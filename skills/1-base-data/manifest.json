@@ -1,0 +1,124 @@
+{
+  "id": "base-data",
+  "name": "Base Data Management",
+  "version": "2.0.0",
+  "description": "Manage foundational data tables for AGIS planning (Updated to cover all 22 sheets)",
+  
+  "discovery_update": {
+    "date": "2026-04-15",
+    "note": "Table DADOS does not exist in actual spreadsheet - replaced by MATERIAIS",
+    "new_tables": ["CPU", "MATERIAIS", "Transportes"]
+  },
+  
+  "tables": [
+    {
+      "name": "BDI",
+      "purpose": "Margem de lucro aplicada a cada tipo de custo (Material, Diesel, MO, Eq)",
+      "key_columns": ["Tipo Custo", "% BDI"],
+      "key_metrics": ["Preço com BDI = Preço sem BDI × (1 + BDI%)"],
+      "relationships": ["PLANEJAMENTO"],
+      "criticality": "HIGH"
+    },
+    {
+      "name": "CPU",
+      "purpose": "Central de Composição Unitária de Serviço - base pricing for standard services",
+      "description": "Contains standardized service definitions with equipment specifications and costs",
+      "key_columns": ["CÓDIGO", "DATA BASE", "SERVIÇO", "UNIDADE"],
+      "key_metrics": ["Service ID", "Service Description", "Unit Type"],
+      "relationships": ["PLANEJAMENTO", "BDI", "RESULTADO"],
+      "criticality": "CRITICAL",
+      "example": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL (M3)"
+    },
+    {
+      "name": "EQUIPAMENTOS",
+      "purpose": "Catálogo de custos de equipamentos e combustíveis",
+      "key_columns": ["Equipamento", "Valor Mensal", "Consumo Combustível"],
+      "key_metrics": ["Custo Total = Valor Mensal + Combustível"],
+      "relationships": ["EQUIPE", "ADM", "MOB"],
+      "criticality": "CRITICAL"
+    },
+    {
+      "name": "MÃO DE OBRA",
+      "purpose": "Base de dados com nomes, salários e cálculos de mão de obra",
+      "key_columns": ["Função", "Salário Base"],
+      "key_metrics": ["Salário Total = Base × (1 + Encargos %), Encargos in ENCARGOS sheet"],
+      "relationships": ["EQUIPE", "ADM", "TOP", "LAB", "QSMS", "ENCARGOS"],
+      "criticality": "CRITICAL"
+    },
+    {
+      "name": "MATERIAIS",
+      "purpose": "DATABASE OF MATERIAL COSTS - Replaces expected DADOS table",
+      "description": "Contains construction materials with unit prices, quantities, and costs",
+      "key_columns": ["CÓDIGO", "DESCRIÇÃO", "UNID.", "R$ UNITÁRIO", "QUANT. TOTAL", "R$ TOTAL"],
+      "key_metrics": ["Material ID", "Material Price", "Extended Cost"],
+      "relationships": ["PLANEJAMENTO", "CRONOGRAMA"],
+      "criticality": "HIGH",
+      "note": "Substitutes table DADOS which does not exist in actual spreadsheet"
+    },
+    {
+      "name": "PRATICABILIDADE",
+      "purpose": "Fator de ocorrência pluviômetrica que reduz produtividade mensal",
+      "key_columns": ["Mês", "% Produtivo"],
+      "key_metrics": ["% Redução = 1 - (dias chuva / dias úteis)"],
+      "relationships": ["CRONOGRAMA"],
+      "criticality": "HIGH"
+    },
+    {
+      "name": "PRODUÇÕES",
+      "purpose": "Definição de produção horária e diária das fases/atividades",
+      "key_columns": ["Atividade", "Unidade", "Produção Horária"],
+      "key_metrics": ["Produção Diária = Horária × 8h"],
+      "relationships": ["CRONOGRAMA"],
+      "criticality": "HIGH"
+    },
+    {
+      "name": "Transportes",
+      "purpose": "Equipment specifications and transport variables for productivity calculations",
+      "description": "Technical specifications of excavation and transportation equipment",
+      "key_columns": ["Equipment", "Bucket Size", "Max Depth", "Capacity Range"],
+      "key_metrics": ["Available Equipment Models", "Technical Specs"],
+      "relationships": ["EQUIPAMENTOS", "CRONOGRAMA", "EQUIPE"],
+      "criticality": "MEDIUM",
+      "tables_covered": ["Escavadeiras (CAT-320, CAT-336, etc)", "Carregadeiras (966L, 938K, etc)"]
+    }
+  ],
+
+  "operations": [
+    {
+      "name": "load_table",
+      "description": "Carrega tabela de base de dados",
+      "inputs": ["table_name: str"],
+      "outputs": ["dataframe: pd.DataFrame"]
+    },
+    {
+      "name": "load_cpu_services",
+      "description": "Load CPU sheet with service definitions and pricing basis",
+      "inputs": [],
+      "outputs": ["cpu_dataframe: pd.DataFrame with services"]
+    },
+    {
+      "name": "load_material_costs",
+      "description": "Load MATERIAIS sheet with material unit costs",
+      "inputs": [],
+      "outputs": ["materials_dataframe: pd.DataFrame"]
+    },
+    {
+      "name": "validate_data",
+      "description": "Valida integridade e consistência dos dados",
+      "inputs": ["dataframe: pd.DataFrame"],
+      "outputs": ["report: ValidationReport"]
+    },
+    {
+      "name": "sync_references",
+      "description": "Sincroniza referências de nomes exatos (MO, Equipamentos, CPU)",
+      "inputs": ["source_table: str", "target_table: str"],
+      "outputs": ["validation_status: Dict"]
+    },
+    {
+      "name": "export_table",
+      "description": "Exporta tabela para Excel ou CSV",
+      "inputs": ["dataframe: pd.DataFrame", "format: str"],
+      "outputs": ["file_path: str"]
+    }
+  ]
+}
