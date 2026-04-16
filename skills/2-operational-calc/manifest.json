@@ -1,0 +1,141 @@
+{
+  "id": "operational-calc",
+  "name": "Operational Cost Calculation",
+  "version": "2.0.0",
+  "description": "Calculate crew, equipment, and administrative costs for direct and indirect activities (Updated to cover all 22 sheets)",
+  
+  "dependencies": ["base-data"],
+
+  "discovery_update": {
+    "date": "2026-04-15",
+    "new_tables": ["ENCARGOS", "DD - C. EXAMES E EPI"],
+    "notes": "Two new tables discovered that affect labor cost calculations and team benefits"
+  },
+
+  "tables": [
+    {
+      "name": "ADM",
+      "purpose": "Equipe Administrativa - Custos indiretos de administração e canteiro",
+      "key_columns": ["Descrição", "Quantidade", "Preço Unitário", "Meses"],
+      "key_metrics": ["Verba Mensal = Qtd × Preço", "Verba Total = Mensal × Meses"],
+      "relationships": ["MOB", "RESULTADO"],
+      "criticality": "HIGH"
+    },
+    {
+      "name": "C_FIXO",
+      "purpose": "Comparação custos fixos (EQUIPE) vs CPU (Planejamento)",
+      "key_columns": ["Serviço", "Equipe", "Pessoas", "Permanência", "Custo Fixo", "Custo Venda", "DELTA"],
+      "key_metrics": ["DELTA = Custo Venda - Custo Fixo (deve estar ≈ 0)"],
+      "relationships": ["EQUIPE", "PLANEJAMENTO"],
+      "criticality": "CRITICAL"
+    },
+    {
+      "name": "DD - C. EXAMES E EPI",
+      "purpose": "HEALTH EXAMS AND SAFETY EQUIPMENT - Team benefits including health insurance and personal protective equipment",
+      "description": "Contains health exam programs (UNIMED, UNIODONTO) and PPE costs (sun protection, noise protection, etc)",
+      "key_columns": ["Item", "Descrição", "%", "R$", "EPIs", "R$ UNIT", "VIDA ÚTIL", "CUSTO"],
+      "key_metrics": ["EPI Monthly Cost = Unit Cost × Quantity × (12 / Life in months)"],
+      "relationships": ["EQUIPE", "MOB", "ADM"],
+      "criticality": "MEDIUM",
+      "example": "PROTETOR SOLAR (R$ 60 × 228 people = R$ 13,680/month equiv)"
+    },
+    {
+      "name": "ENCARGOS",
+      "purpose": "SOCIAL CHARGES/PAYROLL TAXES - Multiplier for labor costs",
+      "description": "Contains payroll tax and benefit percentages applied to base salary",
+      "key_columns": ["Item", "Descrição", "% Encargo"],
+      "key_metrics": ["Total Salary = Base × (1 + % ENCARGOS)"],
+      "relationships": ["MÃO DE OBRA", "EQUIPE", "ADM", "TOP", "LAB", "QSMS"],
+      "criticality": "CRITICAL",
+      "example": "PROVISÃO SOBRE FOLHA (0.31), ENCARGOS (0.30), ADMINISTRAÇÃO (0.05)"
+    },
+    {
+      "name": "EQUIPE",
+      "purpose": "Equipe Direta - Mão de obra e equipamentos diretos por atividade",
+      "key_columns": ["Atividade", "Função/Equipamento", "Quantidade", "Custo Mensal", "Permanência"],
+      "key_metrics": ["Custo Total = (Custo Base × (1 + ENCARGOS%)) × Permanência"],
+      "relationships": ["CRONOGRAMA", "C_FIXO", "ENCARGOS"],
+      "criticality": "HIGH"
+    },
+    {
+      "name": "Escavação e Carga",
+      "purpose": "Equipe especializada de escavação e carga",
+      "key_columns": ["Função", "Quantidade", "Custo"],
+      "key_metrics": ["Custo Total = Similar EQUIPE"],
+      "relationships": ["RESULTADO"],
+      "criticality": "LOW"
+    },
+    {
+      "name": "LAB",
+      "purpose": "Laboratório - Custos de laboratório e testes",
+      "key_columns": ["Função", "Quantidade", "Salário"],
+      "key_metrics": ["Custo Total = Base × (1 + ENCARGOS%)"],
+      "relationships": ["RESULTADO", "ENCARGOS"],
+      "criticality": "LOW"
+    },
+    {
+      "name": "MOB",
+      "purpose": "Mobilização - Custos de transporte, deslocamento e benefícios de equipe",
+      "key_columns": ["Descrição", "Quantidade", "Preço Unitário", "Distância/Meses"],
+      "key_metrics": ["Custo Total = Automático por tipo + DD EXAMES/EPI"],
+      "relationships": ["RESULTADO", "DD - C. EXAMES E EPI"],
+      "criticality": "HIGH"
+    },
+    {
+      "name": "QSMS",
+      "purpose": "Qualidade, Segurança e Meio Ambiente - Custos de QSMS",
+      "key_columns": ["Função", "Quantidade", "Custo"],
+      "key_metrics": ["Custo Total = Base × (1 + ENCARGOS%)"],
+      "relationships": ["RESULTADO", "ENCARGOS"],
+      "criticality": "MEDIUM"
+    },
+    {
+      "name": "TOP",
+      "purpose": "Topografia - Custos de equipe topográfica",
+      "key_columns": ["Função", "Quantidade", "Salário"],
+      "key_metrics": ["Custo Total = Base × (1 + ENCARGOS%)"],
+      "relationships": ["RESULTADO", "ENCARGOS"],
+      "criticality": "MEDIUM"
+    }
+  ],
+
+  "operations": [
+    {
+      "name": "apply_encargos",
+      "description": "Apply social charge multiplier to base salary",
+      "inputs": ["base_salary: float", "encargo_rate: float"],
+      "outputs": ["total_salary: float"]
+    },
+    {
+      "name": "calculate_crew_cost",
+      "description": "Calcula custo total de equipe (MO + Equipamentos + ENCARGOS)",
+      "inputs": ["atividade: str", "pessoas: Dict", "equipamentos: Dict", "permanencia_meses: int", "encargo_rate: float"],
+      "outputs": ["CrewCostResult: dataclass with breakdown"]
+    },
+    {
+      "name": "calculate_epi_costs",
+      "description": "Calculate monthly EPI costs for team",
+      "inputs": ["team_size: int", "selected_epis: List[str]"],
+      "outputs": ["epi_monthly_cost: float"]
+    },
+    {
+      "name": "calculate_team_composition",
+      "description": "Define composição ótima de equipe para atividade",
+      "inputs": ["atividade: str", "cronograma_data: Dict"],
+      "outputs": ["equipe_json: Dict"]
+    },
+    {
+      "name": "validate_cost_delta",
+      "description": "Valida convergência entre custos fixos e custos de venda (tolerance: 5%)",
+      "inputs": ["equipe_costs: float", "planejamento_costs: float"],
+      "outputs": ["DeltaValidation: dataclass"]
+    },
+    {
+      "name": "aggregate_indirect",
+      "description": "Agrega custos indiretos (ADM, TOP, LAB, QSMS, MOB, DD)",
+      "inputs": ["admin: float", "topografia: float", "laboratorio: float", "qsms: float", "mobilizacao: float", "dd_exames: float"],
+      "outputs": ["total_indirect: float"]
+    }
+  ]
+  ]
+}
