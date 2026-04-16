@@ -1,0 +1,62 @@
+{
+  "id": "execution-planning",
+  "name": "Execution Planning",
+  "version": "1.0.0",
+  "description": "Schedule and planning orchestration (CRONOGRAMA, PLANEJAMENTO, RESULTADO)",
+  
+  "dependencies": ["base-data", "operational-calc"],
+
+  "tables": [
+    {
+      "name": "CRONOGRAMA",
+      "purpose": "Cronograma de execução mensal com produção e equipes",
+      "key_columns": ["Atividade", "Dias Trabalhados", "Nº Equipes", "Qtd Planejada"],
+      "key_metrics": ["Qtd Planejada = Dias × Equipes × Prod Diária × % Produtivo"],
+      "relationships": ["PRATICABILIDADE", "PRODUÇÕES", "EQUIPE"],
+      "criticality": "CRITICAL"
+    },
+    {
+      "name": "PLANEJAMENTO",
+      "purpose": "Orçamento e composição de custos por serviço com BDI",
+      "key_columns": ["Serviço", "Quantidade", "Preço Unit", "Material", "Diesel", "MO", "Equip"],
+      "key_metrics": ["Preço com BDI = Preço sem BDI × (1 + BDI%)"],
+      "relationships": ["CPU", "BDI", "C_FIXO"],
+      "criticality": "CRITICAL"
+    },
+    {
+      "name": "RESULTADO",
+      "purpose": "Sumarização financeira final e viabilidade do projeto",
+      "key_columns": ["Descrição", "Valor R$", "% Margem"],
+      "key_metrics": ["Margem = (Receita - Custos) / Receita × 100"],
+      "relationships": ["PLANEJAMENTO", "ADM", "MOB", "C_FIXO"],
+      "criticality": "CRITICAL"
+    }
+  ],
+
+  "operations": [
+    {
+      "name": "schedule_activities",
+      "description": "Distribui atividades ao longo do cronograma",
+      "inputs": ["activity", "productivity_factor", "team_availability"],
+      "outputs": ["schedule"]
+    },
+    {
+      "name": "reconcile_costs",
+      "description": "Reconcilia custos entre EQUIPE, CPU e PLANEJAMENTO",
+      "inputs": ["equipe_costs", "cpu_data", "planning_data"],
+      "outputs": ["reconciliation_report"]
+    },
+    {
+      "name": "calculate_bdi",
+      "description": "Aplica BDI aos custos",
+      "inputs": ["base_cost", "bdi_percentage"],
+      "outputs": ["cost_with_bdi"]
+    },
+    {
+      "name": "aggregate_results",
+      "description": "Consolida todos os custos e calcula resultado financeiro",
+      "inputs": ["direct_costs", "indirect_costs", "revenues"],
+      "outputs": ["financial_summary"]
+    }
+  ]
+}

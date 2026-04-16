@@ -1,0 +1,231 @@
+{
+  "version": "2.0.0",
+  "last_updated": "2026-04-15T16:41:07.692665",
+  "total_tools": 8,
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "load_base_data",
+        "description": "[LAYER 1] Load foundational data tables (MÃO DE OBRA, EQUIPAMENTOS, BDI, etc)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "table_name": {
+              "type": "string",
+              "description": "Name of table to load",
+              "enum": [
+                "MÃO DE OBRA",
+                "EQUIPAMENTOS",
+                "BDI",
+                "PRODUÇÕES",
+                "PRATICABILIDADE",
+                "CPU",
+                "MATERIAIS",
+                "Transportes"
+              ]
+            }
+          },
+          "required": [
+            "table_name"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "validate_base_data",
+        "description": "[LAYER 1] Validate data quality and consistency of base tables",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "table_name": {
+              "type": "string",
+              "description": "Table to validate"
+            },
+            "strict": {
+              "type": "boolean",
+              "description": "Fail on warnings if true"
+            }
+          },
+          "required": [
+            "table_name"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "calculate_crew_cost",
+        "description": "[LAYER 2] Calculate crew cost including salary + equipment + ENCARGOS (66% multiplier)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "activity": {
+              "type": "string",
+              "description": "Activity name"
+            },
+            "labor": {
+              "type": "array",
+              "description": "Labor functions and quantities"
+            },
+            "equipment": {
+              "type": "array",
+              "description": "Equipment and quantities"
+            },
+            "duration_months": {
+              "type": "integer",
+              "description": "Duration in months"
+            },
+            "apply_encargos": {
+              "type": "boolean",
+              "description": "Apply 66% social charge multiplier"
+            }
+          },
+          "required": [
+            "activity",
+            "labor",
+            "equipment",
+            "duration_months"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "validate_cost_delta",
+        "description": "[LAYER 2] Validate convergence between fixed costs and planned costs (must be <5%)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "service": {
+              "type": "string"
+            },
+            "fixed_cost": {
+              "type": "number"
+            },
+            "sales_cost": {
+              "type": "number"
+            },
+            "tolerance_pct": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "service",
+            "fixed_cost",
+            "sales_cost"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "calculate_resultado",
+        "description": "[LAYER 3] Calculate RESULTADO (revenue, costs, profit, margin)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "direct_costs": {
+              "type": "number"
+            },
+            "indirect_costs": {
+              "type": "number"
+            },
+            "revenues": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "direct_costs",
+            "indirect_costs",
+            "revenues"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "validate_schedule",
+        "description": "[LAYER 3] Validate activity schedule completion (must be 100%)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "activity": {
+              "type": "string"
+            },
+            "total_qty": {
+              "type": "number"
+            },
+            "planned_accumulated": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "activity",
+            "total_qty",
+            "planned_accumulated"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "generate_health_report",
+        "description": "[LAYER 4] Generate comprehensive health report (GO/NOGO decision)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "margin_pct": {
+              "type": "number"
+            },
+            "breakeven_pct": {
+              "type": "number"
+            },
+            "direct_costs": {
+              "type": "number"
+            },
+            "indirect_costs": {
+              "type": "number"
+            },
+            "revenue": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "margin_pct",
+            "breakeven_pct",
+            "direct_costs",
+            "indirect_costs",
+            "revenue"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "validate_profitability",
+        "description": "[LAYER 4] Validate profitability is in target range (8-10%)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "margin_pct": {
+              "type": "number",
+              "description": "Margin percentage (0-1)"
+            }
+          },
+          "required": [
+            "margin_pct"
+          ]
+        }
+      }
+    }
+  ]
+}

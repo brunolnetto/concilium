@@ -1,0 +1,74 @@
+{
+  "id": "agis-planning",
+  "name": "AGIS Planning Skills",
+  "version": "1.0.0",
+  "description": "Domain skills for AGIS construction planning spreadsheet analysis and manipulation",
+  "author": "AGIS Team",
+  "license": "proprietary",
+  
+  "skills": [
+    {
+      "id": "base-data",
+      "name": "Base Data Management",
+      "description": "Manage foundational data tables (DADOS, PRODUÇÕES, PRATICABILIDADE, etc)",
+      "dependencies": []
+    },
+    {
+      "id": "operational-calc",
+      "name": "Operational Cost Calculation",
+      "description": "Calculate crew, equipment, and administrative costs",
+      "dependencies": ["base-data"]
+    },
+    {
+      "id": "execution-planning",
+      "name": "Execution Planning",
+      "description": "Schedule and planning orchestration (CRONOGRAMA, PLANEJAMENTO)",
+      "dependencies": ["base-data", "operational-calc"]
+    },
+    {
+      "id": "financial-validation",
+      "name": "Financial Validation",
+      "description": "Validate costs and financial viability (RESULTADO, PONTO DE EQUILIBRIO)",
+      "dependencies": ["execution-planning"]
+    }
+  ],
+
+  "groups": {
+    "1-data-base": {
+      "layer": 1,
+      "tables": ["BDI", "CPU", "EQUIPAMENTOS", "MATERIAIS", "MÃO DE OBRA", "PRATICABILIDADE", "PRODUÇÕES", "Transportes"],
+      "skill_id": "base-data",
+      "notes": "Foundational data tables including new CPU (Composição Unitária), MATERIAIS (material costs), and Transportes (equipment specs)"
+    },
+    "2-operational": {
+      "layer": 2,
+      "tables": ["ADM", "DD - C. EXAMES E EPI", "ENCARGOS", "EQUIPE", "Escavação e Carga", "LAB", "MOB", "QSMS", "TOP"],
+      "skill_id": "operational-calc",
+      "notes": "Operational costs including new ENCARGOS (social charges) and DD - EXAMES E EPI (health exams and safety equipment)"
+    },
+    "3-execution": {
+      "layer": 3,
+      "tables": ["CRONOGRAMA", "PLANEJAMENTO", "RESULTADO"],
+      "skill_id": "execution-planning"
+    },
+    "4-validation": {
+      "layer": 4,
+      "tables": ["PONTO DE EQUILIBRIO"],
+      "skill_id": "financial-validation"
+    }
+  },
+
+  "discovery_notes": {
+    "version": "2.0.0",
+    "discovered": "2026-04-15",
+    "total_sheets": 22,
+    "layout": "4 layers, 22 worksheets",
+    "new_discoveries": {
+      "CPU": "Central de Compoção Unitária de Serviço - pricing basis for services",
+      "MATERIAIS": "Material costs database - replaces expected DADOS table",
+      "ENCARGOS": "Social charges/payroll taxes multiplier for labor costs",
+      "DD - C. EXAMES E EPI": "Health exams and personal protective equipment costs",
+      "Transportes": "Equipment specifications and transport variables"
+    }
+  }
+}

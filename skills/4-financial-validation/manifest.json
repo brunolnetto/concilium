@@ -1,0 +1,46 @@
+{
+  "id": "financial-validation",
+  "name": "Financial Validation",
+  "version": "1.0.0",
+  "description": "Validate financial viability and project health (RESULTADO, PONTO DE EQUILIBRIO)",
+  
+  "dependencies": ["base-data", "operational-calc", "execution-planning"],
+
+  "tables": [
+    {
+      "name": "PONTO DE EQUILIBRIO",
+      "purpose": "Validação de estimativa de custos e ponto de equilíbrio",
+      "key_columns": ["Descrição", "Valor", "% Total"],
+      "key_metrics": ["Ponto de Equilíbrio = Custos Fixos / Margem Contribuição"],
+      "relationships": ["RESULTADO", "PLANEJAMENTO"],
+      "criticality": "HIGH"
+    }
+  ],
+
+  "operations": [
+    {
+      "name": "validate_profitability",
+      "description": "Valida viabilidade financeira do projeto",
+      "inputs": ["margin_pct"],
+      "outputs": ["viability_report"]
+    },
+    {
+      "name": "calculate_breakeven",
+      "description": "Calcula ponto de equilíbrio",
+      "inputs": ["fixed_costs", "contribution_margin"],
+      "outputs": ["breakeven_point"]
+    },
+    {
+      "name": "sensitivity_analysis",
+      "description": "Análise de sensibilidade para variações de custos",
+      "inputs": ["base_scenario", "cost_variations"],
+      "outputs": ["scenarios"]
+    },
+    {
+      "name": "generate_health_report",
+      "description": "Gera relatório de saúde financeira do projeto",
+      "inputs": ["all_costs", "all_revenues"],
+      "outputs": ["health_report"]
+    }
+  ]
+}
