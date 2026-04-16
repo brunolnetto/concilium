@@ -1,3 +1,13 @@
+---
+name: execution-planning
+description: >
+  Use esta skill para orquestrar a conversão de custos operacionais em um
+  orçamento completo com cronograma e previsão financeira. Ative para
+  distribuição de atividades (CRONOGRAMA), elaboração de orçamento
+  (PLANEJAMENTO), ou cálculo de BDI e resultado financeiro.
+compatibility: "Python 3.10+, openpyxl, pandas"
+---
+
 # Execution Planning Skill
 
 **Skill ID:** `execution-planning`  
@@ -185,4 +195,3 @@ See PROCEDIMENTO_PLANEJAMENTO_AGIS.md Sections 2-3 for detailed step-by-step exa
 - [`base-data`]: Provides PRODUÇÃO, PRATICABILIDADE, BDI
 - [`operational-calc`]: Provides EQUIPE, ADM costs
 - [`financial-validation`]: Consumes final results
-

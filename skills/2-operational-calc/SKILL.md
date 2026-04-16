@@ -1,3 +1,13 @@
+---
+name: operational-calc
+description: >
+  Use esta skill para calcular custos operacionais diretos (EQUIPE, Escavação e
+  Carga) e indiretos (ADM, TOP, LAB, QSMS, MOB). Ative quando o usuário
+  solicitar cálculo de custos de equipes, validação de deltas em C_FIXO, ou
+  consolidação de custos de projeto.
+compatibility: "Python 3.10+, openpyxl, pandas"
+---
+
 # Operational Cost Calculation Skill
 
 **Skill ID:** `operational-calc`  

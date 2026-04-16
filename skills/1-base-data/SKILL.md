@@ -1,3 +1,13 @@
+---
+name: base-data
+description: >
+  Use esta skill para carregar, validar e sincronizar as tabelas base do
+  planejamento AGIS (MATERIAIS, MÃO DE OBRA, EQUIPAMENTOS, BDI, PRATICABILIDADE,
+  PRODUÇÕES, CPU, Transportes). Ative sempre que o usuário mencionar dados base,
+  planilha de insumos, validação de referencias ou divergências em tabelas fonte.
+compatibility: "Python 3.10+, openpyxl, pandas"
+---
+
 # Base Data Management Skill
 
 **Skill ID:** `base-data`  

@@ -1,3 +1,13 @@
+---
+name: financial-validation
+description: >
+  Use esta skill para validação final da viabilidade financeira do projeto,
+  análise de ponto de equilíbrio e análise de sensibilidade de riscos. Ative
+  para verificação de margens, validação de rentabilidade ou relatório de
+  saúde financeira.
+compatibility: "Python 3.10+, openpyxl, pandas"
+---
+
 # Financial Validation Skill
 
 **Skill ID:** `financial-validation`  
@@ -279,4 +289,3 @@ Target: > 2x (200% - only need 50% of planned work)
 ## References
 - PROCEDIMENTO_PLANEJAMENTO_AGIS.md: Section 8 (RESULTADO)
 - Relacionamentos_Tabelas.xlsx: Financial table relationships
-
