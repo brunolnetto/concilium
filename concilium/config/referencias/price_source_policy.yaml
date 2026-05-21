@@ -1,0 +1,256 @@
+meta:
+  versao: '2.0'
+  atualizado_em: '2026-05-15'
+mappings:
+- concilium_id: EQ-E0039
+  descricao: Veículo leve
+  tipo: EQUIPAMENTO
+  sicro_codigo: E9512
+  sicro_descricao: Veículo leve - 53 kW
+  score_match: 0.5
+  status: revisar
+- concilium_id: MO-AUXILIAR-ADMINISTRAT
+  descricao: Auxiliar administrativo de obras II
+  tipo: MAO_OBRA
+  sicro_codigo: P9818
+  sicro_descricao: Auxiliar administrativo
+  score_match: 0.5
+  status: revisar
+- concilium_id: MO-ENCARREG-GERAL-SR
+  descricao: Encarregado Geral Senior
+  tipo: MAO_OBRA
+  sicro_codigo: P9887
+  sicro_descricao: Encarregado geral
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-ENG-SEGURANCA
+  descricao: Engenheiro de Segurança
+  tipo: MAO_OBRA
+  sicro_codigo: P9895
+  sicro_descricao: Engenheiro de segurança do trabalho
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-ENG-TRAINEE
+  descricao: Engenheiro Trainee
+  tipo: MAO_OBRA
+  sicro_codigo: P9888
+  sicro_descricao: Engenheiro
+  score_match: 0.5
+  status: revisar
+- concilium_id: MO-ENGENHEIRO-FLORESTAL
+  descricao: Engenheiro Florestal
+  tipo: MAO_OBRA
+  sicro_codigo: P9888
+  sicro_descricao: Engenheiro
+  score_match: 0.5
+  status: revisar
+- concilium_id: MO-MOTOR-ONIBUS
+  descricao: Motorista de ônibus
+  tipo: MAO_OBRA
+  sicro_codigo: P9957
+  sicro_descricao: Motorista de ônibus
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0002
+  descricao: Ajudante Especializado
+  tipo: MAO_OBRA
+  sicro_codigo: P9802
+  sicro_descricao: Ajudante especializado
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0003
+  descricao: Almoxarife
+  tipo: MAO_OBRA
+  sicro_codigo: P9813
+  sicro_descricao: Almoxarife
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0005
+  descricao: Armador
+  tipo: MAO_OBRA
+  sicro_codigo: P9805
+  sicro_descricao: Armador
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0006
+  descricao: Auxiliar Administrativo
+  tipo: MAO_OBRA
+  sicro_codigo: P9818
+  sicro_descricao: Auxiliar administrativo
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0009
+  descricao: Auxiliar de Laboratório
+  tipo: MAO_OBRA
+  sicro_codigo: P9820
+  sicro_descricao: Auxiliar de laboratório
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0015
+  descricao: Carpinteiro
+  tipo: MAO_OBRA
+  sicro_codigo: P9808
+  sicro_descricao: Carpinteiro
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0016
+  descricao: Eletricista
+  tipo: MAO_OBRA
+  sicro_codigo: P9810
+  sicro_descricao: Eletricista
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0032
+  descricao: Motorista Caminhão Basculante
+  tipo: MAO_OBRA
+  sicro_codigo: P9866
+  sicro_descricao: Motorista de caminhão
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-P0033
+  descricao: Motorista Caminhão Pipa
+  tipo: MAO_OBRA
+  sicro_codigo: P9866
+  sicro_descricao: Motorista de caminhão
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-P0034
+  descricao: Motorista Caminhão Comboio
+  tipo: MAO_OBRA
+  sicro_codigo: P9866
+  sicro_descricao: Motorista de caminhão
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-P0056
+  descricao: Técnico de Segurança
+  tipo: MAO_OBRA
+  sicro_codigo: P9967
+  sicro_descricao: Técnico de segurança do trabalho
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-P0057
+  descricao: Topógrafo
+  tipo: MAO_OBRA
+  sicro_codigo: P9981
+  sicro_descricao: Topógrafo
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0071
+  descricao: Motorista Caminhão Munck
+  tipo: MAO_OBRA
+  sicro_codigo: P9866
+  sicro_descricao: Motorista de caminhão
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-P0076
+  descricao: Porteiro
+  tipo: MAO_OBRA
+  sicro_codigo: P9960
+  sicro_descricao: Porteiro
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-P0089
+  descricao: Motorista Caminhão Prancha
+  tipo: MAO_OBRA
+  sicro_codigo: P9866
+  sicro_descricao: Motorista de caminhão
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-PINTOR
+  descricao: Pintor
+  tipo: MAO_OBRA
+  sicro_codigo: P9822
+  sicro_descricao: Pintor
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-PORTEIRO
+  descricao: Porteiro
+  tipo: MAO_OBRA
+  sicro_codigo: P9960
+  sicro_descricao: Porteiro
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-SERV-GERAL
+  descricao: Servente
+  tipo: MAO_OBRA
+  sicro_codigo: P9824
+  sicro_descricao: Servente
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-TEC-SEG
+  descricao: Técnico de Segurança
+  tipo: MAO_OBRA
+  sicro_codigo: P9967
+  sicro_descricao: Técnico de segurança do trabalho
+  score_match: 0.667
+  status: revisar
+- concilium_id: MO-TOPOGRAFO
+  descricao: Topógrafo
+  tipo: MAO_OBRA
+  sicro_codigo: P9981
+  sicro_descricao: Topógrafo
+  score_match: 1.0
+  status: auto
+- concilium_id: MO-TECNICO-ENFERMAGEM
+  descricao: Técnico de Enfermagem do Trabalho
+  tipo: MAO_OBRA
+  sicro_codigo: P9967
+  sicro_descricao: Técnico de segurança do trabalho
+  score_match: 0.5
+  status: revisar
+- concilium_id: MO-VIGIA
+  descricao: Vigia
+  tipo: MAO_OBRA
+  sicro_codigo: P9982
+  sicro_descricao: Vigia
+  score_match: 1.0
+  status: auto
+- concilium_id: MA-ACO-CA50-12MM
+  descricao: Aço CA-50 (barra 12mm)
+  tipo: MATERIAL
+  sicro_codigo: M0004
+  sicro_descricao: Aço CA 50
+  score_match: 0.6
+  status: revisar
+- concilium_id: MA-BDTC-CORPO-DN1000-PA1
+  descricao: Brita 02
+  tipo: MATERIAL
+  sicro_codigo: M0005
+  sicro_descricao: Brita 0
+  score_match: 0.5
+  status: revisar
+- concilium_id: MA-BDTC-CORPO-DN1000-PA2
+  descricao: Brita 03
+  tipo: MATERIAL
+  sicro_codigo: M0005
+  sicro_descricao: Brita 0
+  score_match: 0.5
+  status: revisar
+- concilium_id: MA-BSTC-CORPO-DN1000-PA1
+  descricao: Areia Grossa Lavada
+  tipo: MATERIAL
+  sicro_codigo: M1382
+  sicro_descricao: Areia grossa lavada
+  score_match: 1.0
+  status: auto
+- concilium_id: MA-BSTC-CORPO-DN1000-PA2
+  descricao: Areia Média Lavada
+  tipo: MATERIAL
+  sicro_codigo: M0082
+  sicro_descricao: Areia média lavada
+  score_match: 1.0
+  status: auto
+- concilium_id: MA-BSTC-CORPO-DN1200-PA2
+  descricao: Areia Fina
+  tipo: MATERIAL
+  sicro_codigo: M0080
+  sicro_descricao: Areia fina
+  score_match: 1.0
+  status: auto
+- concilium_id: MA-BTTC-CORPO-DN1200-PA2
+  descricao: Pó de Pedra
+  tipo: MATERIAL
+  sicro_codigo: M1135
+  sicro_descricao: Pó de pedra
+  score_match: 1.0
+  status: auto

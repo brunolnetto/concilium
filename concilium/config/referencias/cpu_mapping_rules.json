@@ -1,0 +1,14 @@
+{
+  "mapping_keywords": {
+    "ATI-001": ["CORTE", "DESTOCAMENTO"],
+    "ATI-003": ["LIMPEZA", "SUPRESSAO VEGETAL"],
+    "ATI-011": ["ESCAVACAO", "CARGA", "1A CAT"],
+    "ATI-017": ["ATERRO"],
+    "ATI-019": ["REGULARIZACAO", "SUBLEITO"],
+    "ATI-065": ["CERCA", "EUCALIPTO"],
+    "ATI-066": ["CERCA", "CONCRETO"],
+    "ATI-067": ["REMOCAO DE CERCA"],
+    "ATI-014": ["ROCHA", "ROMPEDOR"],
+    "ATI-005": ["TOPOGRAFIA", "EIXO", "LOCACAO"]
+  }
+}

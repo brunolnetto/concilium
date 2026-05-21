@@ -1,0 +1,17 @@
+{
+  "codigo": "CPU-OBRAS-ATI-030",
+  "descricao": "Corpo BDTC D=1,00m PA2",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "OBRAS_ARTE",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-BDTC-TUBO-DN1000-PA2",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-OBRAS-ATI-030-PROD-001"
+}

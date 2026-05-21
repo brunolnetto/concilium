@@ -1,0 +1,20 @@
+{
+  "id": "default",
+  "empresa": "Concilium",
+  "perfil_exibicao": "SIMPLES",
+  "cores": {
+    "cabecalho_fundo": "2B2B2B",
+    "cabecalho_texto": "FFFFFF",
+    "zebra_par": "FFFFFF",
+    "zebra_impar": "F5F5F5",
+    "borda": "DDDDDD",
+    "destaque": "FF8C00"
+  },
+  "fontes": {
+    "cabecalho": "Arial",
+    "corpo": "Arial",
+    "tamanho_titulo": 14,
+    "tamanho_cabecalho": 11,
+    "tamanho_corpo": 10
+  }
+}

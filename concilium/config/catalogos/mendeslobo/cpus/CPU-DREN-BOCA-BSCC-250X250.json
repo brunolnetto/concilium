@@ -1,0 +1,19 @@
+{
+  "codigo": "CPU-DREN-BOCA-BSCC-250X250",
+  "descricao": "BOCA BSCC 2,50 X 2,50 M - ESCONSIDADE 0° - AREIA E BRITA COMERCIAIS",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [],
+  "data_referencia_preco": "2026-03-01",
+  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "custo_direto_unitario_planilha": 32365.334784,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "diesel": 0.0,
+    "material": 19738.944,
+    "equipamentos": 12626.390784,
+    "total": 32365.334784
+  },
+  "producao_id_ref": "CPU-DREN-BOCA-BSCC-250X250-PROD-001"
+}

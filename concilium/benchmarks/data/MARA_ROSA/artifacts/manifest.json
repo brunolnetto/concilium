@@ -1,0 +1,23 @@
+{
+  "slug": "MARA_ROSA",
+  "gerado_em": "2026-05-12T21:12:36",
+  "projeto": "Mara Rosa (GO) - Supressão e Sump",
+  "project_dir": null,
+  "paths": {
+    "inputs": [
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\inputs\\referencia.json",
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\raw\\2026_04_15_ML_PLANEJAMENTO_SUPRESSÃO_E_SUMP_MARA ROSA(GO).xlsm"
+    ],
+    "intermediate": [
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\intermediate\\iteracao_referencias_mara_rosa.json",
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\intermediate\\referencia.pre_phase4_remaining_backup.json"
+    ],
+    "outputs": [
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\outputs\\benchmark_report.json",
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\outputs\\relatorio.json",
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\outputs\\relatorio.md",
+      "benchmarks\\data\\MARA_ROSA\\artifacts\\outputs\\resultado_planejamento.xlsx"
+    ],
+    "audit": []
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "CPU-PAVIM-ATI-056-PROD-001",
+  "codigo": "CPU-PAVIM-ATI-056-PROD-001",
+  "descricao": "Produção CPU-PAVIM-ATI-056",
+  "origem": "PROPRIA",
+  "valor_horario": 900.0,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-ESPARG",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-PIPA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-SINALEIRO",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0020",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0010",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 50.4297,
+    "custo_padrao_pj": 50.3801
+  },
+  "cpu_ids": [
+    "CPU-PAVIM-ATI-056"
+  ]
+}

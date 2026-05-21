@@ -1,0 +1,50 @@
+{
+  "$schema_item": "https://concilium.framework/schemas/v1/template_obra",
+  "$comment": "Templates-base por tipo de obra. Sugerem EAP de partida; usuário customiza livremente (DEC-03).",
+
+  "templates": [
+    {
+      "codigo": "TPL-TERRAPLENAGEM-RODOVIARIA",
+      "tipo_obra": "TERRAPLENAGEM",
+      "descricao": "Template para serviços típicos de terraplenagem em obra rodoviária",
+      "criterios_aplicacao": "Aplicável a obras com escavação, transporte e compactação de aterros. Não cobre estabilização química de solo nem fundações especiais.",
+      "servicos_sugeridos": [
+        { "cpu_id": "ESCO-CARGA-1CAT-DMT2000", "ordem": 1, "obrigatoriedade": "essencial",
+          "nota": "Núcleo da terraplenagem; sempre presente" },
+        { "cpu_id": "COMPACT-ATERRO",          "ordem": 2, "obrigatoriedade": "essencial",
+          "nota": "Compactação após escavação/transporte" },
+        { "cpu_id": "REGULARIZACAO-SUBLEITO",  "ordem": 3, "obrigatoriedade": "tipico",
+          "nota": "Antes de pavimentação; remover se obra encerra na terraplenagem" }
+      ]
+    },
+
+    {
+      "codigo": "TPL-PAVIMENTACAO-ASFALTICA",
+      "tipo_obra": "PAVIMENTACAO",
+      "descricao": "Template para pavimentação asfáltica padrão (base BGTC + capa CBUQ)",
+      "criterios_aplicacao": "Pavimentação asfáltica convencional. Não cobre pavimento rígido (concreto) nem reciclagem de capa.",
+      "servicos_sugeridos": [
+        { "cpu_id": "PAV-BASE-BGTC",       "ordem": 1, "obrigatoriedade": "essencial",
+          "nota": "Camada de base sobre subleito regularizado" },
+        { "cpu_id": "PAV-CBUQ-FAIXA-C",    "ordem": 2, "obrigatoriedade": "essencial",
+          "nota": "Camada de rolamento" }
+      ],
+      "precedencias_sugeridas": [
+        { "predecessora": "PAV-BASE-BGTC", "sucessora": "PAV-CBUQ-FAIXA-C" }
+      ]
+    },
+
+    {
+      "codigo": "TPL-SANEAMENTO-COLETOR",
+      "tipo_obra": "SANEAMENTO",
+      "descricao": "Template para coletor de esgoto urbano em manilha cerâmica",
+      "criterios_aplicacao": "Coletor tronco em vias urbanas, DN 200-400mm. Não cobre estações elevatórias nem ETEs.",
+      "servicos_sugeridos": [
+        { "cpu_id": "DREN-MAN-DN300",      "ordem": 1, "obrigatoriedade": "essencial",
+          "nota": "Coletor principal; ajustar DN conforme projeto" },
+        { "cpu_id": "POCO-VISITA-PADRAO",  "ordem": 2, "obrigatoriedade": "essencial",
+          "nota": "Tipicamente 1 PV a cada 80-100m de coletor" }
+      ]
+    }
+  ]
+}

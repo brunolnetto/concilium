@@ -1,0 +1,25 @@
+{
+  "slug": "AGIS",
+  "gerado_em": "2026-05-12T21:12:36",
+  "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
+  "project_dir": null,
+  "paths": {
+    "inputs": [
+      "benchmarks\\data\\AGIS\\artifacts\\inputs\\referencia.json",
+      "benchmarks\\data\\AGIS\\artifacts\\raw\\2026_03_30_PLANEJAMENTO_LOTE 09 e 10_(CE)_v1.xlsm",
+      "benchmarks\\data\\AGIS\\artifacts\\raw\\2026_03_30_PLANEJAMENTO_LOTE 09 e 10_(CE)_v2.xlsm",
+      "benchmarks\\data\\AGIS\\artifacts\\raw\\2026_04_30_PLANEJAMENTO_AGIS_LOTE 09 e 10_(CE).xlsm"
+    ],
+    "intermediate": [],
+    "outputs": [
+      "benchmarks\\data\\AGIS\\artifacts\\outputs\\benchmark_report.json",
+      "benchmarks\\data\\AGIS\\artifacts\\outputs\\modelo_vivo.xlsx",
+      "benchmarks\\data\\AGIS\\artifacts\\outputs\\plan_space_report.json",
+      "benchmarks\\data\\AGIS\\artifacts\\outputs\\plan_space_report.md",
+      "benchmarks\\data\\AGIS\\artifacts\\outputs\\relatorio.json",
+      "benchmarks\\data\\AGIS\\artifacts\\outputs\\relatorio.md",
+      "benchmarks\\data\\AGIS\\artifacts\\outputs\\resultado_planejamento.xlsx"
+    ],
+    "audit": []
+  }
+}

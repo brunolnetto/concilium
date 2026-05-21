@@ -1,0 +1,13 @@
+{
+  "codigo": "P0055",
+  "tipo": "MAO_OBRA",
+  "descricao": "Servente",
+  "unidade": "mês",
+  "preco_unitario": 4209.3216,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "salario_base": 2043.36,
+    "custo_com_encargos": 4209.3216
+  }
+}

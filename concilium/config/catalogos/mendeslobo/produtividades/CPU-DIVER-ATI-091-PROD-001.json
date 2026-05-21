@@ -1,0 +1,27 @@
+{
+  "id": "CPU-DIVER-ATI-091-PROD-001",
+  "codigo": "CPU-DIVER-ATI-091-PROD-001",
+  "descricao": "Produção CPU-DIVER-ATI-091",
+  "origem": "PROPRIA",
+  "valor_horario": 0.125,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OFICIAL",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": []
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 8643.35,
+    "custo_padrao_pj": 7800.0
+  },
+  "cpu_ids": [
+    "CPU-DIVER-ATI-091"
+  ]
+}

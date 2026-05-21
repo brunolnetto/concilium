@@ -1,0 +1,11 @@
+{
+  "codigo": "CPU-PAVIM-ATI-060",
+  "descricao": "Demolição de pavimento asfáltico",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "PAVIMENTACAO",
+  "composicao_itens": [],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-PAVIM-ATI-060-PROD-001"
+}

@@ -1,0 +1,54 @@
+{
+  "id": "PROD-ATI-016",
+  "codigo": "ATI-016",
+  "descricao": "Esc/carg/transp 3ªcat DMT 2-3km (Adotado SICRO)",
+  "valor_horario": 72.0,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "adotado_sicro",
+    "fonte_id": "SICRO-5-02-203-0023",
+    "data_calibracao": "2025-05-01",
+    "referencia": "SICRO CE — mai/2025"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "rocha",
+    "dmt_medio": 2500.0,
+    "season": "nao_aplicavel",
+    "sequenciamento": "linear_continuo"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "nota": "Adotada do SICRO P5.2"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-ESCAV",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0019",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0007",
+        "num_unidades": 4
+      }
+    ]
+  }
+}

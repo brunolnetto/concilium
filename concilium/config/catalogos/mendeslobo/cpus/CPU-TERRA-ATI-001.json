@@ -1,0 +1,11 @@
+{
+  "codigo": "CPU-TERRA-ATI-001",
+  "descricao": "Supressão vegetal DAP>=0,30 e arbustos",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-TERRA-ATI-001-PROD-001"
+}

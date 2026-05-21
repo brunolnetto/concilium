@@ -1,0 +1,3229 @@
+[
+  {
+    "id": "V0000",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X8",
+      "destino": "'CRONOGRAMA'!EJ7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X8",
+          "destino": "'CRONOGRAMA'!EJ7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0001",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X16",
+      "destino": "'PLANEJAMENTO'!E12",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X16",
+          "destino": "'PLANEJAMENTO'!E12"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0002"
+    ]
+  },
+  {
+    "id": "V0002",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X16",
+      "destino": "'PLANEJAMENTO'!E13",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X16",
+          "destino": "'PLANEJAMENTO'!E13"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0001"
+    ]
+  },
+  {
+    "id": "V0003",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!W48",
+      "destino": "'CRONOGRAMA'!AT7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!W48",
+          "destino": "'CRONOGRAMA'!AT7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0007",
+      "V0014",
+      "V0021"
+    ]
+  },
+  {
+    "id": "V0004",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X48",
+      "destino": "'CRONOGRAMA'!EP7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X48",
+          "destino": "'CRONOGRAMA'!EP7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0008"
+    ]
+  },
+  {
+    "id": "V0005",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X54",
+      "destino": "'PLANEJAMENTO'!E15",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X54",
+          "destino": "'PLANEJAMENTO'!E15"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0006"
+    ]
+  },
+  {
+    "id": "V0006",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X54",
+      "destino": "'PLANEJAMENTO'!E14",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X54",
+          "destino": "'PLANEJAMENTO'!E14"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0005"
+    ]
+  },
+  {
+    "id": "V0007",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!W84",
+      "destino": "'CRONOGRAMA'!AT7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!W84",
+          "destino": "'CRONOGRAMA'!AT7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0003",
+      "V0014",
+      "V0021"
+    ]
+  },
+  {
+    "id": "V0008",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X84",
+      "destino": "'CRONOGRAMA'!EP7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X84",
+          "destino": "'CRONOGRAMA'!EP7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0004"
+    ]
+  },
+  {
+    "id": "V0009",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X90",
+      "destino": "'PLANEJAMENTO'!E17",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X90",
+          "destino": "'PLANEJAMENTO'!E17"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0010"
+    ]
+  },
+  {
+    "id": "V0010",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X90",
+      "destino": "'PLANEJAMENTO'!E16",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X90",
+          "destino": "'PLANEJAMENTO'!E16"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0009"
+    ]
+  },
+  {
+    "id": "V0011",
+    "natureza": "V-UP",
+    "escopo": "S-CROSS",
+    "grau": "G2",
+    "sugestao": "REFATORACAO",
+    "aresta": {
+      "origem": "'EQUIPE'!AB97",
+      "destino": "'PRODUÇÕES'!D20",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "PRODUÇÕES"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 3,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!AB97",
+          "destino": "'PRODUÇÕES'!D20"
+        },
+        {
+          "origem": "'PRODUÇÕES'!D20",
+          "destino": "'Escavação e Carga'!F217"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0012",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!W121",
+      "destino": "'CRONOGRAMA'!AZ7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!W121",
+          "destino": "'CRONOGRAMA'!AZ7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0013",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X121",
+      "destino": "'CRONOGRAMA'!EV7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X121",
+          "destino": "'CRONOGRAMA'!EV7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0014",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!W162",
+      "destino": "'CRONOGRAMA'!AT7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!W162",
+          "destino": "'CRONOGRAMA'!AT7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0003",
+      "V0007",
+      "V0021"
+    ]
+  },
+  {
+    "id": "V0015",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X162",
+      "destino": "'CRONOGRAMA'!EQ7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X162",
+          "destino": "'CRONOGRAMA'!EQ7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0016",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!W196",
+      "destino": "'CRONOGRAMA'!EF7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!W196",
+          "destino": "'CRONOGRAMA'!EF7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0017",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X196",
+      "destino": "'CRONOGRAMA'!ER7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X196",
+          "destino": "'CRONOGRAMA'!ER7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0018",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X233",
+      "destino": "'CRONOGRAMA'!CB7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X233",
+          "destino": "'CRONOGRAMA'!CB7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0019"
+    ]
+  },
+  {
+    "id": "V0019",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!W270",
+      "destino": "'CRONOGRAMA'!CB7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!W270",
+          "destino": "'CRONOGRAMA'!CB7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0018"
+    ]
+  },
+  {
+    "id": "V0020",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'EQUIPE'!X270",
+      "destino": "'CRONOGRAMA'!EN7",
+      "aba_origem": "EQUIPE",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'EQUIPE'!X270",
+          "destino": "'CRONOGRAMA'!EN7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0021",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'ADM'!W8",
+      "destino": "'CRONOGRAMA'!AT7",
+      "aba_origem": "ADM",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'ADM'!W8",
+          "destino": "'CRONOGRAMA'!AT7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0003",
+      "V0007",
+      "V0014"
+    ]
+  },
+  {
+    "id": "V0022",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'ADM'!X8",
+      "destino": "'CRONOGRAMA'!EW7",
+      "aba_origem": "ADM",
+      "aba_destino": "CRONOGRAMA"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'ADM'!X8",
+          "destino": "'CRONOGRAMA'!EW7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0023",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'ADM'!I66",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "ADM",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'ADM'!I66",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0027",
+      "V0029",
+      "V0058",
+      "V0060",
+      "V0062",
+      "V0063",
+      "V0064"
+    ]
+  },
+  {
+    "id": "V0024",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'ADM'!J105",
+      "destino": "'PONTO DE EQUILIBRIO'!D14",
+      "aba_origem": "ADM",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'ADM'!J105",
+          "destino": "'PONTO DE EQUILIBRIO'!D14"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D14",
+          "destino": "'EQUIPE'!O235"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0051"
+    ]
+  },
+  {
+    "id": "V0025",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'ADM'!J106",
+      "destino": "'PONTO DE EQUILIBRIO'!D15",
+      "aba_origem": "ADM",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'ADM'!J106",
+          "destino": "'PONTO DE EQUILIBRIO'!D15"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D15",
+          "destino": "'EQUIPE'!O272"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0054"
+    ]
+  },
+  {
+    "id": "V0026",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'ADM'!J107",
+      "destino": "'PONTO DE EQUILIBRIO'!D16",
+      "aba_origem": "ADM",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'ADM'!J107",
+          "destino": "'PONTO DE EQUILIBRIO'!D16"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0057"
+    ]
+  },
+  {
+    "id": "V0027",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'MOB'!M32",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'MOB'!M32",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0023",
+      "V0028",
+      "V0029",
+      "V0058",
+      "V0060",
+      "V0062",
+      "V0063",
+      "V0064"
+    ]
+  },
+  {
+    "id": "V0028",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G3",
+    "sugestao": "REFATORACAO",
+    "aresta": {
+      "origem": "'MOB'!M32",
+      "destino": "'PONTO DE EQUILIBRIO'!C21",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 6,
+      "profundidade": 2,
+      "largura": 5,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 5,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'QSMS'!G25"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'ADM'!G41"
+        },
+        {
+          "origem": "'MOB'!M32",
+          "destino": "'PONTO DE EQUILIBRIO'!C21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'TOP'!G21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'LAB'!G28"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0027",
+      "V0030",
+      "V0059",
+      "V0061"
+    ]
+  },
+  {
+    "id": "V0029",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'MOB'!H47",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'MOB'!H47",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0023",
+      "V0027",
+      "V0058",
+      "V0060",
+      "V0062",
+      "V0063",
+      "V0064"
+    ]
+  },
+  {
+    "id": "V0030",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G3",
+    "sugestao": "REFATORACAO",
+    "aresta": {
+      "origem": "'MOB'!H48",
+      "destino": "'PONTO DE EQUILIBRIO'!C21",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 6,
+      "profundidade": 2,
+      "largura": 5,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 5,
+      "bridges": [
+        {
+          "origem": "'MOB'!H48",
+          "destino": "'PONTO DE EQUILIBRIO'!C21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'QSMS'!G25"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'ADM'!G41"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'TOP'!G21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'LAB'!G28"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0028",
+      "V0059",
+      "V0061"
+    ]
+  },
+  {
+    "id": "V0031",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B53",
+      "destino": "'PONTO DE EQUILIBRIO'!B8",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!B53",
+          "destino": "'PONTO DE EQUILIBRIO'!B8"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B8",
+          "destino": "'EQUIPE'!E7"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0032",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!H53",
+      "destino": "'PONTO DE EQUILIBRIO'!C8",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C8",
+          "destino": "'EQUIPE'!G22"
+        },
+        {
+          "origem": "'MOB'!H53",
+          "destino": "'PONTO DE EQUILIBRIO'!C8"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0033",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T53",
+      "destino": "'PONTO DE EQUILIBRIO'!D8",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!T53",
+          "destino": "'PONTO DE EQUILIBRIO'!D8"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D8",
+          "destino": "'EQUIPE'!O10"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0034",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B54",
+      "destino": "'PONTO DE EQUILIBRIO'!B9",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B9",
+          "destino": "'EQUIPE'!E47"
+        },
+        {
+          "origem": "'MOB'!B54",
+          "destino": "'PONTO DE EQUILIBRIO'!B9"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0035",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!H54",
+      "destino": "'PONTO DE EQUILIBRIO'!C9",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C9",
+          "destino": "'EQUIPE'!G62"
+        },
+        {
+          "origem": "'MOB'!H54",
+          "destino": "'PONTO DE EQUILIBRIO'!C9"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0036",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T54",
+      "destino": "'PONTO DE EQUILIBRIO'!D9",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D9",
+          "destino": "'EQUIPE'!O50"
+        },
+        {
+          "origem": "'MOB'!T54",
+          "destino": "'PONTO DE EQUILIBRIO'!D9"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0037",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B55",
+      "destino": "'PONTO DE EQUILIBRIO'!B10",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B10",
+          "destino": "'EQUIPE'!E83"
+        },
+        {
+          "origem": "'MOB'!B55",
+          "destino": "'PONTO DE EQUILIBRIO'!B10"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0038",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!H55",
+      "destino": "'PONTO DE EQUILIBRIO'!C10",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C10",
+          "destino": "'EQUIPE'!G98"
+        },
+        {
+          "origem": "'MOB'!H55",
+          "destino": "'PONTO DE EQUILIBRIO'!C10"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0039",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T55",
+      "destino": "'PONTO DE EQUILIBRIO'!D10",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D10",
+          "destino": "'EQUIPE'!O86"
+        },
+        {
+          "origem": "'MOB'!T55",
+          "destino": "'PONTO DE EQUILIBRIO'!D10"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0040",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B56",
+      "destino": "'PONTO DE EQUILIBRIO'!B11",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B11",
+          "destino": "'EQUIPE'!E120"
+        },
+        {
+          "origem": "'MOB'!B56",
+          "destino": "'PONTO DE EQUILIBRIO'!B11"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0041",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!H56",
+      "destino": "'PONTO DE EQUILIBRIO'!C11",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C11",
+          "destino": "'EQUIPE'!G137"
+        },
+        {
+          "origem": "'MOB'!H56",
+          "destino": "'PONTO DE EQUILIBRIO'!C11"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0042",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T56",
+      "destino": "'PONTO DE EQUILIBRIO'!D11",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D11",
+          "destino": "'EQUIPE'!O123"
+        },
+        {
+          "origem": "'MOB'!T56",
+          "destino": "'PONTO DE EQUILIBRIO'!D11"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0043",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B57",
+      "destino": "'PONTO DE EQUILIBRIO'!B12",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B12",
+          "destino": "'EQUIPE'!E161"
+        },
+        {
+          "origem": "'MOB'!B57",
+          "destino": "'PONTO DE EQUILIBRIO'!B12"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0044",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!H57",
+      "destino": "'PONTO DE EQUILIBRIO'!C12",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!H57",
+          "destino": "'PONTO DE EQUILIBRIO'!C12"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C12",
+          "destino": "'EQUIPE'!G176"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0045",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T57",
+      "destino": "'PONTO DE EQUILIBRIO'!D12",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!T57",
+          "destino": "'PONTO DE EQUILIBRIO'!D12"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D12",
+          "destino": "'EQUIPE'!O164"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0046",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B58",
+      "destino": "'PONTO DE EQUILIBRIO'!B13",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B13",
+          "destino": "'EQUIPE'!E195"
+        },
+        {
+          "origem": "'MOB'!B58",
+          "destino": "'PONTO DE EQUILIBRIO'!B13"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0047",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!H58",
+      "destino": "'PONTO DE EQUILIBRIO'!C13",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!H58",
+          "destino": "'PONTO DE EQUILIBRIO'!C13"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C13",
+          "destino": "'EQUIPE'!G212"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0048",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T58",
+      "destino": "'PONTO DE EQUILIBRIO'!D13",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!T58",
+          "destino": "'PONTO DE EQUILIBRIO'!D13"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D13",
+          "destino": "'EQUIPE'!O198"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0049",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B59",
+      "destino": "'PONTO DE EQUILIBRIO'!B14",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!B59",
+          "destino": "'PONTO DE EQUILIBRIO'!B14"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B14",
+          "destino": "'EQUIPE'!E232"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0050",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'MOB'!H59",
+      "destino": "'PONTO DE EQUILIBRIO'!C14",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'MOB'!H59",
+          "destino": "'PONTO DE EQUILIBRIO'!C14"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0051",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T59",
+      "destino": "'PONTO DE EQUILIBRIO'!D14",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D14",
+          "destino": "'EQUIPE'!O235"
+        },
+        {
+          "origem": "'MOB'!T59",
+          "destino": "'PONTO DE EQUILIBRIO'!D14"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0024"
+    ]
+  },
+  {
+    "id": "V0052",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B60",
+      "destino": "'PONTO DE EQUILIBRIO'!B15",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B15",
+          "destino": "'EQUIPE'!E269"
+        },
+        {
+          "origem": "'MOB'!B60",
+          "destino": "'PONTO DE EQUILIBRIO'!B15"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0053",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'MOB'!H60",
+      "destino": "'PONTO DE EQUILIBRIO'!C15",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'MOB'!H60",
+          "destino": "'PONTO DE EQUILIBRIO'!C15"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0054",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!T60",
+      "destino": "'PONTO DE EQUILIBRIO'!D15",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'MOB'!T60",
+          "destino": "'PONTO DE EQUILIBRIO'!D15"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!D15",
+          "destino": "'EQUIPE'!O272"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0025"
+    ]
+  },
+  {
+    "id": "V0055",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G2",
+    "sugestao": "ASSISTIDA",
+    "aresta": {
+      "origem": "'MOB'!B61",
+      "destino": "'PONTO DE EQUILIBRIO'!B16",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 3,
+      "profundidade": 2,
+      "largura": 2,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 2,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!B16",
+          "destino": "'EQUIPE'!E307"
+        },
+        {
+          "origem": "'MOB'!B61",
+          "destino": "'PONTO DE EQUILIBRIO'!B16"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0056",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'MOB'!H61",
+      "destino": "'PONTO DE EQUILIBRIO'!C16",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'MOB'!H61",
+          "destino": "'PONTO DE EQUILIBRIO'!C16"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0057",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'MOB'!T61",
+      "destino": "'PONTO DE EQUILIBRIO'!D16",
+      "aba_origem": "MOB",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'MOB'!T61",
+          "destino": "'PONTO DE EQUILIBRIO'!D16"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0026"
+    ]
+  },
+  {
+    "id": "V0058",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'BENEFÍCIOS'!P6",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "BENEFÍCIOS",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'BENEFÍCIOS'!P6",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0023",
+      "V0027",
+      "V0029",
+      "V0059",
+      "V0060",
+      "V0062",
+      "V0063",
+      "V0064"
+    ]
+  },
+  {
+    "id": "V0059",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G3",
+    "sugestao": "REFATORACAO",
+    "aresta": {
+      "origem": "'BENEFÍCIOS'!P6",
+      "destino": "'PONTO DE EQUILIBRIO'!C21",
+      "aba_origem": "BENEFÍCIOS",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 6,
+      "profundidade": 2,
+      "largura": 5,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 5,
+      "bridges": [
+        {
+          "origem": "'BENEFÍCIOS'!P6",
+          "destino": "'PONTO DE EQUILIBRIO'!C21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'QSMS'!G25"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'ADM'!G41"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'TOP'!G21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'LAB'!G28"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0028",
+      "V0030",
+      "V0058",
+      "V0061"
+    ]
+  },
+  {
+    "id": "V0060",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'BENEFÍCIOS'!P7",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "BENEFÍCIOS",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'BENEFÍCIOS'!P7",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0023",
+      "V0027",
+      "V0029",
+      "V0058",
+      "V0062",
+      "V0063",
+      "V0064"
+    ]
+  },
+  {
+    "id": "V0061",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G3",
+    "sugestao": "REFATORACAO",
+    "aresta": {
+      "origem": "'BENEFÍCIOS'!P10",
+      "destino": "'PONTO DE EQUILIBRIO'!C21",
+      "aba_origem": "BENEFÍCIOS",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 6,
+      "profundidade": 2,
+      "largura": 5,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 5,
+      "bridges": [
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'QSMS'!G25"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'ADM'!G41"
+        },
+        {
+          "origem": "'BENEFÍCIOS'!P10",
+          "destino": "'PONTO DE EQUILIBRIO'!C21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'TOP'!G21"
+        },
+        {
+          "origem": "'PONTO DE EQUILIBRIO'!C21",
+          "destino": "'LAB'!G28"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0028",
+      "V0030",
+      "V0059",
+      "V0062"
+    ]
+  },
+  {
+    "id": "V0062",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'BENEFÍCIOS'!P10",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "BENEFÍCIOS",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'BENEFÍCIOS'!P10",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0023",
+      "V0027",
+      "V0029",
+      "V0058",
+      "V0060",
+      "V0061",
+      "V0063",
+      "V0064"
+    ]
+  },
+  {
+    "id": "V0063",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'BENEFÍCIOS'!P24",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "BENEFÍCIOS",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'BENEFÍCIOS'!P24",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0023",
+      "V0027",
+      "V0029",
+      "V0058",
+      "V0060",
+      "V0062",
+      "V0064"
+    ]
+  },
+  {
+    "id": "V0064",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'BENEFÍCIOS'!P33",
+      "destino": "'PONTO DE EQUILIBRIO'!C20",
+      "aba_origem": "BENEFÍCIOS",
+      "aba_destino": "PONTO DE EQUILIBRIO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      },
+      "destino": {
+        "ordem": 4,
+        "nome": "Resultados Finais"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'BENEFÍCIOS'!P33",
+          "destino": "'PONTO DE EQUILIBRIO'!C20"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": [
+      "V0023",
+      "V0027",
+      "V0029",
+      "V0058",
+      "V0060",
+      "V0062",
+      "V0063"
+    ]
+  },
+  {
+    "id": "V0065",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!S2",
+      "destino": "'EQUIPAMENTOS'!B16",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "EQUIPAMENTOS"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!S2",
+          "destino": "'EQUIPAMENTOS'!B16"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0066",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!S3",
+      "destino": "'EQUIPAMENTOS'!B17",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "EQUIPAMENTOS"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!S3",
+          "destino": "'EQUIPAMENTOS'!B17"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0067",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!S4",
+      "destino": "'EQUIPAMENTOS'!B18",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "EQUIPAMENTOS"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 2,
+        "nome": "Calculos Intermediarios"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!S4",
+          "destino": "'EQUIPAMENTOS'!B18"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0068",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!B7",
+      "destino": "'PLANEJAMENTO'!B12",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!B7",
+          "destino": "'PLANEJAMENTO'!B12"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0069",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!B39",
+      "destino": "'PLANEJAMENTO'!B13",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!B39",
+          "destino": "'PLANEJAMENTO'!B13"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0070",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!B130",
+      "destino": "'PLANEJAMENTO'!B14",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!B130",
+          "destino": "'PLANEJAMENTO'!B14"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0071",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!B162",
+      "destino": "'PLANEJAMENTO'!B15",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!B162",
+          "destino": "'PLANEJAMENTO'!B15"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0072",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!B195",
+      "destino": "'PLANEJAMENTO'!B16",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!B195",
+          "destino": "'PLANEJAMENTO'!B16"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0073",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!B224",
+      "destino": "'PLANEJAMENTO'!B17",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!B224",
+          "destino": "'PLANEJAMENTO'!B17"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  },
+  {
+    "id": "V0074",
+    "natureza": "V-UP",
+    "escopo": "S-LOCAL",
+    "grau": "G1",
+    "sugestao": "AUTOMATICA",
+    "aresta": {
+      "origem": "'Escavação e Carga'!B253",
+      "destino": "'PLANEJAMENTO'!B18",
+      "aba_origem": "Escavação e Carga",
+      "aba_destino": "PLANEJAMENTO"
+    },
+    "camadas": {
+      "origem": {
+        "ordem": 1,
+        "nome": "Dados Primarios"
+      },
+      "destino": {
+        "ordem": 3,
+        "nome": "Planejamento e Cronograma"
+      }
+    },
+    "cone": {
+      "tamanho": 2,
+      "profundidade": 1,
+      "largura": 1,
+      "camadas_cruzadas": 2,
+      "tem_ciclo": false,
+      "num_bridges": 1,
+      "bridges": [
+        {
+          "origem": "'Escavação e Carga'!B253",
+          "destino": "'PLANEJAMENTO'!B18"
+        }
+      ],
+      "truncado": false
+    },
+    "cone_compartilhado_com": []
+  }
+]

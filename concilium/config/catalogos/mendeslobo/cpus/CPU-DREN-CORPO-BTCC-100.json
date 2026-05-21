@@ -1,0 +1,19 @@
+{
+  "codigo": "CPU-DREN-CORPO-BTCC-100",
+  "descricao": "CORPO BTCC 3,50 X 3,50 M - MOLDADO NO LOCAL - ALTURA DO ATERRO 6,00 A 10,00 M - AREIA E BRITA COMERCIAIS - PADRÃO VALEC",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [],
+  "data_referencia_preco": "2026-03-01",
+  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "custo_direto_unitario_planilha": 49043.124912,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "diesel": 0.0,
+    "material": 24454.01328,
+    "equipamentos": 24589.111632,
+    "total": 49043.124912
+  },
+  "producao_id_ref": "CPU-DREN-CORPO-BTCC-100-PROD-001"
+}

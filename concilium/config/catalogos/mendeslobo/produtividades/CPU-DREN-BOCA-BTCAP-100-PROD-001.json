@@ -1,0 +1,14 @@
+{
+  "id": "CPU-DREN-BOCA-BTCAP-100-PROD-001",
+  "codigo": "CPU-DREN-BOCA-BTCAP-100-PROD-001",
+  "descricao": "Produção CPU-DREN-BOCA-BTCAP-100",
+  "origem": "PROPRIA",
+  "valor_horario": 1.0,
+  "composicao_padrao_equipe": {
+    "funcoes": [],
+    "equipamentos": []
+  },
+  "cpu_ids": [
+    "CPU-DREN-BOCA-BTCAP-100"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "version": "v1",
+  "created_at": "2026-05-19T00:00:00Z",
+  "created_by": "system (migracao ADR-065)",
+  "motivo": "Migracao de identidade_visual do contexto mendeslobo para entidade TemaVisual.",
+  "id": "mendeslobo-corporativo",
+  "empresa": "Mendes Lobo Construtora",
+  "perfil_exibicao": "EXECUTIVO",
+  "cores": {
+    "cabecalho_fundo": "1F4E78",
+    "cabecalho_texto": "FFFFFF",
+    "zebra_par": "FFFFFF",
+    "zebra_impar": "F2F2F2",
+    "borda": "D9D9D9",
+    "destaque": "FFC000"
+  },
+  "fontes": {
+    "cabecalho": "Arial",
+    "corpo": "Calibri",
+    "tamanho_titulo": 14,
+    "tamanho_cabecalho": 11,
+    "tamanho_corpo": 10
+  }
+}

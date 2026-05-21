@@ -1,0 +1,22 @@
+{
+  "id": "CPU-SANEA-POCO-VISITA-PADRAO-PROD-001",
+  "codigo": "CPU-SANEA-POCO-VISITA-PADRAO-PROD-001",
+  "descricao": "Produção CPU-SANEA-POCO-VISITA-PADRAO",
+  "origem": "PROPRIA",
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OFICIAL",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-SERV-GERAL",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": []
+  },
+  "cpu_ids": [
+    "CPU-SANEA-POCO-VISITA-PADRAO"
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://concilium.framework/schemas/v1/perfil_construtora",
+  "id": "agis",
+  "nome": "AGIS",
+  "jurisdicao_id": "BR",
+  "faixa_margem_alvo": {
+    "min": 0.08,
+    "max": 0.1
+  },
+  "faixa_margem_aceitavel": {
+    "min": 0.06,
+    "max": 0.12
+  },
+  "limiar_ponto_equilibrio": 0.05,
+  "formula_bdi": {
+    "referencia": "TCU_2622_2013",
+    "faixas_por_categoria": {
+      "material": {
+        "min": 0.0,
+        "max": 0.04
+      },
+      "diesel": {
+        "min": 0.28,
+        "max": 0.3
+      },
+      "mao_obra": {
+        "min": 0.28,
+        "max": 0.3
+      },
+      "equipamentos": {
+        "min": 0.28,
+        "max": 0.3
+      }
+    }
+  },
+  "categorias_indireto": [
+    {
+      "codigo": "ADM",
+      "descricao": "Administração de obra"
+    },
+    {
+      "codigo": "TOP",
+      "descricao": "Topografia"
+    },
+    {
+      "codigo": "LAB",
+      "descricao": "Laboratório de solos e materiais"
+    },
+    {
+      "codigo": "QSMS",
+      "descricao": "Qualidade, Saúde, Segurança e Meio Ambiente"
+    },
+    {
+      "codigo": "MOB",
+      "descricao": "Mobilização e desmobilização"
+    }
+  ],
+  "razao_indireto_direto_alvo": {
+    "min": 0.3,
+    "max": 0.5
+  },
+  "politica_aprovacao": {
+    "tipo": "rigida",
+    "transicoes": [
+      {
+        "de": "RASCUNHO",
+        "para": "EM_VALIDACAO",
+        "papel_requerido": "engenheiro_junior"
+      },
+      {
+        "de": "EM_VALIDACAO",
+        "para": "APROVADO",
+        "papel_requerido": "engenheiro_senior"
+      },
+      {
+        "de": "APROVADO",
+        "para": "EM_EXECUCAO",
+        "papel_requerido": "diretoria_operacoes"
+      },
+      {
+        "de": "EM_EXECUCAO",
+        "para": "CONCLUIDO",
+        "papel_requerido": "diretoria_operacoes"
+      }
+    ]
+  },
+  "adapter_saida": {
+    "codigo": "TEMPLATE_AGIS_XLSM",
+    "formato": "XLSM",
+    "template_path": "perfis/agis/template_planejamento.xlsm",
+    "implementacao": "agis_adapter.render_xlsm"
+  },
+  "pesos_analiticos": {
+    "criticality": {
+      "alpha_duration": 0.5,
+      "beta_bottleneck": 0.3,
+      "gamma_downstream": 0.2
+    },
+    "cost_criticality": {
+      "w_cost": 0.4,
+      "w_duration": 0.3,
+      "w_sensitivity": 0.3
+    }
+  },
+  "criterios_modo_exploracao_default": {
+    "margem_min": 0.06,
+    "margem_max": 0.12,
+    "delta_pe_max_pct": 0.05
+  },
+  "bdi_aplicado_padrao": {
+    "material": 0.04,
+    "diesel": 0.2997,
+    "mao_obra": 0.2997,
+    "equipamentos": 0.2997
+  }
+}

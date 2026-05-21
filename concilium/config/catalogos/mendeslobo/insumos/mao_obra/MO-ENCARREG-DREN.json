@@ -1,0 +1,19 @@
+{
+  "codigo": "MO-ENCARREG-DREN",
+  "tipo": "MAO_OBRA",
+  "descricao": "Encarregado de Drenagem",
+  "unidade": "mes",
+  "preco_unitario": 10000.0,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "pj_CE",
+    "horas_extras_pct_padrao": 0.0,
+    "_audit_encargos": "Removido: custo_com_encargos=20600.00 (fator=2.06). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009)."
+  },
+  "classe_compartilhamento": {
+    "classe": "concorrente_compartilhavel",
+    "capacidade_cobertura": 2
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

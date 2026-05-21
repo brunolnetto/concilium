@@ -1,0 +1,91 @@
+# Unidades canônicas e aliases — Concilium Semantic Layer v1.0
+# Cobre todos os tipos de medida dos 11 CPUs
+#
+# Formato:
+#   <canonical_unit>:
+#     aliases: variações aceitas (case-insensitive)
+#     dimension_type: volume | area | length | mass | count
+
+m3:
+  aliases:
+    - "m³"
+    - "metros cubicos"
+    - "metros cúbicos"
+    - "metro cubico"
+    - "metro cúbico"
+    - "M3"
+    - "m 3"
+    - "m^3"
+  dimension_type: volume
+
+m2:
+  aliases:
+    - "m²"
+    - "metros quadrados"
+    - "metros quadrado"
+    - "metro quadrado"
+    - "M2"
+    - "m 2"
+    - "m^2"
+  dimension_type: area
+
+m:
+  aliases:
+    - "ml"
+    - "metro linear"
+    - "metros lineares"
+    - "metro"
+    - "ML"
+    - "M"
+  dimension_type: length
+
+ton:
+  aliases:
+    - "tonelada"
+    - "toneladas"
+    - "t"
+    - "TON"
+    - "Ton"
+    - "T"
+  dimension_type: mass
+
+un:
+  aliases:
+    - "unid"
+    - "unidade"
+    - "unidades"
+    - "und"
+    - "pç"
+    - "peca"
+    - "peça"
+    - "UN"
+    - "UND"
+  dimension_type: count
+
+# Subunidades (normalizadas em runtime)
+cm:
+  aliases:
+    - "centimetro"
+    - "centímetro"
+    - "centimetros"
+    - "centímetros"
+    - "CM"
+  dimension_type: length_sub
+
+mm:
+  aliases:
+    - "milimetro"
+    - "milímetro"
+    - "milimetros"
+    - "milímetros"
+    - "MM"
+  dimension_type: length_sub
+
+pct:
+  aliases:
+    - "%"
+    - "percent"
+    - "porcentagem"
+    - "por cento"
+    - "PCT"
+  dimension_type: ratio

@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-BGTC-MIX",
+  "tipo": "MATERIAL",
+  "descricao": "BGTC usinada",
+  "unidade": "m3",
+  "preco_unitario": 92.5,
+  "fonte_preco": "catalogo_proprio",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

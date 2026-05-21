@@ -1,0 +1,62 @@
+{
+  "id": "PROD-ATI-017",
+  "codigo": "ATI-017",
+  "descricao": "Aterro compactado a 100% do Proctor Normal (Adotado SICRO)",
+  "valor_horario": 140.0,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "adotado_sicro",
+    "fonte_id": "SICRO-5-02-205-0010",
+    "data_calibracao": "2025-05-01",
+    "referencia": "SICRO CE — mai/2025"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "argila_e_laterita",
+    "dmt_medio": 0.0,
+    "season": "nao_aplicavel",
+    "sequenciamento": "linear_continuo"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "nota": "Adotada do SICRO conforme Plano de Correção P5.2"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-PIPA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0029",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0035",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0010",
+        "num_unidades": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-E0022",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Fresadora de Pavimento",
+  "unidade": "h",
+  "preco_unitario": 287.5,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0022",
+    "valor_locacao_mensal": 57500.0,
+    "horas_mes": 200,
+    "consumo_litros_hora": 8.0
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

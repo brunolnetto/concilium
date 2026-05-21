@@ -1,0 +1,40 @@
+{
+  "id": "CPU-OBRAS-ATI-041-PROD-001",
+  "codigo": "CPU-OBRAS-ATI-041-PROD-001",
+  "descricao": "Produção CPU-OBRAS-ATI-041",
+  "origem": "PROPRIA",
+  "valor_horario": 0.042,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-ENCARREG-DREN",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MONTADOR",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0016",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0026",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 12884.4115,
+    "custo_padrao_pj": 9930.0195
+  },
+  "cpu_ids": [
+    "CPU-OBRAS-ATI-041"
+  ]
+}

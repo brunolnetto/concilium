@@ -1,0 +1,19 @@
+{
+  "codigo": "CPU-TERRA-COMPAC-PN",
+  "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR NORMAL",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "data_referencia_preco": "2026-03-30",
+  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "custo_direto_unitario_planilha": 9.068829,
+  "precos_unitarios_sbdi": {
+    "mo": 2.935011,
+    "diesel": 6.196681,
+    "material": 0.0,
+    "equipamentos": 0.0,
+    "total": 9.131692
+  },
+  "producao_id_ref": "CPU-TERRA-COMPAC-PN-PROD-001"
+}

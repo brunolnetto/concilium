@@ -1,0 +1,36 @@
+{
+  "id": "CPU-DIVER-ATI-006-PROD-001",
+  "codigo": "CPU-DIVER-ATI-006-PROD-001",
+  "descricao": "Produção CPU-DIVER-ATI-006",
+  "origem": "PROPRIA",
+  "valor_horario": 1428.57,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPERADOR-DE-MOTOSCRA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0031",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0048",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 0.2667,
+    "custo_padrao_pj": 0.2372
+  },
+  "cpu_ids": [
+    "CPU-DIVER-ATI-006"
+  ]
+}

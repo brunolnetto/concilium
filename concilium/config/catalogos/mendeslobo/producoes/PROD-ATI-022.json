@@ -1,0 +1,50 @@
+{
+  "id": "PROD-ATI-022",
+  "codigo": "ATI-022",
+  "descricao": "BSTC D=0,80 m - Corpo (Adotado SICRO)",
+  "valor_horario": 1.0,
+  "unidade": "m",
+  "origem": {
+    "tipo": "adotado_sicro",
+    "fonte_id": "SICRO-5-02-401-0011",
+    "data_calibracao": "2025-05-01",
+    "referencia": "SICRO CE — mai/2025"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "drenagem",
+    "dmt_medio": 0.0,
+    "season": "nao_aplicavel",
+    "sequenciamento": "linear_continuo"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "nota": "Adotada do SICRO P5.2"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0028",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0036",
+        "num_unidades": 1
+      }
+    ]
+  }
+}

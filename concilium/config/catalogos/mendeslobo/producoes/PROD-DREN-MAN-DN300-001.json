@@ -1,0 +1,79 @@
+{
+  "id": "PROD-DREN-MAN-DN300-001",
+  "codigo": "DREN-MAN-DN300-001",
+  "descricao": "Coletor tronco DN300 em manilha cerâmica — abertura, assentamento, reaterro",
+  "valor_horario": 3.0,
+  "unidade": "m",
+  "origem": {
+    "tipo": "calibrado_contra_obra_real",
+    "fonte_id": "Lote_09_10_CE_2025",
+    "data_calibracao": "2025-09-30T00:00:00Z",
+    "referencia": "Planilha AGIS; aba SANEAMENTO; dados de assentamento DN300"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "argila_e_laterita",
+    "dmt_medio": null,
+    "season": "seco",
+    "sequenciamento": "linear",
+    "equipamento_idade": 3,
+    "notas": "Assentamento manual + retroescavadeira; solo de fácil escavação"
+  },
+  "qualidade": {
+    "confianca_pct": 85,
+    "intervalo_confianca": [
+      2.5,
+      3.5
+    ],
+    "quantidade_amostras": 15,
+    "desvio_padrao": 0.3
+  },
+  "historico_observacoes": [
+    {
+      "obra_id": "Lote_09_10_CE_2025",
+      "periodo": "2025-07-01/2025-09-30",
+      "producao_realizada": 3.0,
+      "delta_pct": 0.0,
+      "contexto_observado": {
+        "solo": "argila_e_laterita",
+        "season": "seco"
+      },
+      "confiabilidade": 0.85,
+      "notas": "Calibração inicial",
+      "timestamp": "2025-10-15T10:30:00Z"
+    }
+  ],
+  "auditoria": {
+    "criado_por": "eng_senior_silva",
+    "data_criacao": "2025-10-15T10:30:00Z",
+    "ultima_modificacao": "2025-10-15T10:30:00Z",
+    "modificado_por": "eng_senior_silva",
+    "versao": "1.0"
+  },
+  "categoria": "SANEAMENTO",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-RETRO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCANADOR",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MONTADOR-AGUA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-SERV-GERAL",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-RETRO-ESCAV",
+        "num_unidades": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-EMULSAO-RR-2C-IMPRIMACAO",
+  "tipo": "MATERIAL",
+  "descricao": "Emulsão RR-2C — imprimação (0,8 kg/m²)",
+  "unidade": "m2",
+  "preco_unitario": 3.08,
+  "fonte_preco": "cotacao_mercado",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

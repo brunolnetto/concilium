@@ -1,0 +1,80 @@
+{
+  "id": "PROD-ESCO-CARGA-3CAT-001",
+  "codigo": "ESCO-CARGA-3CAT-001",
+  "descricao": "Escavação, carga, transporte, descarga e espalhamento — 3ª categoria (rocha)",
+  "valor_horario": 144.541473391304,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_contra_obra_real",
+    "fonte_id": "Lote_09_10_CE_2025",
+    "data_calibracao": "2025-09-30T00:00:00Z",
+    "referencia": "Planilha AGIS; aba PLANEJAMENTO, CPU 2.3; 30 dias de dados"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "rocha_desmontada",
+    "dmt_medio": 1850.0,
+    "season": "seco",
+    "sequenciamento": "linear_continuo",
+    "equipamento_idade": 4,
+    "notas": "3ª categoria: rocha desmontada por desmonte mecânico ou explosivo"
+  },
+  "qualidade": {
+    "confianca_pct": 85,
+    "intervalo_confianca": [
+      130.0,
+      158.0
+    ],
+    "quantidade_amostras": 20,
+    "desvio_padrao": 9.1
+  },
+  "historico_observacoes": [
+    {
+      "obra_id": "Lote_09_10_CE_2025",
+      "periodo": "2025-07-01/2025-09-30",
+      "producao_realizada": 144.541473391304,
+      "delta_pct": 0.0,
+      "contexto_observado": {
+        "solo": "rocha_desmontada",
+        "dmt": 1850,
+        "season": "seco"
+      },
+      "confiabilidade": 0.85,
+      "notas": "Calibração inicial — menor amostra por ocorrência menor de 3ª cat.",
+      "timestamp": "2025-10-15T10:30:00Z"
+    }
+  ],
+  "auditoria": {
+    "criado_por": "eng_senior_silva",
+    "data_criacao": "2025-10-15T10:30:00Z",
+    "ultima_modificacao": "2025-10-15T10:30:00Z",
+    "modificado_por": "eng_senior_silva",
+    "versao": "1.0"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-ESCAV",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 6
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-ESCAV-HID-48T",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-CAM-BASC-14M3-ROCHAS",
+        "num_unidades": 6
+      }
+    ]
+  }
+}

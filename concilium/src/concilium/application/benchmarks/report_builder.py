@@ -1,0 +1,378 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from .projection import BenchmarkProjection
+from .spec_loader import ProjectSpec
+
+
+def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProjection) -> None:
+    if projection.ferramenta:
+        confronto["ferramenta"] = projection.ferramenta
+    if projection.ponto_equilibrio_ferramenta:
+        confronto["ponto_equilibrio_ferramenta"] = projection.ponto_equilibrio_ferramenta
+    if projection.ferramenta_breakdown_direto:
+        confronto["ferramenta_breakdown_direto"] = projection.ferramenta_breakdown_direto
+    if projection.ferramenta_breakdown_indireto:
+        confronto["ferramenta_breakdown_indireto"] = projection.ferramenta_breakdown_indireto
+    if projection.actionable_insights:
+        confronto["actionable_insights"] = projection.actionable_insights
+
+
+def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, Any]) -> dict[str, Any]:
+    deltas: dict[str, Any] = {}
+    for key in ("custo_direto", "custo_indireto", "preco_venda"):
+        ref_v = ref_vals.get(key)
+        tool_v = fer_vals.get(key)
+        if ref_v is not None and tool_v is not None:
+            deltas[key] = {
+                "absoluto": round(tool_v - ref_v, 2),
+                "percentual": round((tool_v - ref_v) / ref_v * 100, 2) if ref_v != 0 else None,
+            }
+    ref_direto = ref_vals.get("custo_direto")
+    tool_catalog = fer_vals.get("custo_direto_catalogo")
+    if ref_direto is not None and tool_catalog is not None:
+        deltas["custo_direto_catalogo_vs_ref"] = {
+            "absoluto": round(tool_catalog - ref_direto, 2),
+            "percentual": round((tool_catalog - ref_direto) / ref_direto * 100, 2) if ref_direto != 0 else None,
+        }
+    return deltas
+
+
+def _compute_peak_recursos(scheduled_activities: list[Any], spec_acts: dict[str, Any]) -> dict[str, int]:
+    by_week: dict[int, dict[str, int]] = {}
+    for sa in scheduled_activities:
+        req_res = (spec_acts.get(sa.activity_id) or {}).get("required_resources") or {}
+        for w in range(sa.start_week, sa.end_week + 1):
+            if w not in by_week:
+                by_week[w] = {}
+            for rtype, qty in req_res.items():
+                by_week[w][rtype] = by_week[w].get(rtype, 0) + int(qty)
+    peak: dict[str, int] = {}
+    for week_usage in by_week.values():
+        for rtype, qty in week_usage.items():
+            if qty > peak.get(rtype, 0):
+                peak[rtype] = qty
+    return peak
+
+
+def _build_rcpsp_schedule(canonical: Any, spec: ProjectSpec) -> dict[str, Any]:
+    cron = canonical.cronograma
+    rcpsp_spec = (spec.inputs_cronograma or {}).get("rcpsp_spec") or {}
+    deadline_weeks = rcpsp_spec.get("deadline_weeks")
+    rcpsp_sched: dict[str, Any] = {
+        "algorithm": cron.algorithm,
+        "makespan_weeks": cron.makespan_weeks,
+        "is_feasible": cron.is_feasible,
+        "was_relaxed": cron.was_relaxed,
+    }
+    if deadline_weeks is not None:
+        rcpsp_sched["deadline_weeks"] = int(deadline_weeks)
+        rcpsp_sched["folga_semanas"] = int(deadline_weeks) - cron.makespan_weeks
+    if cron.scheduled_activities:
+        rcpsp_sched["atividades"] = {
+            sa.activity_id: {
+                "start_week": sa.start_week,
+                "end_week": sa.end_week,
+                "duration_weeks": sa.duration_weeks,
+            }
+            for sa in cron.scheduled_activities
+        }
+        spec_acts = {a["item_id"]: a for a in rcpsp_spec.get("activities", [])}
+        if spec_acts:
+            peak = _compute_peak_recursos(cron.scheduled_activities, spec_acts)
+            if peak:
+                rcpsp_sched["pico_recursos"] = peak
+    return rcpsp_sched
+
+
+def _bq_get_cause(metric: str) -> str:
+    """Maps metric name to cause category string."""
+    if metric == "custo_direto":
+        return "DERIVACAO_PIPELINE"
+    if metric == "custo_direto_catalogo_vs_ref":
+        return "CATALOGO"
+    if metric == "custo_indireto":
+        return "CONSOLIDACAO"
+    if metric == "preco_venda":
+        return "PARAMETRIZACAO_BDI"
+    if metric == "margem_pct":
+        return "CONSOLIDACAO"
+    return "OUTROS"
+
+
+def _bq_build_gate_item(
+    metric: str,
+    delta: dict,
+    confronto: dict,
+    cause: str,
+    classe: str,
+    severity: str,
+    phase: str,
+    action: str,
+    owner: str,
+) -> dict:
+    """Builds a single quality gate item dict."""
+    pct = delta.get("percentual")
+    return {
+        "metric": metric,
+        "fase": phase,
+        "valor_referencia": (confronto.get("referencia") or {}).get(metric),
+        "valor_calculado": (confronto.get("ferramenta") or {}).get(metric),
+        "delta_absoluto": delta.get("absoluto"),
+        "delta_percentual": pct,
+        "classe": classe,
+        "severidade": severity,
+        "causa_categoria": cause,
+        "acao_recomendada": action,
+        "owner": owner,
+        "sla_horas": 0 if severity == "S0" else 48 if severity == "S1" else 24 if severity == "S2" else 0,
+        "status_acao": "NAO_APLICAVEL" if severity == "S0" else "ABERTA",
+    }
+
+
+def _bq_compute_worst(gate_items: list) -> str:
+    """Returns the worst severity label across all gate items."""
+    worst_rank = {"S0": 0, "S1": 1, "S2": 2, "S3": 3}
+    return max((item["severidade"] for item in gate_items), key=lambda s: worst_rank.get(s, 0), default="S0")
+
+
+def _bq_check_critical_over_10(gate_items: list, critical_metrics: set) -> bool:
+    """Returns True if any critical metric has delta > 10%."""
+    return any(
+        item["metric"] in critical_metrics
+        and item["delta_percentual"] is not None
+        and abs(float(item["delta_percentual"])) > 10
+        for item in gate_items
+    )
+
+
+def _bq_get_decision(worst: str, has_critical: bool) -> str:
+    """Returns pipeline decision string based on worst severity."""
+    if worst == "S3":
+        return "BLOQUEADO"
+    if worst == "S2" or has_critical:
+        return "BLOQUEADO_COM_INVESTIGACAO"
+    if worst == "S1":
+        return "APROVADO_COM_RESSALVAS"
+    return "APROVADO"
+
+
+@dataclass
+class BenchmarkReportBuilder:
+    _PHASE_BY_METRIC = {
+        "custo_direto": "06-consolidacao",
+        "custo_direto_catalogo_vs_ref": "06-consolidacao",
+        "custo_indireto": "07-custos-indiretos",
+        "custo_total": "06-consolidacao",
+        "preco_venda": "06-precificacao-unitaria",
+        "margem_pct": "06-consolidacao",
+    }
+
+    _CRITICAL_METRICS = {"custo_direto", "custo_total", "preco_venda", "margem_pct", "bdi_efetivo"}
+
+    @staticmethod
+    def _classify_delta(delta_pct: float | None) -> tuple[str, str]:
+        if delta_pct is None:
+            return "N/A", "S0"
+        abs_delta = abs(delta_pct)
+        if abs_delta <= 5:
+            return "IDEAL", "S0"
+        if abs_delta <= 15:
+            return "ATENCAO", "S1"
+        if abs_delta <= 30:
+            return "PREOCUPANTE", "S2"
+        return "CRITICO", "S3"
+
+    @staticmethod
+    def _format_phase(metric: str) -> str:
+        return BenchmarkReportBuilder._PHASE_BY_METRIC.get(metric, "09-relatorio-e-artefatos")
+
+    @staticmethod
+    def _recommend_action(metric: str, severity: str) -> tuple[str, str]:
+        if severity == "S3":
+            if metric in {"custo_direto", "custo_total"}:
+                return "Bloquear pipeline e revalidar baseline de referencia", "engenharia-benchmarks"
+            if metric == "preco_venda":
+                return "Bloquear pipeline e revisar parametrizacao BDI", "engenharia-bdi"
+            return "Bloquear pipeline e executar investigacao formal", "engenharia-benchmarks"
+        if severity == "S2":
+            if metric in {"custo_direto", "custo_total"}:
+                return "Investigar derivacao da engine e reconciliar custo direto", "engenharia-benchmarks"
+            if metric == "preco_venda":
+                return "Revalidar BDI, tributacao e consolidacao financeira", "engenharia-bdi"
+            if metric == "margem_pct":
+                return "Recalcular consolidacao e checar inconsistencias de margem", "engenharia-financeira"
+            return "Investigar divergencia com evidencia do benchmark", "engenharia-benchmarks"
+        if severity == "S1":
+            if metric in {"custo_direto", "custo_total"}:
+                return "Revisar baseline e confirmar arredondamento/derivacao", "engenharia-benchmarks"
+            if metric == "preco_venda":
+                return "Revisar BDI e confirmar efeito de arredondamento", "engenharia-bdi"
+            return "Registrar ressalva e monitorar tendencia", "engenharia-benchmarks"
+        return "Sem acao corretiva obrigatoria", "benchmark-auditoria"
+
+    def _build_quality_gates(self, confronto: dict[str, Any]) -> dict[str, Any]:
+        deltas = confronto.get("deltas") or {}
+        gate_items: list[dict] = []
+        for metric, delta in deltas.items():
+            classe, severity = self._classify_delta(delta.get("percentual"))
+            phase = self._format_phase(metric)
+            action, owner = self._recommend_action(metric, severity)
+            gate_items.append(
+                _bq_build_gate_item(
+                    metric,
+                    delta,
+                    confronto,
+                    _bq_get_cause(metric),
+                    classe,
+                    severity,
+                    phase,
+                    action,
+                    owner,
+                )
+            )
+        worst = _bq_compute_worst(gate_items)
+        has_critical = _bq_check_critical_over_10(gate_items, self._CRITICAL_METRICS)
+        return {
+            "decision": _bq_get_decision(worst, has_critical),
+            "worst_severity": worst,
+            "critical_metric_over_10pct": has_critical,
+            "items": gate_items,
+        }
+
+    @staticmethod
+    def _extract_referencia_confronto(ref: dict[str, Any]) -> dict[str, Any] | None:
+        resultado = ref.get("resultado") if isinstance(ref, dict) else None
+        if not isinstance(resultado, dict):
+            return None
+
+        # Preferimos o artefato de confronto da planilha real quando existir.
+        confronto_ref = resultado.get("benchmark_confronto_referencia")
+        if isinstance(confronto_ref, dict):
+            return {
+                "custo_direto": confronto_ref.get("custo_direto"),
+                "custo_indireto": confronto_ref.get("custo_indireto"),
+                "custo_total": confronto_ref.get("custo_total"),
+                "preco_venda": confronto_ref.get("preco_venda"),
+            }
+
+        # Fallback: resultado.canonical (presente em alguns arquivos de referência).
+        canonical = resultado.get("canonical")
+        if isinstance(canonical, dict):
+            custo: dict = canonical.get("custo") if isinstance(canonical.get("custo"), dict) else {}  # type: ignore[assignment]
+            venda: dict = canonical.get("venda") if isinstance(canonical.get("venda"), dict) else {}  # type: ignore[assignment]
+            custo_indireto = sum(
+                v for k, v in custo.items() if isinstance(v, (int, float)) and str(k).startswith("indireto_")
+            )
+            return {
+                "custo_direto": custo.get("direto_equipes"),
+                "custo_indireto": custo_indireto if custo_indireto != 0 else None,
+                "custo_total": custo.get("total"),
+                "preco_venda": venda.get("total_com_bdi") or venda.get("total_custo_plus"),
+            }
+
+        return None
+
+    @staticmethod
+    def _build_composicao_final(
+        referencia: dict[str, Any] | None,
+        ferramenta: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        if referencia is None or ferramenta is None:
+            return None
+
+        # Fallback: derive tool total from direct + indirect if not available
+        if ferramenta.get("custo_total") is None:
+            direto = ferramenta.get("custo_direto")
+            indireto = ferramenta.get("custo_indireto")
+            if direto is not None and indireto is not None:
+                ferramenta = {**ferramenta, "custo_total": round(direto + indireto, 2)}
+
+        itens = ["custo_direto", "custo_indireto", "custo_total", "preco_venda"]
+        composicao: dict[str, Any] = {}
+        for item in itens:
+            ref_value = referencia.get(item)
+            tool_value = ferramenta.get(item)
+            if ref_value is None and tool_value is None:
+                continue
+            delta_abs = None
+            delta_pct = None
+            if ref_value is not None and tool_value is not None:
+                delta_abs = round(tool_value - ref_value, 2)
+                delta_pct = round((tool_value - ref_value) / ref_value * 100, 2) if ref_value != 0 else None
+            composicao[item] = {
+                "referencia": ref_value,
+                "ferramenta": tool_value,
+                "delta_absoluto": delta_abs,
+                "delta_percentual": delta_pct,
+            }
+
+        # Include custo_direto_catalogo_vs_ref comparison
+        ref_direto = referencia.get("custo_direto")
+        tool_catalog = ferramenta.get("custo_direto_catalogo")
+        if ref_direto is not None and tool_catalog is not None:
+            delta_abs = round(tool_catalog - ref_direto, 2)
+            delta_pct = round((tool_catalog - ref_direto) / ref_direto * 100, 2) if ref_direto != 0 else None
+            composicao["custo_direto_catalogo_vs_ref"] = {
+                "referencia": ref_direto,
+                "ferramenta": tool_catalog,
+                "delta_absoluto": delta_abs,
+                "delta_percentual": delta_pct,
+            }
+
+        return composicao or None
+
+    def _finalize_confronto(self, confronto: dict[str, Any], ref: dict[str, Any] | None) -> None:
+        if "referencia" in confronto and "ferramenta" in confronto:
+            confronto["deltas"] = _build_deltas_from_confronto(confronto["referencia"], confronto["ferramenta"])
+            composicao_final = self._build_composicao_final(confronto.get("referencia"), confronto.get("ferramenta"))
+            if composicao_final is not None:
+                confronto["composicao_final"] = composicao_final
+        if "ferramenta_breakdown_direto" in confronto or "ferramenta_breakdown_indireto" in confronto:
+            confronto["breakdown_por_fase"] = {
+                "direto": confronto.get("ferramenta_breakdown_direto"),
+                "indireto": confronto.get("ferramenta_breakdown_indireto"),
+            }
+        if ref and ref.get("ponto_de_equilibrio"):
+            pe = ref["ponto_de_equilibrio"]
+            confronto["ponto_equilibrio_referencia"] = {
+                "total_hc": pe.get("total_hc"),
+                "total_custo_fixo": pe.get("total_custo_fixo"),
+                "equipes": len(pe.get("equipes", [])),
+            }
+
+    def build(
+        self,
+        spec: ProjectSpec,
+        version: str | None,
+        results_log: list[dict[str, Any]],
+        ref: dict[str, Any] | None,
+        canonical: Any,
+    ) -> dict[str, Any]:
+        projection = BenchmarkProjection.from_canonical(canonical)
+        report: dict[str, Any] = {
+            "projeto": spec.nome,
+            "slug": spec.slug,
+            "versao": version,
+            "skills_log": results_log,
+            "referencia_disponivel": ref is not None,
+            "confronto": {},
+        }
+        if ref:
+            ref_confronto = self._extract_referencia_confronto(ref)
+            if ref_confronto is not None:
+                report["confronto"]["referencia"] = ref_confronto
+        _add_ferramenta_data(report["confronto"], projection)
+        self._finalize_confronto(report["confronto"], ref)
+        report["quality_gates"] = self._build_quality_gates(report["confronto"])
+        report["action_report"] = report["quality_gates"]["items"]
+        report["status_final"] = report["quality_gates"]["decision"]
+        if canonical is not None:
+            cron = getattr(canonical, "cronograma", None)
+            if cron is not None:
+                report["rcpsp_schedule"] = _build_rcpsp_schedule(canonical, spec)
+        if any(entry.get("status") == "ERRO" for entry in results_log):
+            report["status_final"] = "INVIAVEL"
+        return report

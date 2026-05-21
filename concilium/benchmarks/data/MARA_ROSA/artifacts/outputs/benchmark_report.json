@@ -1,0 +1,195 @@
+﻿{
+  "projeto": "MARA_ROSA",
+  "slug": "MARA_ROSA",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 429,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 3459,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 106,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "OK",
+      "duration_ms": 128,
+      "avisos": []
+    },
+    {
+      "skill": "05-equipes-e-alocacao",
+      "status": "OK",
+      "duration_ms": 131,
+      "avisos": [
+        "Equipamento 'EQ-E0016': consumo_litros_hora não encontrado em nenhuma fonte; custo_combustivel_mensal=0"
+      ]
+    },
+    {
+      "skill": "06-precificacao-unitaria",
+      "status": "OK",
+      "duration_ms": 121,
+      "avisos": []
+    },
+    {
+      "skill": "07-custos-indiretos",
+      "status": "OK",
+      "duration_ms": 99,
+      "avisos": [
+        "Razão indireto/direto 7.5% fora da faixa [10.0%, 50.0%]"
+      ]
+    },
+    {
+      "skill": "10-diagnostico-criticidade",
+      "status": "OK",
+      "duration_ms": 104,
+      "avisos": []
+    },
+    {
+      "skill": "08-consolidacao-financeira",
+      "status": "OK",
+      "duration_ms": 86,
+      "avisos": [
+        "Margem consolidada 22.29% | status=VERMELHO"
+      ]
+    },
+    {
+      "skill": "11-avaliacao-intervencoes",
+      "status": "OK",
+      "duration_ms": 174,
+      "avisos": []
+    },
+    {
+      "skill": "09-relatorio-e-artefatos",
+      "status": "OK",
+      "duration_ms": 8239,
+      "avisos": []
+    },
+    {
+      "skill": "12-registro-decisoes",
+      "status": "OK",
+      "duration_ms": 95,
+      "avisos": []
+    },
+    {
+      "skill": "13-assessor-replanejamento",
+      "status": "OK",
+      "duration_ms": 93,
+      "avisos": []
+    },
+    {
+      "skill": "14-explorador-cenarios",
+      "status": "OK",
+      "duration_ms": 95,
+      "avisos": []
+    },
+    {
+      "skill": "15-relatorio-executivo",
+      "status": "OK",
+      "duration_ms": 103,
+      "avisos": []
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": null,
+      "custo_indireto": null,
+      "custo_total": null,
+      "preco_venda": null
+    },
+    "ferramenta": {
+      "custo_direto": 2325904.15,
+      "custo_direto_equipes": 14630888.559999999,
+      "custo_direto_catalogo": 2325904.15,
+      "custo_indireto": 1068592.77,
+      "custo_total": 3394496.92,
+      "preco_venda": 4368266.2,
+      "preco_venda_plus_eq": 4952763.48,
+      "preco_venda_catalogo": 4368266.2,
+      "bdi_lucro_impostos": 0.28686703890130505
+    },
+    "ferramenta_breakdown_direto": {
+      "mao_obra_total": 8463509.73,
+      "equipamentos_total": 4242105.85,
+      "diesel_total": 1458606.33,
+      "materiais_total": 0.0,
+      "direto_total_equipes": 14164221.9
+    },
+    "ferramenta_breakdown_indireto": {
+      "adm": 821684.79,
+      "top": 137077.38,
+      "lab": 0.0,
+      "qsms": 109830.6,
+      "mob": 0.0,
+      "total": 1068592.77
+    },
+    "actionable_insights": {
+      "criticidade": "1 A, 1 B, 2 C",
+      "sensibilidade": "1 alavancas corretivas, 0 oportunidades",
+      "intervencao": "Recomendacao Principal: Repair (AMARELO/VERMELHO->VERDE)"
+    },
+    "deltas": {},
+    "composicao_final": {
+      "custo_direto": {
+        "referencia": null,
+        "ferramenta": 2325904.15,
+        "delta_absoluto": null,
+        "delta_percentual": null
+      },
+      "custo_indireto": {
+        "referencia": null,
+        "ferramenta": 1068592.77,
+        "delta_absoluto": null,
+        "delta_percentual": null
+      },
+      "custo_total": {
+        "referencia": null,
+        "ferramenta": 3394496.92,
+        "delta_absoluto": null,
+        "delta_percentual": null
+      },
+      "preco_venda": {
+        "referencia": null,
+        "ferramenta": 4368266.2,
+        "delta_absoluto": null,
+        "delta_percentual": null
+      }
+    },
+    "breakdown_por_fase": {
+      "direto": {
+        "mao_obra_total": 8463509.73,
+        "equipamentos_total": 4242105.85,
+        "diesel_total": 1458606.33,
+        "materiais_total": 0.0,
+        "direto_total_equipes": 14164221.9
+      },
+      "indireto": {
+        "adm": 821684.79,
+        "top": 137077.38,
+        "lab": 0.0,
+        "qsms": 109830.6,
+        "mob": 0.0,
+        "total": 1068592.77
+      }
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "APROVADO"
+}

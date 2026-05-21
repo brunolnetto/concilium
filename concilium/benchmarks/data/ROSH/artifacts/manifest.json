@@ -1,0 +1,24 @@
+{
+  "slug": "ROSH",
+  "gerado_em": "2026-05-12T21:12:37",
+  "projeto": "ROSH - Pátio São Vicente SP",
+  "project_dir": null,
+  "paths": {
+    "inputs": [
+      "benchmarks\\data\\ROSH\\artifacts\\inputs\\referencia.json",
+      "benchmarks\\data\\ROSH\\artifacts\\raw\\2026_PATIO_ROSH_PLANEJAMENTO_PLANILHA PADRÃO SOMENTE M.O.xlsm"
+    ],
+    "intermediate": [
+      "benchmarks\\data\\ROSH\\artifacts\\intermediate\\extracao_intermediarios.json",
+      "benchmarks\\data\\ROSH\\artifacts\\intermediate\\iteracao_referencias_rosh.json",
+      "benchmarks\\data\\ROSH\\artifacts\\intermediate\\referencia.pre_phase4_remaining_backup.json"
+    ],
+    "outputs": [
+      "benchmarks\\data\\ROSH\\artifacts\\outputs\\benchmark_report.json",
+      "benchmarks\\data\\ROSH\\artifacts\\outputs\\relatorio.json",
+      "benchmarks\\data\\ROSH\\artifacts\\outputs\\relatorio.md",
+      "benchmarks\\data\\ROSH\\artifacts\\outputs\\resultado_planejamento.xlsx"
+    ],
+    "audit": []
+  }
+}

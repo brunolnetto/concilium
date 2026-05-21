@@ -1,0 +1,19 @@
+{
+  "codigo": "CPU-TERRA-BASE-ESTABILIZADA",
+  "descricao": "BASE ESTABILIZADA GRANULOMETRICAMENTE COM MISTURA SOLO BRITA (70% - 30%) EM USINA COM MATERIAL DE JAZIDA E BRITA PRODUZIDA",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "data_referencia_preco": "2026-03-01",
+  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "custo_direto_unitario_planilha": 87.262804,
+  "precos_unitarios_sbdi": {
+    "mo": 5.120826,
+    "diesel": 12.141978,
+    "material": 70.0,
+    "equipamentos": 0.0,
+    "total": 87.262804
+  },
+  "producao_id_ref": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001"
+}

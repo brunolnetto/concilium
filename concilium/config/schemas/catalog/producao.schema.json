@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://concilium.local/schemas/catalog/producao.schema.json",
+  "title": "Producao",
+  "description": "Registro de produtividade. Dois subtipos: (1) gerado automaticamente por CPU — origem string, sem calibração; (2) calibrado manualmente — origem objeto rico com condicoes_calibracao e qualidade.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "codigo",
+    "descricao",
+    "valor_horario"
+  ],
+  "properties": {
+    "id": {
+      "description": "Chave primária técnica imutável. Atribuída na criação e nunca alterada. Referenciada por CPU.producao_id_ref.",
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{3,80}$"
+    },
+    "codigo": {
+      "description": "Código legível por humanos, único dentro do contexto. Pode coincidir com id ou ser um alias mais curto. Não usar como chave estrangeira — usar id.",
+      "type": "string",
+      "minLength": 1
+    },
+    "descricao": {
+      "type": "string",
+      "minLength": 1
+    },
+    "valor_horario": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "unidade": {
+      "type": "string",
+      "minLength": 1
+    },
+    "categoria": {
+      "description": "Categoria operacional da produção para agrupamento.",
+      "type": ["string", "null"]
+    },
+    "origem": {
+      "description": "Procedência da produtividade. String para produções geradas por CPU ('PROPRIA'/'REFERENCIA'); objeto rico para produções calibradas.",
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/origemCpu"
+        },
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["tipo", "fonte_id", "data_calibracao", "referencia"],
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "calibrado_contra_obra_real",
+                "tabela_referencia",
+                "estimado",
+                "regressao",
+                "adotado_sicro"
+              ]
+            },
+            "fonte_id": {"type": "string"},
+            "data_calibracao": {"type": "string", "format": "date-time"},
+            "referencia": {"type": "string"}
+          }
+        }
+      ]
+    },
+    "condicoes_calibracao": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "tipo_solo": {"type": ["string", "null"]},
+        "dmt_medio": {"type": ["number", "null"]},
+        "season": {"type": ["string", "null"]},
+        "sequenciamento": {"type": ["string", "null"]},
+        "equipamento_idade": {"type": ["integer", "null"]},
+        "notas": {"type": ["string", "null"]}
+      }
+    },
+    "qualidade": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "confianca_pct": {"type": "integer", "minimum": 0, "maximum": 100},
+        "intervalo_confianca": {
+          "type": "array",
+          "prefixItems": [{"type": "number"}, {"type": "number"}],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "quantidade_amostras": {"type": "integer", "minimum": 1},
+        "desvio_padrao": {"type": "number", "minimum": 0}
+      }
+    },
+    "composicao_padrao_equipe": {
+      "$ref": "common.schema.json#/$defs/composicaoPadraoEquipe"
+    },
+    "equipe": {
+      "$ref": "common.schema.json#/$defs/composicaoPadraoEquipe",
+      "deprecated": true
+    },
+    "limite_producao": {
+      "type": "string",
+      "enum": ["equipamento", "mao_obra"],
+      "default": "equipamento"
+    },
+    "variantes": {
+      "description": "Variantes de cenário desta produção (ex: diferentes DMTs, condições climáticas).",
+      "type": ["array", "null"],
+      "items": {"type": "object", "additionalProperties": true}
+    },
+    "historico_observacoes": {
+      "type": "array",
+      "default": [],
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["data", "autor", "descricao"],
+        "properties": {
+          "data": {"type": "string", "format": "date-time"},
+          "autor": {"type": "string", "minLength": 1},
+          "descricao": {"type": "string", "minLength": 1},
+          "tipo": {
+            "type": "string",
+            "enum": ["calibracao", "correcao", "auditoria", "migracao", "outro"],
+            "default": "outro"
+          }
+        }
+      }
+    },
+    "auditoria": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["criado_por", "data_criacao", "ultima_modificacao", "modificado_por", "versao"],
+      "properties": {
+        "criado_por": {"type": "string"},
+        "data_criacao": {"type": "string", "format": "date-time"},
+        "ultima_modificacao": {"type": "string", "format": "date-time"},
+        "modificado_por": {"type": "string"},
+        "versao": {"type": "string"}
+      }
+    },
+    "producao_horaria": {
+      "deprecated": true,
+      "description": "Campo legado. Usar valor_horario."
+    }
+  }
+}

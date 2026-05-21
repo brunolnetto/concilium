@@ -1,0 +1,31 @@
+{
+  "id": "CPU-DIVER-ATI-072-PROD-001",
+  "codigo": "CPU-DIVER-ATI-072-PROD-001",
+  "descricao": "Produção CPU-DIVER-ATI-072",
+  "origem": "PROPRIA",
+  "valor_horario": 15.0,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-ENCARREGADO-DE-FRENT",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MONTADOR-MF",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": []
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 59.174,
+    "custo_padrao_pj": 55.6913
+  },
+  "cpu_ids": [
+    "CPU-DIVER-ATI-072"
+  ]
+}

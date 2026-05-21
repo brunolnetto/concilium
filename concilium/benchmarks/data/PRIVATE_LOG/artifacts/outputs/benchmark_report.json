@@ -1,0 +1,51 @@
+﻿{
+  "projeto": "PRIVATE_LOG",
+  "slug": "PRIVATE_LOG",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 424,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 2614,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 31,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "ERRO",
+      "duration_ms": 37,
+      "avisos": [],
+      "erros": [
+        "Itens não completados: eap-1_5=93.9%; eap-1_2=93.3%; eap-1_4=92.0%; eap-1_3=88.7%; eap-1_7=93.3%"
+      ]
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 14885785.22,
+      "custo_indireto": 6882876.35,
+      "custo_total": 21768661.57,
+      "preco_venda": 25944479.43
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "APROVADO"
+}

@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-E0039",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Veículo leve",
+  "unidade": "h",
+  "preco_unitario": 56.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0039",
+    "valor_locacao_mensal": 11200.0,
+    "horas_mes": 200,
+    "consumo_litros_hora": 0.8
+  },
+  "classe_compartilhamento": {
+    "classe": "concorrente_compartilhavel",
+    "capacidade_cobertura": 3
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

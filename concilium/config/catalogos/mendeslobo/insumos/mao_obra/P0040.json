@@ -1,0 +1,13 @@
+{
+  "codigo": "P0040",
+  "tipo": "MAO_OBRA",
+  "descricao": "Operador de Escavadeira",
+  "unidade": "mês",
+  "preco_unitario": 10300.0,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "salario_base": 5000.0,
+    "custo_com_encargos": 10300.0
+  }
+}

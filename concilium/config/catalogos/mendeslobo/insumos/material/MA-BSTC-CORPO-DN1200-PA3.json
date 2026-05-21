@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-BSTC-CORPO-DN1200-PA3",
+  "tipo": "MATERIAL",
+  "descricao": "Brita 01 (Pedrisco)",
+  "unidade": "m3",
+  "preco_unitario": 145.0,
+  "fonte_preco": "cotacao_mercado",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "OBRAS_ARTE"
+}

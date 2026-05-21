@@ -1,0 +1,13 @@
+{
+  "codigo": "P0004",
+  "tipo": "MAO_OBRA",
+  "descricao": "Apontador Lider",
+  "unidade": "mês",
+  "preco_unitario": 8157.6,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "salario_base": 3960.0,
+    "custo_com_encargos": 8157.6
+  }
+}

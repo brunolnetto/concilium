@@ -1,0 +1,17 @@
+﻿# Concilium Configuration
+# This file centralizes all tunable parameters and thresholds
+
+version: "1.0"  # ?? manter/retirar
+
+# Catalog backend and cache (ADR-024)
+catalog:
+  backend: local_json  # local_json | google_sheets
+  remote_ttl_minutes: 60
+  offline_fallback: true
+  # google_sheets:  # ?? manter/retirar
+  #   spreadsheet_id: ""
+  #   credentials_env: CONCILIUM_GOOGLE_CREDENTIALS
+  # sharepoint:
+  #   site_url: ""
+  #   list_name: ""
+  #   credentials_env: CONCILIUM_SHAREPOINT_CREDENTIALS

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://concilium.local/schemas/catalog/cpu.schema.json",
+  "title": "CPU (ADR-053)",
+  "type": "object",
+  "additionalProperties": false,
+  "patternProperties": {"^_": {"type": ["string", "number", "null"]}},
+  "required": [
+    "codigo",
+    "descricao",
+    "unidade",
+    "origem",
+    "producao_id_ref",
+    "categoria",
+    "composicao_itens"
+  ],
+  "properties": {
+    "codigo": {
+      "$ref": "common.schema.json#/$defs/codigoCpu"
+    },
+    "descricao": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unidade": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origem": {
+      "$ref": "common.schema.json#/$defs/origemCpu"
+    },
+    "cpu_referencia_id": {
+      "type": ["string", "null"]
+    },
+    "producao_id_ref": {
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{3,80}$"
+    },
+    "categoria": {
+      "$ref": "common.schema.json#/$defs/categoriaCpu"
+    },
+    "composicao_itens": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/composicaoItem" },
+      "uniqueItems": true
+    },
+    "fonte_preco": {
+      "description": "Deprecated: fonte de preço ao nível da CPU. Use Insumo.fonte_preco. Mantido para compatibilidade durante curação.",
+      "deprecated": true,
+      "type": ["string", "null"]
+    },
+    "data_referencia_preco": {
+      "description": "Deprecated: data de referência ao nível da CPU. Use Insumo.data_referencia_preco. Mantido para compatibilidade durante curação.",
+      "deprecated": true,
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "atributos_categoria": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "dmt_min_metros": {"type": ["number", "null"], "minimum": 0},
+        "dmt_max_metros": {"type": ["number", "null"]},
+        "dmt_referencia_m": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "custo_direto_unitario_planilha": {
+      "description": "Custo direto unitário extraído da planilha de referência (modo planilha-first, ADR-050). Somente leitura.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "precos_unitarios_sbdi": {
+      "description": "Decomposição do PU por categoria de custo com BDI separado (planilha-first). Chaves: material, mao_obra, diesel, equipamentos.",
+      "type": ["object", "null"],
+      "additionalProperties": {"type": ["number", "null"]}
+    },
+    "_cu_planilha": {
+      "type": ["number", "null"]
+    },
+    "producao_horaria": {
+      "deprecated": true
+    },
+    "producao_id": {
+      "deprecated": true
+    },
+    "equipe": {
+      "deprecated": true
+    }
+  },
+  "not": {
+    "anyOf": [
+      {"required": ["producao_horaria"]},
+      {"required": ["producao_id"]},
+      {"required": ["equipe"]}
+    ]
+  }
+}

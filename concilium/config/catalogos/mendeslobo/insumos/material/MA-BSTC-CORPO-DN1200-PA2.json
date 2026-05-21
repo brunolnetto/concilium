@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-BSTC-CORPO-DN1200-PA2",
+  "tipo": "MATERIAL",
+  "descricao": "Areia Fina",
+  "unidade": "m3",
+  "preco_unitario": 100.0,
+  "fonte_preco": "cotacao_mercado",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "TERRAPLENAGEM"
+}

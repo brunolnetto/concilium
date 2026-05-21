@@ -1,0 +1,469 @@
+{
+  "$schema_item": "https://concilium.framework/schemas/v1/cpu",
+  "$comment": "Catálogo de CPUs AGIS — seed mínimo (7 entradas) para sustentar as 3 amostras. Coeficientes baseados em práticas comuns de obras lineares no Brasil. Composição-padrão de equipe é referência inicial; planejador customiza por projeto.",
+  "cpus": [
+    {
+      "codigo": "ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, carga, transporte de material 1ª categoria — DMT até 2000m",
+      "unidade": "m3",
+      "origem": "PROPRIA",
+      "cpu_referencia_id": "S 02 100 03",
+      "producao_horaria": 233.54208,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ESCAV-HID-38T",
+          "coeficiente": 0.004281883590314859,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-15M3",
+          "coeficiente": 0.02997318513220401,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.18626193617869635,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM",
+            "num_pessoas": 7
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ESCAV-HID-38T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-15M3",
+            "num_unidades": 7
+          }
+        ]
+      },
+      "atributos_categoria": {
+        "dmt_min_metros": 0,
+        "dmt_max_metros": 2000
+      },
+      "_custo_horario_equip_real": {
+        "ESCAV-HID-38T": 278.4,
+        "CAM-BASC-15M3_14m3": 127.475,
+        "nota": "Valores horários reais da planilha — serão convertidos p/ mensais na skill 03"
+      }
+    },
+    {
+      "codigo": "COMPACT-ATERRO",
+      "descricao": "Compactação de aterro a 100% PN",
+      "unidade": "m3",
+      "origem": "PROPRIA",
+      "cpu_referencia_id": "S 02 220 01",
+      "producao_horaria": 140.0,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "OPER-MOTO",
+          "coeficiente": 0.0072,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "OPER-VIBRO",
+          "coeficiente": 0.0072,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "MOTONIVEL",
+          "coeficiente": 0.0072,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "ROLO-VIBRO-12T",
+          "coeficiente": 0.0072,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.131,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-MOTO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "OPER-VIBRO",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "MOTONIVEL",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "ROLO-VIBRO-12T",
+            "num_unidades": 1
+          }
+        ]
+      }
+    },
+    {
+      "codigo": "REGULARIZACAO-SUBLEITO",
+      "descricao": "Regularização de subleito",
+      "unidade": "m2",
+      "origem": "PROPRIA",
+      "producao_horaria": 380.0,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "OPER-MOTO",
+          "coeficiente": 0.00264,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "MOTONIVEL",
+          "coeficiente": 0.00264,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.029,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-MOTO",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "MOTONIVEL",
+            "num_unidades": 1
+          }
+        ]
+      }
+    },
+    {
+      "codigo": "PAV-BASE-BGTC",
+      "descricao": "Base de BGTC — execução e compactação",
+      "unidade": "m3",
+      "origem": "PROPRIA",
+      "cpu_referencia_id": "S 03 200 02",
+      "producao_horaria": 22.0,
+      "categoria": "PAVIMENTACAO",
+      "composicao_itens": [
+        {
+          "insumo_id": "OPER-MOTO",
+          "coeficiente": 0.0455,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "OPER-VIBRO",
+          "coeficiente": 0.0455,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "MOTOR-CAM",
+          "coeficiente": 0.091,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "SERV-GERAL",
+          "coeficiente": 0.0455,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "MOTONIVEL",
+          "coeficiente": 0.0455,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "ROLO-VIBRO-12T",
+          "coeficiente": 0.0455,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-15M3",
+          "coeficiente": 0.091,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "BGTC-MIX",
+          "coeficiente": 1.05,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.677,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-MOTO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "OPER-VIBRO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM",
+            "num_pessoas": 2
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "MOTONIVEL",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "ROLO-VIBRO-12T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-15M3",
+            "num_unidades": 2
+          }
+        ]
+      }
+    },
+    {
+      "codigo": "PAV-CBUQ-FAIXA-C",
+      "descricao": "Concreto betuminoso usinado a quente — Faixa C",
+      "unidade": "ton",
+      "origem": "PROPRIA",
+      "cpu_referencia_id": "S 03 410 04",
+      "producao_horaria": 8.5,
+      "categoria": "PAVIMENTACAO",
+      "composicao_itens": [
+        {
+          "insumo_id": "OPER-VIBRO",
+          "coeficiente": 0.118,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "MOTOR-CAM",
+          "coeficiente": 0.235,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "SERV-GERAL",
+          "coeficiente": 0.235,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "USINA-CBUQ",
+          "coeficiente": 0.118,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "VIBROACAB",
+          "coeficiente": 0.118,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "ROLO-VIBRO-12T",
+          "coeficiente": 0.118,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-15M3",
+          "coeficiente": 0.235,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CBUQ-FAIXA-C",
+          "coeficiente": 1.02,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 5.3,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-VIBRO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM",
+            "num_pessoas": 2
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 2
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "USINA-CBUQ",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "VIBROACAB",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "ROLO-VIBRO-12T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-15M3",
+            "num_unidades": 2
+          }
+        ]
+      }
+    },
+    {
+      "codigo": "DREN-MAN-DN300",
+      "descricao": "Coletor tronco DN300 em manilha cerâmica — abertura, assentamento, reaterro",
+      "unidade": "m",
+      "origem": "PROPRIA",
+      "cpu_referencia_id": "S 06 110 11",
+      "producao_horaria": 3.0,
+      "categoria": "SANEAMENTO",
+      "composicao_itens": [
+        {
+          "insumo_id": "OPER-ESCAV",
+          "coeficiente": 0.333,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "ENCAN",
+          "coeficiente": 0.333,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "PEDREIRO",
+          "coeficiente": 0.333,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "SERV-GERAL",
+          "coeficiente": 0.667,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "RETRO-ESCAV",
+          "coeficiente": 0.333,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "MANILHA-CERAM-300",
+          "coeficiente": 1.05,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "AREIA-MEDIA",
+          "coeficiente": 0.42,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 2.27,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "ENCAN",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "PEDREIRO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 2
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "RETRO-ESCAV",
+            "num_unidades": 1
+          }
+        ]
+      }
+    },
+    {
+      "codigo": "POCO-VISITA-PADRAO",
+      "descricao": "Poço de visita padrão DNIT — execução completa",
+      "unidade": "un",
+      "origem": "PROPRIA",
+      "producao_horaria": 0.25,
+      "categoria": "SANEAMENTO",
+      "composicao_itens": [
+        {
+          "insumo_id": "PEDREIRO",
+          "coeficiente": 4.0,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "SERV-GERAL",
+          "coeficiente": 8.0,
+          "categoria_custo": "MAO_OBRA"
+        },
+        {
+          "insumo_id": "CIMENTO-CPII-50KG",
+          "coeficiente": 28,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "AREIA-MEDIA",
+          "coeficiente": 1.8,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "BRITA-1",
+          "coeficiente": 2.4,
+          "categoria_custo": "MATERIAL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "PEDREIRO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 2
+          }
+        ],
+        "equipamentos": []
+      }
+    }
+  ]
+}

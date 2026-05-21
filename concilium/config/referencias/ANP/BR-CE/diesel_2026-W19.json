@@ -1,0 +1,17 @@
+{
+  "$schema": "https://concilium.framework/schemas/v1/tabela_referencia",
+  "provedor": "ANP",
+  "versao": "2026-W19",
+  "jurisdicao": "BR-CE",
+  "data_vigencia": "2026-05-09",
+  "imutavel": true,
+  "fonte_coleta": "ANP_seed_web",
+  "combustiveis": [
+    {
+      "produto": "DIESEL_S10",
+      "unidade": "l",
+      "preco_medio_ponderado": 7.35,
+      "n_postos": 312
+    }
+  ]
+}

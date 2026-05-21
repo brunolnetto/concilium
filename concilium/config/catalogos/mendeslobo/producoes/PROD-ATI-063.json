@@ -1,0 +1,50 @@
+{
+  "id": "PROD-ATI-063",
+  "codigo": "ATI-063",
+  "descricao": "Piso intertravado de concreto e=10cm (Adotado SICRO)",
+  "valor_horario": 15.0,
+  "unidade": "m2",
+  "origem": {
+    "tipo": "adotado_sicro",
+    "fonte_id": "SICRO-5-03-501-0010",
+    "data_calibracao": "2025-05-01",
+    "referencia": "SICRO CE — mai/2025"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "urbanismo",
+    "dmt_medio": 0.0,
+    "season": "nao_aplicavel",
+    "sequenciamento": "linear_continuo"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "nota": "Adotada do SICRO P5.2"
+  },
+  "categoria": "PAVIMENTACAO",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MONTADOR",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0033",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0026",
+        "num_unidades": 1
+      }
+    ]
+  }
+}

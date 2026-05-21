@@ -1,0 +1,11 @@
+{
+  "codigo": "CPU-DIVER-ATI-090",
+  "descricao": "Mata burro padrão VALEC (Fornecimento e Instalação)",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "DIVERSOS",
+  "composicao_itens": [],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-DIVER-ATI-090-PROD-001"
+}

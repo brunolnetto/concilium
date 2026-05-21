@@ -1,0 +1,396 @@
+{
+  "$schema_item": "https://concilium.framework/schemas/v1/insumo",
+  "$comment": "Catálogo de insumos AGIS — seed mínimo (25 entradas) para sustentar as 3 amostras (terraplenagem, pavimentação, saneamento). Preços em BRL com data de referência abr/2026.",
+  "insumos": [
+    {
+      "codigo": "OPER-ESCAV",
+      "tipo": "MAO_OBRA",
+      "descricao": "Operador de escavadeira",
+      "unidade": "h",
+      "preco_unitario": 5000.0,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 4200.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "OPER-MOTO",
+      "tipo": "MAO_OBRA",
+      "descricao": "Operador de motoniveladora",
+      "unidade": "h",
+      "preco_unitario": 5000.0,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 4500.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "OPER-VIBRO",
+      "tipo": "MAO_OBRA",
+      "descricao": "Operador de rolo vibratório",
+      "unidade": "h",
+      "preco_unitario": 3078.24,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 3800.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "MOTOR-CAM",
+      "tipo": "MAO_OBRA",
+      "descricao": "Motorista de caminhão basculante",
+      "unidade": "h",
+      "preco_unitario": 3078.24,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 3200.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "PEDREIRO",
+      "tipo": "MAO_OBRA",
+      "descricao": "Pedreiro",
+      "unidade": "h",
+      "preco_unitario": 3078.24,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 2800.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "ENCAN",
+      "tipo": "MAO_OBRA",
+      "descricao": "Encanador",
+      "unidade": "h",
+      "preco_unitario": 3078.24,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 2900.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "SERV-GERAL",
+      "tipo": "MAO_OBRA",
+      "descricao": "Servente",
+      "unidade": "h",
+      "preco_unitario": 2043.36,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 1800.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "TOPO",
+      "tipo": "MAO_OBRA",
+      "descricao": "Topógrafo",
+      "unidade": "h",
+      "preco_unitario": 4002.24,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "horista_CE",
+        "horas_extras_pct_padrao": 0.25
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 4800.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "ADM-COORD",
+      "tipo": "MAO_OBRA",
+      "descricao": "Coordenador de obra",
+      "unidade": "h",
+      "preco_unitario": 22000.0,
+      "fonte_preco": "negociado",
+      "atributos_especificos": {
+        "categoria_sindical": "pj_CE",
+        "horas_extras_pct_padrao": 0.0
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 12500.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "ESCAV-HID-38T",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Escavadeira hidráulica sobre esteira 38t",
+      "unidade": "h",
+      "preco_unitario": 278.4,
+      "fonte_preco": "catalogo_proprio",
+      "tabela_referencia_id": "SICRO_2024_CE",
+      "codigo_referencia_externa": "I 02 015 03",
+      "atributos_especificos": {
+        "consumo_litros_hora": 18.5,
+        "potencia_cv": 245
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 28500.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "PA-CARREG-CY",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Pá carregadeira sobre pneus CY 20t",
+      "unidade": "h",
+      "preco_unitario": 104.5,
+      "fonte_preco": "catalogo_proprio",
+      "atributos_especificos": {
+        "consumo_litros_hora": 14.0,
+        "potencia_cv": 185
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 22000.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "MOTONIVEL",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Motoniveladora 140HP",
+      "unidade": "h",
+      "preco_unitario": 220.84,
+      "fonte_preco": "catalogo_proprio",
+      "atributos_especificos": {
+        "consumo_litros_hora": 11.0,
+        "potencia_cv": 140
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 24000.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "ROLO-VIBRO-12T",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Rolo compactador vibratório 12t",
+      "unidade": "h",
+      "preco_unitario": 110.0,
+      "fonte_preco": "catalogo_proprio",
+      "atributos_especificos": {
+        "consumo_litros_hora": 7.2,
+        "potencia_cv": 95
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 14000.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "CAM-BASC-15M3",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Caminhão basculante 15m³",
+      "unidade": "h",
+      "preco_unitario": 127.475,
+      "fonte_preco": "catalogo_proprio",
+      "atributos_especificos": {
+        "consumo_litros_hora": 8.5,
+        "potencia_cv": 280
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 12000.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "RETRO-ESCAV",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Retroescavadeira 4x4 75HP",
+      "unidade": "h",
+      "preco_unitario": 74.5,
+      "fonte_preco": "catalogo_proprio",
+      "atributos_especificos": {
+        "consumo_litros_hora": 6.8,
+        "potencia_cv": 75
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 11500.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "USINA-CBUQ",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Usina de asfalto a quente",
+      "unidade": "h",
+      "preco_unitario": 456.7308,
+      "fonte_preco": "catalogo_proprio",
+      "atributos_especificos": {
+        "consumo_litros_hora": 28.0
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 95000.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "VIBROACAB",
+      "tipo": "EQUIPAMENTO",
+      "descricao": "Vibroacabadora de asfalto",
+      "unidade": "h",
+      "preco_unitario": 182.6923,
+      "fonte_preco": "catalogo_proprio",
+      "atributos_especificos": {
+        "consumo_litros_hora": 9.5,
+        "potencia_cv": 120
+      },
+      "historico_precos": [
+        {
+          "preco_unitario": 38000.0,
+          "data_inicio_vigencia": "2024-01-01",
+          "fonte": "preco_mensal_original_seed_v1"
+        }
+      ]
+    },
+    {
+      "codigo": "DIESEL-S10",
+      "tipo": "MATERIAL",
+      "descricao": "Óleo diesel S10",
+      "unidade": "L",
+      "preco_unitario": 6.99,
+      "fonte_preco": "cotacao_mercado"
+    },
+    {
+      "codigo": "BGTC-MIX",
+      "tipo": "MATERIAL",
+      "descricao": "Brita graduada tratada com cimento (BGTC) — mistura usinada",
+      "unidade": "m3",
+      "preco_unitario": 92.5,
+      "fonte_preco": "catalogo_proprio",
+      "tabela_referencia_id": "SICRO_2024_CE",
+      "codigo_referencia_externa": "I 03 050 02"
+    },
+    {
+      "codigo": "CBUQ-FAIXA-C",
+      "tipo": "MATERIAL",
+      "descricao": "Massa asfáltica CBUQ Faixa C — usinada",
+      "unidade": "ton",
+      "preco_unitario": 385.0,
+      "fonte_preco": "catalogo_proprio"
+    },
+    {
+      "codigo": "MANILHA-CERAM-300",
+      "tipo": "MATERIAL",
+      "descricao": "Manilha cerâmica DN 300mm",
+      "unidade": "m",
+      "preco_unitario": 78.0,
+      "fonte_preco": "cotacao_mercado"
+    },
+    {
+      "codigo": "CIMENTO-CPII-50KG",
+      "tipo": "MATERIAL",
+      "descricao": "Cimento Portland CP II — saco 50kg",
+      "unidade": "saco",
+      "preco_unitario": 38.5,
+      "fonte_preco": "cotacao_mercado"
+    },
+    {
+      "codigo": "AREIA-MEDIA",
+      "tipo": "MATERIAL",
+      "descricao": "Areia média lavada",
+      "unidade": "m3",
+      "preco_unitario": 68.0,
+      "fonte_preco": "cotacao_mercado"
+    },
+    {
+      "codigo": "BRITA-1",
+      "tipo": "MATERIAL",
+      "descricao": "Brita nº 1",
+      "unidade": "m3",
+      "preco_unitario": 78.0,
+      "fonte_preco": "cotacao_mercado"
+    },
+    {
+      "codigo": "ENSAIO-CBR",
+      "tipo": "TERCEIRIZADO",
+      "descricao": "Ensaio de CBR (laboratório terceirizado)",
+      "unidade": "un",
+      "preco_unitario": 280.0,
+      "fonte_preco": "cotacao_mercado"
+    }
+  ]
+}

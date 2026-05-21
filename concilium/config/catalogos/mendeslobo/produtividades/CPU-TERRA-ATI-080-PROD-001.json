@@ -1,0 +1,28 @@
+{
+  "id": "CPU-TERRA-ATI-080-PROD-001",
+  "codigo": "CPU-TERRA-ATI-080-PROD-001",
+  "descricao": "Produção CPU-TERRA-ATI-080",
+  "origem": "PROPRIA",
+  "valor_horario": 450.0,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-HIDROSSEMEADORA",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 5.5,
+    "custo_padrao_pj": 4.8
+  },
+  "cpu_ids": [
+    "CPU-TERRA-ATI-080"
+  ]
+}

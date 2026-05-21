@@ -1,0 +1,74 @@
+{
+  "$schema": "https://concilium.framework/schemas/v1/tabela_referencia",
+  "$comment": "Cabeçalho mínimo da SICRO 2024/CE. Itens reais devem ser importados de fonte oficial DNIT na implementação. Para Fase 0, basta o cabeçalho com 5 itens-chave que as CPUs próprias da AGIS referenciam.",
+
+  "codigo": "SICRO_2024_CE",
+  "provedor": "SICRO",
+  "versao": "2024",
+  "regiao": "CE",
+  "data_vigencia": "2024-01-01",
+  "url_fonte": "https://www.gov.br/dnit/pt-br/assuntos/planejamento-e-pesquisa/custos-e-pagamentos/sicro/nordeste/ceara",
+  "imutavel": true,
+
+  "composicoes_referencia": [
+    {
+      "codigo_referencia": "S 02 100 03",
+      "descricao": "Escavação, carga e transporte material 1ª categoria — DMT até 200m",
+      "unidade": "m3",
+      "preco_unitario_publicado": 9.85,
+      "data_referencia_preco": "2024-01-01"
+    },
+    {
+      "codigo_referencia": "S 02 220 01",
+      "descricao": "Compactação de aterros a 100% PN",
+      "unidade": "m3",
+      "preco_unitario_publicado": 4.32,
+      "data_referencia_preco": "2024-01-01"
+    },
+    {
+      "codigo_referencia": "S 03 200 02",
+      "descricao": "Base de brita graduada tratada com cimento (BGTC)",
+      "unidade": "m3",
+      "preco_unitario_publicado": 152.40,
+      "data_referencia_preco": "2024-01-01"
+    },
+    {
+      "codigo_referencia": "S 03 410 04",
+      "descricao": "Concreto betuminoso usinado a quente (CBUQ) — Faixa C",
+      "unidade": "ton",
+      "preco_unitario_publicado": 478.20,
+      "data_referencia_preco": "2024-01-01"
+    },
+    {
+      "codigo_referencia": "S 06 110 11",
+      "descricao": "Coletor de esgoto DN 300mm em manilha cerâmica",
+      "unidade": "m",
+      "preco_unitario_publicado": 198.50,
+      "data_referencia_preco": "2024-01-01"
+    }
+  ],
+
+  "insumos_referencia": [
+    {
+      "codigo_referencia": "I 01 020 01",
+      "descricao": "Operador de escavadeira",
+      "tipo": "MAO_OBRA",
+      "unidade": "h",
+      "preco_publicado": 28.50
+    },
+    {
+      "codigo_referencia": "I 02 015 03",
+      "descricao": "Escavadeira hidráulica sobre esteira 38t",
+      "tipo": "EQUIPAMENTO",
+      "unidade": "h",
+      "preco_publicado": 178.40
+    },
+    {
+      "codigo_referencia": "I 03 050 02",
+      "descricao": "Brita graduada tratada com cimento",
+      "tipo": "MATERIAL",
+      "unidade": "m3",
+      "preco_publicado": 89.20
+    }
+  ]
+}

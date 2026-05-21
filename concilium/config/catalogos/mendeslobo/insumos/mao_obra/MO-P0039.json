@@ -1,0 +1,20 @@
+{
+  "codigo": "MO-P0039",
+  "tipo": "MAO_OBRA",
+  "descricao": "Montador de Meio Fio",
+  "unidade": "mes",
+  "preco_unitario": 3843.4,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "CLT",
+    "horas_extras_pct_padrao": 0,
+    "_audit_encargos": "Removido: custo_com_encargos=6211.70 (fator=1.62). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009)."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "codigo_sicro": "P0039",
+  "categoria": "DIVERSOS"
+}

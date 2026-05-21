@@ -1,0 +1,10 @@
+{
+  "$schema": "https://concilium.framework/schemas/v1/tabela_referencia",
+  "provedor": "SICRO",
+  "versao": "2026-01",
+  "jurisdicao": "BR-AP",
+  "data_vigencia": "2026-01-01",
+  "url_fonte": "https://www.gov.br/dnit/pt-br/assuntos/planejamento-e-pesquisa/custos-referenciais/sistemas-de-custos/sicro/relatorios/relatorios-sicro/norte/amapa/2026/janeiro/ap-01-2026.7z",
+  "imutavel": true,
+  "cpus": []
+}

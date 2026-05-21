@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-EXTRUSORA",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Extrusora",
+  "unidade": "h",
+  "preco_unitario": 40.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0017",
+    "valor_locacao_mensal": 8000,
+    "horas_mes": 200,
+    "consumo_litros_hora": 2.0
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

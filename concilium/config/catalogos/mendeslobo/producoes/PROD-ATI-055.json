@@ -1,0 +1,66 @@
+{
+  "id": "PROD-ATI-055",
+  "codigo": "ATI-055",
+  "descricao": "Base de Brita Graduada Tratada com Cimento - BGTC (Adotado SICRO)",
+  "valor_horario": 150.0,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "adotado_sicro",
+    "fonte_id": "SICRO-5-03-201-0005",
+    "data_calibracao": "2025-05-01",
+    "referencia": "SICRO CE — mai/2025"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "brita_graduada",
+    "dmt_medio": 0.0,
+    "season": "nao_aplicavel",
+    "sequenciamento": "linear_continuo"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "nota": "Adotada do SICRO P5.2"
+  },
+  "categoria": "OBRAS_ARTE",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-PIPA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCARREG-CAPA",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0028",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0035",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0010",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0008",
+        "num_unidades": 2
+      }
+    ]
+  }
+}

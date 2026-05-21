@@ -1,0 +1,121 @@
+[project]
+name = "concilium"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.116.0",
+    "fastmcp>=3.2.4",
+    "highcharts-gantt>=1.7.0",
+    "jsonschema>=4.23.0",
+    "jmespath>=1.1.0",
+    "openpyxl>=3.1.5",
+    "pulp>=3.3.0",
+    "pydantic>=2.13.3",
+    "python-statemachine>=3.0.0",
+    "rich>=15.0.0",
+    "streamlit>=1.46.0",
+    "typer>=0.25.0",
+    "uvicorn>=0.35.0",
+    "pydot>=4.0.1",
+    "fpdf2>=2.8.0",
+]
+
+[project.scripts]
+concilium = "concilium.presentation.main:main"
+concilium-api = "concilium.presentation.api.app:main"
+
+[project.optional-dependencies]
+# ADR-047: SharePoint backend (instalar com: pip install 'concilium[sharepoint]')
+sharepoint = [
+    "msal>=1.31.0",
+    "httpx>=0.28.1",
+]
+
+[dependency-groups]
+dev = [
+    "codebase-stats>=0.0.3",
+    "httpx>=0.28.1",
+    "pre-commit>=4.3.0",
+    "jmespath>=1.1.0",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.1.0",
+    "requests>=2.33.1",
+    "ruff>=0.14.2",
+    "pytest-json-report>=1.5.0",
+    "import-linter>=2.11",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+norecursedirs = ["scripts", ".venv", "build", "dist", "*.egg-info", "__pycache__"]
+python_files = ["test_*.py", "*_test.py"]
+markers = [
+    "asyncio: marca testes assíncronos (pytest-asyncio)",
+    "integration: testes de integração que requerem infraestrutura",
+    "slow: testes lentos (>5s)",
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]
+"tests/conftest.py" = ["E402"]
+"tests/unit/test_skills.py" = ["E402"]
+"tests/unit/test_application_services_refactor.py" = ["E402"]
+"**/theme.py" = ["E501"]  # CSS strings cannot be split across lines
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# ── ADR-029 Fase 3: import-linter contracts (Dependency Rule enforcement) ──
+[tool.importlinter]
+root_packages = ["concilium"]
+include_external_packages = true
+
+# Domain purity
+[[tool.importlinter.contracts]]
+name = "Domain isolation"
+type = "forbidden"
+source_modules = ["concilium.domain"]
+forbidden_modules = [
+    "concilium.application",
+    "concilium.infrastructure",
+    "concilium.presentation",
+    "sqlalchemy",
+    "fastapi",
+    "requests",
+]
+
+# Application orchestrates
+[[tool.importlinter.contracts]]
+name = "Application cannot depend on presentation"
+type = "forbidden"
+source_modules = ["concilium.application"]
+forbidden_modules = [
+    "concilium.presentation",
+]
+
+# FastAPI presentation depends only on application
+[[tool.importlinter.contracts]]
+name = "Presentation API cannot bypass application"
+type = "forbidden"
+source_modules = ["concilium.presentation.api"]
+forbidden_modules = [
+    "concilium.domain",
+]
+allow_indirect_imports = true

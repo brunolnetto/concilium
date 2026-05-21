@@ -1,0 +1,19 @@
+{
+  "codigo": "MO-OPER-BETONEIRA",
+  "tipo": "MAO_OBRA",
+  "descricao": "Operador de Betoneira",
+  "unidade": "mes",
+  "preco_unitario": 3078.24,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "horista_CE",
+    "horas_extras_pct_padrao": 0.25,
+    "_audit_encargos": "Removido: custo_com_encargos=6341.17 (fator=2.06). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009)."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

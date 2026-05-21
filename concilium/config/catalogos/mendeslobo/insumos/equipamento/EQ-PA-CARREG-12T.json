@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-PA-CARREG-12T",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Pá carregadeira 12t",
+  "unidade": "h",
+  "preco_unitario": 104.5,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0024",
+    "valor_locacao_mensal": 20900,
+    "horas_mes": 200,
+    "consumo_litros_hora": 13.0
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

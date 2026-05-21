@@ -1,0 +1,12 @@
+{
+  "codigo": "CPU-TERRA-ATI-015",
+  "descricao": "Esc/carg/transp 3ªcat DMT<=2000m",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "dmt_referencia_m": 1500.0,
+  "producao_id_ref": "CPU-TERRA-ATI-015-PROD-001"
+}

@@ -1,0 +1,48 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace/concilium
+    command: >
+      sh -lc "uvicorn concilium.presentation.api.app:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      CONCILIUM_ROOT: /workspace/concilium
+      CONCILIUM_CONFIG_ROOT: /workspace/concilium/config
+      PYTHONPATH: /workspace/concilium/src
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/workspace/concilium
+      - ./config:/workspace/concilium/config:rw
+      - concilium_projects:/workspace/concilium/projetos
+      - concilium_benchmark_projects:/workspace/concilium/benchmarks/projetos
+      - concilium_pip_cache:/root/.cache/pip
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /workspace/concilium
+    command: >
+      sh -lc "streamlit run src/concilium/presentation/ui/prototype_streamlit.py
+      --server.port 8501 --server.address 0.0.0.0"
+    environment:
+      CONCILIUM_ROOT: /workspace/concilium
+      CONCILIUM_CONFIG_ROOT: /workspace/concilium/config
+      PYTHONPATH: /workspace/concilium/src
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    volumes:
+      - ./:/workspace/concilium
+      - ./config:/workspace/concilium/config:rw
+      - concilium_projects:/workspace/concilium/projetos
+      - concilium_benchmark_projects:/workspace/concilium/benchmarks/projetos
+      - concilium_pip_cache:/root/.cache/pip
+
+volumes:
+  concilium_projects:
+  concilium_benchmark_projects:
+  concilium_pip_cache:

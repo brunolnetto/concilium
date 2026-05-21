@@ -1,0 +1,18 @@
+{
+  "codigo": "CPU-TERRA-ATI-011",
+  "descricao": "Esc/carg/transp 1ªcat DMT<=2000m",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "dmt_referencia_m": 1500.0,
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.159744,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-TERRA-ATI-011-PROD-001"
+}

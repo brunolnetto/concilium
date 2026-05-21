@@ -1,0 +1,25 @@
+{
+  "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+  "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.12203368,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "data_referencia_preco": "2026-03-30",
+  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "custo_direto_unitario_planilha": 7.534195,
+  "precos_unitarios_sbdi": {
+    "mo": 2.94843,
+    "diesel": 4.709873,
+    "material": 0.0,
+    "equipamentos": 0.0,
+    "total": 7.658303
+  },
+  "producao_id_ref": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001"
+}

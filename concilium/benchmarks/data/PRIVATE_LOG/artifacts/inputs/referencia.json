@@ -1,0 +1,1997 @@
+{
+  "meta": {
+    "slug": "PRIVATE_LOG_CALIBRADO",
+    "projeto": "PRIVATE LOG - CALIBRADO",
+    "extraido_em": "2026-05-09T11:31:05.607549+00:00",
+    "fontes": {
+      "benchmark_report": "C:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\concilium\\benchmark_private_log_calibrado.json",
+      "project_dir": "C:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\concilium\\projetos\\6e097ec6-65aa-4b29-9707-d2757336015b",
+      "canonical": "C:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\concilium\\projetos\\6e097ec6-65aa-4b29-9707-d2757336015b\\v1\\canonical.json",
+      "catalogo": "C:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\concilium\\config\\catalogos\\mendeslobo"
+    }
+  },
+  "cpus": {
+    "total": 6,
+    "itens_eap": [
+      {
+        "item_id": "eap-1_5",
+        "ordem": 1,
+        "cpu_id": "CPU-TERRA-ATI-017",
+        "descricao": "Aterro Compactado a 100% PN",
+        "unidade": "m3",
+        "quantitativo": 662994.21
+      },
+      {
+        "item_id": "eap-1_2",
+        "ordem": 3,
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km",
+        "unidade": "m3",
+        "quantitativo": 614502.27
+      },
+      {
+        "item_id": "eap-1_6",
+        "ordem": 5,
+        "cpu_id": "CPU-TERRA-ATI-014",
+        "descricao": "Desmonte de rocha com escavadeira e rompedor hidráulico",
+        "unidade": "m3",
+        "quantitativo": 12000.0
+      },
+      {
+        "item_id": "eap-1_4",
+        "ordem": 6,
+        "cpu_id": "CPU-TERRA-ATI-019-M2",
+        "descricao": "Regularização do subleito - 100% PN",
+        "unidade": "m2",
+        "quantitativo": 487243.38
+      },
+      {
+        "item_id": "eap-1_3",
+        "ordem": 7,
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,2km  - (JAZIDA)",
+        "unidade": "m3",
+        "quantitativo": 114791.36100000003
+      },
+      {
+        "item_id": "eap-1_1",
+        "ordem": 8,
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "descricao": "Limpeza mecanizada de camada vegetal, incluso carga e transporte",
+        "unidade": "m2",
+        "quantitativo": 487243.38
+      },
+      {
+        "item_id": "eap-4_2",
+        "ordem": 10,
+        "cpu_id": "CPU-TERRA-ATI-005",
+        "descricao": "Topografia",
+        "unidade": "vb",
+        "quantitativo": 1.0
+      },
+      {
+        "item_id": "eap-1_7",
+        "ordem": 12,
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "descricao": "Carga e transporte de material proveniente do desmonte com caminhão basculante de 12 m³ para rocha - rodovia em leito natural",
+        "unidade": "m3",
+        "quantitativo": 614502.27
+      }
+    ],
+    "catalog_references": {
+      "CPU-TERRA-ATI-003": {
+        "codigo": "CPU-TERRA-ATI-003",
+        "descricao": "Desmatamento, destocamento, limpeza",
+        "unidade": "m2",
+        "categoria": "TERRAPLENAGEM",
+        "producao_horaria": 350.0,
+        "producao_id": null,
+        "composicao_itens": [
+          {
+            "insumo_id": "MA-DIESEL-S10",
+            "coeficiente": 0.144,
+            "categoria_custo": "DIESEL"
+          }
+        ],
+        "equipe": {
+          "funcoes": [
+            {
+              "funcao_id": "MO-OPER-ESCAV",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-OPER-TRATOR-EST",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-AJUDANTE",
+              "num_pessoas": 3
+            }
+          ],
+          "equipamentos": [
+            {
+              "equip_id": "EQ-E0016",
+              "num_unidades": 1
+            },
+            {
+              "equip_id": "EQ-E0024",
+              "num_unidades": 1
+            }
+          ]
+        },
+        "tem_equipe_local": true
+      },
+      "CPU-TERRA-ATI-005": {
+        "codigo": "CPU-TERRA-ATI-005",
+        "descricao": "Implantação de eixo (Topografia)",
+        "unidade": "km",
+        "categoria": "TERRAPLENAGEM",
+        "producao_horaria": 0.14,
+        "producao_id": null,
+        "composicao_itens": [],
+        "equipe": {
+          "funcoes": [
+            {
+              "funcao_id": "MO-TOPOGRAFO",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-AUX-TOPO",
+              "num_pessoas": 2
+            }
+          ],
+          "equipamentos": [
+            {
+              "equip_id": "EQ-ESTACAO-TOTAL",
+              "num_unidades": 1
+            }
+          ]
+        },
+        "tem_equipe_local": true
+      },
+      "CPU-TERRA-ATI-011": {
+        "codigo": "CPU-TERRA-ATI-011",
+        "descricao": "Esc/carg/transp 1ªcat DMT<=2000m",
+        "unidade": "m3",
+        "categoria": "TERRAPLENAGEM",
+        "producao_horaria": 159.63,
+        "producao_id": "PROD-ATI-011",
+        "composicao_itens": [
+          {
+            "insumo_id": "MA-DIESEL-S10",
+            "coeficiente": 0.159744,
+            "categoria_custo": "DIESEL"
+          }
+        ],
+        "equipe": {},
+        "tem_equipe_local": false
+      },
+      "CPU-TERRA-ATI-014": {
+        "codigo": "CPU-TERRA-ATI-014",
+        "descricao": "Esc/carg/transp 2ªcat DMT 2000-3000m",
+        "unidade": "m3",
+        "categoria": "TERRAPLENAGEM",
+        "producao_horaria": 165.74,
+        "producao_id": "PROD-ATI-014",
+        "composicao_itens": [],
+        "equipe": {},
+        "tem_equipe_local": false
+      },
+      "CPU-TERRA-ATI-017": {
+        "codigo": "CPU-TERRA-ATI-017",
+        "descricao": "Aterro compactado 100% PN",
+        "unidade": "m3",
+        "categoria": "TERRAPLENAGEM",
+        "producao_horaria": 162.12,
+        "producao_id": "PROD-ATI-017",
+        "composicao_itens": [],
+        "equipe": {
+          "funcoes": [
+            {
+              "funcao_id": "MO-OPER-MOTO",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-OPER-ROLO-COMP",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-MOTOR-CAM-PIPA",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-OPER-ROLO-COMP",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-ENCARREG-TERRA",
+              "num_pessoas": 1
+            }
+          ],
+          "equipamentos": [
+            {
+              "equip_id": "EQ-E0029",
+              "num_unidades": 1
+            },
+            {
+              "equip_id": "EQ-E0035",
+              "num_unidades": 1
+            },
+            {
+              "equip_id": "EQ-E0010",
+              "num_unidades": 1
+            }
+          ]
+        },
+        "tem_equipe_local": true
+      },
+      "CPU-TERRA-ATI-019-M2": {
+        "codigo": "CPU-TERRA-ATI-019-M2",
+        "descricao": "Regularização de subleito — por área (m²)",
+        "unidade": "m2",
+        "categoria": "TERRAPLENAGEM",
+        "producao_horaria": 220.0,
+        "producao_id": null,
+        "composicao_itens": [],
+        "equipe": {
+          "funcoes": [
+            {
+              "funcao_id": "MO-OPER-MOTO",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-ENCARREG-TERRA",
+              "num_pessoas": 1
+            }
+          ],
+          "equipamentos": [
+            {
+              "equip_id": "EQ-E0029",
+              "num_unidades": 1
+            }
+          ]
+        },
+        "tem_equipe_local": true
+      }
+    },
+    "producoes_referenciadas": {
+      "PROD-ATI-011": {
+        "id": "PROD-ATI-011",
+        "codigo": "ATI-011",
+        "descricao": "Escavação, carga e transporte — 1ª categoria — DMT <= 2.000 m (Adotado SICRO)",
+        "valor_horario": 159.63,
+        "unidade": "m3",
+        "equipe": {
+          "funcoes": [
+            {
+              "funcao_id": "MO-OPER-ESCAV",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-MOTOR-CAM-BASC",
+              "num_pessoas": 3
+            },
+            {
+              "funcao_id": "MO-MOTOR-CAM-BASC",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-ENCARREG-TERRA",
+              "num_pessoas": 1
+            }
+          ],
+          "equipamentos": [
+            {
+              "equip_id": "EQ-E0016",
+              "num_unidades": 1
+            },
+            {
+              "equip_id": "EQ-E0007",
+              "num_unidades": 3
+            }
+          ]
+        }
+      },
+      "PROD-ATI-014": {
+        "id": "PROD-ATI-014",
+        "codigo": "ATI-014",
+        "descricao": "Esc/carg/transp 2ªcat DMT 2-3km (Adotado SICRO)",
+        "valor_horario": 110.0,
+        "unidade": "m3",
+        "equipe": {
+          "funcoes": [
+            {
+              "funcao_id": "MO-OPER-ESCAV",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-MOTOR-CAM-BASC",
+              "num_pessoas": 4
+            },
+            {
+              "funcao_id": "MO-MOTOR-CAM-BASC",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-ENCARREG-TERRA",
+              "num_pessoas": 1
+            }
+          ],
+          "equipamentos": [
+            {
+              "equip_id": "EQ-E0018",
+              "num_unidades": 1
+            },
+            {
+              "equip_id": "EQ-E0008",
+              "num_unidades": 4
+            }
+          ]
+        }
+      },
+      "PROD-ATI-017": {
+        "id": "PROD-ATI-017",
+        "codigo": "ATI-017",
+        "descricao": "Aterro compactado a 100% do Proctor Normal (Adotado SICRO)",
+        "valor_horario": 140.0,
+        "unidade": "m3",
+        "equipe": {
+          "funcoes": [
+            {
+              "funcao_id": "MO-OPER-MOTO",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-OPER-ROLO-COMP",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-MOTOR-CAM-PIPA",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-OPER-ROLO-COMP",
+              "num_pessoas": 1
+            },
+            {
+              "funcao_id": "MO-ENCARREG-TERRA",
+              "num_pessoas": 1
+            }
+          ],
+          "equipamentos": [
+            {
+              "equip_id": "EQ-E0029",
+              "num_unidades": 1
+            },
+            {
+              "equip_id": "EQ-E0035",
+              "num_unidades": 1
+            },
+            {
+              "equip_id": "EQ-E0010",
+              "num_unidades": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  "equipes": {
+    "total": 8,
+    "detalhes": [
+      {
+        "equipe_id": "eq-eap-1_5",
+        "item_id": "eap-1_5",
+        "cpu_id": "CPU-TERRA-ATI-017",
+        "funcoes": [],
+        "equipamentos": [],
+        "custos": {
+          "mao_obra_mensal": 0.0,
+          "equipamentos_mensal": 0.0,
+          "combustivel_mensal": 0.0,
+          "material_mensal": 0.0,
+          "total": 0.0
+        }
+      },
+      {
+        "equipe_id": "eq-eap-1_2",
+        "item_id": "eap-1_2",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": [],
+        "equipamentos": [],
+        "custos": {
+          "mao_obra_mensal": 0.0,
+          "equipamentos_mensal": 0.0,
+          "combustivel_mensal": 0.0,
+          "material_mensal": 0.0,
+          "total": 0.0
+        }
+      },
+      {
+        "equipe_id": "eq-eap-1_6",
+        "item_id": "eap-1_6",
+        "cpu_id": "CPU-TERRA-ATI-014",
+        "funcoes": [],
+        "equipamentos": [],
+        "custos": {
+          "mao_obra_mensal": 0.0,
+          "equipamentos_mensal": 0.0,
+          "combustivel_mensal": 0.0,
+          "material_mensal": 0.0,
+          "total": 0.0
+        }
+      },
+      {
+        "equipe_id": "eq-eap-1_4",
+        "item_id": "eap-1_4",
+        "cpu_id": "CPU-TERRA-ATI-019-M2",
+        "funcoes": [
+          {
+            "funcao_id": "MO-OPER-MOTO",
+            "descricao": "Operador de Motoniveladora",
+            "num_pessoas": 1,
+            "salario_base": 5000.0,
+            "percentual_encargos": 1.777,
+            "horas_extras_pct": 0.25,
+            "custo_mensal_unitario": 12875.0,
+            "papel": "direto"
+          },
+          {
+            "funcao_id": "MO-ENCARREG-TERRA",
+            "descricao": "Encarregado de Terraplenagem",
+            "num_pessoas": 1,
+            "salario_base": 4485.36,
+            "percentual_encargos": 1.777,
+            "horas_extras_pct": 0.25,
+            "custo_mensal_unitario": 11549.8,
+            "papel": "direto"
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "EQ-E0029",
+            "descricao": "Motoniveladora 140HP",
+            "num_unidades": 1,
+            "custo_mensal": 43326.98,
+            "consumo_litros_hora": 11.0,
+            "custo_combustivel_mensal": 14029.71,
+            "custo_mensal_total": 57356.69
+          }
+        ],
+        "custos": {
+          "mao_obra_mensal": 24424.8,
+          "equipamentos_mensal": 43326.98,
+          "combustivel_mensal": 14029.71,
+          "material_mensal": 0.0,
+          "total": 1467101.25
+        }
+      },
+      {
+        "equipe_id": "eq-eap-1_3",
+        "item_id": "eap-1_3",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": [],
+        "equipamentos": [],
+        "custos": {
+          "mao_obra_mensal": 0.0,
+          "equipamentos_mensal": 0.0,
+          "combustivel_mensal": 0.0,
+          "material_mensal": 0.0,
+          "total": 0.0
+        }
+      },
+      {
+        "equipe_id": "eq-eap-1_1",
+        "item_id": "eap-1_1",
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "funcoes": [
+          {
+            "funcao_id": "MO-OPER-ESCAV",
+            "descricao": "Operador de Escavadeira",
+            "num_pessoas": 1,
+            "salario_base": 5000.0,
+            "percentual_encargos": 1.777,
+            "horas_extras_pct": 0.25,
+            "custo_mensal_unitario": 12875.0,
+            "papel": "direto"
+          },
+          {
+            "funcao_id": "MO-OPER-TRATOR-EST",
+            "descricao": "Operador de Trator de Esteiras",
+            "num_pessoas": 1,
+            "salario_base": 5000.0,
+            "percentual_encargos": 1.777,
+            "horas_extras_pct": 0.25,
+            "custo_mensal_unitario": 12875.0,
+            "papel": "direto"
+          },
+          {
+            "funcao_id": "MO-AJUDANTE",
+            "descricao": "Ajudante",
+            "num_pessoas": 3,
+            "salario_base": 2043.36,
+            "percentual_encargos": 1.777,
+            "horas_extras_pct": 0.25,
+            "custo_mensal_unitario": 5261.65,
+            "papel": "direto"
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "EQ-E0016",
+            "descricao": "Escavadeira Hidráulica 22t",
+            "num_unidades": 1,
+            "custo_mensal": 35639.3,
+            "consumo_litros_hora": null,
+            "custo_combustivel_mensal": 0.0,
+            "custo_mensal_total": 35639.3
+          },
+          {
+            "equip_id": "EQ-E0024",
+            "descricao": "Trator de Esteiras 20t (300HP)",
+            "num_unidades": 1,
+            "custo_mensal": 49477.12,
+            "consumo_litros_hora": 18.0,
+            "custo_combustivel_mensal": 22957.71,
+            "custo_mensal_total": 72434.83
+          }
+        ],
+        "custos": {
+          "mao_obra_mensal": 41534.95,
+          "equipamentos_mensal": 85116.42,
+          "combustivel_mensal": 22957.71,
+          "material_mensal": 0.0,
+          "total": 1789253.03
+        }
+      },
+      {
+        "equipe_id": "eq-eap-4_2",
+        "item_id": "eap-4_2",
+        "cpu_id": "CPU-TERRA-ATI-005",
+        "funcoes": [
+          {
+            "funcao_id": "MO-TOPOGRAFO",
+            "descricao": "Topógrafo",
+            "num_pessoas": 1,
+            "salario_base": 18000.0,
+            "percentual_encargos": 1.777,
+            "horas_extras_pct": 0.0,
+            "custo_mensal_unitario": 18000.0,
+            "papel": "direto"
+          },
+          {
+            "funcao_id": "MO-AUX-TOPO",
+            "descricao": "Auxiliar de topografia",
+            "num_pessoas": 2,
+            "salario_base": 2217.6,
+            "percentual_encargos": 1.777,
+            "horas_extras_pct": 0.25,
+            "custo_mensal_unitario": 5710.32,
+            "papel": "direto"
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "EQ-ESTACAO-TOTAL",
+            "descricao": "Estação Total",
+            "num_unidades": 1,
+            "custo_mensal": 2640.0,
+            "consumo_litros_hora": null,
+            "custo_combustivel_mensal": 0.0,
+            "custo_mensal_total": 2640.0
+          }
+        ],
+        "custos": {
+          "mao_obra_mensal": 29420.64,
+          "equipamentos_mensal": 2640.0,
+          "combustivel_mensal": 0.0,
+          "material_mensal": 0.0,
+          "total": 191714.96
+        }
+      },
+      {
+        "equipe_id": "eq-eap-1_7",
+        "item_id": "eap-1_7",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": [],
+        "equipamentos": [],
+        "custos": {
+          "mao_obra_mensal": 0.0,
+          "equipamentos_mensal": 0.0,
+          "combustivel_mensal": 0.0,
+          "material_mensal": 0.0,
+          "total": 0.0
+        }
+      }
+    ],
+    "mao_de_obra_agregada": {
+      "MO-OPER-MOTO": {
+        "descricao": "Operador de Motoniveladora",
+        "quantidade_total": 1
+      },
+      "MO-ENCARREG-TERRA": {
+        "descricao": "Encarregado de Terraplenagem",
+        "quantidade_total": 1
+      },
+      "MO-OPER-ESCAV": {
+        "descricao": "Operador de Escavadeira",
+        "quantidade_total": 1
+      },
+      "MO-OPER-TRATOR-EST": {
+        "descricao": "Operador de Trator de Esteiras",
+        "quantidade_total": 1
+      },
+      "MO-AJUDANTE": {
+        "descricao": "Ajudante",
+        "quantidade_total": 3
+      },
+      "MO-TOPOGRAFO": {
+        "descricao": "Topógrafo",
+        "quantidade_total": 1
+      },
+      "MO-AUX-TOPO": {
+        "descricao": "Auxiliar de topografia",
+        "quantidade_total": 2
+      }
+    },
+    "equipamentos_agregados": {
+      "EQ-E0029": {
+        "descricao": "Motoniveladora 140HP",
+        "quantidade_total": 1
+      },
+      "EQ-E0016": {
+        "descricao": "Escavadeira Hidráulica 22t",
+        "quantidade_total": 1
+      },
+      "EQ-E0024": {
+        "descricao": "Trator de Esteiras 20t (300HP)",
+        "quantidade_total": 1
+      },
+      "EQ-ESTACAO-TOTAL": {
+        "descricao": "Estação Total",
+        "quantidade_total": 1
+      }
+    }
+  },
+  "materiais": {
+    "detalhes": [
+      {
+        "item_id": "eap-1_2",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "insumo_id": "MA-DIESEL-S10",
+        "descricao": null,
+        "categoria_custo": "DIESEL",
+        "coeficiente": 0.159744,
+        "quantidade_item": 614502.27,
+        "quantidade_estimada": 98163.050619
+      },
+      {
+        "item_id": "eap-1_3",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "insumo_id": "MA-DIESEL-S10",
+        "descricao": null,
+        "categoria_custo": "DIESEL",
+        "coeficiente": 0.159744,
+        "quantidade_item": 114791.36100000003,
+        "quantidade_estimada": 18337.231172
+      },
+      {
+        "item_id": "eap-1_1",
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "insumo_id": "MA-DIESEL-S10",
+        "descricao": null,
+        "categoria_custo": "DIESEL",
+        "coeficiente": 0.144,
+        "quantidade_item": 487243.38,
+        "quantidade_estimada": 70163.04672
+      },
+      {
+        "item_id": "eap-1_7",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "insumo_id": "MA-DIESEL-S10",
+        "descricao": null,
+        "categoria_custo": "DIESEL",
+        "coeficiente": 0.159744,
+        "quantidade_item": 614502.27,
+        "quantidade_estimada": 98163.050619
+      }
+    ],
+    "agregado_por_insumo": {
+      "MA-DIESEL-S10": {
+        "descricao": null,
+        "categoria_custo": "DIESEL",
+        "quantidade_estimada_total": 284826.37913
+      }
+    }
+  },
+  "bdi": {
+    "por_item": [
+      {
+        "item_id": "eap-1_5",
+        "cpu_id": "CPU-TERRA-ATI-017",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      },
+      {
+        "item_id": "eap-1_2",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      },
+      {
+        "item_id": "eap-1_6",
+        "cpu_id": "CPU-TERRA-ATI-014",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      },
+      {
+        "item_id": "eap-1_4",
+        "cpu_id": "CPU-TERRA-ATI-019-M2",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      },
+      {
+        "item_id": "eap-1_3",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      },
+      {
+        "item_id": "eap-1_1",
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      },
+      {
+        "item_id": "eap-4_2",
+        "cpu_id": "CPU-TERRA-ATI-005",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      },
+      {
+        "item_id": "eap-1_7",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "bdi": {
+          "material": 0.2,
+          "diesel": 0.344955,
+          "mao_obra": 0.344955,
+          "equipamentos": 0.344955
+        }
+      }
+    ],
+    "estatisticas_componentes": {
+      "material": {
+        "min": 0.2,
+        "max": 0.2,
+        "media": 0.2,
+        "qtd_itens": 8
+      },
+      "diesel": {
+        "min": 0.344955,
+        "max": 0.344955,
+        "media": 0.344955,
+        "qtd_itens": 8
+      },
+      "mao_obra": {
+        "min": 0.344955,
+        "max": 0.344955,
+        "media": 0.344955,
+        "qtd_itens": 8
+      },
+      "equipamentos": {
+        "min": 0.344955,
+        "max": 0.344955,
+        "media": 0.344955,
+        "qtd_itens": 8
+      }
+    }
+  },
+  "indiretos": {
+    "ADM_TOP_LAB_QSMS_MOB": {
+      "ADM": {
+        "sem_bdi": 4743198.2,
+        "com_bdi": 5804422.39,
+        "bdi_aplicado": 0.223736
+      },
+      "TOP": {
+        "sem_bdi": 1135058.08,
+        "com_bdi": 1389011.43,
+        "bdi_aplicado": 0.223736
+      },
+      "LAB": {
+        "sem_bdi": 673616.06,
+        "com_bdi": 824328.22,
+        "bdi_aplicado": 0.223736
+      },
+      "QSMS": {
+        "sem_bdi": 346899.54,
+        "com_bdi": 424513.46,
+        "bdi_aplicado": 0.223736
+      },
+      "MOB": {
+        "sem_bdi": 0.0,
+        "com_bdi": 0.0,
+        "bdi_aplicado": 0.223736
+      }
+    },
+    "raw_indiretos": [
+      {
+        "categoria": "ADM",
+        "descricao": "Administração de obra",
+        "funcoes": [],
+        "equipamentos": [],
+        "verbas_mensais": [],
+        "verbas_fixas": [],
+        "mobilizacoes": [],
+        "baixadas": [],
+        "permanencia_meses": 6.0,
+        "custo_total": 4743198.2
+      },
+      {
+        "categoria": "TOP",
+        "descricao": "Topografia",
+        "funcoes": [],
+        "equipamentos": [],
+        "verbas_mensais": [],
+        "verbas_fixas": [],
+        "mobilizacoes": [],
+        "baixadas": [],
+        "permanencia_meses": 6.0,
+        "custo_total": 1135058.08
+      },
+      {
+        "categoria": "LAB",
+        "descricao": "Laboratório de solos e materiais",
+        "funcoes": [],
+        "equipamentos": [],
+        "verbas_mensais": [],
+        "verbas_fixas": [],
+        "mobilizacoes": [],
+        "baixadas": [],
+        "permanencia_meses": 6.0,
+        "custo_total": 673616.06
+      },
+      {
+        "categoria": "QSMS",
+        "descricao": "Qualidade, Saúde, Segurança e Meio Ambiente",
+        "funcoes": [],
+        "equipamentos": [],
+        "verbas_mensais": [],
+        "verbas_fixas": [],
+        "mobilizacoes": [],
+        "baixadas": [],
+        "permanencia_meses": 6.0,
+        "custo_total": 346899.54
+      },
+      {
+        "categoria": "MOB",
+        "descricao": "Mobilização e desmobilização",
+        "funcoes": [],
+        "equipamentos": [],
+        "verbas_mensais": [],
+        "verbas_fixas": [],
+        "mobilizacoes": [],
+        "baixadas": [],
+        "permanencia_meses": 6.0,
+        "custo_total": 0.0
+      }
+    ],
+    "raw_indiretos_com_bdi": [
+      {
+        "categoria": "ADM",
+        "custo_sem_bdi": 4743198.2,
+        "bdi_aplicado": 0.223736,
+        "custo_com_bdi": 5804422.39
+      },
+      {
+        "categoria": "TOP",
+        "custo_sem_bdi": 1135058.08,
+        "bdi_aplicado": 0.223736,
+        "custo_com_bdi": 1389011.43
+      },
+      {
+        "categoria": "LAB",
+        "custo_sem_bdi": 673616.06,
+        "bdi_aplicado": 0.223736,
+        "custo_com_bdi": 824328.22
+      },
+      {
+        "categoria": "QSMS",
+        "custo_sem_bdi": 346899.54,
+        "bdi_aplicado": 0.223736,
+        "custo_com_bdi": 424513.46
+      },
+      {
+        "categoria": "MOB",
+        "custo_sem_bdi": 0.0,
+        "bdi_aplicado": 0.223736,
+        "custo_com_bdi": 0.0
+      }
+    ]
+  },
+  "cronograma": {
+    "resumo": {
+      "algorithm": "manual_allocation",
+      "quality_score": 0.0,
+      "makespan_weeks": 27,
+      "is_feasible": true
+    },
+    "atividades": [
+      {
+        "activity_id": "eap-1_5",
+        "start_week": 0,
+        "end_week": 19,
+        "duration_weeks": 20,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-05-21",
+        "quantidade_programada_total": 662994.2,
+        "num_equipes_medio": 4.8148,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W02": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W03": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W04": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W05": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W06": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W07": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W08": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W09": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W10": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W11": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W12": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W13": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W14": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W15": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W16": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W17": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W18": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W19": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W20": {
+            "num_equipes": 5,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      },
+      {
+        "activity_id": "eap-1_2",
+        "start_week": 0,
+        "end_week": 22,
+        "duration_weeks": 23,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-06-11",
+        "quantidade_programada_total": 614502.25,
+        "num_equipes_medio": 3.8519,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W02": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W03": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W04": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W05": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W06": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W07": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W08": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W09": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W10": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W11": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W12": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W13": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W14": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W15": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W16": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W17": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W18": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W19": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W20": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W21": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W22": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W23": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      },
+      {
+        "activity_id": "eap-1_6",
+        "start_week": 0,
+        "end_week": 2,
+        "duration_weeks": 3,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-01-22",
+        "quantidade_programada_total": 12000.0,
+        "num_equipes_medio": 0.963,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W02": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W03": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      },
+      {
+        "activity_id": "eap-1_4",
+        "start_week": 0,
+        "end_week": 17,
+        "duration_weeks": 18,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-05-07",
+        "quantidade_programada_total": 487243.38,
+        "num_equipes_medio": 2.8889,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W02": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W03": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W04": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W05": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W06": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W07": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W08": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W09": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W10": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W11": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W12": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W13": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W14": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W15": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W16": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W17": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W18": {
+            "num_equipes": 3,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      },
+      {
+        "activity_id": "eap-1_3",
+        "start_week": 0,
+        "end_week": 16,
+        "duration_weeks": 17,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-04-30",
+        "quantidade_programada_total": 114791.38,
+        "num_equipes_medio": 0.963,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W02": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W03": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W04": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W05": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W06": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W07": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W08": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W09": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W10": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W11": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W12": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W13": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W14": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W15": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W16": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W17": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      },
+      {
+        "activity_id": "eap-1_1",
+        "start_week": 0,
+        "end_week": 16,
+        "duration_weeks": 17,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-04-30",
+        "quantidade_programada_total": 487243.38,
+        "num_equipes_medio": 1.9259,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W02": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W03": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W04": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W05": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W06": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W07": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W08": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W09": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W10": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W11": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W12": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W13": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W14": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W15": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W16": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W17": {
+            "num_equipes": 2,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      },
+      {
+        "activity_id": "eap-4_2",
+        "start_week": 0,
+        "end_week": 0,
+        "duration_weeks": 1,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-01-08",
+        "quantidade_programada_total": 1.0,
+        "num_equipes_medio": 0.963,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 1,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      },
+      {
+        "activity_id": "eap-1_7",
+        "start_week": 0,
+        "end_week": 22,
+        "duration_weeks": 23,
+        "data_inicio": "2025-01-01",
+        "data_fim": "2025-06-11",
+        "quantidade_programada_total": 614502.25,
+        "num_equipes_medio": 3.8519,
+        "semanas": {
+          "2025-W01": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W02": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W03": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W04": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W05": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W06": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W07": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W08": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W09": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W10": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W11": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W12": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W13": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W14": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W15": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W16": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W17": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W18": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W19": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W20": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W21": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W22": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          },
+          "2025-W23": {
+            "num_equipes": 4,
+            "qtd_executada": 0,
+            "qtd_acumulada": 0
+          }
+        }
+      }
+    ]
+  },
+  "planejamento": {
+    "itens": [
+      {
+        "item_id": "eap-1_5",
+        "cpu_id": "CPU-TERRA-ATI-017",
+        "quantitativo": 662994.21,
+        "preco_unitario": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          },
+          "com_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "item_id": "eap-1_2",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "quantitativo": 614502.27,
+        "preco_unitario": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          },
+          "com_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "item_id": "eap-1_6",
+        "cpu_id": "CPU-TERRA-ATI-014",
+        "quantitativo": 12000.0,
+        "preco_unitario": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          },
+          "com_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "item_id": "eap-1_4",
+        "cpu_id": "CPU-TERRA-ATI-019-M2",
+        "quantitativo": 487243.38,
+        "preco_unitario": {
+          "material": 0.0,
+          "diesel": 0.1722,
+          "mao_obra": 0.2998,
+          "equipamentos": 0.5318,
+          "total": 1.0037
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0,
+          "diesel": 0.2316,
+          "mao_obra": 0.4032,
+          "equipamentos": 0.7152,
+          "total": 1.35
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 0.0,
+            "diesel": 83897.67,
+            "mao_obra": 146060.3,
+            "equipamentos": 259095.34,
+            "total": 489053.31
+          },
+          "com_bdi": {
+            "material": 0.0,
+            "diesel": 112838.59,
+            "mao_obra": 196444.54,
+            "equipamentos": 348471.57,
+            "total": 657754.69
+          }
+        }
+      },
+      {
+        "item_id": "eap-1_3",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "quantitativo": 114791.36100000003,
+        "preco_unitario": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          },
+          "com_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          }
+        }
+      },
+      {
+        "item_id": "eap-1_1",
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "quantitativo": 487243.38,
+        "preco_unitario": {
+          "material": 0.0571,
+          "diesel": 0.2818,
+          "mao_obra": 0.5098,
+          "equipamentos": 1.0446,
+          "total": 1.8933
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0651,
+          "diesel": 0.379,
+          "mao_obra": 0.6856,
+          "equipamentos": 1.405,
+          "total": 2.5347
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 27842.45,
+            "diesel": 137287.11,
+            "mao_obra": 248379.0,
+            "equipamentos": 508996.19,
+            "total": 922504.75
+          },
+          "com_bdi": {
+            "material": 31740.39,
+            "diesel": 184644.98,
+            "mao_obra": 334058.58,
+            "equipamentos": 684576.97,
+            "total": 1235020.93
+          }
+        }
+      },
+      {
+        "item_id": "eap-4_2",
+        "cpu_id": "CPU-TERRA-ATI-005",
+        "quantitativo": 1.0,
+        "preco_unitario": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 175935.4272,
+          "equipamentos": 15787.2,
+          "total": 191722.6272
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 236625.2325,
+          "equipamentos": 21233.0736,
+          "total": 257858.3061
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 175935.43,
+            "equipamentos": 15787.2,
+            "total": 191722.63
+          },
+          "com_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 236625.23,
+            "equipamentos": 21233.07,
+            "total": 257858.31
+          }
+        }
+      },
+      {
+        "item_id": "eap-1_7",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "quantitativo": 614502.27,
+        "preco_unitario": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "preco_unitario_com_bdi": {
+          "material": 0.0,
+          "diesel": 0.0,
+          "mao_obra": 0.0,
+          "equipamentos": 0.0,
+          "total": 0.0
+        },
+        "subtotal": {
+          "sem_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          },
+          "com_bdi": {
+            "material": 0.0,
+            "diesel": 0.0,
+            "mao_obra": 0.0,
+            "equipamentos": 0.0,
+            "total": 0.0
+          }
+        }
+      }
+    ]
+  },
+  "ponto_equilibrio": {
+    "canonical": [],
+    "resultado_balanco_ponto_equilibrio": null,
+    "benchmark_referencia": {}
+  },
+  "resultado": {
+    "canonical": {
+      "venda": {
+        "total_sem_bdi": 1603280.69,
+        "total_com_bdi": 2150633.9299999997,
+        "total_custo_plus": 11930886.11,
+        "total_custo_plus_catalogo": 11930886.11,
+        "bdi_lucro_impostos": 0.15
+      },
+      "custo": {
+        "direto_equipes": 3475911.6900000004,
+        "direto_catalogo": 1603280.69,
+        "indireto_adm": 4743198.2,
+        "indireto_top": 1135058.08,
+        "indireto_lab": 673616.06,
+        "indireto_qsms": 346899.54,
+        "indireto_mob": 0.0,
+        "total": 10374683.57
+      },
+      "resultado_financeiro": 1556202.539999999,
+      "margem_pct": 0.13043478293667152,
+      "status_margem": "VERMELHO",
+      "validacoes": [],
+      "balanco_de_controle": null,
+      "balanco_ponto_equilibrio": null
+    },
+    "benchmark_confronto_referencia": {
+      "custo_direto": 14885785.22,
+      "custo_indireto": 6882876.35,
+      "custo_total": 21768661.57,
+      "preco_venda": 25944479.43
+    },
+    "benchmark_confronto_ferramenta": {
+      "custo_direto": 3475911.6900000004,
+      "custo_direto_catalogo": 1603280.69,
+      "custo_indireto": 6898771.88,
+      "preco_venda": 11930886.11,
+      "preco_venda_plus_eq": 11930886.11,
+      "preco_venda_catalogo": 2150633.9299999997,
+      "bdi_lucro_impostos": 0.15
+    },
+    "benchmark_breakdown_direto": {
+      "mao_obra_total": 1110829.91,
+      "equipamentos_total": 1810993.17,
+      "diesel_total": 526246.16,
+      "materiais_total": 0.0,
+      "direto_total_equipes": 3448069.24
+    }
+  },
+  "data_inicio": "2024-12-30",
+  "data_termino": "2025-07-06",
+  "mode": "benchmark_config"
+}

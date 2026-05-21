@@ -1,0 +1,200 @@
+{
+  "meta": {
+    "gerado_em": "2026-05-12T18:12:45.126505+00:00",
+    "framework": "concilium",
+    "adapter": "relatorio_validacao_v1",
+    "nota": "Relatório de validação na ausência do template .xlsm original. Estrutura template replica para comparação manual."
+  },
+  "resumo": {
+    "projeto": "MATEC_HINES",
+    "tipo_obra": "terraplenagem",
+    "localizacao": "Brasil",
+    "periodo": "2025-03-31 -> 2026-01-04",
+    "status": "RASCUNHO"
+  },
+  "PLANEJAMENTO": [
+    {
+      "item_id": "eap-1_3",
+      "cpu_id": "CPU-TERRA-ATI-017",
+      "descricao": "Aterro compactado / 98% e 100% P.N nas útimas 5 camadas",
+      "unidade": "m3",
+      "quantitativo": 1000000.0,
+      "preco_unit_servicos": 0.7762,
+      "preco_unit_material": 0.0,
+      "preco_unit_diesel": 0.3495,
+      "bdi_servicos": 0.344955,
+      "bdi_material": 0.2,
+      "bdi_diesel": 0.344955,
+      "subtotal_sem_bdi": 1686515.2,
+      "subtotal_com_bdi": 2268287.06,
+      "criticidade": "B"
+    },
+    {
+      "item_id": "eap-1_2",
+      "cpu_id": "CPU-TERRA-ATI-011",
+      "descricao": "Corte e transporte interno",
+      "unidade": "m3",
+      "quantitativo": 1250000.0,
+      "preco_unit_servicos": 0.8172,
+      "preco_unit_material": 0.8613,
+      "preco_unit_diesel": 0.1964,
+      "bdi_servicos": 0.344955,
+      "bdi_material": 0.2,
+      "bdi_diesel": 0.344955,
+      "subtotal_sem_bdi": 2961676.01,
+      "subtotal_com_bdi": 3827251.14,
+      "criticidade": "A"
+    },
+    {
+      "item_id": "eap-1_5",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Opcional - Transporte de solo já cortado, para outro terreno em Guarulhos com DMT de 8km.",
+      "unidade": "m3",
+      "quantitativo": 200000.0,
+      "preco_unit_servicos": 0.0,
+      "preco_unit_material": 0.0,
+      "preco_unit_diesel": 4.7099,
+      "bdi_servicos": 0.344955,
+      "bdi_material": 0.2,
+      "bdi_diesel": 0.344955,
+      "subtotal_sem_bdi": 1531660.6,
+      "subtotal_com_bdi": 2060014.58,
+      "criticidade": "C"
+    },
+    {
+      "item_id": "eap-1_1",
+      "cpu_id": "CPU-TERRA-ATI-003",
+      "descricao": "Remoção Superficial (20cm - Top Soil) - Excluso supressão vegetal",
+      "unidade": "m2",
+      "quantitativo": 245000.0,
+      "preco_unit_servicos": 0.0,
+      "preco_unit_material": 0.0,
+      "preco_unit_diesel": 0.2942,
+      "bdi_servicos": 0.344955,
+      "bdi_material": 0.2,
+      "bdi_diesel": 0.344955,
+      "subtotal_sem_bdi": 214038.86,
+      "subtotal_com_bdi": 287872.63,
+      "criticidade": "C"
+    }
+  ],
+  "EQUIPE": [
+    {
+      "equipe_id": "eq-eap-1_3",
+      "item_id": "eap-1_3",
+      "num_funcoes": 5,
+      "permanencia_meses": 9.2,
+      "custo_fixo_mensal": 183316.87,
+      "custo_fixo_total": 8432238.88,
+      "custo_venda_cpu": 2268287.06,
+      "delta_pct": 0.34496,
+      "status_pe": "OK"
+    },
+    {
+      "equipe_id": "eq-eap-1_2",
+      "item_id": "eap-1_2",
+      "num_funcoes": 6,
+      "permanencia_meses": 9.2,
+      "custo_fixo_mensal": 204891.12,
+      "custo_fixo_total": 11309537.49,
+      "custo_venda_cpu": 3827251.14,
+      "delta_pct": 1.03037,
+      "status_pe": "OK"
+    },
+    {
+      "equipe_id": "eq-eap-1_5",
+      "item_id": "eap-1_5",
+      "num_funcoes": 10,
+      "permanencia_meses": 9.2,
+      "custo_fixo_mensal": 88801.22,
+      "custo_fixo_total": 816938.5,
+      "custo_venda_cpu": 2060014.58,
+      "delta_pct": 1.52153,
+      "status_pe": "OK"
+    },
+    {
+      "equipe_id": "eq-eap-1_1",
+      "item_id": "eap-1_1",
+      "num_funcoes": 5,
+      "permanencia_meses": 9.2,
+      "custo_fixo_mensal": 148706.96,
+      "custo_fixo_total": 1368049.28,
+      "custo_venda_cpu": 287872.63,
+      "delta_pct": -0.78958,
+      "status_pe": "ERRO"
+    }
+  ],
+  "INDIRETOS": [
+    {
+      "categoria": "ADM",
+      "descricao": "Administracao de obra",
+      "permanencia_meses": 9.24,
+      "custo_total": 3391109.2,
+      "funcoes": [],
+      "equipamentos": [],
+      "verbas_mensais": [],
+      "verbas_fixas": [],
+      "mobilizacoes": []
+    },
+    {
+      "categoria": "TOP",
+      "descricao": "Topografia",
+      "permanencia_meses": 9.24,
+      "custo_total": 595062.8,
+      "funcoes": [],
+      "equipamentos": [],
+      "verbas_mensais": [],
+      "verbas_fixas": [],
+      "mobilizacoes": []
+    },
+    {
+      "categoria": "LAB",
+      "descricao": "Laboratorio de solos e materiais",
+      "permanencia_meses": 9.24,
+      "custo_total": 556642.0,
+      "funcoes": [],
+      "equipamentos": [],
+      "verbas_mensais": [],
+      "verbas_fixas": [],
+      "mobilizacoes": []
+    },
+    {
+      "categoria": "QSMS",
+      "descricao": "Qualidade, Saude, Seguranca e Meio Ambiente",
+      "permanencia_meses": 9.24,
+      "custo_total": 467580.4,
+      "funcoes": [],
+      "equipamentos": [],
+      "verbas_mensais": [],
+      "verbas_fixas": [],
+      "mobilizacoes": []
+    },
+    {
+      "categoria": "MOB",
+      "descricao": "Mobilizacao e desmobilizacao",
+      "permanencia_meses": 11.0,
+      "custo_total": 0.0,
+      "funcoes": [],
+      "equipamentos": [],
+      "verbas_mensais": [],
+      "verbas_fixas": [],
+      "mobilizacoes": []
+    }
+  ],
+  "RESULTADO": {
+    "preco_venda_total": 14574825.41,
+    "custo_total": 11404285.07,
+    "custo_direto": 6393890.67,
+    "custo_indireto": 5010394.4,
+    "razao_indireto_direto": 0.7836221572427983,
+    "resultado_bruto": 3170540.34,
+    "margem_pct": 0.21753539070352404,
+    "status_margem": "VERMELHO"
+  },
+  "ACTIONABLE_INSIGHTS": {
+    "criticidade": null,
+    "sensibilidade": null,
+    "intervencao": null
+  },
+  "validacoes_pipeline": []
+}

@@ -1,0 +1,31 @@
+{
+  "id": "CPU-TERRA-REGULARIZACAO-SUBLEITO-PROD-001",
+  "codigo": "CPU-TERRA-REGULARIZACAO-SUBLEITO-PROD-001",
+  "descricao": "Produção CPU-TERRA-REGULARIZACAO-SUBLEITO",
+  "origem": "PROPRIA",
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-MOTONIVEL-140K",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-ROLO-LISO",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "cpu_ids": [
+    "CPU-TERRA-REGULARIZACAO-SUBLEITO"
+  ]
+}

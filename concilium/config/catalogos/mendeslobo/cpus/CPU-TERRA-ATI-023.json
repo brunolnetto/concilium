@@ -1,0 +1,17 @@
+{
+  "codigo": "CPU-TERRA-ATI-023",
+  "descricao": "Espalhamento e compactação BGTC",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-BRITA-GRADUADA",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-TERRA-ATI-023-PROD-001"
+}

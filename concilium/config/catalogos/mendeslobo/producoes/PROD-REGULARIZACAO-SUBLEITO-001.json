@@ -1,0 +1,61 @@
+{
+  "id": "PROD-REGULARIZACAO-SUBLEITO-001",
+  "codigo": "REGULARIZACAO-SUBLEITO-001",
+  "descricao": "Regularização de subleito com motoniveladora e rolo",
+  "valor_horario": 400.0,
+  "unidade": "m2",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "SICRO_2024_CE",
+    "data_calibracao": "2024-01-01T00:00:00Z",
+    "referencia": "Tabela SICRO 2024 — estimativa para regularização de subleito padrão"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "subleito_geral",
+    "dmt_medio": null,
+    "season": null,
+    "sequenciamento": "linear",
+    "equipamento_idade": null,
+    "notas": "Estimativa baseada em SICRO; sem calibração contra obra real ainda"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "intervalo_confianca": [
+      320.0,
+      480.0
+    ],
+    "quantidade_amostras": 5,
+    "desvio_padrao": 50.0
+  },
+  "historico_observacoes": [],
+  "auditoria": {
+    "criado_por": "eng_senior_silva",
+    "data_criacao": "2025-10-15T10:30:00Z",
+    "ultima_modificacao": "2025-10-15T10:30:00Z",
+    "modificado_por": "eng_senior_silva",
+    "versao": "1.0"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-MOTONIVEL-140K",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-ROLO-LISO",
+        "num_unidades": 1
+      }
+    ]
+  }
+}

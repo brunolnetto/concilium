@@ -1,0 +1,27 @@
+{
+  "codigo": "EQ-E0024",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Trator de Esteiras 20t (300HP)",
+  "unidade": "h",
+  "preco_unitario": 281.12,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0024",
+    "valor_locacao_mensal": 56224.0,
+    "horas_mes": 200,
+    "consumo_litros_hora": 18.0,
+    "decomposicao_equip": {
+      "custo_capital_h": 90.0,
+      "custo_mao_obra_h": 65.0,
+      "custo_diesel_h": 111.6,
+      "custo_material_h": 14.52,
+      "custo_hora_total": 281.12
+    }
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

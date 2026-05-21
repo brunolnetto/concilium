@@ -1,0 +1,50 @@
+{
+  "layers": [
+    {
+      "name": "Dados Primarios",
+      "order": 1,
+      "sheets": [
+        "BDI",
+        "PRATICABILIDADE",
+        "ENCARGOS",
+        "Transportes",
+        "MATERIAIS",
+        "SERVIÇOS TERCEIRIZADOS",
+        "Escavação e Carga"
+      ]
+    },
+    {
+      "name": "Calculos Intermediarios",
+      "order": 2,
+      "sheets": [
+        "TOP",
+        "ADM",
+        "LAB",
+        "QSMS",
+        "MOB",
+        "MÃO DE OBRA",
+        "EQUIPE",
+        "BENEFÍCIOS",
+        "EQUIPAMENTOS"
+      ]
+    },
+    {
+      "name": "Planejamento e Cronograma",
+      "order": 3,
+      "sheets": [
+        "PRODUÇÕES",
+        "CPU",
+        "PLANEJAMENTO",
+        "CRONOGRAMA"
+      ]
+    },
+    {
+      "name": "Resultados Finais",
+      "order": 4,
+      "sheets": [
+        "PONTO DE EQUILIBRIO",
+        "RESULTADO"
+      ]
+    }
+  ]
+}

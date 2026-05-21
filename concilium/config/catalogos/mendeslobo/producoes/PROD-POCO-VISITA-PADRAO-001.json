@@ -1,0 +1,52 @@
+{
+  "id": "PROD-POCO-VISITA-PADRAO-001",
+  "codigo": "POCO-VISITA-PADRAO-001",
+  "descricao": "Poço de visita padrão — execução completa",
+  "valor_horario": 0.25,
+  "unidade": "un",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "SICRO_2024_CE",
+    "data_calibracao": "2024-01-01T00:00:00Z",
+    "referencia": "SICRO 2024 — poço de visita padrão DN600"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": null,
+    "dmt_medio": null,
+    "season": null,
+    "sequenciamento": null,
+    "equipamento_idade": null,
+    "notas": "Estimativa SICRO; produtividade baixa por complexidade de execução"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "intervalo_confianca": [
+      0.18,
+      0.32
+    ],
+    "quantidade_amostras": 8,
+    "desvio_padrao": 0.04
+  },
+  "historico_observacoes": [],
+  "auditoria": {
+    "criado_por": "eng_senior_silva",
+    "data_criacao": "2025-10-15T10:30:00Z",
+    "ultima_modificacao": "2025-10-15T10:30:00Z",
+    "modificado_por": "eng_senior_silva",
+    "versao": "1.0"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OFICIAL",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-SERV-GERAL",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": []
+  }
+}

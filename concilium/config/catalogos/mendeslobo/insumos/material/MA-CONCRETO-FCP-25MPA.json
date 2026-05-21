@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-CONCRETO-FCP-25MPA",
+  "tipo": "MATERIAL",
+  "descricao": "Tinta Betuminosa (Pintura Ligação RL-1C)",
+  "unidade": "t",
+  "preco_unitario": 3850.0,
+  "fonte_preco": "tabela_referencia",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "SINALIZACAO"
+}

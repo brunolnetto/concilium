@@ -1,0 +1,35 @@
+{
+  "id": "CPU-SANEA-DREN-MAN-DN300-PROD-001",
+  "codigo": "CPU-SANEA-DREN-MAN-DN300-PROD-001",
+  "descricao": "Produção CPU-SANEA-DREN-MAN-DN300",
+  "origem": "PROPRIA",
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-RETRO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCANADOR",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MONTADOR-AGUA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-SERV-GERAL",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-RETRO-ESCAV",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "cpu_ids": [
+    "CPU-SANEA-DREN-MAN-DN300"
+  ]
+}

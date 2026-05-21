@@ -1,0 +1,17 @@
+{
+  "codigo": "CPU-PAVIM-ATI-053",
+  "descricao": "Reforço do subleito",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "PAVIMENTACAO",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-BSTC-CORPO-DN1200-PA3",
+      "coeficiente": 0.586207,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-PAVIM-ATI-053-PROD-001"
+}

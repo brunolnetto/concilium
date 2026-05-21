@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-VAN-15P",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Van 15 pessoas",
+  "unidade": "h",
+  "preco_unitario": 80.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0019",
+    "valor_locacao_mensal": 16000,
+    "horas_mes": 200,
+    "consumo_litros_hora": 1.0
+  },
+  "classe_compartilhamento": {
+    "classe": "concorrente_compartilhavel",
+    "capacidade_cobertura": 5
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

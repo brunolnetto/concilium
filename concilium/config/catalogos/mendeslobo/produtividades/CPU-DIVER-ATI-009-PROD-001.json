@@ -1,0 +1,36 @@
+{
+  "id": "CPU-DIVER-ATI-009-PROD-001",
+  "codigo": "CPU-DIVER-ATI-009-PROD-001",
+  "descricao": "Produção CPU-DIVER-ATI-009",
+  "origem": "PROPRIA",
+  "valor_horario": 9.0,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-TRATOR-EST",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0025",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 33.8635,
+    "custo_padrao_pj": 25.0147
+  },
+  "cpu_ids": [
+    "CPU-DIVER-ATI-009"
+  ]
+}

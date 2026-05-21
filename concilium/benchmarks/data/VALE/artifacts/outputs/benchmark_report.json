@@ -1,0 +1,51 @@
+﻿{
+  "projeto": "VALE",
+  "slug": "VALE",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 516,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 3082,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 108,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "ERRO",
+      "duration_ms": 35,
+      "avisos": [],
+      "erros": [
+        "Itens não completados: eap-3_1=98.6%; eap-1_3=99.8%; eap-3_6=98.1%; eap-5_1=94.7%"
+      ]
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 8903472.37,
+      "custo_indireto": 5887204.57,
+      "custo_total": 14790676.94,
+      "preco_venda": 17671000.0
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "APROVADO"
+}

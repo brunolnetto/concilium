@@ -1,0 +1,21 @@
+{
+  "codigo": "EQ-CAM-MUNCK-45T",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão munck 45T",
+  "unidade": "h",
+  "preco_unitario": 175.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0011",
+    "valor_locacao_mensal": 35000,
+    "horas_mes": 200,
+    "consumo_litros_hora": 3.5
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_compartilhavel",
+    "capacidade_cobertura": 1,
+    "fracao_uso": 0.5
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

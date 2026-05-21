@@ -1,0 +1,17 @@
+{
+  "codigo": "CPU-DIVER-ATI-072",
+  "descricao": "Assentamento de guia (terceirizado)",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "DIVERSOS",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-GUIA-CONCRETO-PADRAO",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original",
+  "producao_id_ref": "CPU-DIVER-ATI-072-PROD-001"
+}

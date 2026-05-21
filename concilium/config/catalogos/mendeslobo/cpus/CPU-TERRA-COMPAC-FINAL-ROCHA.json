@@ -1,0 +1,19 @@
+{
+  "codigo": "CPU-TERRA-COMPAC-FINAL-ROCHA",
+  "descricao": "COMPACTAÇÃO DE CAMADA FINAL DE ATERRO DE ROCHA",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "data_referencia_preco": "2026-03-30",
+  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "custo_direto_unitario_planilha": 17.262724,
+  "precos_unitarios_sbdi": {
+    "mo": 8.775281,
+    "diesel": 5.6619,
+    "material": 0.0,
+    "equipamentos": 0.0,
+    "total": 14.437181
+  },
+  "producao_id_ref": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001"
+}

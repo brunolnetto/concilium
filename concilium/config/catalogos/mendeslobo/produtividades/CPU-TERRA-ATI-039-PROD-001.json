@@ -1,0 +1,44 @@
+{
+  "id": "CPU-TERRA-ATI-039-PROD-001",
+  "codigo": "CPU-TERRA-ATI-039-PROD-001",
+  "descricao": "Produção CPU-TERRA-ATI-039",
+  "origem": "PROPRIA",
+  "valor_horario": 0.15,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-ENCARREG-DREN",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MONTADOR",
+        "num_pessoas": 5
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0027",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0026",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0002",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "atributos_categoria": {
+    "custo_padrao_clt": 5217.833,
+    "custo_padrao_pj": 4076.6181
+  },
+  "cpu_ids": [
+    "CPU-TERRA-ATI-039"
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "id": "PROD-ESCO-CARGA-2CAT-001",
+  "codigo": "ESCO-CARGA-2CAT-001",
+  "descricao": "Escavação, carga, transporte, descarga e espalhamento — 2ª categoria",
+  "valor_horario": 159.108923076923,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_contra_obra_real",
+    "fonte_id": "Lote_09_10_CE_2025",
+    "data_calibracao": "2025-09-30T00:00:00Z",
+    "referencia": "Planilha AGIS; aba PLANEJAMENTO, CPU 2.2; 45 dias de dados"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "argila_com_pedras",
+    "dmt_medio": 1850.0,
+    "season": "seco",
+    "sequenciamento": "linear_continuo",
+    "equipamento_idade": 3,
+    "notas": "2ª categoria: argila com pedras, maior resistência que 1ª cat."
+  },
+  "qualidade": {
+    "confianca_pct": 90,
+    "intervalo_confianca": [
+      148.0,
+      170.0
+    ],
+    "quantidade_amostras": 30,
+    "desvio_padrao": 7.2
+  },
+  "historico_observacoes": [
+    {
+      "obra_id": "Lote_09_10_CE_2025",
+      "periodo": "2025-06-01/2025-09-30",
+      "producao_realizada": 159.108923076923,
+      "delta_pct": 0.0,
+      "contexto_observado": {
+        "solo": "argila_com_pedras",
+        "dmt": 1850,
+        "season": "seco"
+      },
+      "confiabilidade": 0.9,
+      "notas": "Calibração inicial",
+      "timestamp": "2025-10-15T10:30:00Z"
+    }
+  ],
+  "auditoria": {
+    "criado_por": "eng_senior_silva",
+    "data_criacao": "2025-10-15T10:30:00Z",
+    "ultima_modificacao": "2025-10-15T10:30:00Z",
+    "modificado_por": "eng_senior_silva",
+    "versao": "1.0"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-ESCAV",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 6
+      },
+      {
+        "funcao_id": "MO-ENCARREGADO-DE-FRENT",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-ESCAV-HID-38T",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-CAM-BASC-14M3",
+        "num_unidades": 6
+      }
+    ]
+  }
+}

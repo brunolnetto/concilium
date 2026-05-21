@@ -1,0 +1,13 @@
+{
+  "codigo": "P0026",
+  "tipo": "MAO_OBRA",
+  "descricao": "Engenheiro Trainee",
+  "unidade": "mes",
+  "preco_unitario": 6870.0,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "salario_base": 6870.0,
+    "custo_com_encargos": 6870.0
+  }
+}

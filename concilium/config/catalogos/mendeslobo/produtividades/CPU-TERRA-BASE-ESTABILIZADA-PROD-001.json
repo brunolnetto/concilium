@@ -1,0 +1,56 @@
+{
+  "id": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001",
+  "codigo": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001",
+  "descricao": "Produção CPU-TERRA-BASE-ESTABILIZADA",
+  "origem": "PROPRIA",
+  "valor_horario": 1.0,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0049",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0043",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0033",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0029",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0028",
+        "num_unidades": 2
+      },
+      {
+        "equip_id": "EQ-E0034",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0021",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0013",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "cpu_ids": [
+    "CPU-TERRA-BASE-ESTABILIZADA"
+  ]
+}

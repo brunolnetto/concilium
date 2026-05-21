@@ -1,0 +1,25 @@
+{
+  "codigo": "EQ-ESCAV-HID-38T",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Escavadeira hidráulica sobre esteira 38T",
+  "unidade": "h",
+  "preco_unitario": 278.4,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0015",
+    "valor_locacao_mensal": 45000,
+    "horas_mes": 200,
+    "consumo_litros_hora": 26.0,
+    "custo_locacao_hora": 225.0,
+    "custo_manutencao_operacao_hora": 53.4,
+    "referencia_sicro_custo_horario": "E9451",
+    "metodo_custo_horario": "locacao_mais_manutencao_operacao",
+    "nota": "Fator de custo 1.24x sobre locação pura. Inclui manutenção e custos operacionais conforme SICRO."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

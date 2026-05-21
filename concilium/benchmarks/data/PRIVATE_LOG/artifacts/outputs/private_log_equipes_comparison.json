@@ -1,0 +1,375 @@
+{
+  "slug": "PRIVATE_LOG",
+  "generated_at": "2026-05-12T12:11:07.215638+00:00",
+  "summary": {
+    "total_items": 8,
+    "items_with_any_gap": 2,
+    "items_materialized_only_in_concilium": 1,
+    "items_zero_in_both": 4
+  },
+  "items": [
+    {
+      "item_id": "eap-1_1",
+      "cpu_id": "CPU-TERRA-ATI-003",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-1_1",
+        "item_id": "eap-1_1",
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "funcoes": {
+          "MO-AJUDANTE": 3,
+          "MO-OPER-ESCAV": 1,
+          "MO-OPER-TRATOR-EST": 1
+        },
+        "equipamentos": {
+          "EQ-E0016": 1,
+          "EQ-E0024": 1
+        },
+        "funcoes_count": 3,
+        "equipamentos_count": 2,
+        "custo_mao_obra_mensal": 41534.95,
+        "custo_equipamentos_mensal": 85116.42,
+        "custo_combustivel_mensal": 22957.71,
+        "custo_material_mensal": 0.0,
+        "custo_total": 1789253.03,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-1_1",
+        "item_id": "eap-1_1",
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "funcoes": {
+          "MO-AJUDANTE": 3,
+          "MO-OPER-ESCAV": 1,
+          "MO-OPER-TRATOR-EST": 1
+        },
+        "equipamentos": {
+          "EQ-E0016": 1,
+          "EQ-E0024": 1
+        },
+        "funcoes_count": 3,
+        "equipamentos_count": 2,
+        "custo_mao_obra_mensal": 41534.95,
+        "custo_equipamentos_mensal": 85116.42,
+        "custo_combustivel_mensal": 22957.71,
+        "custo_material_mensal": 0.0,
+        "custo_total": 1789253.03,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 0.0,
+      "delta_custo_total_pct": 0.0,
+      "issues": []
+    },
+    {
+      "item_id": "eap-1_2",
+      "cpu_id": "CPU-TERRA-ATI-011",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-1_2",
+        "item_id": "eap-1_2",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-1_2",
+        "item_id": "eap-1_2",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 0.0,
+      "delta_custo_total_pct": null,
+      "issues": []
+    },
+    {
+      "item_id": "eap-1_3",
+      "cpu_id": "CPU-TERRA-ATI-011",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-1_3",
+        "item_id": "eap-1_3",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-1_3",
+        "item_id": "eap-1_3",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 0.0,
+      "delta_custo_total_pct": null,
+      "issues": []
+    },
+    {
+      "item_id": "eap-1_4",
+      "cpu_id": "CPU-TERRA-ATI-019-M2",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-1_4",
+        "item_id": "eap-1_4",
+        "cpu_id": "CPU-TERRA-ATI-019-M2",
+        "funcoes": {
+          "MO-ENCARREG-TERRA": 1,
+          "MO-OPER-MOTO": 1
+        },
+        "equipamentos": {
+          "EQ-E0029": 1
+        },
+        "funcoes_count": 2,
+        "equipamentos_count": 1,
+        "custo_mao_obra_mensal": 24424.8,
+        "custo_equipamentos_mensal": 43326.98,
+        "custo_combustivel_mensal": 14029.71,
+        "custo_material_mensal": 0.0,
+        "custo_total": 1467101.25,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-1_4",
+        "item_id": "eap-1_4",
+        "cpu_id": "CPU-TERRA-ATI-019-M2",
+        "funcoes": {
+          "MO-ENCARREG-TERRA": 1,
+          "MO-OPER-MOTO": 1
+        },
+        "equipamentos": {
+          "EQ-E0029": 1
+        },
+        "funcoes_count": 2,
+        "equipamentos_count": 1,
+        "custo_mao_obra_mensal": 28906.05,
+        "custo_equipamentos_mensal": 43326.98,
+        "custo_combustivel_mensal": 14029.71,
+        "custo_material_mensal": 0.0,
+        "custo_total": 1547491.66,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 80390.41,
+      "delta_custo_total_pct": 5.48,
+      "issues": [
+        "custo_total"
+      ]
+    },
+    {
+      "item_id": "eap-1_5",
+      "cpu_id": "CPU-TERRA-ATI-017",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-1_5",
+        "item_id": "eap-1_5",
+        "cpu_id": "CPU-TERRA-ATI-017",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-1_5",
+        "item_id": "eap-1_5",
+        "cpu_id": "CPU-TERRA-ATI-017",
+        "funcoes": {
+          "MO-ENCARREG-TERRA": 1,
+          "MO-MOTOR-CAM-PIPA": 1,
+          "MO-OPER-MOTO": 1,
+          "MO-OPER-ROLO-COMP": 2
+        },
+        "equipamentos": {
+          "EQ-E0010": 1,
+          "EQ-E0029": 1,
+          "EQ-E0035": 1
+        },
+        "funcoes_count": 5,
+        "equipamentos_count": 3,
+        "custo_mao_obra_mensal": 60962.07,
+        "custo_equipamentos_mensal": 84370.18,
+        "custo_combustivel_mensal": 39538.28,
+        "custo_material_mensal": 0.0,
+        "custo_total": 5527407.75,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 5527407.75,
+      "delta_custo_total_pct": null,
+      "issues": [
+        "funcoes",
+        "equipamentos",
+        "custo_total",
+        "funcoes_materializadas_apenas_no_concilium",
+        "equipamentos_materializados_apenas_no_concilium"
+      ]
+    },
+    {
+      "item_id": "eap-1_6",
+      "cpu_id": "CPU-TERRA-ATI-014",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-1_6",
+        "item_id": "eap-1_6",
+        "cpu_id": "CPU-TERRA-ATI-014",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-1_6",
+        "item_id": "eap-1_6",
+        "cpu_id": "CPU-TERRA-ATI-014",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 0.0,
+      "delta_custo_total_pct": null,
+      "issues": []
+    },
+    {
+      "item_id": "eap-1_7",
+      "cpu_id": "CPU-TERRA-ATI-011",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-1_7",
+        "item_id": "eap-1_7",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-1_7",
+        "item_id": "eap-1_7",
+        "cpu_id": "CPU-TERRA-ATI-011",
+        "funcoes": {},
+        "equipamentos": {},
+        "funcoes_count": 0,
+        "equipamentos_count": 0,
+        "custo_mao_obra_mensal": 0.0,
+        "custo_equipamentos_mensal": 0.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 0.0,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 0.0,
+      "delta_custo_total_pct": null,
+      "issues": []
+    },
+    {
+      "item_id": "eap-4_2",
+      "cpu_id": "CPU-TERRA-ATI-005",
+      "ref": {
+        "source": "referencia",
+        "equipe_id": "eq-eap-4_2",
+        "item_id": "eap-4_2",
+        "cpu_id": "CPU-TERRA-ATI-005",
+        "funcoes": {
+          "MO-AUX-TOPO": 2,
+          "MO-TOPOGRAFO": 1
+        },
+        "equipamentos": {
+          "EQ-ESTACAO-TOTAL": 1
+        },
+        "funcoes_count": 2,
+        "equipamentos_count": 1,
+        "custo_mao_obra_mensal": 29420.64,
+        "custo_equipamentos_mensal": 2640.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 191714.96,
+        "permanencia_meses": 0.0
+      },
+      "concilium": {
+        "source": "concilium",
+        "equipe_id": "eq-eap-4_2",
+        "item_id": "eap-4_2",
+        "cpu_id": "CPU-TERRA-ATI-005",
+        "funcoes": {
+          "MO-AUX-TOPO": 2,
+          "MO-TOPOGRAFO": 1
+        },
+        "equipamentos": {
+          "EQ-ESTACAO-TOTAL": 1
+        },
+        "funcoes_count": 2,
+        "equipamentos_count": 1,
+        "custo_mao_obra_mensal": 29420.64,
+        "custo_equipamentos_mensal": 2640.0,
+        "custo_combustivel_mensal": 0.0,
+        "custo_material_mensal": 0.0,
+        "custo_total": 191714.96,
+        "permanencia_meses": 5.98
+      },
+      "delta_custo_total": 0.0,
+      "delta_custo_total_pct": 0.0,
+      "issues": []
+    }
+  ]
+}

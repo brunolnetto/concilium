@@ -1,0 +1,10 @@
+{
+  "id": "ESCO-CARGA-1CAT-DMT2000-PROD-001",
+  "codigo": "ESCO-CARGA-1CAT-DMT2000-PROD-001",
+  "descricao": "Produção ESCO-CARGA-1CAT-DMT2000",
+  "origem": "PROPRIA",
+  "valor_horario": 233.54208,
+  "cpu_ids": [
+    "ESCO-CARGA-1CAT-DMT2000"
+  ]
+}

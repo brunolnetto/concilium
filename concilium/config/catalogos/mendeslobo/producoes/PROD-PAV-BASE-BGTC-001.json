@@ -1,0 +1,73 @@
+{
+  "id": "PROD-PAV-BASE-BGTC-001",
+  "codigo": "PAV-BASE-BGTC-001",
+  "descricao": "Base de BGTC — execução e compactação",
+  "valor_horario": 22.0,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "SICRO_2024_CE",
+    "data_calibracao": "2024-01-01T00:00:00Z",
+    "referencia": "SICRO 2024 — base granular BGTC"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": null,
+    "dmt_medio": null,
+    "season": "seco",
+    "sequenciamento": "linear",
+    "equipamento_idade": null,
+    "notas": "BGTC: Brita Graduada Tratada com Cimento; execução com motoniveladora e rolo"
+  },
+  "qualidade": {
+    "confianca_pct": 70,
+    "intervalo_confianca": [
+      18.0,
+      26.0
+    ],
+    "quantidade_amostras": 6,
+    "desvio_padrao": 2.5
+  },
+  "historico_observacoes": [],
+  "auditoria": {
+    "criado_por": "eng_senior_silva",
+    "data_criacao": "2025-10-15T10:30:00Z",
+    "ultima_modificacao": "2025-10-15T10:30:00Z",
+    "modificado_por": "eng_senior_silva",
+    "versao": "1.0"
+  },
+  "categoria": "DIVERSOS",
+  "equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "MO-SERV-GERAL",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-MOTONIVEL-140K",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-ROLO-PE-CARNEIRO",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-CAM-BASC-14M3",
+        "num_unidades": 2
+      }
+    ]
+  }
+}
