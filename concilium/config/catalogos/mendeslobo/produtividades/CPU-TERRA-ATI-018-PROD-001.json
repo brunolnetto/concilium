@@ -46,11 +46,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 5.3157,
-    "custo_padrao_pj": 4.6456
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-018"
-  ]
+  "historico_observacoes": []
 }

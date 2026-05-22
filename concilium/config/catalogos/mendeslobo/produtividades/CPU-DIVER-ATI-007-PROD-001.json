@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 0.7212,
-    "custo_padrao_pj": 0.5965
-  },
-  "cpu_ids": [
-    "CPU-DIVER-ATI-007"
-  ]
+  "historico_observacoes": []
 }

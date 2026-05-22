@@ -217,7 +217,6 @@ class TestAliases:
 
 
 class TestBackwardCompatibility:
-
     def test_empty_config_dir_returns_empty_list(self, tmp_path: Path) -> None:
         (tmp_path / "contextos").mkdir()
         svc = ContextoVersionService(tmp_path)

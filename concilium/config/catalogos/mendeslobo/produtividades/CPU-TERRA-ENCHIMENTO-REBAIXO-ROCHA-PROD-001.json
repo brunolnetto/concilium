@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001",
   "descricao": "Produção CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
   "origem": "PROPRIA",
-  "valor_horario": 1.0,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -38,7 +38,5 @@
       }
     ]
   },
-  "cpu_ids": [
-    "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA"
-  ]
+  "historico_observacoes": []
 }

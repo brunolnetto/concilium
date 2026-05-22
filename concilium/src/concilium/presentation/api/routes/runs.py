@@ -17,10 +17,10 @@ from ..schemas import (
     RunStartResponse,
 )
 
-router = APIRouter(tags=["projects - runs"])
+router = APIRouter(prefix="/api/projects", tags=["projects - runs"])
 
 
-@router.post("/api/projects/{project_id}/runs", response_model=RunProjectResponse, summary="Run pipeline (synchronous)")
+@router.post("/{project_id}/runs", response_model=RunProjectResponse, summary="Run pipeline (synchronous)")
 def run_project(
     project_id: str,
     req: RunProjectRequest,
@@ -44,7 +44,7 @@ def run_project(
 
 
 @router.post(
-    "/api/projects/{project_id}/runs/start",
+    "/{project_id}/runs/start",
     response_model=RunStartResponse,
     summary="Start pipeline run (asynchronous)",
 )
@@ -71,7 +71,7 @@ def start_run_project(
 
 
 @router.post(
-    "/api/projects/{project_id}/rerun",
+    "/{project_id}/rerun",
     response_model=RunProjectResponse,
     summary="Re-run from a previous run or version",
 )
@@ -100,7 +100,7 @@ def rerun_project(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.get("/api/projects/{project_id}/runs", summary="List all runs for a project")
+@router.get("/{project_id}/runs", summary="List all runs for a project")
 def list_runs(
     project_id: str,
     service: ConciliumService = Depends(get_concilium_service),
@@ -111,7 +111,7 @@ def list_runs(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/api/projects/{project_id}/runs/{run_id}", summary="Get a specific run")
+@router.get("/{project_id}/runs/{run_id}", summary="Get a specific run")
 def get_run(
     project_id: str,
     run_id: str,
@@ -123,7 +123,7 @@ def get_run(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/api/projects/{project_id}/versions/{version}/fork", summary="Fork a version (copy-on-write)")
+@router.post("/{project_id}/versions/{version}/fork", summary="Fork a version (copy-on-write)")
 def fork_version(
     project_id: str,
     version: str,

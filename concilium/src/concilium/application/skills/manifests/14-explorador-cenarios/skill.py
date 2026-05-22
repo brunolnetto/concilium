@@ -101,6 +101,15 @@ def _bl_reduce_duration_lever(canonical_in, venda: float, inputs: dict):
     )
 
 
+def _batl_custo_a_plus(a_plus: list, resultado: Any) -> float:
+    """Computes custo_a_plus sum for ADD_TEAMS lever."""
+    total = resultado.custo.total or 0
+    result = 0.0
+    for a in a_plus:
+        result += getattr(a.custo, "valor_raw", 0.0) * total
+    return result
+
+
 def _bl_add_teams_lever(canonical_in, venda: float):
     """Builds ADD_TEAMS lever or returns None if not applicable."""
     ccr = canonical_in.cost_criticality_report
@@ -110,22 +119,25 @@ def _bl_add_teams_lever(canonical_in, venda: float):
     a_plus = [a for a in atividades_cc if getattr(a, "classe", "") == "A+"]
     if not a_plus or not canonical_in.resultado:
         return None
-    custo_a_plus = sum(getattr(a.custo, "valor_raw", 0.0) * (canonical_in.resultado.custo.total or 0) for a in a_plus)
+    custo_a_plus = _batl_custo_a_plus(a_plus, canonical_in.resultado)
     dm = round(custo_a_plus * _ADD_TEAMS_COST_SENSITIVITY * _ADD_TEAMS_PERMANENCIA_GAIN / max(venda, 1), 6)
     if dm <= 0:
         return None
     top3 = a_plus[:3]
+    params = {}
+    for a in top3:
+        params[getattr(a, "atividade_id", "?")] = "+1 equipe"
     return Lever(
         tipo="ADD_TEAMS",
         checkpoint_skill="03-equipes-diretas",
-        parametros={getattr(a, "atividade_id", "?"): "+1 equipe" for a in top3},
+        parametros=params,
         delta_margem_estimado=dm,
         custo_aplicacao=0.0,
         ratio_beneficio=round(dm, 6),
         confianca="BAIXA",
         controle="TUNAVEL",
         justificativa=(
-            f"{len(a_plus)} atividade(s) A+. Mais equipes reduz perman\u00eancia em "
+            f"{len(a_plus)} atividade(s) A+. Mais equipes reduz permanência em "
             f"~{_ADD_TEAMS_PERMANENCIA_GAIN * 100:.0f}% -> ganho estimado de {dm * 100:.2f}% de margem."
         ),
     )
@@ -213,6 +225,17 @@ def _risco_lever(lever: Lever) -> str:
     return "MEDIO"
 
 
+def _rec_build_oportunidades(levers: list, levers_nao_usados: list | None = None) -> list:
+    """Builds OportunidadeVerde list from levers."""
+    source = levers_nao_usados if levers_nao_usados is not None else levers
+    result = []
+    for lv in source:
+        result.append(
+            OportunidadeVerde(lever=lv, margem_adicional_estimada=lv.delta_margem_estimado, risco=_risco_lever(lv))
+        )
+    return result
+
+
 def run_explorador_cenarios(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
@@ -256,29 +279,11 @@ def run_explorador_cenarios(
 
     if status_entrada != "VERDE":
         repair = _repair_path(levers, margem_entrada, faixa_alvo, faixa_aceitavel)
-        # Oportunidades residuais (para mostrar o que mais pode ser feito)
         levers_nao_usados = levers[len(repair.passos) :]
-        oportunidades = [
-            OportunidadeVerde(
-                lever=lv,
-                margem_adicional_estimada=lv.delta_margem_estimado,
-                risco=_risco_lever(lv),
-            )
-            for lv in levers_nao_usados
-        ]
+        oportunidades = _rec_build_oportunidades(levers, levers_nao_usados)
     else:
         # VERDE: todos os levers são oportunidades de melhoria
-        oportunidades = sorted(
-            [
-                OportunidadeVerde(
-                    lever=lv,
-                    margem_adicional_estimada=lv.delta_margem_estimado,
-                    risco=_risco_lever(lv),
-                )
-                for lv in levers
-            ],
-            key=lambda o: -o.margem_adicional_estimada,
-        )
+        oportunidades = sorted(_rec_build_oportunidades(levers), key=lambda o: -o.margem_adicional_estimada)
 
     psr = PlanSpaceResult(
         status_entrada=status_entrada,
@@ -288,18 +293,18 @@ def run_explorador_cenarios(
     )
 
     novo = canonical_in.model_copy(update={"plan_space_result": psr})
-
     validacoes.append(ValidacaoItem(codigo="VAL-PSE-01", status="OK"))
 
     if repair is not None:
+        viavel_str = "viável" if repair.viavel else "incompleto"
+        status_rep = "OK" if repair.viavel else "AVISO"
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-PSE-02",
-                status="OK" if repair.viavel else "AVISO",
+                status=status_rep,
                 mensagem=(
-                    f"Repair {'viável' if repair.viavel else 'incompleto'}: "
-                    f"margem projetada {repair.margem_projetada * 100:.2f}% "
-                    f"em {len(repair.passos)} passo(s)."
+                    f"Repair {viavel_str}: margem projetada {repair.margem_projetada * 100:.2f}%"
+                    f" em {len(repair.passos)} passo(s)."
                 ),
             )
         )

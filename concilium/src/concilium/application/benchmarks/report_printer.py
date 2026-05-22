@@ -1,6 +1,30 @@
 from __future__ import annotations
 
 
+def _print_pe_referencia(ponto_eq_ref) -> None:
+    if not ponto_eq_ref:
+        return
+    print("\n  [PE] Ponto de Equilibrio (referencia):")
+    print(f"     HC total          : {ponto_eq_ref.get('total_hc') or '?'}")
+    custo_fixo = ponto_eq_ref.get("total_custo_fixo") or 0.0
+    print(f"     Custo fixo total  : R$ {custo_fixo:>14,.2f}")
+    print(f"     Num equipes       : {ponto_eq_ref.get('equipes') or '?'}")
+
+
+def _print_pe_ferramenta(ponto_eq_tool) -> None:
+    if not ponto_eq_tool:
+        return
+    print("\n  [PE] Ponto de Equilibrio Estrutural (Ferramenta):")
+    print(f"     HC operacional    : {ponto_eq_tool.get('total_hc_operacional') or '0'}")
+    print(f"     HC indireto       : {ponto_eq_tool.get('total_hc_indireto') or '0'}")
+    print(f"     HC total          : {ponto_eq_tool.get('total_hc') or '0'}")
+    custo_fixo_mensal = ponto_eq_tool.get("custo_fixo_mensal") or 0.0
+    custo_fixo_total = ponto_eq_tool.get("custo_fixo_total") or 0.0
+    print(f"     Custo fixo mensal : R$ {custo_fixo_mensal:>14,.2f}")
+    print(f"     Custo fixo total  : R$ {custo_fixo_total:>14,.2f}")
+    print(f"     Num equipes       : {ponto_eq_tool.get('equipes') or '0'}")
+
+
 class BenchmarkReportPrinter:
     def _print_header(self, report: dict) -> None:
         quality_gates = report.get("quality_gates", {})
@@ -91,24 +115,8 @@ class BenchmarkReportPrinter:
             print(f"       total         : R$ {indireto.get('total', 0):>14,.2f}")
 
     def _print_ponto_equilibrio(self, confronto: dict) -> None:
-        if confronto.get("ponto_equilibrio_referencia"):
-            ponto_eq_ref = confronto["ponto_equilibrio_referencia"]
-            print("\n  [PE] Ponto de Equilibrio (referencia):")
-            print(f"     HC total          : {ponto_eq_ref.get('total_hc') or '?'}")
-            custo_fixo = ponto_eq_ref.get("total_custo_fixo") or 0.0
-            print(f"     Custo fixo total  : R$ {custo_fixo:>14,.2f}")
-            print(f"     Num equipes       : {ponto_eq_ref.get('equipes') or '?'}")
-        if confronto.get("ponto_equilibrio_ferramenta"):
-            ponto_eq_tool = confronto["ponto_equilibrio_ferramenta"]
-            print("\n  [PE] Ponto de Equilibrio Estrutural (Ferramenta):")
-            print(f"     HC operacional    : {ponto_eq_tool.get('total_hc_operacional') or '0'}")
-            print(f"     HC indireto       : {ponto_eq_tool.get('total_hc_indireto') or '0'}")
-            print(f"     HC total          : {ponto_eq_tool.get('total_hc') or '0'}")
-            custo_fixo_mensal = ponto_eq_tool.get("custo_fixo_mensal") or 0.0
-            custo_fixo_total = ponto_eq_tool.get("custo_fixo_total") or 0.0
-            print(f"     Custo fixo mensal : R$ {custo_fixo_mensal:>14,.2f}")
-            print(f"     Custo fixo total  : R$ {custo_fixo_total:>14,.2f}")
-            print(f"     Num equipes       : {ponto_eq_tool.get('equipes') or '0'}")
+        _print_pe_referencia(confronto.get("ponto_equilibrio_referencia"))
+        _print_pe_ferramenta(confronto.get("ponto_equilibrio_ferramenta"))
 
     def _print_insights(self, confronto: dict) -> None:
         if not confronto.get("actionable_insights"):

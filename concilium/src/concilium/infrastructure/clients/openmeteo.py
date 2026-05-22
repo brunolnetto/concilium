@@ -42,6 +42,13 @@ class DadosClimaticosMensais(BaseModel):
     dias_precipitacao_semanal: dict[str, dict[str, int]] = Field(default_factory=dict)
 
 
+def _accumulate_thresholds(mes_row: dict, semana_row: dict, prec: float, thresholds: list) -> None:
+    for t in thresholds:
+        if prec >= t:
+            mes_row[f"{t}mm"] += 1
+            semana_row[f"{t}mm"] += 1
+
+
 class OpenMeteoClient:
     """Cliente HTTP para Open-Meteo. Implementa cache em memória por (lat, lng, ano)."""
 
@@ -127,16 +134,13 @@ class OpenMeteoClient:
         for date_str, prec in zip(dates, precs, strict=True):
             if prec is None:
                 continue
-            mes = date_str[5:7]  # "YYYY-MM-DD" -> "MM"
+            mes = date_str[5:7]
             d = _date.fromisoformat(date_str)
             iso = d.isocalendar()
             semana_key = f"{iso.year}-W{iso.week:02d}"
             if semana_key not in semanas:
                 semanas[semana_key] = {f"{t}mm": 0 for t in thresholds}
-            for t in thresholds:
-                if prec >= t:
-                    meses[mes][f"{t}mm"] += 1
-                    semanas[semana_key][f"{t}mm"] += 1
+            _accumulate_thresholds(meses[mes], semanas[semana_key], prec, thresholds)
 
         result = DadosClimaticosMensais(
             latitude=latitude,

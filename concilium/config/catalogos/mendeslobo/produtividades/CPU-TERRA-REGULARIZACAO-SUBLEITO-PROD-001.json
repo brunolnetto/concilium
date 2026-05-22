@@ -25,7 +25,6 @@
       }
     ]
   },
-  "cpu_ids": [
-    "CPU-TERRA-REGULARIZACAO-SUBLEITO"
-  ]
+  "historico_observacoes": [],
+  "valor_horario": 400.0
 }

@@ -21,7 +21,7 @@
     "nota": "Adotada do SICRO P5.2"
   },
   "categoria": "OBRAS_ARTE",
-  "equipe": {
+  "composicao_padrao_equipe": {
     "funcoes": [
       {
         "funcao_id": "MO-OPER-MOTO",
@@ -62,5 +62,6 @@
         "num_unidades": 2
       }
     ]
-  }
+  },
+  "historico_observacoes": []
 }

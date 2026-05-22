@@ -44,12 +44,15 @@ def _catalog_based_sizing(
     snapshot: object,
     num_equipes_por_item: dict,
 ) -> None:
-    cpu_lookup = {cpu["codigo"]: cpu for cpu in snapshot.cpus if "codigo" in cpu}  # type: ignore[union-attr]
-    prod_lookup = {
-        (prod.get("id") or prod.get("codigo")): prod
-        for prod in snapshot.produtividades  # type: ignore[union-attr]
-        if prod.get("id") or prod.get("codigo")
-    }
+    cpu_lookup: dict = {}
+    for cpu in snapshot.cpus:  # type: ignore[union-attr]
+        if "codigo" in cpu:
+            cpu_lookup[cpu["codigo"]] = cpu
+    prod_lookup: dict = {}
+    for prod in snapshot.produtividades:  # type: ignore[union-attr]
+        pk = prod.get("id") or prod.get("codigo")
+        if pk:
+            prod_lookup[pk] = prod
     for item in items_sem_ref:
         cpu_id = item.get("cpu_id")
         qty = item.get("quantitativo", 0)

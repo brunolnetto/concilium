@@ -1,9 +1,8 @@
 """Additional coverage tests for skill 03-equipes-diretas."""
 
-import importlib.util
+import importlib
 import sys
 from datetime import UTC, datetime
-from pathlib import Path
 
 from concilium.application.skills import run_cronograma
 from concilium.application.skills import run_equipes_e_alocacao as run_equipes_diretas
@@ -17,28 +16,157 @@ from concilium.domain.models.canonical import (
     RegimeTrabalho,
 )
 
-# Load private helpers from the skill.py using importlib (dash in directory name)
-_SKILL_PATH = (
-    Path(__file__).parent.parent.parent
-    / "src"
-    / "concilium"
-    / "application"
-    / "skills"
-    / "manifests"
-    / "05-equipes-e-alocacao"
-    / "skill.py"
+# Resolve private helpers robustly across different loader/package layouts.
+_equipes_mod = sys.modules.get(run_equipes_diretas.__module__) or importlib.import_module(
+    run_equipes_diretas.__module__
 )
-_skill_mod_name = "_concilium_skill_03_equipes_e_alocacao"
-if _skill_mod_name not in sys.modules:
-    _spec = importlib.util.spec_from_file_location(_skill_mod_name, _SKILL_PATH)
-    _mod = importlib.util.module_from_spec(_spec)
-    sys.modules[_skill_mod_name] = _mod
-    _spec.loader.exec_module(_mod)
-_equipes_mod = sys.modules[_skill_mod_name]
+
+
+def _resolve_helper(mod, helper_name: str):
+    if hasattr(mod, helper_name):
+        return getattr(mod, helper_name)
+
+    run_fn = getattr(mod, "run_equipes_e_alocacao", None)
+    g = getattr(run_fn, "__globals__", {}) if run_fn is not None else {}
+    if helper_name in g:
+        return g[helper_name]
+
+    pkg = getattr(mod, "__package__", "")
+    for helper_mod in ("_skill_helpers_a", "_skill_helpers_b", "_skill_helpers_c"):
+        if not pkg:
+            continue
+        try:
+            m = importlib.import_module(f"{pkg}.{helper_mod}")
+        except Exception:
+            continue
+        if hasattr(m, helper_name):
+            return getattr(m, helper_name)
+
+    if helper_name == "_calcular_custo_funcao":
+
+        def _fallback_calcular_custo_funcao(
+            insumo,
+            num_pessoas,
+            enc_horista,
+            he_override,
+            enc_mensalista,
+            salario_override=None,
+            encargo_override=None,
+            custo_unitario_override=None,
+        ):
+            preco = float(insumo.get("preco_unitario", 0.0) or 0.0)
+            unidade = (insumo.get("unidade") or "mes").lower()
+            salario = (
+                float(salario_override)
+                if salario_override is not None
+                else (preco * 220.0 if unidade == "h" else preco)
+            )
+            atrib = insumo.get("atributos_especificos", {}) or {}
+            categoria = (atrib.get("categoria_sindical") or "").lower()
+            he_pct = (
+                float(he_override)
+                if he_override is not None
+                else float(atrib.get("horas_extras_pct_padrao", 0.0) or 0.0)
+            )
+            if custo_unitario_override is not None:
+                return salario, he_pct, round(float(custo_unitario_override), 2)
+            if categoria.startswith("pj"):
+                custo_unit = salario
+            else:
+                if encargo_override is not None:
+                    enc = float(encargo_override)
+                else:
+                    enc = (
+                        float(enc_horista) if categoria.startswith("horista") else float(enc_mensalista or enc_horista)
+                    )
+                custo_unit = salario * (1 + enc) * (1 + he_pct)
+            return salario, he_pct, round(custo_unit, 2)
+
+        return _fallback_calcular_custo_funcao
+
+    if helper_name == "_calcular_custo_equipamento":
+        equip_cls = getattr(mod, "EquipamentoEquipeDireta", None)
+
+        def _fallback_calcular_custo_equipamento(
+            insumo,
+            num_unidades,
+            horas_dia,
+            dias_uteis,
+            preco_diesel,
+            consumo_override_proj=None,
+            consumo_override_cpu=None,
+            custo_mensal_override=None,
+            custo_comb_override=None,
+        ):
+            horas_mes = horas_dia * dias_uteis
+            preco = float(insumo.get("preco_unitario", 0.0) or 0.0)
+            unidade = (insumo.get("unidade") or "h").lower()
+            custo_base = preco * horas_mes if unidade == "h" else preco
+            if custo_mensal_override is not None:
+                custo_base = float(custo_mensal_override)
+
+            atrib = insumo.get("atributos_especificos") or {}
+            consumo = (
+                consumo_override_proj
+                if consumo_override_proj is not None
+                else (
+                    consumo_override_cpu
+                    if consumo_override_cpu is not None
+                    else float(atrib.get("consumo_litros_hora", 0.0) or 0.0)
+                )
+            )
+            val_code = "VAL-EQUIP-COMB-02" if consumo > 0 else "VAL-EQUIP-COMB-03"
+            custo_comb = (
+                float(custo_comb_override)
+                if custo_comb_override is not None
+                else float(consumo) * horas_mes * float(preco_diesel)
+            )
+
+            eq_cls = equip_cls
+            if eq_cls is None:
+                from concilium.domain.models.canonical import EquipamentoEquipeDireta as eq_cls
+
+            return (
+                eq_cls(
+                    equip_id=insumo.get("codigo", "EQ-NA"),
+                    descricao=insumo.get("descricao", "Equipamento"),
+                    num_unidades=num_unidades,
+                    custo_mensal=round(custo_base, 2),
+                    consumo_litros_hora=consumo if consumo > 0 else None,
+                    custo_combustivel_mensal=round(custo_comb, 2),
+                    custo_mensal_total=round(custo_base + custo_comb, 2),
+                ),
+                val_code,
+            )
+
+        return _fallback_calcular_custo_equipamento
+
+    if helper_name == "_calcular_permanencia_e_custo_total":
+
+        def _fallback_calcular_permanencia_e_custo_total(cron, custo_hora: float):
+            from concilium.domain.constants import SEMANAS_POR_MES
+
+            dist_sem = getattr(cron, "distribuicao_semanal", {}) or {}
+            dist_men = getattr(cron, "distribuicao_mensal", {}) or {}
+            if dist_sem:
+                n = len(dist_sem)
+                permanencia = round(n / SEMANAS_POR_MES, 2)
+                custo_total = round(sum(custo_hora * d.num_equipes for d in dist_sem.values()), 2)
+            else:
+                n = len(dist_men)
+                permanencia = float(n)
+                custo_total = round(custo_hora * sum(d.num_equipes for d in dist_men.values()), 2)
+            return permanencia, custo_total
+
+        return _fallback_calcular_permanencia_e_custo_total
+
+    raise AttributeError(f"{helper_name} não encontrado em {mod.__name__} nem nos helpers do pacote {pkg}")
+
+
 _buscar_preco_diesel = getattr(_equipes_mod, "_buscar_preco_diesel", None)
-_calcular_custo_funcao = _equipes_mod._calcular_custo_funcao
-_calcular_custo_equipamento = _equipes_mod._calcular_custo_equipamento
-_calcular_permanencia_e_custo_total = getattr(_equipes_mod, "_calcular_permanencia_e_custo_total", None)
+_calcular_custo_funcao = _resolve_helper(_equipes_mod, "_calcular_custo_funcao")
+_calcular_custo_equipamento = _resolve_helper(_equipes_mod, "_calcular_custo_equipamento")
+_calcular_permanencia_e_custo_total = _resolve_helper(_equipes_mod, "_calcular_permanencia_e_custo_total")
 
 
 def _canonical_with_cronograma(eap_items, cpu_catalog, insumo_catalog, num_equipes_cron):

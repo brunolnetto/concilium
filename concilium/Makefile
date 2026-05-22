@@ -1,6 +1,6 @@
 # ── Concilium — Makefile ──────────────────────────────────────────────────────
 # Targets rápidos (< 1 min):   test  lint  lint-report  type-check  fmt
-# Targets lentos  (> 1 min):   test-all  coverage  codebase-stats
+# Targets lentos  (> 1 min):   test  coverage  codebase-stats
 # Utilitários:                  file-sizes  clean
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -14,10 +14,9 @@ LINT_REPORT := .lint-report.json
 TEST_REPORT  := $(COV_DIR)/test-report.json
 # Exclude skill manifests (dirs with dashes are not valid Python package names)
 MYPY_EXCLUDE := --exclude 'src/concilium/application/skills/manifests'
-SKIP_SLOW   := --ignore=$(TESTS_UNIT)/test_application_services_refactor.py \
-               --ignore=$(TESTS_UNIT)/test_13_replan_advisor.py
+SKIP_MARKERS := -m "not slow and not flaky"
 
-.PHONY: help test test-all lint lint-report type-check fmt \
+.PHONY: help test test-slow test-flaky lint lint-report type-check fmt \
         coverage codebase-stats file-sizes size clean
 
 # ── Default ───────────────────────────────────────────────────────────────────
@@ -26,14 +25,13 @@ help:
 	@echo "  Concilium — targets disponíveis"
 	@echo ""
 	@echo "  Rápidos (< 1 min)"
-	@echo "    make test           Testes unitários"
-	@echo "    make lint           Ruff: exibe violações (não falha em B008)"
+	@echo "    make test           Testes unitários (exclui slow e flaky)"
+	@echo "    make lint           Ruff: exibe violações"
 	@echo "    make lint-report    Ruff: gera $(LINT_REPORT) agrupado por regra para agente de código"
 	@echo "    make type-check     Mypy: checagem estática de tipos"
 	@echo "    make fmt            Ruff: formata + corrige imports in-place"
 	@echo ""
 	@echo "  Lentos (> 1 min)"
-	@echo "    make test-all       Unitários + integração"
 	@echo "    make coverage       Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"
 	@echo "    make codebase-stats Análise completa → $(COV_DIR)/report.md (requer make coverage)"
 	@echo ""
@@ -44,14 +42,9 @@ help:
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test:
-	$(PYTHON) -m pytest $(TESTS_UNIT) -q --tb=short $(SKIP_SLOW)
-
-test-all:
-	$(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(SKIP_SLOW)
+	$(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(SKIP_MARKERS)
 
 # ── Lint ──────────────────────────────────────────────────────────────────────
-# B008: false-positive em Depends()/typer.Option() — ignorado no lint interativo.
-# Para ver B008 também: make lint-report
 lint:
 	$(PYTHON) -m ruff check $(SRC) tests/ --ignore B008 || true
 	@$(PYTHON) -m ruff check $(SRC) tests/ --output-format json 2>/dev/null \
@@ -87,13 +80,13 @@ fmt:
 # ── Coverage ──────────────────────────────────────────────────────────────────
 coverage:
 	@mkdir -p $(COV_DIR)
-	$(PYTHON) -m pytest $(TESTS_UNIT) -q --tb=short $(SKIP_SLOW) \
+	$(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(SKIP_MARKERS) \
 		--cov=$(SRC) \
 		--cov-branch \
 		--cov-report=json:$(COV_DIR)/coverage.json \
 		--json-report --json-report-file=$(TEST_REPORT) \
 		--cov-report=term-missing:skip-covered \
-		--no-cov-on-fail
+		--durations=50 
 	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"
 
 # ── Codebase stats ────────────────────────────────────────────────────────────

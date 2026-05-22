@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 34.7745,
-    "custo_padrao_pj": 28.9174
-  },
-  "cpu_ids": [
-    "CPU-SANEA-ATI-045"
-  ]
+  "historico_observacoes": []
 }

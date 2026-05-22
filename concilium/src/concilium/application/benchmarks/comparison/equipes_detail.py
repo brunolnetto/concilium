@@ -22,12 +22,17 @@ def _load_cpu(cpu_id: str, cpus_dir: Path) -> dict[str, Any]:
     return _load_json(cpus_dir / f"{cpu_id}.json")
 
 
+def _bed_has_discrepancy(funcoes_ref: list, funcoes_esp: list, equips_ref: list, equips_esp: list) -> bool:
+    """Retorna True se ha discrepancia entre composicao alocada e esperada."""
+    return (len(funcoes_ref) == 0 and len(funcoes_esp) > 0) or (len(equips_ref) == 0 and len(equips_esp) > 0)
+
+
 def build_equipes_detail(slug: str, root: Path | None = None) -> dict[str, Any]:
-    """Retorna equipes com discrepÃ¢ncias entre catÃ¡logo (esperado) e engine (alocado).
+    """Retorna equipes com discrepancias entre catalogo (esperado) e engine (alocado).
 
     Args:
         slug: ex. "CTC"
-        root: raiz do repositÃ³rio
+        root: raiz do repositorio
     """
     r = root or _DEFAULT_ROOT
     bench_root = r / "benchmarks" / "data"
@@ -50,9 +55,7 @@ def build_equipes_detail(slug: str, root: Path | None = None) -> dict[str, Any]:
         funcoes_esperadas = cpu_equipe.get("funcoes", [])
         equipamentos_esperados = cpu_equipe.get("equipamentos", [])
 
-        if (len(funcoes_ref) == 0 and len(funcoes_esperadas) > 0) or (
-            len(equipamentos_ref) == 0 and len(equipamentos_esperados) > 0
-        ):
+        if _bed_has_discrepancy(funcoes_ref, funcoes_esperadas, equipamentos_ref, equipamentos_esperados):
             equipes_com_discrepancias.append(
                 {
                     "item_id": item_id,

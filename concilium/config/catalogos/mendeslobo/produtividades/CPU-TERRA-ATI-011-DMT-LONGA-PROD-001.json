@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ATI-011-DMT-LONGA-PROD-001",
   "descricao": "Produção CPU-TERRA-ATI-011-DMT-LONGA",
   "origem": "PROPRIA",
-  "valor_horario": 110.0,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 9.85,
-    "custo_padrao_pj": 8.7
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-011-DMT-LONGA"
-  ]
+  "historico_observacoes": []
 }

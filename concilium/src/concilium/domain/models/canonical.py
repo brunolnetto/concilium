@@ -860,6 +860,50 @@ class Cronograma(BaseModel):
     pct_completude: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
+def _migrate_cron_item_to_dict(item) -> dict | None:
+    if isinstance(item, dict):
+        return item
+    if hasattr(item, "model_dump"):
+        return item.model_dump()
+    return None
+
+
+def _extract_weeks_from_dist(dist_semanal: dict) -> list:
+    weeks = []
+    for k in dist_semanal:
+        if "-W" in str(k):
+            try:
+                weeks.append(int(str(k).split("-W")[1]))
+            except (ValueError, IndexError):
+                pass
+    return weeks
+
+
+def _migrate_cron_list_to_cronograma(cron: list) -> dict:
+    scheduled = []
+    for item in cron:
+        item_data = _migrate_cron_item_to_dict(item)
+        if item_data is None:
+            continue
+        item_id = item_data.get("item_id", "")
+        dist_semanal = item_data.get("distribuicao_semanal") or {}
+        if not dist_semanal:
+            dist_semanal = item_data.get("distribuicao_mensal") or {}
+        weeks = _extract_weeks_from_dist(dist_semanal)
+        start = min(weeks) if weeks else 1
+        end = max(weeks) if weeks else 1
+        scheduled.append(
+            {
+                "activity_id": item_id,
+                "start_week": start,
+                "end_week": end,
+                "duration_weeks": max(end - start + 1, 1),
+                "distribuicao_semanal": dist_semanal,
+            }
+        )
+    return {"algorithm": "manual_allocation", "scheduled_activities": scheduled}
+
+
 class CanonicalModel(BaseModel):
     """Estado completo do orçamento — produzido incrementalmente pelo pipeline."""
 
@@ -970,43 +1014,7 @@ class CanonicalModel(BaseModel):
         """Backward-compat: convert old list[CronogramaItem] to new unified Cronograma."""
         cron = values.get("cronograma")
         if isinstance(cron, list):
-            scheduled = []
-            for item in cron:
-                # Accept both raw dicts and already-instantiated CronogramaItem objects
-                if isinstance(item, dict):
-                    item_data = item
-                elif hasattr(item, "model_dump"):
-                    item_data = item.model_dump()
-                else:
-                    continue
-                item_id = item_data.get("item_id", "")
-                dist_semanal = item_data.get("distribuicao_semanal") or {}
-                # Fall back to distribuicao_mensal when semanal is empty
-                if not dist_semanal:
-                    dist_semanal = item_data.get("distribuicao_mensal") or {}
-                # Extract start/end week from distribution keys
-                weeks: list[int] = []
-                for k in dist_semanal:
-                    if "-W" in str(k):
-                        try:
-                            weeks.append(int(str(k).split("-W")[1]))
-                        except (ValueError, IndexError):
-                            pass
-                start = min(weeks) if weeks else 1
-                end = max(weeks) if weeks else 1
-                scheduled.append(
-                    {
-                        "activity_id": item_id,
-                        "start_week": start,
-                        "end_week": end,
-                        "duration_weeks": max(end - start + 1, 1),
-                        "distribuicao_semanal": dist_semanal,
-                    }
-                )
-            values["cronograma"] = {
-                "algorithm": "manual_allocation",
-                "scheduled_activities": scheduled,
-            }
+            values["cronograma"] = _migrate_cron_list_to_cronograma(cron)
         return values
 
 

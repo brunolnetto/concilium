@@ -9,5 +9,6 @@
     "potencia_hp": 45.0,
     "horas_mes": 208.0
   },
-  "categoria": "DIVERSOS"
+  "categoria": "DIVERSOS",
+  "fonte_preco": "catalogo_proprio"
 }

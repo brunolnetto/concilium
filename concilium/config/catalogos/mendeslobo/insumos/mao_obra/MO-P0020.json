@@ -8,7 +8,8 @@
   "atributos_especificos": {
     "categoria_sindical": "CLT",
     "horas_extras_pct_padrao": 0,
-    "_audit_encargos": "Removido: custo_com_encargos=16162.00 (fator=1.62). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009)."
+    "_audit_encargos": "Removido: custo_com_encargos=16162.00 (fator=1.62). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009).",
+    "tipo_contrato": "CLT"
   },
   "classe_compartilhamento": {
     "classe": "exclusivo_dedicado",

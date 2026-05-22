@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ATI-010-PROD-001",
   "descricao": "Produção CPU-TERRA-ATI-010",
   "origem": "PROPRIA",
-  "valor_horario": 37.5,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -26,11 +26,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 8.6035,
-    "custo_padrao_pj": 6.8934
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-010"
-  ]
+  "historico_observacoes": []
 }

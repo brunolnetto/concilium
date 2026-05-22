@@ -3,7 +3,7 @@
 import typer
 from rich import print as rprint
 
-from concilium.presentation.cli.shared import config_root, parse_project_version, resolve_project
+from concilium.presentation.cli.shared import config_root, parse_project_version, project_repository, resolve_project
 
 app = typer.Typer(name="root", help="Comandos bÃ¡sicos.", no_args_is_help=True)
 
@@ -20,8 +20,6 @@ def init(
 ) -> None:
     """Cria novo projeto. Gera UUID, popula meta.json, prepara diretÃ³rios."""
     from concilium.application.runtime import Runtime
-    from concilium.infrastructure.storage.project import ProjectStore
-    from concilium.presentation.cli.shared import projetos_root
 
     config = config_root()
     rt = Runtime(config)
@@ -31,9 +29,8 @@ def init(
         rprint(f"[red]{e}[/red]")
         raise typer.Exit(1) from None
 
-    base = projetos_root()
-    base.mkdir(parents=True, exist_ok=True)
-    project = ProjectStore.init(base, nome, contexto)
+    repo = project_repository()
+    project = repo.create_project(nome, contexto)
     rprint(f"[green][OK][/green] Projeto criado: [bold]{nome}[/bold]")
     rprint(f"  ID:       {project.meta['id']}")
     rprint(f"  Contexto: {contexto}")
@@ -41,6 +38,20 @@ def init(
 
 
 @app.command()
+def _print_skills_table(console) -> None:
+    from rich.table import Table
+
+    from concilium.application.skills.registry import SkillRegistry
+
+    registry = SkillRegistry()
+    table = Table(title="Catálogo de Skills")
+    table.add_column("ID", style="cyan")
+    table.add_column("Descrição")
+    for sid, meta in registry.get_all_skills().items():
+        table.add_row(sid, meta.description)  # type: ignore[attr-defined]
+    console.print(table)
+
+
 def status(
     projeto: str = typer.Argument(..., help="Nome ou UUID do projeto."),
     skills: bool = typer.Option(False, "--skills", help="Lista catálogo de skills disponíveis."),
@@ -52,8 +63,6 @@ def status(
     from rich.console import Console
     from rich.table import Table
 
-    from concilium.application.skills.registry import SkillRegistry
-
     console = Console()
 
     if version:
@@ -63,13 +72,7 @@ def status(
         return
 
     if skills:
-        registry = SkillRegistry()
-        table = Table(title="Catálogo de Skills")
-        table.add_column("ID", style="cyan")
-        table.add_column("Descrição")
-        for sid, meta in registry.get_all_skills().items():
-            table.add_row(sid, meta.description)  # type: ignore[attr-defined]
-        console.print(table)
+        _print_skills_table(console)
         return
 
     project = resolve_project(projeto)
@@ -97,6 +100,23 @@ def status(
 
 
 @app.command()
+def _audit_val_color(status: str) -> str:
+    return {"OK": "green", "AVISO": "yellow", "ERRO": "red"}.get(status, "red")
+
+
+def _audit_print_conflitos(conflitos_pico) -> None:
+    from rich import print as rprint
+
+    if conflitos_pico:
+        rprint(f"\n[bold yellow]⚠ {len(conflitos_pico)} Conflitos de Recurso Detectados:[/bold yellow]")
+        for c in conflitos_pico[:3]:
+            rprint(f"  - {c.recurso_id}: Excesso de {c.quantidade_excedente} na semana {c.semana}")
+        if len(conflitos_pico) > 3:
+            rprint(f"    (... e mais {len(conflitos_pico) - 3} outros)")
+    else:
+        rprint("\n[green]✔ Sem conflitos de recurso detectados.[/green]")
+
+
 def audit(
     arg: str = typer.Argument(..., help="projeto ou projeto@vN"),
 ) -> None:
@@ -123,18 +143,11 @@ def audit(
         rprint(f"  Custo Total: R$ {res.custo.total:,.2f}")
 
     # 3. Gargalos (Recursos)
-    if canonical.conflitos_pico:
-        rprint(f"\n[bold yellow]⚠ {len(canonical.conflitos_pico)} Conflitos de Recurso Detectados:[/bold yellow]")
-        for c in canonical.conflitos_pico[:3]:
-            rprint(f"  - {c.recurso_id}: Excesso de {c.quantidade_excedente} na semana {c.semana}")
-        if len(canonical.conflitos_pico) > 3:
-            rprint(f"    (... e mais {len(canonical.conflitos_pico) - 3} outros)")
-    else:
-        rprint("\n[green]✔ Sem conflitos de recurso detectados.[/green]")
+    _audit_print_conflitos(canonical.conflitos_pico)
 
     # 4. Validações de Skill
     if canonical.resultado and canonical.resultado.validacoes:
         rprint("\n[bold]Validações de Skill:[/bold]")
         for v in canonical.resultado.validacoes:
-            cor = {"OK": "green", "AVISO": "yellow", "ERRO": "red"}[v.status]
+            cor = _audit_val_color(v.status)
             rprint(f"  [{cor}]{v.status:5s}[/{cor}] {v.codigo}")

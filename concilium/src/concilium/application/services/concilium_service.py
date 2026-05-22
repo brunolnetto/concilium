@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from concilium.application.benchmarks.batch import discover_benchmark_slugs
 from concilium.application.services.audit_service import AuditService
@@ -11,6 +12,15 @@ from concilium.application.services.pipeline_service import PipelineService
 from concilium.application.services.project_input_builder import ProjectInputBuilder
 from concilium.application.services.project_repository import ProjectRepository
 from concilium.application.services.project_service import ProjectService
+
+from ._concilium_service_helpers import (
+    _cs_get_enriched_cpus,
+    _cs_simulate_mobilizacao_policy,
+    _cs_upsert_catalog_cpu,
+    _cs_validate_mobilizacao_policies,
+    _enrich_cpus_with_producao,
+)
+from .catalog_reasonability import build_catalog_reasonability_artifact
 
 
 @dataclass(frozen=True)
@@ -47,79 +57,8 @@ class ConciliumService:
         actor: str = "system",
         motivo: str = "",
     ) -> dict[str, Any]:
-        """Create or replace a CPU in the master catalog (ADR-067).
-
-        Validates required fields, writes the JSON file, busts bundle cache,
-        and appends an audit entry.
-        """
-        import json as _json
-        from datetime import UTC, datetime
-
-        # D4: minimal validation
-        errors: list[str] = []
-        if not cpu_data.get("codigo"):
-            errors.append("Campo 'codigo' é obrigatório.")
-        elif str(cpu_data["codigo"]) != cpu_id:
-            errors.append(f"'codigo' no body ({cpu_data['codigo']}) deve coincidir com o cpu_id do path ({cpu_id}).")
-        if not cpu_data.get("descricao"):
-            errors.append("Campo 'descricao' é obrigatório.")
-        if not cpu_data.get("unidade"):
-            errors.append("Campo 'unidade' é obrigatório.")
-        if "composicao_itens" in cpu_data and not isinstance(cpu_data["composicao_itens"], list):
-            errors.append("'composicao_itens' deve ser uma lista.")
-        if not motivo:
-            errors.append("Campo 'motivo' é obrigatório para auditoria.")
-        if errors:
-            raise ValueError("; ".join(errors))
-
-        cats_dir = self.config_root / "catalogos" / catalog_id
-        if not cats_dir.exists():
-            raise FileNotFoundError(f"Catálogo '{catalog_id}' não encontrado em {cats_dir}")
-
-        cpus_dir = cats_dir / "cpus"
-        cpus_dir.mkdir(parents=True, exist_ok=True)
-        cpu_file = cpus_dir / f"{cpu_id}.json"
-
-        # Preserve previous state for audit
-        previous: dict | None = None
-        if cpu_file.exists():
-            try:
-                previous = _json.loads(cpu_file.read_text(encoding="utf-8"))
-            except Exception:
-                pass
-
-        # Write new CPU definition
-        cpu_file.write_text(
-            _json.dumps(cpu_data, indent=2, ensure_ascii=False, default=str),
-            encoding="utf-8",
-        )
-
-        # D2: invalidate bundle cache
-        bundle = cats_dir / ".catalog_bundle.json"
-        if bundle.exists():
-            bundle.unlink()
-
-        # D3: audit entry
-        saved_at = datetime.now(UTC).isoformat()
-        audit_path = cats_dir / ".catalog_audit.jsonl"
-        audit_entry = {
-            "event": "upsert_cpu",
-            "cpu_id": cpu_id,
-            "catalog_id": catalog_id,
-            "actor": actor,
-            "motivo": motivo,
-            "timestamp": saved_at,
-            "previous_snapshot": previous,
-        }
-        with audit_path.open("a", encoding="utf-8") as fh:
-            fh.write(_json.dumps(audit_entry, ensure_ascii=False, default=str) + "\n")
-
-        return {
-            "catalog_id": catalog_id,
-            "cpu_id": cpu_id,
-            "saved_at": saved_at,
-            "bundle_invalidated": not bundle.exists(),
-        }
+        """Create or replace a CPU in the master catalog (ADR-067)."""
+        return _cs_upsert_catalog_cpu(self, catalog_id, cpu_id, cpu_data, actor, motivo)
 
     def list_catalogs(self) -> list[dict[str, Any]]:
         cats_dir = self.config_root / "catalogos"
@@ -142,65 +81,12 @@ class ConciliumService:
             "n_producoes": len(cat.get("producoes", [])),
         }
 
-    @staticmethod
-    def _enrich_cpus_with_producao(cat: dict) -> list[dict]:
-        """Join producao_id_ref → valor_horario and equipe onto each CPU object.
-
-        Complexity: O(P + C) where P = len(producoes), C = len(cpus).
-        Single dict-lookup pass — no nested iteration.
-        This is a read-time join; nothing is mutated on disk.
-        """
-        # O(P): build lookup once
-        prod_lookup: dict[str, Any] = {p["id"]: p for p in cat.get("producoes", []) if "id" in p}
-        # O(C): one pass over CPUs, O(1) lookup per entry
-        enriched: list[dict] = []
-        for cpu in cat.get("cpus", []):
-            if not isinstance(cpu, dict):
-                continue
-            prod_ref = cpu.get("producao_id_ref")
-            prod = prod_lookup.get(prod_ref) if prod_ref else None
-            if prod:
-                patch: dict = {}
-                if not cpu.get("producao_horaria") and prod.get("valor_horario") is not None:
-                    patch["producao_horaria"] = prod["valor_horario"]
-                if not cpu.get("equipe") and prod.get("equipe"):
-                    patch["equipe"] = prod["equipe"]
-                if patch:
-                    cpu = {**cpu, **patch}
-            enriched.append(cpu)
-        return enriched  # total O(P + C)
-
     def _get_enriched_cpus(self, catalog_id: str) -> list[dict[str, Any]]:
-        """Return enriched CPUs for a catalog, using mtime-keyed cache.
+        return _cs_get_enriched_cpus(self, catalog_id)
 
-        Cache key: bundle file mtime (nanoseconds).  When ADR-067 writes a CPU
-        and deletes the bundle, mtime changes on rebuild → cache auto-invalidates.
-        Falls back to no-cache if bundle doesn't exist yet.
-        """
-        from concilium.application.runtime import Runtime
-
-        bundle = self.config_root / "catalogos" / catalog_id / ".catalog_bundle.json"
-        try:
-            mtime = bundle.stat().st_mtime_ns if bundle.exists() else 0
-        except OSError:
-            mtime = 0
-
-        cached = self._enriched_cache.get(catalog_id)
-        if cached is not None and cached[0] == mtime:
-            return cached[1]
-
-        rt = Runtime(self.config_root)
-        cat = rt.load_catalogo(catalog_id)
-        enriched = self._enrich_cpus_with_producao(cat)
-
-        # Re-read mtime: load_catalogo may have just created the bundle file
-        try:
-            mtime = bundle.stat().st_mtime_ns if bundle.exists() else 0
-        except OSError:
-            mtime = 0
-
-        self._enriched_cache[catalog_id] = (mtime, enriched)
-        return enriched
+    @staticmethod
+    def _enrich_cpus_with_producao(cat: dict) -> list[dict[str, Any]]:
+        return _enrich_cpus_with_producao(cat)
 
     def list_catalog_cpus(self, catalog_id: str, q: str | None = None, limit: int = 50) -> dict[str, Any]:
         cpus = self._get_enriched_cpus(catalog_id)
@@ -240,16 +126,32 @@ class ConciliumService:
         q_lower = q.lower()
         for cid in cats:
             try:
-                for cpu in self._get_enriched_cpus(cid):
-                    if q_lower in (cpu.get("codigo") or "").lower() or q_lower in (cpu.get("descricao") or "").lower():
-                        results.append({**cpu, "_catalog_id": cid})
-                    if len(results) >= limit:
-                        break
+                self._search_catalog_in(cid, q_lower, results, limit)
             except Exception:
                 continue
             if len(results) >= limit:
                 break
         return {"q": q, "items": results[:limit], "total": len(results)}
+
+    def audit_catalog_reasonability(self, catalog_id: str) -> dict[str, Any]:
+        from concilium.application.runtime import Runtime
+
+        rt = Runtime(self.config_root)
+        cat = rt.load_catalogo(catalog_id)
+        cpus = cat.get("cpus") if isinstance(cat.get("cpus"), list) else []
+        produtividades = cat.get("produtividades") if isinstance(cat.get("produtividades"), list) else []
+        producoes_legado = cat.get("producoes") if isinstance(cat.get("producoes"), list) else []
+        producoes = produtividades + producoes_legado
+        return build_catalog_reasonability_artifact(catalog_id, cpus, producoes)
+
+    def _search_catalog_in(self, cid: str, q_lower: str, results: list, limit: int) -> None:
+        for cpu in self._get_enriched_cpus(cid):
+            codigo = (cpu.get("codigo") or "").lower()
+            descricao = (cpu.get("descricao") or "").lower()
+            if q_lower in codigo or q_lower in descricao:
+                results.append({**cpu, "_catalog_id": cid})
+            if len(results) >= limit:
+                break
 
     def extend_cpu(self, project_id: str, cpu_id: str, cpu_data: dict, actor: str = "system", motivo: str = "") -> None:
         self._dependencies.override_service.extend_cpu(project_id, cpu_id, cpu_data, actor=actor, motivo=motivo)
@@ -456,6 +358,485 @@ class ConciliumService:
             "backtracking_pe": back.to_dict() if back else None,
         }
 
+    def _load_canonical_for_version(self, project_id: str, version: str | None = None):
+        """Loads canonical for a specific version (or current when omitted)."""
+        repository = getattr(self._dependencies, "repository", None)
+        if repository is not None and hasattr(repository, "get_project"):
+            try:
+                project = repository.get_project(project_id)
+                return project.load_canonical(version), (version or project.current_version())
+            except Exception:
+                pass
+
+        # Compatibilidade com stubs/fluxos legados sem ProjectRepository completo.
+        if version is None:
+            project_service = getattr(self._dependencies, "project_service", None)
+            if project_service is not None and hasattr(project_service, "get_last_canonical"):
+                try:
+                    return project_service.get_last_canonical(project_id), version
+                except Exception:
+                    pass
+
+        return None, version
+
+    def get_cubo_analitico(self, project_id: str, version: str | None = None) -> dict[str, Any]:
+        """ADR-058/NEP-024: Retorna o cubo analítico e seus agregados derivados."""
+        canonical, resolved_version = self._load_canonical_for_version(project_id, version)
+        if canonical is None:
+            return {"version": resolved_version, "cubo_analitico": None}
+        cubo = getattr(canonical, "cubo_analitico", None)
+        if cubo is None:
+            from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
+
+            cubo = CuboAnaliticoBuilder().build(canonical)
+        return {"version": resolved_version, "cubo_analitico": cubo.to_dict() if cubo else None}
+
+    @staticmethod
+    def get_cubo_projection_contract() -> dict[str, Any]:
+        faces: dict[str, dict[str, Any]] = {
+            "tempo_natureza": {
+                "label": "Tempo x natureza",
+                "unit_type": "currency_brl",
+                "measure_profiles": ["financial_default"],
+                "aggregation_modes": ["sum"],
+            },
+            "tempo_componente": {
+                "label": "Tempo x componente BDI",
+                "unit_type": "currency_brl",
+                "measure_profiles": ["financial_default"],
+                "aggregation_modes": ["sum"],
+            },
+            "categoria_componente": {
+                "label": "Categoria x componente BDI",
+                "unit_type": "currency_brl",
+                "measure_profiles": ["financial_default"],
+                "aggregation_modes": ["sum"],
+            },
+            "atividade_componente": {
+                "label": "Atividade x componente BDI",
+                "unit_type": "currency_brl",
+                "measure_profiles": ["financial_default"],
+                "aggregation_modes": ["sum"],
+            },
+            "diesel_temporal": {
+                "label": "Diesel temporal",
+                "unit_type": "volume_liter",
+                "measure_profiles": ["financial_default"],
+                "aggregation_modes": ["sum"],
+            },
+            "abc_curva": {
+                "label": "Curva ABC",
+                "unit_type": "currency_brl",
+                "measure_profiles": ["abc_custo_direto"],
+                "aggregation_modes": ["pareto"],
+            },
+            "s_curve_custo": {
+                "label": "S-curve de custo",
+                "unit_type": "currency_brl",
+                "measure_profiles": ["financial_default"],
+                "aggregation_modes": ["cumulative"],
+            },
+            "recursos_ativos_tempo": {
+                "label": "Recursos ativos no tempo",
+                "unit_type": "count",
+                "measure_profiles": ["recursos_ativos"],
+                "aggregation_modes": ["sum", "count_distinct"],
+            },
+        }
+        return {
+            "faces": faces,
+            "granularidades": ["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
+            "measure_profiles": ["financial_default", "abc_custo_direto", "recursos_ativos"],
+            "aggregation_modes": ["sum", "count_distinct", "cumulative", "pareto"],
+            "abc_defaults": {"threshold_a": 0.80, "threshold_b": 0.95},
+        }
+
+    @staticmethod
+    def _resolve_cubo_projection_rows(
+        cubo: Any,
+        face: str,
+        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
+        top_n: int,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str]:
+        if face == "tempo_natureza":
+            payload = cubo.resumo_por_natureza_temporal(granularidade)
+            rows = [
+                {"periodo": periodo, "natureza": "direto", "valor_rs": float(vals.get("direto", 0.0))}
+                for periodo, vals in payload.items()
+            ] + [
+                {
+                    "periodo": periodo,
+                    "natureza": "indireto",
+                    "valor_rs": float(vals.get("indireto", 0.0)),
+                }
+                for periodo, vals in payload.items()
+            ]
+            rows.sort(key=lambda r: (str(r["periodo"]), str(r["natureza"])))
+            columns = [
+                {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+                {"id": "natureza", "label": "Natureza", "dtype": "str", "role": "series"},
+                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
+            ]
+            return rows[:top_n], columns, "bar_stacked"
+
+        if face == "tempo_componente":
+            payload = cubo.composicao_preco_temporal(granularidade)
+            rows: list[dict[str, Any]] = []
+            for periodo, comp_dict in payload.items():
+                for componente, valor in comp_dict.items():
+                    rows.append({"periodo": periodo, "componente_bdi": componente, "valor_rs": float(valor)})
+            rows.sort(key=lambda r: (str(r["periodo"]), -float(r["valor_rs"])))
+            columns = [
+                {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+                {"id": "componente_bdi", "label": "Componente BDI", "dtype": "str", "role": "series"},
+                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
+            ]
+            return rows[:top_n], columns, "line"
+
+        if face == "categoria_componente":
+            payload = cubo.composicao_por_categoria()
+            rows = [
+                {"categoria": categoria, "componente_bdi": comp, "valor_rs": float(valor)}
+                for categoria, comp_dict in payload.items()
+                for comp, valor in comp_dict.items()
+            ]
+            rows.sort(key=lambda r: -float(r["valor_rs"]))
+            columns = [
+                {"id": "categoria", "label": "Categoria", "dtype": "str", "role": "y"},
+                {"id": "componente_bdi", "label": "Componente BDI", "dtype": "str", "role": "x"},
+                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
+            ]
+            return rows[:top_n], columns, "heatmap"
+
+        if face == "atividade_componente":
+            grouped = cubo.group_by("atividade_id", "componente_bdi")
+            rows = [
+                {"atividade_id": atividade_id, "componente_bdi": componente, "valor_rs": float(valor)}
+                for (atividade_id, componente), valor in grouped.items()
+            ]
+            rows.sort(key=lambda r: -float(r["valor_rs"]))
+            columns = [
+                {"id": "atividade_id", "label": "Atividade", "dtype": "str", "role": "y"},
+                {"id": "componente_bdi", "label": "Componente BDI", "dtype": "str", "role": "x"},
+                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
+            ]
+            return rows[:top_n], columns, "heatmap"
+
+        if face == "diesel_temporal":
+            payload = cubo.consumo_diesel_temporal(granularidade)
+            rows = [{"periodo": periodo, "consumo_diesel_l": float(valor)} for periodo, valor in payload.items()]
+            columns = [
+                {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+                {"id": "consumo_diesel_l", "label": "Consumo Diesel (L)", "dtype": "float", "role": "value"},
+            ]
+            return rows[:top_n], columns, "line"
+
+        raise ValueError(f"Face de projeção não suportada: {face}")
+
+    @staticmethod
+    def _bucket_from_week_iso(
+        week_iso: str,
+        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
+    ) -> str:
+        if granularidade == "semana":
+            return week_iso
+        year_str, week_str = week_iso.split("-W", 1)
+        anchor = date.fromisocalendar(int(year_str), int(week_str), 1)
+        if granularidade == "mes":
+            return f"{anchor.year:04d}-{anchor.month:02d}"
+        if granularidade == "bimestre":
+            bimestre = ((anchor.month - 1) // 2) + 1
+            return f"{anchor.year:04d}-B{bimestre}"
+        if granularidade == "trimestre":
+            trimestre = ((anchor.month - 1) // 3) + 1
+            return f"{anchor.year:04d}-T{trimestre}"
+        if granularidade == "semestre":
+            semestre = ((anchor.month - 1) // 6) + 1
+            return f"{anchor.year:04d}-S{semestre}"
+        if granularidade == "ano":
+            return f"{anchor.year:04d}"
+        raise ValueError(f"Granularidade inválida: {granularidade}")
+
+    def _resolve_abc_curva_rows(
+        self,
+        canonical: Any,
+        top_n: int,
+        threshold_a: float,
+        threshold_b: float,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
+        from concilium.domain.services.curva_abc_builder import CurvaABCBuilder
+
+        curva = CurvaABCBuilder().build(canonical)
+        rows: list[dict[str, Any]] = []
+        for item in list(curva.itens)[:top_n]:
+            classe = (
+                "A"
+                if item.pct_custo_acumulado <= threshold_a
+                else ("B" if item.pct_custo_acumulado <= threshold_b else "C")
+            )
+            rows.append(
+                {
+                    "insumo_id": item.insumo_id,
+                    "descricao": item.descricao,
+                    "categoria": item.categoria.lower(),
+                    "custo_total_rs": float(item.custo_total),
+                    "pct_custo": float(item.pct_custo),
+                    "pct_custo_acumulado": float(item.pct_custo_acumulado),
+                    "classe_abc": classe,
+                }
+            )
+        columns = [
+            {"id": "insumo_id", "label": "Insumo", "dtype": "str", "role": "x"},
+            {"id": "descricao", "label": "Descrição", "dtype": "str", "role": "label"},
+            {"id": "categoria", "label": "Categoria", "dtype": "str", "role": "series"},
+            {"id": "custo_total_rs", "label": "Custo Total (R$)", "dtype": "float", "role": "value"},
+            {"id": "pct_custo", "label": "% Custo", "dtype": "float", "role": "value_aux"},
+            {"id": "pct_custo_acumulado", "label": "% Acumulado", "dtype": "float", "role": "line"},
+            {"id": "classe_abc", "label": "Classe ABC", "dtype": "str", "role": "class"},
+        ]
+        class_counts = {"A": 0, "B": 0, "C": 0}
+        for row in rows:
+            class_counts[str(row["classe_abc"])] += 1
+        operator_meta = {
+            "thresholds": {"a": threshold_a, "b": threshold_b},
+            "class_counts": class_counts,
+            "coverage_a": max((float(r["pct_custo_acumulado"]) for r in rows if r["classe_abc"] == "A"), default=0.0),
+        }
+        return rows, columns, "bar", "currency_brl", operator_meta
+
+    def _resolve_s_curve_rows(
+        self,
+        canonical: Any,
+        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
+        top_n: int,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
+        from collections import defaultdict
+
+        from concilium.domain.services.s_curve_builder import SCurveBuilder
+
+        s_curve = SCurveBuilder().build(canonical)
+        grouped: dict[str, dict[str, float]] = defaultdict(lambda: {"custo_semanal_rs": 0.0, "custo_acumulado_rs": 0.0})
+        for idx, semana_iso in enumerate(s_curve.semanas_iso):
+            bucket = self._bucket_from_week_iso(semana_iso, granularidade)
+            grouped[bucket]["custo_semanal_rs"] += float(s_curve.custo_semanal[idx])
+            grouped[bucket]["custo_acumulado_rs"] += float(s_curve.custo_semanal[idx])
+        rows: list[dict[str, Any]] = []
+        acum = 0.0
+        for bucket in sorted(grouped.keys()):
+            custo = float(grouped[bucket]["custo_semanal_rs"])
+            acum += custo
+            rows.append(
+                {
+                    "periodo": bucket,
+                    "custo_semanal_rs": custo,
+                    "custo_acumulado_rs": round(acum, 2),
+                    "pct_acumulado": round(acum / float(s_curve.total_projeto), 6)
+                    if s_curve.total_projeto > 0
+                    else 0.0,
+                }
+            )
+        columns = [
+            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+            {"id": "custo_semanal_rs", "label": "Custo no Período (R$)", "dtype": "float", "role": "value"},
+            {"id": "custo_acumulado_rs", "label": "Custo Acumulado (R$)", "dtype": "float", "role": "line"},
+            {"id": "pct_acumulado", "label": "% Acumulado", "dtype": "float", "role": "line_aux"},
+        ]
+        return rows[:top_n], columns, "line", "currency_brl", {"total_projeto_rs": float(s_curve.total_projeto)}
+
+    def _resolve_recursos_ativos_rows(
+        self,
+        canonical: Any,
+        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
+        top_n: int,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
+        from collections import defaultdict
+
+        from concilium.domain.services.s_curve_builder import SCurveBuilder
+
+        s_curve = SCurveBuilder().build(canonical)
+        grouped: dict[str, dict[str, float]] = defaultdict(
+            lambda: {
+                "n_equipes_totais": 0.0,
+                "n_equipamentos_unicos": 0.0,
+                "equipamentos_unidades_ativas": 0.0,
+            }
+        )
+        for agg in s_curve.agregacao_semanal:
+            bucket = self._bucket_from_week_iso(str(agg.semana_iso), granularidade)
+            grouped[bucket]["n_equipes_totais"] += float(agg.n_equipes_totais)
+            grouped[bucket]["n_equipamentos_unicos"] = max(
+                grouped[bucket]["n_equipamentos_unicos"], float(agg.n_equipamentos_unicos)
+            )
+            grouped[bucket]["equipamentos_unidades_ativas"] += float(sum(agg.equipamentos_ativos.values()))
+        rows = [
+            {
+                "periodo": bucket,
+                "n_equipes_totais": int(vals["n_equipes_totais"]),
+                "n_equipamentos_unicos": int(vals["n_equipamentos_unicos"]),
+                "equipamentos_unidades_ativas": int(vals["equipamentos_unidades_ativas"]),
+            }
+            for bucket, vals in sorted(grouped.items())
+        ]
+        columns = [
+            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+            {"id": "n_equipes_totais", "label": "Nº Equipes", "dtype": "int", "role": "value"},
+            {"id": "n_equipamentos_unicos", "label": "Equipamentos Únicos", "dtype": "int", "role": "value"},
+            {
+                "id": "equipamentos_unidades_ativas",
+                "label": "Unidades de Equipamento Ativas",
+                "dtype": "int",
+                "role": "value",
+            },
+        ]
+        operator_meta = {
+            "aggregation_rule": "sum(n_equipes, unidades) + max(equipamentos_unicos) por bucket",
+            "n_periodos": len(rows),
+        }
+        return rows[:top_n], columns, "line", "count", operator_meta
+
+    def get_cubo_analitico_projection(
+        self,
+        project_id: str,
+        *,
+        version: str | None = None,
+        face: str = "tempo_natureza",
+        granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"] = "mes",
+        categoria: str | None = None,
+        componente_bdi: str | None = None,
+        atividade_id: str | None = None,
+        top_n: int = 300,
+        measure_profile: str | None = None,
+        aggregation_mode: str | None = None,
+        abc_threshold_a: float = 0.80,
+        abc_threshold_b: float = 0.95,
+    ) -> dict[str, Any]:
+        """ADR-069: Projeções navegáveis do cubo para UX iterativa de filtros."""
+        canonical, resolved_version = self._load_canonical_for_version(project_id, version)
+        if canonical is None:
+            return {
+                "version": resolved_version,
+                "face": face,
+                "granularidade": granularidade,
+                "rows": [],
+                "filtros_aplicados": {},
+            }
+        cubo = getattr(canonical, "cubo_analitico", None)
+        if cubo is None:
+            from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
+
+            cubo = CuboAnaliticoBuilder().build(canonical)
+
+        allowed_faces = {
+            "tempo_natureza",
+            "tempo_componente",
+            "categoria_componente",
+            "atividade_componente",
+            "diesel_temporal",
+            "abc_curva",
+            "s_curve_custo",
+            "recursos_ativos_tempo",
+        }
+        contract = self.get_cubo_projection_contract()
+        face_specs = contract["faces"]
+        allowed_granularidade = set(contract["granularidades"])
+        allowed_categoria = {"mao_obra", "equipamento", "diesel", "material"}
+        allowed_componentes = {
+            "custo_direto",
+            "overhead_ac",
+            "overhead_df",
+            "overhead_r",
+            "overhead_cr",
+            "margem_l",
+            "tributo_cofins",
+            "tributo_iss",
+            "tributo_pis",
+            "tributo_cssl",
+            "tributo_ir",
+        }
+        allowed_measure_profile = set(contract["measure_profiles"])
+        allowed_aggregation_mode = set(contract["aggregation_modes"])
+        if face not in allowed_faces:
+            raise ValueError(f"Face de projeção não suportada: {face}")
+        if granularidade not in allowed_granularidade:
+            raise ValueError(f"Granularidade inválida: {granularidade}")
+        if categoria is not None and categoria not in allowed_categoria:
+            raise ValueError(f"Categoria inválida: {categoria}")
+        if componente_bdi is not None and componente_bdi not in allowed_componentes:
+            raise ValueError(f"Componente BDI inválido: {componente_bdi}")
+        if not (0.0 < abc_threshold_a < abc_threshold_b < 1.0):
+            raise ValueError("Thresholds ABC inválidos: use 0 < a < b < 1")
+
+        face_measure_profiles_list = list(face_specs[face]["measure_profiles"])
+        face_aggregation_modes_list = list(face_specs[face]["aggregation_modes"])
+        face_measure_profiles = set(face_measure_profiles_list)
+        face_aggregation_modes = set(face_aggregation_modes_list)
+        resolved_measure_profile = measure_profile or face_measure_profiles_list[0]
+        resolved_aggregation_mode = aggregation_mode or face_aggregation_modes_list[0]
+        if resolved_measure_profile not in allowed_measure_profile:
+            raise ValueError(f"Measure profile inválido: {resolved_measure_profile}")
+        if resolved_aggregation_mode not in allowed_aggregation_mode:
+            raise ValueError(f"Aggregation mode inválido: {resolved_aggregation_mode}")
+        if resolved_measure_profile not in face_measure_profiles:
+            raise ValueError(f"Measure profile inválido para a face: {resolved_measure_profile} em {face}")
+        if resolved_aggregation_mode not in face_aggregation_modes:
+            raise ValueError(f"Aggregation mode inválido para a face: {resolved_aggregation_mode} em {face}")
+
+        bounded_top_n = max(1, min(int(top_n), 2000))
+        cubo_filtrado = cubo.slice(categoria=categoria, atividade_id=atividade_id, componente_bdi=componente_bdi)
+
+        if face == "abc_curva":
+            rows, columns, chart_hint, unit_type, operator_meta = self._resolve_abc_curva_rows(
+                canonical,
+                bounded_top_n,
+                abc_threshold_a,
+                abc_threshold_b,
+            )
+        elif face == "s_curve_custo":
+            rows, columns, chart_hint, unit_type, operator_meta = self._resolve_s_curve_rows(
+                canonical,
+                granularidade,
+                bounded_top_n,
+            )
+        elif face == "recursos_ativos_tempo":
+            rows, columns, chart_hint, unit_type, operator_meta = self._resolve_recursos_ativos_rows(
+                canonical,
+                granularidade,
+                bounded_top_n,
+            )
+        else:
+            rows, columns, chart_hint = self._resolve_cubo_projection_rows(
+                cubo_filtrado, face, granularidade, bounded_top_n
+            )
+            unit_type = str(face_specs[face]["unit_type"])
+            operator_meta = {}
+
+        return {
+            "version": resolved_version,
+            "face": face,
+            "granularidade": granularidade,
+            "measure_profile": resolved_measure_profile,
+            "aggregation_mode": resolved_aggregation_mode,
+            "unit_type": unit_type,
+            "chart_hint": chart_hint,
+            "columns": columns,
+            "operator_meta": operator_meta,
+            "filtros_aplicados": {
+                "categoria": categoria,
+                "componente_bdi": componente_bdi,
+                "atividade_id": atividade_id,
+                "top_n": bounded_top_n,
+            },
+            "totais": {
+                "total_preco_venda": float(cubo_filtrado.total_preco_venda),
+                "total_custo_direto": float(cubo_filtrado.total_custo_direto),
+                "total_overhead": float(cubo_filtrado.total_overhead),
+                "total_margem": float(cubo_filtrado.total_margem),
+                "total_tributos": float(cubo_filtrado.total_tributos),
+                "total_consumo_diesel_L": float(cubo_filtrado.total_consumo_diesel_L),
+            },
+            "rows": rows,
+        }
+
     # ADR-054: Workforce Mobilization Policy methods
 
     def get_mobilizacao_policies(self, project_id: str) -> dict[str, Any]:
@@ -470,152 +851,13 @@ class ConciliumService:
         self._dependencies.override_service.delete_mobilizacao_policy(project_id, item_id, actor=actor)
 
     def simulate_mobilizacao_policy(self, project_id: str, req: dict[str, Any]) -> dict[str, Any]:
-        from concilium.domain.models.mobilizacao import MobilizacaoPolicy
-        from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
+        return _cs_simulate_mobilizacao_policy(project_id, req)
 
-        policy = MobilizacaoPolicy(**req["policy"])
-        simulator = WorkforcePolicySimulator()
+    def validate_mobilizacao_policies(self, project_id: str) -> list[dict[str, Any]]:
+        return _cs_validate_mobilizacao_policies(self, project_id)
 
-        prat_semanal = req.get("prat_semanal") or {}
-        semana_inicio = req.get("semana_inicio")
-        semanas_iso: dict[int, str] | None = None
-
-        if semana_inicio and prat_semanal:
-            # Derive enough offsets for the guard bound
-            import math
-
-            policy.producao_horaria if hasattr(policy, "producao_horaria") else None
-            prod = float(req.get("producao_horaria") or 0)
-            q = float(req.get("quantitativo") or 0)
-            m, h = int(req.get("dias_semana", 6)), int(req.get("horas_dia", 8))
-            base = prod * m * h * policy.n_maximo
-            nominal = math.ceil(q / base) if base > 0 else 1
-            n_weeks = WorkforcePolicySimulator.MAX_MULTIPLIER * max(1, nominal)
-            semanas_iso = WorkforcePolicySimulator.derive_semanas_iso(semana_inicio, n_weeks)
-
-        curva = simulator.simulate(
-            policy=policy,
-            atividade_id=req["item_id"],
-            quantitativo=float(req["quantitativo"]),
-            producao_horaria=float(req["producao_horaria"]),
-            dias_semana=int(req.get("dias_semana", 6)),
-            horas_dia=int(req.get("horas_dia", 8)),
-            prat_semanal=prat_semanal or None,
-            semanas_iso_por_offset=semanas_iso,
-        )
-        return curva.model_dump()
-
-
-def _build_wmp_lookup(iterable, key_field: str) -> dict:
-    """Generic lookup builder: list of dicts -> {key: dict}."""
-    result: dict = {}
-    for item in iterable or []:
-        if isinstance(item, dict) and item.get(key_field):
-            result[item[key_field]] = item
-    return result
-
-
-def _resolve_producao_horaria(eap_item: dict, cpu_lookup: dict, producao_lookup: dict) -> float:
-    """Resolve producao horaria P from EAP->CPU->Producao chain."""
-    cpu_id = eap_item.get("cpu_id", "")
-    cpu = cpu_lookup.get(cpu_id, {})
-    prod_id = cpu.get("producao_id_ref") or cpu.get("producao_id")
-    return float((producao_lookup.get(prod_id) or {}).get("valor_horario") or cpu.get("producao_horaria") or 0.0)
-
-
-def _build_wmp_codigo(curva: Any, policy: Any) -> str:
-    """Determine WMP validation codigo from curve state."""
-    if curva.is_complete:
-        return "VAL-WMP-OK"
-    if policy.semanas_plateau and policy.taxa_desmobilizacao > 0:
-        return "VAL-WMP-DESMOB"
-    return "VAL-WMP-05"
-
-
-def _process_wmp_policy(
-    sim: Any, item_id: str, policy_dict: dict, eap_items: dict, cpu_lookup: dict, producao_lookup: dict, results: list
-) -> None:
-    """Process one WMP policy: validate, resolve P, simulate, append result."""
-    from concilium.domain.models.mobilizacao import MobilizacaoPolicy
-
-    try:
-        policy = MobilizacaoPolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
-    except Exception as exc:
-        results.append(
-            {"codigo": "VAL-WMP-03", "status": "ERRO", "mensagem": f"'{item_id}': política inválida — {exc}"}
-        )
-        return
-
-    eap = eap_items.get(item_id, {})
-    Q = float(eap.get("quantitativo", 0))
-    if Q <= 0:
-        results.append(
-            {"codigo": "VAL-WMP-04", "status": "AVISO", "mensagem": f"'{item_id}': Q={Q} não disponível na referência."}
-        )
-        return
-
-    P = _resolve_producao_horaria(eap, cpu_lookup, producao_lookup)
-    if P <= 0:
-        results.append(
-            {
-                "codigo": "VAL-WMP-02",
-                "status": "AVISO",
-                "mensagem": f"'{item_id}': produtividade não resolvida (P={P}). CPU '{eap.get('cpu_id', '')}'.",
-            }
-        )
-
-    curva = sim.simulate(
-        policy=policy,
-        atividade_id=item_id,
-        quantitativo=Q,
-        producao_horaria=max(P, 0),
-        dias_semana=6,
-        horas_dia=8,
-    )
-    results.append(
-        {
-            "codigo": _build_wmp_codigo(curva, policy),
-            "status": "OK" if curva.is_complete else "AVISO",
-            "mensagem": f"'{item_id}': {curva.duration_weeks} sem., pico={curva.peak_teams}, completa={curva.is_complete}.",
-            "duration_weeks": curva.duration_weeks,
-            "peak_teams": curva.peak_teams,
-            "delivered": curva.delivered,
-            "quantitativo_alvo": Q,
-            "is_complete": curva.is_complete,
-        }
-    )
-
-    def validate_mobilizacao_policies(self, project_id: str) -> list[dict]:
-        """ADR-054 Phase 3: Validate all saved WMP policies without running the full pipeline.
-
-        Resolves productivities, simulates each policy, and returns structured validation
-        items — same VAL-WMP-* codes as the Skill 04 expansion step.
-        """
-        from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
-
-        policies = self._dependencies.override_service.get_mobilizacao_policies(project_id)
-        if not policies:
-            return [{"codigo": "VAL-WMP-NONE", "status": "OK", "mensagem": "Nenhuma política WMP salva."}]
-
-        try:
-            reference = self._dependencies.project_service.get_benchmark_reference(project_id)
-        except FileNotFoundError:
-            reference = {}
-
-        eap_items = _build_wmp_lookup((reference.get("cpus") or {}).get("itens_eap", []), "item_id")
-        cpu_lookup = _build_wmp_lookup(reference.get("catalog", {}).get("cpus", []) or [], "codigo")
-        producao_lookup = _build_wmp_lookup(reference.get("catalog", {}).get("produtividades", []) or [], "id")
-
-        sim = WorkforcePolicySimulator()
-        results: list[dict] = []
-        for item_id, policy_dict in policies.items():
-            _process_wmp_policy(sim, item_id, policy_dict, eap_items, cpu_lookup, producao_lookup, results)
-        return results
-
-    # ADR-054: Deliverables configuration
-
-    def get_deliverables_config(self, project_id: str) -> dict:
+    def get_deliverables_config(self, project_id: str) -> dict[str, Any]:
         return self._dependencies.override_service.get_deliverables_config(project_id)
 
-    def put_deliverables_config(self, project_id: str, config: dict, actor: str = "system") -> dict:
+    def put_deliverables_config(self, project_id: str, config: dict[str, Any], actor: str = "system") -> dict[str, Any]:
         return self._dependencies.override_service.put_deliverables_config(project_id, config, actor=actor)

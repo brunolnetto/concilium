@@ -96,10 +96,6 @@
     "composicao_padrao_equipe": {
       "$ref": "common.schema.json#/$defs/composicaoPadraoEquipe"
     },
-    "equipe": {
-      "$ref": "common.schema.json#/$defs/composicaoPadraoEquipe",
-      "deprecated": true
-    },
     "limite_producao": {
       "type": "string",
       "enum": ["equipamento", "mao_obra"],
@@ -109,6 +105,20 @@
       "description": "Variantes de cenário desta produção (ex: diferentes DMTs, condições climáticas).",
       "type": ["array", "null"],
       "items": {"type": "object", "additionalProperties": true}
+    },
+    "atributos_categoria": {
+      "description": "Atributos específicos da categoria operacional (ex.: custos padrão CLT/PJ).",
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "cpu_ids": {
+      "description": "Lista de CPUs associadas a esta produção para rastreabilidade.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "common.schema.json#/$defs/codigoCpu"
+      },
+      "uniqueItems": true
     },
     "historico_observacoes": {
       "type": "array",
@@ -141,10 +151,6 @@
         "modificado_por": {"type": "string"},
         "versao": {"type": "string"}
       }
-    },
-    "producao_horaria": {
-      "deprecated": true,
-      "description": "Campo legado. Usar valor_horario."
     }
   }
 }

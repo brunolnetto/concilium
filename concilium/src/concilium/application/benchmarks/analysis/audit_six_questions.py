@@ -1,231 +1,66 @@
-"""Auditoria agnÃ³stica de seis perguntas para um benchmark.
-
-ImplementaÃ§Ã£o migrada para cÃ³digo-base e desacoplada de scripts especÃ­ficos.
-"""
+"""Auditoria de seis perguntas para um benchmark."""
 
 from __future__ import annotations
 
-import json
-import re
-from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-_DEFAULT_ROOT = Path(__file__).resolve().parents[5]
-_TOL = 0.05
-_REL_TOL = 0.001  # 0.1%
+from ._audit_utils import (
+    _DEFAULT_ROOT,
+    _TOL,
+    _extract_ref_ponto_equilibrio,
+    _get_ref_confronto,
+    _is_close,
+    _load_json,
+    _norm_float,
+    _resolve_canonical_path,
+    _sum_dict_counter,
+)
 
 
 @dataclass
 class Answer:
     pergunta: str
     status: str
-    evidencia: dict[str, Any]
+    evidencia: dict
 
 
-def _load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _norm_float(v: Any) -> float:
-    try:
-        return float(v or 0)
-    except Exception:
-        return 0.0
-
-
-def _normalize_project_token(value: str) -> str:
-    raw = str(value or "").upper()
-    raw = raw.replace("_", " ")
-    raw = re.sub(r"\bCALIBRADO\b", "", raw)
-    raw = re.sub(r"[^A-Z0-9]+", " ", raw)
-    return " ".join(raw.split())
-
-
-def _get_ref_confronto(ref: dict[str, Any]) -> dict[str, Any]:
-    """Retorna o bloco de confronto de referência quando disponível."""
+def _aq1_resolve_ref_equipes(ref: dict) -> list:
+    """Resolve lista de equipes de referencia em formato historico ou atual."""
     return (
-        ((ref.get("resultado") or {}).get("benchmark_confronto_referencia") or {})
-        if isinstance(ref.get("resultado"), dict)
-        else {}
-    )
-
-
-def _is_close(ref_val: float, cur_val: float, abs_tol: float = _TOL, rel_tol: float = _REL_TOL) -> bool:
-    delta = abs(cur_val - ref_val)
-    limit = max(abs_tol, rel_tol * max(abs(ref_val), abs(cur_val), 1.0))
-    return delta <= limit
-
-
-def _sum_dict_counter(entries: list[dict[str, Any]], key_id: str, key_qty: str) -> Counter:
-    out: Counter = Counter()
-    for row in entries or []:
-        key = str(row.get(key_id) or "")
-        if not key:
-            continue
-        out[key] += int(row.get(key_qty) or 0)
-    return out
-
-
-def _as_float(v: Any) -> float:
-    try:
-        return float(v or 0)
-    except Exception:
-        return 0.0
-
-
-def _row_to_pe_entry(row: dict[str, Any]) -> dict[str, Any] | None:
-    item_id = row.get("item_id") or row.get("item") or row.get("eap_item")
-    if not item_id:
-        return None
-    custo_fixo = (
-        row.get("custo_fixo_equipe") if row.get("custo_fixo_equipe") is not None else row.get("custo_fixo_total")
-    )
-    custo_venda = row.get("custo_venda_cpu") if row.get("custo_venda_cpu") is not None else row.get("custo_venda")
-    delta = row.get("delta")
-    if delta is None and custo_venda is not None and custo_fixo is not None:
-        delta = _as_float(custo_venda) - _as_float(custo_fixo)
-    return {
-        "item_id": str(item_id),
-        "custo_fixo_equipe": _as_float(custo_fixo),
-        "custo_venda_cpu": _as_float(custo_venda),
-        "delta": _as_float(delta),
-    }
-
-
-def _extract_pe_from_list_block(rows: Any) -> list[dict[str, Any]] | None:
-    if not isinstance(rows, list) or not rows:
-        return None
-    out: list[dict[str, Any]] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        entry = _row_to_pe_entry(row)
-        if entry:
-            out.append(entry)
-    return out if out else None
-
-
-def _build_c_fixo_candidates(pe_block: Any, ref: dict[str, Any]) -> list:
-    candidates: list = []
-    if isinstance(pe_block, dict):
-        candidates.append(pe_block.get("c_fixo"))
-        candidates.append(pe_block.get("benchmark_referencia"))
-        candidates.append(pe_block.get("benchmark_referencia_itemizado"))
-    candidates.append(ref.get("c_fixo"))
-    return candidates
-
-
-def _extract_ref_ponto_equilibrio(ref: dict[str, Any]) -> list[dict[str, Any]]:
-    """Extrai ponto de equilíbrio da referência em formatos alternativos.
-
-    Prioridade:
-    1) ponto_equilibrio (lista direta com item_id)
-    2) ponto_equilibrio.canonical
-    3) ponto_equilibrio.c_fixo / c_fixo
-    """
-    pe_block = ref.get("ponto_equilibrio")
-
-    if isinstance(pe_block, list) and pe_block:
-        result = _extract_pe_from_list_block(pe_block)
-        if result:
-            return result
-
-    if isinstance(pe_block, dict):
-        canonical = pe_block.get("canonical")
-        if isinstance(canonical, list) and canonical:
-            return canonical
-
-    for candidate in _build_c_fixo_candidates(pe_block, ref):
-        result = _extract_pe_from_list_block(candidate)
-        if result:
-            return result
-
-    return []
-
-
-def _latest_project_by_name(project_name: str, projects_root: Path) -> Path | None:
-    target_norm = _normalize_project_token(project_name)
-    best: tuple[str, Path] | None = None
-    for d in projects_root.iterdir():
-        if not d.is_dir():
-            continue
-        meta_path = d / "meta.json"
-        if not meta_path.exists():
-            continue
-        try:
-            meta = _load_json(meta_path)
-        except Exception:
-            continue
-        nome_meta = str(meta.get("nome") or "")
-        nome_norm = _normalize_project_token(nome_meta)
-        if (
-            nome_meta != project_name
-            and nome_norm != target_norm
-            and target_norm not in nome_norm
-            and nome_norm not in target_norm
-        ):
-            continue
-        created = str(meta.get("criado_em") or "")
-        if best is None or created > best[0]:
-            best = (created, d)
-    return None if best is None else best[1]
-
-
-def _resolve_canonical_path(extr: dict[str, Any], ref: dict[str, Any], root: Path) -> Path:
-    candidate_raw = str(extr.get("paths", {}).get("canonical", "")).strip()
-    candidate = Path(candidate_raw) if candidate_raw else None
-    if candidate and candidate.exists():
-        return candidate
-
-    project_name = str(ref.get("projeto") or (ref.get("meta") or {}).get("projeto") or "")
-    if project_name:
-        proj = _latest_project_by_name(project_name, root / "projetos")
-        if proj:
-            can = proj / "v1" / "canonical.json"
-            if can.exists():
-                return can
-
-    raise FileNotFoundError("canonical.json nÃ£o encontrado para auditoria")
-
-
-def _audit_q1_insumos_equipes(ref: dict[str, Any], cur: dict[str, Any]) -> Answer:
-    """Q1: Insumos, CPUs, produtividades e composição de equipes iguais?"""
-    ref_eap = ref.get("eap") or (ref.get("cpus") or {}).get("itens_eap") or []
-    ref_cpu_map = {str(x.get("item_id")): str(x.get("cpu_id")) for x in ref_eap}
-    cur_cpu_map = {str(x.get("item_id")): str(x.get("cpu_id")) for x in cur.get("eap", [])}
-    cpus_iguais = ref_cpu_map == cur_cpu_map
-
-    ref_equipes = (
         ref.get("equipes_detalhadas")
         or (ref.get("equipes") or {}).get("detalhes")
         or (ref.get("equipes") or {}).get("equipes")
         or []
     )
-    ref_eq_map: dict[str, dict[str, dict[str, int]]] = {}
-    for eq in ref_equipes:
+
+
+def _aq1_build_eq_map(equipes: list) -> dict:
+    """Constroi mapa item_id -> {funcoes, equipamentos} a partir de lista de equipes."""
+    eq_map: dict = {}
+    for eq in equipes:
         item_id = str(eq.get("item_id") or "")
         if not item_id:
             continue
-        ref_eq_map[item_id] = {
+        eq_map[item_id] = {
             "funcoes": dict(_sum_dict_counter(eq.get("funcoes", []), "funcao_id", "num_pessoas")),
             "equipamentos": dict(_sum_dict_counter(eq.get("equipamentos", []), "equip_id", "num_unidades")),
         }
+    return eq_map
 
-    cur_eq_map: dict[str, dict[str, dict[str, int]]] = {}
-    for eq in cur.get("equipes_diretas", []):
-        item_id = str(eq.get("item_id") or "")
-        if not item_id:
-            continue
-        cur_eq_map[item_id] = {
-            "funcoes": dict(_sum_dict_counter(eq.get("funcoes", []), "funcao_id", "num_pessoas")),
-            "equipamentos": dict(_sum_dict_counter(eq.get("equipamentos", []), "equip_id", "num_unidades")),
-        }
 
+def _audit_q1_insumos_equipes(ref: dict[str, Any], cur: dict[str, Any]) -> Answer:
+    """Q1: Insumos, CPUs, produtividades e composicao de equipes iguais?"""
+    ref_eap = ref.get("eap") or (ref.get("cpus") or {}).get("itens_eap") or []
+    ref_cpu_map = {str(x.get("item_id")): str(x.get("cpu_id")) for x in ref_eap}
+    cur_cpu_map = {str(x.get("item_id")): str(x.get("cpu_id")) for x in cur.get("eap", [])}
+    cpus_iguais = ref_cpu_map == cur_cpu_map
+    ref_eq_map = _aq1_build_eq_map(_aq1_resolve_ref_equipes(ref))
+    cur_eq_map = _aq1_build_eq_map(cur.get("equipes_diretas", []))
     equipes_iguais = ref_eq_map == cur_eq_map
     return Answer(
-        pergunta="1) Insumos/CPUs/produtividades/composição de equipes iguais?",
+        pergunta="1) Insumos/CPUs/produtividades/composicao de equipes iguais?",
         status="PASSA" if (cpus_iguais and equipes_iguais) else "FALHA",
         evidencia={"cpus_iguais": cpus_iguais, "equipes_iguais": equipes_iguais},
     )
@@ -280,22 +115,33 @@ def _extract_ref_item_subtotal(i: dict[str, Any]) -> float:
     return _norm_float(subtotal)
 
 
-def _audit_q3_orcamento(ref: dict[str, Any], cur: dict[str, Any]) -> Answer:
-    """Q3: Orçamento de itens calculado corretamente?"""
-    ref_planejamento = ref.get("planejamento_detalhado") or (ref.get("planejamento") or {}).get("itens") or []
-    if not ref_planejamento:
-        ref_planejamento = (ref.get("cpus") or {}).get("itens_eap") or []
-    ref_items = {str(i.get("item_id")): _extract_ref_item_subtotal(i) for i in ref_planejamento}
-    cur_items = {
+def _aq3_resolve_ref_planejamento(ref: dict) -> list:
+    """Resolve lista de itens de planejamento em diferentes formatos de referencia."""
+    result = ref.get("planejamento_detalhado") or (ref.get("planejamento") or {}).get("itens") or []
+    if not result:
+        result = (ref.get("cpus") or {}).get("itens_eap") or []
+    return result
+
+
+def _aq3_build_cur_items(cur: dict) -> dict:
+    """Constroi mapa item_id -> subtotal_sem_bdi a partir do canonical atual."""
+    return {
         str(i.get("item_id")): _norm_float(((i.get("subtotal") or {}).get("sem_bdi") or {}).get("total"))
         for i in cur.get("planejamento", [])
     }
+
+
+def _audit_q3_orcamento(ref: dict[str, Any], cur: dict[str, Any]) -> Answer:
+    """Q3: Orcamento de itens calculado corretamente?"""
+    ref_planejamento = _aq3_resolve_ref_planejamento(ref)
+    ref_items = {str(i.get("item_id")): _extract_ref_item_subtotal(i) for i in ref_planejamento}
+    cur_items = _aq3_build_cur_items(cur)
     item_deltas = {k: round(cur_items.get(k, 0.0) - v, 2) for k, v in ref_items.items()}
     ok_items = (
         all(_is_close(ref_items.get(k, 0.0), cur_items.get(k, 0.0)) for k in item_deltas) if item_deltas else False
     )
     return Answer(
-        pergunta="3) Orçamento de itens está correto?",
+        pergunta="3) Orcamento de itens esta correto?",
         status="N/A" if not item_deltas else ("PASSA" if ok_items else "FALHA"),
         evidencia={"itens": item_deltas, "qtd_itens": len(item_deltas)},
     )
@@ -312,20 +158,26 @@ def _resolve_ref_indireto(ref_resultado: dict[str, Any], ref_confronto: dict[str
     return ref_ind
 
 
+def _aq4_resolve_ref_resultado(ref: dict) -> dict:
+    """Resolve resultado canonico de referencia (formato novo ou legado)."""
+    return (ref.get("resultado") or {}).get("canonical") or (ref.get("resultado") or {})
+
+
+def _aq4_indireto_fallback(cur: dict) -> float:
+    """Soma indiretos por prefixo de chave quando campo direto nao existe."""
+    return _norm_float(
+        sum(v for k, v in ((cur.get("resultado") or {}).get("custo") or {}).items() if str(k).startswith("indireto_"))
+    )
+
+
 def _audit_q4_indiretos(ref: dict[str, Any], cur: dict[str, Any]) -> Answer:
     """Q4: Indiretos aplicados corretamente?"""
-    ref_resultado = (ref.get("resultado") or {}).get("canonical") or (ref.get("resultado") or {})
+    ref_resultado = _aq4_resolve_ref_resultado(ref)
     ref_confronto = _get_ref_confronto(ref)
     ref_ind = _resolve_ref_indireto(ref_resultado, ref_confronto)
     cur_ind = _norm_float((cur.get("resultado") or {}).get("custo_indireto_total"))
     if cur_ind == 0:
-        cur_ind = _norm_float(
-            sum(
-                v
-                for k, v in (((cur.get("resultado") or {}).get("custo") or {}).items())
-                if str(k).startswith("indireto_")
-            )
-        )
+        cur_ind = _aq4_indireto_fallback(cur)
     delta_ind = round(cur_ind - ref_ind, 2)
     return Answer(
         pergunta="4) Indiretos aplicados corretamente?",
@@ -349,17 +201,22 @@ def _build_pe_mismatch(ref_pe: dict, cur_pe: dict) -> dict[str, Any]:
     return pe_mismatch
 
 
+def _aq5_build_pe_map(items: list | None) -> dict:
+    """Constroi mapa item_id -> item para ponto de equilibrio."""
+    return {str(i.get("item_id")): i for i in (items or []) if i.get("item_id")}
+
+
 def _audit_q5_ponto_equilibrio(ref: dict[str, Any], cur: dict[str, Any]) -> Answer:
-    """Q5: Ponto de equilíbrio por EAP coincide?"""
+    """Q5: Ponto de equilibrio por EAP coincide?"""
     ref_pe_src = _extract_ref_ponto_equilibrio(ref)
-    ref_pe = {str(i.get("item_id")): i for i in (ref_pe_src or []) if i.get("item_id")}
-    cur_pe = {str(i.get("item_id")): i for i in (cur.get("ponto_equilibrio") or []) if i.get("item_id")}
+    ref_pe = _aq5_build_pe_map(ref_pe_src)
+    cur_pe = _aq5_build_pe_map(cur.get("ponto_equilibrio"))
     if not ref_pe:
         return Answer(
-            pergunta="5) Ponto de equilíbrio por EAP coincide?",
+            pergunta="5) Ponto de equilibrio por EAP coincide?",
             status="N/A",
             evidencia={
-                "motivo": "Referência não possui dados de ponto_equilibrio (nem C_FIXO) para confronto",
+                "motivo": "Referencia nao possui dados de ponto_equilibrio (nem C_FIXO) para confronto",
                 "ref_count": 0,
                 "concilium_count": len(cur_pe),
             },
@@ -369,7 +226,7 @@ def _audit_q5_ponto_equilibrio(ref: dict[str, Any], cur: dict[str, Any]) -> Answ
     pe_mismatch = _build_pe_mismatch(ref_pe, cur_pe)
     pe_ok = not missing_ref and not missing_cur and not pe_mismatch
     return Answer(
-        pergunta="5) Ponto de equilíbrio por EAP coincide?",
+        pergunta="5) Ponto de equilibrio por EAP coincide?",
         status="PASSA" if pe_ok else "FALHA",
         evidencia={
             "ref_count": len(ref_pe),
@@ -381,6 +238,32 @@ def _audit_q5_ponto_equilibrio(ref: dict[str, Any], cur: dict[str, Any]) -> Answ
     )
 
 
+def _brt_preco_venda_triple(ref_resultado: dict, ref_confronto: dict, cur_res: dict) -> tuple:
+    """Resolve (ref_preco_venda, cur_preco_venda) de fontes alternativas."""
+    ref_pv = _norm_float(
+        ref_confronto.get("preco_venda")
+        or ref_resultado.get("preco_venda_total")
+        or (ref_resultado.get("venda") or {}).get("total_com_bdi")
+    )
+    cur_pv = _norm_float(
+        cur_res.get("preco_venda_total")
+        or (cur_res.get("venda") or {}).get("total_custo_plus_catalogo")
+        or (cur_res.get("venda") or {}).get("total_com_bdi")
+    )
+    return ref_pv, cur_pv
+
+
+def _brt_custo_triple(ref_resultado: dict, ref_confronto: dict, cur_res: dict) -> tuple:
+    """Resolve (ref_custo_total, cur_custo_total) de fontes alternativas."""
+    ref_ct = _norm_float(
+        ref_confronto.get("custo_total")
+        or ref_resultado.get("custo_total")
+        or (ref_resultado.get("custo") or {}).get("total")
+    )
+    cur_ct = _norm_float(cur_res.get("custo_total") or (cur_res.get("custo") or {}).get("total"))
+    return ref_ct, cur_ct
+
+
 def _build_resultado_triples(
     ref_resultado: dict[str, Any], ref_confronto: dict[str, Any], cur_res: dict[str, Any]
 ) -> dict[str, tuple[float, float]]:
@@ -388,26 +271,8 @@ def _build_resultado_triples(
     ref_ct = _norm_float(ref_confronto.get("custo_total"))
     margem_ref_derived = (ref_pv - ref_ct) / ref_pv if ref_pv > 0 else 0.0
     return {
-        "preco_venda_total": (
-            _norm_float(
-                ref_confronto.get("preco_venda")
-                or ref_resultado.get("preco_venda_total")
-                or (ref_resultado.get("venda") or {}).get("total_com_bdi")
-            ),
-            _norm_float(
-                cur_res.get("preco_venda_total")
-                or (cur_res.get("venda") or {}).get("total_custo_plus_catalogo")
-                or (cur_res.get("venda") or {}).get("total_com_bdi")
-            ),
-        ),
-        "custo_total": (
-            _norm_float(
-                ref_confronto.get("custo_total")
-                or ref_resultado.get("custo_total")
-                or (ref_resultado.get("custo") or {}).get("total")
-            ),
-            _norm_float(cur_res.get("custo_total") or (cur_res.get("custo") or {}).get("total")),
-        ),
+        "preco_venda_total": _brt_preco_venda_triple(ref_resultado, ref_confronto, cur_res),
+        "custo_total": _brt_custo_triple(ref_resultado, ref_confronto, cur_res),
         "margem_bruta": (
             _norm_float(ref_resultado.get("margem_bruta") or ref_resultado.get("margem_pct") or margem_ref_derived),
             _norm_float(cur_res.get("margem_bruta") or cur_res.get("margem_pct")),

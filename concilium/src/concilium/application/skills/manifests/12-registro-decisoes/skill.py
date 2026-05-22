@@ -22,6 +22,26 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
 
+def _rrd_validate_required_fields(inputs: dict, validacoes: list) -> None:
+    for field in ("objective", "justification", "decided_by"):
+        if not inputs.get(field):
+            validacoes.append(
+                ValidacaoItem(codigo="VAL-DEC-01", status="ERRO", mensagem=f"Campo obrigatório ausente: '{field}'")
+            )
+
+
+def _rrd_validate_rejected(considered: list, selected: Any, justification: dict, validacoes: list) -> None:
+    rejected = [c for c in considered if c.get("variavel") != selected]
+    if rejected and not justification.get("rejected_reasons"):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-DEC-03",
+                status="AVISO",
+                mensagem="Intervenções rejeitadas sem 'rejected_reasons' na justificativa",
+            )
+        )
+
+
 def run_registro_decisoes(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
@@ -57,32 +77,15 @@ def run_registro_decisoes(
         )
 
     # Campos obrigatórios simples
-    for field in ("objective", "justification", "decided_by"):
-        if not inputs.get(field):
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-DEC-01",
-                    status="ERRO",
-                    mensagem=f"Campo obrigatório ausente: '{field}'",
-                )
-            )
-
+    _rrd_validate_required_fields(inputs, validacoes)
     has_errors = any(v.status == "ERRO" for v in validacoes)
     if has_errors:
         return SkillResult(canonical_in, validacoes)
 
     # VAL-DEC-03: rejeitadas devem ter razões se houver > 1 alternativa
     selected = inputs["selected_intervention"]
-    rejected = [c for c in considered if c.get("variavel") != selected]
     justification = inputs["justification"]
-    if rejected and not justification.get("rejected_reasons"):
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-DEC-03",
-                status="AVISO",
-                mensagem="Intervenções rejeitadas sem 'rejected_reasons' na justificativa",
-            )
-        )
+    _rrd_validate_rejected(considered, selected, justification, validacoes)
 
     entry = {
         "decision_id": inputs.get("decision_id", f"dec_{uuid4().hex[:8]}"),

@@ -56,6 +56,7 @@ def _first_master_insumo(config_root: Path) -> tuple[str, str]:
     raise AssertionError("Nenhum contexto com insumo disponível foi encontrado")
 
 
+@pytest.mark.slow
 def test_survey_requires_project_by_default(adr040_env: dict[str, Path]) -> None:
     result = runner.invoke(app, ["catalog", "survey", "--contexto", "test", "--type", "price"])
     assert result.exit_code == 1

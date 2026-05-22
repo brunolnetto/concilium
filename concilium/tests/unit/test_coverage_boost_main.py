@@ -7,6 +7,7 @@ to exercise CLI code paths not reached by existing tests.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -150,10 +151,14 @@ def test_run_skill_returns_has_errors(env_cfg):
     mock_result.has_errors = True
     mock_result.validacoes = [MagicMock(status="ERRO", codigo="VAL-TEST-01", mensagem="Forced error")]
 
-    with patch("concilium.application.runtime.Runtime") as mock_rt_cls:
-        mock_rt = MagicMock()
-        mock_rt_cls.return_value = mock_rt
-        mock_rt.run_skill.return_value = mock_result
+    with (
+        patch("concilium.presentation.cli.commands_run._run_resolve_escopo", return_value="esc-1"),
+        patch("concilium.presentation.cli.commands_run._run_resolve_plano", return_value="plan-1"),
+        patch("concilium.application.orchestrators.lifecycle_coordinator.LifecycleCoordinator") as mock_lc_cls,
+    ):
+        mock_coord = MagicMock()
+        mock_lc_cls.return_value = mock_coord
+        mock_coord.avancar_plano.return_value = mock_result
         result = runner.invoke(app, ["project", "run", "01-escopo-e-eap", "--project", "HasErrProj"])
     assert result.exit_code == 1
     assert "falhou" in result.output.lower() or "ERRO" in result.output
@@ -162,6 +167,7 @@ def test_run_skill_returns_has_errors(env_cfg):
 # ── lines 303-309: status command with invocations log ────────────────────────
 
 
+@pytest.mark.slow
 def test_status_with_invocations_log(env_cfg):
     """status shows invocations log when a version has been run (lines 303-309)."""
     from concilium.application.runtime import Runtime
@@ -304,6 +310,12 @@ def test_main_module_dunder_main(monkeypatch, tmp_path):
     # Use --help so typer exits cleanly with code 0
     monkeypatch.setattr("sys.argv", ["concilium", "--help"])
 
-    with pytest.raises(SystemExit) as exc:
-        runpy.run_module("concilium.presentation.main", run_name="__main__", alter_sys=False)
-    assert exc.value.code == 0
+    _mod = "concilium.presentation.main"
+    _saved = sys.modules.pop(_mod, None)
+    try:
+        with pytest.raises(SystemExit) as exc:
+            runpy.run_module(_mod, run_name="__main__", alter_sys=False)
+        assert exc.value.code == 0
+    finally:
+        if _saved is not None:
+            sys.modules[_mod] = _saved

@@ -11,13 +11,13 @@ from concilium.presentation.api.container import get_concilium_service
 
 from ..schemas import DeliverablesConfigRequest, MobilizacaoPolicyUpsertRequest, SimulateRequest
 
-router = APIRouter(tags=["projects - mobilization"])
+router = APIRouter(prefix="/api/projects", tags=["projects - mobilization"])
 
 
 # ── Mobilization policies (ADR-054) ───────────────────────────────────────────
 
 
-@router.get("/api/projects/{project_id}/mobilizacao-policies", summary="Get saved mobilization policies")
+@router.get("/{project_id}/mobilizacao-policies", summary="Get saved mobilization policies")
 def get_mobilizacao_policies(
     project_id: str,
     service: ConciliumService = Depends(get_concilium_service),
@@ -28,9 +28,7 @@ def get_mobilizacao_policies(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post(
-    "/api/projects/{project_id}/mobilizacao-policies", summary="Create or update a mobilization policy for an activity"
-)
+@router.post("/{project_id}/mobilizacao-policies", summary="Create or update a mobilization policy for an activity")
 def upsert_mobilizacao_policy(
     project_id: str,
     req: MobilizacaoPolicyUpsertRequest,
@@ -44,7 +42,7 @@ def upsert_mobilizacao_policy(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.delete("/api/projects/{project_id}/mobilizacao-policies/{item_id}", summary="Delete a mobilization policy")
+@router.delete("/{project_id}/mobilizacao-policies/{item_id}", summary="Delete a mobilization policy")
 def delete_mobilizacao_policy(
     project_id: str,
     item_id: str,
@@ -59,7 +57,7 @@ def delete_mobilizacao_policy(
 
 
 @router.post(
-    "/api/projects/{project_id}/mobilizacao-policies/validate",
+    "/{project_id}/mobilizacao-policies/validate",
     summary="Validate all saved WMP policies without running the pipeline",
 )
 def validate_mobilizacao_policies(
@@ -79,9 +77,7 @@ def validate_mobilizacao_policies(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post(
-    "/api/projects/{project_id}/mobilizacao-policies/simulate", summary="Simulate mobilization curve (stateless)"
-)
+@router.post("/{project_id}/mobilizacao-policies/simulate", summary="Simulate mobilization curve (stateless)")
 def simulate_mobilizacao_policy(
     project_id: str,
     req: SimulateRequest,
@@ -99,7 +95,7 @@ def simulate_mobilizacao_policy(
 # ── Deliverables config ───────────────────────────────────────────────────────
 
 
-@router.get("/api/projects/{project_id}/deliverables-config", summary="Get deliverable generation flags")
+@router.get("/{project_id}/deliverables-config", summary="Get deliverable generation flags")
 def get_deliverables_config(
     project_id: str,
     service: ConciliumService = Depends(get_concilium_service),
@@ -110,7 +106,7 @@ def get_deliverables_config(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/api/projects/{project_id}/deliverables-config", summary="Update which deliverables are generated on run")
+@router.put("/{project_id}/deliverables-config", summary="Update which deliverables are generated on run")
 def put_deliverables_config(
     project_id: str,
     req: DeliverablesConfigRequest,

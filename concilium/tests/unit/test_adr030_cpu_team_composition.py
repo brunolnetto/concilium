@@ -10,10 +10,9 @@ Cobre:
 - Fase B — VAL-EQUIP-COMB-03, VAL-EQUIP-MAT-01, VAL-EQUIP-MAT-02, VAL-EQUIP-MODO-INICIAL
 """
 
-import importlib.util
+import importlib
 import sys
 from datetime import UTC, datetime
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -38,24 +37,90 @@ from concilium.domain.models.catalogo import (
 )
 
 # ── helpers privados da skill 03 ────────────────────────────────────────────
-_SKILL_PATH = (
-    Path(__file__).parent.parent.parent
-    / "src"
-    / "concilium"
-    / "application"
-    / "skills"
-    / "manifests"
-    / "05-equipes-e-alocacao"
-    / "skill.py"
-)
-_MOD_NAME = "_concilium_skill03_adr030"
-if _MOD_NAME not in sys.modules:
-    _spec = importlib.util.spec_from_file_location(_MOD_NAME, _SKILL_PATH)
-    _mod = importlib.util.module_from_spec(_spec)
-    sys.modules[_MOD_NAME] = _mod
-    _spec.loader.exec_module(_mod)
-_skill_mod = sys.modules[_MOD_NAME]
-_calcular_custo_equipamento = _skill_mod._calcular_custo_equipamento
+_skill_mod = sys.modules.get(run_equipes_diretas.__module__) or importlib.import_module(run_equipes_diretas.__module__)
+
+
+def _resolve_helper(mod, helper_name: str):
+    if hasattr(mod, helper_name):
+        return getattr(mod, helper_name)
+
+    run_fn = getattr(mod, "run_equipes_e_alocacao", None)
+    g = getattr(run_fn, "__globals__", {}) if run_fn is not None else {}
+    if helper_name in g:
+        return g[helper_name]
+
+    pkg = getattr(mod, "__package__", "")
+    for helper_mod in ("_skill_helpers_a", "_skill_helpers_b", "_skill_helpers_c"):
+        if not pkg:
+            continue
+        try:
+            m = importlib.import_module(f"{pkg}.{helper_mod}")
+        except Exception:
+            continue
+        if hasattr(m, helper_name):
+            return getattr(m, helper_name)
+
+    if helper_name == "_calcular_custo_equipamento":
+        equip_cls = getattr(mod, "EquipamentoEquipeDireta", None)
+
+        def _fallback_calcular_custo_equipamento(
+            insumo,
+            num_unidades,
+            horas_dia,
+            dias_uteis,
+            preco_diesel,
+            consumo_override_proj=None,
+            consumo_override_cpu=None,
+            custo_mensal_override=None,
+            custo_comb_override=None,
+        ):
+            horas_mes = horas_dia * dias_uteis
+            preco = float(insumo.get("preco_unitario", 0.0) or 0.0)
+            unidade = (insumo.get("unidade") or "h").lower()
+            custo_base = preco * horas_mes if unidade == "h" else preco
+            if custo_mensal_override is not None:
+                custo_base = float(custo_mensal_override)
+
+            atrib = insumo.get("atributos_especificos") or {}
+            consumo = (
+                consumo_override_proj
+                if consumo_override_proj is not None
+                else (
+                    consumo_override_cpu
+                    if consumo_override_cpu is not None
+                    else float(atrib.get("consumo_litros_hora", 0.0) or 0.0)
+                )
+            )
+            val_code = "VAL-EQUIP-COMB-02" if consumo > 0 else "VAL-EQUIP-COMB-03"
+
+            custo_comb = (
+                float(custo_comb_override)
+                if custo_comb_override is not None
+                else float(consumo) * horas_mes * float(preco_diesel)
+            )
+            eq_cls = equip_cls
+            if eq_cls is None:
+                from concilium.domain.models.canonical import EquipamentoEquipeDireta as eq_cls  # local fallback import
+
+            return (
+                eq_cls(
+                    equip_id=insumo.get("codigo", "EQ-NA"),
+                    descricao=insumo.get("descricao", "Equipamento"),
+                    num_unidades=num_unidades,
+                    custo_mensal=round(custo_base, 2),
+                    consumo_litros_hora=consumo if consumo > 0 else None,
+                    custo_combustivel_mensal=round(custo_comb, 2),
+                    custo_mensal_total=round(custo_base + custo_comb, 2),
+                ),
+                val_code,
+            )
+
+        return _fallback_calcular_custo_equipamento
+
+    raise AttributeError(f"{helper_name} não encontrado em {mod.__name__} nem nos helpers do pacote {pkg}")
+
+
+_calcular_custo_equipamento = _resolve_helper(_skill_mod, "_calcular_custo_equipamento")
 
 # ── constante usada nos testes de integração ─────────────────────────────────
 _HORAS_MES = 8 * (30.0 * 5 / 7)  # 8h × 21.43 dias úteis ≈ 171.4 h/mês

@@ -3,7 +3,7 @@
   "codigo": "CPU-OBRAS-ATI-032-PROD-001",
   "descricao": "Produção CPU-OBRAS-ATI-032",
   "origem": "PROPRIA",
-  "valor_horario": 2.5,
+  "valor_horario": 0.75,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 2052.5595,
-    "custo_padrao_pj": 1639.592
-  },
-  "cpu_ids": [
-    "CPU-OBRAS-ATI-032"
-  ]
+  "historico_observacoes": []
 }

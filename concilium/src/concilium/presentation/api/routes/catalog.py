@@ -9,10 +9,10 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from concilium.application.services.concilium_service import ConciliumService
 from concilium.presentation.api.container import get_concilium_service
 
-router = APIRouter(tags=["projects - catalog"])
+router = APIRouter(prefix="/api/projects", tags=["projects - catalog"])
 
 
-@router.get("/api/projects/{project_id}/catalog/overrides", summary="List current CPU overrides for this project")
+@router.get("/{project_id}/catalog/overrides", summary="List current CPU overrides for this project")
 def get_project_catalog_overrides(
     project_id: str,
     service: ConciliumService = Depends(get_concilium_service),
@@ -24,9 +24,7 @@ def get_project_catalog_overrides(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post(
-    "/api/projects/{project_id}/catalog/cpus/{cpu_id}", summary="Extend or override a CPU definition for this project"
-)
+@router.post("/{project_id}/catalog/cpus/{cpu_id}", summary="Extend or override a CPU definition for this project")
 def extend_cpu(
     project_id: str,
     cpu_id: str,
@@ -41,7 +39,7 @@ def extend_cpu(
 
 
 @router.get(
-    "/api/projects/{project_id}/catalog/cpus/{cpu_id}",
+    "/{project_id}/catalog/cpus/{cpu_id}",
     summary="Resolve a CPU definition (project override → master catalog)",
 )
 def resolve_cpu(

@@ -12,8 +12,7 @@
       "custo_capital_h": 45.0,
       "custo_mao_obra_h": 35.0,
       "custo_diesel_h": 20.0,
-      "custo_material_h": 10.0,
-      "custo_hora_total": 110.0
+      "custo_material_h": 10.0
     },
     "_comment_consumo_derivado": "11.69 L/h = 72.496 R$/h ÷ 6.20 R$/L (fonte: decomposicao_equip.custo_diesel_h)"
   },

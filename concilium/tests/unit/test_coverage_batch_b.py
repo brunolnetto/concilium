@@ -60,13 +60,17 @@ _MANIFESTS = Path(__file__).parents[2] / "src" / "concilium" / "application" / "
 
 def _load_skill_module(skill_id: str) -> object:
     mod_name = f"_concilium_skill_{skill_id.replace('-', '_')}"
-    if mod_name in sys.modules:
-        return sys.modules[mod_name]
+    sys.modules.pop(mod_name, None)
     path = _MANIFESTS / skill_id / "skill.py"
     spec = importlib.util.spec_from_file_location(mod_name, path)
     mod = importlib.util.module_from_spec(spec)
+    try:
+        source = path.read_text(encoding="utf-8")
+        exec(compile(source, str(path), "exec"), mod.__dict__)
+    except Exception:
+        sys.modules.pop(mod_name, None)
+        raise
     sys.modules[mod_name] = mod
-    spec.loader.exec_module(mod)
     return mod
 
 

@@ -9,10 +9,10 @@ from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
 from concilium.application.services.concilium_service import ConciliumService
 from concilium.presentation.api.container import get_concilium_service
 
-router = APIRouter(tags=["catalogs"])
+router = APIRouter(prefix="/api/catalogs", tags=["catalogs"])
 
 
-@router.get("/api/catalogs", summary="List available master catalogs")
+@router.get("", summary="List available master catalogs")
 def list_catalogs(
     service: ConciliumService = Depends(get_concilium_service),
 ) -> dict[str, Any]:
@@ -20,7 +20,7 @@ def list_catalogs(
     return {"items": service.list_catalogs()}
 
 
-@router.get("/api/catalogs/{catalog_id}", summary="Get catalog metadata and summary")
+@router.get("/{catalog_id}", summary="Get catalog metadata and summary")
 def get_catalog(
     catalog_id: str,
     service: ConciliumService = Depends(get_concilium_service),
@@ -32,7 +32,7 @@ def get_catalog(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/api/catalogs/{catalog_id}/cpus", summary="List CPUs in master catalog")
+@router.get("/{catalog_id}/cpus", summary="List CPUs in master catalog")
 def list_catalog_cpus(
     catalog_id: str,
     q: str | None = Query(None, description="Filter by código or descrição"),
@@ -46,7 +46,7 @@ def list_catalog_cpus(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/api/catalogs/{catalog_id}/cpus/{cpu_id}", summary="Get a specific CPU from master catalog")
+@router.get("/{catalog_id}/cpus/{cpu_id}", summary="Get a specific CPU from master catalog")
 def get_catalog_cpu(
     catalog_id: str,
     cpu_id: str,
@@ -65,7 +65,7 @@ def get_catalog_cpu(
 
 
 @router.put(
-    "/api/catalogs/{catalog_id}/cpus/{cpu_id}",
+    "/{catalog_id}/cpus/{cpu_id}",
     summary="Create or update a CPU in the master catalog (ADR-067)",
 )
 def upsert_catalog_cpu(
@@ -92,7 +92,7 @@ def upsert_catalog_cpu(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.get("/api/catalogs/{catalog_id}/insumos", summary="List insumos in master catalog")
+@router.get("/{catalog_id}/insumos", summary="List insumos in master catalog")
 def list_catalog_insumos(
     catalog_id: str,
     q: str | None = Query(None, description="Filter by código or descrição"),

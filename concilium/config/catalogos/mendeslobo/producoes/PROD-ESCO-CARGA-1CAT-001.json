@@ -40,7 +40,11 @@
       },
       "confiabilidade": 0.95,
       "notas": "Calibração inicial",
-      "timestamp": "2025-10-15T10:30:00Z"
+      "timestamp": "2025-10-15T10:30:00Z",
+      "data": "2026-05-22T20:08:50.755671+00:00",
+      "autor": "cure_catalog",
+      "descricao": "(migrado sem descrição original)",
+      "tipo": "migracao"
     }
   ],
   "auditoria": {
@@ -51,36 +55,6 @@
     "versao": "1.0"
   },
   "categoria": "DIVERSOS",
-  "equipe": {
-    "funcoes": [
-      {
-        "funcao_id": "MO-OPER-ESCAV",
-        "num_pessoas": 1
-      },
-      {
-        "funcao_id": "MO-AJUDANTE",
-        "num_pessoas": 1
-      },
-      {
-        "funcao_id": "MO-ENCARREG-TERRA",
-        "num_pessoas": 1
-      },
-      {
-        "funcao_id": "MO-MOTOR-CAM-BASC",
-        "num_pessoas": 7
-      }
-    ],
-    "equipamentos": [
-      {
-        "equip_id": "EQ-ESCAV-HID-38T",
-        "num_unidades": 1
-      },
-      {
-        "equip_id": "EQ-CAM-BASC-14M3",
-        "num_unidades": 7
-      }
-    ]
-  },
   "variantes": [
     {
       "id": "padrao",
@@ -171,5 +145,35 @@
         ]
       }
     }
-  ]
+  ],
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-ESCAV",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 7
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-ESCAV-HID-38T",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-CAM-BASC-14M3",
+        "num_unidades": 7
+      }
+    ]
+  }
 }

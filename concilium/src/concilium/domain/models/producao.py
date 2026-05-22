@@ -71,6 +71,31 @@ class AuditoriaProducao(BaseModel):
     versao: str
 
 
+def _fator_by_equipamento(equips_calib: list, equips_nova: list) -> float:
+    if not equips_calib:
+        return 1.0
+    equip_principal_id = equips_calib[0].equip_id
+    qtd_calib = 0.0
+    qtd_nova = 0.0
+    for e in equips_calib:
+        if e.equip_id == equip_principal_id:
+            qtd_calib += e.num_unidades
+    for e in equips_nova:
+        if e.equip_id == equip_principal_id:
+            qtd_nova += e.num_unidades
+    if qtd_calib == 0 or qtd_nova == 0:
+        return 1.0
+    return round(qtd_nova / qtd_calib, 6)
+
+
+def _fator_by_mao_obra(funcoes_calib: list, funcoes_nova: list) -> float:
+    total_calib = sum(f.num_pessoas for f in funcoes_calib)
+    total_nova = sum(f.num_pessoas for f in funcoes_nova)
+    if total_calib == 0 or total_nova == 0:
+        return 1.0
+    return round(total_nova / total_calib, 6)
+
+
 class Producao(BaseModel):
     """Artefato de produtividade — primeira classe, versionado, rastreável."""
 
@@ -112,22 +137,8 @@ class Producao(BaseModel):
             fator = 2 / 1 = 2.0  -> producao_ajustada = valor_horario * 2.0
         """
         if self.limite_producao == "equipamento":
-            equips_calib = self.composicao_padrao_equipe.equipamentos
-            if not equips_calib:
-                return 1.0
-            # Equipamento principal: o primeiro na lista de calibração (mais representativo)
-            equip_principal_id = equips_calib[0].equip_id
-            qtd_calib = sum(e.num_unidades for e in equips_calib if e.equip_id == equip_principal_id)
-            qtd_nova = sum(e.num_unidades for e in nova_composicao.equipamentos if e.equip_id == equip_principal_id)
-            if qtd_calib == 0 or qtd_nova == 0:
-                return 1.0
-            return round(qtd_nova / qtd_calib, 6)
-        else:  # mao_obra
-            total_calib = sum(f.num_pessoas for f in self.composicao_padrao_equipe.funcoes)
-            total_nova = sum(f.num_pessoas for f in nova_composicao.funcoes)
-            if total_calib == 0 or total_nova == 0:
-                return 1.0
-            return round(total_nova / total_calib, 6)
+            return _fator_by_equipamento(self.composicao_padrao_equipe.equipamentos, nova_composicao.equipamentos)
+        return _fator_by_mao_obra(self.composicao_padrao_equipe.funcoes, nova_composicao.funcoes)
 
     def producao_ajustada(self, nova_composicao: ComposicaoPadraoEquipe) -> float:
         """Produtividade horária ajustada para nova composição de equipe.

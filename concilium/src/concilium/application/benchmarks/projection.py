@@ -4,9 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], float | None, float | None]:
-    """Retorna (ferramenta_dict, custo_direto, custo_indireto)."""
-    custo_indireto = round(
+def _bfc_custo_indireto(custo: object) -> float:
+    return round(
         (getattr(custo, "indireto_adm", 0) or 0)
         + (getattr(custo, "indireto_top", 0) or 0)
         + (getattr(custo, "indireto_lab", 0) or 0)
@@ -14,32 +13,43 @@ def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], flo
         + (getattr(custo, "indireto_mob", 0) or 0),
         2,
     )
+
+
+def _bfc_custo_direto_total(custo: object, custo_indireto: float) -> tuple[float | None, float | None]:
     direto_catalogo = getattr(custo, "direto_catalogo", None)
     direto_equipes = getattr(custo, "direto_equipes", None)
     custo_direto = direto_catalogo if direto_catalogo is not None else direto_equipes
     if custo_direto is not None and custo_indireto is not None:
-        custo_total: float | None = round(custo_direto + custo_indireto, 2)
-    else:
-        custo_total = getattr(custo, "total", None)
+        return custo_direto, round(custo_direto + custo_indireto, 2)
+    return custo_direto, getattr(custo, "total", None)
 
+
+def _bfc_preco_venda(venda: object, custo_total: float | None) -> tuple[float | None, float | None]:
     raw_bdi_lucro = getattr(venda, "bdi_lucro_impostos", None) if venda else None
-    preco_venda_plus_catalogo = getattr(venda, "total_custo_plus_catalogo", None) if venda else None
-    if preco_venda_plus_catalogo is not None:
-        preco_venda: float | None = round(preco_venda_plus_catalogo, 2)
-    elif raw_bdi_lucro is not None and custo_total is not None:
-        preco_venda = round(custo_total * (1 + raw_bdi_lucro), 2)
-    else:
-        preco_venda = None
+    preco_venda_plus = getattr(venda, "total_custo_plus_catalogo", None) if venda else None
+    if preco_venda_plus is not None:
+        return raw_bdi_lucro, round(preco_venda_plus, 2)
+    if raw_bdi_lucro is not None and custo_total is not None:
+        return raw_bdi_lucro, round(custo_total * (1 + raw_bdi_lucro), 2)
+    return raw_bdi_lucro, None
 
+
+def _bfc_bdi_lucro(preco_venda: float | None, custo_total: float | None, raw_bdi_lucro: float | None) -> float:
     if preco_venda is not None and custo_total:
-        bdi_lucro = (preco_venda / custo_total) - 1
-    else:
-        bdi_lucro = raw_bdi_lucro if raw_bdi_lucro is not None else 0.15
+        return (preco_venda / custo_total) - 1
+    return raw_bdi_lucro if raw_bdi_lucro is not None else 0.15
 
+
+def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], float | None, float | None]:
+    """Retorna (ferramenta_dict, custo_direto, custo_indireto)."""
+    custo_indireto = _bfc_custo_indireto(custo)
+    custo_direto, custo_total = _bfc_custo_direto_total(custo, custo_indireto)
+    raw_bdi_lucro, preco_venda = _bfc_preco_venda(venda, custo_total)
+    bdi_lucro = _bfc_bdi_lucro(preco_venda, custo_total, raw_bdi_lucro)
     ferramenta = {
         "custo_direto": custo_direto,
-        "custo_direto_equipes": direto_equipes,
-        "custo_direto_catalogo": direto_catalogo,
+        "custo_direto_equipes": getattr(custo, "direto_equipes", None),
+        "custo_direto_catalogo": getattr(custo, "direto_catalogo", None),
         "custo_indireto": custo_indireto,
         "custo_total": custo_total,
         "preco_venda": preco_venda,
@@ -125,29 +135,38 @@ def _accumulate_equipes(equipes_diretas: list) -> dict[str, float]:
 
 def _build_actionable_insights(canonical: Any) -> dict[str, Any]:
     insights: dict[str, Any] = {}
-    cost_criticality_report = getattr(canonical, "cost_criticality_report", None)
-    if cost_criticality_report is not None:
-        insights["criticidade"] = (
-            f"{sum(1 for a in cost_criticality_report.atividades if a.classe == 'A')} A, "
-            f"{sum(1 for a in cost_criticality_report.atividades if a.classe == 'B')} B, "
-            f"{sum(1 for a in cost_criticality_report.atividades if a.classe == 'C')} C"
-        )
-    relatorio_sensibilidade = getattr(canonical, "relatorio_sensibilidade", None)
-    if relatorio_sensibilidade is not None:
-        insights["sensibilidade"] = (
-            f"{len(getattr(relatorio_sensibilidade, 'passos_repair', []))} alavancas corretivas, "
-            f"{len(getattr(relatorio_sensibilidade, 'oportunidades', []))} oportunidades"
-        )
-    relatorio_executivo = getattr(canonical, "relatorio_executivo", None)
-    if relatorio_executivo is not None:
-        rec = relatorio_executivo.recomendacao_primaria
-        insights["intervencao"] = f"Recomendacao Principal: {rec.nome if rec else 'Nenhuma'}"
-    else:
-        relatorio_intervencao = getattr(canonical, "relatorio_intervencao", None)
-        if relatorio_intervencao is not None:
-            rec = relatorio_intervencao.recomendacao_primaria
-            insights["intervencao"] = f"Recomendacao Principal: {rec.nome if rec else 'Nenhuma'}"
+    _bai_fill_criticidade(insights, canonical)
+    _bai_fill_sensibilidade(insights, canonical)
+    _bai_fill_intervencao(insights, canonical)
     return insights
+
+
+def _bai_fill_criticidade(insights: dict, canonical: Any) -> None:
+    report = getattr(canonical, "cost_criticality_report", None)
+    if report is None:
+        return
+    ats = report.atividades
+    count_a = sum(1 for a in ats if a.classe == "A")
+    count_b = sum(1 for a in ats if a.classe == "B")
+    count_c = sum(1 for a in ats if a.classe == "C")
+    insights["criticidade"] = f"{count_a} A, {count_b} B, {count_c} C"
+
+
+def _bai_fill_sensibilidade(insights: dict, canonical: Any) -> None:
+    rel = getattr(canonical, "relatorio_sensibilidade", None)
+    if rel is None:
+        return
+    n_rep = len(getattr(rel, "passos_repair", []))
+    n_opp = len(getattr(rel, "oportunidades", []))
+    insights["sensibilidade"] = f"{n_rep} alavancas corretivas, {n_opp} oportunidades"
+
+
+def _bai_fill_intervencao(insights: dict, canonical: Any) -> None:
+    relatorio = getattr(canonical, "relatorio_executivo", None) or getattr(canonical, "relatorio_intervencao", None)
+    if relatorio is None:
+        return
+    rec = relatorio.recomendacao_primaria
+    insights["intervencao"] = f"Recomendacao Principal: {rec.nome if rec else 'Nenhuma'}"
 
 
 @dataclass

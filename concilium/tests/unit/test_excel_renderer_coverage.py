@@ -14,6 +14,8 @@ from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,
@@ -87,6 +89,8 @@ class TestImportCompat:
 
 
 class TestExcelRendererSave:
+    pytestmark = [pytest.mark.slow]
+
     def test_save_creates_file(self):
         canonical = _canonical_com_resultado()
         renderer = ExcelRenderer(canonical)
@@ -112,6 +116,8 @@ class TestExcelRendererSave:
 
 
 class TestExcelRendererToBytes:
+    pytestmark = [pytest.mark.slow]
+
     def test_to_bytes_returns_bytes(self):
         canonical = _canonical_com_resultado()
         renderer = ExcelRenderer(canonical)

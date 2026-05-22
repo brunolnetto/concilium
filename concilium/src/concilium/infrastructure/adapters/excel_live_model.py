@@ -122,29 +122,278 @@ def _title(ws, row, txt, ncols=8):
 # ── Helper: get catalog producao_horaria ────────────────────────────────────────
 
 
+def _lm_render_cron_item_labels(ws, base: int, item) -> None:
+    for sub, label in [(0, "Produção semanal"), (1, "Acumulado"), (2, "% Completude")]:
+        r = base + sub
+        ws.cell(row=r, column=1, value=item.item_id if sub == 0 else "").fill = _fill(_C["label"])
+        ws.cell(row=r, column=2, value=getattr(item, "descricao", "")[:25] if sub == 0 else "").fill = _fill(
+            _C["label"]
+        )
+        ws.cell(row=r, column=6, value=label).fill = _fill(_C["label"])
+        for ci in [1, 2, 6]:
+            ws.cell(row=r, column=ci).border = _brd()
+            ws.cell(row=r, column=ci).alignment = _aln()
+            ws.cell(row=r, column=ci).font = _fnt(size=8)
+
+
+def _lm_render_cron_item(
+    ws, base: int, item, p: str, eap_rows, alloc_ir, alloc_cols, prat_rows, week_item_cols, H_r, D_r
+) -> None:
+    r_eap = eap_rows[item.item_id]
+    r_alloc = alloc_ir[item.item_id]
+    P_ref = f"{p}!E{r_eap}"
+    qtd_ref = f"{p}!D{r_eap}"
+    _lm_render_cron_item_labels(ws, base, item)
+    _frm(ws, base, 3, f"={qtd_ref}", "#,##0.##")
+    for col_off in [base + 1, base + 2]:
+        ws.cell(row=col_off, column=3).fill = _fill(_C["label"])
+        ws.cell(row=col_off, column=3).border = _brd()
+    for wk, col in week_item_cols.items():
+        alloc_c = alloc_cols.get(wk)
+        prat_c = prat_rows.get(wk)
+        eq_ref = f"{p}!{_col(alloc_c)}{r_alloc}" if alloc_c else "0"
+        p_ref = f"{p}!$B${prat_c}" if prat_c else "1"
+        _frm(ws, base, col, f"=IFERROR({eq_ref}*{P_ref}*{H_r}*{D_r}*{p_ref},0)", "#,##0.0")
+    week_vals = list(week_item_cols.values())
+    for j, col in enumerate(week_vals):
+        if j == 0:
+            acum_f = f"={_col(col)}{base}"
+        else:
+            acum_f = f"={_col(week_vals[j - 1])}{base + 1}+{_col(col)}{base}"
+        _frm(ws, base + 1, col, acum_f, "#,##0.0")
+        _frm(ws, base + 2, col, f"=IF({qtd_ref}>0,{_col(col)}{base + 1}/{qtd_ref},0)", "0.0%")
+    first_wk_col = week_vals[0]
+    last_wk_col = week_vals[-1]
+    _frm(ws, base, 4, f"=SUM({_col(first_wk_col)}{base}:{_col(last_wk_col)}{base})", "#,##0.0")
+    for col_off in [base + 1, base + 2]:
+        ws.cell(row=col_off, column=4).fill = _fill(_C["label"])
+        ws.cell(row=col_off, column=4).border = _brd()
+        ws.cell(row=col_off, column=5).fill = _fill(_C["label"])
+        ws.cell(row=col_off, column=5).border = _brd()
+    _frm(ws, base, 5, f"=IF(C{base}>0,(D{base}-C{base})/C{base},0)", "0.0%")
+
+
+def _lm_render_curva_s(ws, s_title_row: int, eap, p: str, eap_rows, week_item_cols, item_pct_row) -> None:
+    qtd_total_formula = "+".join([f"{p}!D{eap_rows[item.item_id]}" for item in eap])
+    for j, (wk, col) in enumerate(week_item_cols.items()):
+        row = s_title_row + 2 + j
+        ws.cell(row=row, column=1, value=wk).fill = _fill(_C["label"])
+        ws.cell(row=row, column=1).border = _brd()
+        ws.cell(row=row, column=1).font = _fnt(size=8)
+        pct_refs = [f"{p}!D{eap_rows[item.item_id]}*{_col(col)}{item_pct_row[item.item_id]}" for item in eap]
+        s_formula = f"=IF(({qtd_total_formula})>0,({'+'.join(pct_refs)})/({qtd_total_formula}),0)"
+        _frm(ws, row, 2, s_formula, "0.00%")
+
+
+def _lm_sv(field: str, obj) -> float:
+    """Safe float getter for consolidacao reference values."""
+    try:
+        return float(getattr(obj, field, 0) or 0)
+    except Exception:
+        return 0.0
+
+
+def _lm_render_consol_row(ws, r: int, label: str, formula, ref_val) -> None:
+    ws.cell(row=r, column=1, value=label).border = _brd()
+    ws.cell(row=r, column=1).fill = _fill(_C["hdr"] if not formula else _C["label"])
+    ws.cell(row=r, column=1).font = _fnt(bold=not formula, color="FFFFFF" if not formula else "000000")
+    ws.cell(row=r, column=1).alignment = _aln()
+    if formula:
+        fmt = "0.00%" if "MARGEM" in label else "#,##0.00"
+        _frm(ws, r, 2, formula, fmt)
+        if ref_val is not None:
+            _ref_cell(ws, r, 3, ref_val, fmt)
+            _frm(ws, r, 4, f"=B{r}-C{r}", "#,##0.00")
+            _frm(ws, r, 5, f"=IF(C{r}<>0,(B{r}-C{r})/C{r},0)", "0.00%")
+
+
+def _lm_render_func_rows(ws, all_funcoes: list, start_row: int) -> dict:
+    func_rows = {}
+    for i, f in enumerate(all_funcoes):
+        row = start_row + i
+        func_rows[f["id"]] = row
+        ws.cell(row=row, column=1, value=f["id"]).fill = _fill(_C["label"])
+        ws.cell(row=row, column=2, value=f["desc"]).fill = _fill(_C["label"])
+        for ci in [1, 2]:
+            ws.cell(row=row, column=ci).border = _brd()
+            ws.cell(row=row, column=ci).alignment = _aln()
+            ws.cell(row=row, column=ci).font = _fnt(size=9)
+        _inp(ws, row, 3, round(f["mensal"], 2), "#,##0.00")
+    return func_rows
+
+
+def _lm_render_equip_rows(ws, all_equips: list, start_row: int) -> dict:
+    equip_rows = {}
+    for i, e in enumerate(all_equips):
+        row = start_row + i
+        equip_rows[e["id"]] = row
+        ws.cell(row=row, column=1, value=e["id"]).fill = _fill(_C["label"])
+        ws.cell(row=row, column=2, value=e["desc"]).fill = _fill(_C["label"])
+        for ci in [1, 2]:
+            ws.cell(row=row, column=ci).border = _brd()
+            ws.cell(row=row, column=ci).alignment = _aln()
+            ws.cell(row=row, column=ci).font = _fnt(size=9)
+        _inp(ws, row, 3, round(e["mensal"], 2), "#,##0.00")
+        _inp(ws, row, 4, round(e["comb_mensal"], 2), "#,##0.00")
+    return equip_rows
+
+
+def _lm_build_equipe_maps(equipes, item_id: str):
+    eq = equipes.get(item_id)
+    if eq is None:
+        return {}, {}
+    func_map = {}
+    for f in eq.funcoes or []:
+        func_map[f.funcao_id] = f.num_pessoas
+    equip_map = {}
+    for e in eq.equipamentos or []:
+        equip_map[e.equip_id] = e.num_unidades
+    return func_map, equip_map
+
+
+def _lm_render_comp_item_row(ws, row: int, item, equipes, res_cols, all_res) -> None:
+    ws.cell(row=row, column=1, value=item.item_id).fill = _fill(_C["label"])
+    ws.cell(row=row, column=2, value=getattr(item, "descricao", "")[:25]).fill = _fill(_C["label"])
+    for ci in [1, 2]:
+        ws.cell(row=row, column=ci).border = _brd()
+        ws.cell(row=row, column=ci).alignment = _aln()
+        ws.cell(row=row, column=ci).font = _fnt(size=8)
+    func_map, equip_map = _lm_build_equipe_maps(equipes, item.item_id)
+    for r_info in all_res:
+        col = res_cols[r_info["id"]]
+        n = func_map.get(r_info["id"], equip_map.get(r_info["id"], 0))
+        val = n if n else None
+        c_cell = ws.cell(row=row, column=col, value=val)
+        c_cell.fill = _fill(_C["inp"] if n else "F5F5F5")
+        c_cell.border = _brd()
+        c_cell.alignment = _aln("center")
+        c_cell.font = _fnt(size=9)
+        c_cell.number_format = "0"
+
+
+def _lm_render_comp_items(ws, eap, equipes, res_cols, all_res, start_row: int) -> dict:
+    comp_item_rows = {}
+    for i, item in enumerate(eap):
+        row = start_row + i
+        comp_item_rows[item.item_id] = row
+        _lm_render_comp_item_row(ws, row, item, equipes, res_cols, all_res)
+    return comp_item_rows
+
+
+def _lm_build_cd_formulas(comp_r, all_funcoes, all_equips, func_rows, equip_rows, res_cols):
+    mo_terms = [f"RECURSOS!{_col(res_cols[f['id']])}{comp_r}*RECURSOS!$C${func_rows[f['id']]}" for f in all_funcoes]
+    eq_terms = [f"RECURSOS!{_col(res_cols[e['id']])}{comp_r}*RECURSOS!$C${equip_rows[e['id']]}" for e in all_equips]
+    comb_terms = [f"RECURSOS!{_col(res_cols[e['id']])}{comp_r}*RECURSOS!$D${equip_rows[e['id']]}" for e in all_equips]
+    mo_formula = "=" + "+".join(mo_terms) if mo_terms else "=0"
+    eq_formula = "=" + "+".join(eq_terms) if eq_terms else "=0"
+    comb_formula = "=" + "+".join(comb_terms) if comb_terms else "=0"
+    return mo_formula, eq_formula, comb_formula
+
+
+def _lm_render_cd_rows(
+    ws, eap, all_funcoes, all_equips, func_rows, equip_rows, res_cols, comp_item_rows, eap_rows
+) -> dict:
+    cd_rows = {}
+    for i, item in enumerate(eap):
+        row = 3 + i
+        cd_rows[item.item_id] = row
+        comp_r = comp_item_rows[item.item_id]
+        mo_formula, eq_formula, comb_formula = _lm_build_cd_formulas(
+            comp_r, all_funcoes, all_equips, func_rows, equip_rows, res_cols
+        )
+        ws.cell(row=row, column=1, value=item.item_id).fill = _fill(_C["label"])
+        ws.cell(row=row, column=2, value=getattr(item, "descricao", "")[:22]).fill = _fill(_C["label"])
+        for ci in [1, 2]:
+            ws.cell(row=row, column=ci).border = _brd()
+            ws.cell(row=row, column=ci).alignment = _aln()
+            ws.cell(row=row, column=ci).font = _fnt(size=8)
+        _frm(ws, row, 3, mo_formula, "#,##0.00")
+        _frm(ws, row, 4, eq_formula, "#,##0.00")
+        _frm(ws, row, 5, comb_formula, "#,##0.00")
+        _frm(ws, row, 6, f"=C{row}+D{row}+E{row}", "#,##0.00")
+        eap_r = eap_rows[item.item_id]
+        _frm(ws, row, 7, f"=PARÂMETROS!I{eap_r}", "0")
+        _frm(ws, row, 8, f"=G{row}/4.348", "0.00")
+        _frm(ws, row, 9, f"=F{row}*H{row}", "#,##0.00")
+    return cd_rows
+
+
+def _lm_render_ind_rows(ws, indiretos, start_row: int) -> dict:
+    ind_rows = {}
+    for i, ind in enumerate(indiretos):
+        row = start_row + i
+        ind_rows[ind.categoria] = row
+        ws.cell(row=row, column=1, value=ind.categoria).fill = _fill(_C["label"])
+        ws.cell(row=row, column=1).border = _brd()
+        ws.cell(row=row, column=1).alignment = _aln()
+        monthly = (
+            round(ind.custo_total / max(ind.permanencia_meses or 1, 0.01), 2)
+            if ind.permanencia_meses
+            else ind.custo_total
+        )
+        _inp(ws, row, 2, monthly, "#,##0.00")
+        _inp(ws, row, 3, round(ind.permanencia_meses or 0, 2), "0.00")
+    return ind_rows
+
+
+def _lm_render_prat_rows(ws, weeks, prat_data, start_row: int) -> dict:
+    prat_rows = {}
+    for i, wk in enumerate(weeks):
+        row = start_row + i
+        prat_rows[wk] = row
+        ws.cell(row=row, column=1, value=wk).fill = _fill(_C["label"])
+        ws.cell(row=row, column=1).border = _brd()
+        ws.cell(row=row, column=1).alignment = _aln()
+        ws.cell(row=row, column=1).font = _fnt(size=8)
+        fator = prat_data.get(wk, 1.0)
+        _inp(ws, row, 2, round(fator, 4), "0.00%")
+    return prat_rows
+
+
+def _lm_write_dur_formulas(ws, eap, eap_rows, pos, prat_first: int, prat_last: int) -> None:
+    H_r = pos["HORAS_DIA"]
+    D_r = pos["DIAS_SEMANA"]
+    prat_ref = f"AVERAGE(PARÂMETROS!$B${prat_first}:$B${prat_last})"
+    for item in eap:
+        row = eap_rows[item.item_id]
+        qtd_r = f"D{row}"
+        P_r = f"E{row}"
+        neq_r = f"H{row}"
+        dur_formula = f'=IF(AND({P_r}>0,{neq_r}>0),CEILING({qtd_r}/({P_r}*{H_r}*{D_r}*{prat_ref}*{neq_r}),1),"N/D")'
+        ws.cell(row=row, column=9).value = dur_formula
+
+
+def _prod_h_filter_weeks(dist: dict) -> list:
+    result = []
+    for d in dist.values():
+        if d.num_equipes and d.qtd_executada and d.eficiencia:
+            result.append((d.num_equipes, d.qtd_executada, d.eficiencia))
+    return result
+
+
+def _prod_h_compute_samples(weeks_with_data: list, regime) -> list:
+    H = regime.horas_dia if regime else 8
+    D = regime.dias_semana if regime else 6
+    samples = []
+    for n, q, p in weeks_with_data:
+        if n > 0 and p > 0:
+            samples.append(q / (n * H * D * p))
+    return samples
+
+
 def _prod_h_from_canonical(canonical: Any, item_id: str) -> float:
     """Resolve production rate from schedule (divide by H×D)."""
     if not canonical.cronograma:
         return 0.0
+    regime = canonical.projeto.regime_trabalho if canonical.projeto else None
     for act in canonical.cronograma.scheduled_activities or []:
         if act.activity_id != item_id:
             continue
         dist = act.distribuicao_semanal or {}
-        weeks_with_data = [
-            (d.num_equipes, d.qtd_executada, d.eficiencia)
-            for d in dist.values()
-            if d.num_equipes and d.qtd_executada and d.eficiencia
-        ]
+        weeks_with_data = _prod_h_filter_weeks(dist)
         if not weeks_with_data:
             continue
-        # P = qtd_semanal / (neq × H × D × p)
-        samples = []
-        regime = canonical.projeto.regime_trabalho if canonical.projeto else None
-        H = regime.horas_dia if regime else 8
-        D = regime.dias_semana if regime else 6
-        for n, q, p in weeks_with_data:
-            if n > 0 and p > 0:
-                samples.append(q / (n * H * D * p))
+        samples = _prod_h_compute_samples(weeks_with_data, regime)
         if samples:
             return round(sum(samples) / len(samples), 4)
     return 0.0
@@ -527,20 +776,7 @@ class LiveModelRenderer:
         _hdr(ws, ind_title_row + 1, 1, "Categoria")
         _hdr(ws, ind_title_row + 1, 2, "Custo Fixo Mensal (R$)")
         _hdr(ws, ind_title_row + 1, 3, "Permanência (meses)")
-        ind_rows = {}
-        for i, ind in enumerate(self.indiretos):
-            row = ind_title_row + 2 + i
-            ind_rows[ind.categoria] = row
-            ws.cell(row=row, column=1, value=ind.categoria).fill = _fill(_C["label"])
-            ws.cell(row=row, column=1).border = _brd()
-            ws.cell(row=row, column=1).alignment = _aln()
-            monthly = (
-                round(ind.custo_total / max(ind.permanencia_meses or 1, 0.01), 2)
-                if ind.permanencia_meses
-                else ind.custo_total
-            )
-            _inp(ws, row, 2, monthly, "#,##0.00")
-            _inp(ws, row, 3, round(ind.permanencia_meses or 0, 2), "0.00")
+        ind_rows = _lm_render_ind_rows(ws, self.indiretos, ind_title_row + 2)
         pos["IND_ROWS"] = ind_rows  # type: ignore[assignment]
 
         # ── Praticabilidade semanal ───────────────────────────────────────────────
@@ -552,16 +788,7 @@ class LiveModelRenderer:
         _hdr(ws, prat_title_row + 1, 1, "Semana ISO")
         _hdr(ws, prat_title_row + 1, 2, "Fator [0,1]")
 
-        prat_rows = {}
-        for i, wk in enumerate(self.weeks):
-            row = prat_first + i
-            prat_rows[wk] = row
-            ws.cell(row=row, column=1, value=wk).fill = _fill(_C["label"])
-            ws.cell(row=row, column=1).border = _brd()
-            ws.cell(row=row, column=1).alignment = _aln()
-            ws.cell(row=row, column=1).font = _fnt(size=8)
-            fator = self.prat_data.get(wk, 1.0)
-            _inp(ws, row, 2, round(fator, 4), "0.00%")
+        prat_rows = _lm_render_prat_rows(ws, self.weeks, self.prat_data, prat_first)
         pos["PRAT_ROWS"] = prat_rows  # type: ignore[assignment]
         pos["PRAT_COL_FATOR"] = 2  # type: ignore[assignment]
         pos["PRAT_FIRST_ROW"] = prat_first  # type: ignore[assignment]
@@ -571,16 +798,7 @@ class LiveModelRenderer:
         pos["PRAT_MEDIA_FORMULA"] = f"AVERAGE(PARÂMETROS!$B${prat_first}:$B${prat_last})"
 
         # Update dur_calculada formulas now that we know prat rows
-        for item in self.eap:
-            row = eap_rows[item.item_id]
-            qtd_r = f"D{row}"
-            P_r = f"E{row}"
-            H_r = pos["HORAS_DIA"]
-            D_r = pos["DIAS_SEMANA"]
-            neq_r = f"H{row}"
-            prat_ref = f"AVERAGE(PARÂMETROS!$B${prat_first}:$B${prat_last})"
-            dur_formula = f'=IF(AND({P_r}>0,{neq_r}>0),CEILING({qtd_r}/({P_r}*{H_r}*{D_r}*{prat_ref}*{neq_r}),1),"N/D")'
-            ws.cell(row=row, column=9).value = dur_formula
+        _lm_write_dur_formulas(ws, self.eap, eap_rows, pos, prat_first, prat_last)
 
         # ── Alocação semanal ─────────────────────────────────────────────────────
         alloc_title_row = prat_last + 2
@@ -633,17 +851,7 @@ class LiveModelRenderer:
         _hdr(ws, 4, 1, "ID Função")
         _hdr(ws, 4, 2, "Descrição")
         _hdr(ws, 4, 3, "Custo Mensal Unitário (R$)")
-        func_rows = {}
-        for i, f in enumerate(self.all_funcoes):
-            row = 5 + i
-            func_rows[f["id"]] = row
-            ws.cell(row=row, column=1, value=f["id"]).fill = _fill(_C["label"])
-            ws.cell(row=row, column=2, value=f["desc"]).fill = _fill(_C["label"])
-            for ci in [1, 2]:
-                ws.cell(row=row, column=ci).border = _brd()
-                ws.cell(row=row, column=ci).alignment = _aln()
-                ws.cell(row=row, column=ci).font = _fnt(size=9)
-            _inp(ws, row, 3, round(f["mensal"], 2), "#,##0.00")
+        func_rows = _lm_render_func_rows(ws, self.all_funcoes, 5)
         rm["FUNC_ROWS"] = func_rows
 
         # ── Equipamentos ─────────────────────────────────────────────────────────
@@ -653,18 +861,7 @@ class LiveModelRenderer:
         _hdr(ws, eq_title_row + 1, 2, "Descrição")
         _hdr(ws, eq_title_row + 1, 3, "Aluguel Mensal (R$)")
         _hdr(ws, eq_title_row + 1, 4, "Comb. Mensal (R$) (por unidade)")
-        equip_rows = {}
-        for i, e in enumerate(self.all_equips):
-            row = eq_title_row + 2 + i
-            equip_rows[e["id"]] = row
-            ws.cell(row=row, column=1, value=e["id"]).fill = _fill(_C["label"])
-            ws.cell(row=row, column=2, value=e["desc"]).fill = _fill(_C["label"])
-            for ci in [1, 2]:
-                ws.cell(row=row, column=ci).border = _brd()
-                ws.cell(row=row, column=ci).alignment = _aln()
-                ws.cell(row=row, column=ci).font = _fnt(size=9)
-            _inp(ws, row, 3, round(e["mensal"], 2), "#,##0.00")
-            _inp(ws, row, 4, round(e["comb_mensal"], 2), "#,##0.00")
+        equip_rows = _lm_render_equip_rows(ws, self.all_equips, eq_title_row + 2)
         rm["EQUIP_ROWS"] = equip_rows
 
         # ── Composição por item (matrix) ─────────────────────────────────────────
@@ -689,31 +886,7 @@ class LiveModelRenderer:
             ws.column_dimensions[_col(col)].width = 9
         rm["RES_COLS"] = res_cols
 
-        comp_item_rows = {}
-        for i, item in enumerate(self.eap):
-            row = comp_title_row + 2 + i
-            comp_item_rows[item.item_id] = row
-            ws.cell(row=row, column=1, value=item.item_id).fill = _fill(_C["label"])
-            ws.cell(row=row, column=2, value=getattr(item, "descricao", "")[:25]).fill = _fill(_C["label"])
-            for ci in [1, 2]:
-                ws.cell(row=row, column=ci).border = _brd()
-                ws.cell(row=row, column=ci).alignment = _aln()
-                ws.cell(row=row, column=ci).font = _fnt(size=8)
-
-            eq = self.equipes.get(item.item_id)
-            func_map = {f.funcao_id: f.num_pessoas for f in (eq.funcoes or [])} if eq else {}
-            equip_map = {e.equip_id: e.num_unidades for e in (eq.equipamentos or [])} if eq else {}
-
-            for r_info in all_res:
-                col = res_cols[r_info["id"]]
-                n = func_map.get(r_info["id"], equip_map.get(r_info["id"], 0))
-                c_cell = ws.cell(row=row, column=col, value=n if n else None)
-                c_cell.fill = _fill(_C["inp"] if n else "F5F5F5")
-                c_cell.border = _brd()
-                c_cell.alignment = _aln("center")
-                c_cell.font = _fnt(size=9)
-                c_cell.number_format = "0"
-
+        comp_item_rows = _lm_render_comp_items(ws, self.eap, self.equipes, res_cols, all_res, comp_title_row + 2)
         rm["COMP_ITEM_ROWS"] = comp_item_rows
         rm["ALL_FUNCOES"] = self.all_funcoes  # type: ignore[assignment]
         rm["ALL_EQUIPS"] = self.all_equips  # type: ignore[assignment]
@@ -756,56 +929,9 @@ class LiveModelRenderer:
         all_equips = rm["ALL_EQUIPS"]
         eap_rows = pm["EAP_ROWS"]
 
-        cd_rows = {}
-
-        for i, item in enumerate(self.eap):
-            row = 3 + i
-            cd_rows[item.item_id] = row
-
-            comp_r = comp_item_rows[item.item_id]
-
-            # MO mensal = SUMPRODUCT(num_pessoas_row × taxa_mensal_col)
-            # taxa_mensal is in RECURSOS!C{func_row}
-            mo_terms = []
-            for f in all_funcoes:
-                c_comp = _col(res_cols[f["id"]])
-                r_comp = comp_r
-                r_taxa = func_rows[f["id"]]
-                mo_terms.append(f"RECURSOS!{c_comp}{r_comp}*RECURSOS!$C${r_taxa}")
-            mo_formula = "=" + "+".join(mo_terms) if mo_terms else "=0"
-
-            # EQ mensal = SUMPRODUCT(num_units × aluguel)
-            # COMB mensal = SUMPRODUCT(num_units × comb_mensal)
-            eq_terms = []
-            comb_terms = []
-            for e in all_equips:
-                c_comp = _col(res_cols[e["id"]])
-                r_comp = comp_r
-                r_eq = equip_rows[e["id"]]
-                eq_terms.append(f"RECURSOS!{c_comp}{r_comp}*RECURSOS!$C${r_eq}")
-                comb_terms.append(f"RECURSOS!{c_comp}{r_comp}*RECURSOS!$D${r_eq}")
-            eq_formula = "=" + "+".join(eq_terms) if eq_terms else "=0"
-            comb_formula = "=" + "+".join(comb_terms) if comb_terms else "=0"
-
-            ws.cell(row=row, column=1, value=item.item_id).fill = _fill(_C["label"])
-            ws.cell(row=row, column=2, value=getattr(item, "descricao", "")[:22]).fill = _fill(_C["label"])
-            for ci in [1, 2]:
-                ws.cell(row=row, column=ci).border = _brd()
-                ws.cell(row=row, column=ci).alignment = _aln()
-                ws.cell(row=row, column=ci).font = _fnt(size=8)
-
-            _frm(ws, row, 3, mo_formula, "#,##0.00")
-            _frm(ws, row, 4, eq_formula, "#,##0.00")
-            _frm(ws, row, 5, comb_formula, "#,##0.00")
-            _frm(ws, row, 6, f"=C{row}+D{row}+E{row}", "#,##0.00")
-
-            # Permanência em semanas = Duração calculada de PARÂMETROS
-            eap_r = eap_rows[item.item_id]
-            _frm(ws, row, 7, f"=PARÂMETROS!I{eap_r}", "0")
-            # Permanência em meses = semanas / 4.348
-            _frm(ws, row, 8, f"=G{row}/4.348", "0.00")
-            # Custo total = fixo_mensal × permanencia_meses
-            _frm(ws, row, 9, f"=F{row}*H{row}", "#,##0.00")
+        cd_rows = _lm_render_cd_rows(
+            ws, self.eap, all_funcoes, all_equips, func_rows, equip_rows, res_cols, comp_item_rows, eap_rows
+        )
 
         # Total row
         tr = 3 + len(self.eap)
@@ -972,70 +1098,7 @@ class LiveModelRenderer:
             item_prod_row[item.item_id] = base
             item_acum_row[item.item_id] = base + 1
             item_pct_row[item.item_id] = base + 2
-
-            r_eap = eap_rows[item.item_id]
-            r_alloc = alloc_ir[item.item_id]
-            P_ref = f"{p}!E{r_eap}"
-            qtd_ref = f"{p}!D{r_eap}"
-
-            # Rows A-F: labels and totals
-            for sub, label in [(0, "Produção semanal"), (1, "Acumulado"), (2, "% Completude")]:
-                r = base + sub
-                ws.cell(row=r, column=1, value=item.item_id if sub == 0 else "").fill = _fill(_C["label"])
-                ws.cell(row=r, column=2, value=getattr(item, "descricao", "")[:25] if sub == 0 else "").fill = _fill(
-                    _C["label"]
-                )
-                ws.cell(row=r, column=6, value=label).fill = _fill(_C["label"])
-                for ci in [1, 2, 6]:
-                    ws.cell(row=r, column=ci).border = _brd()
-                    ws.cell(row=r, column=ci).alignment = _aln()
-                    ws.cell(row=r, column=ci).font = _fnt(size=8)
-
-            # qtd_planif (col 3) for production row
-            _frm(ws, base, 3, f"={qtd_ref}", "#,##0.##")
-            ws.cell(row=base + 1, column=3).fill = _fill(_C["label"])
-            ws.cell(row=base + 1, column=3).border = _brd()
-            ws.cell(row=base + 2, column=3).fill = _fill(_C["label"])
-            ws.cell(row=base + 2, column=3).border = _brd()
-
-            # Production cells
-            prod_cells = []
-            for wk, col in week_item_cols.items():
-                alloc_c = alloc_cols.get(wk)
-                prat_c = prat_rows.get(wk)
-                eq_ref = f"{p}!{_col(alloc_c)}{r_alloc}" if alloc_c else "0"
-                p_ref = f"{p}!$B${prat_c}" if prat_c else "1"
-                # Produção = E × P × H × D × p_j
-                prod_formula = f"=IFERROR({eq_ref}*{P_ref}*{H_r}*{D_r}*{p_ref},0)"
-                _frm(ws, base, col, prod_formula, "#,##0.0")
-                prod_cells.append(_col(col) + str(base))
-
-            # Acumulado e % completude
-            for j, (_wk, col) in enumerate(week_item_cols.items()):
-                if j == 0:
-                    acum_f = f"={_col(col)}{base}"
-                else:
-                    prev_col = _col(list(week_item_cols.values())[j - 1])
-                    acum_f = f"={prev_col}{base + 1}+{_col(col)}{base}"
-                _frm(ws, base + 1, col, acum_f, "#,##0.0")
-                pct_f = f"=IF({qtd_ref}>0,{_col(col)}{base + 1}/{qtd_ref},0)"
-                _frm(ws, base + 2, col, pct_f, "0.0%")
-
-            # Qty programada total = SUM das produções (col 4)
-            first_wk_col = list(week_item_cols.values())[0]
-            last_wk_col = list(week_item_cols.values())[-1]
-            _frm(ws, base, 4, f"=SUM({_col(first_wk_col)}{base}:{_col(last_wk_col)}{base})", "#,##0.0")
-            ws.cell(row=base + 1, column=4).fill = _fill(_C["label"])
-            ws.cell(row=base + 1, column=4).border = _brd()
-            ws.cell(row=base + 2, column=4).fill = _fill(_C["label"])
-            ws.cell(row=base + 2, column=4).border = _brd()
-
-            # Δ fechamento = (programado - planejado) / planejado
-            _frm(ws, base, 5, f"=IF(C{base}>0,(D{base}-C{base})/C{base},0)", "0.0%")
-            ws.cell(row=base + 1, column=5).fill = _fill(_C["label"])
-            ws.cell(row=base + 1, column=5).border = _brd()
-            ws.cell(row=base + 2, column=5).fill = _fill(_C["label"])
-            ws.cell(row=base + 2, column=5).border = _brd()
+            _lm_render_cron_item(ws, base, item, p, eap_rows, alloc_ir, alloc_cols, prat_rows, week_item_cols, H_r, D_r)
 
         # ── Curva S (summary para gráfico) ───────────────────────────────────────
         s_title_row = 4 + n_eap * 3 + 2
@@ -1046,16 +1109,7 @@ class LiveModelRenderer:
         _hdr(ws, s_title_row + 1, 2, "% Global Acumulado")
 
         # Weight each item by quantity fraction
-        qtd_total_formula = "+".join([f"{p}!D{eap_rows[item.item_id]}" for item in self.eap])
-        for j, (wk, col) in enumerate(week_item_cols.items()):
-            row = s_title_row + 2 + j
-            ws.cell(row=row, column=1, value=wk).fill = _fill(_C["label"])
-            ws.cell(row=row, column=1).border = _brd()
-            ws.cell(row=row, column=1).font = _fnt(size=8)
-            # Weighted avg of completion % across items
-            pct_refs = [f"{p}!D{eap_rows[item.item_id]}*{_col(col)}{item_pct_row[item.item_id]}" for item in self.eap]
-            s_formula = f"=IF(({qtd_total_formula})>0,({'+'.join(pct_refs)})/({qtd_total_formula}),0)"
-            _frm(ws, row, 2, s_formula, "0.00%")
+        _lm_render_curva_s(ws, s_title_row, self.eap, p, eap_rows, week_item_cols, item_pct_row)
 
     # ────────────────────────────────────────────────────────────────────────────
     # INDIRETOS
@@ -1120,36 +1174,20 @@ class LiveModelRenderer:
         venda = getattr(ref, "venda", None) if ref else None
         custo = getattr(ref, "custo", None) if ref else None
 
-        def _sv(f, obj):
-            try:
-                return float(getattr(obj, f, 0) or 0)
-            except Exception:
-                return 0.0
-
         rows_def = [
             (4, "DIRETO", None, None),
-            (5, "  s/BDI (catálogo)", f"=ORÇAMENTO!I{orc_total}", _sv("direto_catalogo", custo)),
-            (6, "  c/BDI (catálogo)", f"=ORÇAMENTO!J{orc_total}", _sv("total_com_bdi", venda)),
+            (5, "  s/BDI (catálogo)", f"=ORÇAMENTO!I{orc_total}", _lm_sv("direto_catalogo", custo)),
+            (6, "  c/BDI (catálogo)", f"=ORÇAMENTO!J{orc_total}", _lm_sv("total_com_bdi", venda)),
             (7, "  Custo equipes (running)", f"='CUSTOS DIR.'!I{cd_total}", None),
             (9, "INDIRETO", None, None),
             (10, "  s/BDI", f"=INDIRETOS!D{ind_total}", None),
             (11, "  c/BDI", f"=INDIRETOS!F{ind_total}", None),
-            (13, "CUSTO TOTAL (catálogo)", "=B5+B10", _sv("total", custo)),
-            (14, "PREÇO DE VENDA", "=B6+B11", _sv("total_com_bdi", venda)),
+            (13, "CUSTO TOTAL (catálogo)", "=B5+B10", _lm_sv("total", custo)),
+            (14, "PREÇO DE VENDA", "=B6+B11", _lm_sv("total_com_bdi", venda)),
             (16, "MARGEM", "=IF(B14>0,(B14-B13)/B14,0)", None),
         ]
         for r, label, formula, ref_val in rows_def:
-            ws.cell(row=r, column=1, value=label).border = _brd()
-            ws.cell(row=r, column=1).fill = _fill(_C["hdr"] if not formula else _C["label"])
-            ws.cell(row=r, column=1).font = _fnt(bold=not formula, color="FFFFFF" if not formula else "000000")
-            ws.cell(row=r, column=1).alignment = _aln()
-            if formula:
-                fmt = "0.00%" if "MARGEM" in label else "#,##0.00"
-                _frm(ws, r, 2, formula, fmt)
-                if ref_val is not None:
-                    _ref_cell(ws, r, 3, ref_val, fmt)
-                    _frm(ws, r, 4, f"=B{r}-C{r}", "#,##0.00")
-                    _frm(ws, r, 5, f"=IF(C{r}<>0,(B{r}-C{r})/C{r},0)", "0.00%")
+            _lm_render_consol_row(ws, r, label, formula, ref_val)
 
     # ────────────────────────────────────────────────────────────────────────────
     # FLUXO DE CAIXA

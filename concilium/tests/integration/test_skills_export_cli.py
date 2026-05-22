@@ -113,7 +113,16 @@ class TestSkillsExportCLI:
         output_file = tmp_path / "diagram_detailed.md"
 
         result = runner.invoke(
-            app, ["configuration", "skills", "export", "--group-by-phase", "--show-validations", "--output", str(output_file)]
+            app,
+            [
+                "configuration",
+                "skills",
+                "export",
+                "--group-by-phase",
+                "--show-validations",
+                "--output",
+                str(output_file),
+            ],
         )
         assert result.exit_code == 0
         assert output_file.exists()

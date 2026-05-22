@@ -119,6 +119,23 @@ def _ru_run_validations(canonical: object, update: object, existing: list, qtd_p
     return validacoes
 
 
+def _find_cron_item(canonical, activity_id: str):
+    acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
+    for sa in acts:
+        if sa.activity_id == activity_id:
+            return sa
+    return None
+
+
+def _realized_up_to(updates: list, week_key: str) -> float:
+    target = _iso_week_to_int(week_key)
+    total = 0.0
+    for u in updates:
+        if _iso_week_to_int(u.week_key) <= target:
+            total += u.quantidade_realizada
+    return total
+
+
 class ProgressTracker:
     """Registra atualizações de progresso e computa métricas (ADR-003)."""
 
@@ -174,24 +191,13 @@ class ProgressTracker:
                 continue
 
             planned_to_week = 0.0
-            cron_item = next(
-                (
-                    sa
-                    for sa in (canonical.cronograma.scheduled_activities if canonical.cronograma else [])
-                    if sa.activity_id == eap_item.item_id
-                ),
-                None,
-            )
+            cron_item = _find_cron_item(canonical, eap_item.item_id)
             if cron_item:
                 planned_to_week = _planned_qty_up_to_week(
                     {"distribuicao_semanal": {k: v for k, v in cron_item.distribuicao_semanal.items()}},
                     week_key,
                 )
-
-            updates = canonical.progresso.get(eap_item.item_id, [])
-            realized = sum(
-                u.quantidade_realizada for u in updates if _iso_week_to_int(u.week_key) <= _iso_week_to_int(week_key)
-            )
+            realized = _realized_up_to(canonical.progresso.get(eap_item.item_id, []), week_key)
 
             total_planned += planned_to_week
             total_earned += realized
@@ -243,32 +249,17 @@ class ProgressTracker:
             if eap_item.quantitativo <= 0:
                 continue
 
-            cron_item = next(
-                (
-                    sa
-                    for sa in (canonical.cronograma.scheduled_activities if canonical.cronograma else [])
-                    if sa.activity_id == eap_item.item_id
-                ),
-                None,
-            )
+            cron_item = _find_cron_item(canonical, eap_item.item_id)
             if not cron_item:
                 continue
-
             planned_to_week = _planned_qty_up_to_week(
                 {"distribuicao_semanal": {k: v for k, v in cron_item.distribuicao_semanal.items()}},
                 week_key,
             )
-
-            updates = canonical.progresso.get(eap_item.item_id, [])
-            realized = sum(
-                u.quantidade_realizada for u in updates if _iso_week_to_int(u.week_key) <= _iso_week_to_int(week_key)
-            )
-
             if planned_to_week <= 0:
                 continue
-
-            spi_activity = realized / planned_to_week if planned_to_week > 0 else 1.0
-
+            realized = _realized_up_to(canonical.progresso.get(eap_item.item_id, []), week_key)
+            spi_activity = realized / planned_to_week
             if spi_activity < _SPI_TIER2_THRESHOLD:
                 delay_pct = (1.0 - spi_activity) * 100
                 alerts.append(
@@ -293,14 +284,7 @@ class ProgressTracker:
             pct = total_realized / eap_item.quantitativo if eap_item.quantitativo > 0 else 0.0
 
             # Estimate delay: compare pct to expected pct at this week
-            cron_item = next(
-                (
-                    sa
-                    for sa in (canonical.cronograma.scheduled_activities if canonical.cronograma else [])
-                    if sa.activity_id == eap_item.item_id
-                ),
-                None,
-            )
+            cron_item = _find_cron_item(canonical, eap_item.item_id)
             expected_pct = 0.0
             if cron_item and eap_item.quantitativo > 0:
                 planned = _planned_qty_up_to_week(

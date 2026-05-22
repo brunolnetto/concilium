@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ATI-022-PROD-001",
   "descricao": "Produção CPU-TERRA-ATI-022",
   "origem": "PROPRIA",
-  "valor_horario": 82.03,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 55.1753,
-    "custo_padrao_pj": 54.3942
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-022"
-  ]
+  "historico_observacoes": []
 }

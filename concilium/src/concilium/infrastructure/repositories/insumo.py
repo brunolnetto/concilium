@@ -70,6 +70,20 @@ def _rp_historico_scd2(
     return None
 
 
+def _lookup_preco_historico(historico: list, data_referencia) -> float | None:
+    try:
+        data_ref = data_referencia if isinstance(data_referencia, date) else date.fromisoformat(str(data_referencia))
+        for registro in reversed(historico):
+            d_inicio = date.fromisoformat(registro["data_inicio_vigencia"])
+            d_fim_raw = registro.get("data_fim_vigencia")
+            d_fim = date.fromisoformat(d_fim_raw) if d_fim_raw else date.max
+            if d_inicio <= data_ref <= d_fim:
+                return registro["preco_unitario"]
+    except (ValueError, KeyError):
+        pass
+    return None
+
+
 class RepositorioInsumo:
     """Providencia consultas de existência e lookup de insumos."""
 
@@ -114,18 +128,9 @@ class RepositorioInsumo:
 
         # 2. SCD Type 2 via historico_precos (ADR-041)
         if data_referencia is not None and insumo.get("historico_precos"):
-            try:
-                data_ref = (
-                    data_referencia if isinstance(data_referencia, date) else date.fromisoformat(str(data_referencia))
-                )
-                for registro in reversed(insumo["historico_precos"]):
-                    d_inicio = date.fromisoformat(registro["data_inicio_vigencia"])
-                    d_fim_raw = registro.get("data_fim_vigencia")
-                    d_fim = date.fromisoformat(d_fim_raw) if d_fim_raw else date.max
-                    if d_inicio <= data_ref <= d_fim:
-                        return registro["preco_unitario"]
-            except (ValueError, KeyError):
-                pass
+            preco = _lookup_preco_historico(insumo["historico_precos"], data_referencia)
+            if preco is not None:
+                return preco
 
         # 3. Fallback plano
         return insumo.get("preco_unitario")

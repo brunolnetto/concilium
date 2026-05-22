@@ -18,7 +18,6 @@ except ImportError:
     from concilium.presentation.ui.state import StateManager
 
 _NAV_ICONS: dict[str, str] = {
-    "Dashboard": "🏠",
     "Catálogo": "📚",
     "Configuração": "⚙️",
     "Projetos": "📁",
@@ -31,6 +30,9 @@ def render_sidebar() -> str:
     """Render sidebar and return the active navigation key."""
     theme = StateManager.get_theme()
     current = st.session_state.get("nav-choice", NAVIGATION_OPTIONS[0])
+    if current not in NAVIGATION_OPTIONS:
+        current = NAVIGATION_OPTIONS[0]
+        st.session_state["nav-choice"] = current
 
     # ── Header ────────────────────────────────────────────────────────────
     st.sidebar.markdown("### 🏗️ Concilium")

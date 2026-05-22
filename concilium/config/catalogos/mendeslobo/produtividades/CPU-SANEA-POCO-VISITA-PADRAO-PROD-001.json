@@ -16,7 +16,6 @@
     ],
     "equipamentos": []
   },
-  "cpu_ids": [
-    "CPU-SANEA-POCO-VISITA-PADRAO"
-  ]
+  "historico_observacoes": [],
+  "valor_horario": 0.25
 }

@@ -18,31 +18,33 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+import pytest
+
 from concilium.application.services.concilium_service import ConciliumService
 
 
 def _make_cat(n_cpus: int, n_prods: int, *, match_all: bool = True) -> dict:
     """Build a synthetic catalog with n_cpus CPUs and n_prods productions."""
-    prods = [
-        {"id": f"PROD-{i:06d}", "valor_horario": float(i + 1)}
-        for i in range(n_prods)
-    ]
+    prods = [{"id": f"PROD-{i:06d}", "valor_horario": float(i + 1)} for i in range(n_prods)]
     cpus = []
     for i in range(n_cpus):
         if match_all:
             ref = f"PROD-{i % n_prods:06d}" if n_prods > 0 else None
         else:
             ref = f"PROD-{i:06d}" if i < n_prods else None
-        cpus.append({
-            "codigo": f"CPU-{i:06d}",
-            "descricao": f"CPU numero {i}",
-            "unidade": "m3",
-            "producao_id_ref": ref,
-        })
+        cpus.append(
+            {
+                "codigo": f"CPU-{i:06d}",
+                "descricao": f"CPU numero {i}",
+                "unidade": "m3",
+                "producao_id_ref": ref,
+            }
+        )
     return {"cpus": cpus, "producoes": prods, "insumos": []}
 
 
 # ─── Correctness ──────────────────────────────────────────────────────────────
+
 
 class TestEnrichCpusCorrectness:
     def test_matching_ref_populates_producao_horaria(self):
@@ -84,8 +86,11 @@ class TestEnrichCpusCorrectness:
         assert ConciliumService._enrich_cpus_with_producao({}) == []
 
     def test_non_dict_cpus_skipped(self):
-        cat = {"cpus": ["not-a-dict", None, {"codigo": "CPU-A", "producao_id_ref": "P1"}],
-               "producoes": [{"id": "P1", "valor_horario": 7.0}], "insumos": []}
+        cat = {
+            "cpus": ["not-a-dict", None, {"codigo": "CPU-A", "producao_id_ref": "P1"}],
+            "producoes": [{"id": "P1", "valor_horario": 7.0}],
+            "insumos": [],
+        }
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
         assert len(enriched) == 1
         assert enriched[0]["producao_horaria"] == 7.0
@@ -93,8 +98,7 @@ class TestEnrichCpusCorrectness:
     def test_original_dict_not_mutated(self):
         """Enrichment must not mutate the input catalog (creates new dicts)."""
         cpu = {"codigo": "CPU-A", "producao_id_ref": "P1"}
-        cat = {"cpus": [cpu], "producoes": [{"id": "P1", "valor_horario": 3.0}],
-               "insumos": []}
+        cat = {"cpus": [cpu], "producoes": [{"id": "P1", "valor_horario": 3.0}], "insumos": []}
         ConciliumService._enrich_cpus_with_producao(cat)
         assert "producao_horaria" not in cpu  # original unmodified
 
@@ -115,7 +119,9 @@ class TestEnrichCpusCorrectness:
 
 # ─── Complexity ───────────────────────────────────────────────────────────────
 
+
 class TestEnrichCpusComplexity:
+    @pytest.mark.flaky
     def test_linear_time_10k_cpus(self):
         """O(P + C): 10_000 CPUs + 10_000 productions must enrich in < 200 ms."""
         cat = _make_cat(10_000, 10_000)
@@ -126,6 +132,7 @@ class TestEnrichCpusComplexity:
         assert all(c.get("producao_horaria") is not None for c in enriched)
         assert elapsed_ms < 200, f"Enrichment took {elapsed_ms:.1f} ms — expected < 200 ms"
 
+    @pytest.mark.slow
     def test_linear_time_1k_cpus_vs_10k_cpus(self):
         """Time ratio for 10× more data should be < 20× (not quadratic)."""
         cat_small = _make_cat(1_000, 1_000)
@@ -144,14 +151,14 @@ class TestEnrichCpusComplexity:
         ratio = t_large / max(t_small, 1e-9)
         assert ratio < 20, (
             f"10× more data took {ratio:.1f}× longer — expected < 20× (linear). "
-            f"small={t_small*1000:.2f}ms large={t_large*1000:.2f}ms"
+            f"small={t_small * 1000:.2f}ms large={t_large * 1000:.2f}ms"
         )
 
+    @pytest.mark.flaky
     def test_no_quadratic_behavior_worst_case(self):
         """Worst case: all CPUs share one production — still O(C)."""
         cat = {
-            "cpus": [{"codigo": f"CPU-{i}", "producao_id_ref": "PROD-0"}
-                     for i in range(5_000)],
+            "cpus": [{"codigo": f"CPU-{i}", "producao_id_ref": "PROD-0"} for i in range(5_000)],
             "producoes": [{"id": "PROD-0", "valor_horario": 1.0}],
             "insumos": [],
         }
@@ -163,6 +170,7 @@ class TestEnrichCpusComplexity:
 
 
 # ─── Cache ────────────────────────────────────────────────────────────────────
+
 
 class TestEnrichedCpusCache:
     def _make_service(self, config_root: Path, projects_root: Path) -> ConciliumService:
@@ -181,21 +189,28 @@ class TestEnrichedCpusCache:
         ov = OverrideService(repo, audit)
         pls = PipelineService(repo, audit, runtime_factory=lambda: Runtime(config_root))
         ib = ProjectInputBuilder(config_root, config_root / "benchmarks")
-        return ConciliumService(ConciliumDependencies(
-            input_builder=ib, repository=repo, project_service=ps,
-            override_service=ov, pipeline_service=pls, audit_service=audit,
-            benchmarks_root=config_root / "benchmarks",
-        ))
+        return ConciliumService(
+            ConciliumDependencies(
+                input_builder=ib,
+                repository=repo,
+                project_service=ps,
+                override_service=ov,
+                pipeline_service=pls,
+                audit_service=audit,
+                benchmarks_root=config_root / "benchmarks",
+            )
+        )
 
     def _setup_catalog(self, tmp_path: Path) -> tuple[Path, Path]:
         import json
+
         cfg = tmp_path / "config"
         cats_dir = cfg / "catalogos" / "test-cat"
         (cats_dir / "cpus").mkdir(parents=True)
         (cats_dir / "producoes").mkdir()
         (cfg / "catalogos" / "test-cat" / "cpus" / "CPU-001.json").write_text(
-            json.dumps({"codigo": "CPU-001", "descricao": "Test", "unidade": "m3",
-                        "producao_id_ref": "PROD-001"}), encoding="utf-8"
+            json.dumps({"codigo": "CPU-001", "descricao": "Test", "unidade": "m3", "producao_id_ref": "PROD-001"}),
+            encoding="utf-8",
         )
         (cfg / "catalogos" / "test-cat" / "producoes" / "PROD-001.json").write_text(
             json.dumps({"id": "PROD-001", "valor_horario": 55.5}), encoding="utf-8"

@@ -281,6 +281,7 @@ class TestSimulatorEdgeCases:
         assert math.isclose(curva.semanas[1].qtd_executada, 120_000.0, rel_tol=1e-6)
         assert math.isclose(curva.delivered, Q, rel_tol=1e-6)
 
+    @pytest.mark.slow
     def test_demobilization_before_completion(self, sim: WorkforcePolicySimulator):
         """If demobilization drives n to 0 before Q, curve is incompleta."""
         # plateau=2 weeks, desmob=2/week → n drops to 0 after 2+1=3 weeks of plateau

@@ -85,6 +85,53 @@ def _count_by_class(itens: list, classe: str) -> int:
     return sum(1 for i in itens if i.classe == classe)
 
 
+def _build_funcoes_detalhes(detalhes: list, funcoes, perm: float) -> None:
+    for funcao in funcoes:
+        fid = funcao.funcao_id or "MO-?"
+        custo = round(funcao.custo_mensal_unitario * funcao.num_pessoas * perm, 2)
+        detalhes.append(
+            InsumoDetalheAtividade(
+                insumo_id=fid,
+                descricao=funcao.descricao or fid,
+                categoria="MAO_OBRA",
+                num_unidades=float(funcao.num_pessoas),
+                custo_unitario_mensal=funcao.custo_mensal_unitario,
+                permanencia_meses=perm,
+                custo_total=custo,
+            )
+        )
+
+
+def _build_equipamentos_detalhes(detalhes: list, equipamentos, perm: float) -> None:
+    for equip in equipamentos:
+        eid = equip.equip_id or "EQ-?"
+        custo_eq = round(equip.custo_mensal * perm, 2)
+        detalhes.append(
+            InsumoDetalheAtividade(
+                insumo_id=eid,
+                descricao=equip.descricao or eid,
+                categoria="EQUIPAMENTO",
+                num_unidades=float(equip.num_unidades),
+                custo_unitario_mensal=equip.custo_mensal,
+                permanencia_meses=perm,
+                custo_total=custo_eq,
+            )
+        )
+        if equip.custo_combustivel_mensal > 0:
+            custo_comb = round(equip.custo_combustivel_mensal * perm, 2)
+            detalhes.append(
+                InsumoDetalheAtividade(
+                    insumo_id=f"{eid}__DIESEL",
+                    descricao=f"Diesel: {equip.descricao or eid}",
+                    categoria="DIESEL",
+                    num_unidades=float(equip.num_unidades),
+                    custo_unitario_mensal=equip.custo_combustivel_mensal,
+                    permanencia_meses=perm,
+                    custo_total=custo_comb,
+                )
+            )
+
+
 class CurvaABCBuilder:
     """Constrói CurvaABCInsumo a partir de um CanonicalModel."""
 
@@ -131,48 +178,7 @@ class CurvaABCBuilder:
             item_id = equipe.item_id
             perm = equipe.permanencia_meses or 0.0
             detalhes: list[InsumoDetalheAtividade] = []
-
-            for funcao in equipe.funcoes:
-                fid = funcao.funcao_id or "MO-?"
-                custo = round(funcao.custo_mensal_unitario * funcao.num_pessoas * perm, 2)
-                detalhes.append(
-                    InsumoDetalheAtividade(
-                        insumo_id=fid,
-                        descricao=funcao.descricao or fid,
-                        categoria="MAO_OBRA",
-                        num_unidades=float(funcao.num_pessoas),
-                        custo_unitario_mensal=funcao.custo_mensal_unitario,
-                        permanencia_meses=perm,
-                        custo_total=custo,
-                    )
-                )
-
-            for equip in equipe.equipamentos:
-                eid = equip.equip_id or "EQ-?"
-                custo_eq = round(equip.custo_mensal * perm, 2)
-                detalhes.append(
-                    InsumoDetalheAtividade(
-                        insumo_id=eid,
-                        descricao=equip.descricao or eid,
-                        categoria="EQUIPAMENTO",
-                        num_unidades=float(equip.num_unidades),
-                        custo_unitario_mensal=equip.custo_mensal,
-                        permanencia_meses=perm,
-                        custo_total=custo_eq,
-                    )
-                )
-                if equip.custo_combustivel_mensal > 0:
-                    custo_comb = round(equip.custo_combustivel_mensal * perm, 2)
-                    detalhes.append(
-                        InsumoDetalheAtividade(
-                            insumo_id=f"{eid}__DIESEL",
-                            descricao=f"Diesel: {equip.descricao or eid}",
-                            categoria="DIESEL",
-                            num_unidades=float(equip.num_unidades),
-                            custo_unitario_mensal=equip.custo_combustivel_mensal,
-                            permanencia_meses=perm,
-                            custo_total=custo_comb,
-                        )
-                    )
+            _build_funcoes_detalhes(detalhes, equipe.funcoes, perm)
+            _build_equipamentos_detalhes(detalhes, equipe.equipamentos, perm)
             resultado[item_id] = detalhes
         return resultado

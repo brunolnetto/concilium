@@ -23,6 +23,43 @@ from .models import (
 _SUPPORTED_RULES = {"MINSLK", "LPT", "MAXRES", "ES", "GR"}
 
 
+def _compute_earliest_starts(act_map: dict, dag, topo_order: list) -> dict:
+    earliest_start: dict[str, int] = {}
+    for aid in topo_order:
+        preds = dag.predecessors(aid)
+        if preds:
+            earliest_start[aid] = max(earliest_start.get(p, 0) + act_map[p].duration_weeks for p in preds)
+        else:
+            earliest_start[aid] = 0
+    return earliest_start
+
+
+def _compute_total_float(
+    act_map: dict, topo_order: list, earliest_start: dict, latest_finish: dict, deadline_weeks: int
+) -> dict:
+    total_float: dict[str, float] = {}
+    for aid in topo_order:
+        a = act_map[aid]
+        ef = earliest_start[aid] + a.duration_weeks
+        lf = latest_finish.get(aid, deadline_weeks)
+        total_float[aid] = lf - ef
+    return total_float
+
+
+def _check_feasibility(act_map: dict, topo_order: list, earliest_start: dict, deadline_weeks: int) -> None:
+    min_duration = max(earliest_start[aid] + act_map[aid].duration_weeks for aid in topo_order)
+    if min_duration > deadline_weeks:
+        raise ScheduleError(f"Infeasible: minimum project duration {min_duration}w exceeds deadline {deadline_weeks}w")
+
+
+def _book_resources(activity, t: int, end: int, resource_usage: dict) -> None:
+    for w in range(t, end):
+        if w not in resource_usage:
+            resource_usage[w] = {}
+        for res, qty in activity.required_resources.items():
+            resource_usage[w][res] = resource_usage[w].get(res, 0) + qty
+
+
 class SerialScheduler:
     """Serial Schedule Generation Scheme (SSGS) with pluggable priority rule."""
 
@@ -47,76 +84,31 @@ class SerialScheduler:
         """
         act_map = {a.activity_id: a for a in activities}
         topo_order = dag.topological_order()
-
-        # Earliest finish of each predecessor — determines earliest start
-        earliest_start: dict[str, int] = {}
-        for aid in topo_order:
-            preds = dag.predecessors(aid)
-            if preds:
-                earliest_start[aid] = max(earliest_start.get(p, 0) + act_map[p].duration_weeks for p in preds)
-            else:
-                earliest_start[aid] = 0
-
-        # Compute latest finish (LF) for slack calculation
+        earliest_start = _compute_earliest_starts(act_map, dag, topo_order)
         latest_finish = self._compute_latest_finish(act_map, dag, topo_order, deadline_weeks)
-
-        # Total float (slack) per activity
-        total_float: dict[str, float] = {}
-        for aid in topo_order:
-            a = act_map[aid]
-            ef = earliest_start[aid] + a.duration_weeks
-            lf = latest_finish.get(aid, deadline_weeks)
-            total_float[aid] = lf - ef
-
-        # Check feasibility: minimum project duration
-        min_duration = max(earliest_start[aid] + act_map[aid].duration_weeks for aid in topo_order)
-        if min_duration > deadline_weeks:
-            raise ScheduleError(
-                f"Infeasible: minimum project duration {min_duration}w exceeds deadline {deadline_weeks}w"
-            )
-
-        # SSGS main loop
-        resource_usage: dict[int, dict[str, int]] = {}  # week -> {res: used}
+        total_float = _compute_total_float(act_map, topo_order, earliest_start, latest_finish, deadline_weeks)
+        _check_feasibility(act_map, topo_order, earliest_start, deadline_weeks)
+        resource_usage: dict[int, dict[str, int]] = {}
         scheduled: dict[str, ScheduledActivity] = {}
-        set(topo_order)
-
-        # Sort activities by priority rule (stable sort, respect topo)
         ordered = self._sort_by_priority(topo_order, act_map, total_float, earliest_start)
-
         for aid in ordered:
             a = act_map[aid]
             preds = dag.predecessors(aid)
-
-            # Earliest start from predecessor finish
-            pred_finish = max(
-                (scheduled[p].end_week for p in preds if p in scheduled),
-                default=0,
-            )
+            pred_finish = max((scheduled[p].end_week for p in preds if p in scheduled), default=0)
             t = max(earliest_start[aid], pred_finish)
-
-            # Find first slot where resources are available for `duration_weeks`
             t = self._find_start(a, t, resource_usage, pool, deadline_weeks)
             end = t + a.duration_weeks
-
             scheduled[aid] = ScheduledActivity(
                 activity_id=aid,
-                start_week=t + 1,  # 1-based weeks
-                end_week=end + 1,  # exclusive (end_week is first week NOT in use)
+                start_week=t + 1,
+                end_week=end + 1,
                 duration_weeks=a.duration_weeks,
                 assigned_resources=dict(a.required_resources),
             )
-
-            # Book resources
-            for w in range(t, end):
-                if w not in resource_usage:
-                    resource_usage[w] = {}
-                for res, qty in a.required_resources.items():
-                    resource_usage[w][res] = resource_usage[w].get(res, 0) + qty
-
+            _book_resources(a, t, end, resource_usage)
         result_acts = list(scheduled.values())
         makespan_0 = max(s.end_week - 1 for s in result_acts) if result_acts else 0
         metrics = self._compute_metrics(result_acts, resource_usage, pool, makespan_0, deadline_weeks)
-
         return ScheduleOutput(
             scheduled_activities=result_acts,
             makespan=makespan_0,

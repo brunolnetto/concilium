@@ -817,6 +817,8 @@ def _canonical_com_resultado(margem_pct: float = 0.20) -> CanonicalModel:
 
 
 class TestSkillAdapterSaidaAgis:
+    pytestmark = [pytest.mark.slow]
+
     def test_gera_todas_secoes(self):
         can = _canonical_com_resultado()
         result = run_relatorio_e_artefatos(can, {})
@@ -1534,6 +1536,8 @@ class TestCriticalityBranches:
 
 class TestAdapterSaidaAgisBranches:
     """Cobre branches adicionais de run_relatorio_e_artefatos."""
+
+    pytestmark = [pytest.mark.slow]
 
     def test_adapter_sem_ponto_equilibrio(self):
         """Cobre path quando pe (PontoEquilibrio) não existe para equipe."""

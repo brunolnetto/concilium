@@ -22,11 +22,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 8.2344,
-    "custo_padrao_pj": 6.0556
-  },
-  "cpu_ids": [
-    "CPU-DIVER-ATI-065"
-  ]
+  "historico_observacoes": []
 }

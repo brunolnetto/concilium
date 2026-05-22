@@ -7,6 +7,7 @@ tools directly to exercise the business-logic bodies in server.py.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,8 @@ from concilium.presentation.mcp_server._context import (
     _runtime,
 )
 from concilium.presentation.mcp_server.server import build_server
+
+pytestmark = [pytest.mark.slow]
 
 CONFIG_ROOT = Path(__file__).resolve().parents[2] / "config"
 
@@ -238,6 +241,17 @@ async def test_avancar_pipeline_skill_explicit(server, server_env):
     projects_path = server_env["projects_path"]
     store = ProjectStore.init(projects_path, "AvancProj", "test")
     store.new_version()
+    es = store.create_escopo(
+        escopo_id="esc-1",
+        nome="Escopo Principal",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
+    )
+    es.create_plan("plano-principal")
     proj_id = store.root.name
 
     # With no skills run yet, next skill should be 00-escopo
@@ -274,38 +288,20 @@ async def test_avancar_pipeline_skill_explicit(server, server_env):
 @pytest.mark.asyncio
 async def test_avancar_pipeline_auto_next(server, server_env):
     """avancar_pipeline without skill_id auto-selects first pending."""
-    from concilium.application.runtime import Runtime
-
     projects_path = server_env["projects_path"]
     store = ProjectStore.init(projects_path, "AutoNextProj", "test")
     store.new_version()
-
-    # Run 00-escopo first to get a populated canonical
-    rt = Runtime(CONFIG_ROOT)
-    rt.run_skill(
-        "01-escopo-e-eap",
-        store,
-        inputs={
-            "nome": "AutoNextProj",
-            "tipo_obra": "terraplenagem",
-            "localizacao": "Aracoiaba, CE",
-            "coordenadas": {"lat": -4.36, "lng": -38.74},
-            "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
-            "data_inicio": "2026-06-01",
-            "data_termino": "2026-12-31",
-            "eap": [
-                {
-                    "item_id": "eap-01",
-                    "ordem": 1,
-                    "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
-                    "descricao": "Escavação",
-                    "unidade": "m3",
-                    "quantitativo": 1000,
-                }
-            ],
-        },
+    es = store.create_escopo(
+        escopo_id="esc-1",
+        nome="Escopo Principal",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
     )
-
+    es.create_plan("plano-principal")
     proj_id = store.root.name
     result = await server.call_tool(
         "avancar_pipeline",
@@ -320,6 +316,17 @@ async def test_avancar_pipeline_runtime_error(server, server_env):
     projects_path = server_env["projects_path"]
     store = ProjectStore.init(projects_path, "DepErrProj", "test")
     store.new_version()
+    es = store.create_escopo(
+        escopo_id="esc-1",
+        nome="Escopo Principal",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
+    )
+    es.create_plan("plano-principal")
     proj_id = store.root.name
 
     # 04-cronograma requires 00 and 01 — should fail with ERRO_PRECONDICAO
@@ -336,7 +343,17 @@ async def test_avancar_pipeline_pipeline_complete(server, server_env):
     projects_path = server_env["projects_path"]
     store = ProjectStore.init(projects_path, "AllDoneProj", "test")
     store.new_version()
-    v = store.current_version()
+    es = store.create_escopo(
+        escopo_id="esc-1",
+        nome="Escopo Principal",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
+    )
+    ps = es.create_plan("plano-principal")
 
     # Fake the invocations log as if all canonical skills ran OK
     skills_in_order = [
@@ -351,7 +368,7 @@ async def test_avancar_pipeline_pipeline_complete(server, server_env):
     ]
     from datetime import UTC, datetime
 
-    log_path = store.version_path(v) / store.INVOCATIONS_LOG
+    log_path = ps.root / "invocations.log"
     with log_path.open("w", encoding="utf-8") as f:
         for skill in skills_in_order:
             f.write(json.dumps({"skill": skill, "status": "OK", "ts": datetime.now(UTC).isoformat()}) + "\n")
@@ -579,10 +596,20 @@ async def test_avancar_pipeline_malformed_log_line(server, server_env):
     projects_path = server_env["projects_path"]
     store = ProjectStore.init(projects_path, "MalformedLog", "test")
     store.new_version()
-    v = store.current_version()
+    es = store.create_escopo(
+        escopo_id="esc-1",
+        nome="Escopo Principal",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
+    )
+    ps = es.create_plan("plano-principal")
 
     # Write a malformed JSON line so the JSONDecodeError path is covered
-    log_path = store.version_path(v) / store.INVOCATIONS_LOG
+    log_path = ps.root / "invocations.log"
     log_path.write_text("this is not valid json\n", encoding="utf-8")
 
     proj_id = store.root.name
@@ -593,16 +620,28 @@ async def test_avancar_pipeline_malformed_log_line(server, server_env):
 @pytest.mark.asyncio
 async def test_avancar_pipeline_generic_exception_from_skill(server, server_env):
     """avancar_pipeline catches generic Exception from run_skill (lines 253-254)."""
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
     projects_path = server_env["projects_path"]
     store = ProjectStore.init(projects_path, "GenExcPipe", "test")
     store.new_version()
+    es = store.create_escopo(
+        escopo_id="esc-1",
+        nome="Escopo Principal",
+        tipo_obra="terraplenagem",
+        localizacao="Aracoiaba, CE",
+        coordenadas_lat=-4.36,
+        coordenadas_lng=-38.74,
+        data_inicio="2026-06-01",
+        data_termino="2026-12-31",
+    )
+    es.create_plan("plano-principal")
     proj_id = store.root.name
 
-    with patch("concilium.presentation.mcp_server.tools.pipeline._runtime") as mock_rt_fn:
-        mock_rt = mock_rt_fn.return_value
-        mock_rt.run_skill.side_effect = ValueError("unexpected error")
+    with patch("concilium.presentation.mcp_server.tools.pipeline._lifecycle_coordinator") as mock_lc_fn:
+        mock_coord = MagicMock()
+        mock_lc_fn.return_value = mock_coord
+        mock_coord.avancar_plano.side_effect = ValueError("unexpected error")
         result = await server.call_tool(
             "avancar_pipeline",
             arguments={"project_id": proj_id, "skill_id": "01-escopo-e-eap"},
@@ -730,8 +769,14 @@ def test_mcp_main_module_entry_point(monkeypatch, tmp_path):
     monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
     monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projs2"))
 
-    with patch("concilium.presentation.mcp_server.server.build_server") as mock_build:
-        mock_srv = MagicMock()
-        mock_build.return_value = mock_srv
-        runpy.run_module("concilium.presentation.mcp_server", run_name="__main__", alter_sys=False)
-    mock_srv.run.assert_called_once()
+    _mod = "concilium.presentation.mcp_server.__main__"
+    _saved = sys.modules.pop(_mod, None)
+    try:
+        with patch("concilium.presentation.mcp_server.server.build_server") as mock_build:
+            mock_srv = MagicMock()
+            mock_build.return_value = mock_srv
+            runpy.run_module("concilium.presentation.mcp_server", run_name="__main__", alter_sys=False)
+        mock_srv.run.assert_called_once()
+    finally:
+        if _saved is not None:
+            sys.modules[_mod] = _saved

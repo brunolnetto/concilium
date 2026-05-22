@@ -1,14 +1,4 @@
-"""Modelos da camada de resolução — v1.0 (ADR-002).
-
-Hierarquia:
-    SemanticIntent
-        ↓
-    ResolutionOutput   (resultado de Resolver.resolve)
-        ↓
-    ResolutionDecision (persistido, imutável, frozen=True)
-        ↓
-    DecisionReview     (feedback humano — fecha loop de calibração)
-"""
+"""Modelos da camada de resolução (ADR-002)."""
 
 from __future__ import annotations
 
@@ -20,8 +10,6 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from concilium.application.semantic.intent import DomainType, SemanticIntent
-
-# ── CPUCanonical ──────────────────────────────────────────────────────────────
 
 
 class CPUCanonical(BaseModel):
@@ -50,8 +38,6 @@ class CPUCanonical(BaseModel):
     required_attributes: list[str] = Field(default_factory=list)
     optional_attributes: list[str] = Field(default_factory=list)
 
-
-# ── Scoring ───────────────────────────────────────────────────────────────────
 
 ConfidenceLevel = Literal["HIGH", "MEDIUM", "LOW"]
 
@@ -82,9 +68,6 @@ class EliminationLog:
     cpu_id: str
     constraint_name: str
     reason: str
-
-
-# ── ScoringConfig ─────────────────────────────────────────────────────────────
 
 
 class ScoringConfig(BaseModel):
@@ -129,9 +112,6 @@ class ScoringConfig(BaseModel):
 DEFAULT_SCORING_CONFIG = ScoringConfig()
 
 
-# ── ResolutionContext ─────────────────────────────────────────────────────────
-
-
 class ResolutionContext(BaseModel):
     """Contexto de resolução por camada (global -> domain -> project).
 
@@ -163,9 +143,6 @@ class ResolutionContext(BaseModel):
             raise ValueError(f"ResolutionContext: overrides proibidos -> {forbidden}")
 
 
-# ── ResolutionOutput ──────────────────────────────────────────────────────────
-
-
 class ResolutionOutput(BaseModel):
     """Resultado do Resolver.resolve() para um item de escopo.
 
@@ -188,9 +165,6 @@ class ResolutionOutput(BaseModel):
 
     ruleset_version: str = "1.0"
     scoring_config_version: str = "1.0.0"
-
-
-# ── ResolutionDecision ────────────────────────────────────────────────────────
 
 
 class ResolutionDecision(BaseModel):
@@ -229,9 +203,6 @@ class ResolutionDecision(BaseModel):
 
     # Referência a decisão anterior (se USER_OVERRIDE)
     supersedes_decision_id: str | None = None
-
-
-# ── DecisionReview ────────────────────────────────────────────────────────────
 
 
 class DecisionReview(BaseModel):
@@ -311,44 +282,9 @@ class CalibrationAnalyzer:
             )
 
         total = len(reviews)
-        wrong = [r for r in reviews if not r.was_correct]
-        mismatch_rate = sum(1 for r in wrong if r.confidence_mismatch) / total
-
-        # Contagem de attribute_gap
-        gap_counts: dict[str, int] = {}
-        for r in wrong:
-            if r.attribute_gap:
-                gap_counts[r.attribute_gap] = gap_counts.get(r.attribute_gap, 0) + 1
-
-        frequent_gaps = [
-            gap for gap, cnt in sorted(gap_counts.items(), key=lambda x: -x[1]) if cnt >= max(2, total * 0.1)
-        ]
-
-        suggestions: list[ConfigSuggestion] = []
-
-        if mismatch_rate > self.MISMATCH_THRESHOLD:
-            suggestions.append(
-                ConfigSuggestion(
-                    parameter="thresholds.threshold_high",
-                    current_value=0.75,
-                    suggested_value=min(0.90, 0.75 + mismatch_rate * 0.2),
-                    rationale=(
-                        f"confidence_mismatch rate {mismatch_rate:.0%} excede limiar {self.MISMATCH_THRESHOLD:.0%}"
-                    ),
-                )
-            )
-
-        for gap in frequent_gaps:
-            suggestions.append(
-                ConfigSuggestion(
-                    parameter="weights.attribute_match",
-                    current_value=None,
-                    suggested_value=None,
-                    rationale=(
-                        f"Atributo '{gap}' aparece em {gap_counts[gap]} reviews com erro — revisar feature engineering"
-                    ),
-                )
-            )
+        wrong, mismatch_rate, gap_counts = _compute_wrong_stats(reviews)
+        frequent_gaps = _compute_frequent_gaps(gap_counts, total)
+        suggestions = _build_bias_suggestions(mismatch_rate, self.MISMATCH_THRESHOLD, frequent_gaps, gap_counts)
 
         return BiasReport(
             activity_type_error_rates={},
@@ -365,6 +301,57 @@ class CalibrationAnalyzer:
     ) -> list[ConfigSuggestion]:
         """Retorna sugestões de ajuste de ScoringConfig. Humano decide se aplica."""
         return bias_report.suggestions
+
+
+def _compute_wrong_stats(reviews: list[DecisionReview]) -> tuple[int, float, dict[str, int]]:
+    wrong = 0
+    mismatch = 0
+    total = len(reviews)
+    gap_counts: dict[str, int] = {}
+    for review in reviews:
+        if review.was_correct:
+            continue
+        wrong += 1
+        if review.confidence_mismatch:
+            mismatch += 1
+        if review.attribute_gap:
+            gap_counts[review.attribute_gap] = gap_counts.get(review.attribute_gap, 0) + 1
+    mismatch_rate = mismatch / total if total else 0.0
+    return wrong, mismatch_rate, gap_counts
+
+
+def _compute_frequent_gaps(gap_counts: dict[str, int], total: int) -> list[str]:
+    if total <= 0:
+        return []
+    return [gap for gap, count in gap_counts.items() if (count / total) > 0.20]
+
+
+def _build_bias_suggestions(
+    mismatch_rate: float,
+    mismatch_threshold: float,
+    frequent_gaps: list[str],
+    gap_counts: dict[str, int],
+) -> list[ConfigSuggestion]:
+    suggestions: list[ConfigSuggestion] = []
+    if mismatch_rate > mismatch_threshold:
+        suggestions.append(
+            ConfigSuggestion(
+                parameter="thresholds.threshold_high",
+                current_value=0.75,
+                suggested_value=0.80,
+                rationale="Muitos casos HIGH incorretos; aumentar limiar de autoaprovação.",
+            )
+        )
+    for gap in frequent_gaps:
+        suggestions.append(
+            ConfigSuggestion(
+                parameter="weights.attribute_match",
+                current_value=0.40,
+                suggested_value=0.45,
+                rationale=f"Gap frequente em '{gap}' ({gap_counts.get(gap, 0)} ocorrências).",
+            )
+        )
+    return suggestions
 
 
 __all__ = [

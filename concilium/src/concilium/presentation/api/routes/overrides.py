@@ -11,10 +11,10 @@ from concilium.presentation.api.container import get_concilium_service
 
 from ..schemas import OverrideUpsertRequest
 
-router = APIRouter(tags=["projects - overrides"])
+router = APIRouter(prefix="/api/projects", tags=["projects - overrides"])
 
 
-@router.get("/api/projects/{project_id}/overrides", summary="List saved skill overrides")
+@router.get("/{project_id}/overrides", summary="List saved skill overrides")
 def list_overrides(
     project_id: str,
     service: ConciliumService = Depends(get_concilium_service),
@@ -25,7 +25,7 @@ def list_overrides(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/api/projects/{project_id}/overrides", summary="Upsert skill input override")
+@router.post("/{project_id}/overrides", summary="Upsert skill input override")
 def upsert_override(
     project_id: str,
     req: OverrideUpsertRequest,
@@ -38,7 +38,7 @@ def upsert_override(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.delete("/api/projects/{project_id}/overrides/{skill_id}", summary="Delete override for a skill")
+@router.delete("/{project_id}/overrides/{skill_id}", summary="Delete override for a skill")
 def delete_override(
     project_id: str,
     skill_id: str,

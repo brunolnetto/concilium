@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001",
   "descricao": "Produção CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
   "origem": "PROPRIA",
-  "valor_horario": 239.04,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "dmt_referencia_m": 1850.0,
-    "custo_padrao_clt": 7.658303
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
-  ]
+  "historico_observacoes": []
 }

@@ -7,7 +7,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-_RULES_ENV = "CONCILIUM_CPU_MAPPING_RULES_FILE"
+_RULES_ENV = "CONCILIUM_BENCHMARK_CPU_MAPPING_RULES_FILE"
+_LEGACY_RULES_ENV = "CONCILIUM_CPU_MAPPING_RULES_FILE"
 
 
 def _tools_root() -> Path:
@@ -19,7 +20,19 @@ def _rules_file() -> Path:
     env_path = os.environ.get(_RULES_ENV)
     if env_path:
         return Path(env_path)
+    legacy_path = os.environ.get(_LEGACY_RULES_ENV)
+    if legacy_path:
+        return Path(legacy_path)
     return _tools_root() / "config" / "referencias" / "cpu_mapping_rules.json"
+
+
+def _clean_keyword_list(keywords: list) -> list[str]:
+    result = []
+    for kw in keywords:
+        s = str(kw).strip()
+        if s:
+            result.append(s.upper())
+    return result
 
 
 def _load_mapping_keywords() -> dict[str, list[str]]:
@@ -40,7 +53,7 @@ def _load_mapping_keywords() -> dict[str, list[str]]:
     for cpu_id, keywords in rules.items():
         if not isinstance(cpu_id, str) or not isinstance(keywords, list):
             continue
-        clean_keywords = [str(kw).upper().strip() for kw in keywords if str(kw).strip()]
+        clean_keywords = _clean_keyword_list(keywords)
         if clean_keywords:
             normalized[cpu_id] = clean_keywords
     return normalized

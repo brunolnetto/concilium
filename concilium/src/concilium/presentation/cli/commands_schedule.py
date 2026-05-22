@@ -42,6 +42,19 @@ def _dag_from_spec(spec: dict, activities):
     return ActivityDAG(activities=activities, precedence=precedence)
 
 
+def _resolve_deadline_weeks(deadline_weeks, ref_raw: dict) -> int:
+    if deadline_weeks is not None:
+        return deadline_weeks
+    try:
+        from datetime import date
+
+        d_ini = date.fromisoformat(ref_raw["data_inicio"])
+        d_fim = date.fromisoformat(ref_raw["data_termino"])
+        return max(1, ((d_fim - d_ini).days // 7) + 1)
+    except (KeyError, ValueError):
+        return 60
+
+
 @app.command("run")
 def schedule_run(
     spec_path: Path = typer.Argument(
@@ -70,16 +83,7 @@ def schedule_run(
 
     rprint(f"[cyan]RCPSP:[/cyan] {len(activities)} atividades, {len(pool.resources)} tipos de recurso")
 
-    from datetime import date
-
-    weeks = deadline_weeks
-    if weeks is None:
-        try:
-            d_ini = date.fromisoformat(ref_raw["data_inicio"])
-            d_fim = date.fromisoformat(ref_raw["data_termino"])
-            weeks = max(1, ((d_fim - d_ini).days // 7) + 1)
-        except (KeyError, ValueError):
-            weeks = 60
+    weeks = _resolve_deadline_weeks(deadline_weeks, ref_raw)
 
     heuristics = [algorithm] if algorithm and algorithm != "MILP" else ["MINSLK", "LPT", "MAXRES"]
     explored = explore_schedules(

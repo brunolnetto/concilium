@@ -38,6 +38,18 @@ def _safe_float(value: Any) -> float | None:
         return None
 
 
+def _lgrs_sum_action_report(action_report: list) -> tuple:
+    """Sumariza action_report em contadores de severidade e acoes abertas."""
+    by_severity: dict[str, int] = {}
+    abertos = 0
+    for item in action_report:
+        sev = str(item.get("severidade") or "S0")
+        by_severity[sev] = by_severity.get(sev, 0) + 1
+        if str(item.get("status_acao") or "").upper() == "ABERTA":
+            abertos += 1
+    return by_severity, abertos
+
+
 def _load_gate_report_for_slug(slug: str | None, root: Path) -> dict[str, Any]:
     if not slug:
         return {}
@@ -56,14 +68,7 @@ def _load_gate_report_for_slug(slug: str | None, root: Path) -> dict[str, Any]:
     report = _load_json(report_path)
     quality_gates = report.get("quality_gates") or {}
     action_report = report.get("action_report") or []
-
-    by_severity: dict[str, int] = {}
-    abertos = 0
-    for item in action_report:
-        sev = str(item.get("severidade") or "S0")
-        by_severity[sev] = by_severity.get(sev, 0) + 1
-        if str(item.get("status_acao") or "").upper() == "ABERTA":
-            abertos += 1
+    by_severity, abertos = _lgrs_sum_action_report(action_report)
 
     return {
         "status_final": report.get("status_final") or quality_gates.get("decision") or "NAO_DISPONIVEL",

@@ -63,7 +63,12 @@ class FileSystemArtifactStore(ArtifactStore):
     def save(self, artifact: ArtifactEnvelope[Any]) -> None:
         """Persiste payload + sidecar no diretório root."""
         payload_path = self.root / f"{artifact.meta.artifact_id}.json"
-        payload_path.write_text(artifact.payload.model_dump_json(indent=2), encoding="utf-8")
+        payload = artifact.payload
+        if hasattr(payload, "model_dump_json"):
+            payload_json = payload.model_dump_json(indent=2)
+        else:
+            payload_json = json.dumps(payload, indent=2, ensure_ascii=False, default=str)
+        payload_path.write_text(payload_json, encoding="utf-8")
         self.save_meta_sidecar(payload_path, artifact.meta)
 
     def get(self, ref: ArtifactRef) -> ArtifactEnvelope[Any]:

@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
   "descricao": "Produção CPU-TERRA-COMPAC-FINAL-ROCHA",
   "origem": "PROPRIA",
-  "valor_horario": 100.0,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -30,10 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 14.437181
-  },
-  "cpu_ids": [
-    "CPU-TERRA-COMPAC-FINAL-ROCHA"
-  ]
+  "historico_observacoes": []
 }

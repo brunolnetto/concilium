@@ -42,6 +42,56 @@ def _extract_prod_team(prod: dict[str, Any]) -> dict[str, Any] | None:
     return comp if (comp.get("funcoes") or comp.get("equipamentos")) else None
 
 
+def _load_producoes_index(prods_dir: Path) -> dict[str, dict[str, Any]]:
+    producoes: dict[str, dict[str, Any]] = {}
+    for prod_file in sorted(prods_dir.glob("*.json")):
+        prod = _load_json(prod_file)
+        prod_id = prod.get("id")
+        if isinstance(prod_id, str) and prod_id:
+            producoes[prod_id] = prod
+    return producoes
+
+
+def _process_cpu_file(
+    cpu_file: Path,
+    producoes: dict[str, dict[str, Any]],
+    cpu_filter: str | None,
+    apply: bool,
+) -> AuditRow | None:
+    cpu = _load_json(cpu_file)
+    cpu_code = cpu.get("codigo")
+    if not isinstance(cpu_code, str) or not cpu_code:
+        return None
+    if cpu_filter and cpu_code != cpu_filter:
+        return None
+    prod_id = cpu.get("producao_id")
+    if not isinstance(prod_id, str) or not prod_id:
+        return None
+    return _classify_cpu(cpu_file, cpu, cpu_code, prod_id, producoes, apply)
+
+
+def _classify_cpu(
+    cpu_file: Path,
+    cpu: dict[str, Any],
+    cpu_code: str,
+    prod_id: str,
+    producoes: dict[str, dict[str, Any]],
+    apply: bool,
+) -> AuditRow:
+    if _has_local_team(cpu):
+        return AuditRow(cpu=cpu_code, producao_id=prod_id, status="ok", detalhe="cpu_ja_tem_equipe")
+    prod = producoes.get(prod_id)
+    if not prod:
+        return AuditRow(cpu=cpu_code, producao_id=prod_id, status="erro", detalhe="producao_id_inexistente")
+    prod_team = _extract_prod_team(prod)
+    if not prod_team:
+        return AuditRow(cpu=cpu_code, producao_id=prod_id, status="erro", detalhe="producao_sem_equipe")
+    if apply:
+        cpu["equipe"] = prod_team
+        _dump_json(cpu_file, cpu)
+    return AuditRow(cpu=cpu_code, producao_id=prod_id, status="normalizar", detalhe="copiar_equipe_da_producao")
+
+
 def normalize_equipes_from_producoes(
     catalog_root: Path | None = None,
     *,
@@ -62,45 +112,10 @@ def normalize_equipes_from_producoes(
     cpus_dir = r / "cpus"
     prods_dir = r / "producoes"
 
-    producoes: dict[str, dict[str, Any]] = {}
-    for prod_file in sorted(prods_dir.glob("*.json")):
-        prod = _load_json(prod_file)
-        prod_id = prod.get("id")
-        if isinstance(prod_id, str) and prod_id:
-            producoes[prod_id] = prod
-
+    producoes = _load_producoes_index(prods_dir)
     rows: list[AuditRow] = []
     for cpu_file in sorted(cpus_dir.glob("*.json")):
-        cpu = _load_json(cpu_file)
-        cpu_code = cpu.get("codigo")
-        if not isinstance(cpu_code, str) or not cpu_code:
-            continue
-        if cpu_filter and cpu_code != cpu_filter:
-            continue
-
-        prod_id = cpu.get("producao_id")
-        if not isinstance(prod_id, str) or not prod_id:
-            continue
-
-        if _has_local_team(cpu):
-            rows.append(AuditRow(cpu=cpu_code, producao_id=prod_id, status="ok", detalhe="cpu_ja_tem_equipe"))
-            continue
-
-        prod = producoes.get(prod_id)  # type: ignore[assignment]
-        if not prod:
-            rows.append(AuditRow(cpu=cpu_code, producao_id=prod_id, status="erro", detalhe="producao_id_inexistente"))
-            continue
-
-        prod_team = _extract_prod_team(prod)
-        if not prod_team:
-            rows.append(AuditRow(cpu=cpu_code, producao_id=prod_id, status="erro", detalhe="producao_sem_equipe"))
-            continue
-
-        rows.append(
-            AuditRow(cpu=cpu_code, producao_id=prod_id, status="normalizar", detalhe="copiar_equipe_da_producao")
-        )
-        if apply:
-            cpu["equipe"] = prod_team
-            _dump_json(cpu_file, cpu)
-
+        row = _process_cpu_file(cpu_file, producoes, cpu_filter, apply)
+        if row is not None:
+            rows.append(row)
     return rows

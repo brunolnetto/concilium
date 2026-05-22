@@ -6,6 +6,16 @@ import pandas as pd
 from concilium.domain.services.simulation import SimuladorEngenharia
 
 
+def _apply_body_row(row, fill, standard_border, font_name_body: str, size_body: int) -> None:
+    from openpyxl.styles import Font
+
+    for cell in row:
+        if fill:
+            cell.fill = fill
+        cell.font = Font(name=font_name_body, size=size_body)
+        cell.border = standard_border
+
+
 class CatalogExporterExcel:
     def __init__(self, catalogo: dict[str, Any], jurisdicao_id: str = None):  # type: ignore[assignment]
         self.catalogo = catalogo
@@ -169,11 +179,7 @@ class CatalogExporterExcel:
             # 2. Zebra e Bordas no Corpo
             for row_idx, row in enumerate(ws.iter_rows(min_row=2), start=2):
                 fill = zebra_fill if row_idx % 2 != 0 else None
-                for cell in row:
-                    if fill:
-                        cell.fill = fill
-                    cell.font = Font(name=font_name_body, size=size_body)
-                    cell.border = standard_border
+                _apply_body_row(row, fill, standard_border, font_name_body, size_body)
 
             # 3. Auto-filtro
             ws.auto_filter.ref = ws.dimensions

@@ -83,8 +83,13 @@ def _populate_catalog_into(target: typer.Typer, cmd) -> None:
     target.command("survey")(cmd.catalog_survey)
     target.command("promote")(cmd.catalog_promote)
     target.command("search")(cmd.catalog_search)
+    if hasattr(cmd, "catalog_audit_reasonability"):
+        target.command("audit")(cmd.catalog_audit_reasonability)
     if hasattr(cmd, "catalog_validate_schema"):
-        target.command("validate-schema")(cmd.catalog_validate_schema)
+        target.command("validate")(cmd.catalog_validate_schema)
+    if hasattr(cmd, "catalog_cure_schema"):
+        target.command("cure")(cmd.catalog_cure_schema)
+        target.command("cure-schema")(cmd.catalog_cure_schema)
 
 
 def _load_catalog() -> None:
@@ -156,7 +161,6 @@ def _load_validate() -> None:
     )
     validate_app.command("project")(commands_validate.validate_project)
     validate_app.command("benchmark")(commands_validate.validate_benchmark)
-    validate_app.command("projeto")(commands_validate.validate_projeto_alias)
     app.add_typer(validate_app, hidden=True)
 
 
@@ -199,7 +203,6 @@ def _load_all() -> None:
     )
     validate_app.command("project")(commands_validate.validate_project)
     validate_app.command("benchmark")(commands_validate.validate_benchmark)
-    validate_app.command("projeto")(commands_validate.validate_projeto_alias)
     app.add_typer(validate_app, hidden=True)
     app.add_typer(commands_schedule.app, hidden=True)
     app.command("health", hidden=True)(commands_health.health)
@@ -220,6 +223,12 @@ def _load_configuration() -> None:
     skills_app.command("export")(skills_export)
 
 
+# Ensure key command trees are present when tests invoke `app` directly
+# via CliRunner (without calling main()/dispatch).
+_load_configuration()
+_load_schedule()
+
+
 _GROUP_LOADERS = {
     "catalog": _load_catalog,
     "project": _load_project,
@@ -231,22 +240,36 @@ _GROUP_LOADERS = {
 }
 
 
+def _is_in_test_context() -> bool:
+    argv0 = sys.argv[0] if sys.argv else ""
+    if any(k in argv0.lower() for k in ("pytest", "py.test", "_jb_pytest")):
+        return True
+    for a in sys.argv[1:3]:
+        for k in ("--collect", "--tb", "-p", "conftest"):
+            if k in a:
+                return True
+    return False
+
+
+def _get_non_flags() -> list:
+    result = []
+    for a in sys.argv[1:]:
+        if not a.startswith("-"):
+            result.append(a)
+    return result
+
+
 def _dispatch() -> None:
     """Importa apenas o(s) módulo(s) necessários para o comando invocado.
 
     Em contexto de teste (pytest / CliRunner não modifica sys.argv), carrega
     todos os grupos para garantir que a CLI esteja completa.
     """
-    argv0 = sys.argv[0] if sys.argv else ""
-    in_test = any(k in argv0.lower() for k in ("pytest", "py.test", "_jb_pytest")) or any(
-        k in a for a in sys.argv[1:3] for k in ("--collect", "--tb", "-p", "conftest")
-    )
-
-    if in_test:
+    if _is_in_test_context():
         _load_all()
         return
 
-    non_flags = [a for a in sys.argv[1:] if not a.startswith("-")]
+    non_flags = _get_non_flags()
     group = non_flags[0] if non_flags else None
 
     loader = _GROUP_LOADERS.get(group)  # type: ignore[arg-type]

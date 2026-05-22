@@ -6,6 +6,41 @@ from concilium.application.skills.phase_classifier import PHASE_MAP, classify_ph
 from concilium.application.skills.registry import SkillRegistry
 
 
+def _build_skill_label(skill_id: str, skill, show_validations: bool) -> str:
+    if show_validations and skill.validations:
+        val_str = ", ".join(skill.validations[:2])
+        if len(skill.validations) > 2:
+            val_str += "..."
+        return f"{skill_id}<br/>({val_str})"
+    return skill_id
+
+
+def _group_skills_by_phase(registry) -> dict:
+    phases_dict: dict = {}
+    for phase in PHASE_MAP.keys():
+        phases_dict[phase] = []
+    for skill_id in registry.skills.keys():
+        phase = classify_phase(skill_id)
+        if phase not in phases_dict:
+            phases_dict[phase] = []
+        phases_dict[phase].append(skill_id)
+    return phases_dict
+
+
+def _append_dep_edges(lines: list, registry, node_id_fn, indent: str = "    ") -> None:
+    edges_added: set = set()
+    for skill_id in registry.skills.keys():
+        skill = registry.get_skill(skill_id)
+        if not skill:
+            continue
+        for dep_id in skill.depends_on_skills:
+            if dep_id in registry.skills:
+                edge = (node_id_fn(dep_id), node_id_fn(skill_id))
+                if edge not in edges_added:
+                    lines.append(f"{indent}{edge[0]} --> {edge[1]}")
+                    edges_added.add(edge)
+
+
 class SkillGraphExporter:
     """Exports skill dependency graph in various formats."""
 
@@ -29,98 +64,36 @@ class SkillGraphExporter:
         Returns:
             Valid Mermaid graph TD definition as string
         """
-        lines: list[str] = ["graph TD"]
-
         if group_by_phase:
             return self._to_mermaid_with_phases(show_validations)
 
-        # Flat graph: define all nodes first
+        lines: list[str] = ["graph TD"]
         for skill_id in sorted(self.registry.skills.keys()):
             skill = self.registry.get_skill(skill_id)
             if not skill:
                 continue
-
-            # Node label with optional validations
-            label = skill_id
-            if show_validations and skill.validations:
-                val_str = ", ".join(skill.validations[:2])  # Limit to 2 for readability
-                if len(skill.validations) > 2:
-                    val_str += "..."
-                label = f"{skill_id}<br/>({val_str})"
-
+            label = _build_skill_label(skill_id, skill, show_validations)
             lines.append(f'    {self._node_id(skill_id)}["{label}"]')
-
-        # Add edges for dependencies
-        edges_added: set[tuple[str, str]] = set()
-        for skill_id in self.registry.skills.keys():
-            skill = self.registry.get_skill(skill_id)
-            if not skill:
-                continue
-
-            for dep_id in skill.depends_on_skills:
-                if dep_id in self.registry.skills:
-                    edge = (self._node_id(dep_id), self._node_id(skill_id))
-                    if edge not in edges_added:
-                        lines.append(f"    {edge[0]} --> {edge[1]}")
-                        edges_added.add(edge)
-
+        _append_dep_edges(lines, self.registry, self._node_id, "    ")
         return "\n".join(lines)
 
     def _to_mermaid_with_phases(self, show_validations: bool = False) -> str:
         """Generate Mermaid with phase grouping (subgraphs)."""
         lines: list[str] = ["graph TD"]
-
-        # Group skills by phase
-        phases_dict: dict[str, list[str]] = {}
-        for phase in PHASE_MAP.keys():
-            phases_dict[phase] = []
-
-        for skill_id in self.registry.skills.keys():
-            phase = classify_phase(skill_id)
-            if phase not in phases_dict:
-                phases_dict[phase] = []
-            phases_dict[phase].append(skill_id)
-
-        # Create subgraphs for each phase
-        phase_node_ids: dict[str, str] = {}
+        phases_dict = _group_skills_by_phase(self.registry)
         for phase in PHASE_MAP.keys():
             if not phases_dict.get(phase):
                 continue
-
             phase_id = self._node_id(phase)
-            phase_node_ids[phase] = phase_id
             lines.append(f'    subgraph {phase_id}["{phase}"]')
-
             for skill_id in sorted(phases_dict[phase]):
                 skill = self.registry.get_skill(skill_id)
                 if not skill:
                     continue
-
-                label = skill_id
-                if show_validations and skill.validations:
-                    val_str = ", ".join(skill.validations[:2])
-                    if len(skill.validations) > 2:
-                        val_str += "..."
-                    label = f"{skill_id}<br/>({val_str})"
-
+                label = _build_skill_label(skill_id, skill, show_validations)
                 lines.append(f'        {self._node_id(skill_id)}["{label}"]')
-
             lines.append("    end")
-
-        # Add edges for dependencies (outside subgraphs)
-        edges_added: set[tuple[str, str]] = set()
-        for skill_id in self.registry.skills.keys():
-            skill = self.registry.get_skill(skill_id)
-            if not skill:
-                continue
-
-            for dep_id in skill.depends_on_skills:
-                if dep_id in self.registry.skills:
-                    edge = (self._node_id(dep_id), self._node_id(skill_id))
-                    if edge not in edges_added:
-                        lines.append(f"    {edge[0]} --> {edge[1]}")
-                        edges_added.add(edge)
-
+        _append_dep_edges(lines, self.registry, self._node_id, "    ")
         return "\n".join(lines)
 
     def to_json(self) -> dict[str, Any]:

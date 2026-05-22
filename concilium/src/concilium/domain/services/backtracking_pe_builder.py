@@ -25,6 +25,52 @@ def _tol(gap: float) -> float:
     return max(_EPS_TOL_ABS, abs(gap) * _EPS_TOL_REL)
 
 
+def _btpb_build_lookups(canonical_in: Any) -> tuple[dict, dict, dict, Any]:
+    equipe_lookup = {e.item_id: e for e in (canonical_in.equipes_diretas or [])}
+    sched_lookup = {
+        sa.activity_id: sa for sa in (canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else [])
+    }
+    plan_lookup = {p.item_id: p for p in (canonical_in.planejamento or [])}
+    return equipe_lookup, sched_lookup, plan_lookup, canonical_in.praticabilidade
+
+
+def _btpb_validacoes(n_fail: int, itens_bt: list, pe_gap_alvo: float) -> list[str]:
+    validacoes: list[str] = []
+    if n_fail > 0:
+        validacoes.append("VAL-INV-ROUNDTRIP-FAIL")
+    for bt_item in itens_bt:
+        sol_l = next((s for s in bt_item.solucoes if s.parametro == "L"), None)
+        if sol_l and abs(sol_l.pe_gap_recalculado - pe_gap_alvo) > _tol(bt_item.pe_gap_atual) * 5:
+            validacoes.append("VAL-INV-NORM-FAIL")
+            break
+    return validacoes
+
+
+def _find_solucao(solucoes: list, parametro: str):
+    for s in solucoes:
+        if s.parametro == parametro and s.roundtrip_valido:
+            return s
+    return None
+
+
+def _get_gap_fator(item, codigo: str) -> float:
+    for f in item.fatores:
+        if f.codigo == codigo:
+            return f.gap_rs
+    return 0.0
+
+
+def _get_item_cubo_hint(diagnostico: DiagnosticoPERelatorio, atividade_id: str) -> dict[str, Any]:
+    bloco = getattr(diagnostico, "explicacao_natureza_periodo", None)
+    if not isinstance(bloco, dict):
+        return {}
+    itens = bloco.get("itens")
+    if not isinstance(itens, dict):
+        return {}
+    hint = itens.get(atividade_id)
+    return hint if isinstance(hint, dict) else {}
+
+
 class BacktrackingPEBuilder:
     """Computa soluções inversas para cada item em déficit."""
 
@@ -35,61 +81,20 @@ class BacktrackingPEBuilder:
         pe_gap_alvo: float = 0.0,
     ) -> BacktrackingPERelatorio:
         projeto_id = diagnostico.projeto_id
-        equipe_lookup = {e.item_id: e for e in (canonical_in.equipes_diretas or [])}
-        sched_lookup = {
-            sa.activity_id: sa
-            for sa in (canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else [])
-        }
-        plan_lookup = {p.item_id: p for p in (canonical_in.planejamento or [])}
-        prat = canonical_in.praticabilidade
-
+        equipe_lookup, sched_lookup, plan_lookup, prat = _btpb_build_lookups(canonical_in)
+        explicacao_natureza_periodo = (
+            diagnostico.explicacao_natureza_periodo if isinstance(diagnostico.explicacao_natureza_periodo, dict) else {}
+        )
         itens_bt: list[BacktrackingPEItem] = []
         n_fail = 0
-
         for item in diagnostico.itens_deficit:
-            solucoes = self._compute_solucoes(item, equipe_lookup, sched_lookup, plan_lookup, prat, pe_gap_alvo)
-            fails = tuple(s.parametro for s in solucoes if not s.roundtrip_valido)
-            n_fail += len(fails)
-            validas = [s for s in solucoes if s.roundtrip_valido]
-
-            # Solução recomendada: menor soma ponderada de impactos
-            recom = None
-            if validas:
-
-                def score(s: SolucaoInversa) -> float:
-                    return (
-                        s.impacto_preco_pct * 3
-                        + s.impacto_produtividade_pct * 2
-                        + s.impacto_recursos_pct * 1.5
-                        + abs(s.impacto_prazo_semanas) * 0.5
-                    )
-
-                recom = min(validas, key=score)
-
-            itens_bt.append(
-                BacktrackingPEItem(
-                    atividade_id=item.atividade_id,
-                    descricao=item.descricao,
-                    pe_gap_atual=item.gap_rs,
-                    pe_gap_alvo=pe_gap_alvo,
-                    solucoes=tuple(sorted(solucoes, key=lambda s: (-s.confianca, s.impacto_preco_pct))),
-                    solucao_recomendada=recom,
-                    roundtrips_falharam=fails,
-                )
+            item_cubo_hint = _get_item_cubo_hint(diagnostico, item.atividade_id)
+            bt_item, fails_count = self._btpb_process_item(
+                item, equipe_lookup, sched_lookup, plan_lookup, prat, pe_gap_alvo, item_cubo_hint
             )
-
-        # ADR-061 §DoD: validações emitidas
-        validacoes: list[str] = []
-        if n_fail > 0:
-            validacoes.append("VAL-INV-ROUNDTRIP-FAIL")
-
-        # VAL-INV-NORM-FAIL: verifica se solucao L fecha gap a ε=0 para todos os itens
-        for bt_item in itens_bt:
-            sol_l = next((s for s in bt_item.solucoes if s.parametro == "L"), None)
-            if sol_l and abs(sol_l.pe_gap_recalculado - pe_gap_alvo) > _tol(bt_item.pe_gap_atual) * 5:
-                validacoes.append("VAL-INV-NORM-FAIL")
-                break
-
+            n_fail += fails_count
+            itens_bt.append(bt_item)
+        validacoes = _btpb_validacoes(n_fail, itens_bt, pe_gap_alvo)
         return BacktrackingPERelatorio(
             projeto_id=projeto_id,
             gerado_em=datetime.now(UTC).isoformat(),
@@ -98,6 +103,56 @@ class BacktrackingPEBuilder:
             consistencia_global=(n_fail == 0),
             n_roundtrips_falharam=n_fail,
             validacoes_emitidas=tuple(validacoes),
+            explicacao_natureza_periodo=explicacao_natureza_periodo,
+        )
+
+    def _btpb_process_item(
+        self,
+        item: DiagnosticoPEItem,
+        equipe_lookup: dict,
+        sched_lookup: dict,
+        plan_lookup: dict,
+        prat: Any,
+        pe_gap_alvo: float,
+        item_cubo_hint: dict[str, Any] | None = None,
+    ) -> tuple[BacktrackingPEItem, int]:
+        solucoes = self._compute_solucoes(item, equipe_lookup, sched_lookup, plan_lookup, prat, pe_gap_alvo)
+        fails = tuple(s.parametro for s in solucoes if not s.roundtrip_valido)
+        validas = [s for s in solucoes if s.roundtrip_valido]
+        recom = None
+        if validas:
+
+            def score(s: SolucaoInversa) -> float:
+                base = (
+                    s.impacto_preco_pct * 3
+                    + s.impacto_produtividade_pct * 2
+                    + s.impacto_recursos_pct * 1.5
+                    + abs(s.impacto_prazo_semanas) * 0.5
+                )
+
+                # Consome explicitamente a decomposição do cubo para priorizar ações.
+                # Se a natureza dominante for indireta em janela crítica, timing tende
+                # a capturar sazonalidade/rampa com menor repasse ao cliente.
+                if s.parametro == "T0_RAMP" and item_cubo_hint:
+                    if item_cubo_hint.get("natureza_dominante") == "indireto":
+                        base -= 0.75
+                    if item_cubo_hint.get("janela_critica_iso"):
+                        base -= 0.25
+
+                return base
+
+            recom = min(validas, key=score)
+        return (
+            BacktrackingPEItem(
+                atividade_id=item.atividade_id,
+                descricao=item.descricao,
+                pe_gap_atual=item.gap_rs,
+                pe_gap_alvo=pe_gap_alvo,
+                solucoes=tuple(sorted(solucoes, key=lambda s: (-s.confianca, s.impacto_preco_pct))),
+                solucao_recomendada=recom,
+                roundtrips_falharam=fails,
+            ),
+            len(fails),
         )
 
     def _solve_L(
@@ -238,11 +293,12 @@ class BacktrackingPEBuilder:
         T_ef: float,
     ) -> SolucaoInversa | None:
         """Solução D: combinação L + timing."""
-        sol_timing = next((s for s in solucoes if s.parametro == "T0_RAMP" and s.roundtrip_valido), None)
-        sol_l = next((s for s in solucoes if s.parametro == "L" and s.roundtrip_valido), None)
+        sol_timing = _find_solucao(solucoes, "T0_RAMP")
+        sol_l = _find_solucao(solucoes, "L")
         if not (sol_timing and sol_l):
             return None
-        gap_residual = item.gap_rs - next((f.gap_rs for f in item.fatores if f.codigo == "F_ETA_CROSS"), 0.0) - alvo
+        gap_f_eta = _get_gap_fator(item, "F_ETA_CROSS")
+        gap_residual = item.gap_rs - gap_f_eta - alvo
         delta_L_comb = abs(gap_residual) / max(denominator, 1.0) if denominator > 0 else 0
         return SolucaoInversa(
             parametro="COMBINADA",

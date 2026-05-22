@@ -29,7 +29,6 @@
       }
     ]
   },
-  "cpu_ids": [
-    "CPU-SANEA-DREN-MAN-DN300"
-  ]
+  "historico_observacoes": [],
+  "valor_horario": 11.5425
 }

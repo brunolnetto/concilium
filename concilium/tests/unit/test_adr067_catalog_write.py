@@ -49,14 +49,21 @@ def service(catalog_env):
     os_ = OverrideService(repo, audit)
 
     from concilium.application.runtime import Runtime
+
     pls = PipelineService(repo, audit, runtime_factory=lambda: Runtime(config_root))
     ib = ProjectInputBuilder(config_root, config_root / "benchmarks" / "data")
 
-    svc = ConciliumService(ConciliumDependencies(
-        input_builder=ib, repository=repo, project_service=ps,
-        override_service=os_, pipeline_service=pls, audit_service=audit,
-        benchmarks_root=config_root / "benchmarks" / "data",
-    ))
+    svc = ConciliumService(
+        ConciliumDependencies(
+            input_builder=ib,
+            repository=repo,
+            project_service=ps,
+            override_service=os_,
+            pipeline_service=pls,
+            audit_service=audit,
+            benchmarks_root=config_root / "benchmarks" / "data",
+        )
+    )
     return svc
 
 

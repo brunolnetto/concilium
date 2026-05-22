@@ -46,10 +46,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 11.939742
-  },
-  "cpu_ids": [
-    "CPU-TERRA-COMPAC-PI"
-  ]
+  "historico_observacoes": []
 }

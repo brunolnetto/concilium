@@ -12,7 +12,6 @@ try:
     from .state import StateManager
     from .templates.catalogo_master_page import render_catalogo_master_page
     from .templates.configuracao_page import render_configuracao_page
-    from .templates.dashboard_page import render_dashboard_page_template
     from .templates.project_page import (
         render_hot_project_template,
         render_normal_project_template,
@@ -27,7 +26,6 @@ except ImportError:
     from concilium.presentation.ui.state import StateManager
     from concilium.presentation.ui.templates.catalogo_master_page import render_catalogo_master_page
     from concilium.presentation.ui.templates.configuracao_page import render_configuracao_page
-    from concilium.presentation.ui.templates.dashboard_page import render_dashboard_page_template
     from concilium.presentation.ui.templates.project_page import (
         render_hot_project_template,
         render_normal_project_template,
@@ -69,8 +67,6 @@ def main() -> None:
             render_hot_project_template(project)
         else:
             render_normal_project_template(project)
-    elif nav_choice == "Dashboard":
-        render_dashboard_page_template()
     elif nav_choice == "Catálogo":
         render_catalogo_master_page()
     elif nav_choice == "Configuração":

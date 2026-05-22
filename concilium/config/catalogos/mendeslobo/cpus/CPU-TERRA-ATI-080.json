@@ -4,8 +4,17 @@
   "unidade": "m2",
   "origem": "PROPRIA",
   "categoria": "TERRAPLENAGEM",
-  "composicao_itens": [],
-  "data_referencia_preco": "2025-05-01",
-  "fonte_preco": "referencia_base_original",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-AJUDANTE",
+      "coeficiente": 4.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-HIDROSSEMEADORA",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
   "producao_id_ref": "CPU-TERRA-ATI-080-PROD-001"
 }

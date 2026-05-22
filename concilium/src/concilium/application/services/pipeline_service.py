@@ -183,6 +183,22 @@ class PipelineService:
             project.write_json(self._files.runs, runs)
         return run_id
 
+    def _prepare_skill_inputs(self, project, run: dict) -> dict:
+        skill_inputs = project.read_json(self._files.skill_inputs, {})
+        if run.get("use_saved_overrides"):
+            saved_overrides = project.read_json(self._files.overrides, {})
+            skill_inputs = deep_merge(skill_inputs, saved_overrides)
+        skill_inputs_override = run.get("skill_inputs_override") or {}
+        skill_inputs = deep_merge(skill_inputs, skill_inputs_override)
+        use_wmp = run.get("use_mobilizacao_policy", True)
+        if use_wmp and run.get("use_saved_overrides", True):
+            policies = project.read_json(self._files.mobilizacao_policies, {})
+            if policies:
+                skill04 = skill_inputs.setdefault("04-cronograma", {})
+                if "mobilizacao_policies" not in skill04:
+                    skill04["mobilizacao_policies"] = policies
+        return skill_inputs
+
     def _execute_run(self, project: ProjectHandle, run_id: str) -> None:
         run = self._find_run(project, run_id)
         if run is None:
@@ -211,24 +227,7 @@ class PipelineService:
             line_offset = len(project.read_lines(f"{version}/invocations.log"))
             self._update_run(project, run_id, {"version": version, "invocation_line_offset": line_offset})
 
-            skill_inputs = project.read_json(self._files.skill_inputs, {})
-            if run.get("use_saved_overrides"):
-                saved_overrides = project.read_json(self._files.overrides, {})
-                skill_inputs = deep_merge(skill_inputs, saved_overrides)
-
-            skill_inputs_override = run.get("skill_inputs_override") or {}
-            skill_inputs = deep_merge(skill_inputs, skill_inputs_override)
-
-            # ADR-054 §9.1: inject saved mobilization policies into Skill 04 inputs.
-            # use_mobilizacao_policy=False lets planners revert to explicit allocation.
-            # Explicit skill_inputs_override["04-cronograma"]["mobilizacao_policies"] always wins.
-            use_wmp = run.get("use_mobilizacao_policy", True)
-            if use_wmp and run.get("use_saved_overrides", True):
-                policies = project.read_json(self._files.mobilizacao_policies, {})
-                if policies:
-                    skill04 = skill_inputs.setdefault("04-cronograma", {})
-                    if "mobilizacao_policies" not in skill04:
-                        skill04["mobilizacao_policies"] = policies
+            skill_inputs = self._prepare_skill_inputs(project, run)
 
             # ADR-063 §D6: validate preconditions per project type
             strategy = get_pipeline_strategy(project)

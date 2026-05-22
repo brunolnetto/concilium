@@ -350,6 +350,7 @@ class TestPraticabilidadeEdgeCases:
 class TestAdapterSaidaEdgeCases:
     """Cover lines 113-114 (planejamento vazio) and 161-168 (Excel exception)."""
 
+    @pytest.mark.slow
     def test_adapter_sem_planejamento_emite_aviso(self):
         """Empty planejamento → VAL-ADAPTER-01 AVISO (line 114)."""
         from concilium.application.skills import run_relatorio_e_artefatos

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import inspect
 import json
 import tomllib
@@ -69,7 +70,8 @@ def _handle_skill_09_side_effects(result: object, project: object, v: str, outpu
         "memorial_bdi_md", outputs_cfg.get("memorial_bdi", outputs_cfg.get("memoria_calculo", True))
     )
     gerar_mem_pdf = outputs_cfg.get("memorial_bdi_pdf", outputs_cfg.get("memorial_bdi", True))
-    gerar_xlsx = outputs_cfg.get("resultado_xlsx", True)
+    gerar_xlsx = outputs_cfg.get("resultado_xlsx", outputs_cfg.get("cronograma_xlsx", True))
+    gerar_modelo_vivo = outputs_cfg.get("modelo_vivo_xlsx", False)
 
     relatorio = getattr(result, "relatorio", None)
     if relatorio:
@@ -82,7 +84,7 @@ def _handle_skill_09_side_effects(result: object, project: object, v: str, outpu
         project.save_output_file(excel_bytes, v, "resultado_planejamento.xlsx")  # type: ignore[union-attr]
 
     excel_live_bytes = getattr(result, "excel_live_bytes", None)
-    if excel_live_bytes:
+    if excel_live_bytes and gerar_modelo_vivo:
         project.save_output_file(excel_live_bytes, v, "modelo_vivo.xlsx")  # type: ignore[union-attr]
 
     _save_memorial_bdi_files(result, project, v, gerar_mem_md, gerar_mem_pdf)
@@ -114,6 +116,29 @@ def _handle_skill_04_side_effects(result: object, project: object, v: str) -> No
     project.save_intermediate_file(
         "schedules_weekly.json", json.dumps(schedules_data, indent=2, ensure_ascii=False, default=_json_default), v
     )  # type: ignore[union-attr]
+
+
+def _persist_typed_artifacts(result: object, project: object, v: str) -> None:
+    artifacts = getattr(result, "artifacts", None)
+    if not artifacts:
+        return
+
+    try:
+        from concilium.infrastructure.storage.artifact_store import FileSystemArtifactStore
+
+        store = FileSystemArtifactStore(project.version_path(v) / "artifacts")  # type: ignore[union-attr]
+        for artifact in artifacts:
+            payload = getattr(artifact, "payload", None)
+            payload_path = store.root / f"{artifact.meta.artifact_id}.json"
+            if hasattr(payload, "model_dump_json"):
+                payload_json = payload.model_dump_json(indent=2)
+            else:
+                payload_json = json.dumps(payload, indent=2, ensure_ascii=False, default=str)
+            payload_path.write_text(payload_json, encoding="utf-8")
+            store.save_meta_sidecar(payload_path, artifact.meta)
+    except Exception:
+        # Best-effort: artifacts tipados não podem quebrar a persistência principal do canônico.
+        pass
 
 
 class RuntimeError(Exception):
@@ -206,32 +231,16 @@ def _md_to_pdf_bytes(md_text: str, title: str = "") -> bytes | None:
         return None
 
 
-def _memorial_bdi_to_md(memorial: dict) -> str:
-    """Converte memorial_bdi dict para Markdown auditável."""
+def _mbm_pct(v: object) -> str:
+    return f"{float(v or 0) * 100:.2f}%"
+
+
+def _mbm_brl(v: object) -> str:
+    return f"R$ {float(v or 0):,.2f}"
+
+
+def _mbm_encargos_sociais(memorial: dict) -> list[str]:
     lines: list[str] = []
-    meta = memorial.get("meta") or {}
-    proj = meta.get("projeto", "")
-    gerado = str(meta.get("gerado_em", ""))[:19].replace("T", " ")
-    lines += ["# Memorial de Cálculo BDI", "", f"**Projeto:** {proj}  ", f"**Gerado em:** {gerado}", ""]
-
-    def _pct(v):
-        return f"{float(v or 0) * 100:.2f}%"
-
-    def _brl(v):
-        return f"R$ {float(v or 0):,.2f}"
-
-    # ── Resultado Sintético ──────────────────────────────────────────────────
-    lines += ["## Resultado Financeiro", ""]
-    lines += ["| Indicador | Valor |", "|-----------|------:|"]
-    lines.append(f"| Preço de Venda (c/BDI) | {_brl(memorial.get('venda_total_com_bdi'))} |")
-    lines.append(f"| Custo Direto | {_brl(memorial.get('custo_direto_total'))} |")
-    lines.append(f"| Overhead | {_brl(memorial.get('overhead_total'))} |")
-    lines.append(f"| Tributos | {_brl(memorial.get('tributos_total'))} |")
-    lines.append(f"| Margem Líquida | {_brl(memorial.get('margem_total'))} ({_pct(memorial.get('margem_pct'))}) |")
-    lines += ["", "---", ""]
-
-    # ── Encargos Sociais ─────────────────────────────────────────────────────
-    lines += ["## Encargos Sociais", ""]
     for regime_key, label in [("encargos_horista", "CLT-Horista"), ("encargos_mensalista", "CLT-Mensalista")]:
         enc = memorial.get(regime_key) or {}
         if not enc:
@@ -249,51 +258,90 @@ def _memorial_bdi_to_md(memorial: dict) -> str:
         ]:
             v = enc.get(grupo)
             if v is not None:
-                lines.append(f"| {grupo.upper().replace('_', ' ')} | {desc} | {_pct(v)} |")
-        lines.append(f"| **TOTAL** | | **{_pct(enc.get('total'))}** |")
+                lines.append(f"| {grupo.upper().replace('_', ' ')} | {desc} | {_mbm_pct(v)} |")
+        lines.append(f"| **TOTAL** | | **{_mbm_pct(enc.get('total'))}** |")
         lines += [""]
+    return lines
 
-    lines += ["---", ""]
 
-    # ── BDI por Categoria ────────────────────────────────────────────────────
-    lines += ["## BDI por Categoria", ""]
+def _mbm_bdi_categorias(memorial: dict) -> list[str]:
+    lines: list[str] = []
     bdi_cats = memorial.get("bdi_por_categoria") or {}
-    if bdi_cats:
-        lines += [
-            "| Categoria | AC | DF | R | CR | L | T | BDI Total |",
-            "|-----------|---:|---:|--:|---:|--:|--:|----------:|",
-        ]
-        for cat, bdi in bdi_cats.items():
-            if not isinstance(bdi, dict):
-                continue
-            lines.append(
-                f"| {cat} | {_pct(bdi.get('ac'))} | {_pct(bdi.get('df'))} | "
-                f"{_pct(bdi.get('r'))} | {_pct(bdi.get('cr'))} | {_pct(bdi.get('l'))} | "
-                f"{_pct(bdi.get('t'))} | **{_pct(bdi.get('bdi_total'))}** |"
-            )
-        lines += [""]
+    if not bdi_cats:
+        return lines
+    lines += [
+        "## BDI por Categoria",
+        "",
+        "| Categoria | AC | DF | R | CR | L | T | BDI Total |",
+        "|-----------|---:|---:|--:|---:|--:|--:|----------:|",
+    ]
+    for cat, bdi in bdi_cats.items():
+        if not isinstance(bdi, dict):
+            continue
+        lines.append(
+            f"| {cat} | {_mbm_pct(bdi.get('ac'))} | {_mbm_pct(bdi.get('df'))} | "
+            f"{_mbm_pct(bdi.get('r'))} | {_mbm_pct(bdi.get('cr'))} | {_mbm_pct(bdi.get('l'))} | "
+            f"{_mbm_pct(bdi.get('t'))} | **{_mbm_pct(bdi.get('bdi_total'))}** |"
+        )
+    lines += [""]
+    return lines
 
-    lines += ["---", ""]
 
-    # ── Aplicação por Item da EAP ────────────────────────────────────────────
+def _mbm_aplicacao_eap(memorial: dict) -> list[str]:
+    lines: list[str] = []
     aplicacao = memorial.get("aplicacao_por_item") or []
-    if aplicacao:
-        lines += ["## Aplicação por Item (EAP)", ""]
-        lines += [
-            "| Item | Custo s/BDI | BDI Pond. | Preço c/BDI | Margem% |",
-            "|------|------------:|----------:|------------:|--------:|",
-        ]
-        for item in aplicacao:
-            if not isinstance(item, dict):
-                continue
-            iid = item.get("item_id") or item.get("cpu_id") or "—"
-            custo = item.get("custo_sem_bdi", 0)
-            venda = item.get("preco_com_bdi", 0)
-            bdi_pond = item.get("bdi_ponderado", 0)
-            margem = (venda - custo) / venda * 100 if venda else 0
-            lines.append(f"| {iid} | {_brl(custo)} | {_pct(bdi_pond)} | {_brl(venda)} | {margem:.2f}% |")
-        lines += [""]
+    if not aplicacao:
+        return lines
+    lines += [
+        "## Aplicação por Item (EAP)",
+        "",
+        "| Item | Custo s/BDI | BDI Pond. | Preço c/BDI | Margem% |",
+        "|------|------------:|----------:|------------:|--------:|",
+    ]
+    for item in aplicacao:
+        if not isinstance(item, dict):
+            continue
+        iid = item.get("item_id") or item.get("cpu_id") or "—"
+        custo = item.get("custo_sem_bdi", 0)
+        venda = item.get("preco_com_bdi", 0)
+        bdi_pond = item.get("bdi_ponderado", 0)
+        margem = (venda - custo) / venda * 100 if venda else 0
+        lines.append(f"| {iid} | {_mbm_brl(custo)} | {_mbm_pct(bdi_pond)} | {_mbm_brl(venda)} | {margem:.2f}% |")
+    lines += [""]
+    return lines
 
+
+def _memorial_bdi_to_md(memorial: dict) -> str:
+    """Converte memorial_bdi dict para Markdown auditável."""
+    meta = memorial.get("meta") or {}
+    proj = meta.get("projeto", "")
+    gerado = str(meta.get("gerado_em", ""))[:19].replace("T", " ")
+    lines: list[str] = [
+        "# Memorial de Cálculo BDI",
+        "",
+        f"**Projeto:** {proj}  ",
+        f"**Gerado em:** {gerado}",
+        "",
+        "## Resultado Financeiro",
+        "",
+        "| Indicador | Valor |",
+        "|-----------|------:|",
+        f"| Preço de Venda (c/BDI) | {_mbm_brl(memorial.get('venda_total_com_bdi'))} |",
+        f"| Custo Direto | {_mbm_brl(memorial.get('custo_direto_total'))} |",
+        f"| Overhead | {_mbm_brl(memorial.get('overhead_total'))} |",
+        f"| Tributos | {_mbm_brl(memorial.get('tributos_total'))} |",
+        f"| Margem Líquida | {_mbm_brl(memorial.get('margem_total'))} ({_mbm_pct(memorial.get('margem_pct'))}) |",
+        "",
+        "---",
+        "",
+        "## Encargos Sociais",
+        "",
+    ]
+    lines += _mbm_encargos_sociais(memorial)
+    lines += ["---", ""]
+    lines += _mbm_bdi_categorias(memorial)
+    lines += ["---", ""]
+    lines += _mbm_aplicacao_eap(memorial)
     return "\n".join(lines)
 
 
@@ -471,7 +519,8 @@ def _md_planejamento(plan: list) -> list[str]:
     if not plan:
         return lines
     lines += [
-        "| Item | Descricao | Un. | Qtd | MO (R$) | EQ (R$) | Diesel (R$) | Mat (R$) | s/BDI (R$) | c/BDI (R$) | Criticidade |",
+        "| Item | Descricao | Un. | Qtd | MO (R$) | EQ (R$) | Diesel (R$) |"
+        " Mat (R$) | s/BDI (R$) | c/BDI (R$) | Criticidade |",
         "|------|-----------|-----|----:|--------:|--------:|------------:|---------:|-----------:|-----------:|:-----------:|",
     ]
     for p in plan:
@@ -491,6 +540,48 @@ def _md_planejamento(plan: list) -> list[str]:
     return lines
 
 
+def _mifv_funcoes_rows(funcoes: list) -> list[str]:
+    lines = ["| Funcao | Qtd | Custo Mensal (R$) | Tipo |", "|--------|----:|------------------:|:-----|"]
+    for f in funcoes:
+        lines.append(
+            f"| {f.get('funcao') or f.get('funcao_id') or '—'}"
+            f" | {int(f.get('quantidade', 1))}"
+            f" | {float(f.get('custo_mensal', 0)):,.2f}"
+            f" | {f.get('tipo_contratacao') or '—'} |"
+        )
+    lines.append("")
+    return lines
+
+
+def _mifv_verbas_rows(verbas: list) -> list[str]:
+    lines = ["**Verbas mensais:**", "", "| Descricao | Valor Mensal (R$) |", "|-----------|------------------:|"]
+    for v in verbas:
+        lines.append(f"| {v.get('descricao') or '—'} | {float(v.get('valor_mensal', 0)):,.2f} |")
+    lines.append("")
+    return lines
+
+
+def _mifv_funcoes_rows(funcoes: list) -> list[str]:
+    lines = ["| Funcao | Qtd | Custo Mensal (R$) | Tipo |", "|--------|----:|------------------:|:-----|"]
+    for f in funcoes:
+        lines.append(
+            f"| {f.get('funcao') or f.get('funcao_id') or '—'}"
+            f" | {int(f.get('quantidade', 1))}"
+            f" | {float(f.get('custo_mensal', 0)):,.2f}"
+            f" | {f.get('tipo_contratacao') or '—'} |"
+        )
+    lines.append("")
+    return lines
+
+
+def _mifv_verbas_rows(verbas: list) -> list[str]:
+    lines = ["**Verbas mensais:**", "", "| Descricao | Valor Mensal (R$) |", "|-----------|------------------:|"]
+    for v in verbas:
+        lines.append(f"| {v.get('descricao') or '—'} | {float(v.get('valor_mensal', 0)):,.2f} |")
+    lines.append("")
+    return lines
+
+
 def _md_indir_funcoes_verbas(ind: dict) -> list[str]:
     funcoes = ind.get("funcoes") or []
     verbas = ind.get("verbas_mensais") or []
@@ -500,18 +591,9 @@ def _md_indir_funcoes_verbas(ind: dict) -> list[str]:
     desc = ind.get("descricao", cat)
     lines: list[str] = [f"### {cat} — {desc}", ""]
     if funcoes:
-        lines += ["| Funcao | Qtd | Custo Mensal (R$) | Tipo |", "|--------|----:|------------------:|:-----|"]
-        for f in funcoes:
-            lines.append(
-                f"| {f.get('funcao') or f.get('funcao_id') or '—'} | {int(f.get('quantidade', 1))} "
-                f"| {float(f.get('custo_mensal', 0)):,.2f} | {f.get('tipo_contratacao') or '—'} |"
-            )
-        lines += [""]
+        lines += _mifv_funcoes_rows(funcoes)
     if verbas:
-        lines += ["**Verbas mensais:**", "", "| Descricao | Valor Mensal (R$) |", "|-----------|------------------:|"]
-        for v in verbas:
-            lines.append(f"| {v.get('descricao') or '—'} | {float(v.get('valor_mensal', 0)):,.2f} |")
-        lines += [""]
+        lines += _mifv_verbas_rows(verbas)
     return lines
 
 
@@ -588,6 +670,25 @@ def _md_analise_composicional(analise: list) -> list[str]:
     return lines
 
 
+def _mdgf_exposicao_block(labels: list, expos: list) -> list[str]:
+    expos_n = [float(v) if _is_nullish(v) is False else 0.0 for v in expos]
+    max_abs_e = max((abs(v) for v in expos_n), default=0.0)
+    y_top_e = max(1.0, max_abs_e * 1.2)
+    return (
+        ["### Exposicao Acumulada", ""]
+        + [
+            "```mermaid",
+            "xychart-beta",
+            '    title "Exposicao Acumulada (Receita - Despesa acum.)"',
+            f"    x-axis {json.dumps(labels, ensure_ascii=False)}",
+            f'    y-axis "R$" 0 --> {y_top_e:.2f}',
+            f"    line {json.dumps([round(v, 2) for v in expos_n], ensure_ascii=False)}",
+            "```",
+        ]
+        + [""]
+    )
+
+
 def _md_graficos_financeiro(graficos: dict) -> list[str]:
     financeiro = graficos.get("financeiro") or {}
     if not isinstance(financeiro, dict):
@@ -602,57 +703,48 @@ def _md_graficos_financeiro(graficos: dict) -> list[str]:
         if chart:
             lines += ["### Fluxo de Caixa", ""] + chart + [""]
     if expos:
-        expos_n = [float(v) if _is_nullish(v) is False else 0.0 for v in expos]
-        max_abs_e = max((abs(v) for v in expos_n), default=0.0)
-        y_top_e = max(1.0, max_abs_e * 1.2)
-        lines += (
-            ["### Exposicao Acumulada", ""]
-            + [
-                "```mermaid",
-                "xychart-beta",
-                '    title "Exposicao Acumulada (Receita - Despesa acum.)"',
-                f"    x-axis {json.dumps(labels, ensure_ascii=False)}",
-                f'    y-axis "R$" 0 --> {y_top_e:.2f}',
-                f"    line {json.dumps([round(v, 2) for v in expos_n], ensure_ascii=False)}",
-                "```",
-            ]
-            + [""]
-        )
+        lines += _mdgf_exposicao_block(labels, expos)
     return lines
+
+
+def _mdg_add_histogram(lines: list, graficos: dict, key: str, title: str, ylabel: str) -> None:
+    """Appends histogram section to lines if data is available."""
+    section = graficos.get(key) or {}
+    if not isinstance(section, dict):
+        return
+    chart = _xychart(
+        title,
+        [str(lbl) for lbl in section.get("labels", [])],
+        list(section.get("values", [])),
+        ylabel,
+        monthly_ticks=True,
+    )
+    if chart:
+        lines += [f"### {title}", ""] + chart + [""]
+
+
+def _mdg_add_histogram(lines: list, graficos: dict, key: str, title: str, ylabel: str) -> None:
+    """Appends histogram section to lines if data is available."""
+    section = graficos.get(key) or {}
+    if not isinstance(section, dict):
+        return
+    chart = _xychart(
+        title,
+        [str(lbl) for lbl in section.get("labels", [])],
+        list(section.get("values", [])),
+        ylabel,
+        monthly_ticks=True,
+    )
+    if chart:
+        lines += [f"### {title}", ""] + chart + [""]
 
 
 def _md_graficos(graficos: dict) -> list[str]:
     if not graficos:
         return []
     lines: list[str] = ["## Graficos", ""]
-    equipamentos = graficos.get("equipamentos") or {}
-    chart = (
-        _xychart(
-            "Histograma de Equipamentos",
-            [str(l) for l in equipamentos.get("labels", [])],
-            list(equipamentos.get("values", [])),
-            "Unidades",
-            monthly_ticks=True,
-        )
-        if isinstance(equipamentos, dict)
-        else None
-    )
-    if chart:
-        lines += ["### Equipamentos", ""] + chart + [""]
-    mao_obra = graficos.get("mao_obra") or {}
-    chart = (
-        _xychart(
-            "Histograma de Mao de Obra",
-            [str(l) for l in mao_obra.get("labels", [])],
-            list(mao_obra.get("values", [])),
-            "Pessoas",
-            monthly_ticks=True,
-        )
-        if isinstance(mao_obra, dict)
-        else None
-    )
-    if chart:
-        lines += ["### Mao de Obra", ""] + chart + [""]
+    _mdg_add_histogram(lines, graficos, "equipamentos", "Histograma de Equipamentos", "Unidades")
+    _mdg_add_histogram(lines, graficos, "mao_obra", "Histograma de Mao de Obra", "Pessoas")
     gantt = graficos.get("cronograma") or {}
     chart = _gantt_block("Cronograma de Execucao", list(gantt.get("tasks", []))) if isinstance(gantt, dict) else None
     if chart:
@@ -662,38 +754,63 @@ def _md_graficos(graficos: dict) -> list[str]:
     return lines
 
 
+def _mip_criticidade(valor: dict) -> str:
+    a_plus = valor.get("total_A_mais", 0)
+    a, b, cv = valor.get("total_A", 0), valor.get("total_B", 0), valor.get("total_C", 0)
+    total = valor.get("total_atividades", 0)
+    return f"- **criticidade**: total={total}, A+={a_plus}, A={a}, B={b}, C={cv}"
+
+
+def _mip_sensibilidade(valor: dict) -> str:
+    status = valor.get("status_margem", "--")
+    repair_steps = len(valor.get("passos_repair", []))
+    oportunidades = len(valor.get("oportunidades", []))
+    extra = []
+    for field, label in [("margem_entrada", "margem_entrada"), ("margem_pos_repair", "margem_pos_repair")]:
+        v = valor.get(field)
+        if v is not None:
+            try:
+                extra.append(f"{label}={float(v) * 100:.2f}%")
+            except Exception:
+                pass
+    extra_txt = ", " + ", ".join(extra) if extra else ""
+    return (
+        f"- **sensibilidade**: status={status}, repair_steps={repair_steps}, oportunidades={oportunidades}{extra_txt}"
+    )
+
+
+def _mip_intervencao(valor: dict) -> str:
+    recomendacao = valor.get("recomendacao_primaria") or {}
+    rec_nome = recomendacao.get("nome", "Nenhuma") if isinstance(recomendacao, dict) else str(recomendacao)
+    eixos = valor.get("eixos_intervencao", [])
+    return f"- **intervencao**: recomendacao={rec_nome}, eixos={len(eixos)}"
+
+
 def _md_insight_pair(nome: str, valor: Any) -> str | None:
     """Formata um par (nome, valor) de insight."""
     valor = _drop_nulls(valor)
     if _is_nullish(valor):
         return None
     if nome == "criticidade" and isinstance(valor, dict):
-        a_plus = valor.get("total_A_mais", 0)
-        a, b, c = valor.get("total_A", 0), valor.get("total_B", 0), valor.get("total_C", 0)
-        total = valor.get("total_atividades", 0)
-        return f"- **criticidade**: total={total}, A+={a_plus}, A={a}, B={b}, C={c}"
+        return _mip_criticidade(valor)
     if nome == "sensibilidade" and isinstance(valor, dict):
-        status = valor.get("status_margem", "--")
-        repair_steps = len(valor.get("passos_repair", []))
-        oportunidades = len(valor.get("oportunidades", []))
-        extra = []
-        for field, label in [("margem_entrada", "margem_entrada"), ("margem_pos_repair", "margem_pos_repair")]:
-            v = valor.get(field)
-            if v is not None:
-                try:
-                    extra.append(f"{label}={float(v) * 100:.2f}%")
-                except Exception:
-                    pass
-        extra_txt = ", " + ", ".join(extra) if extra else ""
-        return f"- **sensibilidade**: status={status}, repair_steps={repair_steps}, oportunidades={oportunidades}{extra_txt}"
+        return _mip_sensibilidade(valor)
     if nome == "intervencao" and isinstance(valor, dict):
-        recomendacao = valor.get("recomendacao_primaria") or {}
-        rec_nome = recomendacao.get("nome", "Nenhuma") if isinstance(recomendacao, dict) else str(recomendacao)
-        eixos = valor.get("eixos_intervencao", [])
-        return f"- **intervencao**: recomendacao={rec_nome}, eixos={len(eixos)}"
+        return _mip_intervencao(valor)
     if isinstance(valor, dict):
         return f"- **{nome}**: {json.dumps(valor, ensure_ascii=False)}"
     return f"- **{nome}**: {valor}"
+
+
+def _mi_format_item(ins: Any) -> str | None:
+    """Formats a single insight item to markdown line."""
+    if isinstance(ins, dict):
+        titulo = ins.get("titulo") or ins.get("title") or ins.get("insight", "")
+        descr = ins.get("descricao") or ins.get("description") or ""
+        return f"- **{titulo}**: {descr}"
+    if isinstance(ins, (list, tuple)) and len(ins) == 2:
+        return _md_insight_pair(str(ins[0]), ins[1])
+    return f"- {ins}"
 
 
 def _md_insights(insights: Any) -> list[str]:
@@ -702,16 +819,9 @@ def _md_insights(insights: Any) -> list[str]:
     items = insights if isinstance(insights, list) else list(insights.items()) if isinstance(insights, dict) else []
     lines: list[str] = ["## Insights Acionaveis", ""]
     for ins in items:
-        if isinstance(ins, dict):
-            titulo = ins.get("titulo") or ins.get("title") or ins.get("insight", "")
-            descr = ins.get("descricao") or ins.get("description") or ""
-            lines.append(f"- **{titulo}**: {descr}")
-        elif isinstance(ins, (list, tuple)) and len(ins) == 2:
-            row = _md_insight_pair(str(ins[0]), ins[1])
-            if row:
-                lines.append(row)
-        else:
-            lines.append(f"- {ins}")
+        row = _mi_format_item(ins)
+        if row:
+            lines.append(row)
     lines += ["", "---", ""]
     return lines
 
@@ -742,6 +852,197 @@ def _json_default(obj: Any) -> Any:
     if isinstance(obj, UUID):
         return str(obj)
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+def _rt_ingest_insumos(data: Any, insumos: list) -> None:
+    if isinstance(data, list):
+        insumos.extend(data)
+    elif isinstance(data, dict) and "insumos" in data:
+        insumos.extend(data["insumos"])
+    elif isinstance(data, dict):
+        insumos.append(data)
+
+
+def _rt_load_insumos_subdir(sub: Any, insumos: list) -> None:
+    for f in sub.glob("*.json"):
+        try:
+            _rt_ingest_insumos(json.loads(f.read_text(encoding="utf-8")), insumos)
+        except Exception:
+            pass
+
+
+def _rt_dedup_insumos(insumos: list) -> list:
+    seen: set = set()
+    unique = []
+    for i in insumos:
+        iid = i.get("id") or i.get("codigo")
+        if iid and iid not in seen:
+            seen.add(iid)
+            unique.append(i)
+    return unique
+
+
+def _rt_parse_executed_skills(log_path: Any) -> set:
+    """Parses invocations log and returns set of executed skill IDs."""
+    executed: set = set()
+    if not log_path.exists():
+        return executed
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            import json as _json
+
+            entry = _json.loads(line)
+            if entry.get("status") in ("OK", "ERRO") and "skill" in entry:
+                executed.add(entry["skill"])
+        except Exception:
+            pass
+    return executed
+
+
+def _rsop_execute_skill(skill_fn, kwargs, skill_id, execution_id, ts_inicio, plano_store):
+    """Run skill_fn; on exception logs and re-raises appropriately."""
+    try:
+        return skill_fn(**kwargs)
+    except Exception as exc:
+        plano_store.log_invocation(
+            {
+                "ts": ts_inicio.isoformat(),
+                "execution_id": execution_id,
+                "skill": skill_id,
+                "status": "ERRO",
+                "erro": str(exc),
+            }
+        )
+        if isinstance(exc, RuntimeError):
+            raise
+        raise RuntimeTechnicalError(f"Falha técnica na skill '{skill_id}': {exc}") from exc
+
+
+def _rp_apply_dv(new_canonical: Any, dv_raw: Any) -> Any:
+    """Apply decision variables to canonical model if valid."""
+    try:
+        from concilium.domain.models.decision_variables import DecisionVariables
+
+        dv_obj = DecisionVariables.model_validate(dv_raw) if isinstance(dv_raw, dict) else dv_raw
+        if new_canonical.decision_variables != dv_obj:
+            return new_canonical.model_copy(update={"decision_variables": dv_obj})
+    except Exception:
+        pass
+    return new_canonical
+
+
+def _rp_resolve_state(skill_id: str, result: Any, skill_inputs: dict) -> Any:
+    """State resolution for run_pipeline: taint propagation + decision variables."""
+    new_canonical = result.canonical
+    if result.has_errors and skill_id in _GATE_SKILLS:
+        blocked = list(set(new_canonical.pipeline_blocked_from) | {skill_id})
+        new_canonical = new_canonical.model_copy(
+            update={
+                "pipeline_blocked_from": blocked,
+                "pipeline_integridade": "CORROMPIDO",
+            }
+        )
+    elif not result.has_errors and skill_id in _GATE_SKILLS:
+        current_blocked = set(new_canonical.pipeline_blocked_from)
+        if skill_id in current_blocked:
+            new_blocked = sorted(current_blocked - {skill_id})
+            new_canonical = new_canonical.model_copy(
+                update={
+                    "pipeline_blocked_from": new_blocked,
+                    "pipeline_integridade": "CORROMPIDO" if new_blocked else None,
+                }
+            )
+    dv_raw = skill_inputs.get(skill_id, {}).get("decision_variables")
+    if dv_raw is not None and not result.has_errors:
+        new_canonical = _rp_apply_dv(new_canonical, dv_raw)
+    return new_canonical
+
+
+def _rp_oas_log_invocation(runtime, store, version, invocation_context, skill_id, result, record):
+    """Log skill invocation to store. Errors are silently swallowed."""
+    try:
+        from datetime import UTC as _UTC
+        from datetime import datetime
+
+        contract = runtime.get_skill_contract(skill_id)
+        error_kind = "DOMINIO" if record.status == "ERRO" else ("TECNICO" if record.status == "EXCEPTION" else None)
+        store.log_invocation(
+            version,
+            {
+                "ts": datetime.now(_UTC).isoformat(),
+                "skill": skill_id,
+                **invocation_context,
+                "contract": {
+                    "required_inputs": contract.required_inputs,
+                    "optional_inputs": contract.optional.inputs,  # type: ignore[attr-defined]
+                    "depends_on_skills": contract.depends_on_skills,
+                    "produces_section": contract.produces_section,
+                },
+                "status": record.status,
+                "duration_ms": record.duration_ms,
+                "error_kind": error_kind,
+                "avisos": record.warnings,
+                "validacoes": [
+                    {"codigo": val.codigo, "status": val.status} for val in getattr(result, "validacoes", [])
+                ],
+            },
+        )
+    except Exception:
+        pass
+
+
+def _rp_oas_save_state(store, version, skill_id, result, new_state, record):
+    """Persist canonical state after skill execution (taint-aware)."""
+    should_save = not (skill_id == "00-escopo" and record.status == "ERRO")
+    if new_state is not None and should_save and record.status != "EXCEPTION":
+        store.save_canonical(new_state, version, created_by=skill_id)
+    elif result is None and skill_id in _GATE_SKILLS and new_state is not None:
+        blocked = list(set(new_state.pipeline_blocked_from) | {skill_id})
+        tainted = new_state.model_copy(
+            update={
+                "pipeline_blocked_from": blocked,
+                "pipeline_integridade": "CORROMPIDO",
+            }
+        )
+        store.save_canonical(tainted, version, created_by=f"taint:{skill_id}")
+
+
+def _rp_on_after_skill(runtime, store, version, invocation_context, skill_id, result, new_state, record):
+    """on_after_skill callback: persistence + side effects + logging."""
+    _rp_oas_save_state(store, version, skill_id, result, new_state, record)
+    if result is not None:
+        runtime._process_side_effects(skill_id, result, store, version)
+    msg = f"[{record.status}] {record.duration_ms}ms"
+    if record.errors:
+        msg += f"  {'; '.join(record.errors)}"
+    print(msg)
+    if record.status == "EXCEPTION" and runtime._meta_is_gate(skill_id):
+        print(f"  [STOP] Interrompendo pipeline: skill portão '{skill_id}' falhou.")
+    _rp_oas_log_invocation(runtime, store, version, invocation_context, skill_id, result, record)
+
+
+def _rp_print_skill_start(skill_id: str) -> None:
+    print(f"  > {skill_id}...", end=" ", flush=True)
+
+
+def _rp_format_records(records: list) -> list[dict]:
+    """Format execution records to pipeline return format."""
+    result = []
+    for r in records:
+        entry: dict = {
+            "skill": r.skill_id,
+            "status": r.status,
+            "duration_ms": r.duration_ms,
+            "avisos": r.warnings,
+        }
+        if r.errors:
+            entry["erros"] = r.errors
+        if r.status == "EXCEPTION" and r.errors:
+            entry["erro"] = r.errors[0]
+        result.append(entry)
+    return result
 
 
 class Runtime:
@@ -1001,7 +1302,7 @@ class Runtime:
             search_dirs.append(cat_dir / "produtividades")
 
         for cpu in cpus:
-            prod_id = cpu.get("producao_id")
+            prod_id = cpu.get("producao_id_ref") or cpu.get("producao_id")
             if not prod_id or prod_id in seen:
                 continue
 
@@ -1025,40 +1326,15 @@ class Runtime:
             return []
 
         insumos: list[dict[str, Any]] = []
-
-        def _ingest(data):
-            if isinstance(data, list):
-                insumos.extend(data)
-            elif isinstance(data, dict) and "insumos" in data:
-                insumos.extend(data["insumos"])
-            elif isinstance(data, dict):
-                insumos.append(data)
-
-        # Arquivos diretos em insumos/*.json
         for f in dir_insumos.glob("*.json"):
             try:
-                _ingest(json.loads(f.read_text(encoding="utf-8")))
+                _rt_ingest_insumos(json.loads(f.read_text(encoding="utf-8")), insumos)
             except Exception:
                 pass
-
-        # Diretórios por categoria (insumos/mao_obra/*.json)
         for sub in dir_insumos.iterdir():
             if sub.is_dir():
-                for f in sub.glob("*.json"):
-                    try:
-                        _ingest(json.loads(f.read_text(encoding="utf-8")))
-                    except Exception:
-                        pass
-
-        # Dedup por ID (preserva o primeiro encontrado)
-        seen = set()
-        unique = []
-        for i in insumos:
-            iid = i.get("id") or i.get("codigo")
-            if iid and iid not in seen:
-                seen.add(iid)
-                unique.append(i)
-        return unique
+                _rt_load_insumos_subdir(sub, insumos)
+        return _rt_dedup_insumos(insumos)
 
     def load_manifest(self, skill_id: str) -> dict[str, Any] | None:
         key = f"manifest:{skill_id}"
@@ -1101,17 +1377,7 @@ class Runtime:
         if not dep_skills:
             return []
         log_path = project.version_path(version) / project.INVOCATIONS_LOG
-        executed_ok: set[str] = set()
-        if log_path.exists():
-            for line in log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    entry = json.loads(line)
-                    if entry.get("status") in ("OK", "ERRO") and "skill" in entry:
-                        executed_ok.add(entry["skill"])
-                except json.JSONDecodeError:
-                    pass
+        executed_ok = _rt_parse_executed_skills(log_path)
         return [dep for dep in dep_skills if dep not in executed_ok]
 
     def create_snapshots(self, project: ProjectStore) -> dict[str, str]:
@@ -1162,6 +1428,17 @@ class Runtime:
                 normalized["percentual_encargos"] = motor["percentual_total"]
             if motor.get("percentual_mensalista") is not None:
                 normalized["percentual_encargos_mensalista"] = motor["percentual_mensalista"]
+        if skill_id == "09-relatorio-e-artefatos":
+            try:
+                deliv_cfg = project.read_json("deliverables_config.json", {})
+                outputs = deliv_cfg.get("outputs", {}) if isinstance(deliv_cfg, dict) else {}
+                normalized.setdefault(
+                    "gerar_excel",
+                    bool(outputs.get("resultado_xlsx", outputs.get("cronograma_xlsx", True))),
+                )
+                normalized.setdefault("gerar_modelo_vivo", bool(outputs.get("modelo_vivo_xlsx", False)))
+            except Exception:
+                pass
         return normalized
 
     def _build_skill_kwargs(
@@ -1192,6 +1469,90 @@ class Runtime:
                 kwargs[param] = providers[param]
         return kwargs
 
+    def _rsk_resolve_missing_deps(
+        self,
+        contract: Any,
+        skill_id: str,
+        project: Any,
+        v: str,
+        _executed_ok: set[str] | None,
+    ) -> list[str]:
+        if _executed_ok is not None:
+            return [d for d in contract.depends_on_skills if d not in _executed_ok]
+        return self.check_manifest_deps(skill_id, project, v)
+
+    def _rsk_handle_error(
+        self,
+        exc: Exception,
+        skill_id: str,
+        canonical_in: Any,
+        project: Any,
+        v: str,
+        ts_inicio: Any,
+        execution_id: str,
+        correlation_id: str,
+        trace_id: str | None,
+    ) -> None:
+        error_kind = "DOMINIO" if isinstance(exc, RuntimeDomainError) else "TECNICO"
+        project.log_invocation(
+            v,
+            {
+                "ts": ts_inicio.isoformat(),
+                "execution_id": execution_id,
+                "correlation_id": correlation_id,
+                "skill": skill_id,
+                "status": "ERRO",
+                "error_kind": error_kind,
+                "erro": str(exc),
+            },
+        )
+        if skill_id in _GATE_SKILLS and canonical_in is not None:
+            blocked = list(set(canonical_in.pipeline_blocked_from) | {skill_id})
+            tainted = canonical_in.model_copy(
+                update={
+                    "pipeline_blocked_from": blocked,
+                    "pipeline_integridade": "CORROMPIDO",
+                }
+            )
+            project.save_canonical(tainted, v, trace_id=trace_id, created_by=f"taint:{skill_id}")
+        if isinstance(exc, RuntimeError):
+            raise
+        raise RuntimeTechnicalError(f"Falha técnica ao executar skill '{skill_id}': {exc}") from exc
+
+    def _rsk_execution_ids(self, normalized_inputs: dict, project: Any, v: str) -> tuple[str, str]:
+        from uuid import uuid4 as _uuid4
+
+        execution_id = normalized_inputs.get("execution_id") or str(_uuid4())
+        correlation_id = normalized_inputs.get("correlation_id") or f"{project.meta['id']}:{v}"
+        return execution_id, correlation_id
+
+    def _rsk_build_log_entry(
+        self,
+        contract: Any,
+        result: Any,
+        ts_inicio: Any,
+        ts_fim: Any,
+        execution_id: str,
+        correlation_id: str,
+        skill_id: str,
+    ) -> dict:
+        return {
+            "ts": ts_inicio.isoformat(),
+            "execution_id": execution_id,
+            "correlation_id": correlation_id,
+            "skill": skill_id,
+            "contract": {
+                "required_inputs": contract.required_inputs,
+                "optional_inputs": contract.optional_inputs,
+                "depends_on_skills": contract.depends_on_skills,
+                "produces_section": contract.produces_section,
+            },
+            "status": "ERRO" if result.has_errors else "OK",
+            "duration_ms": int((ts_fim - ts_inicio).total_seconds() * 1000),
+            "error_kind": "DOMINIO" if result.has_errors else None,
+            "validacoes": [{"codigo": item.codigo, "status": item.status} for item in result.validacoes],
+        }
+
     def run_skill(
         self,
         skill_id: str,
@@ -1208,10 +1569,7 @@ class Runtime:
         if v is None:
             raise RuntimeDomainError("Nenhuma versão ativa. Execute 'concilium version new' primeiro.")
 
-        if _executed_ok is not None:
-            missing_deps = [d for d in contract.depends_on_skills if d not in _executed_ok]
-        else:
-            missing_deps = self.check_manifest_deps(skill_id, project, v)
+        missing_deps = self._rsk_resolve_missing_deps(contract, skill_id, project, v, _executed_ok)
         if missing_deps:
             raise RuntimeDomainError(f"Skill '{skill_id}' requer execução prévia bem-sucedida de: {missing_deps}")
 
@@ -1226,8 +1584,7 @@ class Runtime:
         normalized_inputs = self._apply_runtime_defaults(skill_id, project, contexto, inputs or {})
 
         ts_inicio = datetime.now(UTC)
-        execution_id = normalized_inputs.get("execution_id") or str(uuid4())
-        correlation_id = normalized_inputs.get("correlation_id") or f"{project.meta['id']}:{v}"
+        execution_id, correlation_id = self._rsk_execution_ids(normalized_inputs, project, v)
         kwargs = self._build_skill_kwargs(
             contract,
             canonical_in=canonical_in,
@@ -1242,33 +1599,9 @@ class Runtime:
         try:
             result = skill_fn(**kwargs)
         except Exception as exc:
-            error_kind = "DOMINIO" if isinstance(exc, RuntimeDomainError) else "TECNICO"
-            project.log_invocation(
-                v,
-                {
-                    "ts": ts_inicio.isoformat(),
-                    "execution_id": execution_id,
-                    "correlation_id": correlation_id,
-                    "skill": skill_id,
-                    "status": "ERRO",
-                    "error_kind": error_kind,
-                    "erro": str(exc),
-                },
+            self._rsk_handle_error(
+                exc, skill_id, canonical_in, project, v, ts_inicio, execution_id, correlation_id, trace_id
             )
-            # ADR-022 D3: Se skill GATE lançou exceção, tainta o canônico para bloquear
-            # execução de downstream silenciosamente com campos em valor-zero.
-            if skill_id in _GATE_SKILLS and canonical_in is not None:
-                blocked = list(set(canonical_in.pipeline_blocked_from) | {skill_id})
-                tainted = canonical_in.model_copy(
-                    update={
-                        "pipeline_blocked_from": blocked,
-                        "pipeline_integridade": "CORROMPIDO",
-                    }
-                )
-                project.save_canonical(tainted, v, trace_id=trace_id, created_by=f"taint:{skill_id}")
-            if isinstance(exc, RuntimeError):
-                raise
-            raise RuntimeTechnicalError(f"Falha técnica ao executar skill '{skill_id}': {exc}") from exc
 
         should_save = not (skill_id == "00-escopo" and result.has_errors)
         result, should_save = self._process_taint(skill_id, result, should_save)
@@ -1286,23 +1619,7 @@ class Runtime:
 
         ts_fim = datetime.now(UTC)
         project.log_invocation(
-            v,
-            {
-                "ts": ts_inicio.isoformat(),
-                "execution_id": execution_id,
-                "correlation_id": correlation_id,
-                "skill": skill_id,
-                "contract": {
-                    "required_inputs": contract.required_inputs,
-                    "optional_inputs": contract.optional_inputs,
-                    "depends_on_skills": contract.depends_on_skills,
-                    "produces_section": contract.produces_section,
-                },
-                "status": "ERRO" if result.has_errors else "OK",
-                "duration_ms": int((ts_fim - ts_inicio).total_seconds() * 1000),
-                "error_kind": "DOMINIO" if result.has_errors else None,
-                "validacoes": [{"codigo": item.codigo, "status": item.status} for item in result.validacoes],
-            },
+            v, self._rsk_build_log_entry(contract, result, ts_inicio, ts_fim, execution_id, correlation_id, skill_id)
         )
         return result
 
@@ -1330,15 +1647,7 @@ class Runtime:
 
         # Carrega metadados do escopo para o contexto
         escopo_meta = plano_store.escopo_store.meta
-        contexto = self.load_contexto(escopo_meta.get("contexto_id") or project.meta["contexto_id"])
-
-        # Snapshots do escopo têm precedência
-        perfil = self.load_perfil(escopo_meta.get("snapshot_perfil_id") or contexto.perfil_id)
-        catalogo_id = escopo_meta.get("snapshot_catalogo_id") or contexto.catalogo_id
-        catalogo = self._load_resolved_catalogo(catalogo_id, contexto.jurisdicao_id, project)
-
-        # ADR-065: injeta TemaVisual no catálogo (backward-compat via chave legada)
-        catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()
+        contexto, perfil, catalogo = self._rsop_load_context(escopo_meta, project)
 
         # Mescla metadados do escopo nos inputs base (ADR-031)
         base_inputs = dict(escopo_meta)
@@ -1352,7 +1661,6 @@ class Runtime:
 
         ts_inicio = datetime.now(UTC)
         execution_id = normalized_inputs.get("execution_id") or str(uuid4())
-        normalized_inputs.get("correlation_id") or f"{project.meta['id']}:{plano_store.plano_id}"
 
         kwargs = self._build_skill_kwargs(
             contract,
@@ -1362,24 +1670,10 @@ class Runtime:
             perfil=perfil,
             contexto=contexto,
             project=project,
-            version=plano_store.plano_id,  # Usamos o ID do plano como 'versão' lógica para logs
+            version=plano_store.plano_id,
         )
 
-        try:
-            result = skill_fn(**kwargs)
-        except Exception as exc:
-            plano_store.log_invocation(
-                {
-                    "ts": ts_inicio.isoformat(),
-                    "execution_id": execution_id,
-                    "skill": skill_id,
-                    "status": "ERRO",
-                    "erro": str(exc),
-                }
-            )
-            if isinstance(exc, RuntimeError):
-                raise
-            raise RuntimeTechnicalError(f"Falha técnica na skill '{skill_id}': {exc}") from exc
+        result = _rsop_execute_skill(skill_fn, kwargs, skill_id, execution_id, ts_inicio, plano_store)
 
         # Processamento de Taint e Variáveis de Decisão
         should_save = not (skill_id == "00-escopo" and result.has_errors)
@@ -1403,6 +1697,15 @@ class Runtime:
             }
         )
         return result
+
+    def _rsop_load_context(self, escopo_meta: dict, project: Any) -> tuple:
+        """Load contexto, perfil and catalogo for run_skill_on_plano."""
+        contexto = self.load_contexto(escopo_meta.get("contexto_id") or project.meta["contexto_id"])
+        perfil = self.load_perfil(escopo_meta.get("snapshot_perfil_id") or contexto.perfil_id)
+        catalogo_id = escopo_meta.get("snapshot_catalogo_id") or contexto.catalogo_id
+        catalogo = self._load_resolved_catalogo(catalogo_id, contexto.jurisdicao_id, project)
+        catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()
+        return contexto, perfil, catalogo
 
     def _process_taint(self, skill_id: str, result: SkillResult, should_save: bool) -> tuple[SkillResult, bool]:
         if result.has_errors and skill_id in _GATE_SKILLS:
@@ -1458,6 +1761,8 @@ class Runtime:
         return result, should_save
 
     def _process_side_effects(self, skill_id: str, result: SkillResult, project: ProjectStore, v: str) -> None:
+        _persist_typed_artifacts(result, project, v)
+
         if skill_id == "09-relatorio-e-artefatos":
             try:
                 _deliv_cfg = project.read_json("deliverables_config.json", {})
@@ -1469,11 +1774,13 @@ class Runtime:
         elif skill_id == "12-registro-decisoes":
             decision_log = getattr(result, "decision_log", None)
             if decision_log:
+                payload = json.dumps(decision_log, indent=2, ensure_ascii=False, default=_json_default)
                 project.save_intermediate_file(
                     "decision_log.json",
-                    json.dumps(decision_log, indent=2, ensure_ascii=False, default=_json_default),
+                    payload,
                     v,
                 )
+                (project.version_path(v) / "decision_log.json").write_text(payload, encoding="utf-8")
 
         elif skill_id == "04-cronograma":
             _handle_skill_04_side_effects(result, project, v)
@@ -1501,119 +1808,17 @@ class Runtime:
         skip_bootstrap = initial_state is not None
 
         # ── Callback 1: providers ────────────────────────────────────────────
-        def providers_factory(skill_id: str, state: Any, extra_inputs: dict) -> dict:
-            contexto = self.load_contexto(store.meta["contexto_id"])
-            perfil = self.load_perfil(contexto.perfil_id)
-            catalogo = self._load_resolved_catalogo(contexto.catalogo_id, contexto.jurisdicao_id, store)
-            # ADR-065: injeta TemaVisual no catálogo (backward-compat via chave legada)
-            catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()
-            normalized = self._apply_runtime_defaults(skill_id, store, contexto, extra_inputs)
-            return {
-                "canonical_in": state,
-                "inputs": normalized,
-                "catalogo": catalogo,
-                "perfil": perfil,
-                "contexto": contexto,
-                "project": store,
-                "version": version,
-                "runtime": self,
-            }
+        providers_factory = functools.partial(self._rp_providers_factory, store, version)
 
         # ── Callback 2: state resolution (taint + decision variables) ────────
         def resolve_state(skill_id: str, result: Any, prev_state: Any) -> Any:
-            new_canonical = result.canonical
-            # ADR-022: taint propagation para skills portão
-            if result.has_errors and skill_id in _GATE_SKILLS:
-                blocked = list(set(new_canonical.pipeline_blocked_from) | {skill_id})
-                new_canonical = new_canonical.model_copy(
-                    update={
-                        "pipeline_blocked_from": blocked,
-                        "pipeline_integridade": "CORROMPIDO",
-                    }
-                )
-            elif not result.has_errors and skill_id in _GATE_SKILLS:
-                current_blocked = set(new_canonical.pipeline_blocked_from)
-                if skill_id in current_blocked:
-                    new_blocked = sorted(current_blocked - {skill_id})
-                    new_canonical = new_canonical.model_copy(
-                        update={
-                            "pipeline_blocked_from": new_blocked,
-                            "pipeline_integridade": "CORROMPIDO" if new_blocked else None,
-                        }
-                    )
-            # Decision variables
-            dv_raw = skill_inputs.get(skill_id, {}).get("decision_variables")
-            if dv_raw is not None and not result.has_errors:
-                try:
-                    from concilium.domain.models.decision_variables import DecisionVariables
-
-                    dv_obj = DecisionVariables.model_validate(dv_raw) if isinstance(dv_raw, dict) else dv_raw
-                    if new_canonical.decision_variables != dv_obj:
-                        new_canonical = new_canonical.model_copy(update={"decision_variables": dv_obj})
-                except Exception:
-                    pass
-            return new_canonical
+            return _rp_resolve_state(skill_id, result, skill_inputs)
 
         # ── Callback 3: side effects + persistence + log ─────────────────────
-        def on_before_skill(skill_id: str) -> None:
-            print(f"  > {skill_id}...", end=" ", flush=True)
+        on_before_skill = functools.partial(_rp_print_skill_start)
 
         def on_after_skill(skill_id: str, result: Any, new_state: Any, record: ExecutionRecord) -> None:
-            # Persistência do canônico
-            should_save = not (skill_id == "00-escopo" and record.status == "ERRO")
-            if new_state is not None and should_save and record.status != "EXCEPTION":
-                store.save_canonical(new_state, version, created_by=skill_id)
-            elif result is None and skill_id in _GATE_SKILLS and new_state is not None:
-                # Exceção em skill portão: taint no estado anterior
-                blocked = list(set(new_state.pipeline_blocked_from) | {skill_id})
-                tainted = new_state.model_copy(
-                    update={
-                        "pipeline_blocked_from": blocked,
-                        "pipeline_integridade": "CORROMPIDO",
-                    }
-                )
-                store.save_canonical(tainted, version, created_by=f"taint:{skill_id}")
-
-            # Side effects (Excel, relatorio.json, decision_log...)
-            if result is not None:
-                self._process_side_effects(skill_id, result, store, version)
-
-            # Saída inline
-            msg = f"[{record.status}] {record.duration_ms}ms"
-            if record.errors:
-                msg += f"  {'; '.join(record.errors)}"
-            print(msg)
-            if record.status == "EXCEPTION" and self._meta_is_gate(skill_id):
-                print(f"  [STOP] Interrompendo pipeline: skill portão '{skill_id}' falhou.")
-
-            # Invocations log
-            try:
-                contract = self.get_skill_contract(skill_id)
-                store.log_invocation(
-                    version,
-                    {
-                        "ts": datetime.now(UTC).isoformat(),
-                        "skill": skill_id,
-                        **invocation_context,
-                        "contract": {
-                            "required_inputs": contract.required_inputs,
-                            "optional_inputs": contract.optional.inputs,  # type: ignore[attr-defined]
-                            "depends_on_skills": contract.depends_on_skills,
-                            "produces_section": contract.produces_section,
-                        },
-                        "status": record.status,
-                        "duration_ms": record.duration_ms,
-                        "error_kind": "DOMINIO"
-                        if record.status == "ERRO"
-                        else ("TECNICO" if record.status == "EXCEPTION" else None),
-                        "avisos": record.warnings,
-                        "validacoes": [
-                            {"codigo": val.codigo, "status": val.status} for val in getattr(result, "validacoes", [])
-                        ],
-                    },
-                )
-            except Exception:
-                pass
+            _rp_on_after_skill(self, store, version, invocation_context, skill_id, result, new_state, record)
 
         # Skill 01 inicializa o canônico e deve rodar apenas quando não há estado prévio.
         # Em re-run/fork com canônico existente, pulamos a bootstrap para evitar VAL-ESCOPO-01.
@@ -1630,17 +1835,25 @@ class Runtime:
             on_after_skill=on_after_skill,
         )
 
-        return [
-            {
-                "skill": r.skill_id,
-                "status": r.status,
-                "duration_ms": r.duration_ms,
-                "avisos": r.warnings,
-                **({"erros": r.errors} if r.errors else {}),
-                **({"erro": r.errors[0]} if r.status == "EXCEPTION" and r.errors else {}),
-            }
-            for r in records
-        ]
+        return _rp_format_records(records)
+
+    def _rp_providers_factory(self, store: Any, version: str, skill_id: str, state: Any, extra_inputs: dict) -> dict:
+        """Build providers dict for run_pipeline callback."""
+        contexto = self.load_contexto(store.meta["contexto_id"])
+        perfil = self.load_perfil(contexto.perfil_id)
+        catalogo = self._load_resolved_catalogo(contexto.catalogo_id, contexto.jurisdicao_id, store)
+        catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()
+        normalized = self._apply_runtime_defaults(skill_id, store, contexto, extra_inputs)
+        return {
+            "canonical_in": state,
+            "inputs": normalized,
+            "catalogo": catalogo,
+            "perfil": perfil,
+            "contexto": contexto,
+            "project": store,
+            "version": version,
+            "runtime": self,
+        }
 
     def _meta_is_gate(self, skill_id: str) -> bool:
         return MANIFEST_META.get(skill_id, {}).get("gate", False)

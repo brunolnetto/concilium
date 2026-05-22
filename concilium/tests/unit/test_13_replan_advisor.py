@@ -18,6 +18,8 @@ from concilium.domain.models.canonical import (
     Venda,
 )
 
+pytestmark = [pytest.mark.slow]
+
 
 def _meta():
     return Meta(versao_schema="1.0.0", gerado_em=datetime.now(UTC), contexto_id="test")

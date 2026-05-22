@@ -26,7 +26,7 @@ class ProjectFiles:
 
 
 DEFAULT_DELIVERABLES: dict = {
-    "version": "1.1",
+    "version": "1.2",
     "outputs": {
         # ── Artefatos em disco (outputs/) ─────────────────────────────────
         "resultado_xlsx": True,  # resultado_planejamento.xlsx — planilha principal
@@ -36,15 +36,10 @@ DEFAULT_DELIVERABLES: dict = {
         # ── Abas Excel analíticas (dentro do resultado_xlsx) ─────────────
         "aba_memorial_bdi": True,  # MEMORIAL.BDI — auditoria de cálculo BDI (ADR-057)
         "aba_curva_abc": True,  # CURVA.ABC — Pareto por insumo (ADR-058)
+        "aba_curva_abc_composicao": False,  # CURVA.ABC.COMPOSICAO — Pareto por componente (MO/EQ/MAT/DIESEL)
         "aba_s_curve": True,  # S-CURVE — curva de desembolso acumulado (ADR-058)
         "aba_campanha_frota": True,  # CAMPANHA.FROTA — permanência de equipamentos (ADR-059)
         "aba_cubo_comp": True,  # CUBO.COMP — composição 4D do preço (ADR-058 ext.)
-        # ── Toggles legados (mantidos para compatibilidade) ───────────────
-        "cronograma_xlsx": True,  # alias de resultado_xlsx — mantido
-        "curva_forca_histogram": True,  # histogramas de equipe (HIST.* sheets)
-        "curva_producao_cumulativa": True,  # S-CURVE alias
-        "relatorio_produtividade": True,  # RESULTADO sheet
-        "projecao_custo": True,  # FLUXO.CAIXA sheet
     },
 }
 

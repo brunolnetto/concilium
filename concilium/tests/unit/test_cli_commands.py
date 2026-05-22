@@ -79,6 +79,7 @@ def test_cli_init_creates_project(env_with_config, tmp_path):
     assert len(proj_dirs) == 1
 
 
+@pytest.mark.slow
 def test_cli_init_invalid_contexto(env_with_config):
     result = runner.invoke(app, ["project", "init", "Proj", "--contexto", "nonexistent_ctx"])
     assert result.exit_code != 0
@@ -198,6 +199,7 @@ def test_cli_run_skill_no_version(env_with_config):
     assert result.exit_code != 0
 
 
+@pytest.mark.slow
 def test_cli_run_skill_with_inputs_json(env_with_config):
     """run with --inputs JSON string."""
     from concilium.infrastructure.storage.project import ProjectStore
@@ -251,6 +253,7 @@ def test_cli_run_skill_with_inputs_json(env_with_config):
     assert "sucesso" in result.output.lower() or "OK" in result.output
 
 
+@pytest.mark.slow
 def test_cli_run_skill_with_inputs_file(env_with_config, tmp_path):
     """run with --inputs pointing to a .json file."""
     from concilium.infrastructure.storage.project import ProjectStore

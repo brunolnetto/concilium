@@ -9,7 +9,7 @@
     "categoria_sindical": "horista_CE",
     "horas_extras_pct_padrao": 0.25,
     "percentual_encargos_local": 1.777,
-    "custo_com_encargos": null
+    "tipo_contrato": "CLT"
   },
   "classe_compartilhamento": {
     "classe": "exclusivo_dedicado",

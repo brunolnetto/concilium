@@ -9,54 +9,56 @@ from typing import Any
 _DEFAULT_ROOT = Path(__file__).resolve().parents[5]
 
 
+def _ce_compare_item(item_id: str, can_eq: dict, ref_eq: dict) -> list:
+    """Compara um item de equipe e retorna suas discrepancias."""
+    diffs = []
+    can_func = len(can_eq.get("funcoes", []))
+    ref_func = len(ref_eq.get("funcoes", []))
+    if can_func != ref_func:
+        diffs.append(
+            {
+                "item_id": item_id,
+                "campo": "funcoes_count",
+                "canonical": can_func,
+                "referencia": ref_func,
+                "delta": can_func - ref_func,
+            }
+        )
+    can_eqp = len(can_eq.get("equipamentos", []))
+    ref_eqp = len(ref_eq.get("equipamentos", []))
+    if can_eqp != ref_eqp:
+        diffs.append(
+            {
+                "item_id": item_id,
+                "campo": "equipamentos_count",
+                "canonical": can_eqp,
+                "referencia": ref_eqp,
+                "delta": can_eqp - ref_eqp,
+            }
+        )
+    can_cost = can_eq.get("custo_total", 0.0)
+    ref_cost = (ref_eq.get("custos") or {}).get("total", ref_eq.get("custo_total", 0.0))
+    if abs(can_cost - ref_cost) > 0.01:
+        diffs.append(
+            {
+                "item_id": item_id,
+                "campo": "custo_total",
+                "canonical": round(can_cost, 2),
+                "referencia": round(ref_cost, 2),
+                "delta": round(can_cost - ref_cost, 2),
+            }
+        )
+    return diffs
+
+
 def _compare_equipes(canonical_equipes: list, ref_equipes: list) -> list[dict[str, Any]]:
-    discrepancias: list[dict[str, Any]] = []
     can_dict = {eq["item_id"]: eq for eq in canonical_equipes if eq.get("item_id")}
     ref_dict = {eq.get("item_id"): eq for eq in ref_equipes if eq.get("item_id")}
-
+    discrepancias: list[dict[str, Any]] = []
     for item_id, can_eq in can_dict.items():
         if item_id not in ref_dict:
             continue
-        ref_eq = ref_dict[item_id]
-
-        can_func = len(can_eq.get("funcoes", []))
-        ref_func = len(ref_eq.get("funcoes", []))
-        if can_func != ref_func:
-            discrepancias.append(
-                {
-                    "item_id": item_id,
-                    "campo": "funcoes_count",
-                    "canonical": can_func,
-                    "referencia": ref_func,
-                    "delta": can_func - ref_func,
-                }
-            )
-
-        can_eqp = len(can_eq.get("equipamentos", []))
-        ref_eqp = len(ref_eq.get("equipamentos", []))
-        if can_eqp != ref_eqp:
-            discrepancias.append(
-                {
-                    "item_id": item_id,
-                    "campo": "equipamentos_count",
-                    "canonical": can_eqp,
-                    "referencia": ref_eqp,
-                    "delta": can_eqp - ref_eqp,
-                }
-            )
-
-        can_cost = can_eq.get("custo_total", 0.0)
-        ref_cost = (ref_eq.get("custos") or {}).get("total", ref_eq.get("custo_total", 0.0))
-        if abs(can_cost - ref_cost) > 0.01:
-            discrepancias.append(
-                {
-                    "item_id": item_id,
-                    "campo": "custo_total",
-                    "canonical": round(can_cost, 2),
-                    "referencia": round(ref_cost, 2),
-                    "delta": round(can_cost - ref_cost, 2),
-                }
-            )
+        discrepancias.extend(_ce_compare_item(item_id, can_eq, ref_dict[item_id]))
     return discrepancias
 
 
@@ -71,8 +73,28 @@ def _find_benchmark_report(slug: str, root: Path) -> Path | None:
     return None
 
 
+def _gdfs_load_canonical(projeto_nome: str, r: Path) -> dict:
+    """Localiza e carrega canonical.json do projeto pelo nome."""
+    for d in (r / "projetos").iterdir():
+        if not d.is_dir():
+            continue
+        meta_path = d / "meta.json"
+        if not meta_path.exists():
+            continue
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if meta.get("nome") == projeto_nome:
+            can_path = d / "v1" / "canonical.json"
+            if can_path.exists():
+                return json.loads(can_path.read_text(encoding="utf-8"))
+            break
+    return {}
+
+
 def generate_diffs_for_slug(slug: str, root: Path | None = None) -> dict[str, Any] | None:
-    """Gera diffs simples para um slug. Retorna None se extracted_references nÃ£o existir."""
+    """Gera diffs simples para um slug. Retorna None se extracted_references nao existir."""
     r = root or _DEFAULT_ROOT
     extracted_ref_path = r / "benchmarks" / "extracted_references" / f"iteracao_referencias_{slug.lower()}.json"
 
@@ -90,22 +112,7 @@ def generate_diffs_for_slug(slug: str, root: Path | None = None) -> dict[str, An
         bench = json.load(f)
 
     projeto_nome = bench.get("projeto") or slug
-    canonical: dict[str, Any] = {}
-    for d in (r / "projetos").iterdir():
-        if not d.is_dir():
-            continue
-        meta_path = d / "meta.json"
-        if not meta_path.exists():
-            continue
-        try:
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        if meta.get("nome") == projeto_nome:
-            can_path = d / "v1" / "canonical.json"
-            if can_path.exists():
-                canonical = json.loads(can_path.read_text(encoding="utf-8"))
-            break
+    canonical = _gdfs_load_canonical(projeto_nome, r)
 
     equipes_diffs = _compare_equipes(
         canonical.get("equipes_diretas", []),

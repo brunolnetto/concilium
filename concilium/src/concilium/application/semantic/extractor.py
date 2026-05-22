@@ -78,6 +78,39 @@ _SOIL_CLASS_MAP: dict[str, str] = {
 }
 
 
+def _resolve_missing_attrs(fields: dict, domain: str) -> list:
+    missing_attrs = list(fields.get("missing_attributes", []))
+    if domain == "other" and not missing_attrs:
+        missing_attrs = ["domain", "activity_type"]
+    return missing_attrs
+
+
+def _compute_extraction_confidence(fields: dict, domain: str, activity_type: str) -> ExtractionConfidence:
+    return ExtractionConfidence(
+        domain=0.9 if domain != "other" else 0.3,
+        activity_type=0.9 if activity_type != "unknown" else 0.3,
+        unit=0.95 if fields.get("unit") else 0.0,
+        dimensions=0.8 if fields.get("dimensions") else 0.5,
+        materials=0.7 if fields.get("materials") else 0.0,
+    )
+
+
+def _strip_soil_qualifiers(qualifiers: list) -> list:
+    result = []
+    for q in qualifiers:
+        if not q.startswith("solo_class:"):
+            result.append(q)
+    return result
+
+
+def _bav_validate_invariants(raw: str, fields: dict) -> None:
+    if not fields.get("unit"):
+        raise SemanticParseError(raw, "missing_unit", missing=["unit"])
+    for q in fields.get("qualifiers", []):
+        if _RE_NUMBER.search(q) and not q.startswith("solo_class:"):
+            raise SemanticParseError(raw, "dimension_in_freetext", missing=["dimensions"])
+
+
 class SemanticExtractor:
     """Pipeline deterministico-first para construção de SemanticIntent.
 
@@ -285,36 +318,12 @@ class SemanticExtractor:
         Raises:
             SemanticParseError: se qualquer invariante for violado.
         """
-        # Invariante 1: unit obrigatório
-        if not fields.get("unit"):
-            raise SemanticParseError(raw, "missing_unit", missing=["unit"])
-
-        # Invariante 2: domain "other" sem missing_attributes populado
+        _bav_validate_invariants(raw, fields)
         domain = fields.get("domain") or "other"
         activity_type = fields.get("activity_type") or "unknown"
-        missing_attrs = list(fields.get("missing_attributes", []))
-
-        if domain == "other" and not missing_attrs:
-            missing_attrs = ["domain", "activity_type"]
-
-        # Invariante 3: dimensões não embutidas em qualifiers
-        for q in fields.get("qualifiers", []):
-            if _RE_NUMBER.search(q) and not q.startswith("solo_class:"):
-                raise SemanticParseError(
-                    raw,
-                    "dimension_in_freetext",
-                    missing=["dimensions"],
-                )
-
-        # Cálculo de confiança
-        confidence = ExtractionConfidence(
-            domain=0.9 if domain != "other" else 0.3,
-            activity_type=0.9 if activity_type != "unknown" else 0.3,
-            unit=0.95 if fields.get("unit") else 0.0,
-            dimensions=0.8 if fields.get("dimensions") else 0.5,
-            materials=0.7 if fields.get("materials") else 0.0,
-        )
-
+        missing_attrs = _resolve_missing_attrs(fields, domain)
+        confidence = _compute_extraction_confidence(fields, domain, activity_type)
+        clean_qualifiers = _strip_soil_qualifiers(fields.get("qualifiers", []))
         return SemanticIntent(
             raw_text=raw,
             scope_item_id=sid,
@@ -322,11 +331,7 @@ class SemanticExtractor:
             activity_type=activity_type,
             unit=fields["unit"],
             dimensions=fields.get("dimensions", []),
-            qualifiers=[
-                q
-                for q in fields.get("qualifiers", [])
-                if not q.startswith("solo_class:")  # já movido para context
-            ],
+            qualifiers=clean_qualifiers,
             materials=fields.get("materials", []),
             method=fields.get("method"),
             context=fields.get("context", {}),

@@ -15,7 +15,6 @@ CATEGORIA_TIPO_MAPA: dict[str, list[str]] = {
 }
 
 CARACTERES_PROIBIDOS = ["Ã§", "Ã£", "â‰¥", "â‰¤", "â†’"]
-
 RANGE_SENSATO_POR_UNIDADE: dict[str, tuple[float, float]] = {
     "mes": (0.001, 1.0),
     "h": (0.0001, 100.0),
@@ -33,8 +32,7 @@ RANGE_SENSATO_POR_UNIDADE: dict[str, tuple[float, float]] = {
 
 RANGE_OBRIGATORIO_POR_UNIDADE: dict[str, tuple[float, float]] = {
     **RANGE_SENSATO_POR_UNIDADE,
-    "mes": (1e-7, 12.0),  # Allow tiny fractions for high-productivity CPUs (e.g. 250 m2/h)
-    # Regras adicionais podem ser acrescentadas aqui quando unidades específicas aparecem.
+    "mes": (1e-7, 12.0),
 }
 
 
@@ -55,7 +53,6 @@ class ValidadorCPUInsumo:
         "FERROVIA",
         "INFRAESTRUTURA",
     }
-
     UNIDADES_NORM_MAP = {
         "M2": "m2",
         "M²": "m2",
@@ -146,7 +143,6 @@ class ValidadorCPUInsumo:
         unidade_composicao = str(composicao_item.get("unidade", unidade_insumo)).strip().lower()
         coeficiente = composicao_item.get("coeficiente")
 
-        # Se as unidades forem diferentes, tentamos verificar se são compatíveis
         if unidade_composicao != unidade_insumo:
             if not ConversorUnidades.sao_compativeis(unidade_composicao, unidade_insumo):
                 return ValidacaoItem(
@@ -154,7 +150,6 @@ class ValidadorCPUInsumo:
                     status="ERRO",
                     mensagem=f"Incompatibilidade dimensional: não é possível converter '{unidade_composicao}' para '{unidade_insumo}'",  # noqa: E501
                 )
-            # Se for compatível, normalizamos o coeficiente para a base do insumo para validar o range
             try:
                 coeficiente_val = ConversorUnidades.converter(coeficiente, unidade_composicao, unidade_insumo)  # type: ignore[arg-type]
             except Exception:
@@ -302,7 +297,6 @@ class ValidadorCPUInsumo:
 
     def validar_valores_auditaveis(self, entidade: dict[str, Any]) -> list[ValidacaoItem]:
         erros = []
-        # Para Insumos: preço
         if entidade.get("tipo"):  # É um insumo
             preco = entidade.get("preco_unitario")
             if preco is None or preco <= 0:
@@ -313,8 +307,6 @@ class ValidadorCPUInsumo:
                         mensagem=f"Insumo '{entidade.get('codigo')}' com preço nulo ou zerado",
                     )
                 )
-
-        # Para CPUs: produção
         if "composicao_itens" in entidade:  # É uma CPU
             prod_ref = entidade.get("producao_id_ref")
             if not prod_ref:

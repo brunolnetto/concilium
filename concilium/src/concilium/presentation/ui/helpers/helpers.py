@@ -6,19 +6,14 @@ from typing import Any
 
 
 def safe_count_eap(reference: dict) -> int:
-    """Count EAP items in reference."""
+    """Count EAP items using canonical benchmark reference contract."""
     if not isinstance(reference, dict):
         return 0
-    # Priority 1: benchmark reference has cpus.itens_eap
+
+    # Canonical contract: reference.cpus.itens_eap
     itens = (reference.get("cpus") or {}).get("itens_eap")
     if isinstance(itens, list):
         return len(itens)
-    # Priority 2: inputs_escopo.eap
-    inputs_escopo = reference.get("inputs_escopo")
-    if isinstance(inputs_escopo, dict) and isinstance(inputs_escopo.get("eap"), list):
-        return len(inputs_escopo["eap"])
-    if isinstance(reference.get("eap"), list):
-        return len(reference["eap"])
     return 0
 
 
@@ -80,21 +75,26 @@ def _bneo_build_week_map(semanas: dict, target: int) -> dict[str, int]:
     }
 
 
+def _bneo_process_row(row: dict, activity_lookup: dict) -> tuple[str, dict[str, int]] | None:
+    item_id = str(row.get("item_id") or "").strip()
+    if not item_id or item_id not in activity_lookup:
+        return None
+    target = max(1, int(round(float(row.get("num_equipes_maximo") or 0.0))))
+    if target <= 0:
+        return None
+    week_map = _bneo_build_week_map(activity_lookup[item_id].get("semanas") or {}, target)
+    return (item_id, week_map) if week_map else None
+
+
 def build_num_equipes_override(reference: dict, edited_rows: object) -> dict[str, dict[str, int]]:
     """Build team override mapping from edited rows."""
     activities = (reference.get("cronograma") or {}).get("atividades", []) if isinstance(reference, dict) else []
     activity_lookup = {act.get("item_id") or act.get("activity_id"): act for act in activities}
     override: dict[str, dict[str, int]] = {}
     for row in _bneo_get_rows(edited_rows):
-        item_id = str(row.get("item_id") or "").strip()
-        if not item_id or item_id not in activity_lookup:
-            continue
-        target = max(1, int(round(float(row.get("num_equipes_maximo") or 0.0))))
-        if target <= 0:
-            continue
-        week_map = _bneo_build_week_map(activity_lookup[item_id].get("semanas") or {}, target)
-        if week_map:
-            override[item_id] = week_map
+        result = _bneo_process_row(row, activity_lookup)
+        if result is not None:
+            override[result[0]] = result[1]
     return override
 
 
@@ -145,6 +145,19 @@ def extract_inputs_escopo(reference: dict) -> dict[str, Any]:
     return {}
 
 
+def _easi_merge_extra(extra: dict, skill_inputs: dict) -> None:
+    nested = extra.get("skill_inputs")
+    if isinstance(nested, dict):
+        for key, val in nested.items():
+            if isinstance(val, dict):
+                skill_inputs[str(key)] = dict(val)
+    for key, val in extra.items():
+        if key == "skill_inputs":
+            continue
+        if isinstance(val, dict):
+            skill_inputs[str(key)] = dict(val)
+
+
 def extract_all_skill_inputs(reference: dict) -> dict[str, dict[str, Any]]:
     """Extract all skill inputs from reference."""
     if not isinstance(reference, dict):
@@ -157,16 +170,7 @@ def extract_all_skill_inputs(reference: dict) -> dict[str, dict[str, Any]]:
                 skill_inputs[str(key)] = dict(val)
     extra = reference.get("extra_inputs")
     if isinstance(extra, dict):
-        nested = extra.get("skill_inputs")
-        if isinstance(nested, dict):
-            for key, val in nested.items():
-                if isinstance(val, dict):
-                    skill_inputs[str(key)] = dict(val)
-        for key, val in extra.items():
-            if key == "skill_inputs":
-                continue
-            if isinstance(val, dict):
-                skill_inputs[str(key)] = dict(val)
+        _easi_merge_extra(extra, skill_inputs)
     return skill_inputs
 
 
@@ -212,39 +216,31 @@ def set_path(target: dict[str, Any], dotted_path: str, value: float) -> None:
     cursor[keys[-1]] = float(value)
 
 
-def extract_eap_items_for_policy(reference: dict) -> list[dict[str, Any]]:
-    """Extract deduplicated EAP items with cpu_id from a benchmark reference.
+def _eaip_collect_cpus(reference: dict, items: list, seen: set) -> None:
+    cpus_block = reference.get("cpus")
+    if not isinstance(cpus_block, dict):
+        return
+    for item in cpus_block.get("itens_eap", []):
+        if not isinstance(item, dict):
+            continue
+        item_id = item.get("item_id") or item.get("activity_id")
+        if item_id and item_id not in seen:
+            items.append(item)
+            seen.add(item_id)
 
-    Tries two data paths:
-    1. reference.cpus.itens_eap  — present in most current references
-    2. reference.cronograma.atividades — legacy path (with cpu_id field)
-    """
+
+def extract_eap_items_for_policy(reference: dict) -> list[dict[str, Any]]:
+    """Extract deduplicated EAP items with cpu_id from canonical contract."""
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    cpus_block = reference.get("cpus") if isinstance(reference, dict) else None
-    if isinstance(cpus_block, dict):
-        for item in cpus_block.get("itens_eap", []):
-            if not isinstance(item, dict):
-                continue
-            item_id = item.get("item_id") or item.get("activity_id")
-            if item_id and item_id not in seen:
-                items.append(item)
-                seen.add(item_id)
-
-    for act in (reference.get("cronograma") or {}).get("atividades", []):
-        if not isinstance(act, dict) or not act.get("cpu_id"):
-            continue
-        item_id = act.get("item_id") or act.get("activity_id")
-        if item_id and item_id not in seen:
-            items.append(act)
-            seen.add(item_id)
-
+    if isinstance(reference, dict):
+        _eaip_collect_cpus(reference, items, seen)
     return items
 
 
 def extract_bdi_dict(inputs: dict[str, Any] | None) -> dict[str, float]:
-    """Extract BDI percentages from inputs."""
+    """Extract BDI percentages from canonical inputs only."""
     if not isinstance(inputs, dict):
         return {}
     raw = inputs.get("bdi_aplicado")
@@ -253,16 +249,10 @@ def extract_bdi_dict(inputs: dict[str, Any] | None) -> dict[str, float]:
     if not isinstance(raw, dict):
         raw = inputs
     out: dict[str, float] = {}
+    blocked_short_keys = {"mo", "eq", "mat", "ind"}
     for key, value in raw.items():
+        if str(key) in blocked_short_keys:
+            continue
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             out[str(key)] = float(value)
-    aliases = {
-        "mo": "mao_obra",
-        "eq": "equipamentos",
-        "mat": "material",
-        "ind": "indireto",
-    }
-    for alias, target in aliases.items():
-        if target not in out and alias in out:
-            out[target] = out[alias]
     return out

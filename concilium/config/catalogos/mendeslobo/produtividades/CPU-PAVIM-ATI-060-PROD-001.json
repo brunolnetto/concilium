@@ -8,15 +8,11 @@
     "funcoes": [
       {
         "funcao_id": "MO-OPER-ESCAV",
-        "num_pessoas": 1
+        "num_pessoas": 2
       },
       {
         "funcao_id": "MO-MOTOR-CAM-BASC",
         "num_pessoas": 2
-      },
-      {
-        "funcao_id": "MO-OPER-ESCAV",
-        "num_pessoas": 1
       }
     ],
     "equipamentos": [
@@ -34,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 29.1238,
-    "custo_padrao_pj": 25.9668
-  },
-  "cpu_ids": [
-    "CPU-PAVIM-ATI-060"
-  ]
+  "historico_observacoes": []
 }

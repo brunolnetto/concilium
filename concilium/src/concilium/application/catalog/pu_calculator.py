@@ -21,12 +21,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from concilium.domain.constants import ENCARGOS_CLT, ENCARGOS_PJ, HORAS_MES_REGIME_6x1
+from concilium.domain.constants import (
+    ENCARGOS_CLT,
+    ENCARGOS_PJ,
+    PRECO_DIESEL_REFERENCIA,
+    HORAS_MES_REGIME_6x1,
+)
 
 # ── Parâmetros default (ADR-056 §T3 — fonte: domain/constants.py) ────────────
 DEFAULT_ALPHA_CLT = ENCARGOS_CLT
 DEFAULT_ALPHA_PJ = ENCARGOS_PJ
-DEFAULT_PRECO_DIESEL = 6.50  # R$/L
+DEFAULT_PRECO_DIESEL = PRECO_DIESEL_REFERENCIA  # alias backward-compat
 DEFAULT_HORAS_MES = HORAS_MES_REGIME_6x1  # regime 6×1, 8h/dia
 
 
@@ -152,13 +157,98 @@ def calcular_pu_composicao_itens(
     }
 
 
+def calcular_pu(
+    producao: dict,
+    insumo_index: dict[str, dict],
+    params: ParametrosCalculo | None = None,
+) -> BreakdownPU:
+    """Calcula PU para uma unica producao a partir da composicao da equipe.
+
+    PU = custo_total_horario / producao.valor_horario
+    """
+    if params is None:
+        params = ParametrosCalculo()
+    producao_id = producao.get("id") or producao.get("codigo") or "?"
+    valor_horario = float(producao.get("valor_horario") or 0)
+    bd = BreakdownPU(producao_id=producao_id, valor_horario=valor_horario)
+
+    equipe, funcoes, equipamentos, materiais = _cpu_get_equipe(producao)
+
+    for fn in funcoes:
+        fid = fn.get("funcao_id", "")
+        num_pessoas = float(fn.get("num_pessoas") or 1)
+        ins = insumo_index.get(fid)
+        if ins is None:
+            bd.referencias_faltantes.append(fid)
+            continue
+        salario = float(ins.get("preco_unitario") or 0)
+        hm = _horas_mes(ins, params)
+        bd.custo_mo_h += (salario / hm) * _alpha(ins, params) * num_pessoas
+
+    for eq in equipamentos:
+        eid = eq.get("equip_id", "")
+        num_un = float(eq.get("num_unidades") or 1)
+        ins = insumo_index.get(eid)
+        if ins is None:
+            bd.referencias_faltantes.append(eid)
+            continue
+        preco_h = float(ins.get("preco_unitario") or 0)
+        bd.custo_equip_h += preco_h * num_un
+        consumo = float(eq.get("consumo_litros_hora") or 0)
+        bd.custo_diesel_h += consumo * params.preco_diesel * num_un
+
+    for mat in materiais:
+        mid = mat.get("insumo_id") or mat.get("material_id") or mat.get("codigo") or ""
+        consumo_h = float(mat.get("consumo_por_hora") or mat.get("quantidade_h") or 0)
+        ins = insumo_index.get(mid)
+        if ins is None and mid:
+            bd.referencias_faltantes.append(mid)
+            continue
+        if ins:
+            preco = float(ins.get("preco_unitario") or 0)
+            bd.custo_material_h += consumo_h * preco
+
+    return bd
+
+
 def _cpu_get_equipe(producao: dict) -> tuple:
     """Returns (equipe, funcoes, equipamentos, materiais) from producao dict."""
-    _equipe, funcoes, equipamentos, materiais = _cpu_get_equipe(producao)
-    _cpu_process_funcoes(funcoes, insumo_index, result, params)
-    _cpu_process_equipamentos(equipamentos, insumo_index, result, params)
-    _cpu_process_materiais(materiais, insumo_index, result)
-    return result
+    equipe = producao.get("composicao_padrao_equipe") or producao.get("equipe") or {}
+    funcoes = equipe.get("funcoes") or []
+    equipamentos = equipe.get("equipamentos") or []
+    materiais = equipe.get("materiais") or []
+    return equipe, funcoes, equipamentos, materiais
+
+
+def _build_insumo_index(insumos: list) -> dict:
+    idx = {}
+    for ins in insumos:
+        if ins.get("codigo"):
+            idx[ins["codigo"]] = ins
+    return idx
+
+
+def _check_pu_divergencia(bd, prod: dict, tolerancia_pct: float, pu_divergentes: list) -> None:
+    if bd.pu_calculado is None:
+        return
+    cpu_hint = prod.get("_cu_planilha_referencia")
+    if cpu_hint is None:
+        return
+    try:
+        ref = float(cpu_hint)
+        if ref > 0:
+            delta_pct = abs(bd.pu_calculado - ref) / ref * 100
+            if delta_pct > tolerancia_pct:
+                pu_divergentes.append(
+                    {
+                        "producao_id": bd.producao_id,
+                        "pu_calculado": bd.pu_calculado,
+                        "pu_referencia": ref,
+                        "delta_pct": round(delta_pct, 2),
+                    }
+                )
+    except (TypeError, ValueError):
+        pass
 
 
 def calcular_catalogo(
@@ -182,8 +272,7 @@ def calcular_catalogo(
     if params is None:
         params = ParametrosCalculo()
 
-    insumo_index = {ins["codigo"]: ins for ins in insumos if ins.get("codigo")}
-
+    insumo_index = _build_insumo_index(insumos)
     refs_faltantes: list[dict] = []
     pu_divergentes: list[dict] = []
     sem_valor: list[str] = []
@@ -195,46 +284,18 @@ def calcular_catalogo(
         if not (equipe.get("funcoes") or equipe.get("equipamentos")):
             continue
         com_composicao += 1
-
         bd = calcular_pu(prod, insumo_index, params)
         breakdowns.append(bd.to_dict())
-
         if bd.referencias_faltantes:
-            refs_faltantes.append(
-                {
-                    "producao_id": bd.producao_id,
-                    "faltantes": bd.referencias_faltantes,
-                }
-            )
-
+            refs_faltantes.append({"producao_id": bd.producao_id, "faltantes": bd.referencias_faltantes})
         if not bd.valor_horario:
             sem_valor.append(bd.producao_id)
             continue
+        _check_pu_divergencia(bd, prod, tolerancia_pct, pu_divergentes)
 
-        # Verifica consistência vs _cu_planilha (se presente nas CPUs correspondentes)
-        # A produção pode ter `_cu_planilha` herdado; verificamos via alertas
-        if bd.pu_calculado is not None:
-            for cpu_hint in (prod.get("_cu_planilha_referencia"),):
-                if cpu_hint is None:
-                    break
-                try:
-                    ref = float(cpu_hint)
-                    if ref > 0:
-                        delta_pct = abs(bd.pu_calculado - ref) / ref * 100
-                        if delta_pct > tolerancia_pct:
-                            pu_divergentes.append(
-                                {
-                                    "producao_id": bd.producao_id,
-                                    "pu_calculado": bd.pu_calculado,
-                                    "pu_referencia": ref,
-                                    "delta_pct": round(delta_pct, 2),
-                                }
-                            )
-                except (TypeError, ValueError):
-                    pass
-
+    ok = not refs_faltantes and not sem_valor
     return {
-        "ok": not refs_faltantes and not sem_valor,
+        "ok": ok,
         "total_producoes": len(producoes),
         "com_composicao": com_composicao,
         "sem_valor_horario": sem_valor,

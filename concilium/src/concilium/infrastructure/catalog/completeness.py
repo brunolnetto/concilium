@@ -17,8 +17,74 @@ from concilium.domain.models.catalog_health import (
 )
 
 
+def _count_status(gaps, status: str) -> int:
+    count = 0
+    for g in gaps:
+        if g.status == status:
+            count += 1
+    return count
+
+
+def _safe_pct(part: int, total: int) -> float:
+    return (part / total * 100) if total > 0 else 0.0
+
+
+def _analyze_producoes_quality(producoes: list) -> tuple:
+    prods_reais = 0
+    prods_tabela = 0
+    prods_baixa = 0
+    confiancas = []
+    for p in producoes:
+        tipo = p.get("origem", {}).get("tipo")
+        if tipo == "calibrado_contra_obra_real":
+            prods_reais += 1
+        elif tipo == "tabela_referencia":
+            prods_tabela += 1
+        conf = p.get("qualidade", {}).get("confianca_pct", 0)
+        confiancas.append(conf)
+        if p.get("qualidade", {}).get("confianca_pct", 100) < 60:
+            prods_baixa += 1
+    confianca_media = sum(confiancas) / len(confiancas) if confiancas else 0.0
+    return prods_reais, prods_tabela, prods_baixa, confianca_media
+
+
 class CatalogGapDetector:
     """Detecta gaps entre cobertura esperada e catálogo atual (ADR-012 §D3)."""
+
+    def _check_servico_gap(self, grupo_nome, grupo, servico, cpus, producoes_por_id, confianca_minima):
+        match_cpu = self._find_cpu_by_description(servico, cpus)
+        if match_cpu is None:
+            return CatalogGap(
+                grupo=grupo_nome,
+                servico_esperado=servico,
+                status="AUSENTE",
+                fonte_sugerida=grupo.fonte_preenchimento or "SICRO",
+                prioridade="ALTA",
+            )
+        producao_id = match_cpu.get("producao_id")
+        if not producao_id:
+            return CatalogGap(
+                grupo=grupo_nome,
+                servico_esperado=servico,
+                status="SEM_PRODUTIVIDADE",
+                cpu_existente=match_cpu.get("codigo"),
+                fonte_sugerida="AGIS_OBRAS_REAIS ou SICRO",
+                prioridade="MEDIA",
+            )
+        producao = producoes_por_id.get(producao_id)
+        if producao:
+            confianca = producao.get("qualidade", {}).get("confianca_pct", 100)
+            if confianca < confianca_minima:
+                return CatalogGap(
+                    grupo=grupo_nome,
+                    servico_esperado=servico,
+                    status="BAIXA_CONFIANCA",
+                    cpu_existente=match_cpu.get("codigo"),
+                    confianca_atual=float(confianca),
+                    fonte_sugerida="Calibrar contra obra real",
+                    prioridade="BAIXA",
+                )
+        return None
 
     def detect_gaps(
         self,
@@ -37,52 +103,9 @@ class CatalogGapDetector:
 
         for grupo_nome, grupo in cobertura_config.grupos_servico.items():
             for servico in grupo.servicos_esperados:
-                # Procura correspondência por descrição (case-insensitive)
-                match_cpu = self._find_cpu_by_description(servico, cpus)
-
-                if match_cpu is None:
-                    gaps.append(
-                        CatalogGap(
-                            grupo=grupo_nome,
-                            servico_esperado=servico,
-                            status="AUSENTE",
-                            fonte_sugerida=grupo.fonte_preenchimento or "SICRO",
-                            prioridade="ALTA",
-                        )
-                    )
-                    continue
-
-                # CPU encontrada — verifica produtividade
-                producao_id = match_cpu.get("producao_id")
-                if not producao_id:
-                    gaps.append(
-                        CatalogGap(
-                            grupo=grupo_nome,
-                            servico_esperado=servico,
-                            status="SEM_PRODUTIVIDADE",
-                            cpu_existente=match_cpu.get("codigo"),
-                            fonte_sugerida="AGIS_OBRAS_REAIS ou SICRO",
-                            prioridade="MEDIA",
-                        )
-                    )
-                    continue
-
-                # Verifica confiança da produtividade
-                producao = producoes_por_id.get(producao_id)
-                if producao:
-                    confianca = producao.get("qualidade", {}).get("confianca_pct", 100)
-                    if confianca < confianca_minima:
-                        gaps.append(
-                            CatalogGap(
-                                grupo=grupo_nome,
-                                servico_esperado=servico,
-                                status="BAIXA_CONFIANCA",
-                                cpu_existente=match_cpu.get("codigo"),
-                                confianca_atual=float(confianca),
-                                fonte_sugerida="Calibrar contra obra real",
-                                prioridade="BAIXA",
-                            )
-                        )
+                gap = self._check_servico_gap(grupo_nome, grupo, servico, cpus, producoes_por_id, confianca_minima)
+                if gap is not None:
+                    gaps.append(gap)
 
         return gaps
 
@@ -106,20 +129,15 @@ class CatalogGapDetector:
     ) -> CatalogHealthReport:
         """Gera relatório de saúde do catálogo."""
         producoes = producoes or []
-        len(cpus)
-        gaps_ausente = sum(1 for g in gaps if g.status == "AUSENTE")
-        gaps_sem_prod = sum(1 for g in gaps if g.status == "SEM_PRODUTIVIDADE")
-        gaps_baixa = sum(1 for g in gaps if g.status == "BAIXA_CONFIANCA")
+        gaps_ausente = _count_status(gaps, "AUSENTE")
+        gaps_sem_prod = _count_status(gaps, "SEM_PRODUTIVIDADE")
+        gaps_baixa = _count_status(gaps, "BAIXA_CONFIANCA")
 
         total_cpus_presentes = total_servicos_esperados - gaps_ausente
-        cobertura_pct = (total_cpus_presentes / total_servicos_esperados * 100) if total_servicos_esperados > 0 else 0.0
+        cobertura_pct = _safe_pct(total_cpus_presentes, total_servicos_esperados)
 
-        # Analisa qualidade das produções
-        prods_reais = sum(1 for p in producoes if p.get("origem", {}).get("tipo") == "calibrado_contra_obra_real")
-        prods_tabela = sum(1 for p in producoes if p.get("origem", {}).get("tipo") == "tabela_referencia")
-        prods_baixa = sum(1 for p in producoes if p.get("qualidade", {}).get("confianca_pct", 100) < 60)
-        confiancas = [p.get("qualidade", {}).get("confianca_pct", 0) for p in producoes]
-        confianca_media = sum(confiancas) / len(confiancas) if confiancas else 0.0
+        prods_reais, prods_tabela, prods_baixa_conf, confianca_media = _analyze_producoes_quality(producoes)
+        prods_baixa = prods_baixa_conf
 
         status = CatalogHealthReport.compute_status(cobertura_pct, confianca_media)
 

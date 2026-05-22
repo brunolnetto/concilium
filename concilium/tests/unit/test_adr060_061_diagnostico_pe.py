@@ -13,6 +13,7 @@ Covers:
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 import pytest
 
@@ -311,6 +312,14 @@ class TestDiagnosticoPEBuilder:
         for item in diag.itens_deficit:
             assert item.gap_evitavel_rs <= abs(item.gap_rs) + 0.01
 
+    def test_explicacao_natureza_periodo_exposed(self):
+        canonical = self._make_canonical()
+        diag = DiagnosticoPEBuilder().build(canonical)
+        assert isinstance(diag.explicacao_natureza_periodo, dict)
+        if diag.n_itens_deficit > 0:
+            assert "resumo_global_natureza" in diag.explicacao_natureza_periodo
+            assert "itens" in diag.explicacao_natureza_periodo
+
 
 # ---------------------------------------------------------------------------
 # SolucaoInversa — roundtrip de L
@@ -596,20 +605,46 @@ class TestBacktrackingPEBuilder:
         bt = BacktrackingPEBuilder().build(diag, canonical)
         assert isinstance(bt.validacoes_emitidas, tuple)
 
+    def test_explicacao_natureza_periodo_propagated_to_backtracking(self):
+        diag = self._make_minimal_diagnostico()
+        diag = replace(
+            diag,
+            explicacao_natureza_periodo={
+                "itens": {
+                    "eap-01": {
+                        "janela_critica_iso": "2026-W28",
+                        "natureza_dominante": "indireto",
+                    }
+                }
+            },
+        )
+        canonical = self._make_minimal_canonical()
+        bt = BacktrackingPEBuilder().build(diag, canonical)
+        assert isinstance(bt.explicacao_natureza_periodo, dict)
+        assert bt.explicacao_natureza_periodo.get("itens", {}).get("eap-01", {}).get("natureza_dominante") == "indireto"
+
 
 # ─── ADR-060 §DoD: validações emitidas ───────────────────────────────────────
+
 
 class TestDiagnosticoValidacoes:
     def test_val_pe_cross_term_emitted_when_cross_term_present(self):
         """VAL-PE-CROSS-TERM is emitted when aviso_cross_term is True."""
         from concilium.domain.models.diagnostico_pe import DiagnosticoPERelatorio
+
         # Build a relatorio with aviso_cross_term=True
         relatorio = DiagnosticoPERelatorio(
-            projeto_id="x", gerado_em="2026-01-01T00:00:00",
-            n_itens_deficit=1, gap_total_rs=-1000.0,
-            gap_evitavel_rs=500.0, gap_estrutural_rs=500.0,
-            fator_dominante_label="Clima", aviso_cross_term=True,
-            l_medio_requerido=0.15, itens_deficit=(), consistencia_validada=True,
+            projeto_id="x",
+            gerado_em="2026-01-01T00:00:00",
+            n_itens_deficit=1,
+            gap_total_rs=-1000.0,
+            gap_evitavel_rs=500.0,
+            gap_estrutural_rs=500.0,
+            fator_dominante_label="Clima",
+            aviso_cross_term=True,
+            l_medio_requerido=0.15,
+            itens_deficit=(),
+            consistencia_validada=True,
             validacoes_emitidas=("VAL-PE-CROSS-TERM",),
         )
         assert "VAL-PE-CROSS-TERM" in relatorio.validacoes_emitidas
@@ -617,12 +652,19 @@ class TestDiagnosticoValidacoes:
     def test_no_cross_term_when_not_present(self):
         """VAL-PE-CROSS-TERM not emitted when aviso_cross_term is False."""
         from concilium.domain.models.diagnostico_pe import DiagnosticoPERelatorio
+
         relatorio = DiagnosticoPERelatorio(
-            projeto_id="x", gerado_em="2026-01-01T00:00:00",
-            n_itens_deficit=0, gap_total_rs=0.0,
-            gap_evitavel_rs=0.0, gap_estrutural_rs=0.0,
-            fator_dominante_label="—", aviso_cross_term=False,
-            l_medio_requerido=0.0, itens_deficit=(), consistencia_validada=True,
+            projeto_id="x",
+            gerado_em="2026-01-01T00:00:00",
+            n_itens_deficit=0,
+            gap_total_rs=0.0,
+            gap_evitavel_rs=0.0,
+            gap_estrutural_rs=0.0,
+            fator_dominante_label="—",
+            aviso_cross_term=False,
+            l_medio_requerido=0.0,
+            itens_deficit=(),
+            consistencia_validada=True,
             validacoes_emitidas=(),
         )
         assert "VAL-PE-CROSS-TERM" not in relatorio.validacoes_emitidas
@@ -632,6 +674,7 @@ class TestDiagnosticoValidacoes:
         # DiagnosticoPEBuilder sets consistencia_validada based on actual check
         # A zero-deficit project always passes
         from concilium.domain.services.diagnostico_pe_builder import DiagnosticoPEBuilder
+
         class _FakeCanonical:
             ponto_equilibrio = []
             cronograma = None
@@ -642,5 +685,6 @@ class TestDiagnosticoValidacoes:
             resultado = None
             bridge_analysis = None
             praticabilidade = None
+
         diag = DiagnosticoPEBuilder().build(_FakeCanonical())
         assert diag.consistencia_validada  # zero deficit → always consistent

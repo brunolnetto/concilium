@@ -31,6 +31,13 @@ def _perfil_path(project_root: Path) -> Path:
     return project_root / "bdi" / "perfil_bdi.json"
 
 
+def _bdi_aplic_flags(aplic: dict) -> list:
+    def flag(k: str) -> str:
+        return "[OK]" if aplic.get(k, {}).get("aplicavel") else "[X]"
+
+    return [flag("iss"), flag("pis"), flag("cofins"), flag("cssl"), flag("ir")]
+
+
 @app.command("show")
 def bdi_show(
     projeto: str = typer.Argument(..., help="Nome ou UUID do projeto."),
@@ -67,14 +74,7 @@ def bdi_show(
         t = Table("Categoria", "ISS", "PIS", "COFINS", "CSSL", "IR", show_header=True)
         for cat_key in cats_display:
             aplic = trib.get(cat_key, {})
-            t.add_row(
-                cat_key,
-                "[OK]" if aplic.get("iss", {}).get("aplicavel") else "[X]",
-                "[OK]" if aplic.get("pis", {}).get("aplicavel") else "[X]",
-                "[OK]" if aplic.get("cofins", {}).get("aplicavel") else "[X]",
-                "[OK]" if aplic.get("cssl", {}).get("aplicavel") else "[X]",
-                "[OK]" if aplic.get("ir", {}).get("aplicavel") else "[X]",
-            )
+            t.add_row(cat_key, *_bdi_aplic_flags(aplic))
         console.print(t)
 
     # Lucro

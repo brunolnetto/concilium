@@ -234,6 +234,20 @@ def _project_months(canonical: CanonicalModel) -> list[tuple[int, int]]:
     return sorted(months)
 
 
+def _mdc_accumulate_act(act, cost_per_unit: dict, result: dict) -> None:
+    """Accumulate direct costs for one scheduled activity into result dict."""
+    cpu = cost_per_unit.get(act.activity_id, 0.0)
+    if cpu <= 0:
+        return
+    for week_key, dist in act.distribuicao_semanal.items():
+        qtd = getattr(dist, "qtd_executada", 0.0)
+        if qtd <= 0:
+            continue
+        ym = _week_to_month(week_key)
+        if ym in result:
+            result[ym] += cpu * qtd
+
+
 def _monthly_direct_costs(
     canonical: CanonicalModel,
     project_months: list[tuple[int, int]],
@@ -245,7 +259,6 @@ def _monthly_direct_costs(
     if not canonical.cronograma or not canonical.planejamento:
         return result
 
-    # Custo unitário catálogo (s/BDI) por item
     cost_per_unit: dict[str, float] = {}
     for p in canonical.planejamento:
         total = p.subtotal.sem_bdi.total if p.subtotal else 0.0
@@ -253,16 +266,7 @@ def _monthly_direct_costs(
         cost_per_unit[p.item_id] = total / qty if qty > 0 else 0.0
 
     for act in canonical.cronograma.scheduled_activities:
-        cpu = cost_per_unit.get(act.activity_id, 0.0)
-        if cpu <= 0:
-            continue
-        for week_key, dist in act.distribuicao_semanal.items():
-            qtd = getattr(dist, "qtd_executada", 0.0)
-            if qtd <= 0:
-                continue
-            ym = _week_to_month(week_key)
-            if ym in result:
-                result[ym] += cpu * qtd
+        _mdc_accumulate_act(act, cost_per_unit, result)
 
     return result
 
@@ -487,7 +491,7 @@ def render_diretos(wb: Workbook, canonical: CanonicalModel) -> int:
     _PAPEL_COLOR = {"direto": _C["verde"], "indireto": _C["nav_md"], "gestao": _C["orange"]}
     subtotal_rows: list[int] = []
     for i_eq, eq in enumerate(canonical.equipes_diretas):
-        eap_item = next((e for e in canonical.eap if e.item_id == eq.item_id), None)
+        eap_item = _find_eap_item(canonical.eap, eq.item_id)
         descricao_item = eap_item.descricao if eap_item else eq.item_id
         _section_row(ws, row, f"{eq.item_id} — {descricao_item}", NCOLS)
         row += 1
@@ -1292,7 +1296,7 @@ def _xl_resultado_indirect_cats(res: Any, indiretos_refs: dict | None, linha_fn:
     ]:
         fallback = getattr(res.custo, attr, 0.0) if hasattr(res.custo, attr) else 0.0
         cat_row = (indiretos_refs or {}).get(cat)
-        linha_fn(f"  {cat}", _xl_resultado_xl_resultado_ref("INDIRETOS.DET", 8, cat_row, fallback))
+        linha_fn(f"  {cat}", _xl_resultado_ref("INDIRETOS.DET", 8, cat_row, fallback))
 
 
 def _xl_resultado_custo_composicao(res: Any, planejamento_total_row: int | None, linha_fn: Any) -> float:
@@ -1306,7 +1310,7 @@ def _xl_resultado_custo_composicao(res: Any, planejamento_total_row: int | None,
     ci_pvt = ci_total / pvt if pvt > 0 else 0.0
     linha_fn(
         "Total Direto (catálogo s/BDI)",
-        _xl_resultado_xl_resultado_ref("PLANEJAMENTO", 13, planejamento_total_row, res.venda.total_sem_bdi),
+        _xl_resultado_ref("PLANEJAMENTO", 13, planejamento_total_row, res.venda.total_sem_bdi),
     )
     linha_fn("Total Direto (c/BDI)", res.venda.total_com_bdi)
     linha_fn("RAZÃO CI / CD (%)", round(razao * 100, 2), pct=True, is_money=False)
@@ -1740,6 +1744,78 @@ def render_diretos_res(wb: Workbook, canonical: CanonicalModel) -> int | None:
 # ── Aba INDIRETOS.RES ─────────────────────────────────────────────────────────
 
 
+def _rir_build_lookups(canonical) -> tuple:
+    """Build category lookup dicts and total_sem for render_indiretos_res."""
+    inds_by_cat = {ind.categoria: ind for ind in canonical.indiretos}
+    bdi_by_cat = {ibd.categoria: ibd for ibd in canonical.indiretos_com_bdi}
+    total_sem = sum(ind.custo_total for ind in canonical.indiretos) or 1.0
+    return inds_by_cat, bdi_by_cat, total_sem
+
+
+def _rir_render_total_row(ws, row: int, subtotal_rows_sem: list, subtotal_rows_com: list, fill_tot) -> None:
+    """Render totals row in INDIRETOS.RES."""
+    f_sem = ("=" + "+".join(f"C{r}" for r in subtotal_rows_sem)) if subtotal_rows_sem else "0"
+    f_com = ("=" + "+".join(f"E{r}" for r in subtotal_rows_com)) if subtotal_rows_com else "0"
+    _money(ws, row, 3, f_sem, fill_tot, bold=True, color=_C["white"])
+    ws.cell(row=row, column=4).fill = fill_tot
+    ws.cell(row=row, column=4).border = _border()
+    _money(ws, row, 5, f_com, fill_tot, bold=True, color=_C["white"])
+    ws.cell(row=row, column=6).fill = fill_tot
+    ws.cell(row=row, column=6).border = _border()
+
+
+def _rir_render_cat_row(ws, row: int, cat: str, ind, ibd, fill, total_sem: float) -> int:
+    """Render one indirect-cost category row. Returns next row."""
+    custo_sem = ind.custo_total
+    bdi_val = ibd.bdi_aplicado if ibd else 0.0
+    custo_com = ibd.custo_com_bdi if ibd else custo_sem
+    pct = custo_sem / total_sem * 100
+    _label(ws, row, 1, cat, fill, bold=True, color=_C["nav_dk"])
+    _label(ws, row, 2, ind.descricao, fill)
+    _money(ws, row, 3, custo_sem, fill)
+    cell = ws.cell(row=row, column=4, value=round(bdi_val * 100, 2))
+    cell.fill = fill
+    cell.border = _border()
+    cell.number_format = '0.00"%"'
+    cell.alignment = _align("right")
+    _money(ws, row, 5, custo_com, fill)
+    cell = ws.cell(row=row, column=6, value=round(pct, 2))
+    cell.fill = fill
+    cell.border = _border()
+    cell.number_format = '0.00"%"'
+    cell.alignment = _align("right")
+    return row + 1
+
+
+def _rir_render_kpis(ws, row: int, res, ncols: int) -> int:
+    """Render KPI indicators section in INDIRETOS.RES. Returns next row."""
+    cd = res.custo.direto_catalogo or res.custo.direto_equipes
+    ci = res.custo.total - cd
+    pvt = res.venda.total_com_bdi
+    kpis = [
+        ("TOTAL DIRETO (catálogo s/BDI)", cd, False),
+        ("TOTAL INDIRETO s/BDI", ci, False),
+        ("RAZÃO CI / CD", ci / cd * 100 if cd > 0 else 0.0, True),
+        ("PREÇO DE VENDA TOTAL", pvt, False),
+        ("CI / PVT", ci / pvt * 100 if pvt > 0 else 0.0, True),
+    ]
+    for label, val, is_pct in kpis:
+        fm = _fill(_C["cinza_lt"])
+        _label(ws, row, 1, label, fm, bold=True)
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
+        if is_pct:
+            cell = ws.cell(row=row, column=3, value=round(val, 2))
+            cell.fill = fm
+            cell.border = _border()
+            cell.number_format = '0.00"%"'
+            cell.alignment = _align("right")
+        else:
+            _money(ws, row, 3, val, fm, bold=True)
+        ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=ncols)
+        row += 1
+    return row
+
+
 def render_indiretos_res(wb: Workbook, canonical: CanonicalModel) -> None:
     """INDIRETOS.RES — Custos indiretos resumidos por categoria + KPIs de composição."""
     ws = wb.create_sheet("INDIRETOS.RES")
@@ -1753,9 +1829,7 @@ def render_indiretos_res(wb: Workbook, canonical: CanonicalModel) -> None:
     row += 1
     ws.freeze_panes = f"A{row}"
     ORDEM_CAT = ["ADM", "TOP", "LAB", "QSMS", "MOB"]
-    inds_by_cat = {ind.categoria: ind for ind in canonical.indiretos}
-    bdi_by_cat = {ibd.categoria: ibd for ibd in canonical.indiretos_com_bdi}
-    total_sem = sum(ind.custo_total for ind in canonical.indiretos) or 1.0
+    inds_by_cat, bdi_by_cat, total_sem = _rir_build_lookups(canonical)
     fill_colors = [_fill(_C["white"]), _fill(_C["row_alt"])]
     subtotal_rows_sem: list[int] = []
     subtotal_rows_com: list[int] = []
@@ -1765,27 +1839,9 @@ def render_indiretos_res(wb: Workbook, canonical: CanonicalModel) -> None:
             continue
         ibd = bdi_by_cat.get(cat)  # type: ignore[call-overload]
         fill = fill_colors[i % 2]
-        custo_sem = ind.custo_total
-        bdi_val = ibd.bdi_aplicado if ibd else 0.0
-        custo_com = ibd.custo_com_bdi if ibd else custo_sem
-        pct = custo_sem / total_sem * 100
-        _label(ws, row, 1, cat, fill, bold=True, color=_C["nav_dk"])
-        _label(ws, row, 2, ind.descricao, fill)
-        _money(ws, row, 3, custo_sem, fill)
-        cell = ws.cell(row=row, column=4, value=round(bdi_val * 100, 2))
-        cell.fill = fill
-        cell.border = _border()
-        cell.number_format = '0.00"%"'
-        cell.alignment = _align("right")
-        _money(ws, row, 5, custo_com, fill)
-        cell = ws.cell(row=row, column=6, value=round(pct, 2))
-        cell.fill = fill
-        cell.border = _border()
-        cell.number_format = '0.00"%"'
-        cell.alignment = _align("right")
-        subtotal_rows_sem.append(row)
-        subtotal_rows_com.append(row)
-        row += 1
+        row = _rir_render_cat_row(ws, row, cat, ind, ibd, fill, total_sem)
+        subtotal_rows_sem.append(row - 1)
+        subtotal_rows_com.append(row - 1)
     row += 1
     fill_tot = _fill(_C["nav_dk"])
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
@@ -1794,46 +1850,52 @@ def render_indiretos_res(wb: Workbook, canonical: CanonicalModel) -> None:
     cell.font = _font(bold=True, color=_C["white"], size=11)
     cell.alignment = _align("right")
     cell.border = _border()
-    f_sem = ("=" + "+".join(f"C{r}" for r in subtotal_rows_sem)) if subtotal_rows_sem else "0"
-    f_com = ("=" + "+".join(f"E{r}" for r in subtotal_rows_com)) if subtotal_rows_com else "0"
-    _money(ws, row, 3, f_sem, fill_tot, bold=True, color=_C["white"])
-    ws.cell(row=row, column=4).fill = fill_tot
-    ws.cell(row=row, column=4).border = _border()
-    _money(ws, row, 5, f_com, fill_tot, bold=True, color=_C["white"])
-    ws.cell(row=row, column=6).fill = fill_tot
-    ws.cell(row=row, column=6).border = _border()
+    _rir_render_total_row(ws, row, subtotal_rows_sem, subtotal_rows_com, fill_tot)
     row += 3
     _section_row(ws, row, "INDICADORES DE COMPOSIÇÃO DE CUSTO", NCOLS)
     row += 1
     res = canonical.resultado
     if res:
-        cd = res.custo.direto_catalogo or res.custo.direto_equipes
-        ci = res.custo.total - cd
-        pvt = res.venda.total_com_bdi
-        kpis = [
-            ("TOTAL DIRETO (catálogo s/BDI)", cd, False),
-            ("TOTAL INDIRETO s/BDI", ci, False),
-            ("RAZÃO CI / CD", ci / cd * 100 if cd > 0 else 0.0, True),
-            ("PREÇO DE VENDA TOTAL", pvt, False),
-            ("CI / PVT", ci / pvt * 100 if pvt > 0 else 0.0, True),
-        ]
-        for label, val, is_pct in kpis:
-            fm = _fill(_C["cinza_lt"])
-            _label(ws, row, 1, label, fm, bold=True)
-            ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
-            if is_pct:
-                cell = ws.cell(row=row, column=3, value=round(val, 2))
-                cell.fill = fm
-                cell.border = _border()
-                cell.number_format = '0.00"%"'
-                cell.alignment = _align("right")
-            else:
-                _money(ws, row, 3, val, fm, bold=True)
-            ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=NCOLS)
-            row += 1
+        row = _rir_render_kpis(ws, row, res, NCOLS)
 
 
 # ── Aba CRONOGRAMA.RES ────────────────────────────────────────────────────────
+
+
+def _rcr_build_qty_by_item(canonical, project_months: list) -> dict:
+    """Build dict of {activity_id: {(year,month): qty}} from cronograma."""
+    qty_by_item: dict = {}
+    if not canonical.cronograma:
+        return qty_by_item
+    for act in canonical.cronograma.scheduled_activities:
+        if act.activity_id not in qty_by_item:
+            qty_by_item[act.activity_id] = {ym: 0.0 for ym in project_months}
+        for wk, dist in act.distribuicao_semanal.items():
+            ym = _week_to_month(wk)
+            if ym in qty_by_item[act.activity_id]:
+                qty_by_item[act.activity_id][ym] += getattr(dist, "qtd_executada", 0.0)
+    return qty_by_item
+
+
+def _rcr_render_item_row(ws, row: int, item, fill, monthly: dict, project_months: list) -> int:
+    """Render one EAP item row in CRONOGRAMA.RES sheet. Returns next row."""
+    _label(ws, row, 1, item.item_id, fill)
+    _label(ws, row, 2, item.descricao, fill, wrap=True)
+    _label(ws, row, 3, item.unidade, fill, align="center")
+    cell = ws.cell(row=row, column=4, value=item.quantitativo)
+    cell.fill = fill
+    cell.border = _border()
+    cell.number_format = "#,##0.##"
+    cell.alignment = _align("right")
+    for j, ym in enumerate(project_months):
+        v = monthly.get(ym, 0.0)
+        cell = ws.cell(row=row, column=5 + j, value=round(v, 2) if v else None)
+        cell.fill = fill
+        cell.border = _border()
+        if v:
+            cell.number_format = "#,##0.##"
+            cell.alignment = _align("right")
+    return row + 1
 
 
 def render_cronograma_res(wb: Workbook, canonical: CanonicalModel) -> None:
@@ -1843,15 +1905,7 @@ def render_cronograma_res(wb: Workbook, canonical: CanonicalModel) -> None:
     if not project_months:
         ws.cell(row=1, column=1).value = "Sem dados de cronograma."
         return
-    qty_by_item: dict[str, dict[tuple, float]] = {}
-    if canonical.cronograma:
-        for act in canonical.cronograma.scheduled_activities:
-            if act.activity_id not in qty_by_item:
-                qty_by_item[act.activity_id] = {ym: 0.0 for ym in project_months}
-            for wk, dist in act.distribuicao_semanal.items():
-                ym = _week_to_month(wk)
-                if ym in qty_by_item[act.activity_id]:
-                    qty_by_item[act.activity_id][ym] += getattr(dist, "qtd_executada", 0.0)
+    qty_by_item = _rcr_build_qty_by_item(canonical, project_months)
     NCOLS = 4 + len(project_months)
     _set_col_widths(ws, [10, 30, 6, 12] + [12] * len(project_months))  # type: ignore[arg-type]
     _freeze(ws, "E3")
@@ -1865,26 +1919,75 @@ def render_cronograma_res(wb: Workbook, canonical: CanonicalModel) -> None:
     for i, item in enumerate(canonical.eap):
         fill = fill_colors[i % 2]
         monthly = qty_by_item.get(item.item_id, {ym: 0.0 for ym in project_months})
-        _label(ws, row, 1, item.item_id, fill)
-        _label(ws, row, 2, item.descricao, fill, wrap=True)
-        _label(ws, row, 3, item.unidade, fill, align="center")
-        cell = ws.cell(row=row, column=4, value=item.quantitativo)
-        cell.fill = fill
-        cell.border = _border()
-        cell.number_format = "#,##0.##"
-        cell.alignment = _align("right")
-        for j, ym in enumerate(project_months):
-            v = monthly.get(ym, 0.0)
-            cell = ws.cell(row=row, column=5 + j, value=round(v, 2) if v else None)
-            cell.fill = fill
-            cell.border = _border()
-            if v:
-                cell.number_format = "#,##0.##"
-                cell.alignment = _align("right")
-        row += 1
+        row = _rcr_render_item_row(ws, row, item, fill, monthly, project_months)
 
 
 # ── Aba EQUIPE ────────────────────────────────────────────────────────────────
+
+
+def _find_eap_item(eap_list, item_id: str):
+    """Linear search for an EAP item by id. Returns None if not found."""
+    for e in eap_list:
+        if e.item_id == item_id:
+            return e
+    return None
+
+
+def _req_render_equipe_subtotal(ws, row: int, eq, ncols: int, equipe_total_rows: list) -> int:
+    """Render subtotal row for one equipe. Returns next row."""
+    fill_sub = _fill(_C["orange_lt"])
+    _label(ws, row, 1, f"Subtotal {eq.item_id}", fill_sub, bold=True)
+    for col in range(2, ncols):
+        ws.cell(row=row, column=col).fill = fill_sub
+        ws.cell(row=row, column=col).border = _border()
+    _money(ws, row, ncols, eq.custo_total, fill_sub, bold=True, color=_C["orange"])
+    equipe_total_rows.append(row)
+    return row + 1
+
+
+def _req_render_func_row(ws, row: int, eq, func, fill, papel_color: dict) -> int:
+    """Render one funcao row in EQUIPE sheet. Returns next row."""
+    papel = getattr(func, "papel", "direto") or "direto"
+    cm = func.custo_mensal_unitario * func.num_pessoas
+    _label(ws, row, 1, eq.item_id, fill)
+    _label(ws, row, 2, eq.cpu_id, fill)
+    _label(ws, row, 3, func.descricao or func.funcao_id, fill)
+    _label(ws, row, 4, papel.upper(), fill, bold=True, color=papel_color.get(papel, _C["preto"]), align="center")
+    _label(ws, row, 5, func.num_pessoas, fill, align="right")
+    _money(ws, row, 6, cm, fill)
+    _label(ws, row, 7, round(eq.permanencia_meses, 2), fill, align="right")
+    _label(ws, row, 8, eq.num_equipes_base, fill, align="right")
+    _money(ws, row, 9, cm * eq.permanencia_meses * eq.num_equipes_base, fill)
+    return row + 1
+
+
+def _req_render_equip_rows(ws, row: int, eq, equip, fill) -> int:
+    """Render equipment row (+ optional combustivel row) in EQUIPE sheet. Returns next row."""
+    cm_eq = getattr(equip, "custo_mensal", 0.0) or 0.0
+    desc = getattr(equip, "descricao", equip.equip_id) or equip.equip_id
+    _label(ws, row, 1, eq.item_id, fill)
+    _label(ws, row, 2, equip.equip_id, fill)
+    _label(ws, row, 3, desc + " [EQ]", fill)
+    _label(ws, row, 4, "EQ", fill, align="center", color=_C["nav_dk"])
+    _label(ws, row, 5, equip.num_unidades, fill, align="right")
+    _money(ws, row, 6, cm_eq, fill)
+    _label(ws, row, 7, round(eq.permanencia_meses, 2), fill, align="right")
+    _label(ws, row, 8, eq.num_equipes_base, fill, align="right")
+    _money(ws, row, 9, cm_eq * eq.permanencia_meses * eq.num_equipes_base, fill)
+    row += 1
+    comb = getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0
+    if comb > 0:
+        _label(ws, row, 1, eq.item_id, fill)
+        _label(ws, row, 2, equip.equip_id, fill)
+        _label(ws, row, 3, f"Diesel — {desc}", fill, color=_C["orange"])
+        _label(ws, row, 4, "COMB", fill, align="center", color=_C["orange"])
+        _label(ws, row, 5, equip.num_unidades, fill, align="right")
+        _money(ws, row, 6, comb, fill)
+        _label(ws, row, 7, round(eq.permanencia_meses, 2), fill, align="right")
+        _label(ws, row, 8, eq.num_equipes_base, fill, align="right")
+        _money(ws, row, 9, comb * eq.permanencia_meses * eq.num_equipes_base, fill)
+        row += 1
+    return row
 
 
 def render_equipe(wb: Workbook, canonical: CanonicalModel) -> None:
@@ -1922,52 +2025,10 @@ def render_equipe(wb: Workbook, canonical: CanonicalModel) -> None:
         row += 1
         fill = _fill(_C["white"]) if i_eq % 2 == 0 else _fill(_C["row_alt"])
         for func in eq.funcoes:
-            papel = getattr(func, "papel", "direto") or "direto"
-            cm = func.custo_mensal_unitario * func.num_pessoas
-            _label(ws, row, 1, eq.item_id, fill)
-            _label(ws, row, 2, eq.cpu_id, fill)
-            _label(ws, row, 3, func.descricao or func.funcao_id, fill)
-            _label(
-                ws, row, 4, papel.upper(), fill, bold=True, color=_PAPEL_COLOR.get(papel, _C["preto"]), align="center"
-            )
-            _label(ws, row, 5, func.num_pessoas, fill, align="right")
-            _money(ws, row, 6, cm, fill)
-            _label(ws, row, 7, round(eq.permanencia_meses, 2), fill, align="right")
-            _label(ws, row, 8, eq.num_equipes_base, fill, align="right")
-            _money(ws, row, 9, cm * eq.permanencia_meses * eq.num_equipes_base, fill)
-            row += 1
+            row = _req_render_func_row(ws, row, eq, func, fill, _PAPEL_COLOR)
         for equip in eq.equipamentos:
-            cm_eq = getattr(equip, "custo_mensal", 0.0) or 0.0
-            _label(ws, row, 1, eq.item_id, fill)
-            _label(ws, row, 2, equip.equip_id, fill)
-            _label(ws, row, 3, (getattr(equip, "descricao", equip.equip_id) or equip.equip_id) + " [EQ]", fill)
-            _label(ws, row, 4, "EQ", fill, align="center", color=_C["nav_dk"])
-            _label(ws, row, 5, equip.num_unidades, fill, align="right")
-            _money(ws, row, 6, cm_eq, fill)
-            _label(ws, row, 7, round(eq.permanencia_meses, 2), fill, align="right")
-            _label(ws, row, 8, eq.num_equipes_base, fill, align="right")
-            _money(ws, row, 9, cm_eq * eq.permanencia_meses * eq.num_equipes_base, fill)
-            row += 1
-            comb = getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0
-            if comb > 0:
-                _label(ws, row, 1, eq.item_id, fill)
-                _label(ws, row, 2, equip.equip_id, fill)
-                _label(ws, row, 3, f"Diesel — {getattr(equip, 'descricao', equip.equip_id)}", fill, color=_C["orange"])
-                _label(ws, row, 4, "COMB", fill, align="center", color=_C["orange"])
-                _label(ws, row, 5, equip.num_unidades, fill, align="right")
-                _money(ws, row, 6, comb, fill)
-                _label(ws, row, 7, round(eq.permanencia_meses, 2), fill, align="right")
-                _label(ws, row, 8, eq.num_equipes_base, fill, align="right")
-                _money(ws, row, 9, comb * eq.permanencia_meses * eq.num_equipes_base, fill)
-                row += 1
-        fill_sub = _fill(_C["orange_lt"])
-        _label(ws, row, 1, f"Subtotal {eq.item_id}", fill_sub, bold=True)
-        for c in range(2, NCOLS):
-            ws.cell(row=row, column=c).fill = fill_sub
-            ws.cell(row=row, column=c).border = _border()
-        _money(ws, row, NCOLS, eq.custo_total, fill_sub, bold=True, color=_C["orange"])
-        equipe_total_rows.append(row)
-        row += 1
+            row = _req_render_equip_rows(ws, row, eq, equip, fill)
+        row = _req_render_equipe_subtotal(ws, row, eq, NCOLS, equipe_total_rows)
     row += 1
     fill_tot = _fill(_C["nav_dk"])
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NCOLS - 1)
@@ -2186,118 +2247,13 @@ def render_histograma_mo(wb: Workbook, canonical: CanonicalModel) -> None:
     _write_hist_totals_row(ws, row, all_weeks, _fill(_C["nav_dk"]), week_totals)
 
 
-def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
-    """GRAFICOS — painéis resumidos para histograma, Gantt e fluxo mensal."""
-    ws = wb.create_sheet("GRAFICOS")
-    _set_col_widths(ws, [18, 14, 18, 14, 18, 14, 18, 14, 18, 14, 18, 14])
+def _rg_week_label(week_key: str) -> str:
+    year_str, week_str = week_key.split("-W")
+    monday = date.fromisocalendar(int(year_str), int(week_str), 1)
+    return f"{monday.day:02d}/{MESES_PT[monday.month]}"
 
-    def _week_label(week_key: str) -> str:
-        year_str, week_str = week_key.split("-W")
-        monday = date.fromisocalendar(int(year_str), int(week_str), 1)
-        return f"{monday.day:02d}/{MESES_PT[monday.month]}"
 
-    def _histogram_totals(kind: str) -> tuple[list[str], list[float]]:
-        acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
-        all_weeks = sorted({week for act in acts for week in act.distribuicao_semanal})
-        if not all_weeks:
-            return [], []
-        lookup = {eq.item_id: eq for eq in canonical.equipes_diretas}
-        totals = {week: 0.0 for week in all_weeks}
-        for act in acts:
-            eq = lookup.get(act.activity_id)
-            if eq is None:
-                continue
-            min_units = (
-                min((e.num_unidades for e in eq.equipamentos if (e.num_unidades or 0) > 0), default=1)
-                if eq.equipamentos
-                else 1
-            )
-            scale = (
-                sum(float(e.num_unidades or 0.0) for e in eq.equipamentos)
-                if kind == "equipamentos"
-                else sum(float(f.num_pessoas or 0.0) for f in eq.funcoes)
-            )
-            for week, dist in act.distribuicao_semanal.items():
-                n_eq = float(getattr(dist, "num_equipes", 0) or 0.0)
-                if n_eq > 0:
-                    totals[week] += (n_eq / min_units) * scale
-        return [_week_label(week) for week in all_weeks], [round(totals[week], 2) for week in all_weeks]
-
-    def _gantt_rows() -> list[tuple[str, int, int]]:
-        rows: list[tuple[str, int, int]] = []
-        acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
-        for act in acts:
-            weeks = sorted(act.distribuicao_semanal.keys())
-            if not weeks:
-                continue
-            year_str, week_str = weeks[0].split("-W")
-            date.fromisocalendar(int(year_str), int(week_str), 1)
-            rows.append((_week_label(weeks[0]), 0, len(weeks) * 7))
-        return rows
-
-    def _cash_flow_rows() -> list[dict[str, Any]]:
-        rows = _cash_flow(canonical)
-        result: list[dict[str, Any]] = []
-        for row in rows:
-            result.append(
-                {
-                    "mes": row["mes_label"],
-                    "receita": float(row["receita"]),
-                    "despesa": float(row["despesa"]),
-                    "saldo": float(row["saldo"]),
-                    "exposicao": float(row["exposicao_acumulada"]),
-                }
-            )
-        return result
-
-    def _write_two_col_block(start_col: int, title: str, labels: list[str], values: list[float]) -> int:
-        get_column_letter(start_col)
-        get_column_letter(start_col + 1)
-        ws.cell(row=1, column=start_col, value=title)
-        ws.cell(row=2, column=start_col, value="Categoria")
-        ws.cell(row=2, column=start_col + 1, value="Valor")
-        for idx, (label, value) in enumerate(zip(labels, values, strict=False), start=3):
-            ws.cell(row=idx, column=start_col, value=label)
-            cell = ws.cell(row=idx, column=start_col + 1, value=value)
-            cell.number_format = "#,##0.00"
-        return len(labels) + 2
-
-    eq_labels, eq_values = _histogram_totals("equipamentos")
-    mo_labels, mo_values = _histogram_totals("mao_obra")
-    finance_rows = _cash_flow_rows()
-    _gantt_rows()
-
-    _write_two_col_block(1, "Histograma de Equipamentos", eq_labels, eq_values)
-    _write_two_col_block(4, "Histograma de Mao de Obra", mo_labels, mo_values)
-
-    gantt_col = 7
-    ws.cell(row=1, column=gantt_col, value="Cronograma (Gantt)")
-    ws.cell(row=2, column=gantt_col, value="Tarefa")
-    ws.cell(row=2, column=gantt_col + 1, value="Inicio")
-    ws.cell(row=2, column=gantt_col + 2, value="Duracao (dias)")
-    acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
-    gantt_map: list[tuple[str, int, int]] = []
-    start_dates: list[date] = []
-    for act in acts:
-        weeks = sorted(act.distribuicao_semanal.keys())
-        if not weeks:
-            continue
-        year_str, week_str = weeks[0].split("-W")
-        start_dates.append(date.fromisocalendar(int(year_str), int(week_str), 1))
-    gantt_origin = min(start_dates) if start_dates else None
-    for act in acts:
-        weeks = sorted(act.distribuicao_semanal.keys())
-        if not weeks:
-            continue
-        year_str, week_str = weeks[0].split("-W")
-        start = date.fromisocalendar(int(year_str), int(week_str), 1)
-        start_offset = (start - gantt_origin).days if gantt_origin else 0
-        gantt_map.append((act.activity_id, start_offset, len(weeks) * 7))
-    for idx, (task, start_offset, duration_days) in enumerate(gantt_map, start=3):
-        ws.cell(row=idx, column=gantt_col, value=task)
-        ws.cell(row=idx, column=gantt_col + 1, value=start_offset)
-        ws.cell(row=idx, column=gantt_col + 2, value=duration_days)
-
+def _rg_write_finance_rows(ws, finance_rows: list) -> None:
     finance_col = 1
     finance_row = 20
     ws.cell(row=finance_row, column=finance_col, value="Fluxo mensal")
@@ -2309,6 +2265,125 @@ def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
         for offset, key in enumerate(("receita", "despesa", "saldo", "exposicao"), start=1):
             cell = ws.cell(row=idx, column=finance_col + offset, value=row[key])
             cell.number_format = "#,##0.00"
+
+
+def _rg_hist_scale(eq, kind: str) -> float:
+    """Compute scale factor for an equipe based on kind."""
+    if kind == "equipamentos":
+        return sum(float(e.num_unidades or 0.0) for e in eq.equipamentos)
+    return sum(float(f.num_pessoas or 0.0) for f in eq.funcoes)
+
+
+def _rg_hist_accumulate_act(act, lookup, kind: str, totals: dict) -> None:
+    eq = lookup.get(act.activity_id)
+    if eq is None:
+        return
+    if eq.equipamentos:
+        candidates = [e.num_unidades for e in eq.equipamentos if (e.num_unidades or 0) > 0]
+        min_units = min(candidates) if candidates else 1
+    else:
+        min_units = 1
+    scale = _rg_hist_scale(eq, kind)
+    for week, dist in act.distribuicao_semanal.items():
+        n_eq = float(getattr(dist, "num_equipes", 0) or 0.0)
+        if n_eq > 0:
+            totals[week] += (n_eq / min_units) * scale
+
+
+def _rg_histogram_totals(canonical, kind: str) -> tuple:
+    acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
+    all_weeks_set = set()
+    for act in acts:
+        for week in act.distribuicao_semanal:
+            all_weeks_set.add(week)
+    all_weeks = sorted(all_weeks_set)
+    if not all_weeks:
+        return [], []
+    lookup = {}
+    for eq in canonical.equipes_diretas:
+        lookup[eq.item_id] = eq
+    totals = {week: 0.0 for week in all_weeks}
+    for act in acts:
+        _rg_hist_accumulate_act(act, lookup, kind, totals)
+    labels = [_rg_week_label(week) for week in all_weeks]
+    values = [round(totals[week], 2) for week in all_weeks]
+    return labels, values
+
+
+def _rg_cash_flow_rows(canonical) -> list:
+    rows = _cash_flow(canonical)
+    return [
+        {
+            "mes": row["mes_label"],
+            "receita": float(row["receita"]),
+            "despesa": float(row["despesa"]),
+            "saldo": float(row["saldo"]),
+            "exposicao": float(row["exposicao_acumulada"]),
+        }
+        for row in rows
+    ]
+
+
+def _rg_write_two_col_block(ws, start_col: int, title: str, labels: list, values: list) -> int:
+    get_column_letter(start_col)
+    get_column_letter(start_col + 1)
+    ws.cell(row=1, column=start_col, value=title)
+    ws.cell(row=2, column=start_col, value="Categoria")
+    ws.cell(row=2, column=start_col + 1, value="Valor")
+    for idx, (label, value) in enumerate(zip(labels, values, strict=False), start=3):
+        ws.cell(row=idx, column=start_col, value=label)
+        cell = ws.cell(row=idx, column=start_col + 1, value=value)
+        cell.number_format = "#,##0.00"
+    return len(labels) + 2
+
+
+def _rg_build_gantt_map(canonical) -> list:
+    """Build Gantt map: list of (activity_id, start_offset_days, duration_days)."""
+    acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
+    start_dates = []
+    for act in acts:
+        weeks = sorted(act.distribuicao_semanal.keys())
+        if not weeks:
+            continue
+        year_str, week_str = weeks[0].split("-W")
+        start_dates.append(date.fromisocalendar(int(year_str), int(week_str), 1))
+    gantt_origin = min(start_dates) if start_dates else None
+    gantt_map = []
+    for act in acts:
+        weeks = sorted(act.distribuicao_semanal.keys())
+        if not weeks:
+            continue
+        year_str, week_str = weeks[0].split("-W")
+        start = date.fromisocalendar(int(year_str), int(week_str), 1)
+        start_offset = (start - gantt_origin).days if gantt_origin else 0
+        gantt_map.append((act.activity_id, start_offset, len(weeks) * 7))
+    return gantt_map
+
+
+def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
+    """GRAFICOS — painéis resumidos para histograma, Gantt e fluxo mensal."""
+    ws = wb.create_sheet("GRAFICOS")
+    _set_col_widths(ws, [18, 14, 18, 14, 18, 14, 18, 14, 18, 14, 18, 14])
+
+    eq_labels, eq_values = _rg_histogram_totals(canonical, "equipamentos")
+    mo_labels, mo_values = _rg_histogram_totals(canonical, "mao_obra")
+    finance_rows = _rg_cash_flow_rows(canonical)
+
+    _rg_write_two_col_block(ws, 1, "Histograma de Equipamentos", eq_labels, eq_values)
+    _rg_write_two_col_block(ws, 4, "Histograma de Mao de Obra", mo_labels, mo_values)
+
+    gantt_col = 7
+    ws.cell(row=1, column=gantt_col, value="Cronograma (Gantt)")
+    ws.cell(row=2, column=gantt_col, value="Tarefa")
+    ws.cell(row=2, column=gantt_col + 1, value="Inicio")
+    ws.cell(row=2, column=gantt_col + 2, value="Duracao (dias)")
+    gantt_map = _rg_build_gantt_map(canonical)
+    for idx, (task, start_offset, duration_days) in enumerate(gantt_map, start=3):
+        ws.cell(row=idx, column=gantt_col, value=task)
+        ws.cell(row=idx, column=gantt_col + 1, value=start_offset)
+        ws.cell(row=idx, column=gantt_col + 2, value=duration_days)
+
+    _rg_write_finance_rows(ws, finance_rows)
 
     if eq_labels:
         chart = BarChart()
@@ -2353,7 +2428,8 @@ def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
         ws.add_chart(chart, "J34")
 
     if finance_rows:
-        finance_row + 1
+        finance_row = 20
+        finance_col = 1
         finance_end = finance_row + 1 + len(finance_rows)
         finance_metrics = [
             (2, "Receita Mensal"),
@@ -2902,6 +2978,82 @@ def render_campanha_frota(wb, canonical) -> None:
             row += 1
 
 
+def _rcc_render_summary_section(ws, row: int, grupos, cubo, fills) -> int:
+    for i, (nome, val) in enumerate(grupos):
+        fill = fills[i % 2]
+        pct = val / cubo.total_preco_venda * 100 if cubo.total_preco_venda > 0 else 0
+        _label(ws, row, 1, nome, fill, bold=True, color=_C["nav_dk"])
+        cell_val = ws.cell(row=row, column=2, value=val)
+        cell_val.fill = fill
+        cell_val.border = _border()
+        cell_val.number_format = "R$ #,##0.00"
+        cell_pct = ws.cell(row=row, column=3, value=round(pct, 2))
+        cell_pct.fill = fill
+        cell_pct.border = _border()
+        cell_pct.number_format = '0.00"%"'
+        row += 1
+    return row
+
+
+def _rcc_render_tributaria_section(ws, row: int, trib_map, cubo, fills) -> int:
+    for i, (trib, val) in enumerate(sorted(trib_map.items(), key=lambda kv: kv[1], reverse=True)):
+        fill = fills[i % 2]
+        pct = val / cubo.total_preco_venda * 100 if cubo.total_preco_venda > 0 else 0
+        _label(ws, row, 1, trib.replace("tributo_", "").upper(), fill, color=_C["vermelho"])
+        ws.cell(row=row, column=2, value=val).fill = fill
+        ws.cell(row=row, column=2).border = _border()
+        ws.cell(row=row, column=2).number_format = "R$ #,##0.00"
+        cell_p = ws.cell(row=row, column=3, value=round(pct, 2))
+        cell_p.fill = fill
+        cell_p.border = _border()
+        cell_p.number_format = '0.00"%"'
+        row += 1
+    return row
+
+
+def _rcc_render_margem_section(ws, row: int, margem_ativ, total_margem: float, fills) -> int:
+    for i, (ativ, val) in enumerate(margem_ativ.items()):
+        fill = fills[i % 2]
+        pct = val / total_margem * 100
+        _label(ws, row, 1, ativ, fill, color=_C["verde"])
+        ws.cell(row=row, column=2, value=val).fill = fill
+        ws.cell(row=row, column=2).border = _border()
+        ws.cell(row=row, column=2).number_format = "R$ #,##0.00"
+        cell_p = ws.cell(row=row, column=3, value=round(pct, 2))
+        cell_p.fill = fill
+        cell_p.border = _border()
+        cell_p.number_format = '0.00"%"'
+        row += 1
+    return row
+
+
+def _rcc_render_temporal_row(ws, row: int, semana, comps, fill, total_pv: float, acum: float):
+    c_dir = comps.get("custo_direto", 0.0)
+    c_oh = sum(comps.get(k, 0.0) for k in ("overhead_ac", "overhead_df", "overhead_r", "overhead_cr"))
+    c_marg = comps.get("margem_l", 0.0)
+    c_trib = sum(
+        comps.get(k, 0.0) for k in ("tributo_cofins", "tributo_iss", "tributo_pis", "tributo_cssl", "tributo_ir")
+    )
+    total_sem = c_dir + c_oh + c_marg + c_trib
+    acum += total_sem
+    pct_sem = total_sem / total_pv * 100
+    pct_acum = acum / total_pv * 100
+    for j, v in enumerate([semana, c_dir, c_oh, c_marg, c_trib, total_sem, pct_acum, pct_sem], 1):
+        cell = ws.cell(row=row, column=j, value=round(v, 2) if isinstance(v, float) else v)
+        cell.fill = fill
+        cell.border = _border()
+        if j in (2, 3, 4, 5, 6):
+            cell.number_format = "R$ #,##0.00"
+        if j in (7, 8):
+            cell.number_format = '0.00"%"'
+            cell.alignment = _align("right")
+        if j == 4:
+            cell.font = _font(color=_C["verde"])
+        if j == 5:
+            cell.font = _font(color=_C["vermelho"])
+    return acum, row + 1
+
+
 def render_cubo_comp(wb, canonical) -> None:
     """CUBO.COMP — Composicao do preco de venda ao longo do tempo (ADR-058 ext.).
 
@@ -2949,19 +3101,7 @@ def render_cubo_comp(wb, canonical) -> None:
         ("Tributos Total", cubo.total_tributos),
     ]
     fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
-    for i, (nome, val) in enumerate(grupos):
-        fill = fills[i % 2]
-        pct = val / cubo.total_preco_venda * 100 if cubo.total_preco_venda > 0 else 0
-        _label(ws, row, 1, nome, fill, bold=True, color=_C["nav_dk"])
-        cell_val = ws.cell(row=row, column=2, value=val)
-        cell_val.fill = fill
-        cell_val.border = _border()
-        cell_val.number_format = "R$ #,##0.00"
-        cell_pct = ws.cell(row=row, column=3, value=round(pct, 2))
-        cell_pct.fill = fill
-        cell_pct.border = _border()
-        cell_pct.number_format = '0.00"%"'
-        row += 1
+    row = _rcc_render_summary_section(ws, row, grupos, cubo, fills)
     row += 1
 
     # Secao 2: Exposicao tributaria por tipo
@@ -2970,18 +3110,7 @@ def render_cubo_comp(wb, canonical) -> None:
     _header_row(ws, row, ["Tributo", "R$ Total", "% PV"])
     row += 1
     trib_map = cubo.exposicao_tributaria_por_tipo()
-    for i, (trib, val) in enumerate(sorted(trib_map.items(), key=lambda kv: kv[1], reverse=True)):
-        fill = fills[i % 2]
-        pct = val / cubo.total_preco_venda * 100 if cubo.total_preco_venda > 0 else 0
-        _label(ws, row, 1, trib.replace("tributo_", "").upper(), fill, color=_C["vermelho"])
-        ws.cell(row=row, column=2, value=val).fill = fill
-        ws.cell(row=row, column=2).border = _border()
-        ws.cell(row=row, column=2).number_format = "R$ #,##0.00"
-        cell_p = ws.cell(row=row, column=3, value=round(pct, 2))
-        cell_p.fill = fill
-        cell_p.border = _border()
-        cell_p.number_format = '0.00"%"'
-        row += 1
+    row = _rcc_render_tributaria_section(ws, row, trib_map, cubo, fills)
     row += 1
 
     # Secao 3: Margem por atividade
@@ -2991,18 +3120,7 @@ def render_cubo_comp(wb, canonical) -> None:
     row += 1
     margem_ativ = cubo.margem_por_atividade()
     total_margem = cubo.total_margem or 1.0
-    for i, (ativ, val) in enumerate(margem_ativ.items()):
-        fill = fills[i % 2]
-        pct = val / total_margem * 100
-        _label(ws, row, 1, ativ, fill, color=_C["verde"])
-        ws.cell(row=row, column=2, value=val).fill = fill
-        ws.cell(row=row, column=2).border = _border()
-        ws.cell(row=row, column=2).number_format = "R$ #,##0.00"
-        cell_p = ws.cell(row=row, column=3, value=round(pct, 2))
-        cell_p.fill = fill
-        cell_p.border = _border()
-        cell_p.number_format = '0.00"%"'
-        row += 1
+    row = _rcc_render_margem_section(ws, row, margem_ativ, total_margem, fills)
     row += 1
 
     # Secao 4: Composicao temporal (custo+overhead+margem+tributos por semana)
@@ -3030,30 +3148,7 @@ def render_cubo_comp(wb, canonical) -> None:
     acum = 0.0
     for i, (semana, comps) in enumerate(comp_temp.items()):
         fill = fills[i % 2]
-        c_dir = comps.get("custo_direto", 0.0)
-        c_oh = sum(comps.get(k, 0.0) for k in ("overhead_ac", "overhead_df", "overhead_r", "overhead_cr"))
-        c_marg = comps.get("margem_l", 0.0)
-        c_trib = sum(
-            comps.get(k, 0.0) for k in ("tributo_cofins", "tributo_iss", "tributo_pis", "tributo_cssl", "tributo_ir")
-        )
-        total_sem = c_dir + c_oh + c_marg + c_trib
-        acum += total_sem
-        pct_sem = total_sem / total_pv * 100
-        pct_acum = acum / total_pv * 100
-        for j, v in enumerate([semana, c_dir, c_oh, c_marg, c_trib, total_sem, pct_acum, pct_sem], 1):
-            cell = ws.cell(row=row, column=j, value=round(v, 2) if isinstance(v, float) else v)
-            cell.fill = fill
-            cell.border = _border()
-            if j in (2, 3, 4, 5, 6):
-                cell.number_format = "R$ #,##0.00"
-            if j in (7, 8):
-                cell.number_format = '0.00"%"'
-                cell.alignment = _align("right")
-            if j == 4:
-                cell.font = _font(color=_C["verde"])
-            if j == 5:
-                cell.font = _font(color=_C["vermelho"])
-        row += 1
+        acum, row = _rcc_render_temporal_row(ws, row, semana, comps, fill, total_pv, acum)
 
 
 class ExcelRenderer:

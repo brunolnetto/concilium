@@ -11,6 +11,8 @@ from concilium.application.services.project_service import ProjectService
 from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
 from concilium.presentation.api.app import create_app
 
+pytestmark = [pytest.mark.slow]
+
 
 class RuntimeSpy:
     def __init__(self, observed: dict):
@@ -52,7 +54,7 @@ def project_service(repository, audit_service):
 
 def test_delete_version_blocks_last_project_version(repository, project_service):
     project = repository.create_project("Projeto Teste", "ctx")
-    project.update_meta(project_kind="project")
+    project.update_meta(tipo_projeto="project")
     project.new_version()
 
     with pytest.raises(RuntimeError, match="última versão"):
@@ -64,7 +66,7 @@ def test_delete_version_blocks_last_project_version(repository, project_service)
 
 def test_delete_version_allows_last_hot_project(repository, project_service):
     project = repository.create_project("Projeto HOT", "ctx")
-    project.update_meta(project_kind="hot_project")
+    project.update_meta(tipo_projeto="hot_project")
     project.new_version()
     project.write_json(
         "runs.json",

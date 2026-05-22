@@ -49,7 +49,6 @@
       }
     ]
   },
-  "cpu_ids": [
-    "CPU-TERRA-COMPACT-ATERRO-100PN"
-  ]
+  "historico_observacoes": [],
+  "valor_horario": 173.197428
 }

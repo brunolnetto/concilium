@@ -22,11 +22,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 1.5,
-    "custo_padrao_pj": 1.3
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-019-M2"
-  ]
+  "historico_observacoes": []
 }

@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 48.1486,
-    "custo_padrao_pj": 38.9718
-  },
-  "cpu_ids": [
-    "CPU-SANEA-ATI-051"
-  ]
+  "historico_observacoes": []
 }

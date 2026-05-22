@@ -107,7 +107,9 @@ def _compute_composicao_custo(
                 ValidacaoItem(
                     codigo="VAL-CAT-PU-03",
                     status="AVISO",
-                    mensagem=f"CPU '{cpu_id}': categoria_custo desconhecida '{categoria_custo}' em insumo '{insumo_id}'",
+                    mensagem=(
+                        f"CPU '{cpu_id}': categoria_custo desconhecida '{categoria_custo}' em insumo '{insumo_id}'"
+                    ),
                 )
             )
             continue

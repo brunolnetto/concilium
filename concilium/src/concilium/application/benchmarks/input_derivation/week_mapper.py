@@ -63,40 +63,20 @@ def remap_activity_semanas(
     return result
 
 
-def normalize_referencia_weeks(ref: dict[str, Any]) -> dict[str, Any]:
-    """Normaliza o referencia.json in-place: converte semanas numéricas → ISO em
-    todas as atividades do cronograma, e injeta data_inicio/data_termino no nível
-    raiz quando ausentes.
+def _nrw_inject_dates(ref: dict, semanas_meta: dict, sorted_nums: list) -> None:
+    """Injeta data_inicio e data_termino no nivel raiz a partir das semanas."""
+    first_week_meta = semanas_meta.get(sorted_nums[0], {})
+    last_week_meta = semanas_meta.get(sorted_nums[-1], {})
+    if not ref.get("data_inicio") and first_week_meta.get("data_inicio"):
+        ref["data_inicio"] = str(first_week_meta["data_inicio"])
+    if not ref.get("data_termino") and last_week_meta.get("data_fim"):
+        ref["data_termino"] = str(last_week_meta["data_fim"])
+    elif not ref.get("data_termino") and last_week_meta.get("data_inicio"):
+        ref["data_termino"] = str(last_week_meta["data_inicio"])
 
-    Retorna o mesmo dict modificado (não faz cópia profunda por performance).
-    """
-    cronograma = ref.get("cronograma")
-    if not isinstance(cronograma, dict):
-        return ref
 
-    semanas_meta = cronograma.get("semanas", {})
-    if not is_numeric_week_scheme(semanas_meta):
-        return ref  # já está em ISO ou vazio — nada a fazer
-
-    num_to_iso = build_numeric_to_iso_map(semanas_meta)
-    if not num_to_iso:
-        return ref
-
-    # Injetar data_inicio / data_termino no nível raiz se ausentes
-    sorted_nums = sorted(num_to_iso.keys(), key=int)
-    if sorted_nums:
-        first_week_meta = semanas_meta.get(sorted_nums[0], {})
-        last_week_meta = semanas_meta.get(sorted_nums[-1], {})
-
-        if not ref.get("data_inicio") and first_week_meta.get("data_inicio"):
-            ref["data_inicio"] = str(first_week_meta["data_inicio"])
-
-        if not ref.get("data_termino") and last_week_meta.get("data_fim"):
-            ref["data_termino"] = str(last_week_meta["data_fim"])
-        elif not ref.get("data_termino") and last_week_meta.get("data_inicio"):
-            ref["data_termino"] = str(last_week_meta["data_inicio"])
-
-    # Remap semanas em cada atividade
+def _nrw_remap_atividades(cronograma: dict, num_to_iso: dict) -> None:
+    """Remapeia semanas numericas para ISO em cada atividade do cronograma."""
     atividades = cronograma.get("atividades")
     if isinstance(atividades, list):
         for atividade in atividades:
@@ -108,4 +88,29 @@ def normalize_referencia_weeks(ref: dict[str, Any]) -> dict[str, Any]:
             if is_numeric_week_scheme(semanas):
                 atividade["semanas"] = remap_activity_semanas(semanas, num_to_iso)
 
+
+def normalize_referencia_weeks(ref: dict[str, Any]) -> dict[str, Any]:
+    """Normaliza o referencia.json in-place: converte semanas numericas -> ISO em
+    todas as atividades do cronograma, e injeta data_inicio/data_termino no nivel
+    raiz quando ausentes.
+
+    Retorna o mesmo dict modificado (nao faz copia profunda por performance).
+    """
+    cronograma = ref.get("cronograma")
+    if not isinstance(cronograma, dict):
+        return ref
+
+    semanas_meta = cronograma.get("semanas", {})
+    if not is_numeric_week_scheme(semanas_meta):
+        return ref
+
+    num_to_iso = build_numeric_to_iso_map(semanas_meta)
+    if not num_to_iso:
+        return ref
+
+    sorted_nums = sorted(num_to_iso.keys(), key=int)
+    if sorted_nums:
+        _nrw_inject_dates(ref, semanas_meta, sorted_nums)
+
+    _nrw_remap_atividades(cronograma, num_to_iso)
     return ref

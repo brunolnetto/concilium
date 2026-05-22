@@ -33,12 +33,6 @@ from ..molecules.components import (
 def _to_float(value: object) -> float | None:
     if isinstance(value, bool):
         return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    try:
-        return float(str(value))
-    except Exception:
-        return None
 
 
 def _format_currency(value: object) -> str:
@@ -57,7 +51,6 @@ def _format_percent(value: object) -> str:
     parsed = _to_float(value)
     if parsed is None:
         return "-"
-    # margem_pct é armazenada como fração (0–1); multiplicar por 100 para exibir em %
     return f"{parsed * 100:,.2f}%"
 
 
@@ -74,6 +67,97 @@ def _emoji_status(gap_rs: float) -> str:
     if gap_rs >= -5000:
         return "⚠️"
     return "🔴"
+
+
+def _render_cube_projection_chart(face: str, chart_hint: str, rows: list[dict[str, object]]) -> None:
+    if not rows:
+        return
+    try:
+        import pandas as pd
+    except Exception:
+        st.caption("Pandas indisponível no ambiente; exibindo somente tabela.")
+        return
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return
+
+    if chart_hint == "line":
+        if face == "s_curve_custo" and {"periodo", "custo_acumulado_rs"}.issubset(df.columns):
+            series = df.set_index("periodo")["custo_acumulado_rs"]
+            st.line_chart(series)
+            return
+        if face == "recursos_ativos_tempo" and {"periodo", "n_equipes_totais", "equipamentos_unidades_ativas"}.issubset(
+            df.columns
+        ):
+            multi = df.set_index("periodo")[["n_equipes_totais", "equipamentos_unidades_ativas"]]
+            st.line_chart(multi)
+            return
+        if face == "diesel_temporal" and {"periodo", "consumo_diesel_l"}.issubset(df.columns):
+            series = df.groupby("periodo", as_index=True)["consumo_diesel_l"].sum()
+            st.line_chart(series)
+            return
+        if {"periodo", "componente_bdi", "valor_rs"}.issubset(df.columns):
+            pivot = df.pivot_table(
+                index="periodo",
+                columns="componente_bdi",
+                values="valor_rs",
+                aggfunc="sum",
+                fill_value=0,
+            ).sort_index()
+            st.line_chart(pivot)
+            return
+
+    if chart_hint == "bar_stacked" and {"periodo", "natureza", "valor_rs"}.issubset(df.columns):
+        pivot = df.pivot_table(
+            index="periodo",
+            columns="natureza",
+            values="valor_rs",
+            aggfunc="sum",
+            fill_value=0,
+        ).sort_index()
+        st.bar_chart(pivot)
+        return
+
+    if chart_hint == "bar" and {"insumo_id", "custo_total_rs"}.issubset(df.columns):
+        series = df.set_index("insumo_id")["custo_total_rs"]
+        st.bar_chart(series)
+        return
+
+    if chart_hint == "heatmap":
+        try:
+            import altair as alt
+        except Exception:
+            st.caption("Altair indisponível no ambiente; exibindo somente tabela.")
+            return
+
+        if {"categoria", "componente_bdi", "valor_rs"}.issubset(df.columns):
+            heatmap = (
+                alt.Chart(df)
+                .mark_rect()
+                .encode(
+                    x=alt.X("componente_bdi:N", title="Componente BDI"),
+                    y=alt.Y("categoria:N", title="Categoria"),
+                    color=alt.Color("valor_rs:Q", title="Valor (R$)"),
+                    tooltip=["categoria", "componente_bdi", alt.Tooltip("valor_rs:Q", format=",.2f")],
+                )
+            )
+            st.altair_chart(heatmap, use_container_width=True)
+            return
+
+        if {"atividade_id", "componente_bdi", "valor_rs"}.issubset(df.columns):
+            heatmap = (
+                alt.Chart(df)
+                .mark_rect()
+                .encode(
+                    x=alt.X("componente_bdi:N", title="Componente BDI"),
+                    y=alt.Y("atividade_id:N", title="Atividade"),
+                    color=alt.Color("valor_rs:Q", title="Valor (R$)"),
+                    tooltip=["atividade_id", "componente_bdi", alt.Tooltip("valor_rs:Q", format=",.2f")],
+                )
+            )
+            st.altair_chart(heatmap, use_container_width=True)
+            return
 
 
 def render_diagnostico_pe(
@@ -102,12 +186,14 @@ def render_diagnostico_pe(
             st.markdown(f"`{barra}` **{label}** — R$ {valor:,.0f} ({pct}%)")
         if diagnostico.gap_evitavel_rs > 50:
             st.info(
-                f"R$ {diagnostico.gap_evitavel_rs:,.0f} deste custo pode ser evitado com ajustes de cronograma ou mobilização.",
+                f"R$ {diagnostico.gap_evitavel_rs:,.0f} deste custo pode ser evitado"
+                " com ajustes de cronograma ou mobilização.",
                 icon=None,
             )
         if diagnostico.aviso_cross_term:
             st.warning(
-                "⚠️ Em pelo menos uma atividade, a mobilização coincidiu com o período de pior clima. Esse custo duplo pode ser evitado mudando a época de início."
+                "⚠️ Em pelo menos uma atividade, a mobilização coincidiu com o período de pior clima."
+                " Esse custo duplo pode ser evitado mudando a época de início."
             )
         st.markdown("---")
         st.markdown("**Detalhes por atividade:**")
@@ -216,6 +302,13 @@ def _build_wizard_deficit_opcoes(diagnostico: object, backtracking: object) -> l
     """Builds the wizard option tuples from backtracking data."""
     opcoes: list[tuple[str, str, str]] = []
     params_disponiveis: dict[str, list[str]] = {}
+    bloco_explicacao = getattr(diagnostico, "explicacao_natureza_periodo", {}) if diagnostico else {}
+    janelas_prioritarias = []
+    if isinstance(bloco_explicacao, dict):
+        raw_janelas = bloco_explicacao.get("janelas_prioritarias")
+        if isinstance(raw_janelas, list):
+            janelas_prioritarias = [j for j in raw_janelas if isinstance(j, dict)]
+
     for bt_item in backtracking.itens:  # type: ignore[union-attr]
         for sol in bt_item.solucoes:
             if sol.roundtrip_valido:
@@ -223,11 +316,18 @@ def _build_wizard_deficit_opcoes(diagnostico: object, backtracking: object) -> l
     if "L" in params_disponiveis:
         _wizard_opcao_L(diagnostico, opcoes)
     if "T0_RAMP" in params_disponiveis:
+        timing_msg = "Estima eliminar custo de época desfavorável sem repasse ao cliente"
+        if janelas_prioritarias:
+            top = janelas_prioritarias[0]
+            janela = top.get("janela_iso")
+            natureza = top.get("natureza")
+            if janela and natureza:
+                timing_msg = f"Prioriza janela {janela} com causa dominante {natureza}"
         opcoes.append(
             (
                 "T0_RAMP",
                 "Mudar quando as atividades começam (cronograma)",
-                "Estima eliminar custo de época desfavorável sem repasse ao cliente",
+                timing_msg,
             )
         )
     if "P" in params_disponiveis:
@@ -325,7 +425,8 @@ def render_version_summary(base_url: str, project: dict, actor: str) -> None:
     col_pe.caption(f"Alertas de P.E.: {_format_int(summary.get('pe_alerta_items'))}")  # type: ignore[union-attr]
     if last_run:
         st.caption(
-            "ℹ️ Valores financeiros baseados na última execução e não refletem o estado definitivo até a versão ser comitada."
+            "ℹ️ Valores financeiros baseados na última execução e não refletem"
+            " o estado definitivo até a versão ser comitada."
         )  # noqa: E501
     override_skills = _collect_override_summary(base_url, project_id, actor)
     if override_skills:
@@ -351,7 +452,7 @@ def render_overview_tab(base_url: str, project: dict, actor: str) -> None:
     except Exception:
         reference = {}
 
-    render_version_summary(base_url, project, actor)
+    from concilium.presentation.ui.templates._project_page_helpers_a import _render_context_section, _render_eap_section
 
     with st.expander("ℹ️ Resumo do Projeto", expanded=False):
         render_kpi_cards(
@@ -380,6 +481,214 @@ def render_overview_tab(base_url: str, project: dict, actor: str) -> None:
                 {"label": "Atividades com equipes", "value": team_count},
             ]
         )
+
+    st.divider()
+    with st.expander("📋 Atividades da EAP", expanded=False):
+        _render_eap_section(reference)
+
+    with st.expander("🌐 Contexto e Perfil", expanded=False):
+        _render_context_section(base_url, project, project_id, actor)
+
+
+def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -> None:
+    """Painel de cubo analítico com visualização explícita por versão de planejamento."""
+    project_id = project["project_id"]
+    st.subheader("🧭 Cubo analítico por versão")
+    versions = project.get("versions") or []
+    version_options = versions if versions else [project.get("current_version") or "v1"]
+    selected_version = st.selectbox(
+        "Versão de planejamento",
+        options=version_options,
+        key=f"cube-version-{project_id}",
+    )
+    st.caption("Exploração analítica vinculada à versão selecionada.")
+
+    face_options = {
+        "tempo_natureza": "Tempo × natureza (direto/indireto)",
+        "tempo_componente": "Tempo × componente BDI",
+        "categoria_componente": "Categoria × componente BDI",
+        "atividade_componente": "Atividade × componente BDI",
+        "diesel_temporal": "Diesel (litros) × tempo",
+        "abc_curva": "Curva ABC por insumo (Pareto)",
+        "s_curve_custo": "S-curve de custo acumulado",
+        "recursos_ativos_tempo": "Recursos ativos no tempo",
+    }
+    granularidade_options = ["semana", "mes", "bimestre", "trimestre", "semestre", "ano"]
+    contract_faces: dict[str, dict[str, object]] = {}
+    try:
+        contract = api_call(
+            method="GET",
+            path=f"/api/projects/{project_id}/cubo-analitico/projecao/contrato",
+            base_url=base_url,
+            actor=actor,
+        )
+        raw_faces = contract.get("faces") if isinstance(contract, dict) else None
+        if isinstance(raw_faces, dict):
+            contract_faces = {k: v for k, v in raw_faces.items() if isinstance(v, dict)}
+            face_options = {k: str(v.get("label") or face_options.get(k) or k) for k, v in contract_faces.items()}
+        raw_gran = contract.get("granularidades") if isinstance(contract, dict) else None
+        if isinstance(raw_gran, list) and raw_gran:
+            granularidade_options = [str(g) for g in raw_gran]
+    except Exception:
+        contract_faces = {}
+
+    categoria_options = ["", "mao_obra", "equipamento", "diesel", "material"]
+    componente_options = [
+        "",
+        "custo_direto",
+        "overhead_ac",
+        "overhead_df",
+        "overhead_r",
+        "overhead_cr",
+        "margem_l",
+        "tributo_cofins",
+        "tributo_iss",
+        "tributo_pis",
+        "tributo_cssl",
+        "tributo_ir",
+    ]
+
+    f_col1, f_col2, f_col3 = st.columns([3, 2, 2])
+    face = f_col1.selectbox(
+        "Face",
+        options=list(face_options.keys()),
+        format_func=lambda x: face_options[x],
+        key=f"cube-face-{project_id}",
+    )
+    granularidade = f_col2.selectbox(
+        "Granularidade",
+        options=granularidade_options,
+        index=1,
+        key=f"cube-gran-{project_id}",
+    )
+    top_n = int(
+        f_col3.number_input(
+            "Top N",
+            min_value=20,
+            max_value=2000,
+            value=300,
+            step=20,
+            key=f"cube-topn-{project_id}",
+        )
+    )
+
+    f2_col1, f2_col2, f2_col3 = st.columns([2, 2, 3])
+    categoria = f2_col1.selectbox("Categoria", options=categoria_options, key=f"cube-cat-{project_id}")
+    componente = f2_col2.selectbox("Componente BDI", options=componente_options, key=f"cube-comp-{project_id}")
+    atividade_id = f2_col3.text_input(
+        "Atividade (item_id)",
+        value="",
+        placeholder="Opcional",
+        key=f"cube-act-{project_id}",
+    ).strip()
+
+    current_face_spec = contract_faces.get(face) if isinstance(contract_faces.get(face), dict) else {}
+    face_measure_options = current_face_spec.get("measure_profiles") if isinstance(current_face_spec, dict) else None
+    face_agg_options = current_face_spec.get("aggregation_modes") if isinstance(current_face_spec, dict) else None
+
+    f3_col1, f3_col2, f3_col3 = st.columns([2, 2, 2])
+    measure_options = [""] + [
+        str(v) for v in (face_measure_options or ["financial_default", "abc_custo_direto", "recursos_ativos"])
+    ]
+    aggregation_options = [""] + [
+        str(v) for v in (face_agg_options or ["sum", "count_distinct", "cumulative", "pareto"])
+    ]
+    measure_profile = f3_col1.selectbox(
+        "Measure profile",
+        options=measure_options,
+        key=f"cube-measure-{project_id}",
+    )
+    aggregation_mode = f3_col2.selectbox(
+        "Aggregation mode",
+        options=aggregation_options,
+        key=f"cube-agg-{project_id}",
+    )
+    abc_threshold_a = float(
+        f3_col3.number_input(
+            "ABC threshold A",
+            min_value=0.50,
+            max_value=0.90,
+            value=0.80,
+            step=0.01,
+            key=f"cube-abc-a-{project_id}",
+        )
+    )
+    abc_threshold_b = float(
+        st.number_input(
+            "ABC threshold B",
+            min_value=0.85,
+            max_value=0.99,
+            value=0.95,
+            step=0.01,
+            key=f"cube-abc-b-{project_id}",
+        )
+    )
+
+    categoria_param = categoria or None
+    componente_param = componente or None
+    if face == "diesel_temporal":
+        categoria_param = "diesel"
+        componente_param = "custo_direto"
+        st.caption("Face diesel força filtros: categoria=diesel e componente=custo_direto.")
+
+    params = {
+        "version": selected_version,
+        "face": face,
+        "granularidade": granularidade,
+        "categoria": categoria_param,
+        "componente_bdi": componente_param,
+        "atividade_id": atividade_id or None,
+        "top_n": top_n,
+        "measure_profile": measure_profile or None,
+        "aggregation_mode": aggregation_mode or None,
+        "abc_threshold_a": abc_threshold_a,
+        "abc_threshold_b": abc_threshold_b,
+    }
+    params = {k: v for k, v in params.items() if v is not None and v != ""}
+    try:
+        projection = api_call(
+            method="GET",
+            path=f"/api/projects/{project_id}/cubo-analitico/projecao",
+            params=params,
+            base_url=base_url,
+            actor=actor,
+        )
+        totals = projection.get("totais") or {}
+        rows = projection.get("rows") or []
+        columns_meta = projection.get("columns") or []
+        chart_hint = str(projection.get("chart_hint") or "")
+        operator_meta = projection.get("operator_meta") or {}
+        unit_type = str(projection.get("unit_type") or "")
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Preço de venda", f"R$ {float(totals.get('total_preco_venda', 0.0)):,.0f}")
+        c2.metric("Custo direto", f"R$ {float(totals.get('total_custo_direto', 0.0)):,.0f}")
+        c3.metric("Tributos", f"R$ {float(totals.get('total_tributos', 0.0)):,.0f}")
+
+        if rows:
+            _render_cube_projection_chart(face, chart_hint, rows)
+
+            if columns_meta:
+                st.caption(
+                    "Esquema: "
+                    + ", ".join(
+                        f"{str(col.get('id'))} ({str(col.get('dtype'))}, {str(col.get('role'))})"
+                        for col in columns_meta
+                        if isinstance(col, dict)
+                    )
+                )
+
+            if operator_meta:
+                st.caption(f"Operador: {operator_meta}")
+
+            if unit_type:
+                st.caption(f"Unidade semântica: {unit_type}")
+
+            render_paginated_table(rows, page_key=f"cube-proj-page-{project_id}", page_size=20, label="cubo")
+        else:
+            st.info("Sem dados para a combinação de filtros selecionada.")
+    except Exception as exc:
+        st.warning(f"Falha ao consultar projeção do cubo analítico: {exc}")
 
 
 def _render_md_with_mermaid(text: str) -> None:
@@ -793,6 +1102,12 @@ def render_indiretos_config(base_url: str, project_id: str, actor: str) -> None:
         reference = {}
     equipes = {str(e.get("categoria", "")).upper(): e for e in (reference.get("equipes_indiretas") or [])}
     ind_det = reference.get("indiretos_detalhamento") or {}
+    if not equipes and not ind_det:
+        equipes_fb, ind_det_fb = _hydrate_indiretos_from_overrides(base_url, project_id, actor)
+        if equipes_fb or ind_det_fb:
+            equipes = equipes_fb
+            ind_det = ind_det_fb
+            st.caption("Base de indiretos carregada de overrides salvos (skill 07).")
     _enc_raw = reference.get("encargos_sociais") or {}
     encargos: dict[str, float] = {
         "PJ": float(_enc_raw.get("pj", 0.0)),
@@ -879,7 +1194,7 @@ def render_run(
 def render_version_management(base_url: str, project: dict, actor: str) -> None:
     """Render version management controls."""
     project_id = project["project_id"]
-    st.subheader("💼 Gestão de Versões")
+    st.subheader("🗑️ Excluir versão")
     st.warning(
         "Excluir versão remove seus artefatos/canônico daquela pasta. Runs que apontavam para ela permanecem no histórico e podem ficar órfãos."  # noqa: E501
     )
@@ -1100,7 +1415,12 @@ def _render_saved_bdi_section(project_id: str, reference: dict, current: dict, b
     bdi_col1, bdi_col2, bdi_col3, bdi_col4, bdi_col5 = st.columns(5)
     edited_bdi = {
         "mao_obra": bdi_col1.number_input(
-            "MO", min_value=0.0, max_value=5.0, value=bdi_defaults["mao_obra"], step=0.01, key=f"bdi-mo-{project_id}"
+            "MO",
+            min_value=0.0,
+            max_value=5.0,
+            value=bdi_defaults["mao_obra"],
+            step=0.01,
+            key=f"ov-bdi-mo-{project_id}",
         ),
         "equipamentos": bdi_col2.number_input(
             "Equip.",
@@ -1108,7 +1428,7 @@ def _render_saved_bdi_section(project_id: str, reference: dict, current: dict, b
             max_value=5.0,
             value=bdi_defaults["equipamentos"],
             step=0.01,
-            key=f"bdi-eq-{project_id}",
+            key=f"ov-bdi-eq-{project_id}",
         ),
         "material": bdi_col3.number_input(
             "Material",
@@ -1116,10 +1436,15 @@ def _render_saved_bdi_section(project_id: str, reference: dict, current: dict, b
             max_value=5.0,
             value=bdi_defaults["material"],
             step=0.01,
-            key=f"bdi-mat-{project_id}",
+            key=f"ov-bdi-mat-{project_id}",
         ),
         "diesel": bdi_col4.number_input(
-            "Diesel", min_value=0.0, max_value=5.0, value=bdi_defaults["diesel"], step=0.01, key=f"bdi-dsl-{project_id}"
+            "Diesel",
+            min_value=0.0,
+            max_value=5.0,
+            value=bdi_defaults["diesel"],
+            step=0.01,
+            key=f"ov-bdi-dsl-{project_id}",
         ),
         "indireto": bdi_col5.number_input(
             "Indireto",
@@ -1127,10 +1452,10 @@ def _render_saved_bdi_section(project_id: str, reference: dict, current: dict, b
             max_value=5.0,
             value=bdi_defaults["indireto"],
             step=0.01,
-            key=f"bdi-ind-{project_id}",
+            key=f"ov-bdi-ind-{project_id}",
         ),
     }
-    if st.button("Salvar BDI", key=f"save-bdi-{project_id}", use_container_width=True, type="primary"):
+    if st.button("Salvar BDI", key=f"save-ov-bdi-{project_id}", use_container_width=True, type="primary"):
         p06 = {"bdi_aplicado": {k: edited_bdi[k] for k in ["mao_obra", "equipamentos", "material", "diesel"]}}
         p08 = {"bdi_aplicado": edited_bdi}
         for skill_id, payload in [("06-precificacao-unitaria", p06), ("08-consolidacao-financeira", p08)]:
@@ -1211,6 +1536,50 @@ def _build_mob_policy_rows(eap_items: list, saved_policies: dict, ramp_up_enable
             }
         )
     return rows
+
+
+def _extract_cpu_id_from_any_item(item: dict) -> str:
+    """Extract cpu_id from canonical EAP contract."""
+    if not isinstance(item, dict):
+        return ""
+    cpu_direct = item.get("cpu_id")
+    if isinstance(cpu_direct, str):
+        return cpu_direct.strip()
+    return ""
+
+
+def _load_eap_items_for_planning(project_id: str, base_url: str, actor: str) -> list[dict]:
+    """Loads EAP items from project endpoint and normalizes cpu_id for planning UIs."""
+    try:
+        eap_resp = api_call(method="GET", path=f"/api/projects/{project_id}/eap", base_url=base_url, actor=actor)
+    except Exception:
+        return []
+    rows: list[dict] = []
+    for item in eap_resp.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        cpu_id = _extract_cpu_id_from_any_item(item)
+        if not cpu_id:
+            continue
+        normalized = dict(item)
+        normalized["cpu_id"] = cpu_id
+        rows.append(normalized)
+    return rows
+
+
+def _build_eap_items_from_saved_policies(saved_policies: dict) -> list[dict]:
+    """Builds minimal EAP-like rows from saved mobilization policies when EAP is unavailable."""
+    items: list[dict] = []
+    for item_id in sorted(saved_policies.keys()):
+        items.append(
+            {
+                "item_id": str(item_id),
+                "descricao": "(item sem referência de EAP)",
+                "cpu_id": "",
+                "quantitativo": 0.0,
+            }
+        )
+    return items
 
 
 def _render_mob_rampdown_expander(rows: list[dict], project_id: str) -> None:
@@ -1396,6 +1765,10 @@ def render_mobilizacao_policy_editor(
         saved_policies = {}
     eap_items = extract_eap_items_for_policy(reference)
     if not eap_items:
+        eap_items = _load_eap_items_for_planning(project_id, base_url, actor)
+    if not eap_items and saved_policies:
+        eap_items = _build_eap_items_from_saved_policies(saved_policies)
+    if not eap_items:
         st.info("Nenhum item de EAP com CPU encontrado na referência para configurar políticas.")
         return
     ramp_col1, ramp_col2, _ = st.columns([2, 2, 4])
@@ -1547,6 +1920,47 @@ def render_deliverables_config(base_url: str, project_id: str, actor: str) -> No
             st.success("Salvo.")
         except Exception as exc:
             st.error(f"Erro ao salvar: {exc}")
+
+
+def _hydrate_indiretos_from_overrides(base_url: str, project_id: str, actor: str) -> tuple[dict, dict]:
+    """Fallback: use saved skill 07 overrides when benchmark reference has no indirect baseline."""
+    try:
+        ov = api_call(method="GET", path=f"/api/projects/{project_id}/overrides", base_url=base_url, actor=actor)
+    except Exception:
+        return {}, {}
+    s07 = ov.get("07-custos-indiretos") if isinstance(ov, dict) else None
+    if not isinstance(s07, dict):
+        return {}, {}
+    cats = s07.get("categorias_config") or []
+    if not isinstance(cats, list):
+        return {}, {}
+    equipes_fallback: dict[str, dict] = {}
+    ind_det_fallback: dict[str, dict] = {}
+    for cat in cats:
+        if not isinstance(cat, dict):
+            continue
+        cid = str(cat.get("categoria") or "").upper().strip()
+        if not cid:
+            continue
+        if cid == "MOB":
+            ind_det_fallback["MOB"] = {
+                "custo_fixo_total": float(cat.get("custo_fixo_total") or cat.get("custo_total") or 0.0)
+            }
+            continue
+        mo = ((cat.get("mao_de_obra") or {}).get("itens") or []) if isinstance(cat.get("mao_de_obra"), dict) else []
+        equips = cat.get("equipamentos") or []
+        verbas = cat.get("verbas_mensais") or []
+        if not mo and not equips and not verbas:
+            total_month = float(cat.get("custo_fixo_mensal") or 0.0)
+            if total_month > 0:
+                verbas = [{"descricao": "custo consolidado", "valor_mensal": total_month}]
+        equipes_fallback[cid] = {
+            "categoria": cid,
+            "mao_obra": mo,
+            "equipamentos": equips,
+            "verbas_mensais": verbas,
+        }
+    return equipes_fallback, ind_det_fallback
 
 
 def _bdi_tcu_cv(saved_comp: dict, key: str, dom_val: float) -> float:
@@ -2005,7 +2419,8 @@ def _render_bdi_cbs_ibs(
     st.markdown("**BDI derivado — fórmula TCU Ac. 2622/2013**")
     st.caption(
         "**T_bruto**: alíquota CBS+IBS sobre o preço de venda. **Crédito (%)**: fração recuperável. "
-        "**T_efetivo**: carga líquida após crédito + CSSL + IR. **BDI**: markup total = (1 + overhead) / (1 − T_efetivo) − 1."
+        "**T_efetivo**: carga líquida após crédito + CSSL + IR."
+        " **BDI**: markup total = (1 + overhead) / (1 − T_efetivo) − 1."
     )
     st.dataframe(preview_rows, width="stretch", hide_index=True)
     if st.button("Salvar cenário CBS/IBS", key=f"save-tax-scenario-{project_id}", type="primary"):
@@ -2078,14 +2493,17 @@ def _extract_cpu_ids(reference: dict) -> set[str]:
     cpu_ids: set[str] = set()
     if not isinstance(reference, dict):
         return cpu_ids
+
+    def _add_cpu(value: object) -> None:
+        if isinstance(value, str) and value.strip():
+            cpu_ids.add(value.strip())
+
     cpus_block = reference.get("cpus")
     if isinstance(cpus_block, dict):
         for item in cpus_block.get("itens_eap", []):
-            if isinstance(item, dict) and item.get("cpu_id"):
-                cpu_ids.add(str(item["cpu_id"]))
-    for activity in (reference.get("cronograma") or {}).get("atividades", []):
-        if isinstance(activity, dict) and activity.get("cpu_id"):
-            cpu_ids.add(str(activity["cpu_id"]))
+            if isinstance(item, dict):
+                _add_cpu(item.get("cpu_id"))
+
     return cpu_ids
 
 
@@ -2169,11 +2587,8 @@ def _resolve_cpu_ids_with_fallback(reference: dict, base_url: str, project_id: s
     """Resolves cpu_ids from reference or EAP fallback."""
     cpu_ids = list(_extract_cpu_ids(reference))
     if not cpu_ids:
-        try:
-            eap_resp = api_call(method="GET", path=f"/api/projects/{project_id}/eap", base_url=base_url, actor=actor)
-            cpu_ids = list({it.get("cpu_id") for it in (eap_resp.get("items") or []) if it.get("cpu_id")})
-        except Exception:
-            cpu_ids = []
+        eap_rows = _load_eap_items_for_planning(project_id, base_url, actor)
+        cpu_ids = list({_extract_cpu_id_from_any_item(it) for it in eap_rows if _extract_cpu_id_from_any_item(it)})
     return cpu_ids
 
 
@@ -2610,7 +3025,11 @@ def render_audit(base_url: str, project_id: str, actor: str) -> None:
                 actor=actor,
             ).get("items", [])
         except Exception as exc:
-            st.warning(f"Audit trail indisponivel nesta API: {exc}")
+            msg = str(exc)
+            if "404" in msg or "Not Found" in msg:
+                st.info("Audit trail indisponivel para este ambiente/API.")
+            else:
+                st.warning(f"Audit trail indisponivel nesta API: {exc}")
             return
 
     rows = st.session_state[cache_key]
@@ -2696,6 +3115,17 @@ def render_artifacts_tab(base_url: str, project_id: str, project: dict, actor: s
     """Tab: Artifacts - Version artifacts downloader."""
     st.subheader("📦 Artefatos por Versão")
     versions = project.get("versions") or []
+    try:
+        live_versions = api_call(
+            method="GET",
+            path=f"/api/projects/{project_id}/versions",
+            base_url=base_url,
+            actor=actor,
+        ).get("items", [])
+        if isinstance(live_versions, list) and live_versions:
+            versions = live_versions
+    except Exception:
+        pass
     version_selected = st.selectbox(
         "Versão",
         options=versions if versions else [project.get("current_version") or "v1"],

@@ -193,3 +193,43 @@ BDI_TRIBUTOS_PRE_REFORMA: float = round(BDI_COFINS + BDI_ISS + BDI_PIS + BDI_CSS
 
 # Material não incide ISS/COFINS/PIS em fornecimento puro — tributos zerados no BDI
 BDI_TRIBUTOS_MATERIAL: float = 0.0
+
+
+# ── Preço de referência de insumos de mercado ─────────────────────────────────
+#
+# Valores de referência para orçamentação. Devem ser atualizados a cada revisão
+# periódica, da mesma forma que SALARIO_MINIMO_MENSAL.
+# Fonte: ANP (diesel) — média nacional, vigência maio/2026.
+PRECO_DIESEL_REFERENCIA: float = 6.50  # R$/litro — referência ANP maio/2026
+
+
+# ── Limites de plausibilidade — equipamentos e consumo de diesel ──────────────
+#
+# Faixas físicas derivadas de ensaios de campo e literatura técnica (SICRO/DNIT).
+# Usadas pelo validador de catálogo para detectar valores implausíveis em CPUs.
+#
+# Consumo específico de diesel por CV instalado (litros/hora por CV):
+#   Faixa observada em equipamentos de terraplanagem: 0,18–0,32 l/h/CV
+#   Ponto central (referência para interpolação): 0,245 l/h/CV
+#   Tolerância de aceitação (fração do ponto central): ±50%
+DIESEL_L_POR_CV_MIN: float = 0.18  # l/h/CV — limite inferior (equipamento eficiente)
+DIESEL_L_POR_CV_MAX: float = 0.32  # l/h/CV — limite superior (equipamento convencional)
+DIESEL_L_POR_CV_PONT: float = 0.245  # l/h/CV — ponto central de referência
+DIESEL_TOLERANCIA: float = 0.50  # fração — janela de aceitação em torno do ponto central
+
+
+# ── Limites estatísticos para detecção de outliers em catálogo ───────────────
+#
+# Z-score aplicado sobre a distribuição de preços de insumos similares.
+# Valores acima de ZSCORE_EXTREMO são tratados como erros de entrada; entre
+# ZSCORE_OUTLIER e ZSCORE_EXTREMO são marcados como aviso (revisão recomendada).
+ZSCORE_OUTLIER: float = 2.5  # desvios-padrão — threshold de aviso (outlier leve)
+ZSCORE_EXTREMO: float = 3.5  # desvios-padrão — threshold de erro (outlier severo)
+
+
+# ── Limites financeiros de plausibilidade por item ────────────────────────────
+#
+# Margem mínima aceitável entre preço de venda (com BDI) e custo direto da equipe.
+# Abaixo deste limiar o item apresenta risco financeiro e deve ser sinalizado.
+# Referência: política de precificação MendesLobo (Revisão 2024).
+MARGEM_MINIMA: float = 0.05  # 5 % — margem mínima sobre preço de venda por item

@@ -1,11 +1,11 @@
 ﻿# Concilium Configuration
 # This file centralizes all tunable parameters and thresholds
 
-version: "1.0"  # ?? manter/retirar
+version: "1.0"
 
 # Catalog backend and cache (ADR-024)
 catalog:
-  backend: local_json  # local_json | google_sheets
+  backend: local_json  # local_json | google_sheets | sharepoint
   remote_ttl_minutes: 60
   offline_fallback: true
   # google_sheets:  # ?? manter/retirar

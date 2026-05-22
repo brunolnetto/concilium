@@ -22,11 +22,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 91.2994,
-    "custo_padrao_pj": 81.6202
-  },
-  "cpu_ids": [
-    "CPU-PAVIM-ATI-059"
-  ]
+  "historico_observacoes": []
 }

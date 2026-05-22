@@ -30,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 550.6399,
-    "custo_padrao_pj": 447.398
-  },
-  "cpu_ids": [
-    "CPU-OBRAS-ATI-026"
-  ]
+  "historico_observacoes": []
 }

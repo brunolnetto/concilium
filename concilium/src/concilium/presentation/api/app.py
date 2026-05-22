@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from .config import resolve_api_bind
 from .routes import (
     analysis_router,
     benchmarks_router,
@@ -67,4 +68,5 @@ app = create_app()
 def main() -> None:
     import uvicorn
 
-    uvicorn.run("concilium.presentation.api.app:app", host="127.0.0.1", port=8000, reload=False)
+    host, port = resolve_api_bind()
+    uvicorn.run("concilium.presentation.api.app:app", host=host, port=port, reload=False)

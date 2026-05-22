@@ -1,20 +1,4 @@
-"""ADR-047 Phase 5 — ProjectHandle e ProjectRepository via BlobStoragePort.
-
-StorageProjectHandle implementa o ProjectHandle Protocol usando exclusivamente
-BlobStoragePort para todas as operações de I/O — nenhuma dependência em Path local.
-Compatível com SharePointBlobStorage (SharePoint central) ou LocalBlobStorage (dev/test).
-
-Estrutura de caminhos no storage (espelhando FileProjectHandle):
-    {project_id}/meta.json
-    {project_id}/overrides/cpus_override.json
-    {project_id}/overrides/insumos_override.json
-    {project_id}/overrides/bdi_override.json
-    {project_id}/overrides/mobilizacao_policy_override.json
-    {project_id}/deliverables_config.json
-    {project_id}/{version}/canonical.json
-    {project_id}/{version}/invocations.log
-    {project_id}/{version}/outputs/{filename}
-"""
+"""ProjectHandle/ProjectRepository via BlobStoragePort (ADR-047)."""
 
 from __future__ import annotations
 
@@ -47,8 +31,6 @@ class StorageProjectHandle:
         """Resolve caminho absoluto dentro do projeto no storage."""
         return f"{self._project_id}/{relative.lstrip('/')}"
 
-    # ── Meta ──────────────────────────────────────────────────────────────
-
     @property
     def meta(self) -> dict[str, Any]:
         return self.read_json(self._META_FILE, {})
@@ -57,8 +39,6 @@ class StorageProjectHandle:
         m = self.meta
         m.update(changes)
         self.write_json(self._META_FILE, m)
-
-    # ── Versions ──────────────────────────────────────────────────────────
 
     def list_versions(self) -> list[str]:
         blobs = self._storage.listar_blobs(self._project_id)
@@ -93,12 +73,8 @@ class StorageProjectHandle:
         self.update_meta(current_version=new_name)
         return new_name
 
-    # ── version_path (Path compat — returns a stub Path for legacy callers) ─
-
     def version_path(self, version: str) -> Path:
         return Path(self._project_id) / version
-
-    # ── Canonical ─────────────────────────────────────────────────────────
 
     def load_canonical(self, version: str | None = None) -> CanonicalModel | None:
         v = version or self.current_version()
@@ -123,8 +99,6 @@ class StorageProjectHandle:
             raise RuntimeError("Nenhuma versão ativa — chame new_version() primeiro.")
         payload = model.model_dump_json(indent=2)
         self._storage.gravar_blob(self._path(f"{v}/{self._CANONICAL_FILE}"), payload.encode("utf-8"))
-
-    # ── Generic I/O ───────────────────────────────────────────────────────
 
     def read_json(self, relative_path: str, default: Any) -> Any:
         try:
@@ -178,12 +152,9 @@ class StorageProjectHandle:
         blobs = self._storage.listar_blobs(prefix)
         for _blob in blobs:
             try:
-                # Note: BlobStoragePort has no delete_blob — add a stub
-                pass  # No delete in base port; implement as best-effort
+                pass
             except Exception:
                 pass
-
-    # ── Output files ──────────────────────────────────────────────────────
 
     def list_output_files(self, version: str | None = None) -> list[str]:
         v = version or self.current_version()
@@ -227,21 +198,15 @@ class StorageProjectHandle:
         overrides = self.read_json("overrides/cpus_override.json", {})
         return overrides.get(cpu_id)
 
-    # ── Invocations ───────────────────────────────────────────────────────
-
     def log_invocation(self, version: str, entry: dict[str, Any]) -> None:
         self.append_jsonl(f"{version}/{self._INVOCATIONS_LOG}", entry)
-
-    # ── Approval ──────────────────────────────────────────────────────────
 
     def approve(self, version: str) -> None:
         self._storage.aprovar_versao(self._path(f"{version}/{self._CANONICAL_FILE}"))
 
-    # ── Snapshots (stub — not needed for core SharePoint use case) ────────
-
     @property
     def snapshots(self) -> Any:
-        return None  # Snapshots are managed locally or via separate mechanism
+        return None
 
     def list_escopos(self) -> list[str]:
         return []
@@ -391,7 +356,6 @@ class StorageProjectRepository:
 
     def get_project(self, project_id: str) -> StorageProjectHandle:
         scoped = self._full_storage(project_id)
-        # Check via the scoped storage (which prepends prefix automatically)
         if not scoped.blob_existe(f"{project_id}/meta.json"):
             raise FileNotFoundError(f"Projeto '{project_id}' não encontrado no storage.")
         return StorageProjectHandle(scoped, project_id)

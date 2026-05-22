@@ -44,17 +44,6 @@
       "items": { "$ref": "common.schema.json#/$defs/composicaoItem" },
       "uniqueItems": true
     },
-    "fonte_preco": {
-      "description": "Deprecated: fonte de preço ao nível da CPU. Use Insumo.fonte_preco. Mantido para compatibilidade durante curação.",
-      "deprecated": true,
-      "type": ["string", "null"]
-    },
-    "data_referencia_preco": {
-      "description": "Deprecated: data de referência ao nível da CPU. Use Insumo.data_referencia_preco. Mantido para compatibilidade durante curação.",
-      "deprecated": true,
-      "type": ["string", "null"],
-      "format": "date"
-    },
     "atributos_categoria": {
       "type": "object",
       "additionalProperties": true,
@@ -76,22 +65,6 @@
     },
     "_cu_planilha": {
       "type": ["number", "null"]
-    },
-    "producao_horaria": {
-      "deprecated": true
-    },
-    "producao_id": {
-      "deprecated": true
-    },
-    "equipe": {
-      "deprecated": true
     }
-  },
-  "not": {
-    "anyOf": [
-      {"required": ["producao_horaria"]},
-      {"required": ["producao_id"]},
-      {"required": ["equipe"]}
-    ]
   }
 }

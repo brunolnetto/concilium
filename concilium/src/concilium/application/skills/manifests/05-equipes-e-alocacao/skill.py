@@ -19,7 +19,6 @@ from concilium.domain.constants import (
     ENCARGOS_CLT,
     ENCARGOS_MENSALISTA,
     SEMANAS_POR_MES,
-    HORAS_MES_REGIME_6x1,
 )
 from concilium.domain.models.canonical import (
     Alocacao,
@@ -35,9 +34,32 @@ from concilium.domain.models.canonical import (
 )
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
-HORAS_MES = HORAS_MES_REGIME_6x1  # ADR-056 §T3 — alias backward-compat
-
 # --- Utils de Dimensionamento (da Skill 03) ---
+
+try:
+    from ._skill_helpers_a import (
+        _build_dimensionamento,
+    )
+    from ._skill_helpers_b import (
+        _build_alocacoes_pool,
+        _build_requisitos_e_tipos,
+    )
+except ImportError:
+    import importlib.util
+    from pathlib import Path
+
+    _here = Path(__file__).resolve().parent
+    _spec_a = importlib.util.spec_from_file_location("skill05_helpers_a", _here / "_skill_helpers_a.py")
+    _mod_a = importlib.util.module_from_spec(_spec_a)  # type: ignore[arg-type]
+    _spec_a.loader.exec_module(_mod_a)  # type: ignore[union-attr]
+
+    _spec_b = importlib.util.spec_from_file_location("skill05_helpers_b", _here / "_skill_helpers_b.py")
+    _mod_b = importlib.util.module_from_spec(_spec_b)  # type: ignore[arg-type]
+    _spec_b.loader.exec_module(_mod_b)  # type: ignore[union-attr]
+
+    _build_dimensionamento = _mod_a._build_dimensionamento
+    _build_alocacoes_pool = _mod_b._build_alocacoes_pool
+    _build_requisitos_e_tipos = _mod_b._build_requisitos_e_tipos
 
 
 def _resolve_salario(preco, unidade: str, salario_override) -> float:
@@ -206,6 +228,10 @@ def _calcular_permanencia_e_custo_total(cron, custo_hora: float) -> tuple:
         permanencia = float(n)
         custo_total = round(custo_hora * sum(d.num_equipes for d in dist_men.values()), 2)
     return permanencia, custo_total
+
+
+# Backward-compat for tests importing private helper directly from module
+_calcular_permanencia_e_custo_total = _calcular_permanencia_e_custo_total
 
 
 # --- Helpers Skill Principal ---

@@ -211,6 +211,7 @@ class TestFuelPriceClient:
             },
         }
 
+    @pytest.mark.slow
     def test_parse_state_valid(self):
         """parse_state() resolves known aliases."""
         from concilium.infrastructure.clients.fuel import State, parse_state

@@ -4,9 +4,13 @@
   "unidade": "un",
   "origem": "PROPRIA",
   "categoria": "DRENAGEM",
-  "composicao_itens": [],
-  "data_referencia_preco": "2026-03-01",
-  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-BOCA-BSTC-100",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
   "custo_direto_unitario_planilha": 9542.511636,
   "precos_unitarios_sbdi": {
     "mo": 0.0,

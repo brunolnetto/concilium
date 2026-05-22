@@ -3,10 +3,36 @@
   "descricao": "Esc/carg/transp 1ªcat DMT 2000-3000m",
   "unidade": "m3",
   "origem": "PROPRIA",
-  "dmt_referencia_m": 2500.0,
   "categoria": "TERRAPLENAGEM",
-  "composicao_itens": [],
-  "data_referencia_preco": "2025-05-01",
-  "fonte_preco": "referencia_base_original",
-  "producao_id_ref": "CPU-TERRA-ATI-012-PROD-001"
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-OPER-ESCAV",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-MOTOR-CAM-BASC",
+      "coeficiente": 5.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-ENCARREG-TERRA",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-E0016",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0007",
+      "coeficiente": 4.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-012-PROD-001",
+  "atributos_categoria": {
+    "dmt_referencia_m": 2500.0
+  }
 }

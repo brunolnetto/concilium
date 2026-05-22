@@ -154,29 +154,11 @@ class CatalogResolver:
         """Resolve item do master catalog — individual file → aggregate → project snapshot."""
         concilium_root = Path(project.root).parents[1]
         cat_base = concilium_root / "config" / "catalogos" / catalogo_id
-
         subdir = "cpus" if item_type == "cpu" else "insumos"
-        individual = cat_base / subdir / f"{item_id}.json"
-        if individual.exists():
-            try:
-                return json.loads(individual.read_text(encoding="utf-8"))
-            except Exception:
-                pass
-
-        # Aggregate file
-        agg = cat_base / f"{subdir}.json"
-        if agg.exists():
-            try:
-                data = json.loads(agg.read_text(encoding="utf-8"))
-                items = data.get(subdir, data) if isinstance(data, dict) else data
-                if isinstance(items, list):
-                    for it in items:
-                        if isinstance(it, dict) and it.get("codigo") == item_id:
-                            return it
-            except Exception:
-                pass
-
-        return None
+        result = _rfm_try_individual(cat_base, subdir, item_id)
+        if result is not None:
+            return result
+        return _rfm_try_aggregate(cat_base, subdir, item_id)
 
     # ── Resolução do catálogo completo para um run ────────────────────────────
 
@@ -201,57 +183,10 @@ class CatalogResolver:
         jur_cpus = jur_overlay.get("cpus", {})
         jur_insumos = jur_overlay.get("insumos", {})
 
-        # CPUs: apply jurisdiction then project
-        resolved_cpus: list[dict] = []
-        cpu_ids_processed: set[str] = set()
-        for cpu in resolved.get("cpus", []):
-            cid = cpu.get("codigo", "")
-            if not cid:
-                continue
-            source: OverlaySource = "master"
-            item = dict(cpu)
-            if cid in jur_cpus:
-                item = _deep_merge(item, jur_cpus[cid])
-                source = "jurisdiction"
-            if cid in proj_cpu_overlay:
-                item = _deep_merge(item, proj_cpu_overlay[cid])
-                source = "project"
-            resolved_cpus.append(item)
-            cpu_ids_processed.add(cid)
-            trace.record(cid, source)
-
-        # Project-only CPUs (not in master)
-        for cid, cpu_data in proj_cpu_overlay.items():
-            if cid not in cpu_ids_processed:
-                resolved_cpus.append(cpu_data)
-                trace.record(cid, "project")
-
-        resolved["cpus"] = resolved_cpus
-
-        # Insumos
-        resolved_insumos: list[dict] = []
-        insumo_ids_processed: set[str] = set()
-        for ins in resolved.get("insumos", []):
-            iid = ins.get("id") or ins.get("codigo", "")
-            if not iid:
-                continue
-            source = "master"
-            item = dict(ins)
-            if iid in jur_insumos:
-                item = _deep_merge(item, jur_insumos[iid])
-                source = "jurisdiction"
-            if iid in proj_insumo_overlay:
-                item = _deep_merge(item, proj_insumo_overlay[iid])
-                source = "project"
-            resolved_insumos.append(item)
-            insumo_ids_processed.add(iid)
-            trace.record(iid, source)
-        for iid, ins_data in proj_insumo_overlay.items():
-            if iid not in insumo_ids_processed:
-                resolved_insumos.append(ins_data)
-                trace.record(iid, "project")
-        resolved["insumos"] = resolved_insumos
-
+        resolved["cpus"] = _resolve_catalog_items(resolved.get("cpus", []), "codigo", jur_cpus, proj_cpu_overlay, trace)
+        resolved["insumos"] = _resolve_catalog_items(
+            resolved.get("insumos", []), None, jur_insumos, proj_insumo_overlay, trace
+        )
         return resolved, trace
 
     def build_resolved_catalog(
@@ -272,6 +207,63 @@ class CatalogResolver:
             resolved["cpus"] = [c for c in resolved.get("cpus", []) if c.get("codigo") in eap_cpu_ids]
 
         return resolved, trace
+
+
+def _rfm_try_individual(cat_base, subdir: str, item_id: str):
+    individual = cat_base / subdir / f"{item_id}.json"
+    if individual.exists():
+        try:
+            return json.loads(individual.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return None
+
+
+def _rfm_try_aggregate(cat_base, subdir: str, item_id: str):
+    agg = cat_base / f"{subdir}.json"
+    if not agg.exists():
+        return None
+    try:
+        data = json.loads(agg.read_text(encoding="utf-8"))
+        items = data.get(subdir, data) if isinstance(data, dict) else data
+        if isinstance(items, list):
+            for it in items:
+                if isinstance(it, dict) and it.get("codigo") == item_id:
+                    return it
+    except Exception:
+        pass
+    return None
+
+
+def _resolve_catalog_items(
+    items: list,
+    id_key: str | None,
+    jur_overlay: dict,
+    proj_overlay: dict,
+    trace: CatalogResolutionTrace,
+) -> list:
+    resolved_items = []
+    ids_processed: set = set()
+    for it in items:
+        iid = it.get(id_key, "") if id_key else (it.get("id") or it.get("codigo", ""))
+        if not iid:
+            continue
+        source = "master"
+        item = dict(it)
+        if iid in jur_overlay:
+            item = _deep_merge(item, jur_overlay[iid])
+            source = "jurisdiction"
+        if iid in proj_overlay:
+            item = _deep_merge(item, proj_overlay[iid])
+            source = "project"
+        resolved_items.append(item)
+        ids_processed.add(iid)
+        trace.record(iid, source)
+    for iid, data in proj_overlay.items():
+        if iid not in ids_processed:
+            resolved_items.append(data)
+            trace.record(iid, "project")
+    return resolved_items
 
 
 def _deep_merge(base: dict, overlay: dict) -> dict:

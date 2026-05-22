@@ -211,6 +211,32 @@ def _extract_start_weeks(topo: list[str], x: dict) -> dict[str, int]:
     return start_weeks
 
 
+def _build_usage_by_week(scheduled: list, makespan: int) -> list:
+    usage_by_week: list[dict[str, int]] = [{} for _ in range(makespan)]
+    for act in scheduled:
+        for w in range(act.start_week, act.end_week):
+            if w < makespan:
+                for res, qty in act.assigned_resources.items():
+                    usage_by_week[w][res] = usage_by_week[w].get(res, 0) + qty
+    return usage_by_week
+
+
+def _compute_weekly_loads(usage_by_week: list, makespan: int) -> list:
+    result = []
+    for w in range(makespan):
+        result.append(sum(usage_by_week[w].values()))
+    return result
+
+
+def _compute_variance(weekly_loads: list, mean_load: float, makespan: int) -> float:
+    if not makespan:
+        return 0.0
+    total = 0.0
+    for wl in weekly_loads:
+        total += (wl - mean_load) ** 2
+    return total / makespan
+
+
 def _compute_metrics(
     scheduled: list[ScheduledActivity],
     pool: ResourcePool,
@@ -228,25 +254,17 @@ def _compute_metrics(
             resource_utilization_avg=0.0,
         )
 
-    # Resource utilization per week
-    usage_by_week: list[dict[str, int]] = [{} for _ in range(makespan)]
-    for act in scheduled:
-        for w in range(act.start_week, act.end_week):
-            if w < makespan:
-                for res, qty in act.assigned_resources.items():
-                    usage_by_week[w][res] = usage_by_week[w].get(res, 0) + qty
-
-    # Leveling score: 1 - (std_dev of weekly usage / max_capacity)
+    usage_by_week = _build_usage_by_week(scheduled, makespan)
     total_cap = sum(pool.resources.values()) or 1
-    weekly_loads = [sum(usage_by_week[w].values()) for w in range(makespan)]
-    mean_load = sum(weekly_loads) / makespan if makespan else 0
-    variance = sum((wl - mean_load) ** 2 for wl in weekly_loads) / makespan if makespan else 0
+    weekly_loads = _compute_weekly_loads(usage_by_week, makespan)
+    mean_load = sum(weekly_loads) / makespan
+    variance = _compute_variance(weekly_loads, mean_load, makespan)
     std_dev = variance**0.5
     leveling_score = max(0.0, 1.0 - std_dev / total_cap)
-
-    idle_time = sum(max(0, total_cap - sum(usage_by_week[w].values())) for w in range(makespan))
+    idle_time = 0
+    for w in range(makespan):
+        idle_time += max(0, total_cap - sum(usage_by_week[w].values()))
     utilization_avg = mean_load / total_cap if total_cap else 0.0
-
     return ScheduleMetrics(
         makespan=makespan,
         resource_leveling_score=leveling_score,

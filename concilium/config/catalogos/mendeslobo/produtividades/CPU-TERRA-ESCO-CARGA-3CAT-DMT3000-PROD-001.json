@@ -26,11 +26,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "dmt_referencia_m": 1850.0,
-    "custo_padrao_clt": 18.224432
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
-  ]
+  "historico_observacoes": []
 }

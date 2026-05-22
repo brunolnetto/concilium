@@ -38,11 +38,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 2.0979,
-    "custo_padrao_pj": 1.88
-  },
-  "cpu_ids": [
-    "CPU-PAVIM-ATI-062"
-  ]
+  "historico_observacoes": []
 }

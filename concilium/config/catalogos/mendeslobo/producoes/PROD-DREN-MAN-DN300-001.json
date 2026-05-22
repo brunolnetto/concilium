@@ -39,7 +39,11 @@
       },
       "confiabilidade": 0.85,
       "notas": "Calibração inicial",
-      "timestamp": "2025-10-15T10:30:00Z"
+      "timestamp": "2025-10-15T10:30:00Z",
+      "data": "2026-05-22T20:08:50.755587+00:00",
+      "autor": "cure_catalog",
+      "descricao": "(migrado sem descrição original)",
+      "tipo": "migracao"
     }
   ],
   "auditoria": {
@@ -50,7 +54,7 @@
     "versao": "1.0"
   },
   "categoria": "SANEAMENTO",
-  "equipe": {
+  "composicao_padrao_equipe": {
     "funcoes": [
       {
         "funcao_id": "MO-OPER-RETRO",

@@ -12,11 +12,7 @@
       },
       {
         "funcao_id": "MO-MOTOR-CAM-BASC",
-        "num_pessoas": 3
-      },
-      {
-        "funcao_id": "MO-MOTOR-CAM-BASC",
-        "num_pessoas": 1
+        "num_pessoas": 4
       },
       {
         "funcao_id": "MO-ENCARREG-TERRA",
@@ -34,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 6.0705,
-    "custo_padrao_pj": 5.374
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-011"
-  ]
+  "historico_observacoes": []
 }

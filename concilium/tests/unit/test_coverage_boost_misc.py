@@ -141,5 +141,11 @@ class TestFuelMainBlock:
         mock_response.json.return_value = self._make_api_response()
         mock_get.return_value = mock_response
 
-        # This runs the __main__ block, covering lines 181-189
-        runpy.run_module("concilium.infrastructure.clients.fuel", run_name="__main__", alter_sys=False)
+        _mod = "concilium.infrastructure.clients.fuel"
+        _saved = sys.modules.pop(_mod, None)
+        try:
+            # This runs the __main__ block, covering lines 181-189
+            runpy.run_module(_mod, run_name="__main__", alter_sys=False)
+        finally:
+            if _saved is not None:
+                sys.modules[_mod] = _saved

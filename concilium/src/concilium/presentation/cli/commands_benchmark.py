@@ -14,13 +14,23 @@ Comandos:
 
 from __future__ import annotations
 
-import copy
 import json
 from pathlib import Path
 
 import typer
 from rich import print as rprint
 from rich.table import Table
+
+from ._commands_benchmark_helpers import (
+    _empacotar_benchmark_cli,
+    _execute_plan_space_tasks,
+    _mc_merge_alternativas,
+    _mc_merge_equipes,
+    _mc_remove_legacy,
+    _prepare_plan_space_tasks,
+    _save_plan_space_markdown,
+    _save_plan_space_results,
+)
 
 app = typer.Typer(
     name="benchmark",
@@ -29,42 +39,35 @@ app = typer.Typer(
 )
 
 
-def _mc_merge_alternativas(ref: dict, bench_dir: object, changed: bool) -> tuple:
-    """Embeds alternativas.json into ref['cenarios']. Returns (alt_path, changed)."""
+@app.command("merge-catalog")
+def merge_catalog(
+    slug: str = typer.Argument(..., help="Slug do benchmark (ex: CTC)"),
+    keep: bool = typer.Option(False, "--keep", help="Manter alternativas.json e equipes.json apos merge."),
+) -> None:
+    """Consolida alternativas.json e equipes.json no referencia.json do benchmark."""
+    root = _DEFAULT_ROOT
+    bench_dir = root / "benchmarks" / "data" / slug.upper()
+    ref_path = bench_dir / "referencia.json"
+    if not ref_path.exists():
+        rprint(f"[red]referencia.json nao encontrado: {ref_path}[/red]")
+        raise typer.Exit(1) from None
+
+    ref = json.loads(ref_path.read_text(encoding="utf-8"))
+    changed = False
+
     alt_path, changed = _mc_merge_alternativas(ref, bench_dir, changed)
     eq_path, changed = _mc_merge_equipes(ref, bench_dir, changed)
 
     if not changed:
-        rprint(
-            "[yellow]Nenhuma altera\u00e7\u00e3o necess\u00e1ria. referencia.json j\u00e1 est\u00e1 consolidado.[/yellow]"
-        )
+        rprint("[yellow]Nenhuma alteracao necessaria. referencia.json ja esta consolidado.[/yellow]")
         return
 
     ref_path.write_text(json.dumps(ref, indent=2, ensure_ascii=False), encoding="utf-8")
     rprint(f"[green]referencia.json atualizado:[/green] {ref_path}")
-
-    _mc_remove_legacy(keep_legacy_files, alt_path, eq_path)
+    _mc_remove_legacy(keep, alt_path, eq_path)
 
 
 _DEFAULT_ROOT = Path(__file__).resolve().parents[4]
-
-
-def _deep_merge_dict(base: dict, override: dict) -> dict:
-    """Merge recursivo de dicionários para overlays de alternativas."""
-    result = copy.deepcopy(base)
-    for key, value in override.items():
-        if isinstance(value, dict) and isinstance(result.get(key), dict):
-            result[key] = _deep_merge_dict(result[key], value)
-        else:
-            result[key] = copy.deepcopy(value)
-    return result
-
-
-def _discover_slugs(root: Path) -> list[str]:
-    slugs = sorted(
-        d.name for d in (root / "benchmarks" / "data").iterdir() if d.is_dir() and (d / "referencia.json").exists()
-    )
-    return slugs
 
 
 @app.command("run")
@@ -137,24 +140,6 @@ def run_benchmarks(
 
     if pack or charts:
         _empacotar_benchmark_cli(target_slug, root, gerar_charts=charts or pack)
-
-
-def _empacotar_benchmark_cli(slug: str, root: Path, gerar_charts: bool = True) -> None:
-    """Helper: gera charts (se solicitado) e cria ZIP dos artefatos."""
-    from concilium.application.benchmarks.output_packager import empacotar_outputs
-    from concilium.presentation.cli.shared import config_root as get_config_root
-
-    try:
-        zip_path = empacotar_outputs(
-            slug=slug,
-            config_root=get_config_root(),
-            gerar_graficos=gerar_charts,
-        )
-        rprint(f"\n[green]📦 Pacote criado:[/green] {zip_path}")
-        size_mb = zip_path.stat().st_size / (1024 * 1024)
-        rprint(f"   Tamanho: {size_mb:.2f} MB")
-    except Exception as e:
-        rprint(f"[yellow]⚠ Empacotamento falhou: {e}[/yellow]")
 
 
 @app.command("pack")
@@ -347,165 +332,6 @@ def iterate_correction(
             ensure_ascii=False,
         )
     )
-
-
-def _make_silent_printer():
-    from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
-
-    class _SilentPrinterImpl(BenchmarkReportPrinter):
-        def print(self, report: dict) -> None:  # noqa: A003
-            pass
-
-    return _SilentPrinterImpl()
-
-
-def _run_one_plan_space(
-    alt_id: str,
-    modo: str,
-    spec: object,
-    reset: bool,
-    cfg_root: object,
-    proj_root: object,
-    out_dir: object,
-) -> dict:
-    from concilium.application.benchmarks import BenchmarkRunner
-    from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-
-    runner = BenchmarkRunner(
-        config_root=cfg_root,
-        projects_root=proj_root,
-        report_builder=BenchmarkReportBuilder(),
-        report_printer=_make_silent_printer(),
-    )
-    report = runner.run(spec, reset=reset)  # type: ignore[arg-type]
-    report_file = out_dir / f"{alt_id}.benchmark_report.json"  # type: ignore[operator]
-    report_file.write_text(json.dumps(report, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
-
-    deltas = (report.get("confronto") or {}).get("deltas") or {}
-    delta_preco_venda = (deltas.get("preco_venda") or {}).get("percentual")
-    rcpsp = report.get("rcpsp_schedule") or {}
-    status = report.get("status_final") or ((report.get("quality_gates") or {}).get("decision") or "N/A")
-    return {
-        "alternativa": alt_id,
-        "modo": modo,
-        "status": status,
-        "delta_preco_venda_pct": delta_preco_venda,
-        "makespan_semanas": rcpsp.get("makespan_weeks"),
-        "folga_semanas": rcpsp.get("folga_semanas"),
-        "report_file": str(report_file),
-    }
-
-
-def _prepare_plan_space_tasks(base_ref: dict, ref_path: object, alternativas: list) -> list:
-    from concilium.application.benchmarks.spec_loader import load_spec_from_dict
-
-    tasks: list = []
-    for alt in alternativas:
-        alt_id = str(alt.get("id") or "ALT")
-        modo = str(alt.get("modo") or "AUTO").upper()
-        if str(base_ref.get("mode") or "").lower() == "benchmark_config" and modo != "AUTO":
-            rprint(f"[yellow]Alternativa {alt_id}: modo '{modo}' sobrescrito para AUTO (benchmark_config).[/yellow]")
-            modo = "AUTO"
-        overrides = alt.get("overrides") or {}
-        if not isinstance(overrides, dict):
-            rprint(f"[red]Alternativa {alt_id}: overrides deve ser objeto JSON.[/red]")
-            raise typer.Exit(1) from None
-
-        variant_ref = _deep_merge_dict(base_ref, overrides)
-
-        if modo == "MANUAL":
-            variant_ref.pop("rcpsp_spec", None)
-        elif modo == "AUTO":
-            if not variant_ref.get("rcpsp_spec"):
-                rprint(f"[red]Alternativa {alt_id}: modo AUTO exige rcpsp_spec.[/red]")
-                raise typer.Exit(1) from None
-        else:
-            rprint(f"[red]Alternativa {alt_id}: modo inválido '{modo}' (use AUTO ou MANUAL).[/red]")
-            raise typer.Exit(1) from None
-
-        spec = load_spec_from_dict(variant_ref, ref_path)
-        base_name = spec.nome
-        spec.nome = f"{base_name} [{alt_id}]"
-        tasks.append((alt_id, modo, spec))
-    return tasks
-
-
-def _execute_plan_space_tasks(
-    tasks: list,
-    num_workers: int,
-    reset: bool,
-    cfg_root: object,
-    proj_root: object,
-    out_dir: object,
-) -> tuple[list, list]:
-    import concurrent.futures
-    from threading import Lock
-
-    print_lock = Lock()
-    rows: list = []
-    failed: list = []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        future_to_id = {
-            executor.submit(_run_one_plan_space, alt_id, modo, spec, reset, cfg_root, proj_root, out_dir): alt_id
-            for alt_id, modo, spec in tasks
-        }
-        for future in concurrent.futures.as_completed(future_to_id):
-            alt_id = future_to_id[future]
-            try:
-                row = future.result()
-                with print_lock:
-                    rows.append(row)
-                    rprint(f"  [green]OK {alt_id}[/green]")
-            except Exception as exc:  # noqa: BLE001
-                failed.append(alt_id)
-                with print_lock:
-                    rprint(f"  [red]FAIL {alt_id}: {exc}[/red]")
-    return rows, failed
-
-
-def _save_plan_space_results(
-    rows_sorted: list, slug_upper: str, root: object, outputs_dir: object, bench_dir: object
-) -> None:
-    table = Table(title=f"Plan Space — {slug_upper}")
-    table.add_column("Alternativa", style="cyan")
-    table.add_column("Modo")
-    table.add_column("Status")
-    table.add_column("Delta Preco Venda %", justify="right")
-    table.add_column("Makespan (sem)", justify="right")
-    table.add_column("Folga (sem)", justify="right")
-    for row in rows_sorted:
-        dt = row["delta_preco_venda_pct"]
-        dt_str = f"{float(dt):+.2f}%" if dt is not None else "N/A"
-        mk = row["makespan_semanas"]
-        mk_str = str(mk) if mk is not None else "N/A"
-        fl = row["folga_semanas"]
-        fl_str = str(fl) if fl is not None else "N/A"
-        table.add_row(row["alternativa"], row["modo"], row["status"], dt_str, mk_str, fl_str)
-    rprint(table)
-
-
-def _save_plan_space_markdown(rows_sorted: list, slug_upper: str, outputs_dir: object) -> None:
-    md_lines = [
-        f"# Plan Space — {slug_upper}",
-        "",
-        f"**Alternativas:** {len(rows_sorted)}  ",
-        "",
-        "| Alternativa | Modo | Status | Delta Preco Venda % | Makespan (sem) | Folga (sem) |",
-        "|---|---|---|---:|---:|---:|",
-    ]
-    for row in rows_sorted:
-        dt = row["delta_preco_venda_pct"]
-        dt_str = f"{float(dt):+.2f}%" if dt is not None else "-"
-        mk = row["makespan_semanas"]
-        mk_str = str(mk) if mk is not None else "-"
-        fl = row["folga_semanas"]
-        fl_str = str(fl) if fl is not None else "-"
-        status_badge = f"**{row['status']}**" if row["status"] == "INVIAVEL" else row["status"]
-        md_lines.append(f"| {row['alternativa']} | {row['modo']} | {status_badge} | {dt_str} | {mk_str} | {fl_str} |")
-    summary_md = outputs_dir / "plan_space_report.md"  # type: ignore[operator]
-    summary_md.write_text("\n".join(md_lines) + "\n", encoding="utf-8")
-    rprint(f"[green]Relatório salvo em:[/green] {summary_md}")
 
 
 @app.command("plan-space")

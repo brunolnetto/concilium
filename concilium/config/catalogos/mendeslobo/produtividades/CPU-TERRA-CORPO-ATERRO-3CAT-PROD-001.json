@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
   "descricao": "Produção CPU-TERRA-CORPO-ATERRO-3CAT",
   "origem": "PROPRIA",
-  "valor_horario": 240.0,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -34,10 +34,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 5.873033
-  },
-  "cpu_ids": [
-    "CPU-TERRA-CORPO-ATERRO-3CAT"
-  ]
+  "historico_observacoes": []
 }

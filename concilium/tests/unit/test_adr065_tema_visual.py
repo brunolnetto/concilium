@@ -29,6 +29,7 @@ from concilium.domain.models.tema import (
 
 # ─── CoresTema: hex validation ────────────────────────────────────────────────
 
+
 class TestCoresTema:
     def test_valid_hex_accepted(self):
         c = CoresTema(cabecalho_fundo="1F4E78")
@@ -61,6 +62,7 @@ class TestCoresTema:
 
 # ─── FontesTema: Literal + bounds ────────────────────────────────────────────
 
+
 class TestFontesTema:
     def test_valid_font_accepted(self):
         f = FontesTema(cabecalho="Arial", corpo="Calibri")
@@ -88,6 +90,7 @@ class TestFontesTema:
 
 
 # ─── TemaVisual ───────────────────────────────────────────────────────────────
+
 
 class TestTemaVisual:
     def test_default_values_valid(self):
@@ -130,11 +133,21 @@ class TestTemaVisual:
             "id": "test-co",
             "empresa": "Test Corp",
             "perfil_exibicao": "SIMPLES",
-            "cores": {"cabecalho_fundo": "2B2B2B", "cabecalho_texto": "FFFFFF",
-                      "zebra_par": "FFFFFF", "zebra_impar": "F5F5F5",
-                      "borda": "DDDDDD", "destaque": "FF8C00"},
-            "fontes": {"cabecalho": "Arial", "corpo": "Arial",
-                       "tamanho_titulo": 14, "tamanho_cabecalho": 11, "tamanho_corpo": 10},
+            "cores": {
+                "cabecalho_fundo": "2B2B2B",
+                "cabecalho_texto": "FFFFFF",
+                "zebra_par": "FFFFFF",
+                "zebra_impar": "F5F5F5",
+                "borda": "DDDDDD",
+                "destaque": "FF8C00",
+            },
+            "fontes": {
+                "cabecalho": "Arial",
+                "corpo": "Arial",
+                "tamanho_titulo": 14,
+                "tamanho_cabecalho": 11,
+                "tamanho_corpo": 10,
+            },
         }
         (tema_dir / "tema.json").write_text(json.dumps(data), encoding="utf-8")
         loaded = TemaVisual.model_validate_json((tema_dir / "tema.json").read_text())
@@ -144,32 +157,39 @@ class TestTemaVisual:
 
 # ─── ContextoObra: no identidade_visual, has tema_id ─────────────────────────
 
+
 class TestContextoObra:
     def test_has_tema_id_field(self):
-        ctx = ContextoObra(id="x", perfil_id="p", jurisdicao_id="BR",
-                           referencia_id="r", catalogo_id="c", tema_id="mendeslobo-corporativo")
+        ctx = ContextoObra(
+            id="x",
+            perfil_id="p",
+            jurisdicao_id="BR",
+            referencia_id="r",
+            catalogo_id="c",
+            tema_id="mendeslobo-corporativo",
+        )
         assert ctx.tema_id == "mendeslobo-corporativo"
 
     def test_tema_id_optional_defaults_none(self):
-        ctx = ContextoObra(id="x", perfil_id="p", jurisdicao_id="BR",
-                           referencia_id="r", catalogo_id="c")
+        ctx = ContextoObra(id="x", perfil_id="p", jurisdicao_id="BR", referencia_id="r", catalogo_id="c")
         assert ctx.tema_id is None
 
     def test_has_no_identidade_visual_field(self):
         """identidade_visual was removed (ADR-065) — extra="ignore" silently drops it."""
         ctx = ContextoObra(
-            id="x", perfil_id="p", jurisdicao_id="BR", referencia_id="r",
-            catalogo_id="c", identidade_visual={"empresa": "Old"}  # type: ignore[call-arg]
+            id="x",
+            perfil_id="p",
+            jurisdicao_id="BR",
+            referencia_id="r",
+            catalogo_id="c",
+            identidade_visual={"empresa": "Old"},  # type: ignore[call-arg]
         )
         # Field silently ignored via ConfigDict(extra="ignore")
         assert not hasattr(ctx, "identidade_visual")
 
     def test_mendeslobo_contexto_loads_with_tema_id(self):
         """The actual mendeslobo context file has tema_id after migration."""
-        ctx_file = (
-            Path(__file__).resolve().parents[2]
-            / "config/contextos/mendeslobo/versions/v1.json"
-        )
+        ctx_file = Path(__file__).resolve().parents[2] / "config/contextos/mendeslobo/versions/v1.json"
         if not ctx_file.exists():
             pytest.skip("mendeslobo context not found")
         data = json.loads(ctx_file.read_text(encoding="utf-8"))
@@ -179,6 +199,7 @@ class TestContextoObra:
 
 
 # ─── F7: to_catalogo_dict backward-compat with exporters ─────────────────────
+
 
 class TestBackwardCompat:
     def test_to_catalogo_dict_has_cores_and_fontes(self):
@@ -197,10 +218,7 @@ class TestBackwardCompat:
 
     def test_mendeslobo_tema_matches_old_identidade_visual(self):
         """Config temas/mendeslobo-corporativo has the same values as the old context."""
-        tema_file = (
-            Path(__file__).resolve().parents[2]
-            / "config/temas/mendeslobo-corporativo/tema.json"
-        )
+        tema_file = Path(__file__).resolve().parents[2] / "config/temas/mendeslobo-corporativo/tema.json"
         if not tema_file.exists():
             pytest.skip("mendeslobo-corporativo tema not found")
         tema = TemaVisual.model_validate_json(tema_file.read_text(encoding="utf-8"))

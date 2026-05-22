@@ -11,6 +11,27 @@ from collections import defaultdict
 from concilium.domain.models.constraint_violation import ConstraintViolation
 
 
+def _collect_schedule_weeks(schedule: dict) -> set:
+    weeks: set[int] = set()
+    for info in schedule.values():
+        start = info.get("start_week", 0)
+        end = info.get("end_week", 0)
+        for w in range(start, end + 1):
+            weeks.add(w)
+    return weeks
+
+
+def _compute_week_demand(week: int, schedule: dict, team_allocations: dict) -> dict:
+    demand: dict[str, int] = defaultdict(int)
+    for activity_id, info in schedule.items():
+        start = info.get("start_week", 0)
+        end = info.get("end_week", 0)
+        if start <= week <= end:
+            for role, count in team_allocations.get(activity_id, {}).items():
+                demand[role] += count
+    return demand
+
+
 class ResourcePoolValidator:
     """Per-week aggregation of role/equipment demand vs. pool capacity."""
 
@@ -34,25 +55,10 @@ class ResourcePoolValidator:
             return []
 
         # Collect all week numbers across the schedule
-        weeks: set[int] = set()
-        for info in schedule.values():
-            start = info.get("start_week", 0)
-            end = info.get("end_week", 0)
-            for w in range(start, end + 1):
-                weeks.add(w)
-
+        weeks = _collect_schedule_weeks(schedule)
         violations: list[ConstraintViolation] = []
-
         for week in sorted(weeks):
-            demand: dict[str, int] = defaultdict(int)
-
-            for activity_id, info in schedule.items():
-                start = info.get("start_week", 0)
-                end = info.get("end_week", 0)
-                if start <= week <= end:
-                    for role, count in team_allocations.get(activity_id, {}).items():
-                        demand[role] += count
-
+            demand = _compute_week_demand(week, schedule, team_allocations)
             for role, demanded in demand.items():
                 capacity = pool_capacity.get(role)
                 if capacity is None or demanded <= capacity:
@@ -69,7 +75,6 @@ class ResourcePoolValidator:
                         ),
                     )
                 )
-
         return violations
 
     def validate_week_allocations(

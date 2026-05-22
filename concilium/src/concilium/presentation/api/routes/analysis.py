@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
 from concilium.application.services.concilium_service import ConciliumService
@@ -12,13 +12,13 @@ from concilium.presentation.api.container import get_concilium_service
 
 from ..schemas import CompareRequest
 
-router = APIRouter(tags=["projects - analysis"])
+router = APIRouter(prefix="/api/projects", tags=["projects - analysis"])
 
 
 # ── Version comparison ────────────────────────────────────────────────────────
 
 
-@router.post("/api/projects/{project_id}/compare", summary="Compare two canonical versions (POST body)")
+@router.post("/{project_id}/compare", summary="Compare two canonical versions (POST body)")
 def compare(
     project_id: str,
     req: CompareRequest,
@@ -32,7 +32,7 @@ def compare(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.get("/api/projects/{project_id}/compare", summary="Compare two canonical versions (query params)")
+@router.get("/{project_id}/compare", summary="Compare two canonical versions (query params)")
 def compare_query(
     project_id: str,
     left: str,
@@ -50,7 +50,7 @@ def compare_query(
 # ── Artifacts ─────────────────────────────────────────────────────────────────
 
 
-@router.get("/api/projects/{project_id}/artifacts", summary="List output artifacts")
+@router.get("/{project_id}/artifacts", summary="List output artifacts")
 def list_artifacts(
     project_id: str,
     version: str | None = None,
@@ -62,35 +62,7 @@ def list_artifacts(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/api/projects/{project_id}/artefacts", summary="List output artifacts (alias)", include_in_schema=False)
-def list_artefacts_alias(
-    project_id: str,
-    version: str | None = None,
-    service: ConciliumService = Depends(get_concilium_service),
-) -> dict[str, Any]:
-    try:
-        return service.list_artifacts(project_id, version)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-@router.get(
-    "/api/projects/{project_id}/artefacts/{version}",
-    summary="List artifacts by version (alias)",
-    include_in_schema=False,
-)
-def list_artefacts_by_version_alias(
-    project_id: str,
-    version: str,
-    service: ConciliumService = Depends(get_concilium_service),
-) -> dict[str, Any]:
-    try:
-        return service.list_artifacts(project_id, version)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-@router.get("/api/projects/{project_id}/artifacts/download", summary="Download an artifact file")
+@router.get("/{project_id}/artifacts/download", summary="Download an artifact file")
 def download_artifact(
     project_id: str,
     kind: str,
@@ -111,9 +83,7 @@ def download_artifact(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.get(
-    "/api/projects/{project_id}/benchmark-reference", summary="Get the benchmark reference snapshot for this project"
-)
+@router.get("/{project_id}/benchmark-reference", summary="Get the benchmark reference snapshot for this project")
 def get_benchmark_reference(
     project_id: str,
     service: ConciliumService = Depends(get_concilium_service),
@@ -129,7 +99,7 @@ def get_benchmark_reference(
 # ── Audit ─────────────────────────────────────────────────────────────────────
 
 
-@router.get("/api/projects/{project_id}/audit", summary="List audit log entries")
+@router.get("/{project_id}/audit", summary="List audit log entries")
 def list_audit(
     project_id: str,
     limit: int = 200,
@@ -145,7 +115,7 @@ def list_audit(
 
 
 @router.get(
-    "/api/projects/{project_id}/diagnostico-pe",
+    "/{project_id}/diagnostico-pe",
     summary="Get breakeven diagnosis and backtracking from last successful run",
 )
 def get_diagnostico_pe(
@@ -159,3 +129,95 @@ def get_diagnostico_pe(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         return {"diagnostico_pe": None, "backtracking_pe": None, "aviso": str(exc)}
+
+
+# ── Cubo analítico (ADR-058 / NEP-024) ────────────────────────────────────────
+
+
+@router.get(
+    "/{project_id}/cubo-analitico",
+    summary="Get analytical cube and derived temporal/nature aggregations",
+)
+def get_cubo_analitico(
+    project_id: str,
+    version: str | None = Query(None),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.get_cubo_analitico(project_id, version=version)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/{project_id}/cubo-analitico/projecao",
+    summary="Project analytical cube into filtered faces for UX exploration",
+)
+def get_cubo_analitico_projecao(
+    project_id: str,
+    version: str | None = Query(None),
+    face: Literal[
+        "tempo_natureza",
+        "tempo_componente",
+        "categoria_componente",
+        "atividade_componente",
+        "diesel_temporal",
+        "abc_curva",
+        "s_curve_custo",
+        "recursos_ativos_tempo",
+    ] = Query("tempo_natureza"),
+    granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"] = Query("mes"),
+    categoria: Literal["mao_obra", "equipamento", "diesel", "material"] | None = Query(None),
+    componente_bdi: Literal[
+        "custo_direto",
+        "overhead_ac",
+        "overhead_df",
+        "overhead_r",
+        "overhead_cr",
+        "margem_l",
+        "tributo_cofins",
+        "tributo_iss",
+        "tributo_pis",
+        "tributo_cssl",
+        "tributo_ir",
+    ]
+    | None = Query(None),
+    measure_profile: Literal["financial_default", "abc_custo_direto", "recursos_ativos"] | None = Query(None),
+    aggregation_mode: Literal["sum", "count_distinct", "cumulative", "pareto"] | None = Query(None),
+    abc_threshold_a: float = Query(0.80, gt=0.0, lt=1.0),
+    abc_threshold_b: float = Query(0.95, gt=0.0, lt=1.0),
+    atividade_id: str | None = Query(None),
+    top_n: int = Query(300, ge=1, le=2000),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.get_cubo_analitico_projection(
+            project_id,
+            version=version,
+            face=face,
+            granularidade=granularidade,
+            categoria=categoria,
+            componente_bdi=componente_bdi,
+            atividade_id=atividade_id,
+            top_n=top_n,
+            measure_profile=measure_profile,
+            aggregation_mode=aggregation_mode,
+            abc_threshold_a=abc_threshold_a,
+            abc_threshold_b=abc_threshold_b,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/{project_id}/cubo-analitico/projecao/contrato",
+    summary="Get analytical projection contract matrix (faces x measure x aggregation)",
+)
+def get_cubo_analitico_projecao_contrato(
+    project_id: str,
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    _ = project_id
+    return service.get_cubo_projection_contract()

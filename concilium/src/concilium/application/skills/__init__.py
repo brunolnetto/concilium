@@ -20,6 +20,55 @@ _MANIFESTS = Path(__file__).parent / "manifests"
 _IMPORT_LOCK = threading.Lock()
 
 
+def _skill_pkg_name(skill_id: str) -> str:
+    return f"_concilium_skillpkg_{skill_id.replace('-', '_')}"
+
+
+def _skill_mod_name(skill_id: str) -> str:
+    return f"{_skill_pkg_name(skill_id)}.skill"
+
+
+def _ensure_skill_package(skill_id: str, skill_dir: Path) -> str:
+    pkg_name = _skill_pkg_name(skill_id)
+    if pkg_name in sys.modules:
+        return pkg_name
+
+    pkg = types.ModuleType(pkg_name)
+    pkg.__path__ = [str(skill_dir)]  # type: ignore[attr-defined]
+    pkg.__package__ = pkg_name
+    sys.modules[pkg_name] = pkg
+    return pkg_name
+
+
+def _load_skill_module(skill_id: str) -> types.ModuleType:
+    """Load manifests/{skill_id}/skill.py preserving relative imports.
+
+    The module is loaded as `<synthetic_pkg>.skill` and `<synthetic_pkg>` is a
+    synthetic package pointing to the manifest directory. This lets
+    `from ._skill_helpers_x import ...` work when skills are loaded from files.
+    """
+    skill_path = _MANIFESTS / skill_id / "skill.py"
+    if not skill_path.exists():
+        raise ImportError(f"Arquivo skill.py não encontrado: {skill_path}")
+
+    mod_name = _skill_mod_name(skill_id)
+    if mod_name in sys.modules:
+        return sys.modules[mod_name]
+
+    _ensure_skill_package(skill_id, skill_path.parent)
+    spec = importlib.util.spec_from_file_location(mod_name, skill_path)
+    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    # Register before execution so nested imports during module init can resolve.
+    sys.modules[mod_name] = mod
+    try:
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    except Exception:
+        # Avoid leaking partially initialized modules into future lazy loads.
+        sys.modules.pop(mod_name, None)
+        raise
+    return mod
+
+
 def _get_compat_alias(skill_id: str) -> str:
     _, name = skill_id.split("-", 1)
     return f"concilium.application.skills.{name.replace('-', '_')}"
@@ -41,17 +90,11 @@ class _SkillProxy(types.ModuleType):
     def __getattr__(self, name: str):  # noqa: ANN204
         skill_id: str = self.__dict__["_concilium_skill_id"]
         alias: str = self.__name__
-        skill_path = _MANIFESTS / skill_id / "skill.py"
-        if not skill_path.exists():
-            raise ImportError(f"Arquivo skill.py não encontrado: {skill_path}")
-        mod_name = f"_concilium_skill_{skill_id.replace('-', '_')}"
+        mod_name = _skill_mod_name(skill_id)
         if mod_name not in sys.modules:
             with _IMPORT_LOCK:
                 if mod_name not in sys.modules:
-                    spec = importlib.util.spec_from_file_location(mod_name, skill_path)
-                    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-                    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-                    sys.modules[mod_name] = mod
+                    _load_skill_module(skill_id)
         mod = sys.modules[mod_name]
         # Replace proxy with real module so future imports bypass this object
         sys.modules[alias] = mod
@@ -64,18 +107,18 @@ def _load(skill_id: str, func_name: str) -> Any:
     Idempotente: se o módulo já está em sys.modules (e.g., carregado pelo proxy),
     reutiliza-o sem re-executar o arquivo.
     """
-    skill_path = _MANIFESTS / skill_id / "skill.py"
-    if not skill_path.exists():
-        raise ImportError(f"Arquivo skill.py não encontrado: {skill_path}")
-    mod_name = f"_concilium_skill_{skill_id.replace('-', '_')}"
+    mod_name = _skill_mod_name(skill_id)
     if mod_name not in sys.modules:
         with _IMPORT_LOCK:
             if mod_name not in sys.modules:
-                spec = importlib.util.spec_from_file_location(mod_name, skill_path)
-                mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-                spec.loader.exec_module(mod)  # type: ignore[union-attr]
-                sys.modules[mod_name] = mod
+                _load_skill_module(skill_id)
     mod = sys.modules[mod_name]
+    if not hasattr(mod, func_name):
+        # Recover from stale/partial module object kept from previous failures.
+        with _IMPORT_LOCK:
+            sys.modules.pop(mod_name, None)
+            _load_skill_module(skill_id)
+            mod = sys.modules[mod_name]
     alias = _get_compat_alias(skill_id)
     sys.modules[alias] = mod  # always update (replaces proxy if present)
     return getattr(mod, func_name)

@@ -11,7 +11,8 @@
     "metodo_custo_total": "custo_total_ja_incluido",
     "taxa_encargos_pct": 0.0,
     "nota_encargos": "Valor já representa custo total ao projeto (salário + encargos + benefícios), conforme orçamento gerencial de RH.",
-    "_audit_encargos": "Removido: custo_com_encargos=9000.00 (fator=1.00). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009)."
+    "_audit_encargos": "Removido: custo_com_encargos=9000.00 (fator=1.00). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009).",
+    "tipo_contrato": "CLT"
   },
   "classe_compartilhamento": {
     "classe": "concorrente_compartilhavel",

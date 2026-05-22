@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001",
   "descricao": "Produção CPU-TERRA-BASE-ESTABILIZADA",
   "origem": "PROPRIA",
-  "valor_horario": 1.0,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -50,7 +50,5 @@
       }
     ]
   },
-  "cpu_ids": [
-    "CPU-TERRA-BASE-ESTABILIZADA"
-  ]
+  "historico_observacoes": []
 }

@@ -9,6 +9,22 @@ if TYPE_CHECKING:
     from concilium.domain.models.canonical import CanonicalModel
 
 
+def _extract_total_pessoas(equipes_diretas) -> int:
+    total = 0
+    for eq in equipes_diretas:
+        for f in eq.funcoes:
+            total += f.num_pessoas
+    return total
+
+
+def _extract_atividades_criticas(criticality_report) -> int:
+    criticas = []
+    for a, s in criticality_report.get("scores", {}).items():
+        if s >= 0.7:
+            criticas.append(a)
+    return len(criticas)
+
+
 def extract_metricas(canonical: CanonicalModel | None) -> dict[str, Any]:
     """Extrai métricas-resumo do canônico para a matriz de comparação."""
 
@@ -27,8 +43,7 @@ def extract_metricas(canonical: CanonicalModel | None) -> dict[str, Any]:
         m["duracao_meses"] = len(canonical.cronograma.distribuicao_mensal)
 
     if canonical.equipes_diretas:
-        total_pessoas = sum(sum(f.num_pessoas for f in eq.funcoes) for eq in canonical.equipes_diretas)
-        m["total_pessoas"] = total_pessoas
+        m["total_pessoas"] = _extract_total_pessoas(canonical.equipes_diretas)
 
     if canonical.alocacoes:
         m["total_alocacoes"] = len(canonical.alocacoes)
@@ -39,8 +54,7 @@ def extract_metricas(canonical: CanonicalModel | None) -> dict[str, Any]:
         m["conflitos_pico"] = 0
 
     if canonical.criticality_report:
-        criticas = [a for a, s in canonical.criticality_report.get("scores", {}).items() if s >= 0.7]
-        m["atividades_criticas"] = len(criticas)
+        m["atividades_criticas"] = _extract_atividades_criticas(canonical.criticality_report)
 
     return m
 

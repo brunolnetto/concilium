@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 from .projection import BenchmarkProjection
@@ -159,7 +158,56 @@ def _bq_get_decision(worst: str, has_critical: bool) -> str:
     return "APROVADO"
 
 
-@dataclass
+def _fallback_custo_total(ferramenta: dict) -> dict:
+    if ferramenta.get("custo_total") is None:
+        direto = ferramenta.get("custo_direto")
+        indireto = ferramenta.get("custo_indireto")
+        if direto is not None and indireto is not None:
+            return {**ferramenta, "custo_total": round(direto + indireto, 2)}
+    return ferramenta
+
+
+def _build_composicao_item(ref_value, tool_value) -> dict | None:
+    if ref_value is None and tool_value is None:
+        return None
+    delta_abs = None
+    delta_pct = None
+    if ref_value is not None and tool_value is not None:
+        delta_abs = round(tool_value - ref_value, 2)
+        delta_pct = round((tool_value - ref_value) / ref_value * 100, 2) if ref_value != 0 else None
+    return {
+        "referencia": ref_value,
+        "ferramenta": tool_value,
+        "delta_absoluto": delta_abs,
+        "delta_percentual": delta_pct,
+    }
+
+
+_ACTION_TABLE: dict[tuple[str, str], tuple[str, str]] = {
+    ("S3", "custo_direto"): ("Bloquear pipeline e revalidar baseline de referencia", "engenharia-benchmarks"),
+    ("S3", "custo_total"): ("Bloquear pipeline e revalidar baseline de referencia", "engenharia-benchmarks"),
+    ("S3", "preco_venda"): ("Bloquear pipeline e revisar parametrizacao BDI", "engenharia-bdi"),
+    ("S3", "*"): ("Bloquear pipeline e executar investigacao formal", "engenharia-benchmarks"),
+    ("S2", "custo_direto"): ("Investigar derivacao da engine e reconciliar custo direto", "engenharia-benchmarks"),
+    ("S2", "custo_total"): ("Investigar derivacao da engine e reconciliar custo direto", "engenharia-benchmarks"),
+    ("S2", "preco_venda"): ("Revalidar BDI, tributacao e consolidacao financeira", "engenharia-bdi"),
+    ("S2", "margem_pct"): ("Recalcular consolidacao e checar inconsistencias de margem", "engenharia-financeira"),
+    ("S2", "*"): ("Investigar divergencia com evidencia do benchmark", "engenharia-benchmarks"),
+    ("S1", "custo_direto"): ("Revisar baseline e confirmar arredondamento/derivacao", "engenharia-benchmarks"),
+    ("S1", "custo_total"): ("Revisar baseline e confirmar arredondamento/derivacao", "engenharia-benchmarks"),
+    ("S1", "preco_venda"): ("Revisar BDI e confirmar efeito de arredondamento", "engenharia-bdi"),
+    ("S1", "*"): ("Registrar ressalva e monitorar tendencia", "engenharia-benchmarks"),
+}
+
+
+def _sum_indireto(custo: dict) -> float:
+    total = 0.0
+    for k, v in custo.items():
+        if isinstance(v, (int, float)) and str(k).startswith("indireto_"):
+            total += v
+    return total
+
+
 class BenchmarkReportBuilder:
     _PHASE_BY_METRIC = {
         "custo_direto": "06-consolidacao",
@@ -191,27 +239,11 @@ class BenchmarkReportBuilder:
 
     @staticmethod
     def _recommend_action(metric: str, severity: str) -> tuple[str, str]:
-        if severity == "S3":
-            if metric in {"custo_direto", "custo_total"}:
-                return "Bloquear pipeline e revalidar baseline de referencia", "engenharia-benchmarks"
-            if metric == "preco_venda":
-                return "Bloquear pipeline e revisar parametrizacao BDI", "engenharia-bdi"
-            return "Bloquear pipeline e executar investigacao formal", "engenharia-benchmarks"
-        if severity == "S2":
-            if metric in {"custo_direto", "custo_total"}:
-                return "Investigar derivacao da engine e reconciliar custo direto", "engenharia-benchmarks"
-            if metric == "preco_venda":
-                return "Revalidar BDI, tributacao e consolidacao financeira", "engenharia-bdi"
-            if metric == "margem_pct":
-                return "Recalcular consolidacao e checar inconsistencias de margem", "engenharia-financeira"
-            return "Investigar divergencia com evidencia do benchmark", "engenharia-benchmarks"
-        if severity == "S1":
-            if metric in {"custo_direto", "custo_total"}:
-                return "Revisar baseline e confirmar arredondamento/derivacao", "engenharia-benchmarks"
-            if metric == "preco_venda":
-                return "Revisar BDI e confirmar efeito de arredondamento", "engenharia-bdi"
-            return "Registrar ressalva e monitorar tendencia", "engenharia-benchmarks"
-        return "Sem acao corretiva obrigatoria", "benchmark-auditoria"
+        return (
+            _ACTION_TABLE.get((severity, metric))
+            or _ACTION_TABLE.get((severity, "*"))
+            or ("Sem acao corretiva obrigatoria", "benchmark-auditoria")
+        )
 
     def _build_quality_gates(self, confronto: dict[str, Any]) -> dict[str, Any]:
         deltas = confronto.get("deltas") or {}
@@ -263,9 +295,7 @@ class BenchmarkReportBuilder:
         if isinstance(canonical, dict):
             custo: dict = canonical.get("custo") if isinstance(canonical.get("custo"), dict) else {}  # type: ignore[assignment]
             venda: dict = canonical.get("venda") if isinstance(canonical.get("venda"), dict) else {}  # type: ignore[assignment]
-            custo_indireto = sum(
-                v for k, v in custo.items() if isinstance(v, (int, float)) and str(k).startswith("indireto_")
-            )
+            custo_indireto = _sum_indireto(custo)
             return {
                 "custo_direto": custo.get("direto_equipes"),
                 "custo_indireto": custo_indireto if custo_indireto != 0 else None,
@@ -282,46 +312,17 @@ class BenchmarkReportBuilder:
     ) -> dict[str, Any] | None:
         if referencia is None or ferramenta is None:
             return None
-
-        # Fallback: derive tool total from direct + indirect if not available
-        if ferramenta.get("custo_total") is None:
-            direto = ferramenta.get("custo_direto")
-            indireto = ferramenta.get("custo_indireto")
-            if direto is not None and indireto is not None:
-                ferramenta = {**ferramenta, "custo_total": round(direto + indireto, 2)}
-
+        ferramenta = _fallback_custo_total(ferramenta)
         itens = ["custo_direto", "custo_indireto", "custo_total", "preco_venda"]
         composicao: dict[str, Any] = {}
         for item in itens:
-            ref_value = referencia.get(item)
-            tool_value = ferramenta.get(item)
-            if ref_value is None and tool_value is None:
-                continue
-            delta_abs = None
-            delta_pct = None
-            if ref_value is not None and tool_value is not None:
-                delta_abs = round(tool_value - ref_value, 2)
-                delta_pct = round((tool_value - ref_value) / ref_value * 100, 2) if ref_value != 0 else None
-            composicao[item] = {
-                "referencia": ref_value,
-                "ferramenta": tool_value,
-                "delta_absoluto": delta_abs,
-                "delta_percentual": delta_pct,
-            }
-
-        # Include custo_direto_catalogo_vs_ref comparison
+            entry = _build_composicao_item(referencia.get(item), ferramenta.get(item))
+            if entry is not None:
+                composicao[item] = entry
         ref_direto = referencia.get("custo_direto")
         tool_catalog = ferramenta.get("custo_direto_catalogo")
         if ref_direto is not None and tool_catalog is not None:
-            delta_abs = round(tool_catalog - ref_direto, 2)
-            delta_pct = round((tool_catalog - ref_direto) / ref_direto * 100, 2) if ref_direto != 0 else None
-            composicao["custo_direto_catalogo_vs_ref"] = {
-                "referencia": ref_direto,
-                "ferramenta": tool_catalog,
-                "delta_absoluto": delta_abs,
-                "delta_percentual": delta_pct,
-            }
-
+            composicao["custo_direto_catalogo_vs_ref"] = _build_composicao_item(ref_direto, tool_catalog)
         return composicao or None
 
     def _finalize_confronto(self, confronto: dict[str, Any], ref: dict[str, Any] | None) -> None:

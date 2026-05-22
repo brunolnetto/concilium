@@ -21,7 +21,7 @@
     "nota": "Adotada do SICRO conforme Plano de Correção P5.2"
   },
   "categoria": "DIVERSOS",
-  "equipe": {
+  "composicao_padrao_equipe": {
     "funcoes": [
       {
         "funcao_id": "MO-OPER-MOTO",
@@ -29,14 +29,10 @@
       },
       {
         "funcao_id": "MO-OPER-ROLO-COMP",
-        "num_pessoas": 1
+        "num_pessoas": 2
       },
       {
         "funcao_id": "MO-MOTOR-CAM-PIPA",
-        "num_pessoas": 1
-      },
-      {
-        "funcao_id": "MO-OPER-ROLO-COMP",
         "num_pessoas": 1
       },
       {
@@ -58,5 +54,6 @@
         "num_unidades": 1
       }
     ]
-  }
+  },
+  "historico_observacoes": []
 }

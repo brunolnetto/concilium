@@ -1,14 +1,19 @@
 services:
   api:
+    profiles: ["api", "deploy"]
     build:
       context: .
       dockerfile: Dockerfile.dev
+    env_file:
+      - .env.api
     working_dir: /workspace/concilium
     command: >
-      sh -lc "uvicorn concilium.presentation.api.app:app --host 0.0.0.0 --port 8000 --reload"
+      sh -lc "uvicorn concilium.presentation.api.app:app --host ${CONCILIUM_API_HOST:-0.0.0.0} --port ${CONCILIUM_API_PORT:-8000} --reload"
     environment:
       CONCILIUM_ROOT: /workspace/concilium
       CONCILIUM_CONFIG_ROOT: /workspace/concilium/config
+      CONCILIUM_API_HOST: ${CONCILIUM_API_HOST:-0.0.0.0}
+      CONCILIUM_API_PORT: ${CONCILIUM_API_PORT:-8000}
       PYTHONPATH: /workspace/concilium/src
     ports:
       - "8000:8000"
@@ -20,16 +25,23 @@ services:
       - concilium_pip_cache:/root/.cache/pip
 
   ui:
+    profiles: ["ui", "deploy"]
     build:
       context: .
       dockerfile: Dockerfile.dev
+    env_file:
+      - .env.ui
     working_dir: /workspace/concilium
     command: >
       sh -lc "streamlit run src/concilium/presentation/ui/prototype_streamlit.py
-      --server.port 8501 --server.address 0.0.0.0"
+      --server.port ${CONCILIUM_UI_PORT:-8501} --server.address ${CONCILIUM_UI_HOST:-0.0.0.0}"
     environment:
       CONCILIUM_ROOT: /workspace/concilium
       CONCILIUM_CONFIG_ROOT: /workspace/concilium/config
+      CONCILIUM_UI_HOST: ${CONCILIUM_UI_HOST:-0.0.0.0}
+      CONCILIUM_UI_PORT: ${CONCILIUM_UI_PORT:-8501}
+      CONCILIUM_UI_API_BASE_URL: ${CONCILIUM_UI_API_BASE_URL:-http://api:8000}
+      CONCILIUM_API_BASE_URL: ${CONCILIUM_API_BASE_URL:-http://api:8000}
       PYTHONPATH: /workspace/concilium/src
     ports:
       - "8501:8501"

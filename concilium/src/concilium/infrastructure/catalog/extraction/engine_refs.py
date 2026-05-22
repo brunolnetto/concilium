@@ -35,24 +35,29 @@ def _find_latest_project_by_name(project_name: str, projects_root: Path) -> Path
     target_norm = _normalize_project_token(project_name)
     best: tuple[str, Path] | None = None
     for d in projects_root.iterdir():
-        if not d.is_dir():
-            continue
-        meta_path = d / "meta.json"
-        if not meta_path.exists():
-            continue
-        try:
-            meta = _load_json(meta_path)
-        except Exception:
-            continue
-        nome_norm = _normalize_project_token(meta.get("nome") or "")
-        if nome_norm != target_norm:
-            continue
-        created = str(meta.get("criado_em") or "")
-        if best is None or created > best[0]:
-            best = (created, d)
+        best = _check_project_dir(d, target_norm, best)
     if best is None:
         raise FileNotFoundError(f"Projeto nao encontrado para nome={project_name}")
     return best[1]
+
+
+def _check_project_dir(d: Path, target_norm: str, best):
+    if not d.is_dir():
+        return best
+    meta_path = d / "meta.json"
+    if not meta_path.exists():
+        return best
+    try:
+        meta = _load_json(meta_path)
+    except Exception:
+        return best
+    nome_norm = _normalize_project_token(meta.get("nome") or "")
+    if nome_norm != target_norm:
+        return best
+    created = str(meta.get("criado_em") or "")
+    if best is None or created > best[0]:
+        return (created, d)
+    return best
 
 
 def iter_benchmark_reports(root: Path | None = None) -> list[Path]:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -41,7 +40,40 @@ def discover_benchmark_slugs(benchmarks_root: Path) -> list[str]:
     return slugs
 
 
-@dataclass
+def _fmt_delta(v) -> str:
+    return f"{v:+.2f}%" if v is not None else "N/A"
+
+
+def _resolve_status(report: dict) -> str:
+    s = report.get("status_final")
+    if s:
+        return s
+    qg = report.get("quality_gates")
+    return (qg or {}).get("decision") or "OK"
+
+
+def _build_summary_row(report: dict) -> dict:
+    confronto = report.get("confronto", {})
+    deltas = confronto.get("deltas", {})
+    status_final = _resolve_status(report)
+    skills_log = report.get("skills_log", [])
+    has_error = False
+    for skill in skills_log:
+        if skill.get("status") in ("ERRO", "EXCEPTION"):
+            has_error = True
+            break
+    status_str = f"{status_final}/AVISO" if has_error else status_final
+    slug = report.get("slug") or report.get("projeto") or "-"
+    return {
+        "Projeto": slug,
+        "Status": status_str,
+        "Delta Direto %": _fmt_delta(deltas.get("custo_direto", {}).get("percentual")),
+        "Delta Indireto %": _fmt_delta(deltas.get("custo_indireto", {}).get("percentual")),
+        "Delta Total %": _fmt_delta(deltas.get("custo_total", {}).get("percentual")),
+        "Delta Venda %": _fmt_delta(deltas.get("preco_venda", {}).get("percentual")),
+    }
+
+
 class BenchmarkBatchRunner:
     benchmarks_root: Path
     config_root: Path
@@ -89,23 +121,5 @@ class BenchmarkBatchRunner:
     def build_summary(self, reports: list[dict[str, Any]]) -> list[dict[str, str]]:
         summary: list[dict[str, str]] = []
         for report in reports:
-            confronto = report.get("confronto", {})
-            deltas = confronto.get("deltas", {})
-            status_final = report.get("status_final") or (report.get("quality_gates") or {}).get("decision") or "OK"
-            cd_delta = deltas.get("custo_direto", {}).get("percentual")
-            ci_delta = deltas.get("custo_indireto", {}).get("percentual")
-            ct_delta = deltas.get("custo_total", {}).get("percentual")
-            pv_delta = deltas.get("preco_venda", {}).get("percentual")
-            skills_log = report.get("skills_log", [])
-            has_error = any(skill.get("status") in ("ERRO", "EXCEPTION") for skill in skills_log)
-            summary.append(
-                {
-                    "Projeto": report.get("slug") or report.get("projeto") or "-",
-                    "Status": f"{status_final}/AVISO" if has_error else status_final,
-                    "Delta Direto %": f"{cd_delta:+.2f}%" if cd_delta is not None else "N/A",
-                    "Delta Indireto %": f"{ci_delta:+.2f}%" if ci_delta is not None else "N/A",
-                    "Delta Total %": f"{ct_delta:+.2f}%" if ct_delta is not None else "N/A",
-                    "Delta Venda %": f"{pv_delta:+.2f}%" if pv_delta is not None else "N/A",
-                }
-            )
+            summary.append(_build_summary_row(report))
         return summary

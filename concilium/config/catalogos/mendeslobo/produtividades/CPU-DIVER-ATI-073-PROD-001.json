@@ -13,11 +13,5 @@
     ],
     "equipamentos": []
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 1.6202,
-    "custo_padrao_pj": 0.7865
-  },
-  "cpu_ids": [
-    "CPU-DIVER-ATI-073"
-  ]
+  "historico_observacoes": []
 }

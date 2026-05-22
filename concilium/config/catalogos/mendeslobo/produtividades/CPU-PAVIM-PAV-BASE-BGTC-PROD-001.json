@@ -37,7 +37,6 @@
       }
     ]
   },
-  "cpu_ids": [
-    "CPU-PAVIM-PAV-BASE-BGTC"
-  ]
+  "historico_observacoes": [],
+  "valor_horario": 22.0
 }

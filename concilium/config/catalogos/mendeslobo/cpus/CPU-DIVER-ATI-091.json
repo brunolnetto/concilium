@@ -4,8 +4,17 @@
   "unidade": "un",
   "origem": "PROPRIA",
   "categoria": "DIVERSOS",
-  "composicao_itens": [],
-  "data_referencia_preco": "2025-05-01",
-  "fonte_preco": "referencia_base_original",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-OFICIAL",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-AJUDANTE",
+      "coeficiente": 2.0,
+      "categoria_custo": "MAO_OBRA"
+    }
+  ],
   "producao_id_ref": "CPU-DIVER-ATI-091-PROD-001"
 }

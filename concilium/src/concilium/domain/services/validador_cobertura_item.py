@@ -13,9 +13,8 @@ referência do catálogo (precos_unitarios_sbdi foi removido).
 
 from __future__ import annotations
 
+from concilium.domain.constants import MARGEM_MINIMA
 from concilium.domain.models.canonical import EapItem, EquipeDireta, Planejamento, ValidacaoItem
-
-MARGEM_MINIMA: float = 0.05  # 5 % — abaixo disso é risco financeiro por item
 
 
 def validar_cobertura_item(

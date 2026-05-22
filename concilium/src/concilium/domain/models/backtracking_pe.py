@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 _PARAM_LABELS: dict[str, str] = {
     "L": "Ajustar margem no orçamento (BDI)",
@@ -98,6 +98,8 @@ class BacktrackingPERelatorio:
     n_roundtrips_falharam: int
     # ADR-061: validações emitidas
     validacoes_emitidas: tuple[str, ...] = ()  # ex: ("VAL-INV-ROUNDTRIP-FAIL",)
+    # NEP-025: espelha a explicação por natureza/período usada no diagnóstico
+    explicacao_natureza_periodo: dict = field(default_factory=dict)
 
     @property
     def aviso_consistencia(self) -> str | None:

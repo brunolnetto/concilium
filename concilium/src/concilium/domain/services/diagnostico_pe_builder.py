@@ -47,6 +47,17 @@ def _compute_item_metrics(active: list) -> dict[str, float]:
     }
 
 
+def _compute_f1_quantizacao(canonical_in: Any, resultado: Any, gap_total: float) -> float:
+    if not (canonical_in.bridge_analysis and isinstance(canonical_in.bridge_analysis, dict)):
+        return 0.0
+    n1 = float(canonical_in.bridge_analysis.get("nivel_1_catalogo_base") or 0)
+    n2 = float(canonical_in.bridge_analysis.get("nivel_2_catalogo_escalado") or 0)
+    if n1 <= 0 or n2 <= n1:
+        return 0.0
+    proj_total = float(getattr(getattr(resultado, "custo", None), "total", 1) or 1)
+    return abs(gap_total) * (n2 - n1) / max(proj_total, 1.0)
+
+
 def _build_gap_fatores(
     c_fixo_semanal: float,
     metrics: dict[str, float],
@@ -71,13 +82,7 @@ def _build_gap_fatores(
     f_ind_ramp_rs = max(0.0, gap_ind_estimado * escala - f_ind_clima_rs)
     f_residual_rs = max(0.0, abs(gap_total) - f_eta_clima_rs - f_cross_rs - f_ind_clima_rs - f_ind_ramp_rs)
 
-    f1_rs = 0.0
-    if canonical_in.bridge_analysis and isinstance(canonical_in.bridge_analysis, dict):
-        n1 = float(canonical_in.bridge_analysis.get("nivel_1_catalogo_base") or 0)
-        n2 = float(canonical_in.bridge_analysis.get("nivel_2_catalogo_escalado") or 0)
-        if n1 > 0 and n2 > n1:
-            proj_total = float(getattr(getattr(resultado, "custo", None), "total", 1) or 1)
-            f1_rs = abs(gap_total) * (n2 - n1) / max(proj_total, 1.0)
+    f1_rs = _compute_f1_quantizacao(canonical_in, resultado, gap_total)
 
     fatores_raw = [
         ("F_ETA_CLIMA", f_eta_clima_rs),
@@ -87,12 +92,7 @@ def _build_gap_fatores(
         ("F1_QUANTIZACAO", f1_rs),
         ("F_RESIDUAL", f_residual_rs),
     ]
-    total_attr = sum(v for _, v in fatores_raw)
-    fatores = tuple(
-        FatorPE(codigo=cod, gap_rs=round(v, 2), pct_gap=round(v / max(total_attr, 1.0), 4))
-        for cod, v in sorted(fatores_raw, key=lambda kv: kv[1], reverse=True)
-        if v > 0.50
-    )
+    fatores = _build_fator_pe_tuple(fatores_raw)
     return fatores, f1_rs
 
 
@@ -111,6 +111,106 @@ def _compute_recalibracao_l(gap_total: float, plan: Any, T_efetivo: float) -> fl
     return abs(gap_total) / max(C_cat / (1.0 - T_efetivo), 1.0) if C_cat > 0 else 0.0
 
 
+def _resolve_cubo_analitico(canonical_in: Any) -> Any | None:
+    cubo = getattr(canonical_in, "cubo_analitico", None)
+    if cubo is not None:
+        return cubo
+    try:
+        from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        return CuboAnaliticoBuilder().build(canonical_in)
+    except Exception:
+        return None
+
+
+def _build_activity_week_map(cubo: Any | None) -> dict[str, dict[str, dict[str, float]]]:
+    if cubo is None:
+        return {}
+
+    per_activity: dict[str, dict[str, dict[str, float]]] = defaultdict(lambda: defaultdict(dict))
+    for celula in getattr(cubo, "celulas", ()):
+        natureza = "direto" if getattr(celula, "componente_bdi", "") == "custo_direto" else "indireto"
+        atividade = str(getattr(celula, "atividade_id", ""))
+        semana = str(getattr(celula, "semana_iso", ""))
+        if not atividade or not semana:
+            continue
+        week_data = per_activity[atividade].setdefault(semana, {"direto": 0.0, "indireto": 0.0, "total": 0.0})
+        valor = float(getattr(celula, "valor_rs", 0.0) or 0.0)
+        week_data[natureza] += valor
+        week_data["total"] += valor
+
+    return {atividade: dict(periodos) for atividade, periodos in per_activity.items()}
+
+
+def _build_item_cubo_hint(
+    activity_week_map: dict[str, dict[str, dict[str, float]]], atividade_id: str
+) -> dict[str, Any]:
+    periodos = activity_week_map.get(atividade_id) or {}
+    if not periodos:
+        return {}
+
+    custo_direto = sum(float(v.get("direto", 0.0)) for v in periodos.values())
+    custo_indireto = sum(float(v.get("indireto", 0.0)) for v in periodos.values())
+    natureza = "direto" if custo_direto >= custo_indireto else "indireto"
+    janela = max(periodos.items(), key=lambda kv: float(kv[1].get("total", 0.0)))[0]
+    explicacao = (
+        "Concentracao de custo direto na janela critica"
+        if natureza == "direto"
+        else "Concentracao de custo indireto na janela critica"
+    )
+
+    return {
+        "janela_critica_iso": janela,
+        "natureza_dominante": natureza,
+        "custo_direto_cubo_rs": round(custo_direto, 2),
+        "custo_indireto_cubo_rs": round(custo_indireto, 2),
+        "explicacao_janela": f"{explicacao}: {janela}",
+    }
+
+
+def _build_explicacao_natureza_periodo(
+    cubo: Any | None,
+    activity_week_map: dict[str, dict[str, dict[str, float]]],
+    itens_diag: list[DiagnosticoPEItem],
+) -> dict[str, Any]:
+    if cubo is None:
+        return {}
+
+    itens: dict[str, dict[str, Any]] = {}
+    for item in itens_diag:
+        hint = _build_item_cubo_hint(activity_week_map, item.atividade_id)
+        if hint:
+            itens[item.atividade_id] = hint
+
+    janelas_prioritarias = sorted(
+        (
+            {
+                "atividade_id": item.atividade_id,
+                "descricao": item.descricao,
+                "janela_iso": hint.get("janela_critica_iso"),
+                "natureza": hint.get("natureza_dominante"),
+                "gap_rs": round(abs(item.gap_rs), 2),
+            }
+            for item in itens_diag
+            for hint in [itens.get(item.atividade_id, {})]
+            if hint
+        ),
+        key=lambda entry: float(entry.get("gap_rs", 0.0)),
+        reverse=True,
+    )[:5]
+
+    return {
+        "fonte": "cubo_analitico",
+        "resumo_global_natureza": cubo.resumo_por_natureza(),
+        "resumo_natureza_por_periodo": {
+            "semana": cubo.resumo_por_natureza_temporal("semana"),
+            "mes": cubo.resumo_por_natureza_temporal("mes"),
+        },
+        "itens": itens,
+        "janelas_prioritarias": janelas_prioritarias,
+    }
+
+
 def _process_pe_item(
     pe: Any,
     equipe_lookup: dict,
@@ -122,6 +222,7 @@ def _process_pe_item(
     T_efetivo: float,
     canonical_in: Any,
     resultado: Any,
+    item_cubo_hint: dict[str, Any] | None = None,
 ) -> tuple[DiagnosticoPEItem | None, bool]:
     """Processa um item PE e retorna (item_diagnóstico, cross_term_presente) ou (None, False)."""
     item_id = pe.item_id
@@ -166,7 +267,79 @@ def _process_pe_item(
         l_aplicado=round(L_aplicado, 4),
         l_requerido=round(L_aplicado + delta_l, 4),
         delta_l=round(delta_l, 4),
+        janela_critica_iso=(item_cubo_hint or {}).get("janela_critica_iso"),
+        natureza_dominante=(item_cubo_hint or {}).get("natureza_dominante"),
+        custo_direto_cubo_rs=float((item_cubo_hint or {}).get("custo_direto_cubo_rs", 0.0) or 0.0),
+        custo_indireto_cubo_rs=float((item_cubo_hint or {}).get("custo_indireto_cubo_rs", 0.0) or 0.0),
+        explicacao_janela=(item_cubo_hint or {}).get("explicacao_janela"),
     ), not metrics["validade"]
+
+
+def _dpb_empty_relatorio(projeto_id: str) -> DiagnosticoPERelatorio:
+    return DiagnosticoPERelatorio(
+        projeto_id=projeto_id,
+        gerado_em=datetime.now(UTC).isoformat(),
+        n_itens_deficit=0,
+        gap_total_rs=0.0,
+        gap_evitavel_rs=0.0,
+        gap_estrutural_rs=0.0,
+        fator_dominante_label="—",
+        aviso_cross_term=False,
+        l_medio_requerido=0.0,
+        itens_deficit=(),
+        consistencia_validada=True,
+        explicacao_natureza_periodo={},
+    )
+
+
+def _dpb_build_lookups(canonical_in: Any) -> tuple[dict, dict, dict, dict, dict]:
+    cron = canonical_in.cronograma
+    sched_lookup = _build_lookup_by_key(cron.scheduled_activities if cron else [], "activity_id")
+    equipe_lookup = _build_lookup_by_key(canonical_in.equipes_diretas, "item_id")
+    plan_lookup = _build_lookup_by_key(canonical_in.planejamento, "item_id")
+    ca_lookup = _build_lookup_by_key(canonical_in.custos_atividades, "atividade_id")
+    eap_lookup = _build_lookup_by_key(canonical_in.eap, "item_id")
+    return sched_lookup, equipe_lookup, plan_lookup, ca_lookup, eap_lookup
+
+
+def _build_lookup_by_key(items, key: str) -> dict:
+    result: dict = {}
+    if not items:
+        return result
+    for item in items:
+        result[getattr(item, key)] = item
+    return result
+
+
+def _weighted_l_medio(itens_diag: list) -> float:
+    if not itens_diag:
+        return 0.0
+    numerator = 0.0
+    denominator = 0.0
+    for i in itens_diag:
+        w = abs(i.gap_rs)
+        numerator += i.l_requerido * w
+        denominator += w
+    return numerator / max(denominator, 1.0)
+
+
+def _dominant_fator(itens_diag: list) -> str:
+    todas_causas: dict[str, float] = defaultdict(float)
+    for item in itens_diag:
+        for f in item.fatores:
+            todas_causas[f.label] += f.gap_rs
+    return max(todas_causas, key=lambda k: todas_causas[k]) if todas_causas else "—"
+
+
+def _build_fator_pe_tuple(fatores_raw: list) -> tuple:
+    total_attr = 0.0
+    for _, v in fatores_raw:
+        total_attr += v
+    result = []
+    for cod, v in sorted(fatores_raw, key=lambda kv: kv[1], reverse=True):
+        if v > 0.50:
+            result.append(FatorPE(codigo=cod, gap_rs=round(v, 2), pct_gap=round(v / max(total_attr, 1.0), 4)))
+    return tuple(result)
 
 
 def _build_relatorio_summary(
@@ -174,22 +347,15 @@ def _build_relatorio_summary(
     itens_diag: list[DiagnosticoPEItem],
     cross_term_presente: bool,
     norm_tol_pct: float,
+    explicacao_natureza_periodo: dict[str, Any] | None = None,
 ) -> DiagnosticoPERelatorio:
     gap_total_sum = sum(i.gap_rs for i in itens_diag)
     gap_evit = sum(i.gap_evitavel_rs for i in itens_diag)
     gap_estrt = sum(i.gap_estrutural_rs for i in itens_diag)
 
-    todas_causas: dict[str, float] = defaultdict(float)
-    for item in itens_diag:
-        for f in item.fatores:
-            todas_causas[f.label] += f.gap_rs
-    fator_dom = max(todas_causas, key=lambda k: todas_causas[k]) if todas_causas else "—"
+    fator_dom = _dominant_fator(itens_diag)
 
-    l_medio = (
-        sum(i.l_requerido * abs(i.gap_rs) for i in itens_diag) / max(sum(abs(i.gap_rs) for i in itens_diag), 1.0)
-        if itens_diag
-        else 0.0
-    )
+    l_medio = _weighted_l_medio(itens_diag)
 
     validacoes: list[str] = []
     if cross_term_presente:
@@ -214,6 +380,7 @@ def _build_relatorio_summary(
         itens_deficit=tuple(sorted(itens_diag, key=lambda i: i.gap_rs)),
         consistencia_validada=consistencia,
         validacoes_emitidas=tuple(validacoes),
+        explicacao_natureza_periodo=explicacao_natureza_periodo or {},
     )
 
 
@@ -231,40 +398,24 @@ class DiagnosticoPEBuilder:
         bdi_rates: dict[str, float] | None = None,
     ) -> DiagnosticoPERelatorio:
         projeto_id = str(getattr(getattr(canonical_in, "projeto", None), "nome", "?"))
-        pe_items = canonical_in.ponto_equilibrio or []
-        deficit_items = [p for p in pe_items if p.delta < 0]
+        deficit_items = [p for p in (canonical_in.ponto_equilibrio or []) if p.delta < 0]
 
         if not deficit_items:
-            return DiagnosticoPERelatorio(
-                projeto_id=projeto_id,
-                gerado_em=datetime.now(UTC).isoformat(),
-                n_itens_deficit=0,
-                gap_total_rs=0.0,
-                gap_evitavel_rs=0.0,
-                gap_estrutural_rs=0.0,
-                fator_dominante_label="—",
-                aviso_cross_term=False,
-                l_medio_requerido=0.0,
-                itens_deficit=(),
-                consistencia_validada=True,
-            )
+            return _dpb_empty_relatorio(projeto_id)
 
-        sched_lookup = {
-            sa.activity_id: sa
-            for sa in (canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else [])
-        }
-        equipe_lookup = {e.item_id: e for e in (canonical_in.equipes_diretas or [])}
-        plan_lookup = {p.item_id: p for p in (canonical_in.planejamento or [])}
-        ca_lookup = {ca.atividade_id: ca for ca in (canonical_in.custos_atividades or [])}
-        eap_lookup = {e.item_id: e for e in (canonical_in.eap or [])}
+        sched_lookup, equipe_lookup, plan_lookup, ca_lookup, eap_lookup = _dpb_build_lookups(canonical_in)
         resultado = canonical_in.resultado
         L_aplicado = float(getattr(getattr(resultado, "venda", None), "bdi_lucro_impostos", 0.09) or 0.09)
         T_efetivo = 0.1338
+
+        cubo = _resolve_cubo_analitico(canonical_in)
+        activity_week_map = _build_activity_week_map(cubo)
 
         itens_diag: list[DiagnosticoPEItem] = []
         cross_term_presente = False
 
         for pe in deficit_items:
+            item_cubo_hint = _build_item_cubo_hint(activity_week_map, pe.item_id)
             item, cross = _process_pe_item(
                 pe,
                 equipe_lookup,
@@ -276,10 +427,19 @@ class DiagnosticoPEBuilder:
                 T_efetivo,
                 canonical_in,
                 resultado,
+                item_cubo_hint,
             )
             if item is not None:
                 itens_diag.append(item)
             if cross:
                 cross_term_presente = True
 
-        return _build_relatorio_summary(projeto_id, itens_diag, cross_term_presente, self.NORM_TOL_PCT)
+        explicacao_natureza_periodo = _build_explicacao_natureza_periodo(cubo, activity_week_map, itens_diag)
+
+        return _build_relatorio_summary(
+            projeto_id,
+            itens_diag,
+            cross_term_presente,
+            self.NORM_TOL_PCT,
+            explicacao_natureza_periodo,
+        )

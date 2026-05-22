@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ATI-019-PROD-001",
   "descricao": "Produção CPU-TERRA-ATI-019",
   "origem": "PROPRIA",
-  "valor_horario": 250.0,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -12,11 +12,7 @@
       },
       {
         "funcao_id": "MO-OPER-ROLO-COMP",
-        "num_pessoas": 1
-      },
-      {
-        "funcao_id": "MO-OPER-ROLO-COMP",
-        "num_pessoas": 1
+        "num_pessoas": 2
       },
       {
         "funcao_id": "MO-ENCARREG-TERRA",
@@ -38,11 +34,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 52.4201,
-    "custo_padrao_pj": 52.101
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-019"
-  ]
+  "historico_observacoes": []
 }

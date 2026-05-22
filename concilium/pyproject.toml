@@ -24,13 +24,20 @@ dependencies = [
 
 [project.scripts]
 concilium = "concilium.presentation.main:main"
+concilium-mcp = "concilium.presentation.mcp_server"
 concilium-api = "concilium.presentation.api.app:main"
+concilium-ui = "concilium.presentation.ui.launcher:main"
 
 [project.optional-dependencies]
 # ADR-047: SharePoint backend (instalar com: pip install 'concilium[sharepoint]')
 sharepoint = [
     "msal>=1.31.0",
     "httpx>=0.28.1",
+]
+
+# S3 backend (instalar com: pip install 'concilium[s3]')
+s3 = [
+    "aioboto3>=13.0.0",
 ]
 
 [dependency-groups]
@@ -46,6 +53,7 @@ dev = [
     "ruff>=0.14.2",
     "pytest-json-report>=1.5.0",
     "import-linter>=2.11",
+    "mypy>=2.1.0",
 ]
 
 [tool.pytest.ini_options]

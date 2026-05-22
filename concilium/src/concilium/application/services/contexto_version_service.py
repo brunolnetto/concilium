@@ -7,12 +7,8 @@ lógica de versionamento:
     config/<entity>/<id>/current            ← ponteiro para versão ativa
     config/<entity>/<id>/<entity>.json      ← metadados da entidade
 
-Backward compat: se a estrutura versionada não existir, lê o arquivo estático
-legado config/<entity>/<id>.json e retorna como v1 implícito.
-
-Aliases de conveniência:
-    ContextoVersionService  = ConfigVersionService("contextos")
-    PerfilVersionService    = ConfigVersionService("perfis")
+Se a estrutura versionada não existir, lê o arquivo estático
+config/<entity>/<id>.json e retorna como v1 implícito.
 """
 
 from __future__ import annotations
@@ -84,7 +80,7 @@ class ConfigVersionService:
     def list_versions(self, entity_id: str) -> list[dict[str, Any]]:
         entity_dir = self._root / entity_id
         if not entity_dir.is_dir():
-            return [{"version": "v1", "motivo": "legado"}]
+            return [{"version": "v1", "motivo": "base"}]
         return self._list_versions(entity_dir)
 
     # ── Criação de nova versão ───────────────────────────────────────────────
@@ -215,7 +211,7 @@ class ConfigVersionService:
         return result
 
 
-# ── Aliases de conveniência ──────────────────────────────────────────────────
+# ── Serviços por entidade ────────────────────────────────────────────────────
 
 
 class ContextoVersionService(ConfigVersionService):
@@ -224,7 +220,6 @@ class ContextoVersionService(ConfigVersionService):
     def __init__(self, config_root: Path) -> None:
         super().__init__(config_root, "contextos")
 
-    # Alias methods para backward compat
     def list_contexts(self) -> list[dict[str, Any]]:
         return self.list_entities()
 

@@ -24,38 +24,56 @@ from concilium.domain.services.eap_dag_validator import (
 
 # ─── F2: EapItem.predecessores ───────────────────────────────────────────────
 
+
 class TestEapItemPredecessores:
     def test_default_empty(self):
-        item = EapItem(item_id="IT-001", ordem=1, cpu_id="CPU-A",
-                       descricao="Terraplenagem", unidade="m³", quantitativo=1000.0)
+        item = EapItem(
+            item_id="IT-001", ordem=1, cpu_id="CPU-A", descricao="Terraplenagem", unidade="m³", quantitativo=1000.0
+        )
         assert item.predecessores == []
 
     def test_with_predecessores(self):
-        item = EapItem(item_id="IT-002", ordem=2, cpu_id="CPU-B",
-                       descricao="Pavimentação", unidade="m²", quantitativo=500.0,
-                       predecessores=["IT-001"])
+        item = EapItem(
+            item_id="IT-002",
+            ordem=2,
+            cpu_id="CPU-B",
+            descricao="Pavimentação",
+            unidade="m²",
+            quantitativo=500.0,
+            predecessores=["IT-001"],
+        )
         assert item.predecessores == ["IT-001"]
 
     def test_serialization_roundtrip(self):
-        item = EapItem(item_id="IT-003", ordem=3, cpu_id="CPU-C",
-                       descricao="Drenagem", unidade="m", quantitativo=200.0,
-                       predecessores=["IT-001", "IT-002"])
+        item = EapItem(
+            item_id="IT-003",
+            ordem=3,
+            cpu_id="CPU-C",
+            descricao="Drenagem",
+            unidade="m",
+            quantitativo=200.0,
+            predecessores=["IT-001", "IT-002"],
+        )
         dumped = item.model_dump()
         restored = EapItem.model_validate(dumped)
         assert restored.predecessores == ["IT-001", "IT-002"]
 
     def test_rejects_negative_quantitativo(self):
         with pytest.raises(ValidationError):
-            EapItem(item_id="IT-001", ordem=1, cpu_id="CPU-A",
-                    descricao="X", unidade="m³", quantitativo=-1.0)
+            EapItem(item_id="IT-001", ordem=1, cpu_id="CPU-A", descricao="X", unidade="m³", quantitativo=-1.0)
 
 
 # ─── F2: DAG validation ───────────────────────────────────────────────────────
 
+
 def _make_item(item_id: str, preds: list[str] | None = None) -> EapItem:
     return EapItem(
-        item_id=item_id, ordem=1, cpu_id="CPU-A",
-        descricao=item_id, unidade="m³", quantitativo=1.0,
+        item_id=item_id,
+        ordem=1,
+        cpu_id="CPU-A",
+        descricao=item_id,
+        unidade="m³",
+        quantitativo=1.0,
         predecessores=preds or [],
     )
 
@@ -111,8 +129,10 @@ class TestValidarDagPredecessores:
 
 # ─── F3: PipelineStrategy ─────────────────────────────────────────────────────
 
+
 class _FakeProject:
     """Minimal ProjectHandle stub for strategy tests."""
+
     def __init__(self, tipo_projeto: str, status_eap: str = "ATIVO"):
         self._tipo = tipo_projeto
         self._status = status_eap
@@ -135,8 +155,8 @@ class TestHotProjectStrategy:
     def test_skill_sequence_nonempty(self):
         skills = HotProjectStrategy().skill_sequence()
         assert len(skills) > 0
-        assert "00-escopo" in skills
-        assert "06-consolidar" in skills
+        assert "01-escopo-e-eap" in skills
+        assert "08-consolidacao-financeira" in skills
 
 
 class TestProjectStrategy:

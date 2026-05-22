@@ -66,6 +66,21 @@ Esforço: XS (<30 min) | S (30 min–2h) | M (2–4h) | L (4–8h) | XL (>8h)
 | [NEP-015](nep-015-botoes-tema-escuro-painel-controle.md) | Botões do Painel de Controle não respeitam tema claro/escuro | Concluído | 🟠 Alto | M |
 | [NEP-016](nep-016-eap-vazia-pipeline-feedback.md) | Pipeline falha com "EAP vazia" sem diagnóstico claro ao usuário | Concluído | 🔴 Crítico | S |
 
+### Área: Arquitetura e Skills
+
+| NEP | Título | Status | Prioridade | Esforço |
+|---|---|---|---|---|
+| [NEP-017](nep-017-inventario-skills-readme-desatualizado.md) | Inventário de Skills no README desatualizado | Concluído | 🔴 Crítico | S |
+| [NEP-018](nep-018-entregaveis-keys-desalinhadas-runtime-ui.md) | Chaves de entregáveis desalinhadas entre defaults, UI e runtime | Concluído | 🔴 Crítico | M |
+| [NEP-019](nep-019-persistencia-artefatos-tipados.md) | Persistência e exposição de artefatos tipados de skills | Concluído | 🟠 Alto | M |
+| [NEP-020](nep-020-limpeza-ids-legados-pipeline-strategy.md) | Limpeza de IDs legados em Pipeline Strategy | Concluído | 🟠 Alto | S |
+| [NEP-021](nep-021-documentacao-plano-v2-5-obsoleta.md) | Documento de plano v2.4->v2.5 obsoleto frente ao estado atual | Concluído | 🟡 Médio | XS |
+| [NEP-022](nep-022-variavel-cpu-mapping-benchmark-agnostico.md) | Adequação da variável de mapping CPU para contexto agnóstico | Concluído | 🟠 Alto | S |
+| [NEP-023](nep-023-env-separacao-api-ui-e-legacy-mapping.md) | Estratégia de variáveis de ambiente para separação API/UI e legado de mapping | Concluído | 🟠 Alto | S |
+| [NEP-024](nep-024-cubo-analitico-multidimensional-granularidade-temporal.md) | Cubo analítico multidimensional com granularidade temporal múltipla | Backlog | 🟠 Alto | L |
+| [NEP-025](nep-025-pe-backtracking-orientado-ao-cubo.md) | PE e backtracking orientados ao cubo analítico | Backlog | 🟠 Alto | L |
+| [NEP-026](nep-026-descontinuacao-legacy-alias-lingua-franca.md) | Descontinuação de legacy/alias e consolidação da língua franca de contratos | Concluído | 🔴 Crítico | XL |
+
 ---
 
 ## Legenda de Status

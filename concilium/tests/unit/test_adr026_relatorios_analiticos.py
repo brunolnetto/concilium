@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
+import pytest
+
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.artifact import ArtifactEnvelope, ArtifactKind
 from concilium.domain.models.canonical import CanonicalModel
@@ -153,6 +155,8 @@ class TestSkill15RelatorioCriticidade:
 
 
 class TestSkill07CriticidadeEnrichment:
+    pytestmark = [pytest.mark.slow]
+
     def _run(self, canonical_in: CanonicalModel) -> SkillResult:
         mod = _load_skill("09-relatorio-e-artefatos")
         return mod.run_relatorio_e_artefatos(

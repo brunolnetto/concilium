@@ -14,6 +14,67 @@ from concilium.presentation.cli.shared import config_root, parse_project_version
 app = typer.Typer(name="run", help="ExecuÃ§Ã£o de skills.", no_args_is_help=True)
 
 
+def _run_parse_inputs(inputs_json: str | None) -> dict:
+    if not inputs_json:
+        return {}
+    try:
+        is_file = Path(inputs_json).exists()
+    except OSError:
+        is_file = False
+    if is_file:
+        return json.loads(Path(inputs_json).read_text(encoding="utf-8"))
+    return json.loads(inputs_json)
+
+
+def _run_resolve_escopo(project: object, escopo_id: str | None) -> str:
+    escopos = project.list_escopos()  # type: ignore[union-attr]
+    if not escopos:
+        rprint("[red]Nenhum escopo encontrado no projeto. Use 'escopo criar' primeiro.[/red]")
+        raise typer.Exit(1)
+    if escopo_id is not None:
+        return escopo_id
+    if len(escopos) == 1:
+        return escopos[0]
+    rprint("[red]Projeto tem múltiplos escopos. Use --escopo.[/red]")
+    for eid in escopos:
+        rprint(f"  \u2022 {eid}")
+    raise typer.Exit(1)
+
+
+def _run_resolve_plano(es: object, plano_id: str | None, resolved_escopo: str) -> str:
+    if plano_id is not None:
+        return plano_id
+    active = es.active_plan()  # type: ignore[union-attr]
+    if active is None:
+        rprint(f"[red]Nenhum plano ativo no escopo '{resolved_escopo}'. Use 'plano criar' primeiro.[/red]")
+        raise typer.Exit(1)
+    return active.plano_id
+
+
+def _run_report_result(result: object, skill: str) -> None:
+    if result.has_errors:  # type: ignore[union-attr]
+        rprint(f"[red][X][/red] Skill {skill} falhou:")
+    else:
+        rprint(f"[green][OK][/green] Skill {skill} executada com sucesso.")
+    for v in result.validacoes:  # type: ignore[union-attr]
+        cor = {"OK": "green", "AVISO": "yellow", "ERRO": "red"}[v.status]
+        msg = f": {v.mensagem}" if v.mensagem else ""
+        rprint(f"  [{cor}]{v.status:5s}[/{cor}] {v.codigo}{msg}")
+
+
+def _approve_load_pending_overrides(project: object) -> list[str]:
+    overrides_path = project.root / "overrides" / "insumos_override.json"  # type: ignore[union-attr]
+    if not overrides_path.exists():
+        return []
+    try:
+        loaded = json.loads(overrides_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            return [k for k in loaded.keys() if isinstance(k, str)]
+    except Exception:
+        pass
+    return []
+
+
 @app.command()
 def run(
     skill: str = typer.Argument(..., help="ID da skill (ex.: 02-produtividade-climatica)."),
@@ -25,50 +86,17 @@ def run(
     escopo_id: str | None = typer.Option(None, "--escopo", "-e", help="ID do escopo. Auto-inferido se unico."),
     plano_id: str | None = typer.Option(None, "--plano", help="ID do plano. Auto-inferido se unico."),
 ) -> None:
-    """Invoca uma skill. Persiste canÃ´nico se sucesso. Sempre registra log."""
+    """Invoca uma skill. Persiste canônico se sucesso. Sempre registra log."""
     from concilium.application.runtime import Runtime, RuntimeError
 
     project = resolve_project(projeto)
     rt = Runtime(config_root())
-
-    inputs: dict = {}
-    if inputs_json:
-        try:
-            is_file = Path(inputs_json).exists()
-        except OSError:
-            is_file = False
-        if is_file:
-            inputs = json.loads(Path(inputs_json).read_text(encoding="utf-8"))
-        else:
-            inputs = json.loads(inputs_json)
-
+    inputs = _run_parse_inputs(inputs_json)
     _ = version
 
-    escopos = project.list_escopos()
-    if not escopos:
-        rprint("[red]Nenhum escopo encontrado no projeto. Use 'escopo criar' primeiro.[/red]")
-        raise typer.Exit(1)
-
-    resolved_escopo = escopo_id
-    if resolved_escopo is None:
-        if len(escopos) == 1:
-            resolved_escopo = escopos[0]
-        else:
-            rprint("[red]Projeto tem mÃºltiplos escopos. Use --escopo.[/red]")
-            for eid in escopos:
-                rprint(f"  â€¢ {eid}")
-            raise typer.Exit(1)
-
+    resolved_escopo = _run_resolve_escopo(project, escopo_id)
     es = project.escopo(resolved_escopo)
-
-    resolved_plano = plano_id
-    if resolved_plano is None:
-        active = es.active_plan()
-        if active is None:
-            rprint(f"[red]Nenhum plano ativo no escopo '{resolved_escopo}'. Use 'plano criar' primeiro.[/red]")
-            raise typer.Exit(1)
-        resolved_plano = active.plano_id
-
+    resolved_plano = _run_resolve_plano(es, plano_id, resolved_escopo)
     ps = es.plan(resolved_plano)
     try:
         from concilium.application.orchestrators.lifecycle_coordinator import LifecycleCoordinator
@@ -82,16 +110,7 @@ def run(
         rprint(f"[red]Erro inesperado na skill: {e}[/red]")
         raise typer.Exit(2) from None
 
-    if result.has_errors:
-        rprint(f"[red][X][/red] Skill {skill} falhou:")
-    else:
-        rprint(f"[green][OK][/green] Skill {skill} executada com sucesso.")
-
-    for v in result.validacoes:
-        cor = {"OK": "green", "AVISO": "yellow", "ERRO": "red"}[v.status]
-        msg = f": {v.mensagem}" if v.mensagem else ""
-        rprint(f"  [{cor}]{v.status:5s}[/{cor}] {v.codigo}{msg}")
-
+    _run_report_result(result, skill)
     if result.has_errors:
         raise typer.Exit(1)
 
@@ -120,16 +139,7 @@ def approve(
         rprint(f"[red]Sem canÃ´nico na versÃ£o {v}[/red]")
         raise typer.Exit(1)
 
-    pending_override_ids: list[str] = []
-    overrides_path = project.root / "overrides" / "insumos_override.json"
-    if overrides_path.exists():
-        try:
-            loaded = json.loads(overrides_path.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                pending_override_ids = [k for k in loaded.keys() if isinstance(k, str)]
-        except Exception:
-            pending_override_ids = []
-
+    pending_override_ids = _approve_load_pending_overrides(project)
     if pending_override_ids and not allow_pending_overrides:
         preview = ", ".join(sorted(pending_override_ids)[:5])
         suffix = "" if len(pending_override_ids) <= 5 else f" ... (+{len(pending_override_ids) - 5})"

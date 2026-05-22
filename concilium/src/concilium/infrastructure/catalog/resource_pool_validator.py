@@ -71,6 +71,64 @@ def _rpv_accumulate_demands(atividades_ativas, alocacoes, insumos) -> tuple:
     return demand_a, demand_b, demand_c
 
 
+def _check_demand_a(semana: str, demand_a: dict, pool: dict, violacoes: list) -> None:
+    for insumo_id, demanda in demand_a.items():
+        capacidade = float(pool.get(insumo_id, 0))
+        if demanda > capacidade:
+            violacoes.append(
+                ViolacaoPool(
+                    codigo="VAL-POOL-A-01",
+                    insumo_id=insumo_id,
+                    semana=semana,
+                    demanda=demanda,
+                    capacidade=capacidade,
+                    excedente=demanda - capacidade,
+                    classe="exclusivo_dedicado",
+                    recomendacao=f"Adquirir {demanda - capacidade:.0f} unidade(s) adicional(is) ou deslocar atividade",
+                )
+            )
+
+
+def _check_demand_b(semana: str, demand_b: dict, pool: dict, violacoes: list) -> None:
+    for insumo_id, demanda in demand_b.items():
+        capacidade = float(pool.get(insumo_id, 0))
+        if demanda > capacidade:
+            violacoes.append(
+                ViolacaoPool(
+                    codigo="VAL-POOL-B-01",
+                    insumo_id=insumo_id,
+                    semana=semana,
+                    demanda=demanda,
+                    capacidade=capacidade,
+                    excedente=demanda - capacidade,
+                    classe="exclusivo_compartilhavel",
+                    recomendacao="Redistribuir atividades para evitar sobreposição ou adicionar instância",
+                )
+            )
+
+
+def _check_demand_c(semana: str, demand_c: dict, insumos: dict, pool: dict, violacoes: list) -> None:
+    for insumo_id, n_atividades in demand_c.items():
+        insumo = insumos.get(insumo_id)
+        cls_data = insumo.get("classe_compartilhamento") if isinstance(insumo, dict) else {}
+        cap_cobertura = (cls_data or {}).get("capacidade_cobertura", 1) if isinstance(cls_data, dict) else 1
+        instancias = pool.get(insumo_id, 0)
+        capacidade_efetiva = instancias * cap_cobertura
+        if n_atividades > capacidade_efetiva:
+            violacoes.append(
+                ViolacaoPool(
+                    codigo="VAL-POOL-C-01",
+                    insumo_id=insumo_id,
+                    semana=semana,
+                    demanda=float(n_atividades),
+                    capacidade=float(capacidade_efetiva),
+                    excedente=float(n_atividades - capacidade_efetiva),
+                    classe="concorrente_compartilhavel",
+                    recomendacao=f"Adicionar 1 instância cobre até {cap_cobertura} frente(s) adicional(is)",
+                )
+            )
+
+
 class ResourcePoolValidator:
     """Valida alocações de equipe contra pool usando restrições por classe (ADR-016 §D3)."""
 
@@ -95,58 +153,9 @@ class ResourcePoolValidator:
 
         violacoes: list[ViolacaoPool] = []
 
-        for insumo_id, demanda in demand_a.items():
-            capacidade = float(pool.get(insumo_id, 0))
-            if demanda > capacidade:
-                violacoes.append(
-                    ViolacaoPool(
-                        codigo="VAL-POOL-A-01",
-                        insumo_id=insumo_id,
-                        semana=semana,
-                        demanda=demanda,
-                        capacidade=capacidade,
-                        excedente=demanda - capacidade,
-                        classe="exclusivo_dedicado",
-                        recomendacao=f"Adquirir {demanda - capacidade:.0f} unidade(s) adicional(is) ou deslocar atividade",  # noqa: E501
-                    )
-                )
-
-        for insumo_id, demanda in demand_b.items():
-            capacidade = float(pool.get(insumo_id, 0))
-            if demanda > capacidade:
-                violacoes.append(
-                    ViolacaoPool(
-                        codigo="VAL-POOL-B-01",
-                        insumo_id=insumo_id,
-                        semana=semana,
-                        demanda=demanda,
-                        capacidade=capacidade,
-                        excedente=demanda - capacidade,
-                        classe="exclusivo_compartilhavel",
-                        recomendacao="Redistribuir atividades para evitar sobreposição ou adicionar instância",
-                    )
-                )
-
-        for insumo_id, n_atividades in demand_c.items():
-            insumo = insumos.get(insumo_id)
-            cls_data = insumo.get("classe_compartilhamento") if isinstance(insumo, dict) else {}
-            cap_cobertura = (cls_data or {}).get("capacidade_cobertura", 1) if isinstance(cls_data, dict) else 1
-            instancias = pool.get(insumo_id, 0)
-            capacidade_efetiva = instancias * cap_cobertura
-            if n_atividades > capacidade_efetiva:
-                violacoes.append(
-                    ViolacaoPool(
-                        codigo="VAL-POOL-C-01",
-                        insumo_id=insumo_id,
-                        semana=semana,
-                        demanda=float(n_atividades),
-                        capacidade=float(capacidade_efetiva),
-                        excedente=float(n_atividades - capacidade_efetiva),
-                        classe="concorrente_compartilhavel",
-                        recomendacao=f"Adicionar 1 instância cobre até {cap_cobertura} frente(s) adicional(is)",
-                    )
-                )
-
+        _check_demand_a(semana, demand_a, pool, violacoes)
+        _check_demand_b(semana, demand_b, pool, violacoes)
+        _check_demand_c(semana, demand_c, insumos, pool, violacoes)
         return ResultadoValidacaoSemana(violacoes=violacoes)
 
 

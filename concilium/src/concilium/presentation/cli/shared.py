@@ -7,6 +7,8 @@ from pathlib import Path
 import typer
 from rich import print as rprint
 
+from concilium.infrastructure.storage.store_factory import build_project_repository
+
 
 def _looks_like_workspace_root(path: Path) -> bool:
     return (
@@ -102,10 +104,30 @@ def benchmark_projects_root() -> Path:
     return root
 
 
+def project_repository(*, benchmark: bool = False):
+    """Build project repository using StoreFactory backend selection."""
+    root = benchmark_projects_root() if benchmark else projetos_root()
+    root.mkdir(parents=True, exist_ok=True)
+    return build_project_repository(root)
+
+
+def _find_projects_by_name(base, name_or_id: str) -> list:
+
+    matches = []
+    for p in base.iterdir():
+        if not p.is_dir():
+            continue
+        meta_path = p / "meta.json"
+        if not meta_path.exists():
+            continue
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        if meta.get("nome") == name_or_id:
+            matches.append(p)
+    return matches
+
+
 def resolve_project(name_or_id: str):
     """Resolve nome ou UUID para um ProjectStore."""
-    from concilium.infrastructure.storage.project import ProjectStore
-
     base = _projetos_root()
     if not base.exists():
         rprint(
@@ -117,19 +139,10 @@ def resolve_project(name_or_id: str):
     # Tentativa direta por UUID/diretÃ³rio
     direct = base / name_or_id
     if direct.is_dir() and (direct / "meta.json").exists():
-        return ProjectStore(direct)
+        return project_repository().get_project(name_or_id)
 
     # Busca por nome
-    matches = []
-    for p in base.iterdir():
-        if not p.is_dir():
-            continue
-        meta_path = p / "meta.json"
-        if not meta_path.exists():
-            continue
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        if meta.get("nome") == name_or_id:
-            matches.append(p)
+    matches = _find_projects_by_name(base, name_or_id)
 
     if len(matches) == 0:
         rprint(f"[red]Projeto nÃ£o encontrado: {name_or_id}[/red]")
@@ -139,7 +152,7 @@ def resolve_project(name_or_id: str):
         for m in matches:
             rprint(f"  â€¢ {m.name}")
         raise typer.Exit(1)
-    return ProjectStore(matches[0])
+    return project_repository().get_project(matches[0].name)
 
 
 def parse_project_version(arg: str) -> tuple[str, str | None]:

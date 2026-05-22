@@ -3,7 +3,6 @@
 Comandos:
   concilium validate project <projeto> [--version vN] [--json]
   concilium validate benchmark <slug> [--json]
-  concilium validate projeto <projeto> [--version vN] [--json]  # alias PT-BR
 """
 
 from __future__ import annotations
@@ -33,19 +32,7 @@ def _empty_resumo() -> dict[str, int]:
     return {"verde": 0, "amarelo": 0, "vermelho": 0}
 
 
-def _collect_project_validacoes(canonical_dict: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, int]]:
-    validacoes: list[dict[str, Any]] = []
-    resumo = _empty_resumo()
-
-    for item in (canonical_dict.get("resultado") or {}).get("validacoes") or []:
-        if not isinstance(item, dict):
-            continue
-        status = str(item.get("status") or "").upper()
-        codigo = str(item.get("codigo") or "VAL-GENERIC")
-        mensagem = str(item.get("mensagem") or "")
-        validacoes.append({"codigo": codigo, "status": status, "mensagem": mensagem})
-
-    # Contabiliza resumo a partir das validações gerais (VAL-COB-* incluídos)
+def _tally_resumo(validacoes: list, resumo: dict) -> None:
     for v in validacoes:
         st = str(v.get("status") or "").upper()
         if st == "OK":
@@ -55,7 +42,32 @@ def _collect_project_validacoes(canonical_dict: dict[str, Any]) -> tuple[list[di
         elif st in ("ERRO", "EXCEPTION"):
             resumo["vermelho"] += 1
 
+
+def _collect_project_validacoes(canonical_dict: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    validacoes: list[dict[str, Any]] = []
+    resumo = _empty_resumo()
+
+    raw_list = (canonical_dict.get("resultado") or {}).get("validacoes")
+    items_list = raw_list if raw_list else []
+    for item in items_list:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "").upper()
+        codigo = str(item.get("codigo") or "VAL-GENERIC")
+        mensagem = str(item.get("mensagem") or "")
+        validacoes.append({"codigo": codigo, "status": status, "mensagem": mensagem})
+
+    _tally_resumo(validacoes, resumo)
+
     return validacoes, resumo
+
+
+def _val_status_color(status: str) -> str:
+    if status == "OK":
+        return "green"
+    if status == "AVISO":
+        return "yellow"
+    return "red"
 
 
 def _render_human(payload: dict[str, Any]) -> None:
@@ -85,7 +97,7 @@ def _render_human(payload: dict[str, Any]) -> None:
 
     for v in payload.get("validacoes") or []:
         status = str(v.get("status") or "")
-        color = "green" if status == "OK" else "yellow" if status == "AVISO" else "red"
+        color = _val_status_color(status)
         table.add_row(str(v.get("codigo") or ""), f"[{color}]{status}[/{color}]", str(v.get("mensagem") or ""))
 
     rprint(table)
@@ -128,16 +140,6 @@ def validate_project(
         rprint(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         _render_human(payload)
-
-
-@app.command("projeto")
-def validate_projeto_alias(
-    project_ref: str = typer.Argument(..., help="Alias PT-BR para validate project."),
-    version: str = typer.Option("", "--version", help="Versão explícita (vN)."),
-    as_json: bool = typer.Option(False, "--json", help="Emite payload JSON no contrato unificado."),
-) -> None:
-    """Alias PT-BR para validate project."""
-    validate_project(project_ref=project_ref, version=version, as_json=as_json)
 
 
 @app.command("benchmark")

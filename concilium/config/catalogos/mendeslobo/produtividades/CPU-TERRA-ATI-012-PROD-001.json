@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ATI-012-PROD-001",
   "descricao": "Produção CPU-TERRA-ATI-012",
   "origem": "PROPRIA",
-  "valor_horario": 239.04,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -12,11 +12,7 @@
       },
       {
         "funcao_id": "MO-MOTOR-CAM-BASC",
-        "num_pessoas": 4
-      },
-      {
-        "funcao_id": "MO-MOTOR-CAM-BASC",
-        "num_pessoas": 1
+        "num_pessoas": 5
       },
       {
         "funcao_id": "MO-ENCARREG-TERRA",
@@ -34,11 +30,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 4.169,
-    "custo_padrao_pj": 3.6383
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-012"
-  ]
+  "historico_observacoes": []
 }

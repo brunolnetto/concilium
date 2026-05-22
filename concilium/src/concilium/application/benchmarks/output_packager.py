@@ -38,56 +38,76 @@ def _find_benchmark_dir(slug: str, config_root: Path | None = None) -> Path | No
     return None
 
 
+def _cf_collect_graficos(bench_dir: Path, collected: list) -> None:
+    """Coleta PNGs e SVGs de outputs/."""
+    outputs_dir = bench_dir / "outputs"
+    if not outputs_dir.exists():
+        return
+    for f in sorted(outputs_dir.glob("*.png")):
+        collected.append((f, f"graficos/{f.name}"))
+    for f in sorted(outputs_dir.glob("*.svg")):
+        collected.append((f, f"graficos/{f.name}"))
+
+
+def _cf_collect_relatorios(bench_dir: Path, collected: list) -> None:
+    """Coleta arquivos de relatorio de artifacts/outputs/."""
+    art_out = bench_dir / "artifacts" / "outputs"
+    if not art_out.exists():
+        return
+    for ext in ("*.md", "*.json", "*.xlsx", "*.csv"):
+        for f in sorted(art_out.glob(ext)):
+            collected.append((f, f"relatorio/{f.name}"))
+
+
+def _cf_collect_audit(bench_dir: Path, collected: list) -> None:
+    """Coleta JSONs de audit/ (artifacts/audit/ com fallback em audit/)."""
+    audit_dir = bench_dir / "artifacts" / "audit"
+    if audit_dir.exists():
+        for f in sorted(audit_dir.glob("*.json")):
+            collected.append((f, f"audit/{f.name}"))
+    audit_dir2 = bench_dir / "audit"
+    if not audit_dir2.exists():
+        return
+    existing_arcs = {arc for _, arc in collected}
+    for f in sorted(audit_dir2.glob("*.json")):
+        arc = f"audit/{f.name}"
+        if arc not in existing_arcs:
+            collected.append((f, arc))
+
+
+def _cf_collect_cenarios(bench_dir: Path, collected: list) -> None:
+    """Coleta cenarios intermediarios de artifacts/intermediate/."""
+    inter_dir = bench_dir / "artifacts" / "intermediate"
+    if not inter_dir.exists():
+        return
+    for f in sorted(inter_dir.glob("*.benchmark_report.json")):
+        collected.append((f, f"cenarios/{f.name}"))
+    for f in sorted(inter_dir.glob("plan_space_report.*")):
+        collected.append((f, f"cenarios/{f.name}"))
+
+
+def _cf_collect_ref(bench_dir: Path, collected: list) -> None:
+    """Coleta referencia.json de inputs (com fallback no raiz)."""
+    ref_primary = bench_dir / "artifacts" / "inputs" / "referencia.json"
+    if ref_primary.exists():
+        collected.append((ref_primary, "inputs/referencia.json"))
+        return
+    ref_fallback = bench_dir / "referencia.json"
+    if ref_fallback.exists():
+        collected.append((ref_fallback, "inputs/referencia.json"))
+
+
 def _collect_files(bench_dir: Path) -> list[tuple[Path, str]]:
     """
     Coleta arquivos a incluir no ZIP.
     Retorna lista de (path_real, path_no_zip).
     """
     collected: list[tuple[Path, str]] = []
-
-    # 1. Gráficos (PNGs em outputs/)
-    outputs_dir = bench_dir / "outputs"
-    if outputs_dir.exists():
-        for f in sorted(outputs_dir.glob("*.png")):
-            collected.append((f, f"graficos/{f.name}"))
-        for f in sorted(outputs_dir.glob("*.svg")):
-            collected.append((f, f"graficos/{f.name}"))
-
-    # 2. Relatórios analíticos (artifacts/outputs/)
-    art_out = bench_dir / "artifacts" / "outputs"
-    if art_out.exists():
-        for ext in ("*.md", "*.json", "*.xlsx", "*.csv"):
-            for f in sorted(art_out.glob(ext)):
-                collected.append((f, f"relatorio/{f.name}"))
-
-    # 3. Audit (benchmark_report.json do cenário principal)
-    audit_dir = bench_dir / "artifacts" / "audit"
-    if audit_dir.exists():
-        for f in sorted(audit_dir.glob("*.json")):
-            collected.append((f, f"audit/{f.name}"))
-    # Fallback: audit fora de artifacts
-    audit_dir2 = bench_dir / "audit"
-    if audit_dir2.exists():
-        for f in sorted(audit_dir2.glob("*.json")):
-            if not any(arc == f"audit/{f.name}" for _, arc in collected):
-                collected.append((f, f"audit/{f.name}"))
-
-    # 4. Cenários intermediários (plan space)
-    inter_dir = bench_dir / "artifacts" / "intermediate"
-    if inter_dir.exists():
-        for f in sorted(inter_dir.glob("*.benchmark_report.json")):
-            collected.append((f, f"cenarios/{f.name}"))
-        for f in sorted(inter_dir.glob("plan_space_report.*")):
-            collected.append((f, f"cenarios/{f.name}"))
-
-    # 5. referencia.json (inputs)
-    ref = bench_dir / "artifacts" / "inputs" / "referencia.json"
-    if ref.exists():
-        collected.append((ref, "inputs/referencia.json"))
-    ref2 = bench_dir / "referencia.json"
-    if ref2.exists() and not ref.exists():
-        collected.append((ref2, "inputs/referencia.json"))
-
+    _cf_collect_graficos(bench_dir, collected)
+    _cf_collect_relatorios(bench_dir, collected)
+    _cf_collect_audit(bench_dir, collected)
+    _cf_collect_cenarios(bench_dir, collected)
+    _cf_collect_ref(bench_dir, collected)
     return collected
 
 

@@ -81,6 +81,57 @@ def _cache_is_fresh(snapshot: CatalogSnapshot, ttl_minutes: int) -> bool:
 # ── Local JSON loader ─────────────────────────────────────────────────────────
 
 
+def _llj_load_cpus(cat_dir) -> list:
+    cpus: list = []
+    cpus_dir = cat_dir / "cpus"
+    cpus_path = cat_dir / "cpus.json"
+    if cpus_dir.exists():
+        for cpu_file in sorted(cpus_dir.glob("*.json")):
+            raw = json.loads(cpu_file.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                cpus.append(raw)
+    elif cpus_path.exists():
+        raw = json.loads(cpus_path.read_text(encoding="utf-8"))
+        cpus = raw.get("cpus", raw) if isinstance(raw, dict) else raw
+    return cpus
+
+
+def _llj_load_insumos(cat_dir) -> dict:
+    insumos: dict = {}
+    ins_dir = cat_dir / "insumos"
+    if ins_dir.exists():
+        for tipo_file in ins_dir.glob("*.json"):
+            tipo_key = tipo_file.stem
+            raw = json.loads(tipo_file.read_text(encoding="utf-8"))
+            items = raw.get("insumos", raw) if isinstance(raw, dict) else raw
+            insumos[tipo_key] = items
+    return insumos
+
+
+def _llj_load_produtividades(cat_dir) -> list:
+    produtividades: list = []
+    prod_dir = cat_dir / "producoes"
+    prod_path = cat_dir / "produtividades.json"
+    if prod_dir.exists():
+        for prod_file in sorted(prod_dir.glob("*.json")):
+            raw = json.loads(prod_file.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                produtividades.append(raw)
+    elif prod_path.exists():
+        raw = json.loads(prod_path.read_text(encoding="utf-8"))
+        produtividades = raw.get("produtividades", raw) if isinstance(raw, dict) else raw
+    return produtividades
+
+
+def _llj_load_funcoes(cat_dir) -> list:
+    funcoes: list = []
+    func_path = cat_dir / "funcoes.json"
+    if func_path.exists():
+        raw = json.loads(func_path.read_text(encoding="utf-8"))
+        funcoes = raw.get("funcoes", raw) if isinstance(raw, dict) else raw
+    return funcoes
+
+
 def _load_local_json(
     config_root: Path,
     catalog_name: str,
@@ -90,63 +141,18 @@ def _load_local_json(
     if not cat_dir.exists():
         raise FileNotFoundError(f"Catálogo '{catalog_name}' não encontrado em {cat_dir}")
 
-    # CPUs
-    cpus: list[dict] = []
-    cpus_path = cat_dir / "cpus.json"
-    cpus_dir = cat_dir / "cpus"
-    if cpus_dir.exists():
-        for cpu_file in sorted(cpus_dir.glob("*.json")):
-            raw = json.loads(cpu_file.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                cpus.append(raw)
-    elif cpus_path.exists():
-        raw = json.loads(cpus_path.read_text(encoding="utf-8"))
-        cpus = raw.get("cpus", raw) if isinstance(raw, dict) else raw
-
-    # Insumos separados por tipo
-    insumos: dict[str, list[dict]] = {}
-    ins_dir = cat_dir / "insumos"
-    if ins_dir.exists():
-        for tipo_file in ins_dir.glob("*.json"):
-            tipo_key = tipo_file.stem  # ex: "mao_obra"
-            raw = json.loads(tipo_file.read_text(encoding="utf-8"))
-            items = raw.get("insumos", raw) if isinstance(raw, dict) else raw
-            insumos[tipo_key] = items
-
-    # Produtividades
-    produtividades: list[dict] = []
-    prod_path = cat_dir / "produtividades.json"
-    prod_dir = cat_dir / "producoes"
-    if prod_dir.exists():
-        for prod_file in sorted(prod_dir.glob("*.json")):
-            raw = json.loads(prod_file.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                produtividades.append(raw)
-    elif prod_path.exists():
-        raw = json.loads(prod_path.read_text(encoding="utf-8"))
-        produtividades = raw.get("produtividades", raw) if isinstance(raw, dict) else raw
-
-    # Funções — mapeamento canônico funcao_id -> insumo_id (opcional)
-    funcoes: list[dict] = []
-    func_path = cat_dir / "funcoes.json"
-    if func_path.exists():
-        raw = json.loads(func_path.read_text(encoding="utf-8"))
-        funcoes = raw.get("funcoes", raw) if isinstance(raw, dict) else raw
-
+    cpus = _llj_load_cpus(cat_dir)
+    insumos = _llj_load_insumos(cat_dir)
+    produtividades = _llj_load_produtividades(cat_dir)
+    funcoes = _llj_load_funcoes(cat_dir)
     return cpus, insumos, produtividades, funcoes
 
 
 # ── SharePoint backend (ADR-047 §D5) ─────────────────────────────────────────
 
 
-def _load_sharepoint(
-    storage: Any,  # SharePointBlobStorage
-    catalog_name: str,
-) -> tuple[list[dict], dict[str, list[dict]], list[dict], list[dict]]:
-    """Carrega catálogo do SharePoint espelhando a estrutura _load_local_json (ADR-047 §D6)."""
-    base = f"config/catalogos/{catalog_name}"
-
-    cpus: list[dict] = []
+def _lsp_load_cpus(storage, base: str) -> list:
+    cpus: list = []
     cpus_blobs = storage.listar_blobs(f"{base}/cpus")
     if cpus_blobs:
         for blob_path in sorted(cpus_blobs):
@@ -160,8 +166,11 @@ def _load_sharepoint(
             cpus = raw.get("cpus", raw) if isinstance(raw, dict) else raw
         except FileNotFoundError:
             pass
+    return cpus
 
-    insumos: dict[str, list[dict]] = {}
+
+def _lsp_load_insumos(storage, base: str) -> dict:
+    insumos: dict = {}
     ins_blobs = storage.listar_blobs(f"{base}/insumos")
     for blob_path in ins_blobs:
         if blob_path.endswith(".json"):
@@ -169,8 +178,11 @@ def _load_sharepoint(
             raw = json.loads(storage.ler_blob(blob_path).decode("utf-8"))
             items = raw.get("insumos", raw) if isinstance(raw, dict) else raw
             insumos[tipo_key] = items
+    return insumos
 
-    produtividades: list[dict] = []
+
+def _lsp_load_produtividades(storage, base: str) -> list:
+    produtividades: list = []
     prod_blobs = storage.listar_blobs(f"{base}/produtividades")
     if prod_blobs:
         for blob_path in sorted(prod_blobs):
@@ -184,14 +196,30 @@ def _load_sharepoint(
             produtividades = raw.get("produtividades", raw) if isinstance(raw, dict) else raw
         except FileNotFoundError:
             pass
+    return produtividades
 
-    funcoes: list[dict] = []
+
+def _lsp_load_funcoes(storage, base: str) -> list:
+    funcoes: list = []
     try:
         raw = json.loads(storage.ler_blob(f"{base}/funcoes.json").decode("utf-8"))
         funcoes = raw.get("funcoes", raw) if isinstance(raw, dict) else raw
     except FileNotFoundError:
         pass
+    return funcoes
 
+
+def _load_sharepoint(
+    storage: Any,  # SharePointBlobStorage
+    catalog_name: str,
+) -> tuple[list[dict], dict[str, list[dict]], list[dict], list[dict]]:
+    """Carrega catálogo do SharePoint espelhando a estrutura _load_local_json (ADR-047 §D6)."""
+    base = f"config/catalogos/{catalog_name}"
+
+    cpus = _lsp_load_cpus(storage, base)
+    insumos = _lsp_load_insumos(storage, base)
+    produtividades = _lsp_load_produtividades(storage, base)
+    funcoes = _lsp_load_funcoes(storage, base)
     return cpus, insumos, produtividades, funcoes
 
 
@@ -215,6 +243,23 @@ def _load_google_sheets(
 
 
 # ── CatalogLoader ─────────────────────────────────────────────────────────────
+
+
+def _add_project_id(snapshot: CatalogSnapshot, project_id: str | None) -> CatalogSnapshot:
+    if project_id and project_id not in snapshot.meta.project_ids:
+        updated_meta = CatalogSnapshotMeta.model_validate(
+            {**snapshot.meta.model_dump(), "project_ids": snapshot.meta.project_ids + [project_id]}
+        )
+        return CatalogSnapshot.model_validate({**snapshot.model_dump(), "meta": updated_meta.model_dump()})
+    return snapshot
+
+
+def _compute_diff_if_changed(previous: CatalogSnapshot | None, current: CatalogSnapshot) -> CatalogDiff | None:
+    if previous is None:
+        return None
+    if previous.meta.version_hash != current.meta.version_hash:
+        return compute_catalog_diff(previous, current)
+    return None
 
 
 class CatalogLoader:
@@ -296,37 +341,27 @@ class CatalogLoader:
             - CatalogDiff é None se o catálogo não mudou ou não há snapshot anterior.
         """
         cached = _read_cache(self.project_root, catalog_name)
+        snapshot = self._resolve_snapshot(catalog_name, project_id, cached)
+        diff = _compute_diff_if_changed(previous_snapshot, snapshot)
+        return snapshot, diff
 
-        # Decide se precisa buscar dados frescos
+    def _resolve_snapshot(
+        self, catalog_name: str, project_id: str | None, cached: CatalogSnapshot | None
+    ) -> CatalogSnapshot:
         needs_fetch = (
             self.force_refresh or cached is None or (not self.offline and not _cache_is_fresh(cached, self.ttl_minutes))
         )
-
         if self.offline and cached is None:
             raise FileNotFoundError(
                 f"Modo offline: cache ausente para catálogo '{catalog_name}'. "
                 f"Execute sem --offline para popular o cache."
             )
-
         if needs_fetch:
             snapshot = self._fetch_fresh(catalog_name, project_id)
             _write_cache(self.project_root, catalog_name, snapshot)
-        else:
-            snapshot = cached  # type: ignore[assignment]
-            # Adiciona project_id ao snapshot em memória (sem reescrever se já presente)
-            if project_id and project_id not in snapshot.meta.project_ids:
-                updated_meta = CatalogSnapshotMeta.model_validate(
-                    {**snapshot.meta.model_dump(), "project_ids": snapshot.meta.project_ids + [project_id]}
-                )
-                snapshot = CatalogSnapshot.model_validate({**snapshot.model_dump(), "meta": updated_meta.model_dump()})
-
-        # Diff contra snapshot anterior
-        diff: CatalogDiff | None = None
-        if previous_snapshot is not None:
-            if previous_snapshot.meta.version_hash != snapshot.meta.version_hash:
-                diff = compute_catalog_diff(previous_snapshot, snapshot)
-
-        return snapshot, diff
+            return snapshot
+        snapshot = cached  # type: ignore[assignment]
+        return _add_project_id(snapshot, project_id)
 
     def _fetch_fresh(self, catalog_name: str, project_id: str | None) -> CatalogSnapshot:
         """Busca dados frescos do backend configurado."""

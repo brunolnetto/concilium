@@ -13,29 +13,43 @@ def _load(p: Path) -> dict[str, Any]:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+def _lp_load_meta(meta_path: Path) -> dict | None:
+    try:
+        return _load(meta_path)
+    except Exception:
+        return None
+
+
+def _lp_matches_name(nome_meta: str, project_name: str) -> bool:
+    return (
+        nome_meta == project_name
+        or project_name.upper() in nome_meta.upper()
+        or nome_meta.upper() in project_name.upper()
+    )
+
+
+def _lp_check_dir(d: Path, project_name: str) -> tuple[str, Path] | None:
+    if not d.is_dir():
+        return None
+    meta = _lp_load_meta(d / "meta.json")
+    if meta is None:
+        return None
+    nome_meta = str(meta.get("nome") or "")
+    if not _lp_matches_name(nome_meta, project_name):
+        return None
+    return str(meta.get("criado_em") or ""), d
+
+
 def _latest_project_by_name(project_name: str, projects_root: Path) -> Path | None:
     best: tuple[str, Path] | None = None
     for d in projects_root.iterdir():
-        if not d.is_dir():
+        result = _lp_check_dir(d, project_name)
+        if result is None:
             continue
-        meta_path = d / "meta.json"
-        if not meta_path.exists():
-            continue
-        try:
-            meta = _load(meta_path)
-        except Exception:
-            continue
-        nome_meta = str(meta.get("nome") or "")
-        if (
-            nome_meta != project_name
-            and project_name.upper() not in nome_meta.upper()
-            and nome_meta.upper() not in project_name.upper()
-        ):
-            continue
-        created = str(meta.get("criado_em") or "")
+        created, path = result
         if best is None or created > best[0]:
-            best = (created, d)
-    return None if best is None else best[1]
+            best = (created, path)
+    return best[1] if best else None
 
 
 def _sum_subtotal(itens: list[dict[str, Any]], branch: str) -> float:
@@ -50,20 +64,20 @@ def _sum_subtotal(itens: list[dict[str, Any]], branch: str) -> float:
     return round(total, 2)
 
 
-def _build_etapas_from_canonical(canonical: dict[str, Any]) -> dict[str, Any]:
-    equipes = canonical.get("equipes_diretas") or []
-    planejamento = canonical.get("planejamento") or []
-    indiretos = canonical.get("indiretos") or []
-    resultado = canonical.get("resultado") or {}
-
-    custo_direto_total = 0.0
+def _bet_sum_equipes_custo(equipes: list) -> float:
+    """Soma custo_total das equipes diretas."""
+    total = 0.0
     for eq in equipes:
         try:
-            custo_direto_total += float(eq.get("custo_total") or 0)
+            total += float(eq.get("custo_total") or 0)
         except Exception:
             continue
+    return total
 
-    por_categoria: dict[str, float] = {}
+
+def _bet_build_indiretos(indiretos: list) -> tuple[float, dict]:
+    """Agrega indiretos por categoria e totaliza."""
+    por_categoria: dict = {}
     total_indireto = 0.0
     for ind in indiretos:
         cat = ind.get("categoria")
@@ -72,12 +86,41 @@ def _build_etapas_from_canonical(canonical: dict[str, Any]) -> dict[str, Any]:
         val = float(ind.get("custo_total") or 0)
         por_categoria[cat] = por_categoria.get(cat, 0.0) + val
         total_indireto += val
+    return total_indireto, por_categoria
 
+
+def _bet_extract_resultado(resultado: dict) -> tuple[dict, object]:
+    """Formata consolidacao (06) e extrai direto_catalogo."""
+    venda = resultado.get("venda") or {}
+    custo = resultado.get("custo") or {}
+    consolidacao = {
+        "venda": {
+            "total_sem_bdi": venda.get("total_sem_bdi"),
+            "total_com_bdi": venda.get("total_com_bdi"),
+            "total_custo_plus_catalogo": venda.get("total_custo_plus_catalogo"),
+            "total_custo_plus": venda.get("total_custo_plus"),
+        },
+        "custo": {
+            "total": custo.get("total"),
+            "direto_catalogo": custo.get("direto_catalogo"),
+            "direto_equipes": custo.get("direto_equipes"),
+        },
+        "margem_pct": resultado.get("margem_pct"),
+    }
+    return consolidacao, custo.get("direto_catalogo")
+
+
+def _build_etapas_from_canonical(canonical: dict[str, Any]) -> dict[str, Any]:
+    equipes = canonical.get("equipes_diretas") or []
+    planejamento = canonical.get("planejamento") or []
+    indiretos = canonical.get("indiretos") or []
+    resultado = canonical.get("resultado") or {}
+    custo_direto_total = _bet_sum_equipes_custo(equipes)
+    total_indireto, por_categoria = _bet_build_indiretos(indiretos)
+    res_formatted, direto_catalogo = _bet_extract_resultado(resultado)
     return {
         "03_equipes_e_alocacao": {
-            "agregados": {
-                "custo_direto_total_equipes": round(custo_direto_total, 2),
-            },
+            "agregados": {"custo_direto_total_equipes": round(custo_direto_total, 2)},
             "equipes": equipes,
         },
         "04_planejamento_bdi": {
@@ -85,31 +128,9 @@ def _build_etapas_from_canonical(canonical: dict[str, Any]) -> dict[str, Any]:
             "subtotal_com_bdi_total": _sum_subtotal(planejamento, "com_bdi"),
             "itens_planejamento": len(planejamento),
         },
-        "05_indiretos": {
-            "total_sem_bdi": round(total_indireto, 2),
-            "por_categoria": por_categoria,
-        },
-        "06_consolidacao": {
-            "resultado": {
-                "venda": {
-                    "total_sem_bdi": (resultado.get("venda") or {}).get("total_sem_bdi"),
-                    "total_com_bdi": (resultado.get("venda") or {}).get("total_com_bdi"),
-                    "total_custo_plus_catalogo": (resultado.get("venda") or {}).get("total_custo_plus_catalogo"),
-                    "total_custo_plus": (resultado.get("venda") or {}).get("total_custo_plus"),
-                },
-                "custo": {
-                    "total": (resultado.get("custo") or {}).get("total"),
-                    "direto_catalogo": (resultado.get("custo") or {}).get("direto_catalogo"),
-                    "direto_equipes": (resultado.get("custo") or {}).get("direto_equipes"),
-                },
-                "margem_pct": resultado.get("margem_pct"),
-            }
-        },
-        "03_equipes_e_alocacao_catalogo": {
-            # Custo de catálogo (preço unitário × qty) — base comparável com a referência.
-            # Diferente de custo_direto_total_equipes (running cost das equipes).
-            "custo_direto_catalogo": (resultado.get("custo") or {}).get("direto_catalogo"),
-        },
+        "05_indiretos": {"total_sem_bdi": round(total_indireto, 2), "por_categoria": por_categoria},
+        "06_consolidacao": {"resultado": res_formatted},
+        "03_equipes_e_alocacao_catalogo": {"custo_direto_catalogo": direto_catalogo},
     }
 
 

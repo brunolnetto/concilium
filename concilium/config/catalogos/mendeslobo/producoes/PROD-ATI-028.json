@@ -21,7 +21,7 @@
     "nota": "Adotada do SICRO P5.2"
   },
   "categoria": "DIVERSOS",
-  "equipe": {
+  "composicao_padrao_equipe": {
     "funcoes": [
       {
         "funcao_id": "MO-ENCARREG-DREN",
@@ -46,5 +46,6 @@
         "num_unidades": 1
       }
     ]
-  }
+  },
+  "historico_observacoes": []
 }

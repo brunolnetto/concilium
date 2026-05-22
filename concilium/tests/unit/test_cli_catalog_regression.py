@@ -1,3 +1,4 @@
+import pytest
 from typer.testing import CliRunner
 
 from concilium.presentation.main import app
@@ -5,6 +6,7 @@ from concilium.presentation.main import app
 runner = CliRunner()
 
 
+@pytest.mark.slow
 def test_catalog_help_lists_flat_commands() -> None:
     result = runner.invoke(app, ["catalog", "--help"])
 

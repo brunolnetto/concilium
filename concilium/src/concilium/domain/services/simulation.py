@@ -23,6 +23,51 @@ class ResultadoSimulacao:
     total_direto: float
 
 
+def _sim_calc_funcoes(equipe: dict, insumos: dict, horas_totais: float, fator: float):
+    custo_mo_base = 0.0
+    custo_mo_encargos = 0.0
+    for f in equipe.get("funcoes", []):
+        insumo = insumos.get(f["funcao_id"], {})
+        preco_base = insumo.get("preco_unitario", 0)
+        if insumo.get("unidade") == "mes":
+            preco_base = preco_base / 208.0
+        subtotal_base = f["num_pessoas"] * preco_base * horas_totais
+        custo_mo_base += subtotal_base
+        custo_mo_encargos += subtotal_base * fator
+    return custo_mo_base, custo_mo_encargos
+
+
+def _sim_calc_equipamentos(equipe: dict, insumos: dict, horas_totais: float, fator: float):
+    eq_cap = eq_manut = diesel = mo_eq = mo_eq_enc = 0.0
+    for e in equipe.get("equipamentos", []):
+        insumo = insumos.get(e["equip_id"], {})
+        preco_total_h = insumo.get("preco_unitario", 0)
+        decomp = (insumo.get("atributos_especificos") or {}).get("decomposicao_equip", {})
+        contribuicao = e["num_unidades"] * preco_total_h * horas_totais
+        if decomp:
+            total_h = decomp.get("custo_hora_total", preco_total_h) or 1.0
+            diesel += contribuicao * decomp.get("custo_diesel_h", 0) / total_h
+            eq_manut += contribuicao * decomp.get("custo_material_h", 0) / total_h
+            eq_cap += contribuicao * decomp.get("custo_capital_h", 0) / total_h
+            mo_part = contribuicao * decomp.get("custo_mao_obra_h", 0) / total_h
+            mo_eq += mo_part
+            mo_eq_enc += mo_part * fator
+        else:
+            mo_eq += contribuicao * 0.7
+            mo_eq_enc += (contribuicao * 0.7) * fator
+            eq_manut += contribuicao * 0.1
+            diesel += contribuicao * 0.2
+    return eq_cap, eq_manut, diesel, mo_eq, mo_eq_enc
+
+
+def _sim_calc_materiais(cpu: dict, insumos: dict, producao_total: float) -> float:
+    custo_mat = 0.0
+    for item in cpu.get("composicao_itens", []):
+        insumo = insumos.get(item["insumo_id"], {})
+        custo_mat += item["coeficiente"] * producao_total * insumo.get("preco_unitario", 0)
+    return custo_mat
+
+
 class SimuladorEngenharia:
     def __init__(self, catalogo: dict[str, Any]):
         self.catalogo = catalogo
@@ -82,54 +127,22 @@ class SimuladorEngenharia:
             equipe = {}
 
         # 2.1 Mão de Obra Direta
-        for f in equipe.get("funcoes", []):
-            insumo = self.insumos.get(f["funcao_id"], {})
-            preco_base = insumo.get("preco_unitario", 0)
-            if insumo.get("unidade") == "mes":
-                preco_base = preco_base / 208.0
-
-            subtotal_base = f["num_pessoas"] * preco_base * horas_totais
-            custo_mo_base += subtotal_base
-            custo_mo_encargos += subtotal_base * FATOR_ENCARGOS
+        mo_base_f, mo_enc_f = _sim_calc_funcoes(equipe, self.insumos, horas_totais, FATOR_ENCARGOS)
+        custo_mo_base += mo_base_f
+        custo_mo_encargos += mo_enc_f
 
         # 2.2 Equipamentos (Com Decomposição ADR-023)
-        for e in equipe.get("equipamentos", []):
-            insumo = self.insumos.get(e["equip_id"], {})
-            preco_total_h = insumo.get("preco_unitario", 0)
-
-            # Tenta decomposição
-            decomp = (insumo.get("atributos_especificos") or {}).get("decomposicao_equip", {})
-            if decomp:
-                # Frações do custo horário
-                total_h = decomp.get("custo_hora_total", preco_total_h) or 1.0
-                f_mo = decomp.get("custo_mao_obra_h", 0) / total_h
-                f_diesel = decomp.get("custo_diesel_h", 0) / total_h
-                f_material = decomp.get("custo_material_h", 0) / total_h
-                f_capital = decomp.get("custo_capital_h", 0) / total_h
-
-                contribuicao = e["num_unidades"] * preco_total_h * horas_totais
-                custo_diesel += contribuicao * f_diesel
-                custo_eq_manut += contribuicao * f_material
-                custo_eq_capital += contribuicao * f_capital
-
-                # A parcela de MO do equipamento também sofre encargos
-                mo_equip = contribuicao * f_mo
-                custo_mo_base += mo_equip
-                custo_mo_encargos += mo_equip * FATOR_ENCARGOS
-            else:
-                # Fallback: 70% MO / 10% Manut / 20% Diesel se não houver decomposição
-                contribuicao = e["num_unidades"] * preco_total_h * horas_totais
-                custo_mo_base += contribuicao * 0.7
-                custo_mo_encargos += (contribuicao * 0.7) * FATOR_ENCARGOS
-                custo_eq_manut += contribuicao * 0.1
-                custo_diesel += contribuicao * 0.2
+        eq_cap, eq_manut, diesel, mo_eq, mo_eq_enc = _sim_calc_equipamentos(
+            equipe, self.insumos, horas_totais, FATOR_ENCARGOS
+        )
+        custo_eq_capital += eq_cap
+        custo_eq_manut += eq_manut
+        custo_diesel += diesel
+        custo_mo_base += mo_eq
+        custo_mo_encargos += mo_eq_enc
 
         # 3. Custos de Materiais (Consumo Volumétrico)
-        custo_mat = 0.0
-        for item in cpu.get("composicao_itens", []):
-            insumo = self.insumos.get(item["insumo_id"], {})
-            preco = insumo.get("preco_unitario", 0)
-            custo_mat += item["coeficiente"] * producao_total * preco
+        custo_mat = _sim_calc_materiais(cpu, self.insumos, producao_total)
 
         return ResultadoSimulacao(
             cpu_id=cpu_id,

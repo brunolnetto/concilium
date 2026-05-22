@@ -21,6 +21,7 @@ from concilium.application.services.catalog_resolver import (
 
 # ─── _deep_merge helper ───────────────────────────────────────────────────────
 
+
 class TestDeepMerge:
     def test_scalar_override(self):
         result = _deep_merge({"a": 1, "b": 2}, {"b": 99})
@@ -44,6 +45,7 @@ class TestDeepMerge:
 
 # ─── CatalogResolutionTrace ───────────────────────────────────────────────────
 
+
 class TestCatalogResolutionTrace:
     def test_record_and_to_dict(self):
         trace = CatalogResolutionTrace()
@@ -55,6 +57,7 @@ class TestCatalogResolutionTrace:
 
 
 # ─── CatalogResolver.apply_overlays ──────────────────────────────────────────
+
 
 class _FakeProject:
     def __init__(self, project_root: Path):
@@ -115,9 +118,9 @@ class TestCatalogResolverApplyOverlays:
     def test_project_overlay_overrides_master(self, setup):
         config_root, proj_root, project, resolver, master = setup
         overlay_file = proj_root / "overrides" / "cpus_overlay.json"
-        overlay_file.write_text(json.dumps({
-            "CPU-A": {"descricao": "Customizado A", "producao_horaria": 999.0}
-        }), encoding="utf-8")
+        overlay_file.write_text(
+            json.dumps({"CPU-A": {"descricao": "Customizado A", "producao_horaria": 999.0}}), encoding="utf-8"
+        )
 
         resolved, trace = resolver.apply_overlays(master, project)
         cpu_a = next(c for c in resolved["cpus"] if c["codigo"] == "CPU-A")
@@ -129,9 +132,9 @@ class TestCatalogResolverApplyOverlays:
     def test_project_only_cpu_added(self, setup):
         config_root, proj_root, project, resolver, master = setup
         overlay_file = proj_root / "overrides" / "cpus_overlay.json"
-        overlay_file.write_text(json.dumps({
-            "CPU-NEW": {"codigo": "CPU-NEW", "descricao": "Nova CPU do projeto"}
-        }), encoding="utf-8")
+        overlay_file.write_text(
+            json.dumps({"CPU-NEW": {"codigo": "CPU-NEW", "descricao": "Nova CPU do projeto"}}), encoding="utf-8"
+        )
 
         resolved, trace = resolver.apply_overlays(master, project)
         ids = [c["codigo"] for c in resolved["cpus"]]
@@ -144,9 +147,9 @@ class TestCatalogResolverApplyOverlays:
         # Create jurisdiction overlay
         jur_dir = config_root / "jurisdicoes" / "BR-CE"
         jur_dir.mkdir(parents=True)
-        (jur_dir / "overlay.json").write_text(json.dumps({
-            "cpus": {"CPU-B": {"producao_horaria": 777.0}}
-        }), encoding="utf-8")
+        (jur_dir / "overlay.json").write_text(
+            json.dumps({"cpus": {"CPU-B": {"producao_horaria": 777.0}}}), encoding="utf-8"
+        )
 
         resolved, trace = resolver.apply_overlays(master, project, "BR-CE")
         cpu_b = next(c for c in resolved["cpus"] if c["codigo"] == "CPU-B")
@@ -158,13 +161,13 @@ class TestCatalogResolverApplyOverlays:
 
         jur_dir = config_root / "jurisdicoes" / "BR-CE"
         jur_dir.mkdir(parents=True)
-        (jur_dir / "overlay.json").write_text(json.dumps({
-            "cpus": {"CPU-A": {"producao_horaria": 50.0}}
-        }), encoding="utf-8")
+        (jur_dir / "overlay.json").write_text(
+            json.dumps({"cpus": {"CPU-A": {"producao_horaria": 50.0}}}), encoding="utf-8"
+        )
 
-        (proj_root / "overrides" / "cpus_overlay.json").write_text(json.dumps({
-            "CPU-A": {"producao_horaria": 100.0}
-        }), encoding="utf-8")
+        (proj_root / "overrides" / "cpus_overlay.json").write_text(
+            json.dumps({"CPU-A": {"producao_horaria": 100.0}}), encoding="utf-8"
+        )
 
         resolved, trace = resolver.apply_overlays(master, project, "BR-CE")
         cpu_a = next(c for c in resolved["cpus"] if c["codigo"] == "CPU-A")
@@ -173,17 +176,13 @@ class TestCatalogResolverApplyOverlays:
 
     def test_build_resolved_catalog_filters_to_eap(self, setup):
         config_root, proj_root, project, resolver, master = setup
-        resolved, _trace = resolver.build_resolved_catalog(
-            master, project, None, eap_cpu_ids={"CPU-A"}
-        )
+        resolved, _trace = resolver.build_resolved_catalog(master, project, None, eap_cpu_ids={"CPU-A"})
         assert len(resolved["cpus"]) == 1
         assert resolved["cpus"][0]["codigo"] == "CPU-A"
 
     def test_build_resolved_catalog_no_filter(self, setup):
         config_root, proj_root, project, resolver, master = setup
-        resolved, _trace = resolver.build_resolved_catalog(
-            master, project, None, eap_cpu_ids=None
-        )
+        resolved, _trace = resolver.build_resolved_catalog(master, project, None, eap_cpu_ids=None)
         assert len(resolved["cpus"]) == 2
 
     def test_missing_overlay_returns_master(self, setup):
@@ -198,6 +197,7 @@ class TestCatalogResolverApplyOverlays:
 
 # ─── F2: set_overlay via FileProjectHandle ────────────────────────────────────
 
+
 class TestSetOverlay:
     def test_set_overlay_creates_file(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
@@ -209,6 +209,7 @@ class TestSetOverlay:
         (proj_root / "overrides" / "cpus_override.json").write_text("{}", encoding="utf-8")
 
         import json as _j
+
         (proj_root / "meta.json").write_text(_j.dumps({"id": "x", "nome": "X", "contexto_id": "c"}), encoding="utf-8")
 
         store = ProjectStore(proj_root)
@@ -226,6 +227,7 @@ class TestSetOverlay:
 
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
         from concilium.infrastructure.storage.project import ProjectStore
+
         proj_root = tmp_path / "proj"
         proj_root.mkdir()
         (proj_root / "overrides").mkdir()

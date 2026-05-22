@@ -9,7 +9,8 @@
     "categoria_sindical": "horista_CE",
     "horas_extras_pct_padrao": 0.25,
     "percentual_encargos_local": 1.06,
-    "_audit_encargos": "Removido: custo_com_encargos=10300.00 (fator=2.06). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009)."
+    "_audit_encargos": "Removido: custo_com_encargos=10300.00 (fator=2.06). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009).",
+    "tipo_contrato": "CLT"
   },
   "classe_compartilhamento": {
     "classe": "exclusivo_dedicado",

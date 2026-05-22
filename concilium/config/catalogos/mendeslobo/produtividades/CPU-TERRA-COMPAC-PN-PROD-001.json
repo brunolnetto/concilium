@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-COMPAC-PN-PROD-001",
   "descricao": "Produção CPU-TERRA-COMPAC-PN",
   "origem": "PROPRIA",
-  "valor_horario": 192.23,
+  "valor_horario": 149.51,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -46,10 +46,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 9.131692
-  },
-  "cpu_ids": [
-    "CPU-TERRA-COMPAC-PN"
-  ]
+  "historico_observacoes": []
 }

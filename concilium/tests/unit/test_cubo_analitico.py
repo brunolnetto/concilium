@@ -317,6 +317,51 @@ class TestProjections:
         sum_by_type = sum(cubo.exposicao_tributaria_por_tipo().values())
         assert math.isclose(sum_by_type, cubo.total_tributos, rel_tol=0.001)
 
+    @pytest.mark.parametrize(
+        "granularidade",
+        ["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
+    )
+    def test_composicao_preco_temporal_all_granularities_close_total(self, granularidade):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        comp = cubo.composicao_preco_temporal(granularidade)
+        total = sum(sum(v.values()) for v in comp.values())
+        assert math.isclose(total, cubo.total_preco_venda, rel_tol=0.001)
+
+    @pytest.mark.parametrize(
+        "granularidade",
+        ["mes", "bimestre", "trimestre", "semestre", "ano"],
+    )
+    def test_exposicao_tributaria_temporal_matches_weekly_total(self, granularidade):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        temporal = cubo.exposicao_tributaria_temporal(granularidade)
+        assert math.isclose(sum(temporal.values()), cubo.total_tributos, rel_tol=0.001)
+
+    def test_temporal_wrapper_methods_are_available(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        assert cubo.composicao_preco_mensal()
+        assert cubo.composicao_preco_bimestral()
+        assert cubo.composicao_preco_trimestral()
+        assert cubo.composicao_preco_semestral()
+        assert cubo.composicao_preco_anual()
+
+    def test_resumo_por_natureza_closes_project_total(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        resumo = cubo.resumo_por_natureza()
+        assert set(resumo.keys()) == {"direto", "indireto"}
+        assert math.isclose(resumo["direto"] + resumo["indireto"], cubo.total_preco_venda, rel_tol=0.001)
+
+    @pytest.mark.parametrize("granularidade", ["semana", "mes", "bimestre", "trimestre", "semestre", "ano"])
+    def test_resumo_por_natureza_temporal_closes_project_total(self, granularidade):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        resumo = cubo.resumo_por_natureza_temporal(granularidade)
+        total = sum(float(vals.get("direto", 0.0)) + float(vals.get("indireto", 0.0)) for vals in resumo.values())
+        assert math.isclose(total, cubo.total_preco_venda, rel_tol=0.001)
+
     def test_margem_por_atividade_ordered_desc(self):
         canonical = _make_canonical(n_atividades=3)
         cubo = CuboAnaliticoBuilder().build(canonical)
@@ -407,6 +452,10 @@ class TestSliceAndGroupBy:
         assert "pct_margem" in d
         assert "total_consumo_diesel_L" in d
         assert "consumo_diesel_por_atividade" in d
+        assert "resumo_por_natureza" in d
+        assert "resumo_por_natureza_temporal" in d
+        assert "semana" in d["resumo_por_natureza_temporal"]
+        assert "mes" in d["resumo_por_natureza_temporal"]
 
 
 # ---------------------------------------------------------------------------
@@ -537,6 +586,13 @@ class TestDieselConsumption:
         # All values must be >= 0
         for _sem, vol in semanal.items():
             assert vol >= 0
+
+    @pytest.mark.parametrize("granularidade", ["mes", "bimestre", "trimestre", "semestre", "ano"])
+    def test_consumo_diesel_temporal_matches_weekly_projection(self, granularidade):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        temporal = cubo.consumo_diesel_temporal(granularidade)
+        assert sum(temporal.values()) >= 0
 
     def test_consumo_diesel_por_atividade_projection(self):
         canonical = _make_canonical(n_atividades=2)

@@ -402,6 +402,61 @@ def _aggregate_to_monthly(distribuicao_por_item: dict[str, dict[str, Distribuica
 # ════════════════════════════════════════════════════════════════════════════════
 
 
+def _emm_find_vazios(item_id: str, distribuicao: dict, semanas_obra: list) -> list[str]:
+    """Finds gap weeks inside productive periods."""
+    semanas_produtivas = [s for s, d in distribuicao.items() if d.num_equipes > 0]
+    if len(semanas_produtivas) < 2:
+        return []
+    inicio_idx = semanas_obra.index(semanas_produtivas[0])
+    fim_idx = semanas_obra.index(semanas_produtivas[-1])
+    return [
+        f"{item_id}@{semanas_obra[i]}"
+        for i in range(inicio_idx + 1, fim_idx)
+        if distribuicao[semanas_obra[i]].num_equipes == 0
+    ]
+
+
+def _emm_process_item(
+    item: Any,
+    cpu: dict,
+    producao_lookup: dict,
+    regime: Any,
+    prat_semanal: dict,
+    prat_mensal: dict,
+    semanas_obra: list,
+    num_equipes_por_item: dict,
+    validacoes: list,
+) -> tuple[dict, list, list]:
+    """Computes distribuicao and error lists for a single EAP item."""
+    P = _resolve_productivity(cpu, producao_lookup, validacoes)
+    producao_semanal_base = P * regime.horas_dia * regime.dias_semana
+    equipes_semanas = num_equipes_por_item.get(item.item_id, {})
+    distribuicao = {}
+    qtd_acumulada = 0.0
+    for semana_key in semanas_obra:
+        num_eq = max(0, equipes_semanas.get(semana_key, 0))
+        eficiencia = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
+        qtd_executada = producao_semanal_base * eficiencia * num_eq
+        qtd_remanescente = item.quantitativo - qtd_acumulada
+        if qtd_executada > qtd_remanescente:
+            qtd_executada = max(0.0, qtd_remanescente)
+        qtd_acumulada += qtd_executada
+        pct = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
+        distribuicao[semana_key] = DistribuicaoSemanal(
+            num_equipes=num_eq,
+            qtd_executada=round(qtd_executada, 2),
+            qtd_acumulada=round(qtd_acumulada, 2),
+            pct=round(pct, 4),
+            eficiencia=round(eficiencia, 4),
+        )
+    erros_completude = []
+    pct_completude = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
+    if pct_completude < 0.999:
+        erros_completude.append((item.item_id, round(pct_completude, 4)))
+    erros_vazios = _emm_find_vazios(item.item_id, distribuicao, semanas_obra)
+    return distribuicao, erros_completude, erros_vazios
+
+
 def _execute_manual_mode(
     canonical_in: CanonicalModel,
     num_equipes_por_item: dict[str, dict[str, int]],
@@ -416,8 +471,8 @@ def _execute_manual_mode(
 ) -> dict[str, dict[str, DistribuicaoSemanal]]:
     """Executa lógica Skill 02 (modo manual)."""
     distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]] = {}
-    erros_completude = []
-    erros_vazios = []
+    erros_completude_all = []
+    erros_vazios_all = []
 
     for item in canonical_in.eap:
         cpu = cpu_lookup.get(item.cpu_id)
@@ -430,77 +485,39 @@ def _execute_manual_mode(
                 )
             )
             continue
+        dist, erros_c, erros_v = _emm_process_item(
+            item,
+            cpu,
+            producao_lookup,
+            regime,
+            prat_semanal,
+            prat_mensal,
+            semanas_obra,
+            num_equipes_por_item,
+            validacoes,
+        )
+        distribuicao_por_item[item.item_id] = dist
+        erros_completude_all.extend(erros_c)
+        erros_vazios_all.extend(erros_v)
 
-        P = _resolve_productivity(cpu, producao_lookup, validacoes)
-        producao_semanal_base = P * regime.horas_dia * regime.dias_semana
-        equipes_semanas = num_equipes_por_item.get(item.item_id, {})
-        distribuicao = {}
-        qtd_acumulada = 0.0
-
-        for semana_key in semanas_obra:
-            num_eq = max(0, equipes_semanas.get(semana_key, 0))
-            eficiencia = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
-            qtd_executada = producao_semanal_base * eficiencia * num_eq
-            qtd_remanescente = item.quantitativo - qtd_acumulada
-            if qtd_executada > qtd_remanescente:
-                qtd_executada = max(0.0, qtd_remanescente)
-            qtd_acumulada += qtd_executada
-            pct = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
-
-            distribuicao[semana_key] = DistribuicaoSemanal(
-                num_equipes=num_eq,
-                qtd_executada=round(qtd_executada, 2),
-                qtd_acumulada=round(qtd_acumulada, 2),
-                pct=round(pct, 4),
-                eficiencia=round(eficiencia, 4),
-            )
-
-        distribuicao_por_item[item.item_id] = distribuicao
-
-        pct_completude = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
-        if pct_completude < 0.999:
-            erros_completude.append((item.item_id, round(pct_completude, 4)))
-
-        semanas_produtivas = [s for s, d in distribuicao.items() if d.num_equipes > 0]
-        if len(semanas_produtivas) >= 2:
-            inicio_idx = semanas_obra.index(semanas_produtivas[0])
-            fim_idx = semanas_obra.index(semanas_produtivas[-1])
-            for i in range(inicio_idx + 1, fim_idx):
-                if distribuicao[semanas_obra[i]].num_equipes == 0:
-                    erros_vazios.append(f"{item.item_id}@{semanas_obra[i]}")
-
-    if erros_completude:
-        msg = "; ".join([f"{iid}={pct * 100:.1f}%" for iid, pct in erros_completude])
+    if erros_completude_all:
+        msg = "; ".join([f"{iid}={pct * 100:.1f}%" for iid, pct in erros_completude_all])
+        validacoes.append(ValidacaoItem(codigo="VAL-CRON-01", status="ERRO", mensagem=f"Itens não completados: {msg}"))
+    if erros_vazios_all:
         validacoes.append(
             ValidacaoItem(
-                codigo="VAL-CRON-01",
-                status="ERRO",
-                mensagem=f"Itens não completados: {msg}",
+                codigo="VAL-CRON-02", status="ERRO", mensagem=f"Gaps detectados: {'; '.join(erros_vazios_all[:5])}"
             )
         )
-
-    if erros_vazios:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-CRON-02",
-                status="ERRO",
-                mensagem=f"Gaps detectados: {'; '.join(erros_vazios[:5])}",
-            )
-        )
-
     return distribuicao_por_item
 
 
-def _run_auto_schedule_fallback_chain(
+def _rasfc_extract_inputs(
     canonical_in: CanonicalModel,
-    inputs: dict[str, Any],
-    validacoes: list[ValidacaoItem],
-) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None]:
-    """Executa fallback chain (heurísticas -> relax -> MILP).
-
-    ADR-046: se inputs contiver 'rcpsp_spec', usa extratores baseados na spec
-    em vez de tentar derivar do canônico (que pode estar incompleto).
-    """
+    inputs: dict,
+    validacoes: list,
+) -> tuple[list, Any, Any, int] | None:
+    """Extracts (activities, dag, pool, deadline_weeks) from spec or canonical. Returns None on error."""
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
         activities = _extract_activities_from_spec(rcpsp_spec)
@@ -508,33 +525,36 @@ def _run_auto_schedule_fallback_chain(
             validacoes.append(
                 ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="rcpsp_spec sem atividades.")
             )
-            return [], None
+            return None
         pool = _extract_pool_from_spec(rcpsp_spec)
         dag = _extract_dag_from_spec(rcpsp_spec, activities)
     else:
         activities = _extract_activities(canonical_in)
         if not activities:
             validacoes.append(ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="Sem atividades."))
-            return [], None
+            return None
         dag = _extract_dag(canonical_in, [a.activity_id for a in activities])
         pool = _extract_pool(canonical_in)
 
     if not pool.resources:
         validacoes.append(
             ValidacaoItem(
-                codigo="VAL-SCHED-02",
-                status="AVISO",
-                mensagem="Pool vazio — agendando sem restrições de recursos.",
+                codigo="VAL-SCHED-02", status="AVISO", mensagem="Pool vazio — agendando sem restrições de recursos."
             )
         )
-        # Activities with required_resources={} can still be scheduled without a pool
 
     deadline_weeks = int(
         inputs.get("deadline_weeks")
         or (rcpsp_spec.get("deadline_weeks") if isinstance(rcpsp_spec, dict) else None)
         or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
     )
+    return activities, dag, pool, deadline_weeks
 
+
+def _rasfc_run_heuristics(
+    activities: list, dag: Any, pool: Any, deadline_weeks: int, inputs: dict, validacoes: list
+) -> tuple[list, bool]:
+    """Runs heuristic scheduling with optional pool relaxation. Returns (candidates_canonical, relaxed_flag)."""
     strategy = select_scheduling_algorithm(
         num_activities=len(activities),
         num_resource_types=max(1, len(pool.resources)),
@@ -542,14 +562,12 @@ def _run_auto_schedule_fallback_chain(
         deadline_margin_pct=float(inputs.get("deadline_margin_pct", 0.2)),
         criticality=str(inputs.get("criticality", "medium")),
     )
-
     if inputs.get("algorithm"):
         strategy.algorithm = str(inputs["algorithm"])
     if inputs.get("heuristics"):
         strategy.heuristics = list(inputs["heuristics"])
 
     heuristics = strategy.heuristics or ["MINSLK"]
-
     explored = explore_schedules(
         activities=activities,
         dag=dag,
@@ -574,9 +592,27 @@ def _run_auto_schedule_fallback_chain(
             relaxed_flag = True
             validacoes.append(ValidacaoItem(codigo="VAL-SCHED-03", status="AVISO", mensagem="Pool relaxado 110%."))
 
-    candidates_canonical: list[ScheduleCandidateCanonical] = [
+    return [
         _to_canonical_candidate(r.heuristic, r.schedule, r.quality_score, relaxed_flag) for r in explored
-    ]
+    ], relaxed_flag
+
+
+def _run_auto_schedule_fallback_chain(
+    canonical_in: CanonicalModel,
+    inputs: dict[str, Any],
+    validacoes: list[ValidacaoItem],
+) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None]:
+    """Executa fallback chain (heurísticas -> relax -> MILP).
+
+    ADR-046: se inputs contiver 'rcpsp_spec', usa extratores baseados na spec
+    em vez de tentar derivar do canônico (que pode estar incompleto).
+    """
+    extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes)
+    if extracted is None:
+        return [], None
+    activities, dag, pool, deadline_weeks = extracted
+
+    candidates_canonical, _relaxed = _rasfc_run_heuristics(activities, dag, pool, deadline_weeks, inputs, validacoes)
 
     if not candidates_canonical:
         milp_candidate = _try_milp(activities, dag, pool, deadline_weeks, timeout_seconds=30)
@@ -596,7 +632,6 @@ def _run_auto_schedule_fallback_chain(
             mensagem=f"{best_candidate.heuristic} (qualidade {best_candidate.quality_score:.4f})",
         )
     )
-
     return candidates_canonical, best_candidate
 
 
@@ -677,39 +712,41 @@ def _convert_schedule_to_distribuicao(
 # ════════════════════════════════════════════════════════════════════════════════
 
 
-def _check_pool_violations(
+def _cpv_get_equip_needed(cpu: dict) -> dict[str, int]:
+    """Returns {equip_id: num_unidades} from CPU config."""
+    team = cpu.get("equipe") or cpu.get("composicao_padrao_equipe") or {}
+    return {e["equip_id"]: e["num_unidades"] for e in team.get("equipamentos", [])}
+
+
+def _cpv_build_usage(
     canonical_in: CanonicalModel,
-    distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]],
     cpu_lookup: dict[str, dict],
-    validacoes: list[ValidacaoItem],
-):
-    """Verifica violações de pool de recursos. Retorna lista de ConstraintViolation."""
-    from concilium.domain.models.constraint_violation import ConstraintViolation
-
-    pool = {r.tipo_id: r.quantidade_total for r in (canonical_in.recurso_pool or [])}
-    if not pool:
-        return []
-
-    # Build per-week usage: {semana: {tipo_id: total_units}}
+    distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]],
+) -> dict[str, dict[str, int]]:
     usage: dict[str, dict[str, int]] = {}
     for item in canonical_in.eap or []:
         cpu = cpu_lookup.get(item.cpu_id)
         if not cpu:
             continue
-        equip_needed = {
-            e["equip_id"]: e["num_unidades"]
-            for e in (cpu.get("equipe") or cpu.get("composicao_padrao_equipe") or {}).get("equipamentos", [])
-        }
+        equip_needed = _cpv_get_equip_needed(cpu)
         if not equip_needed:
             continue
         dist = distribuicao_por_item.get(item.item_id, {})
         for semana, d in dist.items():
             if d.num_equipes <= 0:
                 continue
-            if semana not in usage:
-                usage[semana] = {}
+            week_usage = usage.setdefault(semana, {})
             for tipo_id, units_per_team in equip_needed.items():
-                usage[semana][tipo_id] = usage[semana].get(tipo_id, 0) + d.num_equipes * units_per_team
+                week_usage[tipo_id] = week_usage.get(tipo_id, 0) + d.num_equipes * units_per_team
+    return usage
+
+
+def _cpv_process_violations(
+    usage: dict[str, dict[str, int]],
+    pool: dict[str, int],
+    validacoes: list[ValidacaoItem],
+) -> list:
+    from concilium.domain.models.constraint_violation import ConstraintViolation
 
     violations = []
     reported: set[str] = set()
@@ -739,6 +776,20 @@ def _check_pool_violations(
                     )
                 )
     return violations
+
+
+def _check_pool_violations(
+    canonical_in: CanonicalModel,
+    distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]],
+    cpu_lookup: dict[str, dict],
+    validacoes: list[ValidacaoItem],
+):
+    """Verifica violações de pool de recursos. Retorna lista de ConstraintViolation."""
+    pool = {r.tipo_id: r.quantidade_total for r in (canonical_in.recurso_pool or [])}
+    if not pool:
+        return []
+    usage = _cpv_build_usage(canonical_in, cpu_lookup, distribuicao_por_item)
+    return _cpv_process_violations(usage, pool, validacoes)
 
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -791,7 +842,8 @@ def _check_wmp_desmob(
                 codigo="VAL-WMP-DESMOB",
                 status="AVISO",
                 mensagem=(
-                    f"WMP '{item_id}': desmobilizacao forcada pelo plateau={policy.semanas_plateau} sem. antes de entregar Q={Q:.0f}. Aumente n_maximo ou semanas_plateau."
+                    f"WMP '{item_id}': desmobilizacao forcada pelo plateau={policy.semanas_plateau} sem."
+                    f" antes de entregar Q={Q:.0f}. Aumente n_maximo ou semanas_plateau."
                 ),
             )
         )  # type: ignore[union-attr]
@@ -801,7 +853,8 @@ def _check_wmp_desmob(
                 codigo="VAL-WMP-05",
                 status="AVISO",
                 mensagem=(
-                    f"WMP '{item_id}': simulacao nao completou Q={Q:.0f} (P={P:.2f} un/h). Verifique produtividade e politica."
+                    f"WMP '{item_id}': simulacao nao completou Q={Q:.0f} (P={P:.2f} un/h)."
+                    " Verifique produtividade e politica."
                 ),
             )
         )
@@ -901,6 +954,8 @@ def _process_single_wmp_policy(
 
     prod_base = P * regime.dias_semana * regime.horas_dia * policy.n_maximo  # type: ignore[union-attr]
     nominal = math.ceil(Q / prod_base) if prod_base > 0 else 1
+    from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
+
     guard = WorkforcePolicySimulator.MAX_MULTIPLIER * max(1, nominal)
 
     curva = _run_wmp_simulation(sim, policy, item_id, Q, P, regime, prat_semanal, semanas_obra, guard)
@@ -913,7 +968,10 @@ def _process_single_wmp_policy(
         ValidacaoItem(
             codigo="VAL-WMP-OK",
             status="OK",
-            mensagem=f"WMP '{item_id}': {curva.duration_weeks} sem., pico={curva.peak_teams} equipes, completa={curva.is_complete}.",
+            mensagem=(
+                f"WMP '{item_id}': {curva.duration_weeks} sem.,"
+                f" pico={curva.peak_teams} equipes, completa={curva.is_complete}."
+            ),
         )
     )
 
@@ -1213,7 +1271,9 @@ def run_cronograma(
         ValidacaoItem(
             codigo="VAL-CRON-OK",
             status="OK",
-            mensagem=f"Cronograma ({mode}): {len(scheduled_activities_out)} atividades, {len(distribuicao_mensal)} meses.",
+            mensagem=(
+                f"Cronograma ({mode}): {len(scheduled_activities_out)} atividades, {len(distribuicao_mensal)} meses."
+            ),
         )
     )
 

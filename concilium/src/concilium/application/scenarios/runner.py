@@ -77,6 +77,53 @@ class ScenarioResult:
         }
 
 
+def _filter_ok_results(results: list) -> list:
+    ok = []
+    for r in results:
+        if r.status == "OK" and r.metricas:
+            ok.append(r)
+    return ok
+
+
+def _count_results_by_status(results: list) -> tuple:
+    total_ok = 0
+    total_err = 0
+    for r in results:
+        if r.status == "OK":
+            total_ok += 1
+        elif r.status == "ERRO":
+            total_err += 1
+    return total_ok, total_err
+
+
+def _enrich_ok_summary(summary: dict, ok_results: list) -> None:
+    custos = [r.metricas["custo_total"] for r in ok_results if "custo_total" in r.metricas]
+    margens = [r.metricas["margem_pct"] for r in ok_results if "margem_pct" in r.metricas]
+    if custos:
+        summary["custo_min"] = min(custos)
+        summary["custo_max"] = max(custos)
+        summary["custo_spread_pct"] = round((max(custos) - min(custos)) / min(custos) * 100, 1)
+    if margens:
+        summary["margem_min"] = min(margens)
+        summary["margem_max"] = max(margens)
+        best = max(ok_results, key=lambda r: r.metricas.get("margem_pct", -999))
+        summary["melhor_cenario"] = best.config.nome
+        summary["melhor_cenario_descricao"] = best.config.descricao
+
+
+def _build_compare_summary(results: list, ok_results: list) -> dict:
+    total_ok, total_err = _count_results_by_status(results)
+    summary = {
+        "total_cenarios": len(results),
+        "ok": total_ok,
+        "com_erro": total_err,
+        "gerado_em": datetime.now(UTC).isoformat(),
+    }
+    if ok_results:
+        _enrich_ok_summary(summary, ok_results)
+    return summary
+
+
 class ScenarioRunner:
     """Executa múltiplos cenários de variação e coleta métricas."""
 
@@ -266,29 +313,8 @@ class ScenarioRunner:
     def compare(self, results: list[ScenarioResult]) -> dict[str, Any]:
         """Gera matriz de comparação como dict serializável."""
         rows = [r.to_row() for r in results]
-        ok_results = [r for r in results if r.status == "OK" and r.metricas]
-
-        summary: dict[str, Any] = {
-            "total_cenarios": len(results),
-            "ok": sum(1 for r in results if r.status == "OK"),
-            "com_erro": sum(1 for r in results if r.status == "ERRO"),
-            "gerado_em": datetime.now(UTC).isoformat(),
-        }
-
-        if ok_results:
-            custos = [r.metricas["custo_total"] for r in ok_results if "custo_total" in r.metricas]
-            margens = [r.metricas["margem_pct"] for r in ok_results if "margem_pct" in r.metricas]
-            if custos:
-                summary["custo_min"] = min(custos)
-                summary["custo_max"] = max(custos)
-                summary["custo_spread_pct"] = round((max(custos) - min(custos)) / min(custos) * 100, 1)
-            if margens:
-                summary["margem_min"] = min(margens)
-                summary["margem_max"] = max(margens)
-                best = max(ok_results, key=lambda r: r.metricas.get("margem_pct", -999))
-                summary["melhor_cenario"] = best.config.nome
-                summary["melhor_cenario_descricao"] = best.config.descricao
-
+        ok_results = _filter_ok_results(results)
+        summary = _build_compare_summary(results, ok_results)
         return {"resumo": summary, "cenarios": rows}
 
     def save_comparison(self, results: list[ScenarioResult], path: Path) -> Path:

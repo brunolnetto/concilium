@@ -3,7 +3,7 @@
   "codigo": "CPU-TERRA-ATI-034-PROD-001",
   "descricao": "Produção CPU-TERRA-ATI-034",
   "origem": "PROPRIA",
-  "valor_horario": 0.75,
+  "valor_horario": 0.25,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
@@ -34,11 +34,5 @@
       }
     ]
   },
-  "atributos_categoria": {
-    "custo_padrao_clt": 1002.8866,
-    "custo_padrao_pj": 795.5759
-  },
-  "cpu_ids": [
-    "CPU-TERRA-ATI-034"
-  ]
+  "historico_observacoes": []
 }

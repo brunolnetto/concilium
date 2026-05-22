@@ -6,7 +6,7 @@ A UI usa somente os campos com sufixo _label e _descricao.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # ── Nomes para apresentação ao usuário ───────────────────────────────────────
 
@@ -96,6 +96,13 @@ class DiagnosticoPEItem:
     l_requerido: float
     delta_l: float
 
+    # Contexto de explicação vindo do cubo analítico (NEP-024/025)
+    janela_critica_iso: str | None = None
+    natureza_dominante: str | None = None  # "direto" | "indireto"
+    custo_direto_cubo_rs: float = 0.0
+    custo_indireto_cubo_rs: float = 0.0
+    explicacao_janela: str | None = None
+
     # Labels para UI
     @property
     def aproveitamento_pct(self) -> float:
@@ -149,6 +156,8 @@ class DiagnosticoPERelatorio:
     consistencia_validada: bool  # invariante F1+Fη+Find+Fcross ≈ gap_total (±2%)
     # ADR-060: validações emitidas como ValidacaoItem-like codes
     validacoes_emitidas: tuple[str, ...] = ()  # ex: ("VAL-PE-CROSS-TERM",)
+    # NEP-025: bloco para wizard de ação (natureza de custo por período)
+    explicacao_natureza_periodo: dict = field(default_factory=dict)
 
     @property
     def resumo_causas(self) -> dict[str, float]:

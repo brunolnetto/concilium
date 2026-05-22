@@ -9,7 +9,7 @@ from concilium.application.services.override_service import OverrideService
 from concilium.application.services.pipeline_service import PipelineService
 from concilium.application.services.project_input_builder import ProjectInputBuilder
 from concilium.application.services.project_service import ProjectService
-from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+from concilium.infrastructure.storage.store_factory import build_project_repository
 from concilium.presentation.cli.shared import config_root, projetos_root
 
 
@@ -23,7 +23,7 @@ class ServiceContainer:
         benchmarks_root = cfg_root.parent / "benchmarks" / "data"
         prj_root.mkdir(parents=True, exist_ok=True)
 
-        repository = FileProjectRepository(prj_root)
+        repository = build_project_repository(prj_root)
         audit_service = AuditService()
         project_service = ProjectService(repository, audit_service)
         override_service = OverrideService(repository, audit_service)

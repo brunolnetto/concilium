@@ -8,6 +8,6 @@
   "data_referencia_preco": "2026-05-01",
   "atributos_especificos": {
     "salario_base": 3030.924,
-    "custo_com_encargos": 6243.7034
+    "tipo_contrato": "CLT"
   }
 }

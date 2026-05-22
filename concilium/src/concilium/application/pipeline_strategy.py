@@ -12,40 +12,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
+from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+
 if TYPE_CHECKING:
     from concilium.application.services.project_repository import ProjectHandle
 
-# Skills do pipeline padrão (hot_project)
-HOT_PROJECT_PIPELINE_SKILLS: list[str] = [
-    "00-escopo",
-    "02-produtividade-climatica",
-    "03-catalogo-de-recursos",
-    "04-cronograma",
-    "03-equipes-diretas",
-    "03A-derivar-requisitos",
-    "03B-alocacao-recursos",
-    "03C-validar-compartilhamento",
-    "06-precificacao-unitaria",
-    "07-custos-indiretos",
-    "06-consolidar",
-]
-
-# ADR-063 §F6: skills do pipeline para project (composição gradual)
-# Omite skills que dependem de benchmark (03-catalogo-de-recursos carrega do catálogo diretamente).
-# Acrescenta validação de grafo de predecessão antes do cronograma.
-PROJECT_PIPELINE_SKILLS: list[str] = [
-    "00-escopo",
-    "02-produtividade-climatica",
-    "03-catalogo-de-recursos",
-    "04-cronograma",
-    "03-equipes-diretas",
-    "03A-derivar-requisitos",
-    "03B-alocacao-recursos",
-    "03C-validar-compartilhamento",
-    "06-precificacao-unitaria",
-    "07-custos-indiretos",
-    "06-consolidar",
-]
+# Ordem canônica derivada dos manifests TOML (fonte única de verdade).
+HOT_PROJECT_PIPELINE_SKILLS: list[str] = list(CANONICAL_SKILL_ORDER)
+PROJECT_PIPELINE_SKILLS: list[str] = list(CANONICAL_SKILL_ORDER)
 
 
 class PipelineStrategy(Protocol):

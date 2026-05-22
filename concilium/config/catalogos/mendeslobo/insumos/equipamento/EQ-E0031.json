@@ -14,8 +14,7 @@
       "custo_capital_h": 8.0,
       "custo_mao_obra_h": 10.0,
       "custo_diesel_h": 12.4,
-      "custo_material_h": 5.6,
-      "custo_hora_total": 36.0
+      "custo_material_h": 5.6
     }
   },
   "classe_compartilhamento": {
