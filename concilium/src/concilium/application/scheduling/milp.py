@@ -157,6 +157,10 @@ def _build_decision_vars(
     for aid in topo:
         lo = earliest[aid]
         hi = min(latest[aid], horizon - act_map[aid].duration_weeks)
+        # ADR-072: enforce per-activity corridor window constraint
+        if act_map[aid].window_weeks is not None:
+            window_max_start = act_map[aid].window_weeks - act_map[aid].duration_weeks
+            hi = min(hi, window_max_start)
         x[aid] = {t: pulp.LpVariable(f"x_{aid}_{t}", cat="Binary") for t in range(lo, hi + 1)}
     return x
 

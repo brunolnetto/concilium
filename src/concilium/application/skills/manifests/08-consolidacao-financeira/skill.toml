@@ -1,0 +1,20 @@
+[skill]
+id = "08-consolidacao-financeira"
+phase = "Resultado"
+version = "1.0.0"
+descricao = "Consolidação de resultado financeiro e reconciliação de custos de pool. ADR-026."
+
+[depends_on]
+skills = ["05-equipes-e-alocacao", "06-precificacao-unitaria", "07-custos-indiretos"]
+canonical_sections = ["equipes_diretas", "planejamento", "indiretos"]
+
+[produces]
+canonical_section = "resultado"
+validations = ["VAL-CONSOL-OK"]
+
+[inputs]
+required = []
+optional = ["tabela_bdi", "bdi_lucro_impostos"]
+
+[snapshots]
+consumed = ["perfil"]

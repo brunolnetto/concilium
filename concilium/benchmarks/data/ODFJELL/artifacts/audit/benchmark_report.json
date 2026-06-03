@@ -1,0 +1,51 @@
+{
+  "projeto": "ODFJELL",
+  "slug": "ODFJELL",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 9841,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 2151,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 369,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "ERRO",
+      "duration_ms": 529,
+      "avisos": [],
+      "erros": [
+        "rcpsp_spec sem atividades."
+      ]
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 44846.76,
+      "custo_indireto": 1813470.08,
+      "custo_total": 1858316.84,
+      "preco_venda": 6299957.17
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "INVIAVEL"
+}

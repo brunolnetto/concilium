@@ -1,0 +1,68 @@
+{
+  "projeto": null,
+  "slug": "AGIS",
+  "analise_base_referencia": {
+    "total_atividades": 0,
+    "atividades_com_dados": 0,
+    "atividades_zeradas": 0,
+    "atividades_com_dados_ids": [],
+    "atividades_zeradas_ids": []
+  },
+  "integridade_pipeline_concilium": {
+    "03_equipes": {
+      "custo_direto_total": 74593550.8,
+      "equipes_count": 11,
+      "itens_com_equipes": [
+        "eap-1_0",
+        "eap-1_1",
+        "eap-1_2",
+        "eap-1_3",
+        "eap-1_4",
+        "eap-1_5",
+        "eap-1_6",
+        "eap-1_7",
+        "eap-1_8",
+        "eap-1_9",
+        "eap-1_10"
+      ]
+    },
+    "04_planejamento": {
+      "subtotal_sem_bdi_total": 46843791.49,
+      "subtotal_com_bdi_total": 55837373.93,
+      "itens_planejamento": 11
+    },
+    "05_indiretos": {
+      "total_sem_bdi": 19584539.27,
+      "categorias": [
+        "ADM",
+        "TOP",
+        "LAB",
+        "QSMS",
+        "MOB"
+      ]
+    },
+    "06_consolidacao": {
+      "venda_total_sem_bdi": 46843791.49,
+      "venda_total_com_bdi": 80358255.08,
+      "custo_total": 66428330.760000005,
+      "margem_pct": 0.1733477700098412
+    }
+  },
+  "validacoes_fechamento": [
+    {
+      "checkpoint": "04 → 06 (venda sem BDI)",
+      "e4_valor": 46843791.49,
+      "e6_valor": 46843791.49,
+      "delta": 0.0,
+      "status": "OK"
+    },
+    {
+      "checkpoint": "04 → 06 (venda com BDI = direto+indireto)",
+      "e4_direto_com_bdi": 55837373.93,
+      "e6_total_com_bdi": 80358255.08,
+      "e6_total_custo_plus_catalogo": 80358255.08,
+      "delta_indireto_adicionado": 24520881.15,
+      "status": "OK"
+    }
+  ]
+}

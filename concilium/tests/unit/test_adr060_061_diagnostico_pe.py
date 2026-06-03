@@ -73,7 +73,16 @@ def _make_item(
 
 class TestFatorPE:
     def test_labels_exist(self):
-        for cod in ["F_ETA_CLIMA", "F_ETA_CROSS", "F_IND_CLIMA", "F_IND_RAMP", "F1_QUANTIZACAO", "F_RESIDUAL"]:
+        for cod in [
+            "F_ETA_CLIMA",
+            "F_CALENDARIO",
+            "F_CALENDARIO_ESTRUTURAL",
+            "F_ETA_CROSS",
+            "F_IND_CLIMA",
+            "F_IND_RAMP",
+            "F1_QUANTIZACAO",
+            "F_RESIDUAL",
+        ]:
             f = FatorPE(codigo=cod, gap_rs=100.0, pct_gap=0.1)
             assert f.label != cod  # should be translated
             assert len(f.descricao) > 20
@@ -85,6 +94,12 @@ class TestFatorPE:
     def test_cross_term_evitavel(self):
         f = FatorPE(codigo="F_ETA_CROSS", gap_rs=100, pct_gap=0.1)
         assert f.evitavel
+
+    def test_calendar_structural_not_evitavel(self):
+        estrut = FatorPE(codigo="F_CALENDARIO_ESTRUTURAL", gap_rs=100, pct_gap=0.1)
+        timing = FatorPE(codigo="F_CALENDARIO", gap_rs=100, pct_gap=0.1)
+        assert not estrut.evitavel
+        assert timing.evitavel
 
     def test_frozen(self):
         f = FatorPE(codigo="F_ETA_CLIMA", gap_rs=100, pct_gap=0.1)
@@ -189,7 +204,7 @@ class TestDiagnosticoPERelatorio:
 
 
 class TestDiagnosticoPEBuilder:
-    def _make_canonical(self, n_semanas=10, eficiencia=0.8, n_equipes=3, has_deficit=True):
+    def _make_canonical(self, n_semanas=10, eficiencia=0.8, n_equipes=3, fator_calendario=1.0, has_deficit=True):
         from concilium.application.skills import run_escopo_e_eap
         from concilium.domain.models.canonical import (
             Cronograma,
@@ -242,7 +257,12 @@ class TestDiagnosticoPEBuilder:
                 qtd_executada=1000.0,
                 qtd_acumulada=1000.0 * (w + 1),
                 pct=min(1.0, (w + 1) / n_semanas),
-                eficiencia=eficiencia,
+                # ADR-082: o param `eficiencia` representa a praticabilidade (clima);
+                # eficiencia(célula)=utilização m_ij=1.0; fator_total = η_j = clima×calendário.
+                eficiencia=1.0,
+                fator_clima=eficiencia,
+                fator_calendario=fator_calendario,
+                fator_total=eficiencia * fator_calendario,
             )
             for w in range(n_semanas)
         }
@@ -319,6 +339,14 @@ class TestDiagnosticoPEBuilder:
         if diag.n_itens_deficit > 0:
             assert "resumo_global_natureza" in diag.explicacao_natureza_periodo
             assert "itens" in diag.explicacao_natureza_periodo
+
+    def test_calendar_structural_factor_is_reported_when_calendar_reduces_capacity(self):
+        canonical = self._make_canonical(eficiencia=0.9, fator_calendario=0.6)
+        diag = DiagnosticoPEBuilder().build(canonical)
+        assert diag.n_itens_deficit > 0
+        item = diag.itens_deficit[0]
+        by_code = {f.codigo: f.gap_rs for f in item.fatores}
+        assert by_code.get("F_CALENDARIO_ESTRUTURAL", 0.0) > 0.0
 
 
 # ---------------------------------------------------------------------------

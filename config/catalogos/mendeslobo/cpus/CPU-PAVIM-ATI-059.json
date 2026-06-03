@@ -1,0 +1,15 @@
+{
+  "codigo": "CPU-PAVIM-ATI-059",
+  "descricao": "Dreno de pavimento",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "PAVIMENTACAO",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DRENO-PVC-BRITA-KIT",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "producao_id_ref": "CPU-PAVIM-ATI-059-PROD-001"
+}

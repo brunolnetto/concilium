@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "created_at": "2026-01-01T00:00:00Z",
+  "created_by": "system (migracao ADR-062)",
+  "motivo": "Versao inicial - migracao automatica do arquivo estatico original.",
+  "id": "mendeslobo",
+  "perfil_id": "mendeslobo",
+  "jurisdicao_id": "BR",
+  "referencia_id": "SICRO_2024_CE",
+  "catalogo_id": "mendeslobo",
+  "tema_id": "mendeslobo-corporativo"
+}

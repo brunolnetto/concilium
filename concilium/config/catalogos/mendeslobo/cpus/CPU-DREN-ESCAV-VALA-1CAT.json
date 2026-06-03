@@ -14,10 +14,10 @@
   "custo_direto_unitario_planilha": 14.234015,
   "precos_unitarios_sbdi": {
     "mo": 0.0,
-    "diesel": 0.0,
+    "equipamentos": 4.235318,
+    "diesel": 2.191564,
     "material": 0.0,
-    "equipamentos": 14.234015,
-    "total": 14.234015
+    "total": 6.426882
   },
   "producao_id_ref": "CPU-DREN-ESCAV-VALA-1CAT-PROD-001"
 }

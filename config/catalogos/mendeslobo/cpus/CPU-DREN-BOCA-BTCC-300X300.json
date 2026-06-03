@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-BOCA-BTCC-300X300",
+  "descricao": "BOCA BTCC 3,00 X 3,00 M - ESCONSIDADE 0° - AREIA E BRITA COMERCIAIS",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-BOCA-BTCC-300X300",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 34712.372784,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "diesel": 0.0,
+    "material": 22085.982,
+    "equipamentos": 12626.390784,
+    "total": 34712.372784
+  },
+  "producao_id_ref": "CPU-DREN-BOCA-BTCC-300X300-PROD-001"
+}

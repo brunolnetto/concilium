@@ -44,3 +44,14 @@ class BlobStoragePort(ABC):
         Implementação padrão é noop — backends que suportam aprovação devem sobrescrever.
         """
         return
+
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
+        """Gera uma URL de acesso temporário ao blob (ADR-093 D4).
+
+        Usada para entregar artefatos a agentes/stakeholders remotos sem tráfego
+        base64 (Azure SAS, S3 presigned, link de compartilhamento SharePoint/Drive).
+
+        Implementação padrão retorna ``None`` — backends sem suporte a URL assinada
+        (ex.: local) sinalizam ausência, e o chamador recai no transporte base64.
+        """
+        return None

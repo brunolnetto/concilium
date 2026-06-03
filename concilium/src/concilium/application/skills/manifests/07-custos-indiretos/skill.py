@@ -166,9 +166,24 @@ def run_custos_indiretos(
                 canonical_in,
                 catalogo,
             )
-            custo, cat_obj = _apply_dv4_scale_to_categoria(cat_obj, dv4_policy, policy_scale, n_semanas)
-            indiretos_out.append(_build_indireto_from_cat_obj(codigo, cat["descricao"], cat_obj, custo, n_semanas))
-            indiretos_semanal_out.extend(_build_semanal_breakdown(cat_obj, n_semanas))
+            custo, cat_obj = _apply_dv4_scale_to_categoria(
+                cat_obj,
+                dv4_policy,
+                policy_scale,
+                n_semanas,
+                float(prazo_meses),
+            )
+            indiretos_out.append(
+                _build_indireto_from_cat_obj(
+                    codigo,
+                    cat["descricao"],
+                    cat_obj,
+                    custo,
+                    n_semanas,
+                    float(prazo_meses),
+                )
+            )
+            indiretos_semanal_out.extend(_build_semanal_breakdown(cat_obj, n_semanas, custo))
 
     _validate_dv4_policy(dv4_policy, validacoes, policy_scale)
     _validate_razao_indireto_direto(perfil, canonical_in, indiretos_out, validacoes)

@@ -223,6 +223,143 @@ def _compute_preco_cat_from_cpu(
     return preco_cat, equip_sem_decomp_item
 
 
+def _compute_preco_cat_from_production(
+    cpu: dict,
+    prod_lookup: dict,
+    insumo_lookup: dict,
+    preco_diesel: float,
+    alpha_clt: float,
+    alpha_mensalista: float,
+    validacoes: list,
+    catalog_session: object | None = None,  # ADR-100
+) -> dict | None:
+    """NEP-032 D1: deriva preco_cat da composição da equipe × produtividade (bottom-up canônico).
+
+    Fórmula: PU_categoria = custo_categoria_hora / producao.valor_horario
+
+    Onde custo_categoria_hora é calculado por pu_calculator.calcular_pu():
+      MO:         Σ (salario/horas_mes × α × num_pessoas)
+      Diesel:     Σ (consumo_L_h × preco_diesel × num_unidades)
+      Equipamento: Σ (preco_h × num_unidades)  [parte não-MO/não-diesel]
+      Material:   Σ (consumo_h × preco × num_materiais)
+
+    Emite VAL-PLAN-SBDI-LEGADO se o CPU ainda tiver precos_unitarios_sbdi
+    hard-coded (campo agora depreciado — não é usado no cálculo).
+    """
+    from concilium.application.catalog.pu_calculator import ParametrosCalculo, derivar_precos_unitarios_sbdi
+    from concilium.domain.constants import ENCARGOS_PJ, HORAS_MES_REGIME_6x1
+
+    prod_id = cpu.get("producao_id_ref")
+    if not prod_id:
+        return None
+
+    producao = prod_lookup.get(prod_id)
+    if not producao:
+        return None
+
+    valor_horario = float((producao.get("valor_horario") or 0.0))
+    if valor_horario <= 0:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PLAN-PROD-HORARIO",
+                status="AVISO",
+                mensagem=(
+                    f"CPU '{cpu.get('codigo')}': producao '{prod_id}' tem valor_horario=0; "
+                    "precificação bottom-up impossível."
+                ),
+            )
+        )
+        return None
+
+    params = ParametrosCalculo(
+        alpha_clt=alpha_clt,
+        alpha_pj=ENCARGOS_PJ,
+        preco_diesel=preco_diesel,
+        horas_mes=HORAS_MES_REGIME_6x1,
+    )
+
+    sbdi = derivar_precos_unitarios_sbdi(producao, insumo_lookup, params, catalog_session=catalog_session)
+    if not sbdi or float(sbdi.get("total", 0.0) or 0.0) <= 0:
+        return None
+
+    preco_cat = {
+        "mao_obra": float(sbdi.get("mo", sbdi.get("mao_obra", 0.0)) or 0.0),
+        "diesel": float(sbdi.get("diesel", 0.0) or 0.0),
+        "equipamentos": float(sbdi.get("equipamentos", 0.0) or 0.0),
+        "material": float(sbdi.get("material", 0.0) or 0.0),
+    }
+
+    # Advertir se CPU ainda tem sbdi hard-coded (campo legado, ignorado)
+    if cpu.get("precos_unitarios_sbdi"):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PLAN-SBDI-LEGADO",
+                status="INFO",
+                mensagem=(
+                    f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi encontrado mas ignorado — "
+                    "usando precificação bottom-up canônica (NEP-032)."
+                ),
+            )
+        )
+
+    return preco_cat
+
+
+def _validate_encargos_separacao(
+    cpu_codigo: str,
+    cpu: dict,
+    insumo_lookup: dict,
+    validacoes: list,
+) -> None:
+    """NEP-031 L5: valida separação entre encargos trabalhistas (α) e BDI de MO.
+
+    Arquitetura correta (dois mecanismos complementares sem sobreposição):
+      α (skill-05): converte salário mensal em custo real do trabalhador para a empresa
+                    (INSS, FGTS, férias, 13°, SESI, SENAI, etc.)
+                    Fórmula: custo_unit = salario × (1 + α)
+                    Valores: α_CLT ≈ 1.777, α_mensalista ≈ 1.060, α_PJ ≈ 0.06
+
+      BDI_MO (skill-06): markup do serviço sobre o custo direto de MO
+                         (administração central, seguros, risco, lucro, tributos)
+                         Fórmula: preco_venda = custo_direto × (1 + BDI_MO)
+
+    RISCO de dupla contagem: se um insumo de MO em composicao_itens tem
+    preco_unitario já incluindo encargos (ex: R$/h "all-in" de prestador),
+    e o mesmo insumo é processado com BDI_MO pelo skill-06 E também pelo
+    skill-05 com α → o custo da mão de obra seria contabilizado duas vezes.
+
+    Heurística de detecção: insumo em composicao_itens com categoria_custo=MAO_OBRA
+    e preco_unitario > limiar de salário típico + encargos CLT sugere que encargos
+    já estão embutidos (limiar: R$100/h → ~R$16.000/mês para 160h mensais).
+    """
+    _LIMIAR_PU_MO_H = 100.0  # R$/h — acima disso, encargos provavelmente já incluídos
+    for ci in cpu.get("composicao_itens") or []:
+        cat = (ci.get("categoria_custo") or "").upper()
+        if cat not in {"MAO_OBRA", "MO", "MAO DE OBRA", "MÃO_OBRA"}:
+            continue
+        iid = ci.get("insumo_id", "")
+        ins = insumo_lookup.get(iid)
+        if ins is None:
+            continue
+        preco = float(ins.get("preco_unitario", 0.0) or 0.0)
+        unidade = (ins.get("unidade") or "").lower()
+        if unidade == "h" and preco > _LIMIAR_PU_MO_H:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-PLAN-ENCARGOS-DUPLA",
+                    status="AVISO",
+                    mensagem=(
+                        f"CPU '{cpu_codigo}': insumo '{iid}' tem categoria_custo=MAO_OBRA "
+                        f"e preco_unitario={preco:.2f} R$/h (> {_LIMIAR_PU_MO_H} R$/h). "
+                        "Possível inclusão de encargos no preço unitário — verifique se "
+                        "alpha (encargos trabalhistas de skill-05) não será aplicado em duplicata. "
+                        "Se o preço já inclui encargos, defina atributos_especificos.custo_com_encargos "
+                        "no insumo para evitar dupla contagem."
+                    ),
+                )
+            )
+
+
 def _apply_adr038_compensation(eq_real: Any, item: Any, preco_cat: dict) -> None:
     q = item.quantitativo
     p_meses = eq_real.permanencia_efetiva_meses or eq_real.permanencia_meses
@@ -311,6 +448,12 @@ def _process_eap_item(
     erros_insumo: set,
     equip_sem_decomp: set,
     validacoes: list,
+    apply_adr038_compensation: bool = True,
+    benchmark_mode: bool = False,
+    preco_diesel: float = 6.20,
+    alpha_clt: float = 1.777,
+    alpha_mensalista: float = 1.060,
+    catalog_session: object | None = None,  # ADR-100
 ) -> None:
     cpu = cpu_lookup.get(item.cpu_id)
     if cpu is None:
@@ -337,26 +480,89 @@ def _process_eap_item(
     if early is not None:
         plan_out.append(early)
         return
-    from concilium.domain.models.catalogo import CPU
+    preco_cat: dict[str, float] | None = None
+    equip_sem_decomp_item: set[str] = set()
 
-    cpu_model = CPU.model_validate(cpu)
-    preco_cat, equip_sem_decomp_item = _compute_preco_cat_from_cpu(
-        cpu_model, insumo_lookup, repo, jurisdicao_id, overrides, data_base, cpu.get("codigo"), erros_insumo, validacoes
+    # NEP-032 D1: precificação bottom-up canônica.
+    # Hierarquia de fontes:
+    #   1. derivar_precos_unitarios_sbdi(producao, insumos) — bottom-up via composição da equipe
+    #   2. composicao_itens × preco_insumo — fallback para CPUs sem producao completa
+    #   precos_unitarios_sbdi hard-coded nos JSONs é campo depreciado (emite VAL-PLAN-SBDI-LEGADO).
+
+    # Fonte 1: bottom-up da composição da equipe (produção + insumos SICRO/SINAPI)
+    preco_cat = _compute_preco_cat_from_production(
+        cpu, prod_lookup, insumo_lookup,
+        preco_diesel, alpha_clt, alpha_mensalista,
+        validacoes, catalog_session=catalog_session,
     )
-    eq_real = equipe_lookup.get(item.item_id)
-    if eq_real and item.quantitativo > 0:
-        _apply_adr038_compensation(eq_real, item, preco_cat)
-        equip_sem_decomp_item.clear()
+
+    if preco_cat is not None:
         validacoes.append(
             ValidacaoItem(
-                codigo="VAL-PLAN-PARAMETRICO",
+                codigo="VAL-PLAN-BOTTOM-UP",
                 status="INFO",
+                mensagem=f"Item '{item.item_id}': preço unitário derivado de composição da equipe (NEP-032).",
+            )
+        )
+    else:
+        # Fonte 2: composicao_itens × preco_insumo (fallback)
+        from concilium.domain.models.catalogo import CPU
+
+        cpu_model = CPU.model_validate(cpu)
+        preco_cat, equip_sem_decomp_item = _compute_preco_cat_from_cpu(
+            cpu_model, insumo_lookup, repo, jurisdicao_id, overrides, data_base, cpu.get("codigo"), erros_insumo, validacoes
+        )
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PLAN-COMPOSICAO-FALLBACK",
+                status="AVISO",
                 mensagem=(
-                    f"Item '{item.item_id}': CPU recalculada com base operacional (ADR-038)."
-                    f" Scale Factor: {eq_real.num_equipes_base} frentes."
+                    f"CPU '{cpu.get('codigo')}': precificação bottom-up retornou vazio; "
+                    "usando composicao_itens como fallback. "
+                    "Verifique valor_horario na produção e composicao_padrao_equipe."
                 ),
             )
-        )  # noqa: E501
+        )
+        # NEP-029: rastrear presença/ausência de precos_unitarios_sbdi para auditoria
+        if cpu.get("precos_unitarios_sbdi"):
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-PLAN-SBDI",
+                    status="INFO",
+                    mensagem=f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi disponível (informativo; cálculo usa composicao_itens).",
+                )
+            )
+        else:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-PLAN-SBDI-MISSING",
+                    status="AVISO",
+                    mensagem=(
+                        f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi ausente. "
+                        "Usando composicao_itens como fonte de precificação."
+                    ),
+                )
+            )
+
+    if preco_cat is None:
+        return
+    eq_real = equipe_lookup.get(item.item_id)
+    if apply_adr038_compensation and eq_real and item.quantitativo > 0:
+        # NEP-029 D3: ADR-038 depreciado — cancela algebricamente o efeito da quantidade
+        # (subtotal = equipe_total independente de Q). Override ignorado.
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PLAN-ADR038-BLOCKED",
+                status="AVISO",
+                mensagem=(
+                    f"Item '{item.item_id}': apply_adr038_compensation=True ignorado (NEP-029). "
+                    "ADR-038 foi depreciado: divide e multiplica pela quantidade, cancelando seu efeito. "
+                    "Fonte primária em uso: precos_unitarios_sbdi."
+                ),
+            )
+        )
+    # NEP-031 L5: validar separação encargos vs BDI de MO
+    _validate_encargos_separacao(cpu.get("codigo", item.cpu_id), cpu, insumo_lookup, validacoes)
     equip_sem_decomp.update(equip_sem_decomp_item)
     item_override = (
         planejamento_item_overrides.get(item.item_id, {}) if isinstance(planejamento_item_overrides, dict) else {}
@@ -376,22 +582,26 @@ def _get_bdi_value(manual: dict[str, Any], *keys: str, default: float = 0.0) -> 
     return float(default)
 
 
-def _build_lookups(catalogo: dict[str, Any]) -> tuple[dict[str, dict], dict[str, dict], dict[str, float]]:
+def _build_lookups(catalogo: dict[str, Any]) -> tuple[dict[str, dict], dict[str, dict], dict[str, dict]]:
+    """NEP-032: prod_lookup agora mapeia prod_id → full production dict (não mais float).
+
+    O acesso ao valor_horario deve ser feito via prod.get("valor_horario").
+    Mantém retrocompatibilidade: prod_lookup.get(id) is None ainda funciona para
+    verificar existência.
+    """
     cpus = {c["codigo"]: c for c in catalogo.get("cpus", [])}
     insumos = {i["codigo"]: i for i in catalogo.get("insumos", [])}
 
-    # Resolve produtividades do arquivo lateral se disponível no catálogo carregado
+    # Produtividades: dict completo por id (para precificação bottom-up, NEP-032)
     prods_raw = catalogo.get("produtividades", []) or catalogo.get("producoes", [])
-    produtividades: dict[str, float] = {}
+    produtividades: dict[str, dict] = {}
     for p in prods_raw:
         pid = p.get("id")
         if not pid:
             continue
-        valor = p.get("valor_horario")
-        if valor is None:
-            # Fase 2: campo legado em produtividade ainda aceito com depreciação.
-            valor = p.get("producao_horaria")
-        if isinstance(valor, (int, float)):
-            produtividades[pid] = float(valor)
+        # Normaliza campo legado
+        if p.get("valor_horario") is None and p.get("producao_horaria") is not None:
+            p = {**p, "valor_horario": p["producao_horaria"]}
+        produtividades[pid] = p
 
     return cpus, insumos, produtividades

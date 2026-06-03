@@ -1,0 +1,51 @@
+{
+  "projeto": "CTC",
+  "slug": "CTC",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 28292,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 4123,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 547,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "ERRO",
+      "duration_ms": 621,
+      "avisos": [],
+      "erros": [
+        "rcpsp_spec sem atividades."
+      ]
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 1603280.69,
+      "custo_indireto": 28286131.64,
+      "custo_total": 29889412.33,
+      "preco_venda": 142317761.88
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "INVIAVEL"
+}

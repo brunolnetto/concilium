@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-CORPO-BTCAP-100",
+  "descricao": "CORPO BTCAP 1,00 X 1,00 M - MOLDADO NO LOCAL - AREIA E BRITA COMERCIAIS - PADRÃO VALEC",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-CORPO-BTCAP-100",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 34874.040272,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "diesel": 0.0,
+    "material": 10284.92864,
+    "equipamentos": 24589.111632,
+    "total": 34874.040272
+  },
+  "producao_id_ref": "CPU-DREN-CORPO-BTCAP-100-PROD-001"
+}

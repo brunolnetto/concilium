@@ -1,38 +1,44 @@
 {
   "id": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
   "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
-  "descricao": "Produção CPU-TERRA-CORPO-ATERRO-3CAT",
-  "origem": "PROPRIA",
-  "valor_horario": 149.51,
+  "descricao": "Construção Corpo Aterro 3aCat — Planilha AGIS 2026-05",
+  "origem": "PLANILHA_AGIS_2026_05",
+  "valor_horario": 214.92,
   "composicao_padrao_equipe": {
     "funcoes": [
       {
-        "funcao_id": "P0048",
+        "funcao_id": "AGIS-FN-OPER-ROLO",
         "num_pessoas": 2
       },
       {
-        "funcao_id": "P0046",
-        "num_pessoas": 4
-      },
-      {
-        "funcao_id": "P0001",
-        "num_pessoas": 4
-      },
-      {
-        "funcao_id": "P0029",
-        "num_pessoas": 2
-      },
-      {
-        "funcao_id": "P0065",
+        "funcao_id": "AGIS-FN-OPER-TRAT-EST",
         "num_pessoas": 1
+      },
+      {
+        "funcao_id": "AGIS-FN-AJUD",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "AGIS-FN-GREDISTA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "AGIS-FN-ENCAR",
+        "num_pessoas": 0.5
       }
     ],
     "equipamentos": [
       {
-        "equip_id": "EQ-E0037",
-        "num_unidades": 2
+        "equip_id": "AGIS-ROLO-PC-10T",
+        "num_unidades": 2,
+        "consumo_litros_hora": 16.0
+      },
+      {
+        "equip_id": "AGIS-TRAT-EST-40T",
+        "num_unidades": 1,
+        "consumo_litros_hora": 32.0
       }
     ]
   },
-  "historico_observacoes": []
+  "custo_hora_total_referencia": 1262.23
 }

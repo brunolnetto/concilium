@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-TERRA-COMPAC-PI",
+  "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR INTERMEDIÁRIO",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-TERRA-COMPAC-PI",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 11.659923,
+  "precos_unitarios_sbdi": {
+    "mo": 3.837544,
+    "diesel": 8.102198,
+    "material": 0.0,
+    "equipamentos": 0.0,
+    "total": 11.939742
+  },
+  "producao_id_ref": "CPU-TERRA-COMPAC-PI-PROD-001"
+}

@@ -1,0 +1,20 @@
+{
+  "codigo": "CPU-TERRA-ATI-080",
+  "descricao": "Hidrossemeadura para cobertura de taludes",
+  "unidade": "m2",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-AJUDANTE",
+      "coeficiente": 4.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-HIDROSSEMEADORA",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-080-PROD-001"
+}

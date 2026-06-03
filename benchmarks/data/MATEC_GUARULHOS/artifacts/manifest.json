@@ -1,0 +1,24 @@
+{
+  "slug": "MATEC_GUARULHOS",
+  "gerado_em": "2026-05-12T21:12:36",
+  "projeto": "MATEC Guarulhos (SP) - Hines",
+  "project_dir": null,
+  "paths": {
+    "inputs": [
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\inputs\\referencia.json",
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\raw\\2025_10_03_ML_PLANEJAMENTO_MATEC_GUARULHOS (SP).xlsm"
+    ],
+    "intermediate": [
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\intermediate\\extracao_intermediarios.json",
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\intermediate\\iteracao_referencias_matec_guarulhos.json",
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\intermediate\\referencia.pre_phase4_remaining_backup.json"
+    ],
+    "outputs": [
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\outputs\\benchmark_report.json",
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\outputs\\relatorio.json",
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\outputs\\relatorio.md",
+      "benchmarks\\data\\MATEC_GUARULHOS\\artifacts\\outputs\\resultado_planejamento.xlsx"
+    ],
+    "audit": []
+  }
+}

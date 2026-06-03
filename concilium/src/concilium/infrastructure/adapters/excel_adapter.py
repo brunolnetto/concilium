@@ -381,6 +381,68 @@ def _monthly_qty_by_item(
     return result
 
 
+def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> None:
+    """ADR-068: renderiza visão semanal de clima x calendário x fator total."""
+    ws = wb.create_sheet("CALENDARIO.OP")
+    _title_row(ws, 1, "CALENDARIO OPERACIONAL", 7)
+    _header_row(
+        ws,
+        3,
+        [
+            "Semana ISO",
+            "Dias úteis base",
+            "Dias úteis efetivos",
+            "Fator calendário",
+            "Fator clima",
+            "Fator total",
+            "Eventos aplicados",
+        ],
+    )
+
+    _set_col_widths(ws, [14, 16, 18, 16, 12, 12, 38])
+    row = 4
+
+    calendario_rows = list(getattr(canonical, "calendario_operacional", []) or [])
+    if not calendario_rows:
+        _label(ws, row, 1, "Calendário operacional não disponível.", _fill(_C["row_alt"]))
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
+        _freeze(ws, "A4")
+        return
+
+    clima_por_semana: dict[str, float] = {}
+    total_por_semana: dict[str, float] = {}
+    cron = getattr(canonical, "cronograma", None)
+    if cron:
+        for sa in cron.scheduled_activities:
+            for semana_iso, dist in sa.distribuicao_semanal.items():
+                if semana_iso not in clima_por_semana:
+                    clima_por_semana[semana_iso] = float(getattr(dist, "fator_clima", getattr(dist, "eficiencia", 1.0)))
+                    total_por_semana[semana_iso] = float(getattr(dist, "fator_total", getattr(dist, "eficiencia", 1.0)))
+
+    for idx, item in enumerate(calendario_rows):
+        fill = _fill(_C["row_alt"]) if idx % 2 else _fill(_C["white"])
+        if hasattr(item, "model_dump"):
+            row_data = item.model_dump()
+        elif isinstance(item, dict):
+            row_data = item
+        else:
+            row_data = {}
+
+        semana = str(row_data.get("semana_iso", ""))
+        _label(ws, row, 1, semana, fill)
+        _label(ws, row, 2, float(row_data.get("dias_uteis_base", 0.0) or 0.0), fill, align="right")
+        _label(ws, row, 3, float(row_data.get("dias_uteis_efetivos", 0.0) or 0.0), fill, align="right")
+        _label(ws, row, 4, float(row_data.get("fator_calendario", 1.0) or 1.0), fill, align="right")
+        _label(ws, row, 5, round(clima_por_semana.get(semana, 1.0), 4), fill, align="right")
+        _label(ws, row, 6, round(total_por_semana.get(semana, clima_por_semana.get(semana, 1.0)), 4), fill, align="right")
+        eventos = row_data.get("eventos_aplicados", [])
+        eventos_txt = ", ".join(eventos) if isinstance(eventos, (list, tuple)) else str(eventos or "")
+        _label(ws, row, 7, eventos_txt, fill)
+        row += 1
+
+    _freeze(ws, "A4")
+
+
 # ── Aba DIRETOS ───────────────────────────────────────────────────────────────
 
 
@@ -3160,7 +3222,7 @@ class ExcelRenderer:
         self.wb.remove(self.wb.active)
 
     def render(self) -> Workbook:
-        """Renderiza as 15 abas na ordem definida e retorna workbook."""
+        """Renderiza as abas na ordem definida e retorna workbook."""
         render_memorial_bdi(self.wb, self.canonical)
         render_curva_abc(self.wb, self.canonical)
         render_s_curve(self.wb, self.canonical)
@@ -3175,6 +3237,7 @@ class ExcelRenderer:
         render_cronograma_res(self.wb, self.canonical)
         render_equipe(self.wb, self.canonical)
         render_equilibrio(self.wb, self.canonical)
+        render_calendario_operacional(self.wb, self.canonical)
         render_resultado_ml(
             self.wb,
             self.canonical,

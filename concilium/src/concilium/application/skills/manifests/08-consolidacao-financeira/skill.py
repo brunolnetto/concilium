@@ -101,7 +101,9 @@ def run_consolidacao_financeira(
     curva_abc, s_curve, cubo_analitico = _build_abc_analytics(
         canonical_in, inputs, _bdi_tabela, _bdi_regime, validacoes
     )
-    memorial = _build_memorial_bdi(canonical_in, _bdi_fonte, _bdi_regime, _bdi_tabela, _bdi_override)
+    # O memorial usa resultado financeiro consolidado; ele precisa enxergar o canônico já enriquecido.
+    canonical_for_memorial = canonical_in.model_copy(update={"resultado": res})
+    memorial = _build_memorial_bdi(canonical_for_memorial, _bdi_fonte, _bdi_regime, _bdi_tabela, _bdi_override)
 
     novo = canonical_in.model_copy(
         update={
@@ -116,6 +118,9 @@ def run_consolidacao_financeira(
             "cubo_analitico": cubo_analitico,
             "diagnostico_pe": _diag_pe,
             "backtracking_pe": _back_pe,
+            # Persiste a tabela BDI efetiva para garantir formulação consistente
+            # em lazy-builds do serviço e no _build_from_pool do ADR-086.
+            "tabela_bdi_efetiva": _bdi_tabela,
         }
     )
     validacoes.append(

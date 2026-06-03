@@ -233,15 +233,7 @@ def _render_temas_section(base_url: str, actor: str) -> None:
     tema_data = tmap.get(selected) or {}
     versions = tema_data.get("versions") or []
 
-    tab_hist, tab_edit, tab_nova = st.tabs(["📜 Histórico", "✏️ Editar tema", "➕ Nova versão"])
-
-    with tab_hist:
-        _render_version_history(versions, tema_data.get("current_version", "v1"))
-
-    with tab_edit:
-        _render_tema_editor(base_url, actor, selected, tema_data)
-
-    with tab_nova:
+    with st.expander("➕ Nova versão", expanded=False):
         _render_new_version_form(
             base_url=base_url,
             actor=actor,
@@ -250,3 +242,123 @@ def _render_temas_section(base_url: str, actor: str) -> None:
             versions=versions,
             key_prefix="tema",
         )
+
+    tab_detail, tab_hist, tab_edit = st.tabs(["🔍 Detalhe", "📜 Histórico", "✏️ Editar tema"])
+
+    with tab_detail:
+        _render_tema_detail(tema_data, versions)
+
+    with tab_hist:
+        _render_version_history(versions, tema_data.get("current_version", "v1"))
+
+    with tab_edit:
+        _render_tema_editor(base_url, actor, selected, tema_data)
+
+
+def _render_tema_detail(tema_data: dict, versions: list[dict]) -> None:
+    current_v = tema_data.get("current_version", "v1")
+    current_data = next((v for v in versions if v.get("version") == current_v), tema_data)
+
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Empresa", current_data.get("empresa") or "—")
+    col_b.metric("Perfil de exibição", current_data.get("perfil_exibicao") or "—")
+    col_c.metric("Versão ativa", current_data.get("version") or current_v)
+
+    cores = current_data.get("cores") or {}
+    fontes = current_data.get("fontes") or {}
+    if cores:
+        st.caption("Cores ativas")
+        st.dataframe(
+            [{"Token": k, "Valor": str(v)} for k, v in cores.items()],
+            hide_index=True,
+            use_container_width=True,
+        )
+    if fontes:
+        st.caption("Fontes ativas")
+        st.dataframe(
+            [{"Propriedade": k, "Valor": str(v)} for k, v in fontes.items()],
+            hide_index=True,
+            use_container_width=True,
+        )
+
+    st.caption(
+        "Origem da versão ativa: "
+        f"{current_data.get('version') or current_v} · "
+        f"{str(current_data.get('created_at') or '—')[:19].replace('T', ' ')} · "
+        f"{current_data.get('created_by') or '—'}"
+    )
+    if current_data.get("motivo"):
+        st.caption(f"Motivo: {current_data.get('motivo')}")
+
+
+def _render_contexto_detail(entity: dict, versions: list[dict], base_url: str = "", actor: str = "") -> None:
+    """Detalhe de contexto com preview de referências resolvidas e origem da versão."""
+    current_v = entity.get("current_version", "v1")
+    current_data = next((v for v in versions if v.get("version") == current_v), entity)
+
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Catálogo", current_data.get("catalogo_id") or "—")
+    col_b.metric("Perfil", current_data.get("perfil_id") or "—")
+    col_c.metric("Jurisdição", current_data.get("jurisdicao_id") or "—")
+    col_d.metric("Tema", current_data.get("tema_id") or "—")
+
+    refs = {
+        "catalogo_id": current_data.get("catalogo_id"),
+        "perfil_id": current_data.get("perfil_id"),
+        "jurisdicao_id": current_data.get("jurisdicao_id"),
+        "tema_id": current_data.get("tema_id"),
+    }
+    statuses = _resolve_context_reference_statuses(base_url=base_url, actor=actor, refs=refs)
+    st.dataframe(statuses, hide_index=True, use_container_width=True)
+
+    st.caption(
+        "Origem da versão ativa: "
+        f"{current_data.get('version') or current_v} · "
+        f"{str(current_data.get('created_at') or '—')[:19].replace('T', ' ')} · "
+        f"{current_data.get('created_by') or '—'}"
+    )
+    if current_data.get("motivo"):
+        st.caption(f"Motivo: {current_data.get('motivo')}")
+
+
+def _resolve_context_reference_statuses(base_url: str, actor: str, refs: dict[str, str | None]) -> list[dict[str, str]]:
+    available: dict[str, set[str]] = {
+        "catalogo_id": set(),
+        "perfil_id": set(),
+        "jurisdicao_id": set(),
+        "tema_id": set(),
+    }
+    try:
+        cats = api_call(method="GET", path="/api/catalogs", base_url=base_url, actor=actor).get("items") or []
+        available["catalogo_id"] = {str(x) for x in cats}
+    except Exception:
+        pass
+    try:
+        per = api_call(method="GET", path="/api/perfis", base_url=base_url, actor=actor).get("items") or []
+        available["perfil_id"] = {str(x.get("id")) for x in per if isinstance(x, dict) and x.get("id")}
+    except Exception:
+        pass
+    try:
+        jur = api_call(method="GET", path="/api/jurisdicoes", base_url=base_url, actor=actor).get("items") or []
+        available["jurisdicao_id"] = {str(x.get("id")) for x in jur if isinstance(x, dict) and x.get("id")}
+    except Exception:
+        pass
+    try:
+        tem = api_call(method="GET", path="/api/temas", base_url=base_url, actor=actor).get("items") or []
+        available["tema_id"] = {str(x.get("id")) for x in tem if isinstance(x, dict) and x.get("id")}
+    except Exception:
+        pass
+
+    rows: list[dict[str, str]] = []
+    for field, value in refs.items():
+        val = str(value or "").strip()
+        if not val:
+            status = "vazio"
+        elif not available.get(field):
+            status = "nao verificado"
+        elif val in available[field]:
+            status = "ok"
+        else:
+            status = "nao encontrado"
+        rows.append({"Campo": field, "Valor": val or "—", "Status": status})
+    return rows

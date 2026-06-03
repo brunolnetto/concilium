@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-CORPO-BDTC-100-PA1",
+  "descricao": "CORPO DE BDTC D = 1,00 M PA1 - AREIA, BRITA E PEDRA DE MÃO COMERCIAIS",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-CORPO-BDTC-100-PA1",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 4420.061483,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "diesel": 0.0,
+    "material": 2526.764997,
+    "equipamentos": 1893.296486,
+    "total": 4420.061483
+  },
+  "producao_id_ref": "CPU-DREN-CORPO-BDTC-100-PA1-PROD-001"
+}

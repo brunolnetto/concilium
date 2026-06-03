@@ -7,7 +7,6 @@ from concilium.application.services.project_repository import ProjectRepository
 
 from .file_project_repository import FileProjectRepository
 
-
 DEFAULT_STORE_BACKEND = "filesystem"
 _BACKEND_ALIASES: dict[str, str] = {
     "filesystem": "filesystem",
@@ -16,11 +15,16 @@ _BACKEND_ALIASES: dict[str, str] = {
     "local": "filesystem",
     "sharepoint": "sharepoint",
     "s3": "s3",
+    "azure": "azure",
+    "azure_blob": "azure",
+    "gdrive": "gdrive",
+    "google_drive": "gdrive",
+    "drive": "gdrive",
 }
 
 
 def _projects_prefix() -> str:
-    value = (os.environ.get("CONCILIUM_STORE_PROJECTS_PREFIX") or "projetos").strip().strip("/")
+    value = (os.environ.get("CONCILIUM__STORE_PROJECTS_PREFIX") or "projetos").strip().strip("/")
     return value or "projetos"
 
 
@@ -29,7 +33,7 @@ def _build_sharepoint_repository() -> ProjectRepository:
 
     from .storage_project_repository import StorageProjectRepository
 
-    cache_dir_raw = (os.environ.get("CONCILIUM_SP_CACHE_DIR") or "").strip()
+    cache_dir_raw = (os.environ.get("CONCILIUM__SP_CACHE_DIR") or "").strip()
     cache_dir = Path(cache_dir_raw).expanduser() if cache_dir_raw else None
     storage = SharePointBlobStorage.from_env(cache_dir=cache_dir)
     return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
@@ -44,15 +48,33 @@ def _build_s3_repository() -> ProjectRepository:
     return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
 
 
+def _build_azure_repository() -> ProjectRepository:
+    from concilium.infrastructure.adapters.azure_blob_storage import AzureBlobStorage
+
+    from .storage_project_repository import StorageProjectRepository
+
+    storage = AzureBlobStorage.from_env()
+    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
+
+
+def _build_gdrive_repository() -> ProjectRepository:
+    from concilium.infrastructure.adapters.gdrive_blob_storage import GoogleDriveBlobStorage
+
+    from .storage_project_repository import StorageProjectRepository
+
+    storage = GoogleDriveBlobStorage.from_env()
+    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
+
+
 def resolve_store_backend() -> str:
     """Resolve backend name for project repository from environment."""
-    value = (os.environ.get("CONCILIUM_STORE_BACKEND") or DEFAULT_STORE_BACKEND).strip().lower()
+    value = (os.environ.get("CONCILIUM__STORE_BACKEND") or DEFAULT_STORE_BACKEND).strip().lower()
     value = value or DEFAULT_STORE_BACKEND
     return _BACKEND_ALIASES.get(value, value)
 
 
 def build_project_repository(projects_root: Path) -> ProjectRepository:
-    """Build ProjectRepository according to CONCILIUM_STORE_BACKEND.
+    """Build ProjectRepository according to CONCILIUM__STORE_BACKEND.
 
     Current supported backends:
     - filesystem/local_json (default)
@@ -66,8 +88,12 @@ def build_project_repository(projects_root: Path) -> ProjectRepository:
         return _build_sharepoint_repository()
     if backend == "s3":
         return _build_s3_repository()
+    if backend == "azure":
+        return _build_azure_repository()
+    if backend == "gdrive":
+        return _build_gdrive_repository()
 
     raise ValueError(
-        "Unsupported CONCILIUM_STORE_BACKEND='"
-        f"{backend}'. Supported backends: local_json, filesystem, sharepoint, s3."
+        "Unsupported CONCILIUM__STORE_BACKEND='"
+        f"{backend}'. Supported backends: local_json, filesystem, sharepoint, s3, azure, gdrive."
     )

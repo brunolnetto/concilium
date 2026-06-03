@@ -1,0 +1,77 @@
+# Materiais e aliases — Concilium Semantic Layer v1.0
+# Cobre insumos materiais dos 11 CPUs
+#
+# Formato:
+#   <canonical_id>:
+#     aliases: variações aceitas (case-insensitive)
+#     domain: earthwork | pavement | drainage | structure
+
+bgtc_mix:
+  aliases:
+    - "bgtc"
+    - "brita graduada tratada com cimento"
+    - "base cimentada"
+    - "bgc"
+  domain: pavement
+
+cbuq_faixa_c:
+  aliases:
+    - "cbuq"
+    - "cbuq faixa c"
+    - "concreto betuminoso usinado"
+    - "concreto asfáltico"
+    - "asfalto usinado"
+    - "ca usinado"
+  domain: pavement
+
+manilha_ceramica_300:
+  aliases:
+    - "manilha cerâmica dn300"
+    - "manilha dn300"
+    - "tubo cerâmico 300"
+    - "tubulação dn300"
+    - "manilha 300"
+  domain: drainage
+
+cimento_cp:
+  aliases:
+    - "cimento"
+    - "cpii"
+    - "cp ii"
+    - "cimento portland"
+  domain: structure
+
+areia_media:
+  aliases:
+    - "areia"
+    - "areia média"
+    - "areia lavada"
+  domain: structure
+
+brita_1:
+  aliases:
+    - "brita"
+    - "brita 1"
+    - "pedra britada"
+    - "brita graduada"
+  domain: structure
+
+solo_natural:
+  aliases:
+    - "material de 1a categoria"
+    - "material 1a"
+    - "material 2a categoria"
+    - "material 2a"
+    - "material 3a categoria"
+    - "material 3a"
+    - "solo argilo"
+    - "solo argiloso"
+  domain: earthwork
+
+diesel_s10:
+  aliases:
+    - "diesel"
+    - "combustivel"
+    - "diesel s10"
+    - "oleo diesel"
+  domain: earthwork

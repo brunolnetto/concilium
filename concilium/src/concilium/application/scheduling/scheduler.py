@@ -10,6 +10,8 @@ Implements a Serial Schedule Generation Scheme with pluggable priority rules:
 
 from __future__ import annotations
 
+import math
+
 from .models import (
     Activity,
     ActivityDAG,
@@ -23,12 +25,28 @@ from .models import (
 _SUPPORTED_RULES = {"MINSLK", "LPT", "MAXRES", "ES", "GR"}
 
 
-def _compute_earliest_starts(act_map: dict, dag, topo_order: list) -> dict:
+def _pred_release(pred_id: str, succ_id: str, pred_start: int, dag: ActivityDAG, act_map: dict) -> int:
+    """Semana em que o predecessor `pred_id` libera o sucessor `succ_id`.
+
+    ADR-081: start_j ≥ start_i + ceil(θ × duration_i)
+    θ=1.0 (default) → comportamento clássico FS (start + duration = end).
+    θ=0.0 → sucessor pode iniciar quando predecessor inicia (SS-like).
+    """
+    θ = dag.get_threshold(pred_id, succ_id)
+    duration = act_map[pred_id].duration_weeks
+    return pred_start + math.ceil(θ * duration)
+
+
+def _compute_earliest_starts(act_map: dict, dag: ActivityDAG, topo_order: list) -> dict:
+    """ADR-081: usa completion_threshold_pct por aresta para calcular earliest start."""
     earliest_start: dict[str, int] = {}
     for aid in topo_order:
         preds = dag.predecessors(aid)
         if preds:
-            earliest_start[aid] = max(earliest_start.get(p, 0) + act_map[p].duration_weeks for p in preds)
+            earliest_start[aid] = max(
+                _pred_release(p, aid, earliest_start.get(p, 0), dag, act_map)
+                for p in preds
+            )
         else:
             earliest_start[aid] = 0
     return earliest_start
@@ -52,12 +70,25 @@ def _check_feasibility(act_map: dict, topo_order: list, earliest_start: dict, de
         raise ScheduleError(f"Infeasible: minimum project duration {min_duration}w exceeds deadline {deadline_weeks}w")
 
 
+def _demand_at_offset(activity, offset: int, res: str, qty: int) -> int:
+    """Return actual demand for resource `res` at week `offset` within the activity.
+
+    ADR-074: When ``activity.ramp_profile`` is set, the demand is scaled by the
+    fractional profile value (float in [0, 1]) relative to the peak ``qty``.
+    Rounds to nearest integer; minimum is 0.
+    """
+    if activity.ramp_profile is None or offset >= len(activity.ramp_profile):
+        return qty
+    return max(0, round(qty * activity.ramp_profile[offset]))
+
+
 def _book_resources(activity, t: int, end: int, resource_usage: dict) -> None:
-    for w in range(t, end):
+    for offset, w in enumerate(range(t, end)):
         if w not in resource_usage:
             resource_usage[w] = {}
         for res, qty in activity.required_resources.items():
-            resource_usage[w][res] = resource_usage[w].get(res, 0) + qty
+            demand = _demand_at_offset(activity, offset, res, qty)
+            resource_usage[w][res] = resource_usage[w].get(res, 0) + demand
 
 
 class SerialScheduler:
@@ -90,11 +121,31 @@ class SerialScheduler:
         _check_feasibility(act_map, topo_order, earliest_start, deadline_weeks)
         resource_usage: dict[int, dict[str, int]] = {}
         scheduled: dict[str, ScheduledActivity] = {}
-        ordered = self._sort_by_priority(topo_order, act_map, total_float, earliest_start)
-        for aid in ordered:
+
+        # ADR-081: SSGS com ready list — atividade só entra na fila quando todos
+        # os predecessores já foram agendados. Isso garante que o sort por priority
+        # nunca viola a ordem topológica, mesmo com thresholds θ < 1.0.
+        from collections import defaultdict as _ddict
+
+        in_degree: dict[str, int] = _ddict(int)
+        for p, s in dag.precedence:
+            in_degree[s] += 1
+        ready: list[str] = [aid for aid in topo_order if in_degree[aid] == 0]
+
+        while ready:
+            # Ordena a ready list pela regra de prioridade (float, earliest, etc.)
+            ready = self._sort_by_priority(ready, act_map, total_float, earliest_start)
+            aid = ready.pop(0)
             a = act_map[aid]
             preds = dag.predecessors(aid)
-            pred_finish = max((scheduled[p].end_week for p in preds if p in scheduled), default=0)
+            # Todos os predecessores estão em scheduled (invariante da ready list)
+            pred_finish = max(
+                (
+                    _pred_release(p, aid, scheduled[p].start_week - 1, dag, act_map)
+                    for p in preds
+                ),
+                default=0,
+            )
             t = max(earliest_start[aid], pred_finish)
             t = self._find_start(a, t, resource_usage, pool, deadline_weeks)
             end = t + a.duration_weeks
@@ -104,8 +155,14 @@ class SerialScheduler:
                 end_week=end + 1,
                 duration_weeks=a.duration_weeks,
                 assigned_resources=dict(a.required_resources),
+                ramp_profile=a.ramp_profile,  # ADR-074: propagate for cost computation
             )
             _book_resources(a, t, end, resource_usage)
+            # Adiciona sucessores à ready list quando todos seus predecessores estão agendados
+            for succ in dag.successors(aid):
+                in_degree[succ] -= 1
+                if in_degree[succ] == 0:
+                    ready.append(succ)
         result_acts = list(scheduled.values())
         makespan_0 = max(s.end_week - 1 for s in result_acts) if result_acts else 0
         metrics = self._compute_metrics(result_acts, resource_usage, pool, makespan_0, deadline_weeks)
@@ -126,15 +183,28 @@ class SerialScheduler:
         topo_order: list[str],
         deadline_weeks: int,
     ) -> dict[str, int]:
-        """Backward pass to compute Latest Finish times."""
+        """ADR-081: Backward pass para Latest Finish com threshold-aware.
+
+        Fórmula correta (para FS com θ):
+            LF[i] = min_j( LS[j] - ceil(θ_ij × d_i) + d_i )
+                  = min_j( LF[j] - d_j - ceil(θ_ij × d_i) + d_i )
+
+        Para θ=1.0 (FS clássico):
+            LF[i] = min_j( LS[j] ) = min_j( LF[j] - d_j )
+            (equivalente à fórmula clássica sem o `+ d_i` errado)
+        """
         lf: dict[str, int] = {}
         for aid in reversed(topo_order):
             succs = dag.successors(aid)
             if succs:
-                lf[aid] = (
-                    min(lf.get(s, deadline_weeks) - act_map[s].duration_weeks for s in succs)
-                    + act_map[aid].duration_weeks
+                d_i = act_map[aid].duration_weeks
+                lf[aid] = min(
+                    lf.get(s, deadline_weeks) - act_map[s].duration_weeks  # LS[s]
+                    - math.ceil(dag.get_threshold(aid, s) * d_i)           # - ceil(θ × d_i)
+                    + d_i                                                   # + d_i → LF[i]
+                    for s in succs
                 )
+                lf[aid] = max(lf[aid], act_map[aid].duration_weeks)  # LF ≥ d_i
             else:
                 lf[aid] = deadline_weeks
         return lf
@@ -166,9 +236,19 @@ class SerialScheduler:
         pool: ResourcePool,
         deadline_weeks: int,
     ) -> int:
-        """Find the earliest week >= earliest where resources are free for `duration_weeks`."""
+        """Find the earliest week >= earliest where resources are free for `duration_weeks`.
+
+        ADR-072: When ``activity.window_weeks`` is set the activity must
+        finish by ``window_weeks`` (relative to t=0), so the latest allowed
+        start is ``window_weeks - duration_weeks``.
+        """
         t = earliest
-        while t + activity.duration_weeks <= deadline_weeks:
+        # ADR-072: enforce per-activity corridor window constraint
+        if activity.window_weeks is not None:
+            max_start = min(deadline_weeks, activity.window_weeks) - activity.duration_weeks
+        else:
+            max_start = deadline_weeks - activity.duration_weeks
+        while t <= max_start:
             if self._can_schedule(activity, t, resource_usage, pool):
                 return t
             t += 1
@@ -181,13 +261,19 @@ class SerialScheduler:
         resource_usage: dict[int, dict[str, int]],
         pool: ResourcePool,
     ) -> bool:
-        """Check if resources are available for all weeks [start, start+duration)."""
-        for w in range(start, start + activity.duration_weeks):
+        """Check if resources are available for all weeks [start, start+duration).
+
+        ADR-074: Uses ``ramp_profile`` to compute per-week demand when available,
+        so weeks at the start/end of an activity (ramp-up/down phases) need fewer
+        resources than the peak and may fit in windows that the flat model rejects.
+        """
+        for offset, w in enumerate(range(start, start + activity.duration_weeks)):
             week_usage = resource_usage.get(w, {})
             for res, qty in activity.required_resources.items():
+                demand = _demand_at_offset(activity, offset, res, qty)
                 available = pool.resources.get(res, 0)
                 used = week_usage.get(res, 0)
-                if used + qty > available:
+                if used + demand > available:
                     return False
         return True
 

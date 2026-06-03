@@ -1,0 +1,21 @@
+{
+  "codigo": "MO-OPERADOR-DE-MOTOSSER",
+  "tipo": "MAO_OBRA",
+  "descricao": "Operador de motosserra",
+  "unidade": "mes",
+  "preco_unitario": 3547.404,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "horista_CE",
+    "horas_extras_pct_padrao": 0.25,
+    "_audit_encargos": "Removido: custo_com_encargos=7307.65 (fator=2.06). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009).",
+    "tipo_contrato": "CLT"
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_compartilhavel",
+    "capacidade_cobertura": 1,
+    "fracao_uso": 0.5
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

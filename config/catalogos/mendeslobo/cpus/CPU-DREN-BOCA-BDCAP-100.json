@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-BOCA-BDCAP-100",
+  "descricao": "BOCA BDCAP 1,00 X 1,00 M - ESCONSIDADE 0° - AREIA E BRITA COMERCIAIS",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-BOCA-BDCAP-100",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 23905.584984,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "diesel": 0.0,
+    "material": 11279.1942,
+    "equipamentos": 12626.390784,
+    "total": 23905.584984
+  },
+  "producao_id_ref": "CPU-DREN-BOCA-BDCAP-100-PROD-001"
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Any
@@ -74,6 +75,7 @@ def _build_summary_row(report: dict) -> dict:
     }
 
 
+@dataclass(slots=True)
 class BenchmarkBatchRunner:
     benchmarks_root: Path
     config_root: Path

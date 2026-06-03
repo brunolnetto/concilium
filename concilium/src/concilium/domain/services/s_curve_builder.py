@@ -48,7 +48,10 @@ def _scb_collect_direct_costs(sched_activities: list, equipe_lookup: dict) -> tu
             n = dist.num_equipes
             if n <= 0:
                 continue
-            custo_semana = (custo_semanal_base + comb_semanal * dist.eficiencia) * n
+            # ADR-082: combustível escala com a produtividade efetiva (η_j = praticabilidade
+            # × utilização = fator_total), não com a utilização isolada (eficiencia).
+            eta = float(getattr(dist, "fator_total", None) or dist.eficiencia)
+            custo_semana = (custo_semanal_base + comb_semanal * eta) * n
             custo_por_semana[semana_iso] += custo_semana
             n_equipes_por_semana[semana_iso] += n
             for eq in equipe.equipamentos:

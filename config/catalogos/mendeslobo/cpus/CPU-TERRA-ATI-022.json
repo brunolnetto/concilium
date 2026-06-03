@@ -1,0 +1,15 @@
+{
+  "codigo": "CPU-TERRA-ATI-022",
+  "descricao": "Espalhamento e compactação rachão",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-BDTC-CORPO-DN1200-PA2",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-022-PROD-001"
+}

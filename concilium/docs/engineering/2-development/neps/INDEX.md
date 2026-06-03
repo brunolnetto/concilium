@@ -80,6 +80,18 @@ Esforço: XS (<30 min) | S (30 min–2h) | M (2–4h) | L (4–8h) | XL (>8h)
 | [NEP-024](nep-024-cubo-analitico-multidimensional-granularidade-temporal.md) | Cubo analítico multidimensional com granularidade temporal múltipla | Backlog | 🟠 Alto | L |
 | [NEP-025](nep-025-pe-backtracking-orientado-ao-cubo.md) | PE e backtracking orientados ao cubo analítico | Backlog | 🟠 Alto | L |
 | [NEP-026](nep-026-descontinuacao-legacy-alias-lingua-franca.md) | Descontinuação de legacy/alias e consolidação da língua franca de contratos | Concluído | 🔴 Crítico | XL |
+| [NEP-027](nep-027-centralizacao-de-inferencias-de-benchmark.md) | Centralização das inferências de benchmark em camada única | Em Andamento | 🔴 Crítico | XL |
+| [NEP-028](nep-028-governanca-precedencia-causal-e-isolamento-catalogo-projeto.md) | Governança de precedência causal e isolamento de catálogo por projeto | Em Andamento | 🔴 Crítico | XL |
+| [NEP-029](nep-029-divergencia-caminhos-precificacao-unitaria.md) | Divergência estrutural na precificação unitária — dois caminhos incompatíveis e ausência de fonte canônica | Em Andamento | 🔴 Crítico | XL |
+| [NEP-030](nep-030-injecao-minima-honesta-benchmark.md) | Injeção mínima honesta na validação de benchmark — remoção de overrides circulares | Em Andamento | 🔴 Crítico | L |
+| [NEP-031](nep-031-lacunas-modelo-custo-operacional.md) | Lacunas do modelo de custo operacional frente ao enunciado de planejamento | Backlog | 🟠 Alto | XL |
+| [NEP-032](nep-032-expurgo-precos-unitarios-sbdi-precificacao-bottom-up.md) | Expurgo de precos_unitarios_sbdi — precificação bottom-up canônica | Em Andamento | 🔴 Crítico | L |
+| [NEP-033](nep-033-migracao-pdf-renderer-reportlab.md) | Migração do renderer PDF de fpdf2 para ReportLab/Platypus | Concluído | 🟠 Alto | L |
+| [NEP-034](nep-034-convencao-prefixo-xx-helpers-module-level.md) | Convenção de prefixo `_XX_` para helpers module-level | Concluído | 🟡 Médio | S |
+| [NEP-035](nep-035-decomposicao-eficiencia-eta-s-p-w-observabilidade.md) | Decomposição Causal da Eficiência η_s × η_p × η_w e Hierarquia de Observabilidade | Em Andamento | 🔴 Crítico | XL |
+| [NEP-036](nep-036-campo-eficiencia-matricial-log-linear.md) | Campo de Eficiência Matricial E ∈ ℝ^{I×T} e Decomposição Log-Linear | Em Andamento | 🟠 Alto | XL |
+| [NEP-037](nep-037-encargos-sociais-do-custo-direto-para-bdi.md) | Migração dos Encargos Sociais do Custo Direto para a Camada BDI | Em Andamento | 🔴 Crítico | XL |
+| [NEP-038](nep-038-criticidade-rcpsp-compressao-cronograma.md) | Criticidade RCPSP e Teoria de Compressão de Cronograma | Proposta | 🟡 Alta | L |
 
 ---
 

@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 
 _FATOR_LABELS: dict[str, str] = {
     "F_ETA_CLIMA": "Clima e sazonalidade",
+    "F_CALENDARIO": "Feriados e recesso operacional",
+    "F_CALENDARIO_ESTRUTURAL": "Ineficiência estrutural de calendário",
     "F_ETA_CROSS": "Mobilização na época errada",
     "F_IND_CLIMA": "Projeto mais longo por clima",
     "F_IND_RAMP": "Projeto mais longo pela entrada gradual",
@@ -22,6 +24,10 @@ _FATOR_LABELS: dict[str, str] = {
 _FATOR_DESCRICOES: dict[str, str] = {
     "F_ETA_CLIMA": "Dias improdutivos por chuva ou condições adversas aumentam o custo "
     "porque a equipe continua sendo paga mesmo sem produzir.",
+    "F_CALENDARIO": "Dias não úteis por feriados, pontos facultativos e recesso reduzem "
+    "a capacidade civil da semana e elevam custo de permanência.",
+    "F_CALENDARIO_ESTRUTURAL": "Parcela estrutural não evitável da indisponibilidade civil "
+    "(feriados e recesso), análoga à quantização e restrições de mobilização.",
     "F_ETA_CROSS": "A mobilização foi iniciada no período de maior adversidade climática. "
     "Se iniciada em outra época, este custo seria evitável.",
     "F_IND_CLIMA": "Como o projeto durou mais por causa do clima, os custos fixos do canteiro "
@@ -36,6 +42,8 @@ _FATOR_DESCRICOES: dict[str, str] = {
 
 _FATOR_EVITAVEL: dict[str, bool] = {
     "F_ETA_CLIMA": False,
+    "F_CALENDARIO": True,
+    "F_CALENDARIO_ESTRUTURAL": False,
     "F_ETA_CROSS": True,
     "F_IND_CLIMA": False,
     "F_IND_RAMP": True,

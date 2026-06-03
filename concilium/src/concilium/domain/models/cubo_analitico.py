@@ -1,27 +1,25 @@
-"""CuboAnalitico — cubo analítico 4D do espaço ontológico de planejamento (ADR-058 extensão).
+"""CuboAnalitico — cubo analítico do espaço ontológico de planejamento (ADR-087).
 
-Dimensões: categoria × atividade × tempo × componente_BDI
+Hierarquia dimensional: {natureza}.{atividade}.{categoria_insumo}.{propriedade}
+  - natureza:        direto | indireto
+  - atividade:       EapItem.item_id
+  - categoria_insumo: mao_obra | equipamento | material | verba
+  - propriedade:     salario_encargos | aluguel | combustivel | manutencao | consumivel | fixo
 
-O `insumo_id` foi intencionalmente excluído porque:
-  - Os custos já estão pré-agregados por (categoria, atividade) em EquipeDireta
-  - Análise por insumo é responsabilidade exclusiva de CurvaABCInsumo (ADR-058)
-  - A remoção reduz o cubo ~30× (de ~1.3M para ~43k células)
+Diesel é `equipamento.combustivel` (ADR-087/088/089):
+  - valor_rs: custo monetário (R$), BDI_diesel = 4% (fornecimento de mercadoria)
+  - valor_fisico: volume em litros (L), unidade_fisica = "L"
 
-Cada célula representa: quanto do preço de venda, em R$, em uma semana específica,
-para uma categoria de custo de uma atividade, pertence a um componente do BDI.
+Backward compatibility:
+  - CelulaAnalitica.categoria: property que retorna "diesel" para
+    (equipamento.combustivel), e a categoria_insumo para as demais.
+  - CelulaAnalitica.consumo_diesel_L: property que retorna valor_fisico
+    para células (equipamento.combustivel), 0.0 para outras.
 
-Células da categoria "diesel" carregam também `consumo_diesel_L` — o volume físico
-consumido na semana em litros. Grandeza física independente do preço: permite
-planejamento de abastecimento, rastreamento de emissões e análise de sensibilidade
-quando o preço do diesel varia.
+Invariante por (categoria_insumo, propriedade, atividade, semana):
+    sum(célula.valor_rs for comp in COMPONENTES_BDI) ≈ PV_semana
 
-    consumo_L_semana = Σ_equip { consumo_litros_hora × horas_dia × dias_semana
-                                  × eficiencia × num_equipes × num_unidades }
-
-Invariante por (categoria, atividade, semana):
-    sum(célula.valor_rs for comp in COMPONENTES_BDI) ≈ PV_semana(categoria, atividade)
-
-Onde PV_semana = custo_mensal × (num_equipes/SEMANAS_POR_MES) × (1 + BDI_categoria)
+Onde PV_semana = custo_prop_semanal × (1 + BDI_(categoria_insumo, propriedade))
 """
 
 from __future__ import annotations
@@ -50,14 +48,17 @@ TRIBUTOS_BDI = frozenset({"tributo_cofins", "tributo_iss", "tributo_pis", "tribu
 OVERHEAD_BDI = frozenset({"overhead_ac", "overhead_df", "overhead_r", "overhead_cr"})
 TemporalGranularity = Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"]
 
+# Propriedades válidas por categoria_insumo (ADR-087 §1.2)
+PROPRIEDADES_POR_CATEGORIA: dict[str, tuple[str, ...]] = {
+    "mao_obra":    ("salario_encargos",),
+    "equipamento": ("aluguel", "combustivel", "manutencao"),
+    "material":    ("consumivel",),
+    "verba":       ("fixo",),
+}
+
 
 def _temporal_bucket_from_week_iso(week_iso: str, granularidade: TemporalGranularity) -> str:
-    """Mapeia uma semana ISO para uma janela temporal maior.
-
-    O bucket usa a segunda-feira da semana ISO como âncora para derivar mês,
-    bimestre, trimestre, semestre e ano.
-    """
-
+    """Mapeia uma semana ISO para uma janela temporal maior."""
     if granularidade == "semana":
         return week_iso
 
@@ -66,19 +67,15 @@ def _temporal_bucket_from_week_iso(week_iso: str, granularidade: TemporalGranula
 
     if granularidade == "mes":
         return f"{anchor.year:04d}-{anchor.month:02d}"
-
     if granularidade == "bimestre":
         bimestre = ((anchor.month - 1) // 2) + 1
         return f"{anchor.year:04d}-B{bimestre}"
-
     if granularidade == "trimestre":
         trimestre = ((anchor.month - 1) // 3) + 1
         return f"{anchor.year:04d}-T{trimestre}"
-
     if granularidade == "semestre":
         semestre = ((anchor.month - 1) // 6) + 1
         return f"{anchor.year:04d}-S{semestre}"
-
     if granularidade == "ano":
         return f"{anchor.year:04d}"
 
@@ -87,19 +84,64 @@ def _temporal_bucket_from_week_iso(week_iso: str, granularidade: TemporalGranula
 
 @dataclass(frozen=True)
 class CelulaAnalitica:
-    """Elemento atômico do cubo: (categoria, atividade, semana, componente_BDI) → R$.
+    """Elemento atômico do cubo — ADR-087 hierarquia dimensional.
 
-    Para células com categoria="diesel", `consumo_diesel_L` carrega o volume físico
-    em litros consumido naquela semana por aquela atividade. Para todas as demais
-    categorias, `consumo_diesel_L` é 0.0.
+    Campos principais (nova hierarquia):
+        natureza:        "direto" | "indireto"
+        atividade_id:    EapItem.item_id
+        categoria_insumo:"mao_obra" | "equipamento" | "material" | "verba"
+        propriedade:     sub-dimensão da categoria (ver PROPRIEDADES_POR_CATEGORIA)
+        semana_iso:      "2026-W23"
+        componente_bdi:  ver COMPONENTES_BDI
+        valor_rs:        R$ desta célula no preço de venda
+        valor_fisico:    grandeza física (L para combustivel, 0 para outros)
+        unidade_fisica:  "L" | "h" | "" (vazio para células puramente monetárias)
+
+    Backward compatibility (properties derivadas):
+        categoria:       mapeia para "diesel"|"mao_obra"|"equipamento"|"material"
+        consumo_diesel_L:retorna valor_fisico quando propriedade="combustivel"
     """
 
-    categoria: str  # "mao_obra" | "equipamento" | "diesel" | "material"
-    atividade_id: str  # EapItem.item_id
-    semana_iso: str  # "2026-W23"
-    componente_bdi: str  # ver COMPONENTES_BDI
-    valor_rs: float  # R$ desta célula no preço de venda
-    consumo_diesel_L: float = 0.0  # litros/semana — não-zero apenas para categoria="diesel"
+    # ── ADR-087: hierarquia dimensional ──────────────────────────────────────
+    natureza: Literal["direto", "indireto"]
+    atividade_id: str
+    categoria_insumo: Literal["mao_obra", "equipamento", "material", "verba"]
+    propriedade: str           # aluguel | combustivel | manutencao | salario_encargos | consumivel | fixo
+    semana_iso: str            # "2026-W23"
+    componente_bdi: str        # ver COMPONENTES_BDI
+    valor_rs: float
+    valor_fisico: float = 0.0  # grandeza física (L para combustivel, etc.)
+    unidade_fisica: str = ""   # "L" | "h" | ""
+
+    # ── Backward compatibility properties ────────────────────────────────────
+
+    @property
+    def categoria(self) -> str:
+        """Mapeia para o modelo legado de 4 categorias (ADR-069 / ADR-090).
+
+        ADR-090: diesel é material.combustivel (não mais equipamento.combustivel).
+        material.combustivel → "diesel"  (backward compat)
+        material.consumivel  → "material"
+        equipamento.*        → "equipamento"
+        mao_obra.*           → "mao_obra"
+        verba.*              → "material"
+        """
+        if self.categoria_insumo == "material" and self.propriedade == "combustivel":
+            return "diesel"
+        if self.categoria_insumo == "verba":
+            return "material"
+        return self.categoria_insumo
+
+    @property
+    def consumo_diesel_L(self) -> float:
+        """Volume de combustível em litros (backward compat com ADR-069)."""
+        if (self.categoria_insumo == "material"
+                and self.propriedade == "combustivel"
+                and self.unidade_fisica == "L"):
+            return self.valor_fisico
+        return 0.0
+
+    # ── Predicados semânticos ────────────────────────────────────────────────
 
     def is_tributo(self) -> bool:
         return self.componente_bdi in TRIBUTOS_BDI
@@ -114,12 +156,20 @@ class CelulaAnalitica:
         return self.componente_bdi == "custo_direto"
 
     def is_diesel(self) -> bool:
-        return self.categoria == "diesel"
+        """True se esta célula representa combustível — ADR-090: material.combustivel."""
+        return self.categoria_insumo == "material" and self.propriedade == "combustivel"
+
+    def is_equipamento(self) -> bool:
+        """True para qualquer sub-propriedade de equipamento (incluindo combustivel)."""
+        return self.categoria_insumo == "equipamento"
+
+    def is_mao_obra(self) -> bool:
+        return self.categoria_insumo == "mao_obra"
 
 
 @dataclass(frozen=True)
 class CuboAnalitico:
-    """Cubo analítico 4D (categoria × atividade × tempo × componente_BDI).
+    """Cubo analítico — ADR-087 hierarquia dimensional.
 
     Gerado deterministicamente por CuboAnaliticoBuilder.build() a partir do canonical.
     Imutável após construção. Suporta projeções via slice() e group_by().
@@ -128,14 +178,12 @@ class CuboAnalitico:
     projeto_id: str
     gerado_em: str
     regime_bdi: str  # "pre_reforma" | "transicao" | "pleno_cbs_ibs"
-    total_preco_venda: float  # soma de todas as células
-    celulas: tuple[CelulaAnalitica, ...]  # ~43k células para projeto típico
+    total_preco_venda: float
+    celulas: tuple[CelulaAnalitica, ...]
 
     # ── Projeções fundamentais ─────────────────────────────────────────────
 
     def _aggregate_temporal(self, granularidade: TemporalGranularity, predicate=None) -> dict[str, dict[str, float]]:
-        """Agrupa células por janela temporal e componente BDI."""
-
         result: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         for c in self.celulas:
             if predicate is not None and not predicate(c):
@@ -145,8 +193,6 @@ class CuboAnalitico:
         return {k: dict(v) for k, v in sorted(result.items())}
 
     def _aggregate_temporal_scalar(self, granularidade: TemporalGranularity, predicate=None) -> dict[str, float]:
-        """Agrupa células por janela temporal e soma um único valor por bucket."""
-
         result: dict[str, float] = defaultdict(float)
         for c in self.celulas:
             if predicate is not None and not predicate(c):
@@ -156,8 +202,6 @@ class CuboAnalitico:
         return dict(sorted(result.items()))
 
     def _aggregate_natureza_temporal(self, granularidade: TemporalGranularity) -> dict[str, dict[str, float]]:
-        """Agrupa células por janela temporal e separa custo direto vs. indireto."""
-
         result: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         for c in self.celulas:
             bucket = _temporal_bucket_from_week_iso(c.semana_iso, granularidade)
@@ -166,10 +210,6 @@ class CuboAnalitico:
         return {k: dict(v) for k, v in sorted(result.items())}
 
     def exposicao_tributaria_semanal(self) -> dict[str, float]:
-        """Total de tributos (ISS+COFINS+PIS+CSSL+IR) por semana ISO.
-
-        Responde: "Em que semanas pago mais impostos?"
-        """
         result: dict[str, float] = defaultdict(float)
         for c in self.celulas:
             if c.is_tributo():
@@ -177,15 +217,9 @@ class CuboAnalitico:
         return dict(sorted(result.items()))
 
     def exposicao_tributaria_temporal(self, granularidade: TemporalGranularity = "semana") -> dict[str, float]:
-        """Total de tributos por janela temporal maior que semana."""
-
         return self._aggregate_temporal_scalar(granularidade, predicate=lambda c: c.is_tributo())
 
     def exposicao_tributaria_por_tipo(self) -> dict[str, float]:
-        """Total acumulado por tipo de tributo ao longo do projeto.
-
-        Responde: "Quanto pago de ISS vs. COFINS vs. IR no total?"
-        """
         result: dict[str, float] = defaultdict(float)
         for c in self.celulas:
             if c.is_tributo():
@@ -193,26 +227,13 @@ class CuboAnalitico:
         return dict(result)
 
     def resumo_por_natureza(self) -> dict[str, float]:
-        """Resumo global por natureza de custo: direto vs. indireto."""
-
         indireto = round(self.total_overhead + self.total_margem + self.total_tributos, 2)
-        return {
-            "direto": self.total_custo_direto,
-            "indireto": indireto,
-        }
+        return {"direto": self.total_custo_direto, "indireto": indireto}
 
-    def resumo_por_natureza_temporal(
-        self, granularidade: TemporalGranularity = "semana"
-    ) -> dict[str, dict[str, float]]:
-        """Resumo por natureza de custo em uma granularidade temporal escolhida."""
-
+    def resumo_por_natureza_temporal(self, granularidade: TemporalGranularity = "semana") -> dict[str, dict[str, float]]:
         return self._aggregate_natureza_temporal(granularidade)
 
     def margem_por_atividade(self) -> dict[str, float]:
-        """Margem líquida (componente L) por atividade.
-
-        Responde: "Qual atividade contribui mais para a margem do projeto?"
-        """
         result: dict[str, float] = defaultdict(float)
         for c in self.celulas:
             if c.is_margem():
@@ -220,12 +241,6 @@ class CuboAnalitico:
         return dict(sorted(result.items(), key=lambda kv: kv[1], reverse=True))
 
     def composicao_preco_temporal(self, granularidade: TemporalGranularity = "semana") -> dict[str, dict[str, float]]:
-        """Composição do preço de venda por janela temporal: {periodo → {componente → R$}}.
-
-        Permite gráfico de barras empilhadas por semana, mês, bimestre, trimestre,
-        semestre ou ano.
-        custo_direto | overhead | margem | tributos
-        """
         return self._aggregate_temporal(granularidade)
 
     def composicao_preco_mensal(self) -> dict[str, dict[str, float]]:
@@ -244,36 +259,31 @@ class CuboAnalitico:
         return self.composicao_preco_temporal("ano")
 
     def composicao_por_categoria(self) -> dict[str, dict[str, float]]:
-        """Para cada categoria de custo, a decomposição agregada em R$.
-
-        Responde: "Na mão de obra, quanto vai a tributos vs. margem vs. custo?"
-        """
+        """Backward compat — usa c.categoria (property ADR-087)."""
         result: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         for c in self.celulas:
             result[c.categoria][c.componente_bdi] += c.valor_rs
         return {k: dict(v) for k, v in result.items()}
 
-    def consumo_diesel_temporal(self, granularidade: TemporalGranularity = "semana") -> dict[str, float]:
-        """Volume de diesel consumido por janela temporal em litros."""
+    def composicao_por_hierarquia(self) -> dict[tuple[str, str], dict[str, float]]:
+        """ADR-087: decomposição por (categoria_insumo, propriedade) × componente_bdi."""
+        result: dict[tuple[str, str], dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        for c in self.celulas:
+            result[(c.categoria_insumo, c.propriedade)][c.componente_bdi] += c.valor_rs
+        return {k: dict(v) for k, v in sorted(result.items())}
 
-        return self._aggregate_temporal_scalar(
-            granularidade,
-            predicate=lambda c: c.is_diesel() and c.consumo_diesel_L > 0 and c.componente_bdi == "custo_direto",
-        )
+    def consumo_diesel_temporal(self, granularidade: TemporalGranularity = "semana") -> dict[str, float]:
+        result: dict[str, float] = defaultdict(float)
+        for c in self.celulas:
+            if c.is_diesel() and c.consumo_diesel_L > 0 and c.componente_bdi == "custo_direto":
+                bucket = _temporal_bucket_from_week_iso(c.semana_iso, granularidade)
+                result[bucket] += c.consumo_diesel_L
+        return dict(sorted(result.items()))
 
     def consumo_diesel_semanal(self) -> dict[str, float]:
-        """Volume de diesel consumido por semana em litros (L/semana).
-
-        Agrega todas as atividades — útil para planejamento de abastecimento.
-        Responde: "Quanto diesel (em litros) preciso na semana 2026-W25?"
-        """
         return self.consumo_diesel_temporal("semana")
 
     def consumo_diesel_por_atividade(self) -> dict[str, float]:
-        """Volume total de diesel por atividade ao longo de toda a campanha (litros).
-
-        Responde: "Qual atividade consome mais combustível?"
-        """
         result: dict[str, float] = defaultdict(float)
         for c in self.celulas:
             if c.is_diesel() and c.consumo_diesel_L > 0 and c.componente_bdi == "custo_direto":
@@ -282,21 +292,19 @@ class CuboAnalitico:
 
     @property
     def total_consumo_diesel_L(self) -> float:
-        """Volume total de diesel consumido no projeto (litros)."""
         return round(
             sum(c.consumo_diesel_L for c in self.celulas if c.is_diesel() and c.componente_bdi == "custo_direto"),
             2,
         )
 
     def custo_direto_por_atividade_semana(self) -> dict[tuple[str, str], float]:
-        """{(atividade_id, semana_iso): R$ de custo direto} — base para EVM."""
         result: dict[tuple[str, str], float] = defaultdict(float)
         for c in self.celulas:
             if c.is_custo_direto():
                 result[(c.atividade_id, c.semana_iso)] += c.valor_rs
         return dict(result)
 
-    # ── Slice e group_by genéricos ─────────────────────────────────────────
+    # ── Slice e group_by ──────────────────────────────────────────────────────
 
     def slice(
         self,
@@ -304,15 +312,20 @@ class CuboAnalitico:
         atividade_id: str | None = None,
         semana_iso: str | None = None,
         componente_bdi: str | None = None,
+        # ADR-087: novos filtros hierárquicos
+        natureza: str | None = None,
+        categoria_insumo: str | None = None,
+        propriedade: str | None = None,
     ) -> CuboAnalitico:
-        """Filtra o cubo mantendo apenas células que satisfazem os critérios."""
-
         def match(c: CelulaAnalitica) -> bool:
             return (
-                (categoria is None or c.categoria == categoria)
+                (categoria is None or c.categoria == categoria)           # backward compat
                 and (atividade_id is None or c.atividade_id == atividade_id)
                 and (semana_iso is None or c.semana_iso == semana_iso)
                 and (componente_bdi is None or c.componente_bdi == componente_bdi)
+                and (natureza is None or c.natureza == natureza)          # ADR-087
+                and (categoria_insumo is None or c.categoria_insumo == categoria_insumo)
+                and (propriedade is None or c.propriedade == propriedade)
             )
 
         filtered = tuple(c for c in self.celulas if match(c))
@@ -325,13 +338,11 @@ class CuboAnalitico:
         )
 
     def group_by(self, *dims: str) -> dict[tuple, float]:
-        """Agrega valor_rs por combinação de dimensões.
+        """Agrega valor_rs por dimensões.
 
-        Dimensões válidas: "categoria", "atividade_id", "semana_iso", "componente_bdi"
-
-        Exemplo:
-            cubo.group_by("semana_iso", "componente_bdi")
-            → {("2026-W23", "tributo_iss"): 1234.56, ...}
+        Dimensões válidas (legacy + ADR-087):
+            "categoria", "atividade_id", "semana_iso", "componente_bdi",
+            "natureza", "categoria_insumo", "propriedade"
         """
         result: dict[tuple, float] = defaultdict(float)
         for c in self.celulas:
@@ -366,7 +377,6 @@ class CuboAnalitico:
         return round(self.total_margem / self.total_preco_venda, 6) if self.total_preco_venda > 0 else 0.0
 
     def to_dict(self) -> dict:
-        """Serialização compacta — projeta sumários e top aggregations."""
         return {
             "projeto_id": self.projeto_id,
             "gerado_em": self.gerado_em,

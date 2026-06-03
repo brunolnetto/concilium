@@ -1,0 +1,20 @@
+[skill]
+id = "12-registro-decisoes"
+phase = "Decisão"
+version = "1.1.0"
+descricao = "Registra decisão técnica humana estruturada com contexto do estado atual do projeto. Valida campos obrigatórios e persiste decision_log.json."
+
+[depends_on]
+skills = ["08-consolidacao-financeira", "05-equipes-e-alocacao"]
+canonical_sections = ["resultado_reconciliado", "resultado", "conflitos_pico"]
+
+[produces]
+canonical_section = "decision_log"
+validations = ["VAL-DEC-01", "VAL-DEC-02", "VAL-DEC-03"]
+
+[inputs]
+required = ["objective", "considered_interventions", "selected_intervention", "justification", "decided_by"]
+optional = ["decision_id", "constraints", "expected_outcome"]
+
+[snapshots]
+consumed = []

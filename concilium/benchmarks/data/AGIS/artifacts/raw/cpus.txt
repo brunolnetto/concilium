@@ -58,7 +58,9 @@ E0002	Caminhão basculante 14 m³			 7,00 	 1,00 	 -   	 122,48 	 122,48 	 857,3
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
 	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
@@ -118,7 +120,7 @@ E0002	Caminhão basculante 14 m³			 8,00 	 1,00 	 -   	 122,48 	 122,48 	 979,8
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+---------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -181,7 +183,7 @@ E0002	Caminhão basculante 14 m³			 6,00 	 1,00 	 -   	 122,48 	 122,48 	 734,8
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+----------------------------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -244,7 +246,7 @@ E0002	Caminhão basculante 14 m³			 6,62 	 1,00 	 -   	 122,48 	 122,48 	 810,2
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+------------------------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -307,7 +309,7 @@ E0004	Caminhão basculante 14 m³ - rochas			 6,00 	 1,00 	 -   	 185,20 	 185,2
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+----------------------------------------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -371,7 +373,7 @@ E0002	Caminhão basculante 14 m³ - rochas			 8,00 	 1,00 	 -   	 185,20 	 185,2
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -440,7 +442,7 @@ E0002	Caminhão basculante 14 m³ - rochas			 8,00 	 1,00 	 -   	 185,20 	 185,2
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -508,7 +510,7 @@ E0002	Caminhão basculante 14 m³ - rochas			 8,00 	 1,00 	 -   	 185,20 	 185,2
 	FERROVIA NOVA TRANSNORDESTINA - LOTE 09 e 10					CUSTO UNITÁRIO				
 	0					ESPECIFICAÇÃO				
 										
-										
+------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -567,7 +569,7 @@ E0002	Caminhão basculante 14 m³ - rochas			 8,00 	 1,00 	 -   	 185,20 	 185,2
 	FERROVIA NOVA TRANSNORDESTINA - LOTE 09 e 10					CUSTO UNITÁRIO				
 	0					ESPECIFICAÇÃO				
 										
-										
+------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -629,7 +631,7 @@ E0002	Caminhão basculante 14 m³ - rochas			 8,00 	 1,00 	 -   	 185,20 	 185,2
 	0					CUSTO UNITÁRIO				
 	0					ESPECIFICAÇÃO				
 										
-										
+------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -693,7 +695,7 @@ E0002	Caminhão basculante 14 m³ - rochas			 8,00 	 1,00 	 -   	 185,20 	 185,2
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
+------------------------------------------------------------------------------------------------------------
 										
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
@@ -751,8 +753,9 @@ E0002	Caminhão basculante 14 m³ - rochas			 8,00 	 1,00 	 -   	 185,20 	 185,2
 						CUSTO UNITÁRIO				
 						ESPECIFICAÇÃO				
 										
-										
-										
+
+------------------------------------------------------------------------------------------------------------
+	
 	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
 										
 	DNIT	DATA BASE	SERVIÇO						UNIDADE	

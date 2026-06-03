@@ -1,0 +1,64 @@
+{
+  "projeto_id": "c6a52c80-93e1-4334-bcbc-1a3ed0067472",
+  "versao": "1",
+  "gerado_em": "2026-05-29T10:56:13.897664Z",
+  "status_entrada": "VERMELHO",
+  "eixos_intervencao": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.173348,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    },
+    {
+      "nome": "Oportunidade REDUCE_DURATION",
+      "margem_estimada": 0.057681,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": [
+        "REDUCE_DURATION"
+      ]
+    },
+    {
+      "nome": "Oportunidade ADD_TEAMS",
+      "margem_estimada": 0.022839,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "ALTO",
+      "levers_combinados": [
+        "ADD_TEAMS"
+      ]
+    },
+    {
+      "nome": "Oportunidade REVIEW_BDI",
+      "margem_estimada": 0.018,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "ALTO",
+      "levers_combinados": [
+        "REVIEW_BDI"
+      ]
+    }
+  ],
+  "fronteira_pareto": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.173348,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    }
+  ],
+  "recomendacao_primaria": {
+    "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+    "margem_estimada": 0.173348,
+    "prazo_delta_dias": null,
+    "confianca": "MEDIA",
+    "risco": "MEDIO",
+    "levers_combinados": []
+  }
+}

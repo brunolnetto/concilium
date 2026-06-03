@@ -208,15 +208,7 @@ def _render_jurisdicoes_section(base_url: str, actor: str) -> None:
     jur_data = jmap.get(selected) or {}
     versions = jur_data.get("versions") or []
 
-    tab_hist, tab_edit, tab_nova = st.tabs(["📜 Historico", "✏️ Editar overlay", "➕ Nova versao"])
-
-    with tab_hist:
-        _render_version_history(versions, jur_data.get("current_version", "v1"))
-
-    with tab_edit:
-        _render_jurisdicao_editor(base_url, actor, selected, jur_data)
-
-    with tab_nova:
+    with st.expander("➕ Nova versão", expanded=False):
         _render_new_version_form(
             base_url=base_url,
             actor=actor,
@@ -225,6 +217,53 @@ def _render_jurisdicoes_section(base_url: str, actor: str) -> None:
             versions=versions,
             key_prefix="jur",
         )
+
+    tab_detail, tab_hist, tab_edit = st.tabs(["🔍 Detalhe", "📜 Histórico", "✏️ Editar overlay"])
+
+    with tab_detail:
+        _render_jurisdicao_detail(jur_data, versions)
+
+    with tab_hist:
+        _render_version_history(versions, jur_data.get("current_version", "v1"))
+
+    with tab_edit:
+        _render_jurisdicao_editor(base_url, actor, selected, jur_data)
+
+
+def _render_jurisdicao_detail(jur_data: dict, versions: list[dict]) -> None:
+    current_v = jur_data.get("current_version", "v1")
+    current_data = next((v for v in versions if v.get("version") == current_v), jur_data)
+
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Código", current_data.get("codigo") or jur_data.get("id") or "—")
+    col_b.metric("Nome", current_data.get("nome") or "—")
+    col_c.metric("Versão ativa", current_data.get("version") or current_v)
+
+    provedores = current_data.get("provedores_referencia") or []
+    if provedores:
+        st.caption("Provedores de referência")
+        st.dataframe(
+            [
+                {
+                    "ID": p.get("id") or "—",
+                    "Base": p.get("base") or "—",
+                    "Referência": p.get("data_referencia") or "—",
+                }
+                for p in provedores
+                if isinstance(p, dict)
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
+
+    st.caption(
+        "Origem da versão ativa: "
+        f"{current_data.get('version') or current_v} · "
+        f"{str(current_data.get('created_at') or '—')[:19].replace('T', ' ')} · "
+        f"{current_data.get('created_by') or '—'}"
+    )
+    if current_data.get("motivo"):
+        st.caption(f"Motivo: {current_data.get('motivo')}")
 
 
 def _find_current_version_data(jur_data: dict) -> dict:

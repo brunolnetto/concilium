@@ -20,6 +20,7 @@ from concilium.domain.models.canonical import (
     Coordenadas,
     EapItem,
     Meta,
+    PrecedenciaItem,
     Projeto,
     RegimeTrabalho,
     ValidacaoItem,
@@ -28,11 +29,15 @@ from concilium.domain.models.canonical import (
 _TOLERANCIA_ATV = 0.001
 
 
-def _kahn(nos: list[str], arestas: list[tuple[str, str]]) -> list[str] | None:
-    """Ordenação topológica de Kahn estável."""
+def _kahn(nos: list[str], arestas: list) -> list[str] | None:
+    """Ordenação topológica de Kahn estável.
+
+    Aceita arestas como tuplas (de, para) ou (de, para, tipo, lag).
+    """
     in_degree: dict[str, int] = {n: 0 for n in nos}
     succ: dict[str, list[str]] = defaultdict(list)
-    for de, para in arestas:
+    for aresta in arestas:
+        de, para = aresta[0], aresta[1]
         succ[de].append(para)
         in_degree[para] += 1
 
@@ -141,22 +146,68 @@ def _build_all_atividades(eap: list, decomposicao_raw: list, validacoes: list) -
     return atividades_out
 
 
-def _build_dag_from_precedencias(nos: list, nos_set: set, precedencias_raw: list, validacoes: list) -> list:
-    arestas_validas: list[tuple[str, str]] = []
+def _build_dag_from_precedencias(
+    nos: list, nos_set: set, precedencias_raw: list, eap: list[EapItem], validacoes: list
+) -> list[tuple[str, str, str, int]]:
+    """NEP-031 L4: retorna lista de (predecessora, sucessora, tipo, lag).
+
+    Fontes de precedência:
+    1. EapItem.predecessores (PrecedenciaItem ou str legado) — principal
+    2. inputs["precedencias"] (formato legado {predecessora, sucessora}) — compat.
+    """
+    # Mapa atividade → item_id para lookup rápido
+    atv_para_item: dict[str, str] = {a.atividade_id: a.item_id for item_eap in eap for a in []}
+    # Na prática, nos são activity_ids derivados de item_ids. Usamos nome direto.
+    arestas_validas: list[tuple[str, str, str, int]] = []
+
+    # Fonte 1: EapItem.predecessores tipados
+    eap_by_id = {item.item_id: item for item in eap}
+    for item in eap:
+        suc_id = item.item_id
+        if suc_id not in nos_set:
+            continue
+        for prec in item.predecessores_tipados():
+            pred_id = prec.item_id
+            if pred_id in nos_set:
+                arestas_validas.append((pred_id, suc_id, prec.tipo, prec.lag))
+            else:
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-DAG-01",
+                        status="ERRO",
+                        mensagem=f"Precedência inválida: {pred_id} -> {suc_id} (item não encontrado na EAP)",
+                    )
+                )
+
+    # Fonte 2: precedencias_raw (legado — apenas FS sem lag)
     for p in precedencias_raw:
         pred, suc = p.get("predecessora", ""), p.get("sucessora", "")
         if pred in nos_set and suc in nos_set:
-            arestas_validas.append((pred, suc))
+            # Evitar duplicatas com o que já foi inserido pela Fonte 1
+            if not any(a[0] == pred and a[1] == suc for a in arestas_validas):
+                arestas_validas.append((pred, suc, "FS", 0))
         else:
             validacoes.append(
                 ValidacaoItem(codigo="VAL-DAG-01", status="ERRO", mensagem=f"Precedência inválida: {pred} -> {suc}")
             )
+
     if not any(v.codigo == "VAL-DAG-01" for v in validacoes):
         validacoes.append(ValidacaoItem(codigo="VAL-DAG-01", status="OK"))
     return arestas_validas
 
 
-def _compute_longest_paths(nos: list, succ_map: dict, pred_map: dict, ordem_topologica: list) -> tuple[dict, dict]:
+def _compute_longest_paths(
+    nos: list,
+    succ_map: dict,
+    pred_map_typed: dict,  # {n: [(pred, tipo, lag), ...]}
+    ordem_topologica: list,
+) -> tuple[dict, dict]:
+    """NEP-031 L4: calcula start_offset_min considerando tipo e lag das arestas.
+
+    FS (lag=k): start(B) >= start(A) + 1 + k  (A termina antes de B começar)
+    SS (lag=k): start(B) >= start(A) + k       (B começa lag semanas após A iniciar)
+    FF (lag=k): suporte parcial — tratado como FS; requer duração para constraint exata.
+    """
     longest_path_to = {n: [n] for n in nos}
     start_offset_min = {n: 0 for n in nos}
     for n in ordem_topologica:
@@ -164,21 +215,32 @@ def _compute_longest_paths(nos: list, succ_map: dict, pred_map: dict, ordem_topo
             cand = longest_path_to[n] + [s]
             if len(cand) > len(longest_path_to[s]):
                 longest_path_to[s] = cand
-        if pred_map.get(n):
-            start_offset_min[n] = max(start_offset_min[p] + 1 for p in pred_map[n])
+        preds = pred_map_typed.get(n, [])
+        if preds:
+            offsets = []
+            for pred_id, tipo, lag in preds:
+                base = start_offset_min[pred_id]
+                if tipo == "SS":
+                    offsets.append(base + lag)
+                elif tipo == "FF":
+                    # FF: parcialmente suportado — usa FS como lower bound conservador
+                    offsets.append(base + 1 + lag)
+                else:  # FS (default)
+                    offsets.append(base + 1 + lag)
+            start_offset_min[n] = max(offsets)
     return longest_path_to, start_offset_min
 
 
-def _build_activity_dag(nos: list, arestas_validas: list, ordem_topologica: list) -> ActivityDag:
+def _build_activity_dag(nos: list, arestas_validas: list[tuple[str, str, str, int]], ordem_topologica: list) -> ActivityDag:
     succ_map: dict = defaultdict(list)
-    pred_map: dict = defaultdict(list)
-    for a, b in arestas_validas:
+    pred_map_typed: dict = defaultdict(list)  # {n: [(pred, tipo, lag), ...]}
+    for a, b, tipo, lag in arestas_validas:
         succ_map[a].append(b)
-        pred_map[b].append(a)
-    longest_path_to, start_offset_min = _compute_longest_paths(nos, succ_map, pred_map, ordem_topologica)
+        pred_map_typed[b].append((a, tipo, lag))
+    longest_path_to, start_offset_min = _compute_longest_paths(nos, succ_map, pred_map_typed, ordem_topologica)
     return ActivityDag(
         nos=nos,
-        arestas=[ArestaActivityDag(de=d, para=p) for d, p in arestas_validas],
+        arestas=[ArestaActivityDag(de=d, para=p, tipo=t, lag=l) for d, p, t, l in arestas_validas],
         ordem_topologica=ordem_topologica,
         critical_path=max(longest_path_to.values(), key=len) if longest_path_to else [],
         start_offset_min=start_offset_min,
@@ -224,7 +286,7 @@ def run_escopo_e_eap(
     nos = [a.atividade_id for a in atividades_out]
     nos_set = set(nos)
     precedencias_raw = inputs.get("precedencias", [])
-    arestas_validas = _build_dag_from_precedencias(nos, nos_set, precedencias_raw, validacoes)
+    arestas_validas = _build_dag_from_precedencias(nos, nos_set, precedencias_raw, eap, validacoes)
 
     ordem_topologica = _kahn(nos, arestas_validas)
     if ordem_topologica is None:

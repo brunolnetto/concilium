@@ -1,0 +1,53 @@
+{
+  "codigo": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+  "descricao": "ENCHIMENTO DE REBAIXO EM ROCHA - BRITA PRODUZIDA COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "P0046",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "P0043",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "P0001",
+      "coeficiente": 3.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "P0048",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-E0028",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0021",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0035",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
+  "custo_direto_unitario_planilha": 5.623821,
+  "precos_unitarios_sbdi": {
+    "mo": 1.65023,
+    "diesel": 3.973591,
+    "material": 0.0,
+    "equipamentos": 0.0,
+    "total": 5.623821
+  },
+  "producao_id_ref": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001"
+}

@@ -27,8 +27,8 @@ def env_cfg(tmp_path, monkeypatch):
     """Real config + fresh temp projects dir."""
     projects = tmp_path / "projetos"
     projects.mkdir()
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(projects))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(projects))
     return {"config": str(CONFIG_ROOT), "projects": str(projects), "projects_path": projects}
 
 
@@ -39,8 +39,8 @@ def test_startup_config_root_is_file_not_dir(monkeypatch, tmp_path):
     """_require_existing_dir raises when config_root is a FILE not a dir (line 95)."""
     fake_file = tmp_path / "config.txt"
     fake_file.write_text("x")
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(fake_file))
-    monkeypatch.delenv("CONCILIUM_CONFIG", raising=False)
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(fake_file))
+    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     result = runner.invoke(app, ["project", "init", "X"])
     assert result.exit_code == 1
 
@@ -50,8 +50,8 @@ def test_startup_config_root_is_file_not_dir(monkeypatch, tmp_path):
 
 def test_resolve_project_projects_root_not_exists(monkeypatch, tmp_path):
     """_resolve_project exits 1 when PROJECTS_ROOT dir doesn't exist (lines 133-137)."""
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "nonexistent_projects"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "nonexistent_projects"))
     result = runner.invoke(app, ["project", "status", "any_project"])
     assert result.exit_code == 1
 
@@ -293,8 +293,8 @@ def test_main_function_entry_point(monkeypatch, tmp_path):
     """main() function calls app() (line 662)."""
     import concilium.presentation.main as main_mod
 
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projs"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs"))
 
     with patch.object(main_mod, "app") as mock_app:
         main_mod.main()
@@ -305,8 +305,8 @@ def test_main_module_dunder_main(monkeypatch, tmp_path):
     """Running main.py as __main__ calls main() (line 666)."""
     import runpy
 
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projs"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs"))
     # Use --help so typer exits cleanly with code 0
     monkeypatch.setattr("sys.argv", ["concilium", "--help"])
 

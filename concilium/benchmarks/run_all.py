@@ -6,16 +6,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 # ADR-043: Usar BenchmarkFacade como ponto de entrada unificado.
-# Se CONCILIUM_ROOT estiver definido (execução via C:\Temp\), usa-o.
+# Se CONCILIUM__ROOT estiver definido (execução via C:\Temp\), usa-o.
 # Caso contrário, infere a raiz a partir deste arquivo.
 from concilium.application.benchmarks import BenchmarkFacade, BenchmarkBatchRunner
 
 def run_all():
-    root = Path(os.environ.get("CONCILIUM_ROOT", Path(__file__).resolve().parent.parent))
+    root = Path(os.environ.get("CONCILIUM__ROOT", Path(__file__).resolve().parent.parent))
     concilium_root = Path(root)
 
-    os.environ.setdefault("CONCILIUM_CONFIG_ROOT", str(concilium_root / "config"))
-    os.environ.setdefault("CONCILIUM_PROJECTS_ROOT", str(concilium_root / "benchmarks" / "projetos"))
+    os.environ.setdefault("CONCILIUM__CONFIG_ROOT", str(concilium_root / "config"))
+    os.environ.setdefault("CONCILIUM__PROJECTS_ROOT", str(concilium_root / "benchmarks" / "projetos"))
 
     facade = BenchmarkFacade.from_root(concilium_root)
     reports = facade.run_all(reset=True)

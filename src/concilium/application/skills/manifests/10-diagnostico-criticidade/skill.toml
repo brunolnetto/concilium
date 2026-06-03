@@ -1,0 +1,20 @@
+[skill]
+id = "10-diagnostico-criticidade"
+phase = "Análise"
+version = "1.0.0"
+descricao = "Diagnóstico consolidado de criticidade (Prazo, Custo, Recurso, Sensibilidade). ADR-026."
+
+[depends_on]
+skills = ["04-cronograma", "05-equipes-e-alocacao", "06-precificacao-unitaria"]
+canonical_sections = ["cronograma", "equipes_diretas", "alocacoes"]
+
+[produces]
+canonical_section = "cost_criticality_report"
+validations = ["VAL-DIAG-OK"]
+
+[inputs]
+required = []
+optional = []
+
+[snapshots]
+consumed = []

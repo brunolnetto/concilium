@@ -135,12 +135,18 @@ def _norm_ref_build_default_rcpsp_spec(out: dict[str, Any], rcpsp_block: dict[st
         restr = out.get("restricao_equipes")
         if isinstance(restr, dict):
             resource_pool = restr
-    return {
+    spec_out: dict[str, Any] = {
         "deadline_weeks": int(rcpsp_block.get("deadline_weeks") or len(weeks) or 1),  # type: ignore[union-attr]
         "activities": activities,
         "resource_pool": resource_pool,
         "precedence": rcpsp_block.get("precedence") or [],  # type: ignore[union-attr]
     }
+    # ADR-091 Fase 4: objetivo de pool (pool_config) opcional na referência. Quando
+    # presente sem resource_pool explícito, dirige a inferência do pool mínimo.
+    pool_config = out.get("pool_config")
+    if isinstance(pool_config, dict):
+        spec_out["pool_config"] = pool_config
+    return spec_out
 
 
 def _norm_ref_ensure_rcpsp_spec(out: dict[str, Any]) -> None:

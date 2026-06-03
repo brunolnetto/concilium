@@ -37,13 +37,17 @@ Usage::
         project.log_invocation(v, {"skill": skill_id, ...})
         _process_side_effects(skill_id, result, project, v)
 
+    executor = SkillExecutor(
+        skills=SKILLS,
+        manifest_meta=MANIFEST_META,
+        on_before_skill=lambda sid: print(f"  > {sid}...", end=" ", flush=True),
+        on_after_skill=on_after_skill,
+    )
     final_state, records = executor.run_pipeline(
         state_in=initial_canonical,
         providers_factory=providers_factory,
         skill_inputs=per_skill_inputs,
         resolve_state=resolve_state,
-        on_before_skill=lambda sid: print(f"  > {sid}...", end=" ", flush=True),
-        on_after_skill=on_after_skill,
     )
     executor.print_report(records)
 """
@@ -164,64 +168,30 @@ def _default_state_extractor(result: Any, prev_state: Any) -> Any:
     return getattr(result, "canonical", prev_state)
 
 
-def _rp_build_topology(meta: dict) -> object:
-    """Builds and prepares a TopologicalSorter from manifest meta."""
-    from graphlib import TopologicalSorter
-
-    ts: object = TopologicalSorter()
-    for sid, m in meta.items():
-        deps = m.get("depends_on", {}).get("skills", [])
-        ts.add(sid, *deps)  # type: ignore[attr-defined]
-    ts.prepare()  # type: ignore[attr-defined]
-    return ts
+# ── Telemetry helpers (ADR-095) ───────────────────────────────────────────────
 
 
-def _rp_extract_validacao_msgs(result: object) -> tuple[list, list]:
-    """Extracts error and warning messages from a skill result."""
-    errors = [v.mensagem for v in getattr(result, "validacoes", []) if v.status == "ERRO"]
-    warnings = [v.mensagem for v in getattr(result, "validacoes", []) if v.status == "AVISO"]
-    return errors, warnings
-
-
-def _rp_execute_node(
-    executor: object,
-    node: str,
-    state: object,
-    skill_inputs: dict,
-    providers_factory: object,
-    resolve_state_fn: object,
-    on_before_skill: object,
-    on_after_skill: object,
-) -> tuple[object, object, bool]:
-    """Executes a single skill node; returns (record, new_state, gate_failed)."""
-    import time
-
-    from concilium.application.skills.executor import ExecutionRecord
-
-    if on_before_skill:
-        on_before_skill(node)
-    t0 = time.perf_counter_ns()
-    result = None
+def _get_skill_span(skill_id: str) -> Any:
+    """Retorna context manager OTEL span para a skill, ou nullcontext se OTEL indisponível."""
     try:
-        providers = providers_factory(node, state, skill_inputs.get(node, {}))
-        result = executor.dispatch(node, providers)
-        duration_ms = round((time.perf_counter_ns() - t0) / 1_000_000)
-        has_errors = bool(getattr(result, "has_errors", False))
-        errors, warnings = _rp_extract_validacao_msgs(result)
-        status = "ERRO" if has_errors else "OK"
-        new_state = resolve_state_fn(node, result, state)
-        record = ExecutionRecord(node, status, duration_ms, errors, warnings)
-        if on_after_skill:
-            on_after_skill(node, result, new_state, record)
-        gate_fail = has_errors and executor._meta.get(node, {}).get("gate", False)
-        return record, new_state, gate_fail
-    except Exception as exc:
-        duration_ms = round((time.perf_counter_ns() - t0) / 1_000_000)
-        record = ExecutionRecord(node, "EXCEPTION", duration_ms, [str(exc)])
-        if on_after_skill:
-            on_after_skill(node, result, state, record)
-        gate_fail = executor._meta.get(node, {}).get("gate", False)
-        return record, state, gate_fail
+        from concilium.infrastructure.telemetry import skill_span
+        return skill_span(skill_id)
+    except Exception:
+        from contextlib import nullcontext
+        return nullcontext(None)
+
+
+def _emit_skill_telemetry(skill_id: str, status: str, duration_ms: int) -> None:
+    """Emite métrica de duração e define atributos no span ativo (best-effort)."""
+    try:
+        from concilium.infrastructure.telemetry import record_skill_duration, set_current_span_attrs
+        record_skill_duration(skill_id, status, duration_ms)
+        set_current_span_attrs({"skill.status": status, "skill.duration_ms": duration_ms})
+    except Exception:
+        pass
+
+
+
 
 
 class SkillExecutor:
@@ -249,9 +219,71 @@ class SkillExecutor:
         self,
         skills: dict[str, Callable],
         manifest_meta: dict[str, dict],
+        on_before_skill: Callable[[str], None] | None = None,
+        on_after_skill: Callable[[str, Any, Any, "ExecutionRecord"], None] | None = None,
     ) -> None:
         self._skills = skills
         self._meta = manifest_meta
+        self._on_before_skill = on_before_skill
+        self._on_after_skill = on_after_skill
+
+    # ── Private helpers ───────────────────────────────────────────────────────
+
+    def _build_topology(self) -> object:
+        """Builds and prepares a TopologicalSorter from manifest meta."""
+        from graphlib import TopologicalSorter
+
+        ts: object = TopologicalSorter()
+        for sid, m in self._meta.items():
+            deps = m.get("depends_on", {}).get("skills", [])
+            ts.add(sid, *deps)  # type: ignore[attr-defined]
+        ts.prepare()  # type: ignore[attr-defined]
+        return ts
+
+    @staticmethod
+    def _extract_validacao_msgs(result: object) -> tuple[list, list]:
+        """Extracts error and warning messages from a skill result."""
+        errors = [v.mensagem for v in getattr(result, "validacoes", []) if v.status == "ERRO"]
+        warnings = [v.mensagem for v in getattr(result, "validacoes", []) if v.status == "AVISO"]
+        return errors, warnings
+
+    def _execute_node(
+        self,
+        node: str,
+        state: object,
+        skill_inputs: dict,
+        providers_factory: object,
+        resolve_state_fn: object,
+    ) -> tuple["ExecutionRecord", object, bool]:
+        """Executes a single skill node; returns (record, new_state, gate_failed)."""
+        if self._on_before_skill:
+            self._on_before_skill(node)
+
+        with _get_skill_span(node):
+            t0 = time.perf_counter_ns()
+            result = None
+            try:
+                providers = providers_factory(node, state, skill_inputs.get(node, {}))
+                result = self.dispatch(node, providers)
+                duration_ms = round((time.perf_counter_ns() - t0) / 1_000_000)
+                has_errors = bool(getattr(result, "has_errors", False))
+                errors, warnings = self._extract_validacao_msgs(result)
+                status = "ERRO" if has_errors else "OK"
+                new_state = resolve_state_fn(node, result, state)
+                record = ExecutionRecord(node, status, duration_ms, errors, warnings)
+                _emit_skill_telemetry(node, status, duration_ms)
+                if self._on_after_skill:
+                    self._on_after_skill(node, result, new_state, record)
+                gate_fail = has_errors and self._meta.get(node, {}).get("gate", False)
+                return record, new_state, gate_fail
+            except Exception as exc:
+                duration_ms = round((time.perf_counter_ns() - t0) / 1_000_000)
+                record = ExecutionRecord(node, "EXCEPTION", duration_ms, [str(exc)])
+                _emit_skill_telemetry(node, "EXCEPTION", duration_ms)
+                if self._on_after_skill:
+                    self._on_after_skill(node, result, state, record)
+                gate_fail = self._meta.get(node, {}).get("gate", False)
+                return record, state, gate_fail
 
     # ── Single skill dispatch ─────────────────────────────────────────────────
 
@@ -275,8 +307,6 @@ class SkillExecutor:
         providers_factory: Callable[[str, Any, dict[str, Any]], dict[str, Any]],
         skill_inputs: dict[str, dict[str, Any]] | None = None,
         resolve_state: Callable[[str, Any, Any], Any] | None = None,
-        on_before_skill: Callable[[str], None] | None = None,
-        on_after_skill: Callable[[str, Any, Any, ExecutionRecord], None] | None = None,
     ) -> tuple[Any, list[ExecutionRecord]]:
         """Run all registered skills in dependency order.
 
@@ -288,11 +318,6 @@ class SkillExecutor:
             resolve_state: Extracts and post-processes the new state from a
                 skill result. Receives (skill_id, result, prev_state).
                 Defaults to ``getattr(result, "canonical", prev_state)``.
-            on_before_skill: Hook fired just before dispatch. Receives skill_id.
-            on_after_skill: Hook fired after state is resolved.
-                Receives (skill_id, result, new_state, record).
-                Suitable for persistence, side effects, and audit logging.
-
         Returns:
             (final_state, list[ExecutionRecord]) — one record per executed skill.
 
@@ -301,29 +326,24 @@ class SkillExecutor:
         The ``on_after_skill`` hook is still called so the caller can
         persist any taint applied via ``resolve_state``.
         """
-        from graphlib import TopologicalSorter  # noqa: F401
-
         _resolve_state = resolve_state or _default_state_extractor
         skill_inputs = skill_inputs or {}
         records: list = []
         state = state_in
         t_start = time.perf_counter_ns()
-        ts = _rp_build_topology(self._meta)
+        ts = self._build_topology()
         gate_failed = False
         while ts.is_active() and not gate_failed:
             for node in list(ts.get_ready()):
                 if node not in self._skills:
                     ts.done(node)
                     continue
-                record, state, node_gate = _rp_execute_node(
-                    self,
+                record, state, node_gate = self._execute_node(
                     node,
                     state,
                     skill_inputs,
                     providers_factory,
                     _resolve_state,
-                    on_before_skill,
-                    on_after_skill,
                 )
                 records.append(record)
                 ts.done(node)

@@ -10,7 +10,7 @@ from fastapi.responses import Response
 from concilium.application.services.concilium_service import ConciliumService
 from concilium.presentation.api.container import get_concilium_service
 
-from ..schemas import CompareRequest
+from ..schemas import CompareRequest, SimulateCalendarioOperacionalRequest
 
 router = APIRouter(prefix="/api/projects", tags=["projects - analysis"])
 
@@ -131,6 +131,37 @@ def get_diagnostico_pe(
         return {"diagnostico_pe": None, "backtracking_pe": None, "aviso": str(exc)}
 
 
+@router.get(
+    "/{project_id}/calendario-operacional",
+    summary="Get weekly operational calendar factors (climate x calendar x total)",
+)
+def get_calendario_operacional(
+    project_id: str,
+    version: str | None = Query(None),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.get_calendario_operacional(project_id, version=version)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post(
+    "/{project_id}/calendario-operacional/simular",
+    summary="Simulate weekly calendar overrides and resulting total factor",
+)
+def simulate_calendario_operacional(
+    project_id: str,
+    req: SimulateCalendarioOperacionalRequest,
+    version: str | None = Query(None),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.simulate_calendario_operacional(project_id, req.model_dump(), version=version)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 # ── Cubo analítico (ADR-058 / NEP-024) ────────────────────────────────────────
 
 
@@ -221,3 +252,53 @@ def get_cubo_analitico_projecao_contrato(
 ) -> dict[str, Any]:
     _ = project_id
     return service.get_cubo_projection_contract()
+
+
+@router.get(
+    "/{project_id}/cubo-pool/projecao",
+    summary="ADR-086: Explore the resource-pool decomposition (instance/temporal/causal faces)",
+)
+def get_cubo_pool_projecao(
+    project_id: str,
+    version: str | None = Query(None),
+    face: Literal[
+        "utilizacao_temporal",
+        "custo_estado_componente",
+        "instancia_ciclo_vida",
+        "atividade_instancia",
+        "causa_custo",
+        "economia_pool",
+        "cadeia_perpetuacao",
+    ] = Query("instancia_ciclo_vida"),
+    granularidade: Literal["semana", "mes", "trimestre", "ano"] = Query("mes"),
+    atividade_id: str | None = Query(None),
+    instancia_id: str | None = Query(None),
+    top_n: int = Query(300, ge=1, le=2000),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.get_cubo_pool_projection(
+            project_id,
+            version=version,
+            face=face,
+            granularidade=granularidade,
+            atividade_id=atividade_id,
+            instancia_id=instancia_id,
+            top_n=top_n,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/{project_id}/cubo-pool/projecao/contrato",
+    summary="ADR-086: Get resource-pool projection contract (faces x natureza x granularidade)",
+)
+def get_cubo_pool_projecao_contrato(
+    project_id: str,
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    _ = project_id
+    return service.get_cubo_pool_projection_contract()

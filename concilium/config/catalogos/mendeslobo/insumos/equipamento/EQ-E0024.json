@@ -3,8 +3,8 @@
   "tipo": "EQUIPAMENTO",
   "descricao": "Trator de Esteiras 20t (300HP)",
   "unidade": "h",
-  "preco_unitario": 281.12,
-  "fonte_preco": "catalogo_proprio",
+  "preco_unitario": 238.50,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
   "atributos_especificos": {
     "codigo_planilha": "E0024",
     "valor_locacao_mensal": 56224.0,

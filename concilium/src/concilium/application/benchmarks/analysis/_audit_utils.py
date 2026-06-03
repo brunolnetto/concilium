@@ -179,10 +179,19 @@ def _resolve_canonical_path(extr: dict[str, Any], ref: dict[str, Any], root: Pat
 
     project_name = str(ref.get("projeto") or (ref.get("meta") or {}).get("projeto") or "")
     if project_name:
-        proj = _latest_project_by_name(project_name, root / "projetos")
-        if proj:
-            can = proj / "v1" / "canonical.json"
-            if can.exists():
-                return can
+        for projects_root in (root / "benchmarks" / "projetos", root / "projetos"):
+            if not projects_root.exists() or not projects_root.is_dir():
+                continue
+            proj = _latest_project_by_name(project_name, projects_root)
+            if not proj:
+                continue
+            try:
+                meta = _load_json(proj / "meta.json")
+            except Exception:
+                meta = {}
+            current_version = str(meta.get("current_version") or "v1")
+            for can in (proj / current_version / "canonical.json", proj / "v1" / "canonical.json"):
+                if can.exists():
+                    return can
 
     raise FileNotFoundError("canonical.json nÃ£o encontrado para auditoria")

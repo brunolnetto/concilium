@@ -1,0 +1,335 @@
+﻿{
+  "projeto": "ROSH",
+  "slug": "ROSH",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 295,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 2826,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 46,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "OK",
+      "duration_ms": 37,
+      "avisos": []
+    },
+    {
+      "skill": "05-equipes-e-alocacao",
+      "status": "OK",
+      "duration_ms": 41,
+      "avisos": [
+        "Equipamento 'EQ-E0016': consumo_litros_hora não encontrado em nenhuma fonte; custo_combustivel_mensal=0",
+        "Equipamento 'EQ-E0016': consumo_litros_hora não encontrado em nenhuma fonte; custo_combustivel_mensal=0"
+      ]
+    },
+    {
+      "skill": "06-precificacao-unitaria",
+      "status": "OK",
+      "duration_ms": 33,
+      "avisos": []
+    },
+    {
+      "skill": "07-custos-indiretos",
+      "status": "OK",
+      "duration_ms": 31,
+      "avisos": [
+        "Razão indireto/direto 734.8% fora da faixa [10.0%, 50.0%]"
+      ]
+    },
+    {
+      "skill": "10-diagnostico-criticidade",
+      "status": "OK",
+      "duration_ms": 48,
+      "avisos": []
+    },
+    {
+      "skill": "08-consolidacao-financeira",
+      "status": "OK",
+      "duration_ms": 34,
+      "avisos": [
+        "Margem consolidada 18.60% | status=VERMELHO"
+      ]
+    },
+    {
+      "skill": "11-avaliacao-intervencoes",
+      "status": "OK",
+      "duration_ms": 33,
+      "avisos": []
+    },
+    {
+      "skill": "09-relatorio-e-artefatos",
+      "status": "OK",
+      "duration_ms": 2662,
+      "avisos": []
+    },
+    {
+      "skill": "12-registro-decisoes",
+      "status": "OK",
+      "duration_ms": 35,
+      "avisos": []
+    },
+    {
+      "skill": "13-assessor-replanejamento",
+      "status": "OK",
+      "duration_ms": 48,
+      "avisos": []
+    },
+    {
+      "skill": "14-explorador-cenarios",
+      "status": "OK",
+      "duration_ms": 49,
+      "avisos": []
+    },
+    {
+      "skill": "15-relatorio-executivo",
+      "status": "OK",
+      "duration_ms": 34,
+      "avisos": []
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 2589258.292916728,
+      "custo_indireto": 3065109.2663972043,
+      "custo_total": 3772282.45,
+      "preco_venda": 7383537.646748512
+    },
+    "ferramenta": {
+      "custo_direto": 131044.20000000001,
+      "custo_direto_equipes": 434489.04000000004,
+      "custo_direto_catalogo": 131044.20000000001,
+      "custo_indireto": 3192805.62,
+      "custo_total": 3323849.82,
+      "preco_venda": 4083399.73,
+      "preco_venda_plus_eq": 4486709.68,
+      "preco_venda_catalogo": 4083399.73,
+      "bdi_lucro_impostos": 0.22851511083012777
+    },
+    "ferramenta_breakdown_direto": {
+      "mao_obra_total": 124184.53,
+      "equipamentos_total": 254487.92,
+      "diesel_total": 55816.59,
+      "materiais_total": 0.0,
+      "direto_total_equipes": 434489.04
+    },
+    "ferramenta_breakdown_indireto": {
+      "adm": 2258160.66,
+      "top": 543657.15,
+      "lab": 270160.11,
+      "qsms": 120827.7,
+      "mob": 0.0,
+      "total": 3192805.62
+    },
+    "actionable_insights": {
+      "criticidade": "1 A, 0 B, 1 C",
+      "sensibilidade": "1 alavancas corretivas, 0 oportunidades",
+      "intervencao": "Recomendacao Principal: Repair (AMARELO/VERMELHO->VERDE)"
+    },
+    "deltas": {
+      "custo_direto": {
+        "absoluto": -2458214.09,
+        "percentual": -94.94
+      },
+      "custo_indireto": {
+        "absoluto": 127696.35,
+        "percentual": 4.17
+      },
+      "preco_venda": {
+        "absoluto": -3300137.92,
+        "percentual": -44.7
+      },
+      "custo_direto_catalogo_vs_ref": {
+        "absoluto": -2458214.09,
+        "percentual": -94.94
+      }
+    },
+    "composicao_final": {
+      "custo_direto": {
+        "referencia": 2589258.292916728,
+        "ferramenta": 131044.20000000001,
+        "delta_absoluto": -2458214.09,
+        "delta_percentual": -94.94
+      },
+      "custo_indireto": {
+        "referencia": 3065109.2663972043,
+        "ferramenta": 3192805.62,
+        "delta_absoluto": 127696.35,
+        "delta_percentual": 4.17
+      },
+      "custo_total": {
+        "referencia": 3772282.45,
+        "ferramenta": 3323849.82,
+        "delta_absoluto": -448432.63,
+        "delta_percentual": -11.89
+      },
+      "preco_venda": {
+        "referencia": 7383537.646748512,
+        "ferramenta": 4083399.73,
+        "delta_absoluto": -3300137.92,
+        "delta_percentual": -44.7
+      }
+    },
+    "breakdown_por_fase": {
+      "direto": {
+        "mao_obra_total": 124184.53,
+        "equipamentos_total": 254487.92,
+        "diesel_total": 55816.59,
+        "materiais_total": 0.0,
+        "direto_total_equipes": 434489.04
+      },
+      "indireto": {
+        "adm": 2258160.66,
+        "top": 543657.15,
+        "lab": 270160.11,
+        "qsms": 120827.7,
+        "mob": 0.0,
+        "total": 3192805.62
+      }
+    }
+  },
+  "quality_gates": {
+    "decision": "BLOQUEADO",
+    "worst_severity": "S3",
+    "critical_metric_over_10pct": true,
+    "items": [
+      {
+        "metric": "custo_direto",
+        "fase": "06-consolidacao",
+        "valor_referencia": 2589258.292916728,
+        "valor_calculado": 131044.20000000001,
+        "delta_absoluto": -2458214.09,
+        "delta_percentual": -94.94,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "DERIVACAO_PIPELINE",
+        "acao_recomendada": "Bloquear pipeline e revalidar baseline de referencia",
+        "owner": "engenharia-benchmarks",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      },
+      {
+        "metric": "custo_indireto",
+        "fase": "07-custos-indiretos",
+        "valor_referencia": 3065109.2663972043,
+        "valor_calculado": 3192805.62,
+        "delta_absoluto": 127696.35,
+        "delta_percentual": 4.17,
+        "classe": "IDEAL",
+        "severidade": "S0",
+        "causa_categoria": "CONSOLIDACAO",
+        "acao_recomendada": "Sem acao corretiva obrigatoria",
+        "owner": "benchmark-auditoria",
+        "sla_horas": 0,
+        "status_acao": "NAO_APLICAVEL"
+      },
+      {
+        "metric": "preco_venda",
+        "fase": "06-precificacao-unitaria",
+        "valor_referencia": 7383537.646748512,
+        "valor_calculado": 4083399.73,
+        "delta_absoluto": -3300137.92,
+        "delta_percentual": -44.7,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "PARAMETRIZACAO_BDI",
+        "acao_recomendada": "Bloquear pipeline e revisar parametrizacao BDI",
+        "owner": "engenharia-bdi",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      },
+      {
+        "metric": "custo_direto_catalogo_vs_ref",
+        "fase": "06-consolidacao",
+        "valor_referencia": null,
+        "valor_calculado": null,
+        "delta_absoluto": -2458214.09,
+        "delta_percentual": -94.94,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "CATALOGO",
+        "acao_recomendada": "Bloquear pipeline e executar investigacao formal",
+        "owner": "engenharia-benchmarks",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      }
+    ]
+  },
+  "action_report": [
+    {
+      "metric": "custo_direto",
+      "fase": "06-consolidacao",
+      "valor_referencia": 2589258.292916728,
+      "valor_calculado": 131044.20000000001,
+      "delta_absoluto": -2458214.09,
+      "delta_percentual": -94.94,
+      "classe": "CRITICO",
+      "severidade": "S3",
+      "causa_categoria": "DERIVACAO_PIPELINE",
+      "acao_recomendada": "Bloquear pipeline e revalidar baseline de referencia",
+      "owner": "engenharia-benchmarks",
+      "sla_horas": 0,
+      "status_acao": "ABERTA"
+    },
+    {
+      "metric": "custo_indireto",
+      "fase": "07-custos-indiretos",
+      "valor_referencia": 3065109.2663972043,
+      "valor_calculado": 3192805.62,
+      "delta_absoluto": 127696.35,
+      "delta_percentual": 4.17,
+      "classe": "IDEAL",
+      "severidade": "S0",
+      "causa_categoria": "CONSOLIDACAO",
+      "acao_recomendada": "Sem acao corretiva obrigatoria",
+      "owner": "benchmark-auditoria",
+      "sla_horas": 0,
+      "status_acao": "NAO_APLICAVEL"
+    },
+    {
+      "metric": "preco_venda",
+      "fase": "06-precificacao-unitaria",
+      "valor_referencia": 7383537.646748512,
+      "valor_calculado": 4083399.73,
+      "delta_absoluto": -3300137.92,
+      "delta_percentual": -44.7,
+      "classe": "CRITICO",
+      "severidade": "S3",
+      "causa_categoria": "PARAMETRIZACAO_BDI",
+      "acao_recomendada": "Bloquear pipeline e revisar parametrizacao BDI",
+      "owner": "engenharia-bdi",
+      "sla_horas": 0,
+      "status_acao": "ABERTA"
+    },
+    {
+      "metric": "custo_direto_catalogo_vs_ref",
+      "fase": "06-consolidacao",
+      "valor_referencia": null,
+      "valor_calculado": null,
+      "delta_absoluto": -2458214.09,
+      "delta_percentual": -94.94,
+      "classe": "CRITICO",
+      "severidade": "S3",
+      "causa_categoria": "CATALOGO",
+      "acao_recomendada": "Bloquear pipeline e executar investigacao formal",
+      "owner": "engenharia-benchmarks",
+      "sla_horas": 0,
+      "status_acao": "ABERTA"
+    }
+  ],
+  "status_final": "BLOQUEADO"
+}

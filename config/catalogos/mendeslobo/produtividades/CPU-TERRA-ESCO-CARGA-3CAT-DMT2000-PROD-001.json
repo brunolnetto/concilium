@@ -1,0 +1,30 @@
+{
+  "id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000-PROD-001",
+  "codigo": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000-PROD-001",
+  "descricao": "Produção CPU-TERRA-ESCO-CARGA-3CAT-DMT2000",
+  "origem": "PROPRIA",
+  "valor_horario": 144.541473,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "P0032",
+        "num_pessoas": 25
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0016",
+        "num_unidades": 4
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

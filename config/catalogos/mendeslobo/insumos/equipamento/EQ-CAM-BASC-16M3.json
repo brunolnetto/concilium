@@ -1,0 +1,25 @@
+{
+  "codigo": "EQ-CAM-BASC-16M3",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão basculante 16 m³",
+  "unidade": "h",
+  "preco_unitario": 229.35,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0003",
+    "valor_locacao_mensal": 35990,
+    "horas_mes": 200,
+    "consumo_litros_hora": 2.5,
+    "custo_locacao_hora": 179.95,
+    "custo_manutencao_operacao_hora": 49.4,
+    "referencia_sicro_custo_horario": "E9003",
+    "metodo_custo_horario": "locacao_mais_manutencao_operacao",
+    "nota": "Fator de custo 1.27x sobre locação pura. Inclui manutenção e custos operacionais conforme SICRO."
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

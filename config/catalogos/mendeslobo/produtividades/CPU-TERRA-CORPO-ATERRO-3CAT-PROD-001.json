@@ -1,0 +1,38 @@
+{
+  "id": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
+  "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
+  "descricao": "Produção CPU-TERRA-CORPO-ATERRO-3CAT",
+  "origem": "PROPRIA",
+  "valor_horario": 149.51,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0048",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "P0029",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0065",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0037",
+        "num_unidades": 2
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

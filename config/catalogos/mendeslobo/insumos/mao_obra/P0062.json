@@ -1,0 +1,13 @@
+{
+  "codigo": "P0062",
+  "tipo": "MAO_OBRA",
+  "descricao": "Operador de motosserra",
+  "unidade": "mês",
+  "preco_unitario": 7307.6522,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "salario_base": 3547.404,
+    "tipo_contrato": "CLT"
+  }
+}

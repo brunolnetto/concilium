@@ -42,6 +42,11 @@ def _enrich_cpu_with_prod(cpu: dict, prod_lookup: dict) -> dict:
     patch: dict = {}
     if not cpu.get("producao_horaria") and prod.get("valor_horario") is not None:
         patch["producao_horaria"] = prod["valor_horario"]
+    prod_equipe = prod.get("equipe")
+    if not isinstance(prod_equipe, dict):
+        prod_equipe = prod.get("composicao_padrao_equipe")
+    if not cpu.get("equipe") and isinstance(prod_equipe, dict):
+        patch["equipe"] = prod_equipe
     return {**cpu, **patch} if patch else cpu
 
 
@@ -52,9 +57,7 @@ def _enrich_cpus_with_producao(cat: dict) -> list[dict]:
     Single dict-lookup pass — no nested iteration.
     This is a read-time join; nothing is mutated on disk.
     """
-    producoes = cat.get("produtividades")
-    if not isinstance(producoes, list):
-        producoes = cat.get("producoes", [])
+    producoes = cat.get("produtividades") or cat.get("producoes", [])
     prod_lookup = _build_prod_lookup(producoes)
     enriched: list[dict] = []
     for cpu in cat.get("cpus", []):

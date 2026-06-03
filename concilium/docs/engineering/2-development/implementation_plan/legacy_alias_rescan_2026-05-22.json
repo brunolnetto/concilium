@@ -173,7 +173,7 @@
     {
       "path": "tests/unit/test_env_config_precedence.py",
       "line": 14,
-      "text": "monkeypatch.setenv(\"CONCILIUM_CPU_MAPPING_RULES_FILE\", str(legacy_rules))"
+      "text": "monkeypatch.setenv(\"CONCILIUM__CPU_MAPPING_RULES_FILE\", str(legacy_rules))"
     },
     {
       "path": "tests/unit/test_env_config_precedence.py",
@@ -188,7 +188,7 @@
     {
       "path": "tests/unit/test_env_config_precedence.py",
       "line": 22,
-      "text": "monkeypatch.setenv(\"CONCILIUM_CPU_MAPPING_RULES_FILE\", str(legacy_rules))"
+      "text": "monkeypatch.setenv(\"CONCILIUM__CPU_MAPPING_RULES_FILE\", str(legacy_rules))"
     },
     {
       "path": "tests/unit/test_env_config_precedence.py",
@@ -1633,7 +1633,7 @@
     {
       "path": "src/concilium/infrastructure/catalog/mapping/cpu_mapper.py",
       "line": 11,
-      "text": "_LEGACY_RULES_ENV = \"CONCILIUM_CPU_MAPPING_RULES_FILE\""
+      "text": "_LEGACY_RULES_ENV = \"CONCILIUM__CPU_MAPPING_RULES_FILE\""
     },
     {
       "path": "src/concilium/infrastructure/catalog/mapping/cpu_mapper.py",

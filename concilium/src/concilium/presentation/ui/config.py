@@ -25,27 +25,27 @@ def _env_int(name: str, default: int) -> int:
 
 def resolve_api_bind_host() -> str:
     """Host canônico da API para ambientes desacoplados."""
-    return _env_str("CONCILIUM_API_HOST", "api")
+    return _env_str("CONCILIUM__API_HOST", "api")
 
 
 def resolve_api_bind_port() -> int:
     """Porta canônica da API para ambientes desacoplados."""
-    return _env_int("CONCILIUM_API_PORT", 8000)
+    return _env_int("CONCILIUM__API_PORT", 8000)
 
 
 def resolve_api_base_url() -> str:
     """Resolve URL base da API consumida pela UI com precedência explícita.
 
     Ordem de precedência:
-    1. CONCILIUM_UI_API_BASE_URL (override da UI)
-    2. CONCILIUM_API_BASE_URL (valor canônico compartilhado)
-    3. CONCILIUM_API_HOST + CONCILIUM_API_PORT
+    1. CONCILIUM__UI_API_BASE_URL (override da UI)
+    2. CONCILIUM__API_BASE_URL (valor canônico compartilhado)
+    3. CONCILIUM__API_HOST + CONCILIUM__API_PORT
     """
-    ui_override = os.environ.get("CONCILIUM_UI_API_BASE_URL", "").strip()
+    ui_override = os.environ.get("CONCILIUM__UI_API_BASE_URL", "").strip()
     if ui_override:
         return ui_override.rstrip("/")
 
-    api_base = os.environ.get("CONCILIUM_API_BASE_URL", "").strip()
+    api_base = os.environ.get("CONCILIUM__API_BASE_URL", "").strip()
     if api_base:
         return api_base.rstrip("/")
 
@@ -56,12 +56,12 @@ def resolve_api_base_url() -> str:
 
 def resolve_ui_bind_host() -> str:
     """Host sugerido para bind da UI (Streamlit)."""
-    return _env_str("CONCILIUM_UI_HOST", "127.0.0.1")
+    return _env_str("CONCILIUM__UI_HOST", "127.0.0.1")
 
 
 def resolve_ui_bind_port() -> int:
     """Porta sugerida para bind da UI (Streamlit)."""
-    return _env_int("CONCILIUM_UI_PORT", 8501)
+    return _env_int("CONCILIUM__UI_PORT", 8501)
 
 
 # API Configuration
@@ -90,7 +90,7 @@ ML_ORANGE = "#C05C18"
 ML_ORANGE_LT = "#F5E6D8"
 
 # Navigation
-NAVIGATION_OPTIONS = ["Configuração", "Catálogo", "Projetos"]
+NAVIGATION_OPTIONS = ["Configuração", "Catálogo", "Projetos", "Novo QQP"]
 DEFAULT_NAV = "Projetos"
 
 # Project Kinds

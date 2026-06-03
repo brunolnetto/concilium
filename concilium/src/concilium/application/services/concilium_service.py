@@ -163,7 +163,116 @@ class ConciliumService:
         return overlay if isinstance(overlay, dict) else {}
 
     def resolve_cpu(self, project_id: str, cpu_id: str) -> dict | None:
-        return self._dependencies.override_service.resolve_cpu(project_id, cpu_id)
+        candidate = self._dependencies.override_service.resolve_cpu(project_id, cpu_id)
+
+        project = self._dependencies.repository.get_project(project_id)
+        master_cpu = None
+        for catalog_id in self._candidate_catalog_ids(project):
+            try:
+                master_cpu = self.get_catalog_cpu(catalog_id, cpu_id)
+            except Exception:
+                master_cpu = None
+            if master_cpu:
+                break
+
+        if candidate and master_cpu:
+            # Preserve project-level fields while inheriting richer master composition.
+            return {**master_cpu, **candidate}
+        if candidate:
+            enriched_candidate = self._enrich_cpu_from_producao(project, dict(candidate))
+            return enriched_candidate
+        if master_cpu:
+            return master_cpu
+        return candidate
+
+    def _candidate_catalog_ids(self, project: Any) -> list[str]:
+        """Resolve possible catalog IDs for project CPU enrichment."""
+        meta = project.meta if isinstance(project.meta, dict) else {}
+        ids: list[str] = []
+
+        base_catalog = str(meta.get("catalogo_base") or "").strip()
+        if base_catalog:
+            ids.append(base_catalog)
+
+        contexto_catalog = self._resolve_project_catalog_id(project)
+        if contexto_catalog:
+            ids.append(contexto_catalog)
+
+        contexto_id = str(meta.get("contexto_id") or "").strip()
+        if contexto_id:
+            ids.append(contexto_id)
+
+        dedup: list[str] = []
+        seen: set[str] = set()
+        for cid in ids:
+            if cid and cid not in seen:
+                seen.add(cid)
+                dedup.append(cid)
+        return dedup
+
+    def _enrich_cpu_from_producao(self, project: Any, cpu: dict[str, Any]) -> dict[str, Any]:
+        """Inject producao_horaria/equipe from catalog produtividade when CPU is sparse."""
+        if cpu.get("equipe") and cpu.get("producao_horaria") is not None:
+            return cpu
+
+        prod_id = str(cpu.get("producao_id_ref") or cpu.get("producao_id") or "").strip()
+        if not prod_id:
+            return cpu
+
+        for catalog_id in self._candidate_catalog_ids(project):
+            prod = self._get_catalog_producao(catalog_id, prod_id)
+            if not prod:
+                continue
+            if cpu.get("producao_horaria") is None and prod.get("valor_horario") is not None:
+                cpu["producao_horaria"] = prod.get("valor_horario")
+            if not cpu.get("equipe"):
+                equipe = prod.get("equipe")
+                if not isinstance(equipe, dict):
+                    equipe = prod.get("composicao_padrao_equipe")
+                if isinstance(equipe, dict):
+                    cpu["equipe"] = equipe
+            if cpu.get("equipe") and cpu.get("producao_horaria") is not None:
+                break
+
+        return cpu
+
+    def _get_catalog_producao(self, catalog_id: str, prod_id: str) -> dict[str, Any] | None:
+        from concilium.application.runtime import Runtime
+
+        rt = Runtime(self.config_root)
+        cat = rt.load_catalogo(catalog_id)
+        for key in ("produtividades", "producoes"):
+            rows = cat.get(key)
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                if isinstance(row, dict) and str(row.get("id") or "") == prod_id:
+                    return row
+        return None
+
+    def _resolve_project_catalog_id(self, project: Any) -> str | None:
+        """Resolve current catalog id for a project via contexto version metadata."""
+        meta = project.meta if isinstance(project.meta, dict) else {}
+        contexto_id = str(meta.get("contexto_id") or "").strip()
+        if not contexto_id:
+            return None
+
+        try:
+            versions = self._dependencies.project_service.list_contexto_versions(contexto_id)
+        except Exception:
+            versions = []
+        if not versions:
+            return contexto_id
+
+        contexto_version = str(meta.get("contexto_version") or "").strip()
+        selected = None
+        if contexto_version:
+            selected = next((v for v in versions if str(v.get("version") or "") == contexto_version), None)
+        if selected is None:
+            selected = versions[-1]
+
+        catalog_id = str((selected or {}).get("catalogo_id") or "").strip()
+        return catalog_id or contexto_id
 
     def list_benchmarks(self) -> list[str]:
         return discover_benchmark_slugs(self._dependencies.benchmarks_root)
@@ -188,6 +297,9 @@ class ConciliumService:
     def get_project(self, project_id: str) -> dict[str, Any]:
         return self._dependencies.project_service.get_project(project_id)
 
+    def delete_project(self, project_id: str, actor: str = "system") -> dict[str, Any]:
+        return self._dependencies.project_service.delete_project(project_id, actor=actor)
+
     # ── ADR-063: EAP management ───────────────────────────────────────────────
 
     def get_eap(self, project_id: str) -> dict[str, Any]:
@@ -206,9 +318,20 @@ class ConciliumService:
         return self._dependencies.project_service.list_perfil_versions(perfil_id)
 
     def create_perfil_version(
-        self, perfil_id: str, fields: dict[str, Any], motivo: str, author: str = "system"
+        self,
+        perfil_id: str,
+        fields: dict[str, Any],
+        motivo: str,
+        author: str = "system",
+        make_current: bool | None = None,
     ) -> dict[str, Any]:
-        return self._dependencies.project_service.create_perfil_version(perfil_id, fields, motivo, author)
+        return self._dependencies.project_service.create_perfil_version(
+            perfil_id,
+            fields,
+            motivo,
+            author,
+            make_current=make_current,
+        )
 
     def compare_perfil_versions(self, perfil_id: str, version_a: str, version_b: str) -> dict[str, Any]:
         return self._dependencies.project_service.compare_perfil_versions(perfil_id, version_a, version_b)
@@ -220,9 +343,20 @@ class ConciliumService:
         return self._dependencies.project_service.list_contexto_versions(contexto_id)
 
     def create_contexto_version(
-        self, contexto_id: str, fields: dict[str, Any], motivo: str, author: str = "system"
+        self,
+        contexto_id: str,
+        fields: dict[str, Any],
+        motivo: str,
+        author: str = "system",
+        make_current: bool | None = None,
     ) -> dict[str, Any]:
-        return self._dependencies.project_service.create_contexto_version(contexto_id, fields, motivo, author)
+        return self._dependencies.project_service.create_contexto_version(
+            contexto_id,
+            fields,
+            motivo,
+            author,
+            make_current=make_current,
+        )
 
     def compare_contexto_versions(self, contexto_id: str, version_a: str, version_b: str) -> dict[str, Any]:
         return self._dependencies.project_service.compare_contexto_versions(contexto_id, version_a, version_b)
@@ -236,9 +370,20 @@ class ConciliumService:
         return self._dependencies.project_service.list_tema_versions(tema_id)
 
     def create_tema_version(
-        self, tema_id: str, fields: dict[str, Any], motivo: str, author: str = "system"
+        self,
+        tema_id: str,
+        fields: dict[str, Any],
+        motivo: str,
+        author: str = "system",
+        make_current: bool | None = None,
     ) -> dict[str, Any]:
-        return self._dependencies.project_service.create_tema_version(tema_id, fields, motivo, author)
+        return self._dependencies.project_service.create_tema_version(
+            tema_id,
+            fields,
+            motivo,
+            author,
+            make_current=make_current,
+        )
 
     def compare_tema_versions(self, tema_id: str, version_a: str, version_b: str) -> dict[str, Any]:
         return self._dependencies.project_service.compare_tema_versions(tema_id, version_a, version_b)
@@ -252,9 +397,20 @@ class ConciliumService:
         return self._dependencies.project_service.list_jurisdicao_versions(jurisdicao_id)
 
     def create_jurisdicao_version(
-        self, jurisdicao_id: str, fields: dict[str, Any], motivo: str, author: str = "system"
+        self,
+        jurisdicao_id: str,
+        fields: dict[str, Any],
+        motivo: str,
+        author: str = "system",
+        make_current: bool | None = None,
     ) -> dict[str, Any]:
-        return self._dependencies.project_service.create_jurisdicao_version(jurisdicao_id, fields, motivo, author)
+        return self._dependencies.project_service.create_jurisdicao_version(
+            jurisdicao_id,
+            fields,
+            motivo,
+            author,
+            make_current=make_current,
+        )
 
     def compare_jurisdicao_versions(self, jurisdicao_id: str, version_a: str, version_b: str) -> dict[str, Any]:
         return self._dependencies.project_service.compare_jurisdicao_versions(jurisdicao_id, version_a, version_b)
@@ -267,6 +423,8 @@ class ConciliumService:
         fork_version: bool,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
+        use_mobilizacao_policy: bool,
+        use_strict_catalog_baseline: bool,
         actor: str = "system",
     ) -> dict[str, Any]:
         return self._dependencies.pipeline_service.run_project(
@@ -275,6 +433,8 @@ class ConciliumService:
             fork_version=fork_version,
             skill_inputs_override=skill_inputs_override,
             use_saved_overrides=use_saved_overrides,
+            use_mobilizacao_policy=use_mobilizacao_policy,
+            use_strict_catalog_baseline=use_strict_catalog_baseline,
             actor=actor,
         )
 
@@ -286,6 +446,8 @@ class ConciliumService:
         fork_version: bool,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
+        use_mobilizacao_policy: bool,
+        use_strict_catalog_baseline: bool,
         actor: str = "system",
     ) -> dict[str, Any]:
         return self._dependencies.pipeline_service.start_run_project(
@@ -294,6 +456,8 @@ class ConciliumService:
             fork_version=fork_version,
             skill_inputs_override=skill_inputs_override,
             use_saved_overrides=use_saved_overrides,
+            use_mobilizacao_policy=use_mobilizacao_policy,
+            use_strict_catalog_baseline=use_strict_catalog_baseline,
             actor=actor,
         )
 
@@ -358,6 +522,63 @@ class ConciliumService:
             "backtracking_pe": back.to_dict() if back else None,
         }
 
+    def get_calendario_operacional(self, project_id: str, version: str | None = None) -> dict[str, Any]:
+        canonical, resolved_version = self._load_canonical_for_version(project_id, version)
+        if canonical is None:
+            return {"version": resolved_version, "semanas": []}
+
+        semanas: list[dict[str, Any]] = []
+        calendario = list(getattr(canonical, "calendario_operacional", []) or [])
+        clima_por_semana: dict[str, float] = {}
+        total_por_semana: dict[str, float] = {}
+        cron = getattr(canonical, "cronograma", None)
+        if cron:
+            for sa in cron.scheduled_activities:
+                for semana_iso, dist in sa.distribuicao_semanal.items():
+                    clima_por_semana.setdefault(
+                        semana_iso,
+                        float(getattr(dist, "fator_clima", getattr(dist, "eficiencia", 1.0)) or 1.0),
+                    )
+                    total_por_semana.setdefault(
+                        semana_iso,
+                        float(getattr(dist, "fator_total", getattr(dist, "eficiencia", 1.0)) or 1.0),
+                    )
+
+        for row in calendario:
+            data = row.model_dump() if hasattr(row, "model_dump") else dict(row)
+            semana = str(data.get("semana_iso", ""))
+            semanas.append(
+                {
+                    **data,
+                    "fator_clima": round(clima_por_semana.get(semana, 1.0), 4),
+                    "fator_total": round(total_por_semana.get(semana, clima_por_semana.get(semana, 1.0)), 4),
+                }
+            )
+
+        return {"version": resolved_version, "semanas": semanas}
+
+    def simulate_calendario_operacional(
+        self,
+        project_id: str,
+        payload: dict[str, Any],
+        version: str | None = None,
+    ) -> dict[str, Any]:
+        base = self.get_calendario_operacional(project_id, version)
+        overrides = dict((payload or {}).get("fator_calendario_semanal", {}) or {})
+        simulado: list[dict[str, Any]] = []
+        for row in base.get("semanas", []):
+            semana = str(row.get("semana_iso", ""))
+            fator_clima = float(row.get("fator_clima", 1.0) or 1.0)
+            fator_cal = float(overrides.get(semana, row.get("fator_calendario", 1.0)) or 1.0)
+            simulado.append(
+                {
+                    **row,
+                    "fator_calendario": round(fator_cal, 4),
+                    "fator_total": round(fator_clima * fator_cal, 4),
+                }
+            )
+        return {"version": base.get("version"), "simulado": simulado}
+
     def _load_canonical_for_version(self, project_id: str, version: str | None = None):
         """Loads canonical for a specific version (or current when omitted)."""
         repository = getattr(self._dependencies, "repository", None)
@@ -390,6 +611,45 @@ class ConciliumService:
 
             cubo = CuboAnaliticoBuilder().build(canonical)
         return {"version": resolved_version, "cubo_analitico": cubo.to_dict() if cubo else None}
+
+    # ── ADR-086: Cubo de Pool Instancial ──────────────────────────────────────
+    @staticmethod
+    def get_cubo_pool_projection_contract() -> dict[str, Any]:
+        """ADR-086 D6.1: contrato navegável das faces do cubo de pool."""
+        from concilium.application.services.cubo_pool_projection import (
+            cubo_pool_projection_contract,
+        )
+
+        return cubo_pool_projection_contract()
+
+    def get_cubo_pool_projection(
+        self,
+        project_id: str,
+        *,
+        version: str | None = None,
+        face: str = "instancia_ciclo_vida",
+        granularidade: str = "mes",
+        top_n: int = 300,
+        atividade_id: str | None = None,
+        instancia_id: str | None = None,
+    ) -> dict[str, Any]:
+        """ADR-086 D6.1: projeção honesta e descritiva da decomposição de pool de recursos."""
+        from concilium.application.services.cubo_pool_projection import (
+            resolve_cubo_pool_projection,
+        )
+
+        canonical, resolved_version = self._load_canonical_for_version(project_id, version)
+        if canonical is None:
+            return {
+                "version": resolved_version, "face": face, "rows": [], "narrativa": [],
+                "filtros_aplicados": {}, "invariantes_ok": True, "invariantes_violacoes": [],
+            }
+        proj = resolve_cubo_pool_projection(
+            canonical, face=face, granularidade=granularidade, top_n=top_n,
+            atividade_id=atividade_id, instancia_id=instancia_id,
+        )
+        proj["version"] = resolved_version
+        return proj
 
     @staticmethod
     def get_cubo_projection_contract() -> dict[str, Any]:
@@ -458,104 +718,18 @@ class ConciliumService:
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
         top_n: int,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str]:
-        if face == "tempo_natureza":
-            payload = cubo.resumo_por_natureza_temporal(granularidade)
-            rows = [
-                {"periodo": periodo, "natureza": "direto", "valor_rs": float(vals.get("direto", 0.0))}
-                for periodo, vals in payload.items()
-            ] + [
-                {
-                    "periodo": periodo,
-                    "natureza": "indireto",
-                    "valor_rs": float(vals.get("indireto", 0.0)),
-                }
-                for periodo, vals in payload.items()
-            ]
-            rows.sort(key=lambda r: (str(r["periodo"]), str(r["natureza"])))
-            columns = [
-                {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
-                {"id": "natureza", "label": "Natureza", "dtype": "str", "role": "series"},
-                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
-            ]
-            return rows[:top_n], columns, "bar_stacked"
+        from .cube_projection_views import resolve_cubo_projection_rows
 
-        if face == "tempo_componente":
-            payload = cubo.composicao_preco_temporal(granularidade)
-            rows: list[dict[str, Any]] = []
-            for periodo, comp_dict in payload.items():
-                for componente, valor in comp_dict.items():
-                    rows.append({"periodo": periodo, "componente_bdi": componente, "valor_rs": float(valor)})
-            rows.sort(key=lambda r: (str(r["periodo"]), -float(r["valor_rs"])))
-            columns = [
-                {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
-                {"id": "componente_bdi", "label": "Componente BDI", "dtype": "str", "role": "series"},
-                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
-            ]
-            return rows[:top_n], columns, "line"
-
-        if face == "categoria_componente":
-            payload = cubo.composicao_por_categoria()
-            rows = [
-                {"categoria": categoria, "componente_bdi": comp, "valor_rs": float(valor)}
-                for categoria, comp_dict in payload.items()
-                for comp, valor in comp_dict.items()
-            ]
-            rows.sort(key=lambda r: -float(r["valor_rs"]))
-            columns = [
-                {"id": "categoria", "label": "Categoria", "dtype": "str", "role": "y"},
-                {"id": "componente_bdi", "label": "Componente BDI", "dtype": "str", "role": "x"},
-                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
-            ]
-            return rows[:top_n], columns, "heatmap"
-
-        if face == "atividade_componente":
-            grouped = cubo.group_by("atividade_id", "componente_bdi")
-            rows = [
-                {"atividade_id": atividade_id, "componente_bdi": componente, "valor_rs": float(valor)}
-                for (atividade_id, componente), valor in grouped.items()
-            ]
-            rows.sort(key=lambda r: -float(r["valor_rs"]))
-            columns = [
-                {"id": "atividade_id", "label": "Atividade", "dtype": "str", "role": "y"},
-                {"id": "componente_bdi", "label": "Componente BDI", "dtype": "str", "role": "x"},
-                {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
-            ]
-            return rows[:top_n], columns, "heatmap"
-
-        if face == "diesel_temporal":
-            payload = cubo.consumo_diesel_temporal(granularidade)
-            rows = [{"periodo": periodo, "consumo_diesel_l": float(valor)} for periodo, valor in payload.items()]
-            columns = [
-                {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
-                {"id": "consumo_diesel_l", "label": "Consumo Diesel (L)", "dtype": "float", "role": "value"},
-            ]
-            return rows[:top_n], columns, "line"
-
-        raise ValueError(f"Face de projeção não suportada: {face}")
+        return resolve_cubo_projection_rows(cubo, face, granularidade, top_n)
 
     @staticmethod
     def _bucket_from_week_iso(
         week_iso: str,
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
     ) -> str:
-        if granularidade == "semana":
-            return week_iso
-        year_str, week_str = week_iso.split("-W", 1)
-        anchor = date.fromisocalendar(int(year_str), int(week_str), 1)
-        if granularidade == "mes":
-            return f"{anchor.year:04d}-{anchor.month:02d}"
-        if granularidade == "bimestre":
-            bimestre = ((anchor.month - 1) // 2) + 1
-            return f"{anchor.year:04d}-B{bimestre}"
-        if granularidade == "trimestre":
-            trimestre = ((anchor.month - 1) // 3) + 1
-            return f"{anchor.year:04d}-T{trimestre}"
-        if granularidade == "semestre":
-            semestre = ((anchor.month - 1) // 6) + 1
-            return f"{anchor.year:04d}-S{semestre}"
-        if granularidade == "ano":
-            return f"{anchor.year:04d}"
-        raise ValueError(f"Granularidade inválida: {granularidade}")
+        from .cube_projection_views import bucket_from_week_iso
+
+        return bucket_from_week_iso(week_iso, granularidade)
 
     def _resolve_abc_curva_rows(
         self,
@@ -564,45 +738,9 @@ class ConciliumService:
         threshold_a: float,
         threshold_b: float,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
-        from concilium.domain.services.curva_abc_builder import CurvaABCBuilder
+        from .cube_projection_views import resolve_abc_curva_rows
 
-        curva = CurvaABCBuilder().build(canonical)
-        rows: list[dict[str, Any]] = []
-        for item in list(curva.itens)[:top_n]:
-            classe = (
-                "A"
-                if item.pct_custo_acumulado <= threshold_a
-                else ("B" if item.pct_custo_acumulado <= threshold_b else "C")
-            )
-            rows.append(
-                {
-                    "insumo_id": item.insumo_id,
-                    "descricao": item.descricao,
-                    "categoria": item.categoria.lower(),
-                    "custo_total_rs": float(item.custo_total),
-                    "pct_custo": float(item.pct_custo),
-                    "pct_custo_acumulado": float(item.pct_custo_acumulado),
-                    "classe_abc": classe,
-                }
-            )
-        columns = [
-            {"id": "insumo_id", "label": "Insumo", "dtype": "str", "role": "x"},
-            {"id": "descricao", "label": "Descrição", "dtype": "str", "role": "label"},
-            {"id": "categoria", "label": "Categoria", "dtype": "str", "role": "series"},
-            {"id": "custo_total_rs", "label": "Custo Total (R$)", "dtype": "float", "role": "value"},
-            {"id": "pct_custo", "label": "% Custo", "dtype": "float", "role": "value_aux"},
-            {"id": "pct_custo_acumulado", "label": "% Acumulado", "dtype": "float", "role": "line"},
-            {"id": "classe_abc", "label": "Classe ABC", "dtype": "str", "role": "class"},
-        ]
-        class_counts = {"A": 0, "B": 0, "C": 0}
-        for row in rows:
-            class_counts[str(row["classe_abc"])] += 1
-        operator_meta = {
-            "thresholds": {"a": threshold_a, "b": threshold_b},
-            "class_counts": class_counts,
-            "coverage_a": max((float(r["pct_custo_acumulado"]) for r in rows if r["classe_abc"] == "A"), default=0.0),
-        }
-        return rows, columns, "bar", "currency_brl", operator_meta
+        return resolve_abc_curva_rows(canonical, top_n, threshold_a, threshold_b)
 
     def _resolve_s_curve_rows(
         self,
@@ -610,38 +748,9 @@ class ConciliumService:
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
         top_n: int,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
-        from collections import defaultdict
+        from .cube_projection_views import resolve_s_curve_rows
 
-        from concilium.domain.services.s_curve_builder import SCurveBuilder
-
-        s_curve = SCurveBuilder().build(canonical)
-        grouped: dict[str, dict[str, float]] = defaultdict(lambda: {"custo_semanal_rs": 0.0, "custo_acumulado_rs": 0.0})
-        for idx, semana_iso in enumerate(s_curve.semanas_iso):
-            bucket = self._bucket_from_week_iso(semana_iso, granularidade)
-            grouped[bucket]["custo_semanal_rs"] += float(s_curve.custo_semanal[idx])
-            grouped[bucket]["custo_acumulado_rs"] += float(s_curve.custo_semanal[idx])
-        rows: list[dict[str, Any]] = []
-        acum = 0.0
-        for bucket in sorted(grouped.keys()):
-            custo = float(grouped[bucket]["custo_semanal_rs"])
-            acum += custo
-            rows.append(
-                {
-                    "periodo": bucket,
-                    "custo_semanal_rs": custo,
-                    "custo_acumulado_rs": round(acum, 2),
-                    "pct_acumulado": round(acum / float(s_curve.total_projeto), 6)
-                    if s_curve.total_projeto > 0
-                    else 0.0,
-                }
-            )
-        columns = [
-            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
-            {"id": "custo_semanal_rs", "label": "Custo no Período (R$)", "dtype": "float", "role": "value"},
-            {"id": "custo_acumulado_rs", "label": "Custo Acumulado (R$)", "dtype": "float", "role": "line"},
-            {"id": "pct_acumulado", "label": "% Acumulado", "dtype": "float", "role": "line_aux"},
-        ]
-        return rows[:top_n], columns, "line", "currency_brl", {"total_projeto_rs": float(s_curve.total_projeto)}
+        return resolve_s_curve_rows(canonical, granularidade, top_n)
 
     def _resolve_recursos_ativos_rows(
         self,
@@ -649,50 +758,9 @@ class ConciliumService:
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
         top_n: int,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
-        from collections import defaultdict
+        from .cube_projection_views import resolve_recursos_ativos_rows
 
-        from concilium.domain.services.s_curve_builder import SCurveBuilder
-
-        s_curve = SCurveBuilder().build(canonical)
-        grouped: dict[str, dict[str, float]] = defaultdict(
-            lambda: {
-                "n_equipes_totais": 0.0,
-                "n_equipamentos_unicos": 0.0,
-                "equipamentos_unidades_ativas": 0.0,
-            }
-        )
-        for agg in s_curve.agregacao_semanal:
-            bucket = self._bucket_from_week_iso(str(agg.semana_iso), granularidade)
-            grouped[bucket]["n_equipes_totais"] += float(agg.n_equipes_totais)
-            grouped[bucket]["n_equipamentos_unicos"] = max(
-                grouped[bucket]["n_equipamentos_unicos"], float(agg.n_equipamentos_unicos)
-            )
-            grouped[bucket]["equipamentos_unidades_ativas"] += float(sum(agg.equipamentos_ativos.values()))
-        rows = [
-            {
-                "periodo": bucket,
-                "n_equipes_totais": int(vals["n_equipes_totais"]),
-                "n_equipamentos_unicos": int(vals["n_equipamentos_unicos"]),
-                "equipamentos_unidades_ativas": int(vals["equipamentos_unidades_ativas"]),
-            }
-            for bucket, vals in sorted(grouped.items())
-        ]
-        columns = [
-            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
-            {"id": "n_equipes_totais", "label": "Nº Equipes", "dtype": "int", "role": "value"},
-            {"id": "n_equipamentos_unicos", "label": "Equipamentos Únicos", "dtype": "int", "role": "value"},
-            {
-                "id": "equipamentos_unidades_ativas",
-                "label": "Unidades de Equipamento Ativas",
-                "dtype": "int",
-                "role": "value",
-            },
-        ]
-        operator_meta = {
-            "aggregation_rule": "sum(n_equipes, unidades) + max(equipamentos_unicos) por bucket",
-            "n_periodos": len(rows),
-        }
-        return rows[:top_n], columns, "line", "count", operator_meta
+        return resolve_recursos_ativos_rows(canonical, granularidade, top_n)
 
     def get_cubo_analitico_projection(
         self,
@@ -784,31 +852,22 @@ class ConciliumService:
         bounded_top_n = max(1, min(int(top_n), 2000))
         cubo_filtrado = cubo.slice(categoria=categoria, atividade_id=atividade_id, componente_bdi=componente_bdi)
 
-        if face == "abc_curva":
-            rows, columns, chart_hint, unit_type, operator_meta = self._resolve_abc_curva_rows(
-                canonical,
-                bounded_top_n,
-                abc_threshold_a,
-                abc_threshold_b,
-            )
-        elif face == "s_curve_custo":
-            rows, columns, chart_hint, unit_type, operator_meta = self._resolve_s_curve_rows(
-                canonical,
-                granularidade,
-                bounded_top_n,
-            )
-        elif face == "recursos_ativos_tempo":
-            rows, columns, chart_hint, unit_type, operator_meta = self._resolve_recursos_ativos_rows(
-                canonical,
-                granularidade,
-                bounded_top_n,
-            )
-        else:
-            rows, columns, chart_hint = self._resolve_cubo_projection_rows(
-                cubo_filtrado, face, granularidade, bounded_top_n
-            )
-            unit_type = str(face_specs[face]["unit_type"])
-            operator_meta = {}
+        from .cube_projection_views import build_cube_projection_payload
+
+        projection_payload = build_cube_projection_payload(
+            canonical=canonical,
+            cubo=cubo_filtrado,
+            face=face,
+            granularidade=granularidade,
+            top_n=bounded_top_n,
+            abc_threshold_a=abc_threshold_a,
+            abc_threshold_b=abc_threshold_b,
+        )
+        rows = projection_payload["rows"]
+        columns = projection_payload["columns"]
+        chart_hint = str(projection_payload["chart_hint"])
+        unit_type = str(projection_payload["unit_type"])
+        operator_meta = projection_payload["operator_meta"]
 
         return {
             "version": resolved_version,

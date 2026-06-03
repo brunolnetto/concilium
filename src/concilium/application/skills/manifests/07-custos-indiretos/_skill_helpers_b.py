@@ -1,0 +1,389 @@
+"""Skill 05 — Indiretos (ADR-009, ADR-023 §D4).
+
+Dimensiona custos indiretos com granularidade semanal.
+ADR-023 §D4: também emite IndiretoComBdi com BDI-INDIRETO aplicado sobre cada categoria.
+
+Categorias suportadas: ADM, TOP, LAB, QSMS, MOB.
+
+Drivers:
+  permanencia: custo_fixo_mensal ÷ 4.33 × n_semanas (TOP, ADM, LAB, QSMS)
+  one_time:    custo_fixo_total alocado nas semanas 0 e final (MOB)
+
+Inputs (no dict 'inputs'):
+    composicoes_indireto: dict[categoria, dict] — opcional, override por categoria
+    dados_mobilizacao:    dict — para categoria MOB (legado)
+    perc_encargos:        float — default 0.92
+    categorias_config:    list[dict] — lista de IndirectoCategoria serializadas (ADR-009 novo)
+    tabela_bdi:           TabelaBdi serializada — para bdi_indireto (ADR-023 §D4); opcional
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # ADR-056 §T3
+from concilium.domain.models.bdi import DEFAULT_BDI_TABELA, TabelaBdi
+from concilium.domain.models.canonical import (
+    CanonicalModel,
+    IndirectoCategoria,
+    IndirectoCostComponent,
+    Indireto,
+    IndiretoComBdi,
+    IndiretoSemanal,
+    Mobilizacao,
+    ValidacaoItem,
+)
+from concilium.domain.models.decision_variables import DecisionVariables
+from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
+try:
+    from ._skill_helpers_a import (
+        _bcfd_enrich_mo_itens,
+        _composicao_default_por_categoria,
+        _dimensionar_automatico,
+        _parse_component,
+    )
+except ImportError:
+    import importlib.util
+    from pathlib import Path
+
+    _here = Path(__file__).resolve().parent
+    _spec_a = importlib.util.spec_from_file_location("skill07_helpers_a_for_b", _here / "_skill_helpers_a.py")
+    _mod_a = importlib.util.module_from_spec(_spec_a)  # type: ignore[arg-type]
+    _spec_a.loader.exec_module(_mod_a)  # type: ignore[union-attr]
+    _bcfd_enrich_mo_itens = _mod_a._bcfd_enrich_mo_itens
+    _composicao_default_por_categoria = _mod_a._composicao_default_por_categoria
+    _dimensionar_automatico = _mod_a._dimensionar_automatico
+    _parse_component = _mod_a._parse_component
+
+# Fator padrão: 1 mês = 4.33 semanas
+# _SEMANAS_POR_MES agora importada de domain/constants.py (era 4.33, corrigido para 4.3482)
+
+
+def _build_categoria_from_dict(
+    codigo: str,
+    comp_dict: dict,
+    n_semanas: int,
+    repo: RepositorioInsumo | None = None,
+    data_base=None,
+    overrides: dict[str, Any] | None = None,
+    jurisdicao_id: str | None = None,
+) -> IndirectoCategoria:
+    """Constrói IndirectoCategoria a partir de dict de composição (ADR-009 driver=permanencia)."""
+    _bcfd_enrich_mo_itens(comp_dict, repo, jurisdicao_id, overrides, data_base)
+    mo = _parse_component(comp_dict.get("mao_de_obra"))
+    eq = _parse_component(comp_dict.get("equipamentos"))
+    vb = _parse_component(comp_dict.get("verbas"))
+    custo_mensal = (
+        (mo.custo_fixo_mensal if mo else 0.0)
+        + (eq.custo_fixo_mensal if eq else 0.0)
+        + (vb.custo_fixo_mensal if vb else 0.0)
+    )
+    custo_total = round(custo_mensal * (n_semanas / _SEMANAS_POR_MES), 2)
+    return IndirectoCategoria(
+        categoria=codigo,  # type: ignore[arg-type]
+        driver="permanencia",
+        mao_de_obra=mo,
+        equipamentos=eq,
+        verbas=vb,
+        custo_fixo_mensal=custo_mensal,
+        custo_fixo_total=custo_total,
+    )
+
+
+def _build_semanal_breakdown(
+    categoria: IndirectoCategoria,
+    n_semanas: int,
+) -> list[IndiretoSemanal]:
+    """Gera breakdown semanal para uma categoria (ADR-009 §D2)."""
+    result: list[IndiretoSemanal] = []
+    if categoria.driver == "permanencia":
+        mo_sem = (categoria.mao_de_obra.custo_fixo_mensal if categoria.mao_de_obra else 0.0) / _SEMANAS_POR_MES
+        eq_sem = (categoria.equipamentos.custo_fixo_mensal if categoria.equipamentos else 0.0) / _SEMANAS_POR_MES
+        vb_sem = (categoria.verbas.custo_fixo_mensal if categoria.verbas else 0.0) / _SEMANAS_POR_MES
+        custo_sem = mo_sem + eq_sem + vb_sem
+        for w in range(n_semanas):
+            result.append(
+                IndiretoSemanal(
+                    semana=w,
+                    categoria=categoria.categoria,
+                    custo_mao_de_obra=round(mo_sem, 2),
+                    custo_equipamentos=round(eq_sem, 2),
+                    custo_verbas=round(vb_sem, 2),
+                    custo_semanal=round(custo_sem, 2),
+                    ativa=True,
+                )
+            )
+    else:
+        # MOB: split entre semana 0 e semana final
+        metade = round(categoria.custo_fixo_total / 2, 2)
+        for w in range(n_semanas):
+            ativa = w == 0 or w == (n_semanas - 1)
+            custo_w = metade if ativa else 0.0
+            result.append(
+                IndiretoSemanal(
+                    semana=w,
+                    categoria=categoria.categoria,
+                    custo_mao_de_obra=0.0,
+                    custo_equipamentos=0.0,
+                    custo_verbas=round(custo_w, 2) if ativa else 0.0,
+                    custo_semanal=round(custo_w, 2),
+                    ativa=ativa,
+                )
+            )
+    return result
+
+
+def _custo_mob_legado(dados_mob: dict, num_pessoas_direta: int, prazo_meses: int) -> tuple[float, list[Mobilizacao]]:
+    """Calcula custo MOB legado (retrocompatível com formato anterior)."""
+    custo_total = 0.0
+    mobilizacoes: list[Mobilizacao] = []
+    for m in dados_mob.get("mobilizacoes", []):
+        mob = Mobilizacao(
+            descricao=m["descricao"],
+            num_unidades=m["num_unidades"],
+            origem=m["origem"],
+            destino=m["destino"],
+            distancia_km=m["distancia_km"],
+            custo_km=m["custo_km"],
+            custo_total=m["num_unidades"] * m["distancia_km"] * m["custo_km"],
+        )
+        mobilizacoes.append(mob)
+        custo_total += mob.custo_total
+    custo_pessoa_mes = dados_mob.get("custo_pessoa_mes", 1850)
+    custo_total += num_pessoas_direta * custo_pessoa_mes * prazo_meses
+    for b in dados_mob.get("baixadas", []):
+        n_ocorrencias = len(b.get("meses_ocorrencia", []))
+        custo_total += b.get("num_pessoas", 0) * b.get("valor_por_pessoa", 0) * n_ocorrencias
+    return round(custo_total, 2), mobilizacoes
+
+
+def _extract_overrides(inputs: dict) -> dict | None:
+    val = inputs.get("insumos_override")
+    if isinstance(val, dict):
+        return val
+    return None
+
+
+def _count_pessoas_diretas(canonical_in: CanonicalModel) -> int:
+    return sum(sum(f.num_pessoas for f in eq.funcoes) for eq in canonical_in.equipes_diretas)
+
+
+def _get_pipeline_blocked(canonical_in: CanonicalModel) -> set:
+    return set(canonical_in.pipeline_blocked_from or [])
+
+
+def _extract_dv4_policy(inputs: dict) -> str | None:
+    dv_obj = inputs.get("decision_variables") or inputs.get("dv")
+    if dv_obj is None:
+        return None
+    if isinstance(dv_obj, dict):
+        return dv_obj.get("dv4_indirect_policy")
+    if isinstance(dv_obj, DecisionVariables):
+        return dv_obj.dv4_indirect_policy
+    return getattr(dv_obj, "dv4_indirect_policy", None)
+
+
+def _process_mob_categoria(
+    cat: dict,
+    categorias_config_raw: list,
+    dados_mob: dict,
+    num_pessoas_direta: int,
+    prazo_meses: int,
+    n_semanas: int,
+    dv4_policy: str | None,
+    policy_scale: dict,
+) -> tuple[Indireto, list[IndiretoSemanal]]:
+    descricao: str = cat["descricao"]
+    cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == "MOB"), None)
+    if cat_cfg_raw:
+        cat_obj = IndirectoCategoria(**cat_cfg_raw)
+        custo = cat_obj.custo_fixo_total
+        mobs: list[Mobilizacao] = []
+    else:
+        custo, mobs = _custo_mob_legado(dados_mob, num_pessoas_direta, prazo_meses)
+        cat_obj = IndirectoCategoria(
+            categoria="MOB",
+            driver="one_time",
+            custo_fixo_total=custo,
+            verbas=IndirectoCostComponent(nome="MOB", custo_fixo_mensal=0.0),
+        )
+    if dv4_policy and dv4_policy in policy_scale:
+        custo = round(custo * policy_scale[dv4_policy], 2)
+        cat_obj = cat_obj.model_copy(update={"custo_fixo_total": custo})
+    indir = Indireto(
+        categoria="MOB", descricao=descricao, mobilizacoes=mobs, permanencia_meses=float(prazo_meses), custo_total=custo
+    )
+    return indir, _build_semanal_breakdown(cat_obj, n_semanas)
+
+
+def _resolve_categoria_comp(
+    codigo: str,
+    cat: dict,
+    composicoes_input: dict,
+    categorias_config_raw: list,
+    n_semanas: int,
+    repo: Any,
+    data_base: Any,
+    overrides: dict | None,
+    jurisdicao_id: str | None,
+    canonical_in: CanonicalModel,
+    catalogo: dict | None,
+) -> IndirectoCategoria:
+    cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == codigo), None)
+    if cat_cfg_raw:
+        return IndirectoCategoria(**cat_cfg_raw)
+    if codigo in composicoes_input:
+        return _build_categoria_from_dict(
+            codigo,
+            composicoes_input[codigo],
+            n_semanas,
+            repo,
+            data_base,
+            overrides=overrides,
+            jurisdicao_id=jurisdicao_id,
+        )
+    if "regra_dimensionamento" in cat:
+        comp_auto = _dimensionar_automatico(codigo, cat["regra_dimensionamento"], canonical_in, catalogo)
+        return _build_categoria_from_dict(
+            codigo, comp_auto, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
+        )
+    comp_default = _composicao_default_por_categoria(codigo)
+    return _build_categoria_from_dict(
+        codigo, comp_default, n_semanas, repo, data_base, overrides=overrides, jurisdicao_id=jurisdicao_id
+    )
+
+
+def _apply_dv4_scale_to_categoria(
+    cat_obj: IndirectoCategoria,
+    dv4_policy: str | None,
+    policy_scale: dict,
+    n_semanas: int,
+) -> tuple[float, IndirectoCategoria]:
+    custo = cat_obj.custo_total_para_semanas(n_semanas)
+    if dv4_policy and dv4_policy in policy_scale:
+        scale = policy_scale[dv4_policy]
+        custo = round(custo * scale, 2)
+        cat_obj = cat_obj.model_copy(update={"custo_fixo_mensal": round(cat_obj.custo_fixo_mensal * scale, 2)})
+    return custo, cat_obj
+
+
+def _build_indireto_from_cat_obj(
+    codigo: str,
+    descricao: str,
+    cat_obj: IndirectoCategoria,
+    custo: float,
+    n_semanas: int,
+) -> Indireto:
+    return Indireto(
+        categoria=codigo,  # type: ignore[arg-type]
+        descricao=descricao,
+        funcoes=[item for item in (cat_obj.mao_de_obra.itens if cat_obj.mao_de_obra else [])],
+        equipamentos=[item for item in (cat_obj.equipamentos.itens if cat_obj.equipamentos else [])],
+        verbas_mensais=[item for item in (cat_obj.verbas.itens if cat_obj.verbas else [])],
+        permanencia_meses=round(n_semanas / _SEMANAS_POR_MES, 2),
+        custo_total=custo,
+    )
+
+
+def _validate_dv4_policy(dv4_policy: str | None, validacoes: list, policy_scale: dict) -> None:
+    if not dv4_policy:
+        return
+    if dv4_policy in policy_scale:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-IND-POL-01",
+                status="OK",
+                mensagem=f"Policy '{dv4_policy}' aplicada (scale={policy_scale[dv4_policy]})",
+            )
+        )
+    else:
+        validacoes.append(
+            ValidacaoItem(codigo="VAL-IND-POL-01", status="ERRO", mensagem=f"Policy desconhecida: '{dv4_policy}'")
+        )
+
+
+def _validate_razao_indireto_direto(
+    perfil: dict | None,
+    canonical_in: CanonicalModel,
+    indiretos_out: list,
+    validacoes: list,
+) -> None:
+    razao_alvo = (perfil or {}).get("razao_indireto_direto_alvo")
+    if not razao_alvo or not canonical_in.equipes_diretas:
+        return
+    custo_direto = sum(eq.custo_total for eq in canonical_in.equipes_diretas)
+    custo_indireto = sum(i.custo_total for i in indiretos_out)
+    if custo_direto <= 0:
+        return
+    razao = custo_indireto / custo_direto
+    if not (razao_alvo["min"] <= razao <= razao_alvo["max"]):
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-POL-INDIRETO",
+                status="AVISO",
+                mensagem=(
+                    f"Razão indireto/direto {razao * 100:.1f}% fora da faixa"
+                    f" [{razao_alvo['min'] * 100:.1f}%, {razao_alvo['max'] * 100:.1f}%]"
+                ),
+            )
+        )
+    else:
+        validacoes.append(ValidacaoItem(codigo="VAL-POL-INDIRETO", status="OK"))
+
+
+def _apply_bdi_to_indiretos(
+    tabela_bdi_raw: Any,
+    indiretos_out: list,
+    validacoes: list,
+) -> list[IndiretoComBdi]:
+    tabela_bdi: TabelaBdi = DEFAULT_BDI_TABELA
+    if tabela_bdi_raw is not None:
+        try:
+            tabela_bdi = (
+                TabelaBdi.model_validate(tabela_bdi_raw) if isinstance(tabela_bdi_raw, dict) else tabela_bdi_raw
+            )
+        except Exception as e:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-INDIR-BDI-PARSE",
+                    status="AVISO",
+                    mensagem=f"Falha ao parsear inputs.tabela_bdi: {e}. Usando DEFAULT_BDI_TABELA.",
+                )
+            )
+    bdi_indir = tabela_bdi.indireto.bdi_total
+    indiretos_com_bdi_out: list[IndiretoComBdi] = []
+    for ind in indiretos_out:
+        custo_sem = ind.custo_total
+        custo_com = round(custo_sem * (1 + bdi_indir), 2)
+        try:
+            indiretos_com_bdi_out.append(
+                IndiretoComBdi(
+                    categoria=ind.categoria,
+                    custo_sem_bdi=custo_sem,
+                    bdi_aplicado=round(bdi_indir, 6),
+                    custo_com_bdi=custo_com,
+                )
+            )
+        except Exception as e:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-INDIR-BDI-ITEM",
+                    status="AVISO",
+                    mensagem=f"IndiretoComBdi não gerado para '{ind.categoria}': {e}",
+                )
+            )
+    if indiretos_com_bdi_out:
+        custo_total_sem = sum(i.custo_sem_bdi for i in indiretos_com_bdi_out)
+        custo_total_com = sum(i.custo_com_bdi for i in indiretos_com_bdi_out)
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-INDIR-BDI-OK",
+                status="OK",
+                mensagem=(
+                    f"BDI-INDIRETO {bdi_indir * 100:.2f}% aplicado a {len(indiretos_com_bdi_out)} categorias:"
+                    f" sem_bdi=R${custo_total_sem:,.2f} -> com_bdi=R${custo_total_com:,.2f}"
+                ),
+            )
+        )
+    return indiretos_com_bdi_out

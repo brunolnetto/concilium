@@ -1,0 +1,51 @@
+﻿{
+  "projeto": "LUNDIN",
+  "slug": "LUNDIN",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 393,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 3300,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 80,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "ERRO",
+      "duration_ms": 77,
+      "avisos": [],
+      "erros": [
+        "Itens não completados: eap-3_1=92.4%; eap-1_3=93.8%; eap-2_1=94.1%; eap-3_3=93.8%; eap-3_6=92.6%; eap-5_1=94.7%"
+      ]
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 12761743.77,
+      "custo_indireto": 14181483.49,
+      "custo_total": 26943227.26,
+      "preco_venda": 43659291.54
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "APROVADO"
+}

@@ -438,6 +438,87 @@ def render_version_summary(base_url: str, project: dict, actor: str) -> None:
     col_hist2.metric("Última modificação", _upd[:10] if len(_upd) > 10 else _upd)
 
 
+def render_version_detail(base_url: str, project: dict, actor: str) -> None:
+    """Render descriptive per-version detail panel — runs, KPIs e artefatos da versão selecionada."""
+    import pandas as pd
+
+    project_id = project["project_id"]
+    versions = list(project.get("versions") or [])
+    if not versions:
+        st.info("Projeto sem versões registradas.")
+        return
+
+    current_v = project.get("current_version") or versions[0]
+    selected = st.selectbox(
+        "Versão",
+        options=versions,
+        index=versions.index(current_v) if current_v in versions else 0,
+        key=f"detail-version-select-{project_id}",
+    )
+
+    st.markdown(f"#### Versão `{selected}`")
+
+    try:
+        runs = api_call(
+            method="GET",
+            path=f"/api/projects/{project_id}/runs",
+            base_url=base_url,
+            actor=actor,
+        ).get("items", [])
+    except Exception:
+        runs = []
+
+    version_runs = [r for r in runs if r.get("version") == selected]
+
+    if not version_runs:
+        st.info(f"Nenhuma execução registrada para a versão **{selected}**.")
+    else:
+        last = version_runs[0]
+        summary = last.get("summary") or {}
+        col_status, col_ts, col_custo, col_margem, col_pe = st.columns(5)
+        _ts = str(last.get("started_at") or "-")
+        col_status.metric("Status", last.get("status", "-"))
+        col_ts.metric("Última execução", _ts[:16].replace("T", " ") if len(_ts) > 10 else _ts)
+        col_custo.metric("Custo total", _format_currency(summary.get("custo_total")))
+        col_margem.metric("Margem prevista", _format_percent(summary.get("margem_pct")))
+        col_pe.metric("Itens déficit P.E.", _format_int(summary.get("pe_deficit_items")))
+        if summary.get("custo_total") is None and last.get("status") == "OK":
+            st.caption(
+                "ℹ️ Pipeline concluída sem dados financeiros — a skill de consolidação (resultado) "
+                "pode não ter sido executada ou o canônico não atingiu o skill 13."
+            )
+
+        rows = [
+            {
+                "Run ID": str(r.get("run_id") or "-")[:12],
+                "Status": r.get("status", "-"),
+                "Início": str(r.get("started_at") or "-")[:16].replace("T", " "),
+                "Fim": str(r.get("finished_at") or "-")[:16].replace("T", " "),
+                "Fork de": r.get("base_version") or "-",
+                "Custo": _format_currency((r.get("summary") or {}).get("custo_total")),
+                "Margem": _format_percent((r.get("summary") or {}).get("margem_pct")),
+            }
+            for r in version_runs
+        ]
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    try:
+        artifacts = api_call(
+            method="GET",
+            path=f"/api/projects/{project_id}/artifacts",
+            params={"version": selected},
+            base_url=base_url,
+            actor=actor,
+        )
+        outputs = list(artifacts.get("outputs") or [])
+        if outputs:
+            st.caption(f"**Artefatos gerados ({len(outputs)}):** {', '.join(outputs)}")
+        else:
+            st.caption("Nenhum artefato gerado para esta versão.")
+    except Exception:
+        pass
+
+
 def render_overview_tab(base_url: str, project: dict, actor: str) -> None:
     """Tab: Overview - Dashboard de métricas do projeto."""
     project_id = project["project_id"]
@@ -454,7 +535,7 @@ def render_overview_tab(base_url: str, project: dict, actor: str) -> None:
 
     from concilium.presentation.ui.templates._project_page_helpers_a import _render_context_section, _render_eap_section
 
-    with st.expander("ℹ️ Resumo do Projeto", expanded=False):
+    with st.expander("ℹ️ Resumo do Projeto", expanded=True):
         render_kpi_cards(
             [
                 {"label": "Tipo", "value": str(project.get("tipo_projeto", "-")).upper()},
@@ -482,9 +563,8 @@ def render_overview_tab(base_url: str, project: dict, actor: str) -> None:
             ]
         )
 
-    st.divider()
     with st.expander("📋 Atividades da EAP", expanded=False):
-        _render_eap_section(reference)
+        _render_eap_section(reference, base_url, project_id, actor)
 
     with st.expander("🌐 Contexto e Perfil", expanded=False):
         _render_context_section(base_url, project, project_id, actor)
@@ -548,21 +628,51 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
         "tributo_ir",
     ]
 
-    f_col1, f_col2, f_col3 = st.columns([3, 2, 2])
-    face = f_col1.selectbox(
+    # Granularidade só faz sentido em faces com eixo temporal.
+    # Lê a seleção atual do session_state (padrão = primeira face) para decidir o
+    # layout ANTES de renderizar o selectbox — padrão Streamlit para layouts dependentes.
+    _face_key = f"cube-face-{project_id}"
+    _face_options_keys = list(face_options.keys())
+    _face_current = st.session_state.get(_face_key, _face_options_keys[0])
+
+    face_granularity_support: dict[str, bool] = {
+        "tempo_natureza": True,
+        "tempo_componente": True,
+        "categoria_componente": False,  # cross-tab estático: categoria × componente
+        "atividade_componente": False,  # breakdown por atividade, sem eixo temporal
+        "diesel_temporal": True,
+        "abc_curva": False,             # pareto por insumo, sem tempo
+        "s_curve_custo": True,
+        "recursos_ativos_tempo": True,
+    }
+    _show_granularidade = face_granularity_support.get(_face_current, True)
+
+    if _show_granularidade:
+        f_col1, f_col2, f_col3 = st.columns([3, 2, 2])
+        face_col, gran_col, topn_col = f_col1, f_col2, f_col3
+    else:
+        f_col1, f_col2 = st.columns([3, 2])
+        face_col, topn_col = f_col1, f_col2
+        gran_col = None
+
+    face = face_col.selectbox(
         "Face",
-        options=list(face_options.keys()),
+        options=_face_options_keys,
         format_func=lambda x: face_options[x],
-        key=f"cube-face-{project_id}",
+        key=_face_key,
     )
-    granularidade = f_col2.selectbox(
-        "Granularidade",
-        options=granularidade_options,
-        index=1,
-        key=f"cube-gran-{project_id}",
+    granularidade = (
+        gran_col.selectbox(
+            "Granularidade",
+            options=granularidade_options,
+            index=1,
+            key=f"cube-gran-{project_id}",
+        )
+        if gran_col is not None
+        else granularidade_options[1]  # default "mes" quando oculto
     )
     top_n = int(
-        f_col3.number_input(
+        topn_col.number_input(
             "Top N",
             min_value=20,
             max_value=2000,
@@ -572,57 +682,94 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
         )
     )
 
-    f2_col1, f2_col2, f2_col3 = st.columns([2, 2, 3])
-    categoria = f2_col1.selectbox("Categoria", options=categoria_options, key=f"cube-cat-{project_id}")
-    componente = f2_col2.selectbox("Componente BDI", options=componente_options, key=f"cube-comp-{project_id}")
-    atividade_id = f2_col3.text_input(
-        "Atividade (item_id)",
-        value="",
-        placeholder="Opcional",
-        key=f"cube-act-{project_id}",
-    ).strip()
+    face_filter_support: dict[str, dict[str, bool]] = {
+        "tempo_natureza": {"categoria": True, "componente": False, "atividade": False},
+        "tempo_componente": {"categoria": False, "componente": True, "atividade": False},
+        "categoria_componente": {"categoria": True, "componente": True, "atividade": False},
+        "atividade_componente": {"categoria": False, "componente": True, "atividade": True},
+        "diesel_temporal": {"categoria": False, "componente": False, "atividade": False},
+        "abc_curva": {"categoria": True, "componente": False, "atividade": False},
+        "s_curve_custo": {"categoria": False, "componente": True, "atividade": False},
+        "recursos_ativos_tempo": {"categoria": True, "componente": False, "atividade": True},
+    }
+    active_filter_cfg = face_filter_support.get(face, {"categoria": True, "componente": True, "atividade": True})
+
+    # Apenas os filtros relevantes à face selecionada ficam visíveis.
+    # Calcula larguras proporcionais: categoria/componente = 2, atividade = 3.
+    _filter_specs = [
+        ("categoria",  2, "cat"),
+        ("componente", 2, "comp"),
+        ("atividade",  3, "act"),
+    ]
+    _active = [(dim, w, k) for dim, w, k in _filter_specs if active_filter_cfg.get(dim)]
+
+    categoria = ""
+    componente = ""
+    atividade_id = ""
+
+    if _active:
+        _cols = st.columns([w for _, w, _ in _active])
+        for col, (dim, _, key_suffix) in zip(_cols, _active):
+            if dim == "categoria":
+                categoria = col.selectbox("Categoria", options=categoria_options, key=f"cube-cat-{project_id}")
+            elif dim == "componente":
+                componente = col.selectbox("Componente BDI", options=componente_options, key=f"cube-comp-{project_id}")
+            elif dim == "atividade":
+                atividade_id = col.text_input(
+                    "Atividade (item_id)",
+                    value="",
+                    placeholder="ex: eap-1_0",
+                    key=f"cube-act-{project_id}",
+                ).strip()
 
     current_face_spec = contract_faces.get(face) if isinstance(contract_faces.get(face), dict) else {}
     face_measure_options = current_face_spec.get("measure_profiles") if isinstance(current_face_spec, dict) else None
     face_agg_options = current_face_spec.get("aggregation_modes") if isinstance(current_face_spec, dict) else None
 
-    f3_col1, f3_col2, f3_col3 = st.columns([2, 2, 2])
-    measure_options = [""] + [
-        str(v) for v in (face_measure_options or ["financial_default", "abc_custo_direto", "recursos_ativos"])
-    ]
-    aggregation_options = [""] + [
-        str(v) for v in (face_agg_options or ["sum", "count_distinct", "cumulative", "pareto"])
-    ]
-    measure_profile = f3_col1.selectbox(
-        "Measure profile",
-        options=measure_options,
-        key=f"cube-measure-{project_id}",
-    )
-    aggregation_mode = f3_col2.selectbox(
-        "Aggregation mode",
-        options=aggregation_options,
-        key=f"cube-agg-{project_id}",
-    )
-    abc_threshold_a = float(
-        f3_col3.number_input(
-            "ABC threshold A",
-            min_value=0.50,
-            max_value=0.90,
-            value=0.80,
-            step=0.01,
-            key=f"cube-abc-a-{project_id}",
+    with st.expander("Opcional", expanded=False):
+        f3_col1, f3_col2, f3_col3 = st.columns([2, 2, 2])
+        measure_options = [""] + [
+            str(v) for v in (face_measure_options or ["financial_default", "abc_custo_direto", "recursos_ativos"])
+        ]
+        aggregation_options = [""] + [
+            str(v) for v in (face_agg_options or ["sum", "count_distinct", "cumulative", "pareto"])
+        ]
+        measure_profile = f3_col1.selectbox(
+            "Measure profile",
+            options=measure_options,
+            key=f"cube-measure-{project_id}",
         )
-    )
-    abc_threshold_b = float(
-        st.number_input(
-            "ABC threshold B",
-            min_value=0.85,
-            max_value=0.99,
-            value=0.95,
-            step=0.01,
-            key=f"cube-abc-b-{project_id}",
+        aggregation_mode = f3_col2.selectbox(
+            "Aggregation mode",
+            options=aggregation_options,
+            key=f"cube-agg-{project_id}",
         )
-    )
+
+        abc_threshold_a = 0.80
+        abc_threshold_b = 0.95
+        if face == "abc_curva":
+            abc_threshold_a = float(
+                f3_col3.number_input(
+                    "ABC threshold A",
+                    min_value=0.50,
+                    max_value=0.90,
+                    value=0.80,
+                    step=0.01,
+                    key=f"cube-abc-a-{project_id}",
+                )
+            )
+            abc_threshold_b = float(
+                st.number_input(
+                    "ABC threshold B",
+                    min_value=0.85,
+                    max_value=0.99,
+                    value=0.95,
+                    step=0.01,
+                    key=f"cube-abc-b-{project_id}",
+                )
+            )
+        else:
+            f3_col3.caption("ABC thresholds aplicam-se apenas à face Curva ABC")
 
     categoria_param = categoria or None
     componente_param = componente or None
@@ -660,10 +807,26 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
         operator_meta = projection.get("operator_meta") or {}
         unit_type = str(projection.get("unit_type") or "")
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Preço de venda", f"R$ {float(totals.get('total_preco_venda', 0.0)):,.0f}")
-        c2.metric("Custo direto", f"R$ {float(totals.get('total_custo_direto', 0.0)):,.0f}")
-        c3.metric("Tributos", f"R$ {float(totals.get('total_tributos', 0.0)):,.0f}")
+        if face == "diesel_temporal":
+            # Métricas de dimensionamento de tanque — consumo em VOLUME (litros)
+            consumos = [float(r.get("consumo_diesel_l") or 0.0) for r in rows if isinstance(r, dict)]
+            total_l = sum(consumos)
+            pico_l = max(consumos) if consumos else 0.0
+            media_l = total_l / len(consumos) if consumos else 0.0
+            st.caption("⛽ **Volume de diesel** — use o pico para dimensionar tanques em sítio")
+            d1, d2, d3, d4 = st.columns(4)
+            d1.metric("Total consumo", f"{total_l:,.0f} L")
+            d2.metric(f"Pico/{granularidade}", f"{pico_l:,.0f} L")
+            d3.metric(f"Média/{granularidade}", f"{media_l:,.0f} L")
+            # Sugestão de tanque: pico × fator de segurança (1.5 × ciclo de reabastecimento estimado em 2 períodos)
+            tanque_sugerido = pico_l * 1.5 * 2
+            d4.metric("Tanque sugerido ×3", f"{tanque_sugerido:,.0f} L",
+                      help="Estimativa conservadora: pico × 1,5 (fator segurança) × 2 (ciclo de reabastecimento). Ajuste conforme frequência de entrega.")
+        else:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Preço de venda", f"R$ {float(totals.get('total_preco_venda', 0.0)):,.0f}")
+            c2.metric("Custo direto", f"R$ {float(totals.get('total_custo_direto', 0.0)):,.0f}")
+            c3.metric("Tributos", f"R$ {float(totals.get('total_tributos', 0.0)):,.0f}")
 
         if rows:
             _render_cube_projection_chart(face, chart_hint, rows)
@@ -2709,10 +2872,45 @@ def _load_cpu_insumos_catalog(reference: dict, base_url: str, project_id: str, a
     return insumos_cat
 
 
+def _resolve_catalog_id_for_project(project_id: str, base_url: str, actor: str) -> str:
+    """Resolve catalog_id currently associated to the project's context."""
+    try:
+        project_meta = api_call("GET", f"/api/projects/{project_id}", base_url=base_url, actor=actor)
+        contexto_id = str(project_meta.get("contexto_id") or "").strip()
+        if not contexto_id:
+            return ""
+        ctx = api_call("GET", f"/api/contextos/{contexto_id}/versions", base_url=base_url, actor=actor)
+        versions = ctx.get("versions") or []
+        if isinstance(versions, list) and versions:
+            return str((versions[-1] or {}).get("catalogo_id") or contexto_id)
+        return contexto_id
+    except Exception:
+        return ""
+
+
+def _fetch_cpu_from_master_catalog(cpu_id: str, catalog_id: str, base_url: str, actor: str) -> dict:
+    """Fetch CPU from master catalog API. Returns {} on failure."""
+    if not catalog_id:
+        return {}
+    try:
+        payload = api_call(
+            method="GET",
+            path=f"/api/catalogs/{catalog_id}/cpus/{cpu_id}",
+            base_url=base_url,
+            actor=actor,
+        )
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
+
+
 def _cpu_equipe_parts(cpu: dict) -> tuple[list, list, list]:
     """Extracts (funcoes, equipamentos, composicao_itens) from a CPU dict."""
-    funcoes = list((cpu.get("equipe") or {}).get("funcoes") or [])
-    equipamentos = list((cpu.get("equipe") or {}).get("equipamentos") or [])
+    equipe_block = cpu.get("equipe")
+    if not isinstance(equipe_block, dict):
+        equipe_block = cpu.get("composicao_padrao_equipe") if isinstance(cpu.get("composicao_padrao_equipe"), dict) else {}
+    funcoes = list((equipe_block or {}).get("funcoes") or [])
+    equipamentos = list((equipe_block or {}).get("equipamentos") or [])
     composicao_itens = list(cpu.get("composicao_itens") or cpu.get("composicao_completa") or [])
     return funcoes, equipamentos, composicao_itens
 
@@ -2812,10 +3010,20 @@ def _render_cpu_comp_expander(
 ) -> None:
     """Renders the composition editor expander for one CPU."""
     descricao = cpu.get("descricao", "")
+    funcoes, equipamentos, composicao_itens = _cpu_equipe_parts(cpu)
     _comp_cats = sorted(
-        {it.get("categoria_custo", "?") for it in (cpu.get("composicao_itens") or cpu.get("composicao_completa") or [])}
+        {it.get("categoria_custo", "?") for it in composicao_itens}
     )
-    _badge = " · ".join(_comp_cats) if _comp_cats else "sem composição"
+    _parts: list[str] = []
+    if funcoes:
+        _parts.append(f"MO:{len(funcoes)}")
+    if equipamentos:
+        _parts.append(f"EQ:{len(equipamentos)}")
+    if composicao_itens:
+        _parts.append(f"INS:{len(composicao_itens)}")
+    if _comp_cats:
+        _parts.extend(_comp_cats)
+    _badge = " · ".join(_parts) if _parts else "sem composição"
     with st.expander(f"{cpu_id} — {descricao[:60]}  `{_badge}`", expanded=False):
         rows = _build_cpu_comp_rows(cpu, insumos_cat)
         if not rows:
@@ -2865,12 +3073,18 @@ def render_cpu_composition_override(base_url: str, project_id: str, actor: str) 
         return
     insumos_cat = _load_cpu_insumos_catalog(reference, base_url, project_id, actor)
     catalog_cpus = _catalog_cpus_by_codigo(reference.get("catalog") or {})
+    catalog_id = _resolve_catalog_id_for_project(project_id, base_url, actor)
+    master_cache: dict[str, dict] = {}
     for cpu_id in sorted(cpu_ids):
-        if cpu_id in catalog_cpus:
-            cpu: dict = dict(catalog_cpus[cpu_id])
-        else:
+        cpu: dict = dict(catalog_cpus.get(cpu_id) or {})
+
+        # Snapshot de referência pode trazer apenas INS (sem equipe/equipamentos).
+        # Nesses casos, reidrata via endpoint resolvido do projeto.
+        funcoes, equipamentos, _ = _cpu_equipe_parts(cpu)
+        needs_hydration = (not cpu) or (not funcoes and not equipamentos)
+        if needs_hydration:
             try:
-                cpu = (
+                resolved = (
                     api_call(
                         method="GET",
                         path=f"/api/projects/{project_id}/catalog/cpus/{cpu_id}",
@@ -2879,8 +3093,21 @@ def render_cpu_composition_override(base_url: str, project_id: str, actor: str) 
                     )
                     or {}
                 )
+                if isinstance(resolved, dict):
+                    cpu = {**cpu, **resolved} if cpu else resolved
             except Exception:
-                cpu = {"codigo": cpu_id}
+                if not cpu:
+                    cpu = {"codigo": cpu_id}
+
+        # Se ainda faltar equipe, consulta catálogo mestre do contexto explicitamente.
+        funcoes, equipamentos, _ = _cpu_equipe_parts(cpu)
+        if not funcoes and not equipamentos:
+            if cpu_id not in master_cache:
+                master_cache[cpu_id] = _fetch_cpu_from_master_catalog(cpu_id, catalog_id, base_url, actor)
+            master_cpu = master_cache.get(cpu_id) or {}
+            if master_cpu:
+                cpu = {**cpu, **master_cpu}
+
         if not cpu:
             st.warning(f"CPU '{cpu_id}' não encontrada.")
             continue

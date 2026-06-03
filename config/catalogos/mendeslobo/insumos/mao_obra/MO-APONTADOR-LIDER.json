@@ -1,0 +1,20 @@
+{
+  "codigo": "MO-APONTADOR-LIDER",
+  "tipo": "MAO_OBRA",
+  "descricao": "Apontador Lider",
+  "unidade": "mes",
+  "preco_unitario": 3960.0,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "horista_CE",
+    "horas_extras_pct_padrao": 0.25,
+    "_audit_encargos": "Removido: custo_com_encargos=8157.60 (fator=2.06). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009).",
+    "tipo_contrato": "CLT"
+  },
+  "classe_compartilhamento": {
+    "classe": "concorrente_compartilhavel",
+    "capacidade_cobertura": 3
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

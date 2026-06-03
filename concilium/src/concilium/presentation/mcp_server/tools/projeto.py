@@ -27,7 +27,7 @@ def register(server: FastMCP) -> None:
         """Lista os projetos existentes no sistema com versão atual e contexto."""
         proj_root = _projetos_root()
         if not proj_root.exists():
-            return {"projetos": [], "projetos_root": str(proj_root)}
+            return _wrap_response({"projetos": [], "projetos_root": str(proj_root)})
 
         out = []
         for p in sorted(proj_root.iterdir()):
@@ -47,7 +47,7 @@ def register(server: FastMCP) -> None:
                 )
             except Exception as e:
                 out.append({"id": p.name, "erro": str(e)})
-        return {"projetos": out, "projetos_root": str(proj_root)}
+        return _wrap_response({"projetos": out, "projetos_root": str(proj_root)})
 
     # ── 3. Iniciar orçamento ─────────────────────────────────────────────
     @server.tool()

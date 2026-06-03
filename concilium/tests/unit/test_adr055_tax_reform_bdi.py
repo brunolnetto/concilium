@@ -208,14 +208,15 @@ class TestResolverBdiCbsIbs:
         assert result.mao_obra.bdi_total != DEFAULT_BDI_TABELA.mao_obra.bdi_total
 
     def test_bdi_formula_still_valid_tcu(self):
-        """TCU formula: ((1+overhead)/(1-T))-1 still holds for CBS/IBS table."""
+        """TCU formula multiplicativa: (1+AC)(1+DF)(1+R)(1+CR)(1+L)/(1-T)-1 é válida para CBS/IBS."""
         scenario = CENARIOS_TRIBUTARIOS[TaxRegimeVersion.PLENO_CBS_IBS]
         tabela = resolver_bdi_cbs_ibs(DEFAULT_BDI_TABELA, scenario)
         for comp_name in ("mao_obra", "material", "diesel", "servicos", "indireto"):
             comp: ComponentesBdi = getattr(tabela, comp_name)
-            overhead = comp.ac + comp.df + comp.r + comp.cr + comp.l
+            # Fórmula multiplicativa TCU Acórdão 2622/2013
+            overhead_mult = (1 + comp.ac) * (1 + comp.df) * (1 + comp.r) * (1 + comp.cr) * (1 + comp.l)
             T = comp.tributos
-            expected_bdi = (1 + overhead) / (1 - T) - 1
+            expected_bdi = overhead_mult / (1 - T) - 1
             assert math.isclose(comp.bdi_total, expected_bdi, rel_tol=1e-5), (
                 f"{comp_name}: formula mismatch bdi_total={comp.bdi_total}, expected={expected_bdi}"
             )

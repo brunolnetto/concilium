@@ -1,0 +1,633 @@
+{
+  "$comment": "CPUs calibradas contra Lote 09/10 CE",
+  "cpus": [
+    {
+      "codigo": "ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M",
+      "unidade": "M3",
+      "origem": "PROPRIA",
+      "producao_horaria": 233.54208,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ESCAV-HID-38T",
+          "coeficiente": 0.00428188,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-14M3",
+          "coeficiente": 0.02997319,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.12203368,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "AJUDANTE",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "ENCARREG-TERRA",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-BASC",
+            "num_pessoas": 7
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ESCAV-HID-38T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-14M3",
+            "num_unidades": 7
+          }
+        ]
+      },
+      "_cu_planilha": 7.53419493550642,
+      "producao_id_ref": "ESCO-CARGA-1CAT-DMT2000-PROD-001"
+    },
+    {
+      "codigo": "ESCO-CARGA-1CAT-DMT3000",
+      "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+      "unidade": "M3",
+      "origem": "PROPRIA",
+      "producao_horaria": 233.54208,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ESCAV-HID-38T",
+          "coeficiente": 0.00428188,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-14M3",
+          "coeficiente": 0.03425507,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.12203368,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "AJUDANTE",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "ENCARREG-TERRA",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-BASC",
+            "num_pessoas": 8
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ESCAV-HID-38T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-14M3",
+            "num_unidades": 8
+          }
+        ]
+      },
+      "_cu_planilha": 8.27827291922568,
+      "producao_id_ref": "ESCO-CARGA-1CAT-DMT3000-PROD-001"
+    },
+    {
+      "codigo": "ESCO-CARGA-2CAT-DMT2000",
+      "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT até 2000m",
+      "unidade": "M3",
+      "origem": "PROPRIA",
+      "producao_horaria": 159.108923076923,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ESCAV-HID-38T",
+          "coeficiente": 0.006285,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-14M3",
+          "coeficiente": 0.03771002,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 1.89807079,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-BASC",
+            "num_pessoas": 6
+          },
+          {
+            "funcao_id": "ENCARREGADO-DE-FRENT",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "AJUDANTE",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ESCAV-HID-38T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-14M3",
+            "num_unidades": 6
+          }
+        ]
+      },
+      "_cu_planilha": 9.96661912919223,
+      "producao_id_ref": "ESCO-CARGA-2CAT-DMT2000-PROD-001"
+    },
+    {
+      "codigo": "ESCO-CARGA-2CAT-DMT3000",
+      "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT 2000 A 3000M",
+      "unidade": "M3",
+      "origem": "PROPRIA",
+      "producao_horaria": 159.108923076923,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ESCAV-HID-38T",
+          "coeficiente": 0.006285,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-14M3",
+          "coeficiente": 0.04158158,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 1.89807079,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "AJUDANTE",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-BASC",
+            "num_pessoas": 7
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ESCAV-HID-38T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-14M3",
+            "num_unidades": 7
+          }
+        ]
+      },
+      "_cu_planilha": 10.5322632931656,
+      "producao_id_ref": "ESCO-CARGA-2CAT-DMT3000-PROD-001"
+    },
+    {
+      "codigo": "ESCO-CARGA-3CAT-DMT2000",
+      "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT ATÉ 2000M",
+      "unidade": "M3",
+      "origem": "PROPRIA",
+      "producao_horaria": 144.541473391304,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ESCAV-HID-48T",
+          "coeficiente": 0.00691843,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-14M3-ROCHAS",
+          "coeficiente": 0.04151058,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 2.12049866,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "AJUDANTE",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-BASC",
+            "num_pessoas": 6
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ESCAV-HID-48T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-14M3-ROCHAS",
+            "num_unidades": 6
+          }
+        ]
+      },
+      "_cu_planilha": 14.7875383560797,
+      "producao_id_ref": "ESCO-CARGA-3CAT-DMT2000-PROD-001"
+    },
+    {
+      "codigo": "ESCO-CARGA-3CAT-DMT3000",
+      "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT 2000m a 3000m",
+      "unidade": "M3",
+      "origem": "PROPRIA",
+      "producao_horaria": 144.541473391304,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ESCAV-HID-48T",
+          "coeficiente": 0.00691843,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-14M3",
+          "coeficiente": 0.05534744,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 2.12049866,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ESCAV",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "AJUDANTE",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-BASC",
+            "num_pessoas": 8
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ESCAV-HID-48T",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-14M3",
+            "num_unidades": 8
+          }
+        ]
+      },
+      "_cu_planilha": 18.1112930454995,
+      "producao_id_ref": "ESCO-CARGA-3CAT-DMT3000-PROD-001"
+    },
+    {
+      "codigo": "COMPACT-ATERRO-100PN",
+      "descricao": "Compactação de aterros a 100% do Proctor Normal",
+      "unidade": "m3",
+      "origem": "PROPRIA",
+      "producao_horaria": 173.197428,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "ROLO-PE-CARNEIRO",
+          "coeficiente": 0.01154752,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "TRATOR-PNEUS",
+          "coeficiente": 0.00577376,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "MOTONIVEL-140K",
+          "coeficiente": 0.00577376,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-PIPA-18K",
+          "coeficiente": 0.00577376,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.45612687,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-ROLO-COMP",
+            "num_pessoas": 2
+          },
+          {
+            "funcao_id": "OPER-TRATOR-PNE",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "OPER-MOTO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-PIPA",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "AJUDANTE",
+            "num_pessoas": 2
+          },
+          {
+            "funcao_id": "GREDISTA",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "ENCARREG-TERRA",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "ROLO-PE-CARNEIRO",
+            "num_unidades": 2
+          },
+          {
+            "equip_id": "MOTONIVEL-140K",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-PIPA-18K",
+            "num_unidades": 1
+          }
+        ]
+      },
+      "_cu_planilha": 9.06882864544407,
+      "producao_id_ref": "COMPACT-ATERRO-100PN-PROD-001"
+    },
+    {
+      "codigo": "REGULARIZACAO-SUBLEITO",
+      "descricao": "Regularização de subleito com motoniveladora e rolo",
+      "unidade": "m2",
+      "origem": "PROPRIA",
+      "producao_horaria": 400.0,
+      "categoria": "TERRAPLENAGEM",
+      "composicao_itens": [
+        {
+          "insumo_id": "MOTONIVEL-140K",
+          "coeficiente": 0.0025,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "ROLO-LISO",
+          "coeficiente": 0.0025,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 0.0725,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-MOTO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "OPER-ROLO-COMP",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "MOTONIVEL-140K",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "ROLO-LISO",
+            "num_unidades": 1
+          }
+        ]
+      },
+      "_cu_estimado": 1.3684,
+      "producao_id_ref": "REGULARIZACAO-SUBLEITO-PROD-001"
+    },
+    {
+      "codigo": "DREN-MAN-DN300",
+      "descricao": "Coletor tronco DN300 em manilha cerâmica — abertura, assentamento, reaterro",
+      "unidade": "m",
+      "origem": "PROPRIA",
+      "producao_horaria": 3.0,
+      "categoria": "SANEAMENTO",
+      "composicao_itens": [
+        {
+          "insumo_id": "RETRO-ESCAV",
+          "coeficiente": 0.33333333,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "MANILHA-CERAM-300",
+          "coeficiente": 1.05,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "AREIA-MEDIA",
+          "coeficiente": 0.42,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 2.26666667,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-RETRO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "ENCANADOR",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MONTADOR-AGUA",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 2
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "RETRO-ESCAV",
+            "num_unidades": 1
+          }
+        ]
+      },
+      "producao_id_ref": "DREN-MAN-DN300-PROD-001"
+    },
+    {
+      "codigo": "POCO-VISITA-PADRAO",
+      "descricao": "Poço de visita padrão — execução completa",
+      "unidade": "un",
+      "origem": "PROPRIA",
+      "producao_horaria": 0.25,
+      "categoria": "SANEAMENTO",
+      "composicao_itens": [
+        {
+          "insumo_id": "CIMENTO-CPII-50KG",
+          "coeficiente": 28.0,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "AREIA-MEDIA",
+          "coeficiente": 1.8,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "BRITA-1",
+          "coeficiente": 2.4,
+          "categoria_custo": "MATERIAL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OFICIAL",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 2
+          }
+        ],
+        "equipamentos": []
+      },
+      "producao_id_ref": "POCO-VISITA-PADRAO-PROD-001"
+    },
+    {
+      "codigo": "PAV-BASE-BGTC",
+      "descricao": "Base de BGTC — execução e compactação",
+      "unidade": "m3",
+      "origem": "PROPRIA",
+      "producao_horaria": 22.0,
+      "categoria": "PAVIMENTACAO",
+      "composicao_itens": [
+        {
+          "insumo_id": "MOTONIVEL-140K",
+          "coeficiente": 0.04545455,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "ROLO-PE-CARNEIRO",
+          "coeficiente": 0.04545455,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "CAM-BASC-14M3",
+          "coeficiente": 0.09090909,
+          "categoria_custo": "EQUIPAMENTO"
+        },
+        {
+          "insumo_id": "BGTC-MIX",
+          "coeficiente": 1.05,
+          "categoria_custo": "MATERIAL"
+        },
+        {
+          "insumo_id": "DIESEL-S10",
+          "coeficiente": 1.45454545,
+          "categoria_custo": "DIESEL"
+        }
+      ],
+      "composicao_padrao_equipe": {
+        "funcoes": [
+          {
+            "funcao_id": "OPER-MOTO",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "OPER-ROLO-COMP",
+            "num_pessoas": 1
+          },
+          {
+            "funcao_id": "MOTOR-CAM-BASC",
+            "num_pessoas": 2
+          },
+          {
+            "funcao_id": "SERV-GERAL",
+            "num_pessoas": 1
+          }
+        ],
+        "equipamentos": [
+          {
+            "equip_id": "MOTONIVEL-140K",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "ROLO-PE-CARNEIRO",
+            "num_unidades": 1
+          },
+          {
+            "equip_id": "CAM-BASC-14M3",
+            "num_unidades": 2
+          }
+        ]
+      },
+      "producao_id_ref": "PAV-BASE-BGTC-PROD-001"
+    }
+  ]
+}

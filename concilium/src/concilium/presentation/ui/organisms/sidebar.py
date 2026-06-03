@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from html import escape
 import sys
 from pathlib import Path
 
@@ -75,10 +76,10 @@ def render_sidebar() -> str:
 def _render_project_context(project: dict) -> None:
     """Compact project info — visible when a project is open."""
     pid = project.get("project_id", "")
-    nome = project.get("nome") or pid[:12]
+    nome = escape(str(project.get("nome") or pid[:12]))
     tipo = (project.get("tipo_projeto") or "hot_project").lower()
-    versao = project.get("current_version") or "—"
-    status_eap = project.get("status_eap", "")
+    versao = escape(str(project.get("current_version") or "—"))
+    status_eap = escape(str(project.get("status_eap", "")))
     badge = "🔥" if tipo == "hot_project" else "📐"
 
     st.sidebar.markdown(

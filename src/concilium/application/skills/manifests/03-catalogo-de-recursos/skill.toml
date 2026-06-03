@@ -1,0 +1,25 @@
+[skill]
+id = "03-catalogo-de-recursos"
+phase = "Definição"
+gate = true
+version = "1.0.0"
+descricao = "Declara tipos de recursos e pool inicial antes do cronograma."
+
+[depends_on]
+skills = ["02-produtividade-climatica"]
+canonical_sections = []
+
+[produces]
+canonical_section = "tipos_recurso"
+validations = ["VAL-DECL-01", "VAL-DECL-02", "VAL-DECL-OK"]
+
+[inputs]
+required = []
+optional = ["tipos_recurso", "templates_recursos", "pool_inicial"]
+
+[snapshots]
+consumed = []
+
+[replan_checkpoint]
+enabled = true
+descricao = "Expansão de pool de recursos (BUY/HIRE) para eliminar conflitos de 03C."

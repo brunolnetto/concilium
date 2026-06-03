@@ -109,18 +109,27 @@ def _llj_load_insumos(cat_dir) -> dict:
 
 
 def _llj_load_produtividades(cat_dir) -> list:
-    produtividades: list = []
-    prod_dir = cat_dir / "producoes"
+    """Carrega arquivos de produtividade/produção do catálogo.
+
+    Ordem de preferência dos layouts de diretório:
+      1. produtividades/  — layout novo (CPU-*-PROD-001.json individuais)
+      2. producoes/       — layout legado (PROD-*.json individuais)
+      3. produtividades.json — arquivo único (fallback)
+    """
+    for dir_name in ("produtividades", "producoes"):
+        prod_dir = cat_dir / dir_name
+        if prod_dir.exists():
+            produtividades: list = []
+            for prod_file in sorted(prod_dir.glob("*.json")):
+                raw = json.loads(prod_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    produtividades.append(raw)
+            return produtividades
     prod_path = cat_dir / "produtividades.json"
-    if prod_dir.exists():
-        for prod_file in sorted(prod_dir.glob("*.json")):
-            raw = json.loads(prod_file.read_text(encoding="utf-8"))
-            if isinstance(raw, dict):
-                produtividades.append(raw)
-    elif prod_path.exists():
+    if prod_path.exists():
         raw = json.loads(prod_path.read_text(encoding="utf-8"))
-        produtividades = raw.get("produtividades", raw) if isinstance(raw, dict) else raw
-    return produtividades
+        return raw.get("produtividades", raw) if isinstance(raw, dict) else raw
+    return []
 
 
 def _llj_load_funcoes(cat_dir) -> list:
@@ -136,21 +145,36 @@ def _load_local_json(
     config_root: Path,
     catalog_name: str,
 ) -> tuple[list[dict], dict[str, list[dict]], list[dict], list[dict]]:
-    """Carrega CPUs, insumos, produtividades e funções de config/catalogos/<catalog_name>/."""
+    """Carrega CPUs, insumos, produtividades e funções.
+
+    Tenta DuckDB primeiro (ADR-100) — 10-700× mais rápido no warm start.
+    Recai em leitura JSON pura se DuckDB não estiver disponível ou falhar.
+    """
     cat_dir = config_root / "catalogos" / catalog_name
     if not cat_dir.exists():
         raise FileNotFoundError(f"Catálogo '{catalog_name}' não encontrado em {cat_dir}")
 
+    # ── Fast path: DuckDB (ADR-100) ──────────────────────────────────────────
+    try:
+        from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine
+        engine = CatalogQueryEngine(cat_dir)
+        if engine.is_ready():
+            return (
+                engine.load_cpus(),
+                engine.load_insumos(),
+                engine.load_produtividades(),
+                engine.load_funcoes(),
+            )
+    except Exception as _exc:
+        import logging as _log
+        _log.getLogger(__name__).debug("DuckDB path falhou, usando JSON puro: %s", _exc)
+
+    # ── Fallback: JSON puro (comportamento original) ─────────────────────────
     cpus = _llj_load_cpus(cat_dir)
     insumos = _llj_load_insumos(cat_dir)
     produtividades = _llj_load_produtividades(cat_dir)
     funcoes = _llj_load_funcoes(cat_dir)
     return cpus, insumos, produtividades, funcoes
-
-
-# ── SharePoint backend (ADR-047 §D5) ─────────────────────────────────────────
-
-
 def _lsp_load_cpus(storage, base: str) -> list:
     cpus: list = []
     cpus_blobs = storage.listar_blobs(f"{base}/cpus")
@@ -378,7 +402,7 @@ class CatalogLoader:
         elif self.backend == CatalogBackend.GOOGLE_SHEETS:
             import os  # noqa: PLC0415
 
-            creds_path = os.environ.get("CONCILIUM_GOOGLE_CREDENTIALS", "")
+            creds_path = os.environ.get("CONCILIUM__GOOGLE_CREDENTIALS", "")
             spreadsheet_id = ""  # lido do config yaml
             cpus, insumos, produtividades, _ = _load_google_sheets(catalog_name, spreadsheet_id, creds_path)  # type: ignore[misc]
             funcoes = []

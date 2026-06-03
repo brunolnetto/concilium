@@ -1,0 +1,24 @@
+[skill]
+id = "09-relatorio-e-artefatos"
+phase = "Saída"
+version = "1.0.0"
+descricao = "Renderiza canônico final em planilha Excel auditável (.xlsm) e incorpora insights executivos quando disponíveis."
+
+[depends_on]
+skills = ["08-consolidacao-financeira"]
+canonical_sections = ["resultado_reconciliado", "resultado", "planejamento", "equipes_diretas", "indiretos", "relatorio_criticidade", "relatorio_sensibilidade", "relatorio_intervencao"]
+
+[produces]
+canonical_section = "relatorio_saida"
+validations = ["VAL-ADAPTER-01", "VAL-ADAPTER-CRITICIDADE", "VAL-ADAPTER-EXCEL", "VAL-ADAPTER-EXCEL-LIVE"]
+
+[inputs]
+required = []
+optional = []
+
+[resources]
+template_spec = "config/templates/planilha_planejamento.json"
+template_xlsm = "perfis/{perfil_id}/template_planejamento.xlsm"
+
+[snapshots]
+consumed = []

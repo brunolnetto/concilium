@@ -1,0 +1,16 @@
+{
+  "$schema": "https://concilium.framework/schemas/v1/jurisdicao",
+  "codigo": "BR-SP",
+  "nome": "Brasil - São Paulo",
+  "parent_id": "BR",
+  "motor_tributario_bdi": {
+    "versao": "2024.1",
+    "aliquotas": {
+      "ISS": 0.05,
+      "PIS": 0.0065,
+      "COFINS": 0.03,
+      "CPRB": 0.045
+    },
+    "$comment": "ISS = máximo LC 116/2003 (5%). Verificar legislação municipal antes de aprovar orçamento."
+  }
+}

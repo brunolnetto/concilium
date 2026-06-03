@@ -354,7 +354,8 @@ def plan_space(
         raise typer.Exit(1) from None
 
     base_ref = json.loads(ref_path.read_text(encoding="utf-8"))
-    cenarios_embutidos = base_ref.get("cenarios")
+    # v2: cenarios fica em spec; v1: fica no topo
+    cenarios_embutidos = (base_ref.get("spec") or base_ref).get("cenarios")
     alternativas = cenarios_embutidos if isinstance(cenarios_embutidos, list) and cenarios_embutidos else []
 
     if not alternativas:
@@ -391,5 +392,56 @@ def plan_space(
 
     summary = {"slug": slug_upper, "projects_root": str(benchmark_projects_root()), "rows": rows_sorted}
     (out_dir / "plan_space_report.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
-
     _save_plan_space_markdown(rows_sorted, slug_upper, outputs_dir)
+
+
+@app.command("compare")
+def compare_algorithms(
+    slug: str = typer.Option(..., "--slug", "-s", help="Slug do benchmark (ex: CTC)."),
+    algorithms: str = typer.Option(
+        "",
+        "--algorithms",
+        "-a",
+        help="Algoritmos separados por vírgula (default: CP-SAT,LNS,MINSLK).",
+    ),
+    reset: bool = typer.Option(False, "--reset", help="Remove projeto existente antes de rodar."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Salva relatório JSON neste caminho."),
+) -> None:
+    """Compara CP-SAT, LNS e MINSLK no mesmo benchmark e reporta impacto nos entregáveis.
+
+    Roda o pipeline uma vez por algoritmo (cada execução permanece single-algo),
+    consolida makespan, quality_score, custo total e custo de mob e exibe tabela
+    comparativa.
+
+    Exemplos:\b
+        concilium benchmark compare --slug CTC
+        concilium benchmark compare --slug CTC --algorithms MINSLK,LPT
+        concilium benchmark compare --slug CTC --reset --output comparison.json
+    """
+    from concilium.application.benchmarks.algorithm_comparison import AlgorithmComparisonRunner
+    from concilium.application.benchmarks.batch import discover_benchmark_slugs, find_benchmark_reference
+    from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
+    from concilium.presentation.cli.shared import _tools_root, benchmark_projects_root, config_root
+
+    root = _tools_root()
+    target_slug = slug.upper()
+    target_ref = find_benchmark_reference(root / "benchmarks" / "data", target_slug)
+    if target_ref is None:
+        available = ", ".join(discover_benchmark_slugs(root / "benchmarks" / "data")) or "(nenhum benchmark encontrado)"
+        rprint(f"[red]Benchmark '{target_slug}' não encontrado.[/red] Disponíveis: {available}")
+        raise typer.Exit(1) from None
+
+    spec = BenchmarkSpecLoader(config_root()).load(target_ref)
+    algos = [a.strip() for a in algorithms.split(",") if a.strip()] or None
+
+    rprint(f"[bold cyan]Comparação de algoritmos:[/bold cyan] {target_slug}")
+
+    runner = AlgorithmComparisonRunner(
+        config_root=config_root(),
+        projects_root=benchmark_projects_root(),
+    )
+    try:
+        runner.compare(spec, algorithms=algos, reset=reset, save_json=output)
+    except Exception as exc:
+        rprint(f"[red]ERRO: {exc}[/red]")
+        raise typer.Exit(1) from None

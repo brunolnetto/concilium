@@ -144,8 +144,12 @@ def _build_raw_cpus(catalog_snap: dict) -> list:
 def _enrich_cpu_with_prod(c: dict, prod_map: dict) -> dict:
     ref = c.get("producao_id_ref")
     prod = prod_map.get(ref) if ref else None
-    if prod and not c.get("equipe") and prod.get("equipe"):
-        return {**c, "equipe": prod["equipe"]}
+    if prod and not c.get("equipe"):
+        equipe = prod.get("equipe")
+        if not isinstance(equipe, dict):
+            equipe = prod.get("composicao_padrao_equipe")
+        if isinstance(equipe, dict):
+            return {**c, "equipe": equipe}
     return c
 
 
@@ -158,6 +162,49 @@ def _build_project_cpu_map(reference: dict) -> dict:
         c = _enrich_cpu_with_prod(c, prod_map)
         cpu_map[str(c.get("codigo", ""))] = c
     return cpu_map
+
+
+def _cpu_has_composition(cpu_data: dict) -> bool:
+    if not isinstance(cpu_data, dict):
+        return False
+    equipe = cpu_data.get("equipe") or {}
+    composicao = cpu_data.get("composicao_itens") or cpu_data.get("composicao_completa") or []
+    return bool((equipe.get("funcoes") or equipe.get("equipamentos") or composicao))
+
+
+def _fetch_cpu_details(project_id: str, cpu_id: str, base_url: str, actor: str) -> dict:
+    try:
+        payload = api_call(
+            method="GET",
+            path=f"/api/projects/{project_id}/catalog/cpus/{cpu_id}",
+            base_url=base_url,
+            actor=actor,
+        )
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
+
+
+def _resolve_cpu_data(
+    cpu_id: str,
+    cpu_map: dict,
+    cpu_cache: dict[str, dict],
+    project_id: str,
+    base_url: str,
+    actor: str,
+) -> dict:
+    base_data = cpu_map.get(cpu_id) or {}
+    if _cpu_has_composition(base_data):
+        return base_data
+    if cpu_id in cpu_cache:
+        merged = dict(base_data)
+        merged.update(cpu_cache[cpu_id])
+        return merged
+    fetched = _fetch_cpu_details(project_id, cpu_id, base_url, actor)
+    cpu_cache[cpu_id] = fetched
+    merged = dict(base_data)
+    merged.update(fetched)
+    return merged
 
 
 def _build_equipe_rows(equipe: dict) -> list:
@@ -202,6 +249,16 @@ def _render_eap_composicao_section(composicao: list, has_equipe: bool) -> None:
 
 def _render_eap_item_body(item: dict, cpu_data: dict, qtd: object, unidade: str) -> None:
     cpu_id = item.get("cpu_id", "—")
+    # Descrição: preferência para o campo da EAP, fallback para CPU
+    descricao_item = item.get("descricao") or ""
+    descricao_cpu = cpu_data.get("descricao") or cpu_data.get("nome") or ""
+    if descricao_item:
+        st.caption(f"**{descricao_item}**")
+    elif descricao_cpu:
+        st.caption(f"*CPU — {descricao_cpu}*")
+    observacao = item.get("observacao") or item.get("nota") or ""
+    if observacao:
+        st.caption(f"📝 {observacao}")
     c1, c2, c3 = st.columns(3)
     c1.caption("CPU")
     c1.code(cpu_id)
@@ -220,19 +277,26 @@ def _render_eap_item_body(item: dict, cpu_data: dict, qtd: object, unidade: str)
     _render_eap_composicao_section(composicao, has_equipe)
 
 
-def _render_eap_item_expander(item: dict, cpu_map: dict) -> None:
+def _render_eap_item_expander(
+    item: dict,
+    cpu_map: dict,
+    cpu_cache: dict[str, dict],
+    project_id: str,
+    base_url: str,
+    actor: str,
+) -> None:
     cpu_id = item.get("cpu_id", "—")
     qtd = item.get("quantitativo", "—")
     unidade = item.get("unidade", "")
     descricao = item.get("descricao") or cpu_id
     item_id = item.get("item_id", "?")
     label = f"📌 **{item_id}** — {descricao[:60]}  ·  {qtd} {unidade}"
-    cpu_data = cpu_map.get(cpu_id) or {}
+    cpu_data = _resolve_cpu_data(cpu_id, cpu_map, cpu_cache, project_id, base_url, actor)
     with st.expander(label, expanded=False):
         _render_eap_item_body(item, cpu_data, qtd, unidade)
 
 
-def _render_eap_section(reference: dict) -> None:
+def _render_eap_section(reference: dict, base_url: str, project_id: str, actor: str) -> None:
     st.caption(
         "Versões já executadas preservam o canonical completo do momento do run. "
         "Re-executar com nova EAP produzirá resultados diferentes. "
@@ -240,10 +304,11 @@ def _render_eap_section(reference: dict) -> None:
     )
     eap_items = (reference.get("cpus") or {}).get("itens_eap", [])
     cpu_map = _build_project_cpu_map(reference)
+    cpu_cache: dict[str, dict] = {}
     if eap_items:
         st.caption(f"**{len(eap_items)}** atividade(s)")
         for item in eap_items:
-            _render_eap_item_expander(item, cpu_map)
+            _render_eap_item_expander(item, cpu_map, cpu_cache, project_id, base_url, actor)
     else:
         st.info("Nenhum item de EAP encontrado na referência deste projeto.")
 

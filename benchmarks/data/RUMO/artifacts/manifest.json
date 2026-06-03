@@ -1,0 +1,24 @@
+{
+  "slug": "RUMO",
+  "gerado_em": "2026-05-12T21:12:37",
+  "projeto": "RUMO - Dom Aquino (MT)",
+  "project_dir": null,
+  "paths": {
+    "inputs": [
+      "benchmarks\\data\\RUMO\\artifacts\\inputs\\referencia.json",
+      "benchmarks\\data\\RUMO\\artifacts\\raw\\2026_03_11_PLANEJAMENTO_RUMO_DOM AQUINO (MT).xlsm"
+    ],
+    "intermediate": [
+      "benchmarks\\data\\RUMO\\artifacts\\intermediate\\extracao_intermediarios.json",
+      "benchmarks\\data\\RUMO\\artifacts\\intermediate\\iteracao_referencias_rumo.json",
+      "benchmarks\\data\\RUMO\\artifacts\\intermediate\\referencia.pre_phase4_remaining_backup.json"
+    ],
+    "outputs": [
+      "benchmarks\\data\\RUMO\\artifacts\\outputs\\benchmark_report.json",
+      "benchmarks\\data\\RUMO\\artifacts\\outputs\\relatorio.json",
+      "benchmarks\\data\\RUMO\\artifacts\\outputs\\relatorio.md",
+      "benchmarks\\data\\RUMO\\artifacts\\outputs\\resultado_planejamento.xlsx"
+    ],
+    "audit": []
+  }
+}

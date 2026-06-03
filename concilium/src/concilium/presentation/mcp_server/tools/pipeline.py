@@ -15,6 +15,8 @@ from concilium.presentation.mcp_server._context import (
     _runtime,
     _wrap_response,
 )
+from concilium.infrastructure.auth.permission_guard import permission
+from concilium.presentation.mcp_server.rate_limit import mcp_rate_limit
 
 
 def register(server: FastMCP) -> None:
@@ -22,6 +24,8 @@ def register(server: FastMCP) -> None:
 
     # ── 4. Avançar pipeline ──────────────────────────────────────────────
     @server.tool()
+    @permission("project:run")
+    @mcp_rate_limit()
     def avancar_pipeline(
         project_id: str,
         skill_id: str | None = None,

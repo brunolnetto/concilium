@@ -5,6 +5,7 @@ de config/, persistindo via ProjectStore, com cliente Open-Meteo mockado.
 """
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -13,6 +14,28 @@ import pytest
 
 from concilium.application.runtime import Runtime
 from concilium.infrastructure.storage.project import ProjectStore
+
+
+# ── Fixtures para TestPipelineAnalitico ───────────────────────────────────────
+
+
+@pytest.fixture(scope="class")
+def projeto_analitico(tmp_path_factory, _session_pipeline_sk09):
+    """Class-scoped: cópia isolada do projeto pós-09 ÚNICA por classe de teste.
+    
+    Mudança de function → class scope reduz copytree de ~6-7× para 1× por classe.
+    Testes em TestPipelineAnalitico são read-heavy e independentes, então
+    compartilhar o mesmo projeto entre testes é seguro.
+    
+    PERFORMANCE: ~3-5s copytree × 1 ao invés de × 7 testes = economia de ~20-28s.
+    """
+    proj_base, _ = _session_pipeline_sk09
+    dest = tmp_path_factory.mktemp("analitico") / "projeto"
+    shutil.copytree(proj_base.root, dest)
+    return ProjectStore(dest)
+
+
+# Fixture intermediária removida - usar _session_pipeline_sk09 diretamente
 
 
 class TestPipelineEndToEnd:
@@ -294,130 +317,36 @@ def _carregar_amostra_canonical(path: Path):
 class TestPipelineAnalitico:
     """Testa dispatch via Runtime para skills 07-12, persistência de artefatos e log."""
 
-    @staticmethod
-    def _rodar_00_a_06(
-        runtime: Runtime,
-        projeto: ProjectStore,
-        inputs_escopo: dict,
-        mock_openmeteo,
-    ) -> None:
-        """Executa o pipeline fase 1A (skills 00-06) e garante resultado populado."""
-        projeto.new_version()
-        r = runtime.run_skill("01-escopo-e-eap", projeto, inputs=inputs_escopo)
-        assert not r.has_errors, r.validacoes
-
-        with patch(
-            "concilium.infrastructure.clients.openmeteo.OpenMeteoClient",
-            return_value=mock_openmeteo,
-        ):
-            r = runtime.run_skill("02-produtividade-climatica", projeto, inputs={"ano_referencia": 2024})
+    def test_07_persiste_relatorio_agis_json(self, _session_pipeline_sk09):
+        proj, r = _session_pipeline_sk09
         assert not r.has_errors
 
-        # 00A, 00B, 01A — pré-requisitos de 04-cronograma
-        r = runtime.run_skill("03-catalogo-de-recursos", projeto, inputs={})
-        assert not r.has_errors
-
-        cron_inputs = {
-            "num_equipes_por_item": {
-                "eap-01": {f"2026-W{w:02d}": 1 for w in range(23, 31)},
-                "eap-02": {f"2026-W{w:02d}": 1 for w in range(27, 37)},
-                "eap-03": {f"2026-W{w:02d}": 1 for w in range(35, 41)},
-            }
-        }
-        r = runtime.run_skill("04-cronograma", projeto, inputs=cron_inputs)
-        assert not r.has_errors
-
-        r = runtime.run_skill("05-equipes-e-alocacao", projeto, inputs={})
-        assert not r.has_errors
-
-        r = runtime.run_skill("06-precificacao-unitaria", projeto, inputs={})  # may have price deviation warnings
-        assert r.canonical is not None, r.validacoes
-
-        r = runtime.run_skill("07-custos-indiretos", projeto, inputs={})
-        assert not r.has_errors
-
-        runtime.run_skill("08-consolidacao-financeira", projeto, inputs={})
-        assert projeto.load_canonical().resultado is not None
-
-    def test_07_persiste_relatorio_agis_json(
-        self,
-        runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
-        inputs_escopo_terraplenagem: dict,
-        mock_openmeteo_aracoiaba,
-    ):
-        self._rodar_00_a_06(
-            runtime,
-            projeto_terraplenagem,
-            inputs_escopo_terraplenagem,
-            mock_openmeteo_aracoiaba,
-        )
-        r = runtime.run_skill("09-relatorio-e-artefatos", projeto_terraplenagem, inputs={})
-        assert not r.has_errors
-
-        v = projeto_terraplenagem.current_version()
-        output_path = projeto_terraplenagem.version_path(v) / "outputs" / "relatorio.md"
+        v = proj.current_version()
+        output_path = proj.version_path(v) / "outputs" / "relatorio.md"
         assert output_path.exists(), "relatorio.md não foi persistido"
         relatorio_text = output_path.read_text(encoding="utf-8", errors="replace")
-        # relatorio.md é markdown - verificar que contém seções esperadas
         assert len(relatorio_text) > 0, "relatorio.md está vazio"
 
-    def test_08_criticality_popula_canonical(
-        self,
-        runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
-        inputs_escopo_terraplenagem: dict,
-        mock_openmeteo_aracoiaba,
-    ):
-        self._rodar_00_a_06(
-            runtime,
-            projeto_terraplenagem,
-            inputs_escopo_terraplenagem,
-            mock_openmeteo_aracoiaba,
-        )
-        r = runtime.run_skill("10-diagnostico-criticidade", projeto_terraplenagem, inputs={})
+    def test_08_criticality_popula_canonical(self, runtime, projeto_analitico):
+        r = runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
         assert not r.has_errors
 
-        can = projeto_terraplenagem.load_canonical()
+        can = projeto_analitico.load_canonical()
         assert can.criticality_report is not None
         assert "critical_path" in can.criticality_report
 
-    def test_09_cost_criticality_popula_canonical(
-        self,
-        runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
-        inputs_escopo_terraplenagem: dict,
-        mock_openmeteo_aracoiaba,
-    ):
-        self._rodar_00_a_06(
-            runtime,
-            projeto_terraplenagem,
-            inputs_escopo_terraplenagem,
-            mock_openmeteo_aracoiaba,
-        )
-        runtime.run_skill("10-diagnostico-criticidade", projeto_terraplenagem, inputs={})
-        r = runtime.run_skill("10-diagnostico-criticidade", projeto_terraplenagem, inputs={})
+    def test_09_cost_criticality_popula_canonical(self, runtime, projeto_analitico):
+        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
+        r = runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
         assert not r.has_errors
 
-        can = projeto_terraplenagem.load_canonical()
+        can = projeto_analitico.load_canonical()
         assert can.cost_criticality_report is not None
         assert len(can.cost_criticality_report.atividades) > 0
 
-    def test_10_intervention_roi_popula_canonical(
-        self,
-        runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
-        inputs_escopo_terraplenagem: dict,
-        mock_openmeteo_aracoiaba,
-    ):
-        self._rodar_00_a_06(
-            runtime,
-            projeto_terraplenagem,
-            inputs_escopo_terraplenagem,
-            mock_openmeteo_aracoiaba,
-        )
-        runtime.run_skill("10-diagnostico-criticidade", projeto_terraplenagem, inputs={})
-        runtime.run_skill("10-diagnostico-criticidade", projeto_terraplenagem, inputs={})
+    def test_10_intervention_roi_popula_canonical(self, runtime, projeto_analitico):
+        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
+        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
         intervencoes = [
             {
                 "intervencao_id": "iv-01",
@@ -430,28 +359,18 @@ class TestPipelineAnalitico:
         ]
         r = runtime.run_skill(
             "11-avaliacao-intervencoes",
-            projeto_terraplenagem,
+            projeto_analitico,
             inputs={"intervencoes_propostas": intervencoes},
         )
         assert not r.has_errors
 
-        can = projeto_terraplenagem.load_canonical()
+        can = projeto_analitico.load_canonical()
         assert can.intervention_assessments is not None
         assert len(can.intervention_assessments) == 1
 
-    def test_11_decision_log_persiste_json(
-        self,
-        runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
-        inputs_escopo_terraplenagem: dict,
-        mock_openmeteo_aracoiaba,
-    ):
-        self._rodar_00_a_06(
-            runtime,
-            projeto_terraplenagem,
-            inputs_escopo_terraplenagem,
-            mock_openmeteo_aracoiaba,
-        )
+    def test_11_decision_log_persiste_json(self, runtime, projeto_analitico):
+        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
+        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
         decision_inputs = {
             "objective": "Aumentar margem para faixa verde (≥10%)",
             "considered_interventions": [
@@ -466,33 +385,30 @@ class TestPipelineAnalitico:
             "decided_by": {"type": "ENGENHEIRO", "id": "eng-bruno"},
             "expected_outcome": {"margem": 0.10, "prazo_dias": 214},
         }
-        r = runtime.run_skill("12-registro-decisoes", projeto_terraplenagem, inputs=decision_inputs)
+        r = runtime.run_skill("12-registro-decisoes", projeto_analitico, inputs=decision_inputs)
         assert not r.has_errors
 
-        v = projeto_terraplenagem.current_version()
-        dl_path = projeto_terraplenagem.version_path(v) / "decision_log.json"
+        v = projeto_analitico.current_version()
+        dl_path = projeto_analitico.version_path(v) / "decision_log.json"
         assert dl_path.exists(), "decision_log.json não foi persistido"
         dl = json.loads(dl_path.read_text())
         assert "decision_id" in dl
         assert dl["selected_intervention"] == "iv-01"
 
-    def test_pipeline_07_a_11_gera_12_invocacoes_no_log(
-        self,
-        runtime: Runtime,
-        projeto_terraplenagem: ProjectStore,
-        inputs_escopo_terraplenagem: dict,
-        mock_openmeteo_aracoiaba,
-    ):
-        """Pipeline completo: 00-06 (14 skills) + 07-11 (5 skills) = 19 entradas no log."""
-        self._rodar_00_a_06(
-            runtime,
-            projeto_terraplenagem,
-            inputs_escopo_terraplenagem,
-            mock_openmeteo_aracoiaba,
-        )
-        runtime.run_skill("09-relatorio-e-artefatos", projeto_terraplenagem, inputs={})
-        runtime.run_skill("10-diagnostico-criticidade", projeto_terraplenagem, inputs={})
-        runtime.run_skill("10-diagnostico-criticidade", projeto_terraplenagem, inputs={})
+    def test_pipeline_07_a_11_gera_12_invocacoes_no_log(self, tmp_path, runtime, _session_pipeline_sk09):
+        """Pipeline completo: 01-09 (base) + 10-12 (este teste) ≥ 8 entradas no log.
+        
+        PERFORMANCE: Usa shutil.copytree do projeto base. Poderia usar hardlinks
+        mas a complexidade não vale para um único teste.
+        """
+        sk09_proj, _ = _session_pipeline_sk09
+        # Cópia isolada para não sujar o estado compartilhado
+        dest = tmp_path / "projeto"
+        shutil.copytree(sk09_proj.root, dest)
+        proj = ProjectStore(dest)
+
+        runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
+        runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
 
         intervencoes = [
             {
@@ -506,7 +422,7 @@ class TestPipelineAnalitico:
         ]
         runtime.run_skill(
             "11-avaliacao-intervencoes",
-            projeto_terraplenagem,
+            proj,
             inputs={"intervencoes_propostas": intervencoes},
         )
         decision_inputs = {
@@ -519,9 +435,9 @@ class TestPipelineAnalitico:
             "justification": {"rationale": "Custo adicional de subcontratação não se paga na margem atual"},
             "decided_by": {"type": "GESTOR", "id": "gest-01"},
         }
-        runtime.run_skill("12-registro-decisoes", projeto_terraplenagem, inputs=decision_inputs)
+        runtime.run_skill("12-registro-decisoes", proj, inputs=decision_inputs)
 
-        log_text = (projeto_terraplenagem.root / "v1" / "invocations.log").read_text()
+        log_text = (proj.root / "v1" / "invocations.log").read_text()
         n_inv = len([line for line in log_text.strip().splitlines() if line])
         assert n_inv >= 8, f"Esperadas >= 8 invocações, encontradas {n_inv}"
 
@@ -537,6 +453,19 @@ class TestValidacaoAgisComSeedData:
     nos dados seed (margem 9.2 %, status VERDE, 3 serviços, 2 equipes diretas).
     """
 
+    @pytest.fixture(scope="class")
+    def _relatorio_seed(self):
+        """Executa run_relatorio_e_artefatos UMA VEZ para TestValidacaoAgisComSeedData.
+
+        Compartilhada pelos dois testes que validam o relatório analítico;
+        evita executar a skill duas vezes sobre o mesmo canonical de entrada.
+        """
+        from concilium.application.skills import run_relatorio_e_artefatos
+
+        path = Path(__file__).parent.parent / "samples" / "01-terraplenagem-feliz.json"
+        can = _carregar_amostra_canonical(path)
+        return run_relatorio_e_artefatos(can, {})
+
     def test_canonical_carrega_corretamente(self, amostra_terraplenagem_path: Path):
         can = _carregar_amostra_canonical(amostra_terraplenagem_path)
         assert can.projeto.nome.startswith("Terraplenagem")
@@ -546,12 +475,9 @@ class TestValidacaoAgisComSeedData:
         assert can.cronograma is not None
         assert len(can.cronograma.scheduled_activities) == 3
 
-    def test_relatorio_agis_replica_valores_seed(self, amostra_terraplenagem_path: Path):
+    def test_relatorio_agis_replica_valores_seed(self, _relatorio_seed):
         """Skill 07 deve replicar fielmente os valores financeiros do seed."""
-        from concilium.application.skills import run_relatorio_e_artefatos
-
-        can = _carregar_amostra_canonical(amostra_terraplenagem_path)
-        result = run_relatorio_e_artefatos(can, {})
+        result = _relatorio_seed
         assert not result.has_errors
 
         rel = result.relatorio
@@ -576,12 +502,9 @@ class TestValidacaoAgisComSeedData:
         assert eq_row["delta_pct"] is None
         assert eq_row["status_pe"] == "N/A"
 
-    def test_relatorio_analitico_margens_e_razoes(self, amostra_terraplenagem_path: Path):
+    def test_relatorio_analitico_margens_e_razoes(self, _relatorio_seed):
         """Relatório analítico: razão indireto/direto e posicionamento da margem."""
-        from concilium.application.skills import run_relatorio_e_artefatos
-
-        can = _carregar_amostra_canonical(amostra_terraplenagem_path)
-        result = run_relatorio_e_artefatos(can, {})
+        result = _relatorio_seed
         res = result.relatorio["RESULTADO"]
 
         # Razão indireto/direto: positiva (custo total inclui direto + indiretos)

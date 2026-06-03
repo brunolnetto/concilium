@@ -1,0 +1,64 @@
+{
+  "projeto_id": "7024ca2e-0d8a-479e-8fd0-1f09d7705c99",
+  "versao": "1",
+  "gerado_em": "2026-06-01T23:11:16.649219Z",
+  "status_entrada": "VERMELHO",
+  "eixos_intervencao": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.204473,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    },
+    {
+      "nome": "Oportunidade SERIALIZAR_CRONOGRAMA",
+      "margem_estimada": 0.331745,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "BAIXO",
+      "levers_combinados": [
+        "SERIALIZAR_CRONOGRAMA"
+      ]
+    },
+    {
+      "nome": "Oportunidade MELHORAR_PRATICABILIDADE",
+      "margem_estimada": 0.047644,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": [
+        "MELHORAR_PRATICABILIDADE"
+      ]
+    },
+    {
+      "nome": "Oportunidade OTIMIZAR_POOL",
+      "margem_estimada": 0.044697,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "BAIXO",
+      "levers_combinados": [
+        "OTIMIZAR_POOL"
+      ]
+    }
+  ],
+  "fronteira_pareto": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.204473,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    }
+  ],
+  "recomendacao_primaria": {
+    "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+    "margem_estimada": 0.204473,
+    "prazo_delta_dias": null,
+    "confianca": "MEDIA",
+    "risco": "MEDIO",
+    "levers_combinados": []
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://concilium.local/schemas/catalog/common.schema.json",
+  "title": "Concilium Catalog Common Types",
+  "$defs": {
+    "codigoCpu": {
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{4,40}$"
+    },
+    "codigoInsumo": {
+      "type": "string",
+      "pattern": "^[A-Z0-9-]{3,40}$"
+    },
+    "categoriaCpu": {
+      "type": "string",
+      "enum": [
+        "TERRAPLENAGEM",
+        "PAVIMENTACAO",
+        "DRENAGEM",
+        "SANEAMENTO",
+        "OBRAS_ARTE",
+        "DIVERSOS"
+      ]
+    },
+    "categoriaCusto": {
+      "type": "string",
+      "enum": ["MATERIAL", "DIESEL", "MAO_OBRA", "EQUIPAMENTO"]
+    },
+    "tipoInsumo": {
+      "type": "string",
+      "enum": ["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO"]
+    },
+    "fontePreco": {
+      "description": "Fonte do preço. Valores canônicos: catalogo_proprio, tabela_referencia, cotacao_mercado, negociado. Aceita strings livres para referências externas (ex: PLANILHA_AGIS_2026_05, SICRO_DNIT).",
+      "type": "string",
+      "minLength": 1
+    },
+    "origemCpu": {
+      "type": "string",
+      "enum": ["REFERENCIA", "PROPRIA"]
+    },
+    "composicaoItem": {
+      "description": "Item da composição de uma CPU. unidade é derivada de Insumo.unidade — não armazenar aqui. Unicidade por insumo_id deve ser garantida pela aplicação.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["insumo_id", "coeficiente", "categoria_custo"],
+      "properties": {
+        "insumo_id": {
+          "$ref": "#/$defs/codigoInsumo"
+        },
+        "coeficiente": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "categoria_custo": {
+          "$ref": "#/$defs/categoriaCusto"
+        }
+      }
+    },
+    "funcaoEquipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["funcao_id", "num_pessoas"],
+      "properties": {
+        "funcao_id": {
+          "$ref": "#/$defs/codigoInsumo"
+        },
+        "num_pessoas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "horas_extras_pct": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "papel": {
+          "type": "string",
+          "enum": ["direto", "indireto", "gestao"],
+          "default": "direto"
+        }
+      }
+    },
+    "equipamentoEquipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["equip_id", "num_unidades"],
+      "properties": {
+        "equip_id": {
+          "$ref": "#/$defs/codigoInsumo"
+        },
+        "num_unidades": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "consumo_litros_hora_estimado": {
+          "type": ["number", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "materialEquipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["insumo_id", "consumo_por_hora", "unidade"],
+      "properties": {
+        "insumo_id": {
+          "$ref": "#/$defs/codigoInsumo"
+        },
+        "consumo_por_hora": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unidade": {
+          "type": "string"
+        },
+        "descricao": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "composicaoPadraoEquipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["funcoes", "equipamentos"],
+      "properties": {
+        "funcoes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/funcaoEquipe" },
+          "uniqueItems": true
+        },
+        "equipamentos": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/equipamentoEquipe" },
+          "uniqueItems": true
+        },
+        "materiais": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/materialEquipe" },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "decomposicaoEquip": {
+      "description": "Decomposição do custo horário do equipamento em componentes. custo_hora_total = mao_obra_h + diesel_h + material_h + capital_h — calculado em runtime, não armazenar.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "custo_mao_obra_h",
+        "custo_diesel_h",
+        "custo_material_h",
+        "custo_capital_h"
+      ],
+      "properties": {
+        "custo_mao_obra_h": {"type": "number", "minimum": 0},
+        "custo_diesel_h": {"type": "number", "minimum": 0},
+        "custo_material_h": {"type": "number", "minimum": 0},
+        "custo_capital_h": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}

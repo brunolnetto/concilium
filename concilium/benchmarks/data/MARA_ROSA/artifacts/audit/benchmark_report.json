@@ -1,0 +1,51 @@
+{
+  "projeto": "MARA_ROSA",
+  "slug": "MARA_ROSA",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 11846,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 2592,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 262,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "ERRO",
+      "duration_ms": 290,
+      "avisos": [],
+      "erros": [
+        "rcpsp_spec sem atividades."
+      ]
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 1186993.39,
+      "custo_indireto": null,
+      "custo_total": null,
+      "preco_venda": null
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "INVIAVEL"
+}

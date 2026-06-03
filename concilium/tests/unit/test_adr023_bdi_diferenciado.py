@@ -138,20 +138,29 @@ class TestTabelaBdi:
         assert isinstance(DEFAULT_BDI_TABELA, TabelaBdi)
 
     def test_default_bdi_mao_obra(self):
-        """Default MO BDI ≈ 34.5% (TCU formula, April/2026 components)."""
-        assert abs(DEFAULT_BDI_TABELA.mao_obra.bdi_total - 0.344955) < 1e-4
+        """Default MO BDI ≈ 29.97% — planilha AGIS / fórmula TCU multiplicativa.
+
+        Componentes: AC=5%, DF=1.5%, R=1%, L=9% | ISS=5%, CSSL=1.99%, IR=2.74%
+        BDI = (1.05)(1.015)(1.01)(1.09) / (1 - 0.0973) - 1 ≈ 29.97%
+        """
+        assert abs(DEFAULT_BDI_TABELA.mao_obra.bdi_total - 0.2997) < 1e-3
 
     def test_default_bdi_material(self):
-        """Default material BDI = 5.00% (AC only, no profit on pass-through materials)."""
-        assert abs(DEFAULT_BDI_TABELA.material.bdi_total - 0.05) < 1e-4
+        """Default material BDI = 4.00% — apenas lucro, sem tributos sobre fornecimento."""
+        assert abs(DEFAULT_BDI_TABELA.material.bdi_total - 0.04) < 1e-6
 
     def test_default_bdi_diesel(self):
-        """Default diesel BDI ≈ 25.84% (TCU formula, April/2026 components)."""
-        assert abs(DEFAULT_BDI_TABELA.diesel.bdi_total - 0.25837) < 1e-4
+        """Default diesel BDI = 4.00% — tratado como fornecimento de insumo (planilha AGIS)."""
+        assert abs(DEFAULT_BDI_TABELA.diesel.bdi_total - 0.04) < 1e-6
 
     def test_default_bdi_indireto(self):
-        """Default indireto BDI ≈ 22.37% (TCU formula, April/2026 components)."""
-        assert abs(DEFAULT_BDI_TABELA.indireto.bdi_total - 0.223736) < 1e-4
+        """Default indireto BDI ≈ 25.21% — planilha AGIS / fórmula TCU multiplicativa.
+
+        Componentes: AC=5%, DF=1.5%, R=1%, L=5% | ISS=5%, CSSL=1.99%, IR=2.74%
+        BDI = (1.05)(1.015)(1.01)(1.05) / (1 - 0.0973) - 1 ≈ 25.23%
+        (Planilha mostra 25.21% — diferença de 0.02% por arredondamento na planilha)
+        """
+        assert abs(DEFAULT_BDI_TABELA.indireto.bdi_total - 0.2523) < 1e-3
 
     def test_tabela_bdi_round_trip(self):
         """TabelaBdi serializes and deserializes without loss."""

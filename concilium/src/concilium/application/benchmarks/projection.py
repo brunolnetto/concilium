@@ -25,19 +25,39 @@ def _bfc_custo_direto_total(custo: object, custo_indireto: float) -> tuple[float
 
 
 def _bfc_preco_venda(venda: object, custo_total: float | None) -> tuple[float | None, float | None]:
+    """Retorna (raw_bdi_lucro, preco_venda).
+
+    Fonte primária: ``total_com_bdi`` — o preço operacional honesto (custo instancial × BDI,
+    conforme ADR-085 D5 / refactoring de pricing). O catálogo (``total_custo_plus_catalogo``)
+    fica como campo diagnóstico ``preco_venda_catalogo`` no ferramenta.
+    """
     raw_bdi_lucro = getattr(venda, "bdi_lucro_impostos", None) if venda else None
-    preco_venda_plus = getattr(venda, "total_custo_plus_catalogo", None) if venda else None
-    if preco_venda_plus is not None:
-        return raw_bdi_lucro, round(preco_venda_plus, 2)
+    # Preço operacional honesto (total_com_bdi = venda_plus após refactoring)
+    preco_venda_op = getattr(venda, "total_com_bdi", None) if venda else None
+    if preco_venda_op is not None:
+        return raw_bdi_lucro, round(preco_venda_op, 2)
+    # Fallback: catálogo ou derivado do markup
+    preco_venda_cat = getattr(venda, "total_custo_plus_catalogo", None) if venda else None
+    if preco_venda_cat is not None:
+        return raw_bdi_lucro, round(preco_venda_cat, 2)
     if raw_bdi_lucro is not None and custo_total is not None:
         return raw_bdi_lucro, round(custo_total * (1 + raw_bdi_lucro), 2)
     return raw_bdi_lucro, None
 
 
 def _bfc_bdi_lucro(preco_venda: float | None, custo_total: float | None, raw_bdi_lucro: float | None) -> float:
+    """Retorna o markup efetivo (BDI + lucro + impostos) como fração.
+
+    Prefere ``raw_bdi_lucro`` de ``Venda.bdi_lucro_impostos``, que já é calculado sobre
+    o custo operacional real (``venda_plus / custo_operacional_real − 1``, skill-08).
+    Isso evita o erro de usar custo de catálogo (R$66M) como denominador de um preço
+    operacional (R$103M), que geraria markup artificialmente inflado (≈55%).
+    """
+    if raw_bdi_lucro is not None:
+        return raw_bdi_lucro  # já correto: venda_plus / custo_op_real − 1
     if preco_venda is not None and custo_total:
         return (preco_venda / custo_total) - 1
-    return raw_bdi_lucro if raw_bdi_lucro is not None else 0.15
+    return 0.15
 
 
 def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], float | None, float | None]:
@@ -54,7 +74,10 @@ def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], flo
         "custo_total": custo_total,
         "preco_venda": preco_venda,
         "preco_venda_plus_eq": getattr(venda, "total_custo_plus", None) if venda else None,
-        "preco_venda_catalogo": getattr(venda, "total_com_bdi", None) if venda else None,
+        # preco_venda_catalogo: referência de benchmarking (PU×Q×BDI) — total_custo_plus_catalogo
+        # total_com_bdi agora é o preço operacional honesto (custo instancial × BDI)
+        "preco_venda_catalogo": getattr(venda, "total_custo_plus_catalogo", None) if venda else None,
+        "preco_venda_operacional": getattr(venda, "total_com_bdi", None) if venda else None,
         "bdi_lucro_impostos": bdi_lucro,
     }
     return ferramenta, custo_direto, custo_indireto

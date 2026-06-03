@@ -75,6 +75,111 @@ _EBR_KEY_MAP: dict[str, str] = {
 }
 
 
+def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
+    """Converte schema v2 (meta+spec+resultado) para formato v1-compatível com o pipeline.
+
+    Schema v2 é detectado pela presença da chave 'spec' no dict raiz.
+    A estrutura v2 é mais limpa e compacta; esta função expande para o formato
+    que o resto do pipeline (spec_loader + input_deriver) já sabe consumir.
+
+    Mapeamento:
+        meta.*                  → campos raiz (projeto, data_inicio, …)
+        spec.eap                → ref["eap"]
+        spec.rcpsp_spec         → ref["rcpsp_spec"]
+        spec.cronograma[]       → ref["cronograma"]["atividades"] (+ quantitativo da eap)
+        spec.planejamento[]     → ref["planejamento_detalhado"] (subtotal aninhado)
+        spec.bdi                → ref["bdi"]
+        spec.indiretos[]        → ref["indiretos_detalhamento"] + ref["equipes_indiretas"]
+        spec.diretos            → ref["equipes_detalhadas"]
+        spec.cenarios           → ref["cenarios"]
+        resultado               → ref["resultado"]  (mantido no topo)
+    """
+    meta = ref.get("meta") or {}
+    spec = ref.get("spec") or {}
+
+    out: dict[str, Any] = {}
+
+    # 1. meta → campos raiz
+    out["projeto"] = meta.get("projeto", "")
+    out["data_inicio"] = meta.get("data_inicio", "")
+    out["data_termino"] = meta.get("data_termino", "")
+    out["localizacao"] = meta.get("localizacao", "")
+    out["regime_trabalho"] = meta.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6})
+    out["mode"] = meta.get("mode", "benchmark_config")
+
+    # 2. eap direto
+    out["eap"] = spec.get("eap") or []
+    eap_by_id: dict[str, Any] = {item["item_id"]: item for item in out["eap"] if "item_id" in item}
+
+    # 3. rcpsp_spec (inalterado)
+    out["rcpsp_spec"] = spec.get("rcpsp_spec") or {}
+
+    # 4. cronograma: itens v2 → atividades v1 (+ quantitativo da eap, necessário para escala)
+    atividades = []
+    for item in (spec.get("cronograma") or []):
+        item_id = item["item_id"]
+        eap_item = eap_by_id.get(item_id, {})
+        atividades.append(
+            {
+                "item_id": item_id,
+                "producao_diaria": item.get("producao_diaria", 0.0),
+                "quantitativo": eap_item.get("quantitativo", 0.0),
+                "semanas": item.get("semanas") or {},
+            }
+        )
+    out["cronograma"] = {"atividades": atividades}
+
+    # 5. planejamento: flat v2 → subtotal aninhado v1
+    planejamento_detalhado = []
+    for item in (spec.get("planejamento") or []):
+        item_id = item["item_id"]
+        eap_item = eap_by_id.get(item_id, {})
+        planejamento_detalhado.append(
+            {
+                "item_id": item_id,
+                "cpu_id": eap_item.get("cpu_id", ""),
+                "quantitativo": eap_item.get("quantitativo", 0.0),
+                "subtotal": {
+                    "sem_bdi": {"total": item.get("custo_sem_bdi", 0.0)},
+                    "com_bdi": {"total": item.get("custo_com_bdi", 0.0)},
+                },
+            }
+        )
+    out["planejamento_detalhado"] = planejamento_detalhado
+
+    # 6. bdi
+    out["bdi"] = spec.get("bdi") or {}
+
+    # 7. indiretos[] → indiretos_detalhamento (dict) + equipes_indiretas (lista)
+    #    driver "mensal"  → custo_fixo_mensal_total  (multiplicado por duração no pipeline)
+    #    driver "projeto" → custo_fixo_total          (custo único, ex: mobilização)
+    indiretos_detalhamento: dict[str, Any] = {}
+    equipes_indiretas: list[dict[str, Any]] = []
+    for ind in (spec.get("indiretos") or []):
+        cat = ind["categoria"]
+        driver = ind.get("driver", "mensal")
+        if driver == "projeto":
+            indiretos_detalhamento[cat] = {"custo_fixo_total": ind.get("custo_fixo_total", 0.0)}
+        else:
+            indiretos_detalhamento[cat] = {"custo_fixo_mensal_total": ind.get("custo_fixo_mensal_total", 0.0)}
+        mao_obra = ind.get("mao_obra") or []
+        if mao_obra:
+            equipes_indiretas.append({"id": f"INDIR-{cat}", "categoria": cat, "mao_obra": mao_obra})
+    out["indiretos_detalhamento"] = indiretos_detalhamento
+    out["equipes_indiretas"] = equipes_indiretas
+
+    # 8. diretos → equipes_detalhadas
+    out["equipes_detalhadas"] = spec.get("diretos") or []
+
+    # 9. cenarios
+    out["cenarios"] = spec.get("cenarios") or []
+
+    # 10. resultado (já está no topo em v2)
+    out["resultado"] = ref.get("resultado") or {}
+
+    return out
+
+
 # ── Helpers for BenchmarkSpecLoader.load_from_dict ──────────────────────────────
 # ── Helpers for BenchmarkSpecLoader._enrich_eap_with_cpu_ids ────────────────────
 # ── Helpers for BenchmarkSpecLoader._build_inputs_indiretos ─────────────────────
@@ -181,15 +286,15 @@ class BenchmarkSpecLoader:
             "08-consolidacao-financeira": consolidacao_inputs,
         }
 
-        bdi_ref = ref.get("bdi", {})
-        if bdi_ref:
+        # Permite override de BDI por referência quando disponível, com fallback termo-a-termo.
+        bdi_ref = ref.get("bdi") or {}
+        if isinstance(bdi_ref, dict) and bdi_ref:
             extra_inputs = self._lfd_build_bdi_section(extra_inputs, ref, bdi_ref)
 
-        ref_item_overrides = ref.get("planejamento_item_overrides")
-        if isinstance(ref_item_overrides, dict) and ref_item_overrides:
-            s04 = extra_inputs.get("06-precificacao-unitaria", {})
-            s04["planejamento_item_overrides"] = ref_item_overrides
-            extra_inputs["06-precificacao-unitaria"] = s04
+        # NEP-030 D3: planejamento_item_overrides NÃO é mais injetado da referência.
+        # Per-item cost overrides substituem o cálculo do algoritmo.
+        # Se necessário no futuro, deve ser um mecanismo explícito e separado do arquivo
+        # de referência (ex: config/overrides/{projeto}/planejamento.json).
 
         ind_ref = self._lfd_build_ind_ref(ref, weeks)
         inputs_indiretos = self._build_inputs_indiretos(
@@ -230,6 +335,11 @@ class BenchmarkSpecLoader:
                 "id": "benchmark_runner",
             },
         }
+
+        # ADR-071: repassa rcpsp_spec para skill-05 para que possa calcular
+        # contratos de pool e atribuir custos proporcionalmente ao uso.
+        if ref.get("rcpsp_spec"):
+            extra_inputs["05-equipes-e-alocacao"] = {"rcpsp_spec": ref["rcpsp_spec"]}
 
         return ProjectSpec(
             nome=ref.get("projeto", slug),
@@ -276,9 +386,13 @@ class BenchmarkSpecLoader:
         """Normaliza schemas de referência para o formato legado esperado pelo loader.
 
         Compatibiliza o novo modo `benchmark_config` sem quebrar referências antigas.
+        Suporta schema v2 (meta+spec+resultado) quando a chave 'spec' está presente.
         """
         if not isinstance(ref, dict):
             return ref
+        # v2: presença de 'spec' indica schema reorganizado → normaliza para v1-compat
+        if "spec" in ref:
+            ref = _unpack_v2_schema(ref)
         mode = str(ref.get("mode") or "").strip().lower()
         if mode != "benchmark_config":
             return ref
@@ -371,11 +485,11 @@ class BenchmarkSpecLoader:
 
 
 def load_spec_from_json(path: Path | str) -> ProjectSpec:
-    config_root = Path(os.environ.get("CONCILIUM_CONFIG_ROOT", Path.cwd() / "config"))
+    config_root = Path(os.environ.get("CONCILIUM__CONFIG_ROOT", Path.cwd() / "config"))
     return BenchmarkSpecLoader(config_root).load(path)
 
 
 def load_spec_from_dict(ref: dict[str, Any], path: Path | str) -> ProjectSpec:
     """Carrega ProjectSpec a partir de um dict ja em memoria (sem I/O de disco)."""
-    config_root = Path(os.environ.get("CONCILIUM_CONFIG_ROOT", Path.cwd() / "config"))
+    config_root = Path(os.environ.get("CONCILIUM__CONFIG_ROOT", Path.cwd() / "config"))
     return BenchmarkSpecLoader(config_root).load_from_dict(ref, path)

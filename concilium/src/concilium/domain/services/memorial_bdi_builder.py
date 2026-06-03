@@ -66,6 +66,16 @@ def _ba_get_pu_components(pu: object) -> tuple:
     return mo, equip, mat, diesel
 
 
+def _mb_resolve_custo_direto(resultado: Any) -> float:
+    """Retorna custo direto autoritativo do resultado consolidado."""
+    if not resultado or not getattr(resultado, "custo", None):
+        return 0.0
+    custo = resultado.custo
+    direto_equipes = float(getattr(custo, "direto_equipes", 0.0) or 0.0)
+    direto_catalogo = float(getattr(custo, "direto_catalogo", 0.0) or 0.0)
+    return direto_catalogo if direto_catalogo > 0 else direto_equipes
+
+
 class MemorialBDIBuilder:
     """Constrói MemorialCalculoBDI a partir de um canonical e dos inputs de BDI usados."""
 
@@ -114,13 +124,15 @@ class MemorialBDIBuilder:
 
         resultado = canonical_in.resultado
         venda = float(resultado.venda.total_com_bdi) if resultado and resultado.venda else 0.0
-        custo = float(resultado.custo.total) if resultado and resultado.custo else 0.0
+        custo_direto = _mb_resolve_custo_direto(resultado)
         margem = float(resultado.resultado_financeiro) if resultado else 0.0
         margem_pct = float(resultado.margem_pct) if resultado else 0.0
 
-        # Overhead e tributos estimados do resultado financeiro
-        overhead_total = venda - custo - margem - (venda * (BDI_CSSL + BDI_IR))
-        tributos_total = venda * 0.1338  # T_pre_reforma (aproximação; CBS/IBS ajusta)
+        # Aproximação conservadora de tributos totais na receita.
+        # Mantemos a taxa histórica até concluir distribuição por categoria no consolidado.
+        tributos_total = venda * 0.1338
+        # Overhead sintético = parcela restante da receita após custo direto, margem e tributos.
+        overhead_total = venda - custo_direto - margem - tributos_total
 
         return MemorialCalculoBDI(
             meta=meta,
@@ -130,7 +142,7 @@ class MemorialBDIBuilder:
             decomposicao_por_categoria=decomp_por_cat,
             aplicacao_por_item=aplicacao,
             venda_total_com_bdi=round(venda, 2),
-            custo_direto_total=round(custo, 2),
+            custo_direto_total=round(custo_direto, 2),
             overhead_total=round(overhead_total, 2),
             margem_total=round(margem, 2),
             tributos_total=round(tributos_total, 2),

@@ -1,0 +1,12 @@
+{
+  "codigo": "E0005",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão basculante 20 m³",
+  "unidade": "h",
+  "preco_unitario": 120.0,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "horas_mes": 200.0
+  }
+}

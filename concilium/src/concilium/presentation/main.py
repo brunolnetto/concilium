@@ -51,6 +51,11 @@ benchmark_app = typer.Typer(
     help="Operações de benchmark: run, audit, analyze, extract e correção de discrepâncias.",
     no_args_is_help=True,
 )
+auth_app = typer.Typer(
+    name="auth",
+    help="Gestão de usuários, dispositivos e tokens JWT (ADR-094).",
+    no_args_is_help=True,
+)
 skills_app = typer.Typer(
     name="skills",
     help="Gerenciamento e exportação dos manifests de skills.",
@@ -70,7 +75,8 @@ configuration_app.add_typer(app_jurisdicao)
 app.add_typer(catalog_app)
 app.add_typer(project_app)
 app.add_typer(configuration_app)
-app.add_typer(benchmark_app, hidden=True)
+app.add_typer(benchmark_app)
+app.add_typer(auth_app)
 
 
 # ── Loaders por grupo ────────────────────────────────────────────────────────
@@ -86,7 +92,7 @@ def _populate_catalog_into(target: typer.Typer, cmd) -> None:
     if hasattr(cmd, "catalog_audit_reasonability"):
         target.command("audit")(cmd.catalog_audit_reasonability)
     if hasattr(cmd, "catalog_validate_schema"):
-        target.command("validate")(cmd.catalog_validate_schema)
+        target.command("validate-schema")(cmd.catalog_validate_schema)
     if hasattr(cmd, "catalog_cure_schema"):
         target.command("cure")(cmd.catalog_cure_schema)
         target.command("cure-schema")(cmd.catalog_cure_schema)
@@ -148,6 +154,7 @@ def _load_benchmark() -> None:
     benchmark_app.command("iterate")(commands_benchmark.iterate_correction)
     benchmark_app.command("plan-space")(commands_benchmark.plan_space)
     benchmark_app.command("pack")(commands_benchmark.pack_benchmark)
+    benchmark_app.command("compare")(commands_benchmark.compare_algorithms)
     benchmark_app.add_typer(commands_schedule.app, name="schedule")
 
 
@@ -168,6 +175,19 @@ def _load_schedule() -> None:
     from concilium.presentation.cli import commands_schedule
 
     app.add_typer(commands_schedule.app, hidden=True)
+
+
+def _load_auth() -> None:
+    from concilium.presentation.cli.commands_auth import (
+        add_user, list_users, remove_user,
+        new_device, list_devices, revoke_device,
+    )
+    auth_app.command("add-user")(add_user)
+    auth_app.command("list-users")(list_users)
+    auth_app.command("remove-user")(remove_user)
+    auth_app.command("new-device")(new_device)
+    auth_app.command("list-devices")(list_devices)
+    auth_app.command("revoke-device")(revoke_device)
 
 
 def _load_health() -> None:
@@ -195,6 +215,7 @@ def _load_all() -> None:
     _load_project()
     _load_benchmark()
     _load_configuration()
+    _load_auth()
 
     validate_app = typer.Typer(
         name="validate",
@@ -237,6 +258,7 @@ _GROUP_LOADERS = {
     "schedule": _load_schedule,
     "health": _load_health,
     "configuration": _load_configuration,
+    "auth": _load_auth,
 }
 
 
@@ -249,6 +271,16 @@ def _is_in_test_context() -> bool:
             if k in a:
                 return True
     return False
+
+
+# Em contexto de teste o CliRunner invoca ``app`` diretamente (sem passar por
+# main()/_dispatch), então todos os grupos precisam estar carregados já no import
+# — caso contrário comandos como ``project init`` ficam indisponíveis e o resultado
+# passa a depender da ordem de coleta dos testes (qualquer teste que dispare
+# _load_all() "consertaria" os demais). Carregar tudo aqui torna a CLI determinística
+# sob pytest sem afetar o caminho de produção (lazy dispatch permanece em main()).
+if _is_in_test_context():
+    _load_all()
 
 
 def _get_non_flags() -> list:

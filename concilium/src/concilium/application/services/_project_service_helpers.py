@@ -18,8 +18,11 @@ def _try_enrich_cpu_with_prod(cpu: dict[str, Any], prod_lkp: dict[str, Any]) -> 
     patch: dict[str, Any] = {}
     if not cpu.get("producao_horaria") and prod.get("valor_horario") is not None:
         patch["producao_horaria"] = prod["valor_horario"]
-    if not cpu.get("equipe") and prod.get("equipe"):
-        patch["equipe"] = prod["equipe"]
+    prod_equipe = prod.get("equipe")
+    if not isinstance(prod_equipe, dict):
+        prod_equipe = prod.get("composicao_padrao_equipe")
+    if not cpu.get("equipe") and isinstance(prod_equipe, dict):
+        patch["equipe"] = prod_equipe
     if patch:
         cpu = {**cpu, **patch}
     return cpu
@@ -101,7 +104,10 @@ def _compute_flat_bdi(tabela_bdi: dict[str, Any]) -> dict[str, float]:
             continue
         flat[cat] = round(bdi, 6)
     if flat and "equipamentos" not in flat:
-        flat["equipamentos"] = round(0.70 * flat.get("mao_obra", 0.0) + 0.30 * flat.get("diesel", 0.0), 6)
+        if "servicos" in flat:
+            flat["equipamentos"] = flat["servicos"]
+        else:
+            flat["equipamentos"] = round(0.70 * flat.get("mao_obra", 0.0) + 0.30 * flat.get("diesel", 0.0), 6)
     if flat and "servicos" not in flat:
         flat["servicos"] = flat.get("mao_obra", 0.0)
     return flat
@@ -144,18 +150,27 @@ def _cp_embed_catalog_if_needed(project: object, benchmark_reference: object, fi
             cat_files = sorted(snaps_dir.glob("catalogo-*.json"))
             if cat_files:
                 cat = _jcat.loads(cat_files[-1].read_text(encoding="utf-8"))
-                catalog: dict = {}
-                if cat.get("cpus"):
-                    catalog["cpus"] = cat["cpus"]
-                if cat.get("insumos"):
-                    catalog["insumos"] = cat["insumos"]
-                if cat.get("produtividades"):
-                    catalog["produtividades"] = cat["produtividades"]
+                catalog = _build_catalog_from_snapshot(cat)
                 if catalog:
                     ref_to_save["catalog"] = catalog
         except Exception:
             pass
     project.write_json(files.benchmark_reference, ref_to_save)
+
+
+def _resolve_catalogo_base_from_context(svc: ProjectService, contexto_id: str) -> str | None:
+    """Resolve canonical catalog id from current context version metadata."""
+    try:
+        versions = svc.list_contexto_versions(contexto_id)
+    except Exception:
+        versions = []
+    if not versions:
+        return contexto_id or None
+    current = versions[-1] if isinstance(versions, list) and versions else {}
+    catalog_id = str((current or {}).get("catalogo_id") or "").strip()
+    if catalog_id:
+        return catalog_id
+    return contexto_id or None
 
 
 def _cp_save_perfil_context(
@@ -209,7 +224,11 @@ def _ps_create_project(
     perfil_version: str | None = None,  # ADR-062
 ) -> dict[str, Any]:
     project_name = req.nome or inputs_escopo.get("nome") or f"Prototype {benchmark_slug or 'Project'}"
-    catalogo_base = benchmark_slug or getattr(req, "catalogo_base", None)
+    # catalogo_base drives project-level CPU resolution and must be a real catalog id.
+    # benchmark_slug identifies a dataset/template and is not necessarily a catalog id.
+    catalogo_base = _resolve_catalogo_base_from_context(svc, req.contexto_id)
+    if not catalogo_base:
+        catalogo_base = inputs_escopo.get("snapshot_catalogo_id") or getattr(req, "catalogo_base", None)
     project = svc._repository.create_project(project_name, req.contexto_id, catalogo_base=catalogo_base)
     tipo_projeto = "hot_project" if benchmark_slug else "project"
     status_eap = "ATIVO" if tipo_projeto == "hot_project" else "RASCUNHO"
@@ -309,3 +328,20 @@ def _ps_delete_version(svc: ProjectService, project_id: str, version: str, actor
     }
     svc._audit_service.log(project, action="delete_version", actor=actor, payload={"version": version}, result=payload)
     return payload
+
+
+def _ps_delete_project(svc: ProjectService, project_id: str, actor: str = "system") -> dict[str, Any]:
+    import shutil
+
+    project = svc._repository.get_project(project_id)
+    root = project.root
+    if not root.exists():
+        raise FileNotFoundError(f"Projeto '{project_id}' não encontrado.")
+
+    summary = {
+        "project_id": project_id,
+        "versions": project.list_versions(),
+        "current_version": project.current_version(),
+    }
+    shutil.rmtree(root)
+    return {"project_id": project_id, "deleted": True, "summary": summary}

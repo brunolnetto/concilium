@@ -1,0 +1,80 @@
+{
+  "slug": "LUNDIN",
+  "resumo": {
+    "passa": 0,
+    "falha": 5,
+    "na": 1,
+    "total": 6
+  },
+  "respostas": [
+    {
+      "pergunta": "1) Insumos/CPUs/produtividades/composicao de equipes iguais?",
+      "status": "FALHA",
+      "evidencia": {
+        "cpus_iguais": true,
+        "equipes_iguais": false
+      }
+    },
+    {
+      "pergunta": "2) Custo direto (catálogo vs referência) igual?",
+      "status": "FALHA",
+      "evidencia": {
+        "ref": 11783095.21,
+        "concilium_catalogo": 0.0,
+        "delta": -11783095.21
+      }
+    },
+    {
+      "pergunta": "3) Orcamento de itens esta correto?",
+      "status": "FALHA",
+      "evidencia": {
+        "itens": {
+          "eap-3_1": -371141.66,
+          "eap-1_2": -1340017.65,
+          "eap-1_1": -1229036.01,
+          "eap-1_3": -381643.99,
+          "eap-2_1": -575270.16,
+          "eap-3_3": -371141.66,
+          "eap-3_6": -216878.47,
+          "eap-5_1": -371141.66,
+          "eap-2_3": -148388.38,
+          "eap-4_1": -257858.31,
+          "eap-3_5": -371141.66,
+          "eap-3_2": -371141.66,
+          "eap-2_2": -148388.38,
+          "eap-3_4": -371141.66
+        },
+        "qtd_itens": 14
+      }
+    },
+    {
+      "pergunta": "4) Indiretos aplicados corretamente?",
+      "status": "FALHA",
+      "evidencia": {
+        "ref": 14181483.49,
+        "concilium": 0.0,
+        "delta": -14181483.49
+      }
+    },
+    {
+      "pergunta": "5) Ponto de equilibrio por EAP coincide?",
+      "status": "N/A",
+      "evidencia": {
+        "motivo": "Referencia nao possui dados de ponto_equilibrio (nem C_FIXO) para confronto",
+        "ref_count": 0,
+        "concilium_count": 0
+      }
+    },
+    {
+      "pergunta": "6) Resultado final coincide?",
+      "status": "FALHA",
+      "evidencia": {
+        "deltas": {
+          "preco_venda_total": -43659291.54,
+          "custo_total": -26943227.26,
+          "margem_bruta": -0.13
+        }
+      }
+    }
+  ]
+}

@@ -61,7 +61,7 @@ class TestCatalogoPageNoRawJson:
 class TestLintRawJsonScanner:
     def test_detects_antipattern_in_synthetic_file(self, tmp_path):
         """Scanner finds st.text_area + json.loads in same function."""
-        from scripts.lint_report import _scan_raw_json_ui
+        from scripts.dev.lint_report import _scan_raw_json_ui
 
         bad_file = tmp_path / "bad_ui.py"
         bad_file.write_text(
@@ -85,7 +85,7 @@ class TestLintRawJsonScanner:
 
     def test_no_false_positive_when_separate_functions(self, tmp_path):
         """text_area in one function, json.loads in another — NOT a violation."""
-        from scripts.lint_report import _scan_raw_json_ui
+        from scripts.dev.lint_report import _scan_raw_json_ui
 
         ok_file = tmp_path / "ok_ui.py"
         ok_file.write_text(
@@ -108,7 +108,7 @@ class TestLintRawJsonScanner:
 
     def test_no_false_positive_for_readonly_st_json(self, tmp_path):
         """st.json() display (no text_area) is NOT a violation."""
-        from scripts.lint_report import _scan_raw_json_ui
+        from scripts.dev.lint_report import _scan_raw_json_ui
 
         ok_file = tmp_path / "readonly_ui.py"
         ok_file.write_text(
@@ -130,7 +130,7 @@ class TestLintRawJsonScanner:
     @pytest.mark.slow
     def test_ui_directory_is_clean(self):
         """The actual UI directory has zero UI-JSON-RAW violations."""
-        from scripts.lint_report import _scan_raw_json_ui
+        from scripts.dev.lint_report import _scan_raw_json_ui
 
         ui_root = Path(__file__).resolve().parents[2] / "src/concilium/presentation/ui"
         hits = _scan_raw_json_ui(ui_root)

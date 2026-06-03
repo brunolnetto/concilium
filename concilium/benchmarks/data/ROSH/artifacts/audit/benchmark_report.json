@@ -1,0 +1,51 @@
+{
+  "projeto": "ROSH",
+  "slug": "ROSH",
+  "versao": "v1",
+  "skills_log": [
+    {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 14338,
+      "avisos": []
+    },
+    {
+      "skill": "02-produtividade-climatica",
+      "status": "OK",
+      "duration_ms": 2674,
+      "avisos": []
+    },
+    {
+      "skill": "03-catalogo-de-recursos",
+      "status": "OK",
+      "duration_ms": 374,
+      "avisos": []
+    },
+    {
+      "skill": "04-cronograma",
+      "status": "ERRO",
+      "duration_ms": 413,
+      "avisos": [],
+      "erros": [
+        "rcpsp_spec sem atividades."
+      ]
+    }
+  ],
+  "referencia_disponivel": true,
+  "confronto": {
+    "referencia": {
+      "custo_direto": 1797896.02,
+      "custo_indireto": 3065109.2663972043,
+      "custo_total": 4863005.29,
+      "preco_venda": 7383537.646748512
+    }
+  },
+  "quality_gates": {
+    "decision": "APROVADO",
+    "worst_severity": "S0",
+    "critical_metric_over_10pct": false,
+    "items": []
+  },
+  "action_report": [],
+  "status_final": "INVIAVEL"
+}

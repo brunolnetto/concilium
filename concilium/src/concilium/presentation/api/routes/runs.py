@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
 from concilium.application.services.concilium_service import ConciliumService
+from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.api.container import get_concilium_service
+from concilium.presentation.api.rate_limit import limiter
 
 from ..schemas import (
     ForkVersionRequest,
@@ -19,9 +21,15 @@ from ..schemas import (
 
 router = APIRouter(prefix="/api/projects", tags=["projects - runs"])
 
+_PIPELINE_LIMIT = "10/minute"
+
 
 @router.post("/{project_id}/runs", response_model=RunProjectResponse, summary="Run pipeline (synchronous)")
+@limiter.limit(_PIPELINE_LIMIT)
+@permission("project:run")
 def run_project(
+    request: Request,
+    response: Response,
     project_id: str,
     req: RunProjectRequest,
     x_user: str = Header(default="anonymous", alias="X-User"),
@@ -34,6 +42,8 @@ def run_project(
             fork_version=req.fork_version,
             skill_inputs_override=req.skill_inputs_override,
             use_saved_overrides=req.use_saved_overrides,
+            use_mobilizacao_policy=req.use_mobilizacao_policy,
+            use_strict_catalog_baseline=req.use_strict_catalog_baseline,
             actor=x_user,
         )
         return RunProjectResponse(**payload)
@@ -48,7 +58,11 @@ def run_project(
     response_model=RunStartResponse,
     summary="Start pipeline run (asynchronous)",
 )
+@limiter.limit(_PIPELINE_LIMIT)
+@permission("project:run")
 def start_run_project(
+    request: Request,
+    response: Response,
     project_id: str,
     req: RunProjectRequest,
     x_user: str = Header(default="anonymous", alias="X-User"),
@@ -61,6 +75,8 @@ def start_run_project(
             fork_version=req.fork_version,
             skill_inputs_override=req.skill_inputs_override,
             use_saved_overrides=req.use_saved_overrides,
+            use_mobilizacao_policy=req.use_mobilizacao_policy,
+            use_strict_catalog_baseline=req.use_strict_catalog_baseline,
             actor=x_user,
         )
         return RunStartResponse(**payload)
@@ -75,7 +91,11 @@ def start_run_project(
     response_model=RunProjectResponse,
     summary="Re-run from a previous run or version",
 )
+@limiter.limit(_PIPELINE_LIMIT)
+@permission("project:run")
 def rerun_project(
+    request: Request,
+    response: Response,
     project_id: str,
     req: RerunProjectRequest,
     x_user: str = Header(default="anonymous", alias="X-User"),
@@ -91,6 +111,8 @@ def rerun_project(
             fork_version=req.fork_version,
             skill_inputs_override=req.skill_inputs_override,
             use_saved_overrides=req.use_saved_overrides,
+            use_mobilizacao_policy=req.use_mobilizacao_policy,
+            use_strict_catalog_baseline=req.use_strict_catalog_baseline,
             actor=x_user,
         )
         return RunProjectResponse(**payload)

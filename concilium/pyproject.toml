@@ -6,27 +6,43 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.116.0",
+    "PyJWT[crypto]>=2.8.0",
     "fastmcp>=3.2.4",
     "highcharts-gantt>=1.7.0",
     "jsonschema>=4.23.0",
     "jmespath>=1.1.0",
     "openpyxl>=3.1.5",
     "pulp>=3.3.0",
+    "ortools>=9.0",
     "pydantic>=2.13.3",
     "python-statemachine>=3.0.0",
     "rich>=15.0.0",
     "streamlit>=1.46.0",
     "typer>=0.25.0",
     "uvicorn>=0.35.0",
+    "matplotlib>=3.9.0",
     "pydot>=4.0.1",
     "fpdf2>=2.8.0",
+    "ortools>=9.15.6755",
+    "reportlab>=4.5.1",
+    "eule[interval]>=0.1.3",
+    # ADR-100: DuckDB catalog query engine (optional — sem ele usa JSON puro)
+    "duckdb>=1.0.0",
+    # ADR-098: Rate limiting
+    "slowapi>=0.1.9",
+    # ADR-095: OpenTelemetry observability layer
+    "opentelemetry-api>=1.27.0",
+    "opentelemetry-sdk>=1.27.0",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-exporter-otlp-proto-http>=1.27.0",
 ]
 
 [project.scripts]
 concilium = "concilium.presentation.main:main"
-concilium-mcp = "concilium.presentation.mcp_server"
+concilium-mcp = "concilium.presentation.mcp_server.server:main"
 concilium-api = "concilium.presentation.api.app:main"
 concilium-ui = "concilium.presentation.ui.launcher:main"
+concilium-mcp-proxy = "concilium.presentation.mcp_proxy.proxy:main"
 
 [project.optional-dependencies]
 # ADR-047: SharePoint backend (instalar com: pip install 'concilium[sharepoint]')
@@ -38,6 +54,19 @@ sharepoint = [
 # S3 backend (instalar com: pip install 'concilium[s3]')
 s3 = [
     "aioboto3>=13.0.0",
+]
+
+# Azure Blob Storage + Key Vault (instalar com: pip install 'concilium[azure]')
+azure = [
+    "azure-storage-blob>=12.20.0",
+    "azure-identity>=1.17.0",
+    "azure-keyvault-secrets>=4.8.0",
+]
+
+# Google Drive backend (instalar com: pip install 'concilium[gdrive]')
+gdrive = [
+    "google-api-python-client>=2.130.0",
+    "google-auth>=2.30.0",
 ]
 
 [dependency-groups]

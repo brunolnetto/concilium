@@ -1,0 +1,58 @@
+[
+  {
+    "codigo": "DIESEL-S10",
+    "tipo": "MATERIAL",
+    "descricao": "Óleo diesel S10",
+    "unidade": "L",
+    "preco_unitario": 6.99,
+    "fonte_preco": "cotacao_mercado"
+  },
+  {
+    "codigo": "BGTC-MIX",
+    "tipo": "MATERIAL",
+    "descricao": "BGTC usinada",
+    "unidade": "m3",
+    "preco_unitario": 92.5,
+    "fonte_preco": "catalogo_proprio"
+  },
+  {
+    "codigo": "CBUQ-FAIXA-C",
+    "tipo": "MATERIAL",
+    "descricao": "CBUQ Faixa C",
+    "unidade": "ton",
+    "preco_unitario": 385.0,
+    "fonte_preco": "catalogo_proprio"
+  },
+  {
+    "codigo": "MANILHA-CERAM-300",
+    "tipo": "MATERIAL",
+    "descricao": "Manilha cerâmica DN300",
+    "unidade": "m",
+    "preco_unitario": 78.0,
+    "fonte_preco": "cotacao_mercado"
+  },
+  {
+    "codigo": "CIMENTO-CPII-50KG",
+    "tipo": "MATERIAL",
+    "descricao": "Cimento CP II 50kg",
+    "unidade": "saco",
+    "preco_unitario": 38.5,
+    "fonte_preco": "cotacao_mercado"
+  },
+  {
+    "codigo": "AREIA-MEDIA",
+    "tipo": "MATERIAL",
+    "descricao": "Areia média lavada",
+    "unidade": "m3",
+    "preco_unitario": 68.0,
+    "fonte_preco": "cotacao_mercado"
+  },
+  {
+    "codigo": "BRITA-1",
+    "tipo": "MATERIAL",
+    "descricao": "Brita nº 1",
+    "unidade": "m3",
+    "preco_unitario": 78.0,
+    "fonte_preco": "cotacao_mercado"
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "codigo": "CPU-TERRA-ATI-021",
+  "descricao": "Rebaixo terreno natural argiloso 20cm",
+  "unidade": "m2",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-OPER-MOTO",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-OPER-ROLO-COMP",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-ENCARREG-TERRA",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-E0028",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0036",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-021-PROD-001"
+}

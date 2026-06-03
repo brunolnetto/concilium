@@ -30,8 +30,8 @@ _ROOT = _HERE.parent
 
 sys.path.insert(0, str(_ROOT / "src"))
 
-os.environ.setdefault("CONCILIUM_CONFIG_ROOT",    str(_ROOT / "config"))
-os.environ.setdefault("CONCILIUM_PROJECTS_ROOT",  str(_ROOT / "benchmarks" / "projetos"))
+os.environ.setdefault("CONCILIUM__CONFIG_ROOT",    str(_ROOT / "config"))
+os.environ.setdefault("CONCILIUM__PROJECTS_ROOT",  str(_ROOT / "benchmarks" / "projetos"))
 
 
 def run_benchmark(spec: ProjectSpec, *, reset: bool = False) -> dict:
@@ -42,8 +42,8 @@ def run_benchmark(spec: ProjectSpec, *, reset: bool = False) -> dict:
     print(f"{'='*70}\n")
 
     runner = BenchmarkRunner(
-        config_root=Path(os.environ["CONCILIUM_CONFIG_ROOT"]),
-        projects_root=Path(os.environ["CONCILIUM_PROJECTS_ROOT"]),
+        config_root=Path(os.environ["CONCILIUM__CONFIG_ROOT"]),
+        projects_root=Path(os.environ["CONCILIUM__PROJECTS_ROOT"]),
         report_builder=BenchmarkReportBuilder(),
         report_printer=BenchmarkReportPrinter(),
     )

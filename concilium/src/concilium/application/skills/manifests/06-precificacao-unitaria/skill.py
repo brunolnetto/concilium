@@ -73,26 +73,36 @@ def _extract_overrides(inputs: dict[str, Any]) -> dict | None:
 
 
 def _resolve_bdi(inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> dict[str, float]:
-    def _with_equip_weight(base: dict[str, float]) -> dict[str, float]:
-        equip = round((0.70 * base["mao_obra"]) + (0.30 * base["diesel"]), 6)
+    def _to_flat_bdi(base: dict[str, Any]) -> dict[str, float]:
+        material = float(base.get("material", 0.0) or 0.0)
+        diesel = float(base.get("diesel", 0.0) or 0.0)
+        mao_obra = float(base.get("mao_obra", 0.0) or 0.0)
+        equipamentos_raw = base.get("equipamentos")
+
+        if equipamentos_raw is None:
+            # ADR-023 §D3: EQUIP BDI = 70% MAO_OBRA + 30% DIESEL
+            equip = round((0.70 * mao_obra) + (0.30 * diesel), 6)
+        else:
+            equip = float(equipamentos_raw or 0.0)
+
         return {
-            "material": float(base["material"]),
-            "diesel": float(base["diesel"]),
-            "mao_obra": float(base["mao_obra"]),
+            "material": material,
+            "diesel": diesel,
+            "mao_obra": mao_obra,
             "equipamentos": float(equip),
         }
 
     manual = inputs.get("bdi_aplicado")
     if isinstance(manual, dict):
-        resolved = _with_equip_weight(
+        resolved = _to_flat_bdi(
             {
                 "material": float(manual.get("material", 0.0) or 0.0),
                 "diesel": float(manual.get("diesel", 0.0) or 0.0),
                 "mao_obra": float(manual.get("mao_obra", 0.0) or 0.0),
+                "servicos": manual.get("servicos"),
+                "equipamentos": manual.get("equipamentos"),
             }
         )
-        if "equipamentos" in manual and manual.get("equipamentos") is not None:
-            resolved["equipamentos"] = float(manual.get("equipamentos") or 0.0)
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-BDI-FONTE",
@@ -122,11 +132,12 @@ def _resolve_bdi(inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> dic
         else:
             return {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
 
-    result = _with_equip_weight(
+    result = _to_flat_bdi(
         {
             "material": float(tabela.material.bdi_total),
             "diesel": float(tabela.diesel.bdi_total),
             "mao_obra": float(tabela.mao_obra.bdi_total),
+            "servicos": float(tabela.servicos.bdi_total),
         }
     )
     validacoes.append(
@@ -147,11 +158,27 @@ def _validar_bdi_dentro_da_faixa(bdi_aplicado: dict[str, float]) -> list[str]:
     return violacoes
 
 
+def _as_bool(value: Any) -> bool:
+    """Converte entradas heterogêneas em bool sem tratar 'false' como True."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "t", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "f", "no", "n", "off", ""}:
+            return False
+    return False
+
+
 def run_precificacao_unitaria(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
     catalogo: dict[str, Any],
     perfil: dict[str, Any],
+    catalog_session: object | None = None,  # ADR-100
 ) -> SkillResult:
     """Popula seção 'planejamento' do canônico."""
     validacoes: list[ValidacaoItem] = []
@@ -166,8 +193,29 @@ def run_precificacao_unitaria(
     overrides = _extract_overrides(inputs)
     jurisdicao_id = inputs.get("jurisdicao_id")
 
+    # NEP-032: parâmetros para precificação bottom-up (diesel + encargos)
+    from concilium.domain.constants import ENCARGOS_CLT, ENCARGOS_MENSALISTA, PRECO_DIESEL_REFERENCIA
+    preco_diesel = float(inputs.get("preco_diesel", PRECO_DIESEL_REFERENCIA))
+    for _ins in catalogo.get("insumos", []):
+        if _ins.get("codigo") in ("MA-DIESEL-S10", "DIESEL-S10"):
+            preco_diesel = float(_ins.get("preco_unitario", preco_diesel) or preco_diesel)
+            break
+    alpha_clt = float(inputs.get("percentual_encargos", ENCARGOS_CLT))
+    alpha_mensalista = float(inputs.get("percentual_encargos_mensalista", ENCARGOS_MENSALISTA))
+
     bdi_aplicado = _resolve_bdi(inputs, validacoes)
     planejamento_item_overrides = inputs.get("planejamento_item_overrides", {})
+    benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
+    # ADR-038: compensação por custo real de equipe — opt-in (default False).
+    # Quando True, substitui o preço unitário pelo custo total da equipe dividido
+    # pela quantidade, tornando o custo total INDEPENDENTE da quantidade (bug latente
+    # quando duas EAPs usam a mesma configuração de equipe com quantidades diferentes).
+    # Use apenas se as equipes de skill-05 forem dimensionadas proporcionalmente às
+    # quantidades de cada item; caso contrário itens idênticos ficam com custo igual
+    # independentemente do volume. Para precificação baseline, manter False.
+    apply_compensation = (
+        _as_bool(inputs.get("apply_adr038_compensation", False)) and not benchmark_mode
+    )
 
     violacoes_bdi = _validar_bdi_dentro_da_faixa(bdi_aplicado)
     if violacoes_bdi:
@@ -205,6 +253,21 @@ def run_precificacao_unitaria(
             erros_insumo,
             equip_sem_decomp,
             validacoes,
+            apply_compensation,
+            benchmark_mode,
+            preco_diesel=preco_diesel,
+            alpha_clt=alpha_clt,
+            alpha_mensalista=alpha_mensalista,
+            catalog_session=catalog_session,  # ADR-100
+        )
+
+    if benchmark_mode:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PLAN-BENCHMARK",
+                status="INFO",
+                mensagem="Modo benchmark: precificacao mantida no baseline de catalogo (ADR-038 desabilitada).",
+            )
         )
 
     if erros_eap:
@@ -226,12 +289,24 @@ def run_precificacao_unitaria(
                 status="AVISO",
                 mensagem=(
                     f"Insumos EQUIPAMENTO sem decomposicao_equip: {', '.join(sorted(equip_sem_decomp))}."
-                    " Usando ponderação 70%/30% (MAO_OBRA+DIESEL)."
+                    " Mantendo custo na categoria equipamentos."
                     " Enriqueça o catálogo com DecomposicaoEquipamento para BDI auditável (ADR-023 §D3)."
                 ),
             )
         )
 
-    _validate_coverage(canonical_in, plan_out, validacoes)
+    if benchmark_mode:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-COB-SKIPPED-BENCHMARK",
+                status="INFO",
+                mensagem=(
+                    "Modo benchmark: validacao de cobertura operacional (VAL-COB-*) desabilitada "
+                    "para preservar comparacao em baseline de catalogo."
+                ),
+            )
+        )
+    else:
+        _validate_coverage(canonical_in, plan_out, validacoes)
     novo = canonical_in.model_copy(update={"planejamento": plan_out})
     return SkillResult(novo, validacoes)

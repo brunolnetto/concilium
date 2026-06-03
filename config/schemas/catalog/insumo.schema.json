@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://concilium.local/schemas/catalog/insumo.schema.json",
+  "title": "Insumo",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "atributosMaoObra": {
+      "description": "Atributos específicos de MAO_OBRA. custo_com_encargos é derivado: preco_unitario × fator_encargos(tipo_contrato) — CLT=1.77, PJ=1.06. Não armazenar.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {"^_": {"type": ["string", "number", "null"]}},
+      "properties": {
+        "categoria_sindical": {"type": ["string", "null"]},
+        "horas_extras_pct_padrao": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "tipo_contrato": {"type": ["string", "null"], "enum": ["CLT", "PJ", null]},
+        "salario_mensal": {"type": ["number", "null"], "minimum": 0},
+        "horas_mes": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "percentual_encargos_local": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "salario_base": {"type": ["number", "null"], "minimum": 0},
+        "taxa_encargos_pct": {"type": ["number", "null"], "minimum": 0},
+        "nota_encargos": {"type": ["string", "null"]},
+        "metodo_custo_total": {"type": ["string", "null"]},
+        "_audit_encargos": {
+          "description": "Nota de auditoria sobre remoção de custo_com_encargos (ADR-009). Somente leitura.",
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "atributosEquipamento": {
+      "description": "Atributos específicos de EQUIPAMENTO. custo_manutencao_hora = valor_locacao_mensal × pct_manutencao / horas_mes_padrao. custo_produtivo_hora = sum(decomposicao_equip). Ambos derivados — não armazenar.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {"^_": {"type": ["string", "number", "null"]}},
+      "properties": {
+        "consumo_litros_hora": {"type": ["number", "null"], "minimum": 0},
+        "potencia_cv": {"type": ["number", "null"]},
+        "potencia_hp": {"type": ["number", "null"]},
+        "codigo_planilha": {"type": ["string", "null"]},
+        "valor_locacao_mensal": {"type": ["number", "null"], "minimum": 0},
+        "horas_mes": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "tipo_propriedade": {"type": ["string", "null"], "enum": ["proprio", "locacao", null]},
+        "pct_manutencao": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "custo_locacao_hora": {"type": ["number", "null"], "minimum": 0},
+        "custo_manutencao_operacao": {"type": ["number", "null"], "minimum": 0},
+        "custo_manutencao_operacao_hora": {"type": ["number", "null"], "minimum": 0},
+        "metodo_custo_total": {"type": ["string", "null"]},
+        "metodo_custo_horario": {"type": ["string", "null"]},
+        "nota_revisao": {"type": ["string", "null"]},
+        "nota": {"type": ["string", "null"]},
+        "referencia_sicro_custo_horario": {"type": ["string", "null"]},
+        "decomposicao_equip": {
+          "anyOf": [
+            {"type": "null"},
+            {"$ref": "common.schema.json#/$defs/decomposicaoEquip"}
+          ]
+        }
+      }
+    },
+    "atributosMaterial": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fornecedor_referencia": {"type": ["string", "null"]},
+        "prazo_entrega": {"type": ["string", "null"]}
+      }
+    },
+    "atributosTerceirizado": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  "required": [
+    "codigo",
+    "tipo",
+    "descricao",
+    "unidade",
+    "preco_unitario",
+    "fonte_preco"
+  ],
+  "properties": {
+    "codigo": {
+      "$ref": "common.schema.json#/$defs/codigoInsumo"
+    },
+    "tipo": {
+      "$ref": "common.schema.json#/$defs/tipoInsumo"
+    },
+    "descricao": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unidade": {
+      "type": "string",
+      "minLength": 1
+    },
+    "preco_unitario": {
+      "type": "number",
+      "minimum": 0
+    },
+    "fonte_preco": {
+      "$ref": "common.schema.json#/$defs/fontePreco"
+    },
+    "tabela_referencia_id": {
+      "type": ["string", "null"]
+    },
+    "codigo_referencia_externa": {
+      "type": ["string", "null"]
+    },
+    "historico_precos": {
+      "type": "array",
+      "uniqueItems": true,
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["preco_unitario", "data_inicio_vigencia"],
+        "properties": {
+          "preco_unitario": {"type": "number", "minimum": 0},
+          "data_inicio_vigencia": {"type": "string", "format": "date"},
+          "data_fim_vigencia": {"type": ["string", "null"], "format": "date"},
+          "fonte": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "classe_compartilhamento": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["classe"],
+      "properties": {
+        "classe": {
+          "type": "string",
+          "enum": [
+            "exclusivo_dedicado",
+            "exclusivo_compartilhavel",
+            "concorrente_compartilhavel"
+          ]
+        },
+        "fracao_uso": {
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "capacidade_cobertura": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      }
+    },
+    "categoria": {
+      "description": "Categoria operacional do insumo para fins de agrupamento no catálogo.",
+      "type": ["string", "null"]
+    },
+    "data_referencia_preco": {
+      "description": "Data de referência do preco_unitario vigente.",
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "codigo_sicro": {
+      "description": "Código de referência no SICRO/DNIT para este insumo.",
+      "type": ["string", "null"]
+    },
+    "metodo_custo_total": {
+      "description": "Método de apuração do custo total (ex: locacao_mais_operacao, custo_horario_composto).",
+      "type": ["string", "null"]
+    },
+    "regionalizacao": {
+      "description": "Variações regionais de preço para este insumo.",
+      "type": "array",
+      "default": [],
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["jurisdicao_id", "preco_unitario"],
+        "properties": {
+          "jurisdicao_id": {"type": "string", "minLength": 1},
+          "preco_unitario": {"type": "number", "minimum": 0},
+          "fonte_preco": {"type": ["string", "null"]},
+          "data_referencia": {"type": ["string", "null"], "format": "date"},
+          "sicro_codigo": {"type": ["string", "null"]},
+          "sicro_descricao": {"type": ["string", "null"]},
+          "url_fonte": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "atributos_especificos": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"tipo": {"const": "MAO_OBRA"}},
+        "required": ["tipo"]
+      },
+      "then": {
+        "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosMaoObra"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"tipo": {"const": "EQUIPAMENTO"}},
+        "required": ["tipo"]
+      },
+      "then": {
+        "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosEquipamento"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"tipo": {"const": "MATERIAL"}},
+        "required": ["tipo"]
+      },
+      "then": {
+        "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosMaterial"}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"tipo": {"const": "TERCEIRIZADO"}},
+        "required": ["tipo"]
+      },
+      "then": {
+        "properties": {"atributos_especificos": {"$ref": "#/$defs/atributosTerceirizado"}}
+      }
+    }
+  ]
+}

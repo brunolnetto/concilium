@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT",
+  "descricao": "CONSTRUÇÃO DE CORPO DE ATERRO COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-TERRA-CORPO-ATERRO-3CAT",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 5.911938,
+  "precos_unitarios_sbdi": {
+    "mo": 1.802449,
+    "diesel": 4.070584,
+    "material": 0.0,
+    "equipamentos": 0.0,
+    "total": 5.873033
+  },
+  "producao_id_ref": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001"
+}

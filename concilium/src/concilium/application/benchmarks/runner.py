@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 from dataclasses import dataclass
@@ -8,9 +9,18 @@ from typing import Any
 
 from concilium.application.runtime import Runtime
 
+from .inference import BenchmarkInferenceService  # noqa: F401 — needed for monkeypatching in tests
 from .report_builder import BenchmarkReportBuilder
 from .report_printer import BenchmarkReportPrinter
 from .spec_loader import ProjectSpec
+
+
+def _load_inference_service() -> Any:
+    mod = importlib.import_module("concilium.application.benchmarks.inference")
+    svc_cls = getattr(mod, "BenchmarkInferenceService", None)
+    if svc_cls is None:
+        raise RuntimeError("BenchmarkInferenceService indisponivel")
+    return svc_cls
 
 
 @dataclass
@@ -23,17 +33,21 @@ class BenchmarkRunner:
     def run(self, spec: ProjectSpec, *, reset: bool = False) -> dict[str, Any]:
         store = self._find_or_create(spec.nome, spec.contexto_id, reset)
         runtime = Runtime(self.config_root)
+        ref_data = self._load_referencia(spec)
+        svc_cls = _load_inference_service()
+        inference_pack = svc_cls.derive(ref_data)
 
         if store.current_version() is None:
             store.new_version()
 
-        results_log = runtime.run_pipeline(store, self._prepare_inputs(spec))
+        results_log = runtime.run_pipeline(store, self._prepare_inputs(spec, ref_data, inference_pack))
         report = self.report_builder.build(
             spec=spec,
             version=store.current_version(),
             results_log=results_log,
-            ref=self._load_referencia(spec),
+            ref=ref_data,
             canonical=store.load_canonical(),
+            inference_pack=inference_pack,
         )
         self.report_printer.print(report)
 
@@ -47,11 +61,24 @@ class BenchmarkRunner:
         report_file = audit_dir / "benchmark_report.json"
         report_file.write_text(json.dumps(report, indent=2, default=str, ensure_ascii=False), encoding="utf-8")
 
-        # Copia outputs do project store para artifacts_dir (Excel principal, relatorio.json, relatorio.md)
+        # Copia outputs relevantes do project store para artifacts_dir.
+        # Inclui markdown e PDF para manter paridade de artefatos auditaveis.
         v = store.current_version()
         saved: list[str] = ["benchmark_report.json"]
+        keep_names = {
+            "relatorio.json",
+            "relatorio.md",
+            "relatorio.pdf",
+            "memorial_bdi.md",
+            "memorial_bdi.pdf",
+            "resumo_executivo.md",  # ADR-093 D5
+        }
         for fname in store.list_output_files(v):
-            if fname.startswith("resultado_planejamento") or fname in ("relatorio.json", "relatorio.md"):
+            if (
+                fname.endswith(".png")
+                or fname.startswith("resultado_planejamento")
+                or fname in keep_names
+            ):
                 data = store.load_output_file(v, fname)
                 if data is not None:
                     try:
@@ -66,13 +93,8 @@ class BenchmarkRunner:
         return report
 
     def _artifact_output_dir(self, spec: ProjectSpec) -> Path:
-        if spec.referencia_path is not None:
-            p = spec.referencia_path.parent
-            # If referencia lives inside …/artifacts/inputs/, step up to …/artifacts/
-            if p.name == "inputs" and p.parent.name == "artifacts":
-                p = p.parent
-            return p / "outputs"
-        return Path("benchmarks") / "data" / spec.slug / "artifacts" / "outputs"
+        benchmarks_root = self.projects_root.parent
+        return benchmarks_root / "data" / spec.slug / "artifacts" / "outputs"
 
     def _find_or_create(self, nome: str, contexto_id: str, reset: bool):
         from concilium.infrastructure.storage.project import ProjectStore
@@ -104,7 +126,12 @@ class BenchmarkRunner:
             return json.loads(spec.referencia_path.read_text(encoding="utf-8"))
         return None
 
-    def _prepare_inputs(self, spec: ProjectSpec) -> dict[str, dict]:
+    def _prepare_inputs(
+        self,
+        spec: ProjectSpec,
+        ref: dict[str, Any] | None = None,
+        inference_pack: Any | None = None,
+    ) -> dict[str, dict]:
         skill_inputs: dict[str, dict] = {}
         if spec.inputs_escopo:
             if "contexto_id" not in spec.inputs_escopo:
@@ -118,4 +145,14 @@ class BenchmarkRunner:
         if spec.inputs_indiretos:
             skill_inputs["07-custos-indiretos"] = spec.inputs_indiretos
         skill_inputs.update(spec.extra_inputs)
+
+        # Em contexto de benchmark, a análise bridge (ADR-039) não deve usar custo
+        # operacional de equipes (N4) — a comparação é catalog-vs-reference, não
+        # deployment-vs-reference. Sem isso, skill-08 propaga VERMELHO → skill-15
+        # falha com ERRO → status_final=INVIAVEL mesmo quando o plano é viável.
+        skill_inputs.setdefault("08-consolidacao-financeira", {})["benchmark_mode"] = True
+
+        svc_cls = _load_inference_service()
+        pack = inference_pack or svc_cls.derive(ref)
+        skill_inputs = svc_cls.apply_to_skill_inputs(skill_inputs, pack)
         return skill_inputs

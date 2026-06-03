@@ -6,8 +6,8 @@ from concilium.presentation.ui import launcher
 
 
 def test_build_streamlit_command_uses_env_bind(monkeypatch) -> None:
-    monkeypatch.setenv("CONCILIUM_UI_HOST", "0.0.0.0")
-    monkeypatch.setenv("CONCILIUM_UI_PORT", "8600")
+    monkeypatch.setenv("CONCILIUM__UI_HOST", "0.0.0.0")
+    monkeypatch.setenv("CONCILIUM__UI_PORT", "8600")
 
     cmd = launcher.build_streamlit_command(Path("src/concilium/presentation/ui/prototype_streamlit.py"))
 
@@ -21,12 +21,12 @@ def test_build_streamlit_command_uses_env_bind(monkeypatch) -> None:
 
 
 def test_resolve_ui_entrypoint_uses_override(monkeypatch) -> None:
-    monkeypatch.setenv("CONCILIUM_UI_ENTRYPOINT", "/tmp/custom_ui.py")
+    monkeypatch.setenv("CONCILIUM__UI_ENTRYPOINT", "/tmp/custom_ui.py")
 
     assert launcher.resolve_ui_entrypoint() == Path("/tmp/custom_ui.py")
 
 
 def test_resolve_ui_entrypoint_defaults(monkeypatch) -> None:
-    monkeypatch.delenv("CONCILIUM_UI_ENTRYPOINT", raising=False)
+    monkeypatch.delenv("CONCILIUM__UI_ENTRYPOINT", raising=False)
 
     assert launcher.resolve_ui_entrypoint().name == "prototype_streamlit.py"

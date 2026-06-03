@@ -68,6 +68,20 @@ _MESES_PT = {
 }
 
 
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "t", "yes", "y", "on"}:
+            return True
+        if normalized in {"0", "false", "f", "no", "n", "off", ""}:
+            return False
+    return False
+
+
 def run_relatorio_e_artefatos(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
@@ -75,8 +89,12 @@ def run_relatorio_e_artefatos(
 ) -> SkillResult:
     """Produz relatório estruturado baseado em template."""
     validacoes: list[ValidacaoItem] = []
-    gerar_excel = bool(inputs.get("gerar_excel", True))
-    gerar_modelo_vivo = bool(inputs.get("gerar_modelo_vivo", False))
+    gerar_excel = _as_bool(inputs.get("gerar_excel", True))
+    gerar_modelo_vivo = _as_bool(inputs.get("gerar_modelo_vivo", False))
+    benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
+    benchmark_reference_projection = inputs.get("benchmark_reference_projection")
+    if not isinstance(benchmark_reference_projection, dict):
+        benchmark_reference_projection = None
 
     if canonical_in.resultado is None:
         validacoes.append(
@@ -126,6 +144,8 @@ def run_relatorio_e_artefatos(
         graficos,
         eap_by_item_id,
         project_months,
+        benchmark_mode=benchmark_mode,
+        benchmark_reference_projection=benchmark_reference_projection,
     )
 
     novo = canonical_in.model_copy(update={})

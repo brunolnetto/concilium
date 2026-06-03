@@ -1,0 +1,248 @@
+﻿{
+  "slug": "PRIVATE_LOG",
+  "generated_at": "2026-05-12T12:11:07.215638+00:00",
+  "benchmark_reference_totals": {
+    "custo_direto": 14885785.22,
+    "custo_indireto": 6882876.35,
+    "custo_total": 21768661.57,
+    "preco_venda": 25944479.43
+  },
+  "reference_internal_result": {
+    "direto_equipes": 3475911.6900000004,
+    "direto_catalogo": 1603280.69,
+    "custo_total": 10374683.57,
+    "preco_venda": 11930886.11,
+    "indiretos": {
+      "adm": 4743198.2,
+      "top": 1135058.08,
+      "lab": 673616.06,
+      "qsms": 346899.54,
+      "mob": 0.0,
+      "total": 6898771.88
+    }
+  },
+  "concilium_current_result": {
+    "direto_equipes": 9204846.790000001,
+    "direto_catalogo": 2856741.28,
+    "custo_total": 16108929.43,
+    "preco_venda": 12050969.01,
+    "indiretos": {
+      "adm": 4746849.64,
+      "top": 1135931.94,
+      "lab": 674134.5,
+      "qsms": 347166.56,
+      "mob": 0.0,
+      "total": 6904082.64
+    }
+  },
+  "direct_cost_authority_gap": {
+    "custo_direto_equipes": 9204846.790000001,
+    "custo_direto_catalogo": 2856741.28,
+    "delta": 6348105.51
+  },
+  "direct_components": [
+    {
+      "component": "mao_obra_total",
+      "reference_internal": 1110829.91,
+      "concilium": 3013913.31,
+      "delta": 1903083.4,
+      "delta_pct": 171.32
+    },
+    {
+      "component": "equipamentos_total",
+      "reference_internal": 1810993.17,
+      "concilium": 4333560.65,
+      "delta": 2522567.48,
+      "delta_pct": 139.29
+    },
+    {
+      "component": "diesel_total",
+      "reference_internal": 526246.16,
+      "concilium": 1708393.45,
+      "delta": 1182147.29,
+      "delta_pct": 224.64
+    },
+    {
+      "component": "materiais_total",
+      "reference_internal": 0.0,
+      "concilium": 0.0,
+      "delta": 0.0,
+      "delta_pct": null
+    },
+    {
+      "component": "direto_total_equipes",
+      "reference_internal": 3448069.24,
+      "concilium": 9055867.4,
+      "delta": 5607798.16,
+      "delta_pct": 162.64
+    }
+  ],
+  "indirect_components": [
+    {
+      "component": "adm",
+      "reference_internal": 4743198.2,
+      "concilium": 4746849.64,
+      "delta": 3651.44,
+      "delta_pct": 0.08
+    },
+    {
+      "component": "top",
+      "reference_internal": 1135058.08,
+      "concilium": 1135931.94,
+      "delta": 873.86,
+      "delta_pct": 0.08
+    },
+    {
+      "component": "lab",
+      "reference_internal": 673616.06,
+      "concilium": 674134.5,
+      "delta": 518.44,
+      "delta_pct": 0.08
+    },
+    {
+      "component": "qsms",
+      "reference_internal": 346899.54,
+      "concilium": 347166.56,
+      "delta": 267.02,
+      "delta_pct": 0.08
+    },
+    {
+      "component": "mob",
+      "reference_internal": 0.0,
+      "concilium": 0.0,
+      "delta": 0.0,
+      "delta_pct": null
+    },
+    {
+      "component": "total",
+      "reference_internal": 6898771.88,
+      "concilium": 6904082.64,
+      "delta": 5310.76,
+      "delta_pct": 0.08
+    }
+  ],
+  "aggregate_vs_benchmark_reference": {
+    "custo_direto": {
+      "referencia": 14885785.22,
+      "ferramenta": 2856741.28,
+      "delta_absoluto": -12029043.94,
+      "delta_percentual": -80.81
+    },
+    "custo_indireto": {
+      "referencia": 6882876.35,
+      "ferramenta": 6904082.64,
+      "delta_absoluto": 21206.29,
+      "delta_percentual": 0.31
+    },
+    "custo_total": {
+      "referencia": 21768661.57,
+      "ferramenta": 9760823.92,
+      "delta_absoluto": -12007837.65,
+      "delta_percentual": -55.16
+    },
+    "preco_venda": {
+      "referencia": 25944479.43,
+      "ferramenta": 12269367.62,
+      "delta_absoluto": -13675111.81,
+      "delta_percentual": -52.71
+    }
+  },
+  "quality_gates": {
+    "decision": "BLOQUEADO",
+    "worst_severity": "S3",
+    "critical_metric_over_10pct": true,
+    "items": [
+      {
+        "metric": "custo_direto",
+        "fase": "06-consolidacao",
+        "valor_referencia": 14885785.22,
+        "valor_calculado": 2856741.28,
+        "delta_absoluto": -12029043.94,
+        "delta_percentual": -80.81,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "DERIVACAO_PIPELINE",
+        "acao_recomendada": "Bloquear pipeline e revalidar baseline de referencia",
+        "owner": "engenharia-benchmarks",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      },
+      {
+        "metric": "custo_indireto",
+        "fase": "07-custos-indiretos",
+        "valor_referencia": 6882876.35,
+        "valor_calculado": 6904082.64,
+        "delta_absoluto": 21206.29,
+        "delta_percentual": 0.31,
+        "classe": "IDEAL",
+        "severidade": "S0",
+        "causa_categoria": "CONSOLIDACAO",
+        "acao_recomendada": "Sem acao corretiva obrigatoria",
+        "owner": "benchmark-auditoria",
+        "sla_horas": 0,
+        "status_acao": "NAO_APLICAVEL"
+      },
+      {
+        "metric": "preco_venda",
+        "fase": "06-precificacao-unitaria",
+        "valor_referencia": 25944479.43,
+        "valor_calculado": 12269367.62,
+        "delta_absoluto": -13675111.81,
+        "delta_percentual": -52.71,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "PARAMETRIZACAO_BDI",
+        "acao_recomendada": "Bloquear pipeline e revisar parametrizacao BDI",
+        "owner": "engenharia-bdi",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      },
+      {
+        "metric": "custo_direto_catalogo_vs_ref",
+        "fase": "06-consolidacao",
+        "valor_referencia": null,
+        "valor_calculado": null,
+        "delta_absoluto": -12029043.94,
+        "delta_percentual": -80.81,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "CATALOGO",
+        "acao_recomendada": "Bloquear pipeline e executar investigacao formal",
+        "owner": "engenharia-benchmarks",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      }
+    ]
+  },
+  "skill_warnings": [
+    {
+      "skill": "05-equipes-e-alocacao",
+      "warnings": [
+        "CPU 'CPU-TERRA-ATI-011' com producao_id='PROD-ATI-011' sem equipe local. Normalize o catálogo (materializar equipe na CPU).",
+        "CPU 'CPU-TERRA-ATI-014' com producao_id='PROD-ATI-014' sem equipe local. Normalize o catálogo (materializar equipe na CPU).",
+        "CPU 'CPU-TERRA-ATI-011' com producao_id='PROD-ATI-011' sem equipe local. Normalize o catálogo (materializar equipe na CPU).",
+        "Equipamento 'EQ-E0016': consumo_litros_hora não encontrado em nenhuma fonte; custo_combustivel_mensal=0",
+        "Equipamento 'EQ-ESTACAO-TOTAL': consumo_litros_hora não encontrado em nenhuma fonte; custo_combustivel_mensal=0",
+        "CPU 'CPU-TERRA-ATI-011' com producao_id='PROD-ATI-011' sem equipe local. Normalize o catálogo (materializar equipe na CPU)."
+      ]
+    },
+    {
+      "skill": "07-custos-indiretos",
+      "warnings": [
+        "Razão indireto/direto 76.2% fora da faixa [10.0%, 50.0%]"
+      ]
+    },
+    {
+      "skill": "08-consolidacao-financeira",
+      "warnings": [
+        "Margem consolidada -33.67% | status=VERMELHO"
+      ]
+    },
+    {
+      "skill": "14-explorador-cenarios",
+      "warnings": [
+        "Repair incompleto: margem projetada -27.29% em 2 passo(s)."
+      ]
+    }
+  ]
+}

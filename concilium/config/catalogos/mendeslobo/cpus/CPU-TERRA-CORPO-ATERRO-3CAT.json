@@ -4,20 +4,16 @@
   "unidade": "m3",
   "origem": "PROPRIA",
   "categoria": "TERRAPLENAGEM",
-  "composicao_itens": [
-    {
-      "insumo_id": "MA-AGIS-CPU-TERRA-CORPO-ATERRO-3CAT",
-      "coeficiente": 1.0,
-      "categoria_custo": "MATERIAL"
-    }
-  ],
+  "composicao_itens": [],
   "custo_direto_unitario_planilha": 5.911938,
   "precos_unitarios_sbdi": {
-    "mo": 1.802449,
-    "diesel": 4.070584,
+    "mo": 2.637904,
+    "equipamentos": 2.841522,
+    "diesel": 1.607147,
     "material": 0.0,
-    "equipamentos": 0.0,
-    "total": 5.873033
+    "total": 7.086574
   },
-  "producao_id_ref": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001"
+  "producao_id_ref": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
+  "custo_direto_unitario_planilha_engine": 7.086574,
+  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=610.7 + B_base=204.2×(1+1.777) + diesel_SICRO=345.4) / C=214.92 = 7.0866 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L."
 }

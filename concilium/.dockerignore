@@ -7,7 +7,11 @@ __pycache__/
 *.pyo
 *.pyd
 .venv/
+# dados em runtime → sempre montados como volume, não precisam no contexto de build
 projetos/
-benchmarks/projetos/
-benchmarks/data/**/artifacts/outputs/
-benchmarks/data/**/artifacts/audit/
+benchmarks/
+# artefatos de teste e documentação nunca são necessários na imagem
+tests/
+docs/
+# config/ NÃO excluída aqui: a imagem de produção precisa embuti-la via "COPY ."
+# Em dev, o Dockerfile.dev faz apenas "COPY src" → config nunca entra na imagem dev

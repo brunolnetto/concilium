@@ -1,0 +1,20 @@
+[skill]
+id = "05-equipes-e-alocacao"
+phase = "Planejamento"
+version = "1.0.0"
+descricao = "Dimensionamento de equipes e alocação de recursos em pool consolidada. ADR-026."
+
+[depends_on]
+skills = ["01-escopo-e-eap", "04-cronograma", "03-catalogo-de-recursos"]
+canonical_sections = ["eap", "cronograma", "tipos_recurso"]
+
+[produces]
+canonical_section = "equipes_diretas"
+validations = ["VAL-EQP-ALOC"]
+
+[inputs]
+required = []
+optional = ["percentual_encargos", "percentual_encargos_mensalista", "preco_diesel"]
+
+[snapshots]
+consumed = ["catalogo"]

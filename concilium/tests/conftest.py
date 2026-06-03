@@ -1,7 +1,34 @@
-"""Fixtures pytest para testes do Concilium."""
+"""Fixtures pytest para testes do Concilium.
+
+PERFORMANCE NOTES:
+==================
+- Session-scoped fixtures (_session_*): executam UMA VEZ por sessão pytest inteira
+- Class-scoped fixtures: executam UMA VEZ por classe de teste
+- Function-scoped: executam para CADA teste (padrão)
+
+OTIMIZAÇÕES IMPLEMENTADAS:
+--------------------------
+1. **Fixtures session-scoped** para pipelines pesados (skills 01-09: ~50-80s)
+2. **Class-scoped projeto_analitico** economiza ~20-28s (1× ao invés de 7× copytree)
+3. **Performance hooks** medem automaticamente fixtures > 0.5s
+4. **Ignore patterns** em copytree evitam copiar PDFs, ZIPs, referencias/
+
+PRÓXIMAS OTIMIZAÇÕES (se necessário):
+-------------------------------------
+- **pytest-xdist**: Paralelizar testes em múltiplos workers
+  Uso: `pytest -n auto tests/integration/`
+  Ganho esperado: 2-4× mais rápido em máquina com 4+ cores
+  
+- **pytest-split**: Dividir testes em grupos balanceados para CI
+  Uso: `pytest --splits 4 --group 1`
+  
+- **Hardlinks ao invés de copytree**: Para projetos > 100MB
+  Requer implementação de helper copy_project_with_hardlinks()
+"""
 
 # Ensure the package source dir is on sys.path so tests can import `concilium`
 import sys
+import time
 from pathlib import Path
 
 # Garante asyncio_mode=auto mesmo em versões antigas do pytest-asyncio
@@ -20,19 +47,21 @@ def pytest_configure(config):
         pass
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _preload_all_cli_groups():
-    """Garante que todos os grupos CLI estejam registrados para testes com CliRunner.
+@pytest.hookimpl(tryfirst=True)
+def pytest_fixture_setup(fixturedef, request):
+    """Hook para monitorar performance de fixtures lentas."""
+    # Monitora fixtures session/class-scoped, ou function-scoped que tenham "pipeline" no nome
+    if fixturedef.scope in ("session", "class") or "pipeline" in fixturedef.argname or "analitico" in fixturedef.argname:
+        fixturedef._start_time = time.time()
 
-    CliRunner invoca `app` diretamente sem passar por `main()`, então o dispatch
-    lazy nunca roda. Este fixture carrega todos os grupos uma vez por sessão.
-    """
-    try:
-        from concilium.presentation.main import _load_all
 
-        _load_all()
-    except Exception:
-        pass  # CLI pode não estar disponível em todos os contextos de teste
+@pytest.hookimpl(trylast=True)
+def pytest_fixture_post_finalizer(fixturedef, request):
+    """Log de performance para fixtures lentas."""
+    if hasattr(fixturedef, "_start_time"):
+        elapsed = time.time() - fixturedef._start_time
+        if elapsed > 0.5:  # Log se > 0.5s (reduzido de 1s para pegar mais detalhes)
+            print(f"\n[PERF] {fixturedef.argname} ({fixturedef.scope}): {elapsed:.2f}s")
 
 
 project_root = Path(__file__).resolve().parents[1]
@@ -43,20 +72,19 @@ if str(src_path) not in sys.path:
 import os
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+import shutil
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, OpenMeteoClient
+os.environ.setdefault("CONCILIUM__PDF_RENDERER", "fpdf2")
 
-try:
-    from concilium.application.runtime import Runtime
-except ModuleNotFoundError:
-    from concilium.application.runtime import Runtime
+from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, OpenMeteoClient
+from concilium.application.runtime import Runtime
 from concilium.infrastructure.storage.project import ProjectStore
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def config_root() -> Path:
     """Path do diretório de configuração com dados seed."""
     return Path(__file__).parent.parent / "config"
@@ -70,7 +98,7 @@ def projetos_root(tmp_path: Path) -> Path:
     return p
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def runtime(config_root: Path) -> Runtime:
     return Runtime(config_root)
 
@@ -85,7 +113,7 @@ def projeto_terraplenagem(projetos_root: Path) -> ProjectStore:
     return ProjectStore.init(projetos_root, "terraplenagem-aracoiaba-test", "test")
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_openmeteo_aracoiaba() -> OpenMeteoClient:
     """Cliente Open-Meteo mockado retornando padrão climático realista do Nordeste.
 
@@ -148,7 +176,7 @@ def mock_openmeteo_aracoiaba() -> OpenMeteoClient:
     return client
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def inputs_escopo_terraplenagem() -> dict[str, Any]:
     """Inputs para skill 00 com 3 itens da EAP de terraplenagem."""
     return {
@@ -188,13 +216,172 @@ def inputs_escopo_terraplenagem() -> dict[str, Any]:
     }
 
 
+@pytest.fixture(scope="session")
+def _session_pipeline_sk03(
+    tmp_path_factory, runtime, inputs_escopo_terraplenagem, mock_openmeteo_aracoiaba
+):
+    """Executa skills 01→03 UMA VEZ por sessão de teste. Retorna proj.root.
+
+    Base compartilhada por _session_pipeline_sk09 e _session_edge_case_sk09;
+    evita duplicar as 3 skills iniciais (idênticas entre os dois pipelines
+    de contexto 'test').
+    
+    PERFORMANCE: Skills 01-03 (especialmente 03-catalogo) são as mais lentas (~70s).
+    Compartilhar este base é crítico para performance de toda a suite.
+    """
+    projetos_root = tmp_path_factory.mktemp("session_sk03")
+    proj = ProjectStore.init(projetos_root, "session-sk03-test", "test")
+    proj.new_version()
+
+    runtime.run_skill("01-escopo-e-eap", proj, inputs=inputs_escopo_terraplenagem)
+    with patch(
+        "concilium.infrastructure.clients.openmeteo.OpenMeteoClient",
+        return_value=mock_openmeteo_aracoiaba,
+    ):
+        runtime.run_skill("02-produtividade-climatica", proj, inputs={"ano_referencia": 2024})
+    
+    # Skill 03 é o maior gargalo (~50-60s) - carrega catálogo completo
+    runtime.run_skill("03-catalogo-de-recursos", proj, inputs={})
+    return proj.root
+
+
+@pytest.fixture(scope="session")
+def _session_pipeline_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
+    """Executa pipeline 04→09 UMA VEZ por sessão, copiando do base pós-03.
+
+    Compartilhada entre test_samples_end_to_end.py e test_pipeline.py para
+    eliminar a segunda execução redundante do pipeline completo.
+    Todos os consumidores são read-only; testes que modificam o projeto
+    recebem uma cópia isolada via shutil.copytree.
+    
+    PERFORMANCE: ~10-15s para skills 04-09. Base sk03 já tem catálogo carregado.
+    """
+    _start = time.time()
+    dest = tmp_path_factory.mktemp("session_sk09") / "projeto"
+    shutil.copytree(_session_pipeline_sk03, dest)
+    proj = ProjectStore(dest)
+
+    cron_inputs = {
+        "num_equipes_por_item": {
+            "eap-01": {f"2026-W{w:02d}": 1 for w in range(23, 31)},
+            "eap-02": {f"2026-W{w:02d}": 1 for w in range(27, 37)},
+            "eap-03": {f"2026-W{w:02d}" : 1 for w in range(35, 41)},
+        }
+    }
+    runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
+    runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
+    runtime.run_skill("06-precificacao-unitaria", proj, inputs={})
+    runtime.run_skill("07-custos-indiretos", proj, inputs={})
+    runtime.run_skill("08-consolidacao-financeira", proj, inputs={})
+    r = runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
+    print(f"\n[PERF] Pipeline sk09 completo: {time.time() - _start:.2f}s")
+    return proj, r
+
+
+@pytest.fixture(scope="session")
+def _session_edge_case_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
+    """Executa pipeline edge case (04→09, cron mínimo) UMA VEZ por sessão, copiando do base pós-03.
+
+    Utilizada por TestExcelEdgeCases para validar geração de Excel com dados incompletos.
+    O cronograma mínimo (apenas eap-01 por uma semana) propositalmente diverge do
+    pipeline principal (_session_pipeline_sk09) para cobrir o cenário de stress.
+    Reutiliza _session_pipeline_sk03 para evitar duplicar skills 01→03.
+    
+    PERFORMANCE: ~5-8s (edge case é mais rápido por ter menos dados).
+    """
+    _start = time.time()
+    dest = tmp_path_factory.mktemp("session_edge_sk09") / "projeto"
+    shutil.copytree(_session_pipeline_sk03, dest)
+    proj = ProjectStore(dest)
+
+    cron_inputs = {"num_equipes_por_item": {"eap-01": {"2026-W31": 1}}}  # cronograma mínimo
+    runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
+    runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
+    runtime.run_skill("06-precificacao-unitaria", proj, inputs={})
+    runtime.run_skill("07-custos-indiretos", proj, inputs={})
+    runtime.run_skill("08-consolidacao-financeira", proj, inputs={})
+    runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
+    print(f"\n[PERF] Pipeline edge case sk09: {time.time() - _start:.2f}s")
+    return proj
+
+
+@pytest.fixture(scope="session")
+def _session_pipeline_mendeslobo_sk09(
+    tmp_path_factory, runtime, inputs_escopo_terraplenagem, mock_openmeteo_aracoiaba
+):
+    """Executa pipeline 01→09 com contexto mendeslobo UMA VEZ por sessão.
+
+    Promovida de module-scoped para session-scoped; garante que mesmo que o
+    módulo seja dividido no futuro, o pipeline não será executado mais de uma vez.
+    
+    PERFORMANCE: ~70-80s total (skill 03 sozinha leva ~50-60s por catálogo mendeslobo maior).
+    OTIMIZAÇÃO FUTURA: Compartilhar base sk03 entre contextos diferentes seria complexo
+    devido a diferenças nos catálogos por perfil.
+    """
+    _start = time.time()
+    inputs_agis = inputs_escopo_terraplenagem.copy()
+    inputs_agis["contexto_id"] = "mendeslobo"
+
+    projetos_root = tmp_path_factory.mktemp("session_mendeslobo_sk09")
+    proj = ProjectStore.init(projetos_root, "session-mendeslobo-sk09-test", "test")
+    proj.new_version()
+
+    _t0 = time.time()
+    runtime.run_skill("01-escopo-e-eap", proj, inputs=inputs_agis)
+    print(f"\n[PERF] Skill 01: {time.time() - _t0:.2f}s")
+    
+    _t0 = time.time()
+    with patch(
+        "concilium.infrastructure.clients.openmeteo.OpenMeteoClient",
+        return_value=mock_openmeteo_aracoiaba,
+    ):
+        runtime.run_skill("02-produtividade-climatica", proj, inputs={"ano_referencia": 2024})
+    print(f"[PERF] Skill 02: {time.time() - _t0:.2f}s")
+    
+    _t0 = time.time()
+    runtime.run_skill("03-catalogo-de-recursos", proj, inputs={})
+    print(f"[PERF] Skill 03 (GARGALO catálogo mendeslobo): {time.time() - _t0:.2f}s")
+    
+    cron_inputs = {
+        "num_equipes_por_item": {
+            "eap-01": {f"2026-W{w:02d}": 1 for w in range(23, 31)},
+            "eap-02": {f"2026-W{w:02d}": 1 for w in range(27, 37)},
+            "eap-03": {f"2026-W{w:02d}": 1 for w in range(35, 41)},
+        }
+    }
+    runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
+    runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
+    runtime.run_skill("06-precificacao-unitaria", proj, inputs={})
+    runtime.run_skill("07-custos-indiretos", proj, inputs={})
+    runtime.run_skill("08-consolidacao-financeira", proj, inputs={})
+    runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
+    print(f"[PERF] Pipeline mendeslobo completo: {time.time() - _start:.2f}s")
+    return proj
+
+
+@pytest.fixture(scope="session")
+def _wb_sk09(_session_pipeline_sk09):
+    """Pre-carrega o Workbook do pipeline session-scoped UMA VEZ.
+
+    Evita N invocações independentes de load_workbook (cada uma ~12–23 s)
+    sobre os mesmos bytes. Todos os consumidores são read-only (sheetnames,
+    iter_rows) — sem risco de estado compartilhado entre testes.
+    """
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    _, r = _session_pipeline_sk09
+    return load_workbook(BytesIO(r.excel_bytes))
+
+
 @pytest.fixture
 def amostra_terraplenagem_path() -> Path:
     """Resolve a amostra por ordem determinística de fontes conhecidas."""
     sample_name = "01-terraplenagem-feliz.json"
     candidates: list[Path] = []
 
-    samples_env = os.environ.get("CONCILIUM_SAMPLES_DIR")
+    samples_env = os.environ.get("CONCILIUM__SAMPLES_DIR")
     if samples_env:
         candidates.append(Path(samples_env) / sample_name)
 
@@ -216,5 +403,5 @@ def amostra_terraplenagem_path() -> Path:
     raise FileNotFoundError(
         "Amostra de terraplenagem não encontrada. Caminhos verificados:\n"
         f"{attempted}\n"
-        "Defina CONCILIUM_SAMPLES_DIR para apontar para os samples."
+        "Defina CONCILIUM__SAMPLES_DIR para apontar para os samples."
     )

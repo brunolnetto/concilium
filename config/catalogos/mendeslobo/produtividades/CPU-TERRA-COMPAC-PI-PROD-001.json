@@ -1,0 +1,50 @@
+{
+  "id": "CPU-TERRA-COMPAC-PI-PROD-001",
+  "codigo": "CPU-TERRA-COMPAC-PI-PROD-001",
+  "descricao": "Produção CPU-TERRA-COMPAC-PI",
+  "origem": "PROPRIA",
+  "valor_horario": 149.51,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0043",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "P0049",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "P0033",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 6
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 6
+      },
+      {
+        "funcao_id": "P0029",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "P0065",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0028",
+        "num_unidades": 3
+      },
+      {
+        "equip_id": "EQ-E0034",
+        "num_unidades": 3
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

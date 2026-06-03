@@ -4,10 +4,9 @@
 		{
 			"label": "audit-benchmarks-fresh",
 			"type": "shell",
-			"command": "py",
+			"command": "c:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\.venv\\Scripts\\python.exe",
 			"args": [
-				"-3",
-				"scripts/diagnosticar_falhas_audit.py"
+				"tools\\run_agis_with_discrepancy_artifacts.py"
 			],
 			"isBackground": false
 		},
@@ -17,6 +16,33 @@
 			"command": "c:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\.venv\\Scripts\\python.exe",
 			"args": [
 				"benchmarks\\run_all.py"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "audit-benchmarks-batch",
+			"type": "shell",
+			"command": "c:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\.venv\\Scripts\\python.exe",
+			"args": [
+				"tools\\audit_benchmarks_batch.py"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "address-agis-discrepancies",
+			"type": "shell",
+			"command": "c:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\.venv\\Scripts\\python.exe",
+			"args": [
+				"tools\\address_agis_discrepancies.py"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "run-agis-escala-unitaria",
+			"type": "shell",
+			"command": "c:\\Users\\bruno\\OneDrive - Mendes Lobo\\MendesLobo Construtora\\Agente Engenheiro Sênior\\.venv\\Scripts\\python.exe",
+			"args": [
+				"tools\\run_agis_escala_unitaria.py"
 			],
 			"isBackground": false
 		}

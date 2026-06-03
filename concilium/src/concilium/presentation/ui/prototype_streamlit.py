@@ -16,6 +16,7 @@ try:
         render_hot_project_template,
         render_normal_project_template,
     )
+    from .templates.formulario_qqp_page import render_formulario_qqp_page
     from .templates.projetos_page import render_projetos_page
     from .theme import apply_visual_identity
 except ImportError:
@@ -30,6 +31,7 @@ except ImportError:
         render_hot_project_template,
         render_normal_project_template,
     )
+    from concilium.presentation.ui.templates.formulario_qqp_page import render_formulario_qqp_page
     from concilium.presentation.ui.templates.projetos_page import render_projetos_page
     from concilium.presentation.ui.theme import apply_visual_identity
 
@@ -69,6 +71,8 @@ def main() -> None:
             render_normal_project_template(project)
     elif nav_choice == "Catálogo":
         render_catalogo_master_page()
+    elif nav_choice == "Novo QQP":
+        render_formulario_qqp_page()
     elif nav_choice == "Configuração":
         render_configuracao_page()
 

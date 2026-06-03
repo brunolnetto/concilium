@@ -1,0 +1,30 @@
+{
+  "id": "CPU-DREN-BOCA-BTCC-300X300-PROD-001",
+  "codigo": "CPU-DREN-BOCA-BTCC-300X300-PROD-001",
+  "descricao": "Produção CPU-DREN-BOCA-BTCC-300X300",
+  "origem": "PROPRIA",
+  "valor_horario": 0.017857,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0052",
+        "num_pessoas": 5
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0071",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0007",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

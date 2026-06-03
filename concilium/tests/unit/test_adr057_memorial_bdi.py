@@ -136,11 +136,13 @@ class TestMemorialBDICategoria:
         assert math.isclose(mem.overhead_total, expected_oh, rel_tol=1e-6)
 
     def test_tributos_total_correct(self):
+        """tributos_total deve refletir a configuração real do DEFAULT calibrado."""
         from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_bdi_categoria("mao_obra", comp, "DEFAULT", "pre_reforma", False)
-        expected_t = BDI_COFINS + BDI_ISS + BDI_PIS + BDI_CSSL + BDI_IR
+        # DEFAULT calibrado AGIS: COFINS=0%, PIS=0%; T = ISS + CSSL + IR = 9.73%
+        expected_t = comp.cofins + comp.iss + comp.pis + comp.cssl + comp.ir
         assert math.isclose(mem.tributos_total, expected_t, abs_tol=1e-6)
 
     def test_material_has_zero_tributos(self):
@@ -183,31 +185,39 @@ class TestMemorialDecomposicao:
         assert abs(mem.soma - 1.0) < 0.001, f"Category {cat}: soma={mem.soma}, expected 1.0"
 
     def test_custo_direto_mao_obra(self):
-        """For mao_obra: custo_direto ≈ 74.35%."""
+        """For mao_obra: custo_direto ≈ 77.49% (calibração AGIS — T=9.73% vs 13.38% antigo)."""
         from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_decomposicao("mao_obra", comp)
-        # C/PV = (1-T)/(1+OH) = (1-0.1338)/(1+0.165) = 0.8662/1.165 ≈ 0.7435
-        assert math.isclose(mem.custo_direto_pct, 0.7435, abs_tol=0.002)
+        # C/PV = (1-T)/(1+OH) = (1-0.0973)/(1+0.165) = 0.9027/1.165 ≈ 0.7749
+        assert math.isclose(mem.custo_direto_pct, 0.7749, abs_tol=0.002)
 
     def test_margem_mao_obra(self):
-        """Margem L contribui ~6.69% do preço de venda para mao_obra."""
+        """Margem L contribui ~6.97% do preço de venda para mao_obra (calibração AGIS)."""
         from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_decomposicao("mao_obra", comp)
-        assert math.isclose(mem.margem_l_pct, 0.0669, abs_tol=0.002)
+        # margem_l = L × C/PV = 0.09 × 0.7749 ≈ 0.0697
+        assert math.isclose(mem.margem_l_pct, 0.0697, abs_tol=0.002)
 
-    def test_tributos_total_pre_reforma(self):
-        """Tributos devem ser 13.38% para categorias não-material."""
+    def test_tributos_por_categoria(self):
+        """Tributos do DEFAULT calibrado AGIS: isenção COFINS/PIS; diesel/material sem tributos."""
         from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
 
-        for cat in ["mao_obra", "servicos", "indireto", "diesel"]:
+        # mao_obra, servicos, indireto: ISS=5% + CSSL=1.99% + IR=2.74% = 9.73%
+        for cat in ["mao_obra", "servicos", "indireto"]:
             comp = getattr(DEFAULT_BDI_TABELA, cat)
             mem = MemorialBDIBuilder._build_decomposicao(cat, comp)
             t = mem.tributos_total_pct
-            assert math.isclose(t, 0.1338, abs_tol=1e-4), f"{cat}: tributos={t:.4f}"
+            assert math.isclose(t, 0.0973, abs_tol=1e-3), f"{cat}: tributos={t:.4f} (esperado ≈ 0.0973)"
+
+        # diesel e material: sem tributos sobre fornecimento de insumo
+        for cat in ["diesel", "material"]:
+            comp = getattr(DEFAULT_BDI_TABELA, cat)
+            mem = MemorialBDIBuilder._build_decomposicao(cat, comp)
+            assert mem.tributos_total_pct == 0.0, f"{cat}: tributos deveriam ser 0"
 
     def test_material_zero_tributos(self):
         """Material tem tributos zerados."""

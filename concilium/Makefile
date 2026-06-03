@@ -59,7 +59,7 @@ print('  Top 5:', ', '.join(f\"{c}×{n}\" for c,n in codes.most_common(5)))"
 # Gera $(LINT_REPORT) agrupado por regra + severidade para leitura pelo agente de código.
 lint-report:
 	@$(PYTHON) -m ruff check $(SRC) tests/ --output-format json 2>/dev/null \
-		| $(PYTHON) scripts/lint_report.py > $(LINT_REPORT)
+		| $(PYTHON) scripts/dev/lint_report.py > $(LINT_REPORT)
 	@echo "  Lint report → $(LINT_REPORT)"
 	@$(PYTHON) -c "\
 import json; r=json.load(open('$(LINT_REPORT)')); \
@@ -86,7 +86,7 @@ coverage:
 		--cov-report=json:$(COV_DIR)/coverage.json \
 		--json-report --json-report-file=$(TEST_REPORT) \
 		--cov-report=term-missing:skip-covered \
-		--durations=50 
+		--durations=50 -rXs
 	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"
 
 # ── Codebase stats ────────────────────────────────────────────────────────────

@@ -1,0 +1,15 @@
+{
+  "codigo": "CPU-PAVIM-ATI-062",
+  "descricao": "TSD",
+  "unidade": "m2",
+  "origem": "PROPRIA",
+  "categoria": "PAVIMENTACAO",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-CONCRETO-FCP-20MPA",
+      "coeficiente": 0.001,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "producao_id_ref": "CPU-PAVIM-ATI-062-PROD-001"
+}

@@ -48,12 +48,34 @@ TOOLS_ESPERADAS = {
 }
 
 
-@pytest.fixture
-def server_with_config(monkeypatch, tmp_path):
-    """Server com env vars apontando para config real e projetos temporários."""
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(Path(__file__).parent.parent / "config"))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projetos"))
-    return build_server()
+@pytest.fixture(scope="session")
+def server_with_config(tmp_path_factory):
+    """Server com env vars apontando para config real e projetos temporários.
+
+    Session-scoped: build_server() leva ~0.6–2.7 s por chamada; compartilhar
+    uma instância única poupa ~10 s por sessão. Todos os testes são read-only
+    (ping, list, erros de projeto inexistente) — sem risco de estado cruzado.
+    """
+    import os
+    from concilium.infrastructure.settings import _reset_all
+
+    config_root = str(Path(__file__).parents[2] / "config")
+    proj_root = str(tmp_path_factory.mktemp("mcp_projetos"))
+
+    prev = {k: os.environ.get(k) for k in ("CONCILIUM__CONFIG_ROOT", "CONCILIUM__PROJECTS_ROOT")}
+    os.environ["CONCILIUM__CONFIG_ROOT"] = config_root
+    os.environ["CONCILIUM__PROJECTS_ROOT"] = proj_root
+    _reset_all()
+
+    server = build_server()
+    yield server
+
+    for k, v in prev.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+    _reset_all()
 
 
 # ── Registro ───────────────────────────────────────────────────────────────────

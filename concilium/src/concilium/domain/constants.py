@@ -138,10 +138,11 @@ ENCARGOS_PJ: float = 0.06  # 6% sobre o valor do serviço (estimativa)
 ALPHA_MIN_ENCARGOS: float = 1.0  # 100% — sem encargos (PJ puro)
 ALPHA_MAX_ENCARGOS: float = 2.5  # 250% — encargos máximos observados em obras
 
-# ── Salário mínimo (vigência 2025) ────────────────────────────────────────────
+# ── Salário mínimo (vigência 2026) ────────────────────────────────────────────
 # Atualizar a cada reajuste do governo federal.
-SALARIO_MINIMO_MENSAL: float = 1_518.0  # R$ — Portaria MTE nº 3.659/2024
-SMH: float = SALARIO_MINIMO_MENSAL / HORAS_MES_CLT  # R$/h ≈ 6.90 (salário mínimo horário)
+# ADR-097: portaria MTE/2025 → R$ 1.621,00 vigente jan/2026
+SALARIO_MINIMO_MENSAL: float = 1_621.0  # R$ — Portaria MTE/2025 (vigência jan/2026)
+SMH: float = SALARIO_MINIMO_MENSAL / HORAS_MES_CLT  # R$/h ≈ 7.37 (salário mínimo horário)
 
 # ── Faixas de convergência de PU (ADR-051) ───────────────────────────────────
 # Thresholds de desvio entre PU calculado pelo pipeline e PU do catálogo.

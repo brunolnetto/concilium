@@ -22,7 +22,7 @@ def _looks_like_workspace_root(path: Path) -> bool:
 
 def _tools_root() -> Path:
     """Resolve raiz do workspace, mesmo com pacote instalado no venv."""
-    env_root = os.environ.get("CONCILIUM_ROOT")
+    env_root = os.environ.get("CONCILIUM__ROOT")
     if env_root:
         candidate = Path(env_root).expanduser()
         if _looks_like_workspace_root(candidate):
@@ -56,7 +56,7 @@ def _require_existing_dir(path: Path, *, label: str, env_keys: tuple[str, str]) 
 def _config_root() -> Path:
     """Returns config root path (without validation)."""
     return _resolve_env_path(
-        primary="CONCILIUM_CONFIG_ROOT",
+        primary="CONCILIUM__CONFIG_ROOT",
         default=_tools_root() / "config",
     )
 
@@ -64,7 +64,7 @@ def _config_root() -> Path:
 def _projetos_root() -> Path:
     """Returns projects root path (without validation)."""
     return _resolve_env_path(
-        primary="CONCILIUM_PROJECTS_ROOT",
+        primary="CONCILIUM__PROJECTS_ROOT",
         default=_tools_root() / "projetos",
     )
 
@@ -77,7 +77,7 @@ def _benchmark_projects_root() -> Path:
     """
     return Path(
         os.environ.get(
-            "CONCILIUM_BENCHMARK_PROJECTS_ROOT",
+            "CONCILIUM__BENCHMARK_PROJECTS_ROOT",
             str(_tools_root() / "benchmarks" / "projetos"),
         )
     )
@@ -88,7 +88,7 @@ def config_root() -> Path:
     return _require_existing_dir(
         _config_root(),
         label="DiretÃ³rio de configuraÃ§Ã£o",
-        env_keys=("CONCILIUM_CONFIG_ROOT", "CONCILIUM_CONFIG"),
+        env_keys=("CONCILIUM__CONFIG_ROOT", "CONCILIUM__CONFIG"),
     )
 
 
@@ -132,7 +132,7 @@ def resolve_project(name_or_id: str):
     if not base.exists():
         rprint(
             "[red]DiretÃ³rio de projetos nÃ£o existe: "
-            f"{base}. Defina CONCILIUM_PROJECTS_ROOT ou CONCILIUM_PROJETOS.[/red]"
+            f"{base}. Defina CONCILIUM__PROJECTS_ROOT ou CONCILIUM__PROJETOS.[/red]"
         )
         raise typer.Exit(1)
 

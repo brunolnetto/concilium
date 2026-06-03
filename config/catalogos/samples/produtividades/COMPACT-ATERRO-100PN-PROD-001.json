@@ -1,0 +1,10 @@
+{
+  "id": "COMPACT-ATERRO-100PN-PROD-001",
+  "codigo": "COMPACT-ATERRO-100PN-PROD-001",
+  "descricao": "Produção COMPACT-ATERRO-100PN",
+  "origem": "PROPRIA",
+  "valor_horario": 173.197428,
+  "cpu_ids": [
+    "COMPACT-ATERRO-100PN"
+  ]
+}

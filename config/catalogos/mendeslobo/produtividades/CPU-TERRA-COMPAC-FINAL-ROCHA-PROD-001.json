@@ -1,0 +1,34 @@
+{
+  "id": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
+  "codigo": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
+  "descricao": "Produção CPU-TERRA-COMPAC-FINAL-ROCHA",
+  "origem": "PROPRIA",
+  "valor_horario": 149.51,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0048",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "P0033",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0035",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

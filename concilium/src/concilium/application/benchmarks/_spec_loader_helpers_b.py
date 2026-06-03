@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
-
-
 def _lfd_to_bdi_comp(
     raw: dict,
     flat_rate,
@@ -234,7 +232,7 @@ def _ea_normalize_itens_eap(itens_eap: list) -> list[dict]:
 
 
 def _bs_lfd_build_bdi_section(svc: BenchmarkSpecLoader, extra_inputs: dict, ref: dict[str, Any], bdi_ref: dict) -> dict:
-    """Builds and injects BDI tabela into extra_inputs['06-precificacao-unitaria']."""
+    """Builds and injects BDI tabela into pricing/consolidation benchmark inputs."""
     ref_bdi_rates = svc._extract_bdi_rates(ref)
     default_vals = {
         "ac": 0.05,
@@ -268,7 +266,8 @@ def _bs_lfd_build_bdi_section(svc: BenchmarkSpecLoader, extra_inputs: dict, ref:
         "diesel": _lfd_to_bdi_comp(bdi_ref.get("diesel", {}), ref_bdi_rates.get("diesel"), default_vals),
         "data_vigencia": "2026-04-01",
     }
-    s04 = extra_inputs.get("06-precificacao-unitaria", {})
-    s04["tabela_bdi"] = tabela_bdi
-    extra_inputs["06-precificacao-unitaria"] = s04
+    for skill_id in ("06-precificacao-unitaria", "08-consolidacao-financeira"):
+        section = extra_inputs.get(skill_id, {})
+        section["tabela_bdi"] = tabela_bdi
+        extra_inputs[skill_id] = section
     return extra_inputs

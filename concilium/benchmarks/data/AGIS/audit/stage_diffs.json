@@ -1,0 +1,385 @@
+{
+  "slug": "AGIS",
+  "gerado_em": "2026-05-28T19:31:38.030103",
+  "por_etapa": {
+    "05-equipes-e-alocacao": {
+      "total_discrepancias": 22,
+      "discrepancias": [
+        {
+          "item_id": "eap-1_0",
+          "campo": "equipamentos_count",
+          "canonical": 3,
+          "referencia": 2,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_0",
+          "campo": "custo_total",
+          "canonical": 2943567.46,
+          "referencia": 0.0,
+          "delta": 2943567.46,
+          "pct_diff": 29435674600.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_1",
+          "campo": "equipamentos_count",
+          "canonical": 2,
+          "referencia": 1,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_1",
+          "campo": "custo_total",
+          "canonical": 1970042.7,
+          "referencia": 0.0,
+          "delta": 1970042.7,
+          "pct_diff": 19700427000.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_2",
+          "campo": "equipamentos_count",
+          "canonical": 2,
+          "referencia": 1,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_2",
+          "campo": "custo_total",
+          "canonical": 6107146.92,
+          "referencia": 0.0,
+          "delta": 6107146.92,
+          "pct_diff": 61071469200.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_3",
+          "campo": "equipamentos_count",
+          "canonical": 2,
+          "referencia": 1,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_3",
+          "campo": "custo_total",
+          "canonical": 1558235.66,
+          "referencia": 0.0,
+          "delta": 1558235.66,
+          "pct_diff": 15582356600.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_4",
+          "campo": "equipamentos_count",
+          "canonical": 2,
+          "referencia": 1,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_4",
+          "campo": "custo_total",
+          "canonical": 8681592.84,
+          "referencia": 0.0,
+          "delta": 8681592.84,
+          "pct_diff": 86815928400.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_5",
+          "campo": "equipamentos_count",
+          "canonical": 2,
+          "referencia": 1,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_5",
+          "campo": "custo_total",
+          "canonical": 6844322.72,
+          "referencia": 0.0,
+          "delta": 6844322.72,
+          "pct_diff": 68443227200.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_6",
+          "campo": "equipamentos_count",
+          "canonical": 2,
+          "referencia": 1,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_6",
+          "campo": "custo_total",
+          "canonical": 15513810.48,
+          "referencia": 0.0,
+          "delta": 15513810.48,
+          "pct_diff": 155138104800.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_7",
+          "campo": "equipamentos_count",
+          "canonical": 4,
+          "referencia": 2,
+          "delta": 2,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_7",
+          "campo": "custo_total",
+          "canonical": 15384587.28,
+          "referencia": 0.0,
+          "delta": 15384587.28,
+          "pct_diff": 153845872800.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_8",
+          "campo": "equipamentos_count",
+          "canonical": 4,
+          "referencia": 2,
+          "delta": 2,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_8",
+          "campo": "custo_total",
+          "canonical": 329666.1,
+          "referencia": 0.0,
+          "delta": 329666.1,
+          "pct_diff": 3296661000.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_9",
+          "campo": "equipamentos_count",
+          "canonical": 2,
+          "referencia": 1,
+          "delta": 1,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_9",
+          "campo": "custo_total",
+          "canonical": 14601246.44,
+          "referencia": 0.0,
+          "delta": 14601246.44,
+          "pct_diff": 146012464400.0,
+          "severidade": "ALTA"
+        },
+        {
+          "item_id": "eap-1_10",
+          "campo": "equipamentos_count",
+          "canonical": 4,
+          "referencia": 1,
+          "delta": 3,
+          "severidade": "MEDIA"
+        },
+        {
+          "item_id": "eap-1_10",
+          "campo": "custo_total",
+          "canonical": 659332.2,
+          "referencia": 0.0,
+          "delta": 659332.2,
+          "pct_diff": 6593322000.0,
+          "severidade": "ALTA"
+        }
+      ],
+      "resumo": "0 CRITICA, 11 ALTA, 11 MEDIA"
+    },
+    "04-planejamento-e-insumos": {
+      "total_discrepancias": 11,
+      "discrepancias": [
+        {
+          "item_id": "eap-1_0",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 2104003.2,
+          "referencia": 2096707.2,
+          "delta": 7296.000000000233,
+          "pct_diff": 0.35,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_1",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 822980.08,
+          "referencia": 822985.02,
+          "delta": -4.940000000060536,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_2",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 2850704.99,
+          "referencia": 2850672.98,
+          "delta": 32.010000000242144,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_3",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 1063003.64,
+          "referencia": 1063003.74,
+          "delta": -0.10000000009313226,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_4",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 6303250.07,
+          "referencia": 6237825.13,
+          "delta": 65424.94000000041,
+          "pct_diff": 1.05,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_5",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 4530306.11,
+          "referencia": 4530378.01,
+          "delta": -71.8999999994412,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_6",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 12329412.1,
+          "referencia": 12329175.32,
+          "delta": 236.77999999932945,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_7",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 10369819.8,
+          "referencia": 10370271.78,
+          "delta": -451.9799999985844,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_8",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 351146.05,
+          "referencia": 351159.75,
+          "delta": -13.700000000011642,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_9",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 5762268.39,
+          "referencia": 5762346.88,
+          "delta": -78.49000000022352,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        },
+        {
+          "item_id": "eap-1_10",
+          "campo": "subtotal_sem_bdi",
+          "canonical": 356897.06,
+          "referencia": 356904.01,
+          "delta": -6.9500000000116415,
+          "pct_diff": 0.0,
+          "severidade": "BAIXA"
+        }
+      ],
+      "resumo": "0 CRITICA, 0 ALTA, 0 MEDIA"
+    },
+    "07-custos-indiretos-e-contingencia": {
+      "total_discrepancias": 5,
+      "discrepancias": [
+        {
+          "categoria": "ADM",
+          "campo": "custo_total",
+          "canonical": 13766750.4,
+          "referencia": 0.0,
+          "delta": 13766750.4,
+          "pct_diff": 0,
+          "severidade": "MÃ‰DIA"
+        },
+        {
+          "categoria": "TOP",
+          "campo": "custo_total",
+          "canonical": 863205.59,
+          "referencia": 0.0,
+          "delta": 863205.59,
+          "pct_diff": 0,
+          "severidade": "MÃ‰DIA"
+        },
+        {
+          "categoria": "LAB",
+          "campo": "custo_total",
+          "canonical": 140291.06,
+          "referencia": 0.0,
+          "delta": 140291.06,
+          "pct_diff": 0,
+          "severidade": "MÃ‰DIA"
+        },
+        {
+          "categoria": "QSMS",
+          "campo": "custo_total",
+          "canonical": 759691.79,
+          "referencia": 0.0,
+          "delta": 759691.79,
+          "pct_diff": 0,
+          "severidade": "MÃ‰DIA"
+        },
+        {
+          "categoria": "MOB",
+          "campo": "custo_total",
+          "canonical": 4054600.43,
+          "referencia": 0.0,
+          "delta": 4054600.43,
+          "pct_diff": 0,
+          "severidade": "MÃ‰DIA"
+        }
+      ],
+      "resumo": "0 CRITICA, 0 ALTA, 0 MEDIA"
+    },
+    "06-consolidacao-resultado": {
+      "total_discrepancias": 3,
+      "discrepancias": [
+        {
+          "campo": "venda",
+          "canonical": 30866475.75,
+          "referencia": 76961261.88,
+          "delta": -46094786.129999995,
+          "pct_diff": 59.89,
+          "severidade": "CRÃTICA"
+        },
+        {
+          "campo": "custo",
+          "canonical": 66428330.760000005,
+          "referencia": 66451872.72,
+          "delta": -23541.959999993443,
+          "pct_diff": 0.04,
+          "severidade": "CRÃTICA"
+        },
+        {
+          "campo": "margem",
+          "canonical": 0.1733477700098412,
+          "referencia": 0.13655427293261524,
+          "delta": 0.036793497077225956,
+          "pct_diff": 25.11,
+          "severidade": "ALTA"
+        }
+      ],
+      "resumo": "2 CRITICA, 1 ALTA, 0 MEDIA"
+    }
+  }
+}

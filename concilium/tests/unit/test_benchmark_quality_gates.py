@@ -75,3 +75,59 @@ class TestBenchmarkQualityGates:
         preco_item = next(item for item in report["action_report"] if item["metric"] == "preco_venda")
         assert preco_item["causa_categoria"] == "PARAMETRIZACAO_BDI"
         assert preco_item["owner"] == "engenharia-bdi"
+
+    def test_build_prefers_inference_pack_reference_projection(self, monkeypatch):
+        builder = BenchmarkReportBuilder()
+        spec = ProjectSpec(nome="Projeto Teste", slug="proj-teste", contexto_id="ctx")
+        ref = {
+            "resultado": {
+                "benchmark_confronto_referencia": {
+                    "custo_direto": 100.0,
+                    "custo_indireto": 20.0,
+                    "custo_total": 120.0,
+                    "preco_venda": 130.0,
+                }
+            }
+        }
+
+        fake_projection = _fake_projection(
+            ferramenta={
+                "custo_direto": 100.0,
+                "custo_direto_catalogo": 100.0,
+                "custo_indireto": 20.0,
+                "custo_total": 120.0,
+                "preco_venda": 130.0,
+            }
+        )
+        monkeypatch.setattr(
+            "concilium.application.benchmarks.report_builder.BenchmarkProjection.from_canonical",
+            lambda canonical: fake_projection,
+        )
+
+        def _unexpected_extract(_):
+            raise AssertionError("_extract_referencia_confronto should not run when inference_pack is provided")
+
+        monkeypatch.setattr(
+            "concilium.application.benchmarks.report_builder.BenchmarkReportBuilder._extract_referencia_confronto",
+            staticmethod(_unexpected_extract),
+        )
+
+        inference_pack = SimpleNamespace(
+            reference_projection={
+                "custo_direto": 100.0,
+                "custo_indireto": 20.0,
+                "custo_total": 120.0,
+                "preco_venda": 130.0,
+            }
+        )
+
+        report = builder.build(
+            spec=spec,
+            version="v1",
+            results_log=[],
+            ref=ref,
+            canonical=object(),
+            inference_pack=inference_pack,
+        )
+
+        assert report["confronto"]["referencia"] == inference_pack.reference_projection

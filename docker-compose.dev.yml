@@ -1,0 +1,60 @@
+services:
+  api:
+    profiles: ["api", "deploy"]
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env.api
+    working_dir: /workspace/concilium
+    command: >
+      sh -lc "uvicorn concilium.presentation.api.app:app --host ${CONCILIUM_API_HOST:-0.0.0.0} --port ${CONCILIUM_API_PORT:-8000} --reload"
+    environment:
+      CONCILIUM_ROOT: /workspace/concilium
+      CONCILIUM_CONFIG_ROOT: /workspace/concilium/config
+      CONCILIUM_API_HOST: ${CONCILIUM_API_HOST:-0.0.0.0}
+      CONCILIUM_API_PORT: ${CONCILIUM_API_PORT:-8000}
+      PYTHONPATH: /workspace/concilium/src
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/workspace/concilium
+      - ./config:/workspace/concilium/config:rw
+      - concilium_projects:/workspace/concilium/projetos
+      - concilium_benchmark_projects:/workspace/concilium/benchmarks/projetos
+      - concilium_pip_cache:/root/.cache/pip
+
+  ui:
+    profiles: ["ui", "deploy"]
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env.ui
+    working_dir: /workspace/concilium
+    command: >
+      sh -lc "streamlit run src/concilium/presentation/ui/prototype_streamlit.py
+      --server.port ${CONCILIUM_UI_PORT:-8501} --server.address ${CONCILIUM_UI_HOST:-0.0.0.0}"
+    environment:
+      CONCILIUM_ROOT: /workspace/concilium
+      CONCILIUM_CONFIG_ROOT: /workspace/concilium/config
+      CONCILIUM_UI_HOST: ${CONCILIUM_UI_HOST:-0.0.0.0}
+      CONCILIUM_UI_PORT: ${CONCILIUM_UI_PORT:-8501}
+      CONCILIUM_UI_API_BASE_URL: ${CONCILIUM_UI_API_BASE_URL:-http://api:8000}
+      CONCILIUM_API_BASE_URL: ${CONCILIUM_API_BASE_URL:-http://api:8000}
+      PYTHONPATH: /workspace/concilium/src
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    volumes:
+      - ./:/workspace/concilium
+      - ./config:/workspace/concilium/config:rw
+      - concilium_projects:/workspace/concilium/projetos
+      - concilium_benchmark_projects:/workspace/concilium/benchmarks/projetos
+      - concilium_pip_cache:/root/.cache/pip
+
+volumes:
+  concilium_projects:
+  concilium_benchmark_projects:
+  concilium_pip_cache:

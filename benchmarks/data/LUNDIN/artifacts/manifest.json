@@ -1,0 +1,24 @@
+{
+  "slug": "LUNDIN",
+  "gerado_em": "2026-05-12T21:12:36",
+  "projeto": "LUNDIN - Alto Horizonte (GO)",
+  "project_dir": null,
+  "paths": {
+    "inputs": [
+      "benchmarks\\data\\LUNDIN\\artifacts\\inputs\\referencia.json",
+      "benchmarks\\data\\LUNDIN\\artifacts\\raw\\2024.12.05_PLANEJAMENTO_LUNDIN_ALTO HORIZONTE (GO).xlsm"
+    ],
+    "intermediate": [
+      "benchmarks\\data\\LUNDIN\\artifacts\\intermediate\\extracao_intermediarios.json",
+      "benchmarks\\data\\LUNDIN\\artifacts\\intermediate\\iteracao_referencias_lundin.json",
+      "benchmarks\\data\\LUNDIN\\artifacts\\intermediate\\referencia.pre_phase4_remaining_backup.json"
+    ],
+    "outputs": [
+      "benchmarks\\data\\LUNDIN\\artifacts\\outputs\\benchmark_report.json",
+      "benchmarks\\data\\LUNDIN\\artifacts\\outputs\\relatorio.json",
+      "benchmarks\\data\\LUNDIN\\artifacts\\outputs\\relatorio.md",
+      "benchmarks\\data\\LUNDIN\\artifacts\\outputs\\resultado_planejamento.xlsx"
+    ],
+    "audit": []
+  }
+}

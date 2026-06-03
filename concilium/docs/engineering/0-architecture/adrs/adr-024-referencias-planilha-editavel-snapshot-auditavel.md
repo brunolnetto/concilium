@@ -246,4 +246,4 @@ Isso garante que **projetos existentes não quebram** durante a migração.
 - [ ] Flags CLI: `--force-refresh`, `--offline`, `--strict-catalog`, `--confirm-catalog-change`
 - [ ] Testes: `test_cache_hit_no_roundtrip`, `test_hash_change_triggers_diff`, `test_same_hash_no_diff`, `test_offline_fallback`, `test_snapshot_immutable_on_same_hash`
 - [ ] Documentação de setup da Service Account no `docs/engineering/setup/google-sheets-credentials.md`
-- [ ] Credenciais **nunca** no repositório — path configurado via variável de ambiente `CONCILIUM_GOOGLE_CREDENTIALS`
+- [ ] Credenciais **nunca** no repositório — path configurado via variável de ambiente `CONCILIUM__GOOGLE_CREDENTIALS`

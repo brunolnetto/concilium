@@ -17,11 +17,13 @@ router = APIRouter(prefix="/api/projects", tags=["projects - core"])
 # ── Project CRUD ──────────────────────────────────────────────────────────────
 
 
+@router.get("", include_in_schema=False)
 @router.get("/", summary="List all projects")
 def list_projects(service: ConciliumService = Depends(get_concilium_service)) -> dict[str, Any]:
     return {"items": service.list_projects()}
 
 
+@router.post("", include_in_schema=False)
 @router.post("/", response_model=CreateProjectResponse, summary="Create a new project")
 def create_project(
     req: CreateProjectRequest,
@@ -44,6 +46,20 @@ def get_project(
         return service.get_project(project_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/{project_id}", summary="Delete project and all version folders")
+def delete_project(
+    project_id: str,
+    x_user: str = Header(default="anonymous", alias="X-User"),
+    service: ConciliumService = Depends(get_concilium_service),
+) -> dict[str, Any]:
+    try:
+        return service.delete_project(project_id, actor=x_user)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.patch("/{project_id}/config", summary="Update mutable project metadata (nome, contexto_id)")

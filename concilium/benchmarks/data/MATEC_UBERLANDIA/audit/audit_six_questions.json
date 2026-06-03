@@ -1,0 +1,11 @@
+{
+  "slug": "MATEC_UBERLANDIA",
+  "status": "indisponivel",
+  "motivo": "canonical.json nÃ£o encontrado para auditoria",
+  "resumo": {
+    "passa": 0,
+    "falha": 0,
+    "na": 0,
+    "total": 0
+  }
+}

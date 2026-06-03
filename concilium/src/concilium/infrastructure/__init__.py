@@ -6,5 +6,4 @@ Pacote raiz da camada de infraestrutura DDD. Subpacotes:
   infrastructure/adapters     — renderizadores Excel, interpretador de templates
   infrastructure/catalog      — loader, updater, completeness do catálogo
   infrastructure/repositories — implementações concretas dos ports de domain/repositories
-  infrastructure/config.py    — ConfigurationManager (leitura de YAML/env)
 """

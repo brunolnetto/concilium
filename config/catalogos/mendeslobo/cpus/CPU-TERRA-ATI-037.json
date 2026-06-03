@@ -1,0 +1,40 @@
+{
+  "codigo": "CPU-TERRA-ATI-037",
+  "descricao": "Corpo BSCC 3,00×2,50m — aterro 2-6m",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-ENCARREG-DREN",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-MONTADOR",
+      "coeficiente": 4.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-AJUDANTE",
+      "coeficiente": 4.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-E0027",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0026",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0002",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-037-PROD-001"
+}

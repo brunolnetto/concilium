@@ -9,11 +9,12 @@ from statemachine import State, StateMachine
 
 from concilium.domain.models.analitica import CurvaABCInsumo, SCurve  # ADR-058
 from concilium.domain.models.backtracking_pe import BacktrackingPERelatorio  # ADR-061
-from concilium.domain.models.bdi import IndiretoComBdi  # ADR-023 §D4
+from concilium.domain.models.bdi import IndiretoComBdi, TabelaBdi  # ADR-023 §D4
 from concilium.domain.models.campanha_equipamento import AnaliseFrequenciaCampanhas  # ADR-059
 from concilium.domain.models.catalogo import PapelFuncao
 from concilium.domain.models.constraint_violation import ConstraintViolation
 from concilium.domain.models.cubo_analitico import CuboAnalitico  # ADR-058 ext.
+from concilium.domain.models.calendario_operacional import CalendarioOperacionalSemanal
 from concilium.domain.models.decision_variables import DecisionVariables
 from concilium.domain.models.diagnostico_pe import DiagnosticoPERelatorio  # ADR-060
 from concilium.domain.models.memorial_bdi import MemorialCalculoBDI  # ADR-057
@@ -146,6 +147,37 @@ class Praticabilidade(BaseModel):
     percentual_produtivo_mensal: dict[str, float] = Field(default_factory=dict)
 
 
+class PrecedenciaItem(BaseModel):
+    """NEP-031 L4: relação de precedência tipada entre itens da EAP (§4 do enunciado).
+
+    Tipos suportados:
+      FS (Finish-to-Start, default): B começa após A terminar + lag semanas.
+      SS (Start-to-Start):           B começa lag semanas após A iniciar.
+      FF (Finish-to-Finish):         B termina lag semanas após A terminar (parcial).
+
+    ADR-081: ``completion_threshold_pct`` (θ ∈ [0,1]) define a fração do quantitativo
+    do predecessor concluída antes do sucessor poder iniciar (apenas FS).
+    θ=1.0 (default) → FS clássico 100%.  θ=0.20 → B pode iniciar quando A está 20% feita.
+    Fórmula: start_B ≥ start_A + ceil(θ × duration_A) + lag
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    item_id: str
+    tipo: Literal["FS", "SS", "FF"] = "FS"
+    lag: int = Field(default=0, ge=0, description="Lag em semanas")
+    # ADR-081: completion threshold ∈ [0,1]. 1.0 = FS clássico (default sem quebra retroativa).
+    completion_threshold_pct: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Fração do quantitativo do predecessor concluída antes do início do "
+            "sucessor (apenas FS). θ=1.0 = FS estrito; θ=0.0 = equivale a SS."
+        ),
+    )
+
+
 class EapItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -155,8 +187,19 @@ class EapItem(BaseModel):
     descricao: str
     unidade: str
     quantitativo: float = Field(gt=0)
-    # ADR-063 §D4: predecessor IDs (Finish-to-Start). Empty for hot_project.
-    predecessores: list[str] = Field(default_factory=list)
+    # NEP-031 L4: predecessores com tipo de relação (FS/SS/FF) e lag.
+    # Aceita str (legado, tratado como FS lag=0) ou PrecedenciaItem.
+    predecessores: list[str | PrecedenciaItem] = Field(default_factory=list)
+
+    def predecessores_tipados(self) -> list[PrecedenciaItem]:
+        """Normaliza predecessores para PrecedenciaItem (converte str legados)."""
+        result = []
+        for p in self.predecessores:
+            if isinstance(p, str):
+                result.append(PrecedenciaItem(item_id=p, tipo="FS", lag=0))
+            else:
+                result.append(p)
+        return result
 
 
 # Eap é apenas alias para list[EapItem] — exposto como nome no canônico
@@ -180,10 +223,19 @@ class Atividade(BaseModel):
 
 
 class ArestaActivityDag(BaseModel):
+    """NEP-031 L4: aresta do DAG com tipo de relação, lag e threshold de conclusão.
+
+    ADR-081: ``completion_threshold_pct`` (θ) tem a mesma semântica de PrecedenciaItem.
+    """
+
     model_config = ConfigDict(extra="ignore")
 
     de: str
     para: str
+    tipo: Literal["FS", "SS", "FF"] = "FS"
+    lag: int = Field(default=0, ge=0)
+    # ADR-081: idêntico a PrecedenciaItem.completion_threshold_pct
+    completion_threshold_pct: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
 class ActivityDag(BaseModel):
@@ -197,7 +249,21 @@ class ActivityDag(BaseModel):
 
 
 class DistribuicaoSemanal(BaseModel):
-    """Distribuição de execução por semana ISO ("AAAA-Www")."""
+    """Distribuição de execução por semana ISO ("AAAA-Www").
+
+    NEP-035 — Decomposição causal da eficiência η = η_s · η_p · η_w:
+      η_s  = n_j / n_max          (alocação: fração da força máxima fielded)
+      η_p  = fator_clima × fator_calendario  (praticabilidade)
+      η_w  = m_ij / M_max = eficiencia      (gestão; M_max=1.0 até calibração histórica)
+      η    = fator_total = η_s · η_p · η_w  (eficiência total observada)
+
+    q_max_celula = P_i · h · n_max · M_max  (capacidade teórica da semana)
+    perda_fisica = q_max_celula · η_s - q_executada  (produção perdida na semana, unidades físicas)
+
+    Agregação multi-semanal correta (Seção 5 do modelo):
+      η_agg = Σ_j(η_j · q_max_celula_j) / Σ_j(q_max_celula_j)  [ponderado por capacidade]
+      ≠ produto de médias por fator (os fatores acoplam via pesos de capacidade).
+    """
 
     model_config = ConfigDict(extra="ignore")
 
@@ -205,8 +271,18 @@ class DistribuicaoSemanal(BaseModel):
     qtd_executada: float = Field(ge=0)
     qtd_acumulada: float = Field(ge=0)
     pct: float = Field(ge=0, le=1)
-    # Eficiência da semana — fração produtiva aplicada (derivada da praticabilidade)
+    # ADR-082-cons: eficiencia = utilização m_ij (≠ praticabilidade; ver fator_total)
     eficiencia: float = Field(default=1.0, ge=0.0, le=1.0)
+    # ADR-068: separacao explícita entre clima e calendario operacional.
+    fator_clima: float = Field(default=1.0, ge=0.0, le=1.0)
+    fator_calendario: float = Field(default=1.0, ge=0.0, le=1.0)
+    fator_total: float = Field(default=1.0, ge=0.0, le=1.0)
+    # NEP-035: decomposição causal η_s · η_p · η_w
+    eta_s: float = Field(default=1.0, ge=0.0, le=1.0)
+    eta_p: float = Field(default=1.0, ge=0.0, le=1.0)
+    eta_w: float = Field(default=1.0, ge=0.0, le=1.0)
+    q_max_celula: float = Field(default=0.0, ge=0.0)
+    perda_fisica: float = Field(default=0.0, ge=0.0)
 
 
 # Alias retrocompatível
@@ -292,6 +368,21 @@ class EquipamentoEquipeDireta(BaseModel):
     consumo_litros_hora: float | None = None
     custo_combustivel_mensal: float = 0.0
     custo_mensal_total: float = 0.0
+    # NEP-031 L1: modo de cobrança de aluguel (§8.2 da formalização — u_q)
+    rental_unit: str = "hora_produtiva"  # "hora_produtiva" | "dia_calendario" | "mes"
+    # NEP-031 L5: taxa de manutenção por hora produtiva (§8.2 da formalização — μ_q)
+    # Custo de manutenção ativo incorrido somente quando σ = prod (não idle/demob).
+    custo_manutencao_hora: float = 0.0
+    # NEP-031 L2: custo de mob/desmob por evento (§8.3 da formalização — c_r^mob / c_r^demob)
+    custo_mobilizacao: float = 0.0
+    custo_desmobilizacao: float = 0.0
+    # ADR-088: sub-decomposição (aluguel | combustivel | manutencao) por equipamento.
+    # custo_mensal = custo_locacao_mensal + custo_manutencao_mensal (sem combustivel)
+    # custo_mensal_total = custo_mensal + custo_combustivel_mensal
+    custo_locacao_mensal: float = 0.0         # aluguel puro (BDI_servicos ≈ 30%)
+    custo_manutencao_mensal: float = 0.0      # manutenção ativa (BDI_servicos)
+    custo_locacao_idle_mensal: float = 0.0    # aluguel em standby (integral; = custo_locacao em geral)
+    custo_manutencao_idle_mensal: float = 0.0 # manutenção em standby (zero em geral)
 
 
 class EquipeDireta(BaseModel):
@@ -305,15 +396,27 @@ class EquipeDireta(BaseModel):
     funcoes: list[FuncaoEquipeDireta] = Field(default_factory=list)
     equipamentos: list[EquipamentoEquipeDireta] = Field(default_factory=list)
     custo_mao_obra_mensal: float = 0.0
-    # ADR-030 D3: custo_equipamentos_mensal exclui combustível (antes era custo_mensal_total)
-    custo_equipamentos_mensal: float = 0.0
-    custo_combustivel_total_mensal: float = 0.0  # ADR-030 D3: soma de combustível de todos os equipamentos
-    custo_material_mensal: float = 0.0  # ADR-030 D2: materiais diretos da equipe
+    # ADR-030 D3 / ADR-088: separação aluguel | combustivel | manutencao
+    custo_equipamentos_mensal: float = 0.0          # aluguel + manutencao (sem combustivel)
+    custo_combustivel_total_mensal: float = 0.0     # combustivel total da equipe
+    custo_material_mensal: float = 0.0
     custo_fixo_mensal: float = 0.0
+    # ADR-088: sub-campos de equipamento agregados da equipe
+    custo_locacao_mensal: float = 0.0               # Σ equipamentos.custo_locacao_mensal × num_unidades
+    custo_manutencao_mensal: float = 0.0            # Σ equipamentos.custo_manutencao_mensal × num_unidades
+    # Invariante: custo_equipamentos_mensal ≈ custo_locacao_mensal + custo_manutencao_mensal
     permanencia_meses: float = Field(default=0.0, ge=0)
     permanencia_efetiva_meses: float = Field(default=0.0, ge=0)  # Σ(num_equipes_j) / SEMANAS_POR_MES — correto para N>1
     custo_total: float = 0.0
     modo_estimativa: Literal["inicial", "refinado"] = "refinado"  # ADR-030 D4
+    # NEP-031 L2: custo de aluguel de equipamentos ociosos dentro da janela de mobilização (§6.3)
+    custo_ocioso_equipamentos: float = 0.0
+    # NEP-031 L3: custo total de mobilização/desmobilização por eventos detectados (§8)
+    custo_mob_desmob: float = 0.0
+    # ADR-071: campos de pool contract — preenchidos quando rcpsp_spec presente em skill-05
+    custo_total_autonomo: float = 0.0   # custo disjunto original (diagnóstico/comparação)
+    contrato_tipo_id: str = ""          # tipo_id do RecursoContrato atribuído; "" = sem pool
+    fracao_atribuicao: float = 0.0      # fração do custo_contrato atribuída a este item
 
 
 class CustomTeamComposition(BaseModel):
@@ -416,6 +519,29 @@ class Indireto(BaseModel):
     baixadas: list[dict] = Field(default_factory=list)
     permanencia_meses: float | None = None
     custo_total: float = 0.0
+    # ADR-090: sub-custos por categoria_insumo — calculados por skill-07.
+    # Permite BDI diferenciado por natureza (MO ≈ 30%, EQ ≈ 30%, material/comb = 4%, verba ≈ 25%).
+    # Invariante: custo_total ≈ custo_mao_obra + custo_equipamentos + custo_combustivel
+    #                          + custo_verba + custo_mobilizacao
+    custo_mao_obra: float = 0.0       # funcoes — BDI_mao_obra
+    custo_equipamentos: float = 0.0   # equipamentos (aluguel+manut, sem comb) — BDI_servicos
+    custo_combustivel: float = 0.0    # combustivel de equipamentos indiretos — BDI_material
+    custo_verba: float = 0.0          # verbas_mensais + verbas_fixas — BDI_indireto
+    custo_mobilizacao: float = 0.0    # mobilizacoes (overhead admin) — BDI_indireto
+
+
+class LeverEquilibrio(BaseModel):
+    """ADR-082: Ação operacional/contratual que fecha parcialmente o gap do ponto de equilíbrio."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str  # "fechar_gap_escala" | "fechar_gap_praticabilidade" | "fechar_gap_pool" | "revisao_bdi_minima"
+    tipo: Literal["custo", "preco"]
+    descricao: str
+    delta_margin: float  # R$ — positivo = melhoria de margem
+    delta_margin_pct: float  # fração de custo_venda_cpu
+    viavel: bool  # False quando o gap já é ≤ 0 (lever sem efeito)
+    restricoes: list[str] = Field(default_factory=list)  # caveats / condições de aplicação
 
 
 class PontoEquilibrio(BaseModel):
@@ -427,13 +553,43 @@ class PontoEquilibrio(BaseModel):
     delta: float
     delta_pct: float
     status_validacao: StatusValidacao
-    custo_operacional_real: float = 0.0  # Novo: custo_total da equipe (real)
-    frentes_equivalentes: float = 1.0  # Novo: razão entre custo_operacional_real e custo_fixo_equipe
+    custo_operacional_real: float = 0.0  # custo_total da equipe (real, inclui pool overhead)
+    frentes_equivalentes: float = 1.0  # custo_operacional_real / custo_fixo_equipe
 
     # ADR-051 Link: Rastreio de confiabilidade do PE baseado em validação de PU
     validacao_pu_status: Literal["VERDE", "AMARELO", "VERMELHO"] | None = None
     confianca_pe: Literal["ALTA", "MEDIA", "BAIXA"] | None = None
     diagnostico_pu: str | None = None  # ex: "PU subestimado em 8%, PE pode ser otimista"
+
+    # ADR-076 Opção C: diagnóstico quantitativo de viabilidade
+    # frentes_equivalentes_necessarias = custo_total_autonomo / (PU_sem_bdi × Q)
+    # Responde: "quantas vezes o preço de catálogo seria necessário para cobrir a execução autônoma?"
+    frentes_equivalentes_necessarias: float = 1.0
+    gap_pool_overhead: float = 0.0          # custo_operacional_real − custo_total_autonomo (signed: <0 = pool economiza)
+    status_frentes: Literal["OK", "AVISO", "CRITICO"] | None = None  # OK≤1.25, AVISO≤1.5, CRITICO>1.5
+
+    # ADR-076 Opção D: calibração de PU — ajuste mínimo para margem zero
+    pu_catalogo_unitario: float = 0.0       # PU_sem_bdi por unidade (referência catálogo)
+    pu_calibrado_unitario: float = 0.0      # max(pu_catalogo, custo_total_autonomo / Q)
+    ajuste_minimo_pct: float = 0.0          # (pu_calibrado − pu_catalogo) / pu_catalogo × 100
+    gap_praticabilidade_abs: float = 0.0    # RESIDUAL pós-escala: custo_total_autonomo − (custo_base × N_equipes)
+    # ≈ 0 para execução puramente proporcional; >0 indica desvio real de produtividade
+    # (ex: extensão de prazo por clima além da compressão de N equipes, maior consumo de combustível)
+    # NOTA: ≠ custo_total_autonomo − custo_base (esse seria gap_escala, não praticabilidade)
+    gap_pool_abs: float = 0.0               # custo_total − custo_total_autonomo (overhead de pool)
+
+    # ADR-076 Justificativa de Lesão de Produtividade Horária
+    # Campos derivados de distribuicao_semanal — rastreiam a origem do desvio por componente
+    n_equipes_efetivo: float = 1.0          # team_weeks / active_weeks (número médio real de equipes)
+    semanas_ativas: int = 0                 # semanas com num_equipes > 0
+    fator_clima_medio: float = 1.0          # média ponderada de fator_clima por equipe×semana
+    fator_calendario_medio: float = 1.0     # média ponderada de fator_calendario por equipe×semana
+    semanas_lesadas_clima: int = 0          # semanas com fator_clima < 0.90
+    gap_escala_abs: float = 0.0             # custo_base_catalogo × (N_equipes − 1): custo por compressão de prazo
+    diagnostico_lesao: str | None = None    # texto gerado: fonte dominante do desvio
+
+    # ADR-082: Levers de ação para fechar o gap do ponto de equilíbrio
+    levers_equilibrio: list[LeverEquilibrio] = Field(default_factory=list)
 
 
 class Venda(BaseModel):
@@ -538,6 +694,297 @@ class RecursoPool(BaseModel):
     quantidade_disponivel: int = Field(ge=0)
     data_aquisicao: date | None = None
     custo_aquisicao_total: float = Field(ge=0, default=0.0)
+
+
+class CustoParticionadoItem(BaseModel):
+    """Partição causal de custo de pool por item — ADR-083/084.
+
+    Decompõe o custo atribuído em componentes causais via diagrama de Euler
+    sobre IntervalSet (eule[interval]) — ADR-084 D2.
+
+    Campos Fase 2 (já implementados via _compute_particao_por_tipo):
+      custo_produtivo, custo_mob_imputado, custo_ocioso_imputado,
+      custo_total_particionado, economia_mob, overhead_ocioso
+
+    Campos Fase 3 (implementados via particionar_contrato() com euler()):
+      custo_produtivo_exclusivo, custo_produtivo_compartilhado,
+      custo_demob_imputado, custo_total_autonomo, economia_vs_autonomo,
+      predecessor_critico_id, overlap_semanas
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    item_id: str
+
+    # ── Fase 2 — implementado ────────────────────────────────────────────────
+    custo_produtivo: float = 0.0          # machine_weeks × custo_unit (produção direta)
+    custo_mob_imputado: float = 0.0       # fração de mob/demob atribuída (Shapley igual por cadeia)
+    custo_ocioso_imputado: float = 0.0    # custo de idle gap imputado ao item como sucessor causal
+    custo_total_particionado: float = 0.0 # = custo_atribuido_i (autoridade via ADR-071 D3)
+    economia_mob: float = 0.0             # mob_standalone − mob_imputado (>0 = economia)
+    overhead_ocioso: float = 0.0          # = custo_ocioso_imputado (custo de gap imputado)
+
+    # ── Fase 3 — ADR-084 D2, via euler() ────────────────────────────────────
+    custo_produtivo_exclusivo: float = 0.0      # custo em regiões onde só esta atividade está ativa
+    custo_produtivo_compartilhado: float = 0.0  # custo em regiões de sobreposição atribuídas a esta
+    custo_demob_imputado: float = 0.0           # C_demob / n (separado de mob)
+    custo_total_autonomo: float = 0.0           # custo se item contratasse sozinho (baseline)
+    economia_vs_autonomo: float = 0.0           # custo_total_autonomo − custo_total_particionado
+    predecessor_critico_id: str | None = None   # predecessor que determina T_start na DAG
+    overlap_semanas: float = 0.0                # semanas ativas em sobreposição com outra atividade
+
+    # ── ADR-085 D4: decomposição categorial do custo instancial particionado ──
+    # Base bottom-up para BDI diferenciado por categoria (ADR-023).
+    # Invariante: custo_inst_mo + custo_inst_eq + custo_inst_comb + custo_inst_mat
+    #             == custo_total_particionado (±0,01) — validado por VAL-INST-CAT-SOMA.
+    custo_inst_mo: float = 0.0       # mão-de-obra (salário + encargos), inclui MO ociosa (CLT integral)
+    custo_inst_eq: float = 0.0       # aluguel de equipamento (ativo + ocioso à taxa reduzida)
+    custo_inst_comb: float = 0.0     # combustível (apenas produtivo)
+    custo_inst_mat: float = 0.0      # material (apenas produtivo)
+
+
+class CadeiaPerpetuacao(BaseModel):
+    """Cadeia de perpetuação de instâncias de recurso — ADR-073.
+
+    Agrupa atividades consecutivas que usam o mesmo tipo de recurso com gap ≤ δ,
+    mantendo a frota mobilizada entre atividades para evitar mob/demob intermediários.
+
+    Uma cadeia gera exatamente 1 mobilização e 1 desmobilização, independentemente
+    do número de atividades cobertas.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    cadeia_id: str                      # ex: "cadeia-desmat-1"
+    tipo_id: str                        # ex: "DESMAT"
+    item_ids: list[str] = Field(default_factory=list)  # atividades em ordem de início
+    semana_inicio: str = ""             # primeira semana ativa do primeiro item
+    semana_fim: str = ""                # última semana ativa do último item
+    semanas_ativas: int = 0             # soma de active_weeks de todos os itens
+    semanas_ociosas: int = 0            # soma dos gaps dentro da cadeia
+    n_mobilizacoes: int = 1             # sempre 1 por cadeia
+    n_desmobilizacoes: int = 1          # sempre 1 por cadeia
+    custo_standby: float = 0.0          # custo de manutenção durante gaps
+    machine_weeks_ativas: int = 0       # Σ required_i × active_weeks_i (ramp-adjusted)
+    delta_aplicado_semanas: int = 2     # threshold de gap efetivo usado
+
+
+class RecursoContrato(BaseModel):
+    """Contrato de pool de recursos — ADR-071.
+
+    Representa o custo real do contrato de um tipo de recurso compartilhado.
+    Em vez de cobrar cada atividade pelo tempo que o recurso fica alocado de
+    forma independente (modelo disjunto), o contrato cobre:
+
+        pool_size × custo_unit_semanal × semanas_contrato
+
+    O custo por item é uma atribuição proporcional ao uso (machine-weeks).
+
+    ADR-073: campos de perpetuação (n_cadeias, custo_mob_desmob_contrato,
+    custo_standby_total, r_naive) enriquecidos pelo skill-05 quando disponível.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    contrato_id: str                                  # ex: "contrato-esc-3cat"
+    tipo_id: str                                      # ex: "ESC-3CAT"
+    quantidade_contratada: int                        # pool_size do rcpsp_spec
+    semana_inicio: str                                # primeira semana ativa (ex: "S001")
+    semana_fim: str                                   # última semana ativa
+    semanas_contrato: int                             # span total (semana_fim_idx - semana_inicio_idx + 1)
+    custo_unit_semanal: float                         # custo médio por unidade × semana (média ponderada)
+    custo_total_contrato: float                       # quantidade × custo_unit × semanas
+    items_cobertos: list[str] = Field(default_factory=list)  # item_ids que usam este tipo
+    # ADR-080: semana de mobilização por instância (número → semana ISO).
+    # {} = todas as instâncias são mobilizadas desde semana_inicio (comportamento legado).
+    mobilizacao_por_instancia: dict[int, str] = Field(default_factory=dict)
+    # ADR-073: diagnóstico de perpetuação
+    n_cadeias: int = 0                                # número de cadeias (= número de mob/demob do tipo)
+    custo_mob_desmob_contrato: float = 0.0            # n_cadeias × (custo_mob + custo_demob) × pool
+    custo_standby_total: float = 0.0                  # custo standby dentro dos gaps entre cadeias
+    r_naive: int = 0                                  # R_r^naive = Σ e_{i,r} (upper bound disjunto)
+    # ADR-078: custos de mob/demob/idle por unidade — opcionais (backward-compatible)
+    custo_mob_unit: float = 0.0                       # R$/unidade — mobilização
+    custo_demob_unit: float = 0.0                     # R$/unidade — desmobilização
+    custo_idle_semanal_unit: float = 0.0              # R$/unidade/semana — standby contínuo
+    unidade_faturamento: str = "hora_prod"            # "hora_prod" | "dia_cal" | "mes"
+    gap_max_economico: int = 9999                     # calculado em skill-05 pelo _build_pre_processamento
+    # ADR-085 D2 / ADR-088: decomposição da taxa semanal unitária por componente.
+    # Σ(custo_unit_semanal_*) ≈ custo_unit_semanal.
+    custo_unit_semanal_mo: float = 0.0                # taxa MO por unidade×semana (ativa = ociosa, CLT)
+    custo_unit_semanal_eq: float = 0.0                # taxa aluguel+manut por unidade×semana (ativa)
+    custo_unit_semanal_comb: float = 0.0              # taxa combustível por unidade×semana (apenas ativa)
+    custo_unit_semanal_mat: float = 0.0               # taxa material por unidade×semana (apenas ativa)
+    rho_idle_eq: float = 1.0                          # fração da taxa EQ cobrada em standby (idle/ativa)
+    # ADR-088: sub-decomposição de EQ (locacao | manutencao)
+    custo_unit_semanal_locacao: float = 0.0           # taxa aluguel puro (BDI_servicos)
+    custo_unit_semanal_manutencao: float = 0.0        # taxa manutenção (BDI_servicos)
+    # Invariante: custo_unit_semanal_eq ≈ custo_unit_semanal_locacao + custo_unit_semanal_manutencao
+    # ADR-083: partição causal de custo por item (produtivo + ocioso + mob_imputado)
+    particao_por_item: list[CustoParticionadoItem] = Field(default_factory=list)
+
+
+# ── ADR-077: Recurso Instancial ───────────────────────────────────────────────
+
+
+class SegmentoAtividade(BaseModel):
+    """Segmento contínuo de alocação de um slot de recurso a uma atividade — ADR-083.
+
+    Captura o intervalo exato [semana_inicio, semana_fim] em que um slot específico
+    de um contrato de pool esteve alocado a uma atividade sem interrupção.  Gerado
+    por `_build_instancias_recurso` a partir do rastreio semana-a-semana do slot.
+    Utilizado por `_enrich_particao_overhead` para calcular `overhead_ocioso` e
+    `custo_ocioso_imputado` com base nos gaps reais entre atividades consecutivas.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    activity_id: str               # item_id da atividade coberta
+    semana_inicio: str             # primeira semana do segmento (ISO, ex: "2026-W35")
+    semana_fim: str                # última semana do segmento (inclusive)
+    machine_weeks: int = 0        # quantidade de semanas de trabalho neste segmento
+
+
+class InstanciaRecurso(BaseModel):
+    """Slot instancial de um contrato de pool — ADR-077.
+
+    Representa uma posição contratual numerada dentro do pool (ex: "ESC-3CAT-03"),
+    com rastreio de utilização ao longo do projeto.
+
+    Não representa um ativo físico específico — o contrato compra capacidade (slots),
+    e o ativo físico que ocupa um slot pode variar por substituição ou manutenção.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    instancia_id: str                               # ex: "ESC-3CAT-03"
+    contrato_id: str                                # FK → RecursoContrato.contrato_id
+    tipo_id: str                                    # ex: "ESC-3CAT"
+    numero: int                                     # 1-based: posição no pool
+    semana_entrada: str                             # primeira semana do contrato
+    semana_saida: str                               # última semana do contrato
+    semanas_ativas: int = 0                         # semanas com atividade atribuída
+    semanas_standby: int = 0                        # semanas contratadas sem atividade
+    taxa_utilizacao_pct: float = 100.0              # semanas_ativas / (ativas + standby) × 100
+    custo_standby: float = 0.0                      # c_idle × semanas_standby (ADR-079) ou custo_unit_semanal (fallback)
+    atividades_cobertas: list[str] = Field(default_factory=list)  # activity_ids
+    # ADR-079: Desmobilização Antecipada (diagnóstico)
+    semana_ultima_atividade: str = ""              # última semana com atividade atribuída
+    semanas_antecipacao_possivel: int = 0          # trailing standby evitáveis por desmob antecipada
+    economia_desmobilizacao_antecipada: float = 0.0  # R$ economizáveis: max(0, c_idle×trailing - c_demob)
+    # ADR-080: desmob antecipada efetiva (True quando economia foi aplicada ao custo_total_contrato)
+    desmob_antecipada_aplicada: bool = False
+    # ADR-083: linha do tempo de alocação por atividade — segmentos contínuos por slot
+    segmentos_atividade: list[SegmentoAtividade] = Field(default_factory=list)
+
+    # ── ADR-085 D1/D3: ciclo de vida e custo instancial composicional ─────────
+    # Linha do tempo σ_k(j) ∈ {prod, idle, off}. mob = 1ª semana ativa (mob tardia);
+    # demob = última semana coberta (após desmob antecipada efetiva). off = fora do ciclo (custo 0).
+    semana_mobilizacao: str = ""        # 1ª semana ativa (late mob); "" = span do contrato (legado)
+    semana_desmobilizacao: str = ""     # última semana coberta após desmob efetiva; "" = span do contrato
+    semanas_off: int = 0                # semanas do span do contrato fora de [mob, demob] (custo zero)
+    # Custo instancial por componente (D2/D3) — soma = custo_instancia_total
+    custo_ativo_mo: float = 0.0         # MO em semanas produtivas
+    custo_ativo_eq: float = 0.0         # aluguel EQ em semanas produtivas
+    custo_ativo_comb: float = 0.0       # combustível em semanas produtivas
+    custo_ativo_mat: float = 0.0        # material em semanas produtivas
+    custo_idle_mo: float = 0.0          # MO em standby (integral — CLT)
+    custo_idle_eq: float = 0.0          # aluguel EQ em standby (taxa reduzida ρ·c_eq)
+    custo_mob_instancia: float = 0.0    # custo de mobilização imputado a esta instância
+    custo_demob_instancia: float = 0.0  # custo de desmobilização (efetivo quando desmob antecipada)
+    custo_instancia_total: float = 0.0  # Σ de todos os termos acima (ADR-085 D3)
+    # ADR-086: gaps-ponte mantidos ociosos (idle) deste slot — activity_id="__idle__".
+    # Registrados por _build_instancias_recurso onde a classificação idle/off já ocorre,
+    # para o CuboPoolInstancial reconstruir o estado semana a semana sem recomputar (ADR-086 R3).
+    segmentos_idle: list[SegmentoAtividade] = Field(default_factory=list)
+
+
+class ComposicaoEquipeAtividade(BaseModel):
+    """Composição instancial da equipe de uma atividade — ADR-077.
+
+    Liga uma atividade às instâncias do pool que a alimentaram, com rastreabilidade
+    dos slots utilizados e do volume de machine-weeks gerado.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    activity_id: str                                # item_id (EAP)
+    tipo_id: str                                    # tipo do recurso (ex: "ESC-3CAT")
+    contrato_id: str                                # FK → RecursoContrato.contrato_id
+    pool_size: int                                  # quantidade_contratada do contrato
+    n_instancias: int                               # nº de slots atribuídos a esta atividade
+    required: int                                   # required_resources[tipo_id] do rcpsp_spec
+    instancias_numeros: list[int] = Field(default_factory=list)   # números dos slots usados
+    semana_inicio: str = ""                         # primeira semana ativa da atividade
+    semana_fim: str = ""                            # última semana ativa da atividade
+    machine_weeks: int = 0                          # total machine-weeks (required × active_weeks)
+
+
+class ResumoUtilizacaoContrato(BaseModel):
+    """Resumo agregado de utilização por contrato de pool — ADR-077.
+
+    Agrega métricas de OEE simplificado (sem qualidade, foco em disponibilidade × uso)
+    para um tipo de recurso ao longo do projeto.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    contrato_id: str
+    tipo_id: str
+    quantidade_contratada: int
+    semanas_contrato: int
+    machine_weeks_disponiveis: int                  # quantidade_contratada × semanas_contrato
+    machine_weeks_usados: int                       # Σ semanas_ativas de todas as instâncias
+    machine_weeks_standby: int                      # Σ semanas_standby de todas as instâncias
+    taxa_utilizacao_pct: float                      # machine_weeks_usados / disponiveis × 100
+    custo_standby_total: float                      # custo_unit_semanal × machine_weeks_standby
+    instancias_standby_alto: list[str] = Field(default_factory=list)  # IDs com utilização < 65%
+    # OK ≥ 65%, AVISO 35–65%, CRITICO < 35%
+    status_utilizacao: Literal["OK", "AVISO", "CRITICO"] = "OK"
+
+
+# ── ADR-078: Pré-processamento Estrutural de Compartilhamento ────────────────
+
+
+class OportunidadeCompartilhamento(BaseModel):
+    """Par de atividades com potencial de economia via serialização — ADR-078.
+
+    Cada instância representa uma aresta `(i, j, r)` do grafo de oportunidades H:
+    atividade `i` termina antes de `j`, ambas usam o tipo `r`, e perpetuar `r`
+    entre elas tem economia potencial `delta_c_pot` descontada pela eficiência `eta`.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    atividade_i: str                          # item_id da atividade anterior
+    atividade_j: str                          # item_id da atividade posterior
+    tipo_id: str                              # tipo de recurso compartilhado
+    gap_semanas: int                          # semanas entre fim(i) e início(j)
+    gap_max_semanas: int                      # gap_r^max — limite de viabilidade
+    eta: float                                # η ∈ [0,1] — eficiência com desconto idle
+    omega_bundle: float                       # Ω ∈ [0,1] — fração econômica do bundle
+    delta_c_pot: float                        # R$ — economia potencial máxima
+    lambda0: float                            # δC × Ω — penalidade inicial Scheduling Modo B
+    recursos_compartilhaveis: dict[str, int] = Field(default_factory=dict)  # ov_vector
+    economicamente_viavel: bool = True        # gap <= gap_max
+
+
+class RelatorioOportunidades(BaseModel):
+    """Artefato de pré-processamento estrutural — ADR-078.
+
+    Produzido pelo _build_pre_processamento_compartilhamento em skill-05 quando
+    `rcpsp_spec.resource_costs` está presente. Contém o grafo de oportunidades H
+    completo (incluindo arestas inviáveis para auditoria).
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    total_oportunidades: int                          # |H| total (viáveis + podadas)
+    total_economia_pot: float                         # Σ delta_c_pot (apenas viáveis)
+    oportunidades_podadas: int                        # count(economicamente_viavel=False)
+    lambda0_total: float                              # Σ lambda0 (apenas viáveis)
+    oportunidades: list[OportunidadeCompartilhamento] = Field(default_factory=list)
+    gap_max_por_tipo: dict[str, int] = Field(default_factory=dict)  # {tipo_id: gap_max}
 
 
 class RequisitoRecurso(BaseModel):
@@ -816,6 +1263,8 @@ class ScheduledActivityCanonical(BaseModel):
     data_inicio: date | None = None
     data_fim: date | None = None
     assigned_resources: dict[str, int] = Field(default_factory=dict)
+    # ADR-074: normalized ramp profile propagated from Activity; None = flat demand
+    ramp_profile: list[float] | None = None
 
     # Distribuição semanal: chave "AAAA-Www" -> {num_equipes, qtd_executada, qtd_acumulada, pct, eficiencia}
     distribuicao_semanal: dict[str, DistribuicaoSemanal] = Field(default_factory=dict)
@@ -843,7 +1292,7 @@ class Cronograma(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     # Scheduling metadata (from AUTO optimization or MANUAL_ALLOCATION)
-    algorithm: Literal["manual_allocation", "MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP"] = "manual_allocation"
+    algorithm: Literal["manual_allocation", "MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP", "CP-SAT", "LNS"] = "manual_allocation"
     quality_score: float = Field(default=0.0, ge=0.0, le=1.0)
     makespan_weeks: int = Field(default=1, ge=1)
     is_feasible: bool = True
@@ -912,6 +1361,9 @@ class CanonicalModel(BaseModel):
     meta: Meta
     projeto: Projeto
     praticabilidade: Praticabilidade | None = None
+    # ADR-068: artefato semanal consolidado de disponibilidade civil.
+    calendario_operacional: list[CalendarioOperacionalSemanal] = Field(default_factory=list)
+    fator_calendario_semanal: dict[str, float] = Field(default_factory=dict)
     eap: list[EapItem] = Field(default_factory=list)
     atividades: list[Atividade] | None = None
     intervalos_atividade: list[AtividadeIntervalo] = Field(
@@ -939,6 +1391,16 @@ class CanonicalModel(BaseModel):
     # Fase 2 — resource binding
     tipos_recurso: list[TipoRecurso] = Field(default_factory=list)
     recurso_pool: list[RecursoPool] = Field(default_factory=list)
+    # ADR-071: contratos de pool — produzidos pelo skill-05 quando rcpsp_spec presente
+    contratos_recurso: list[RecursoContrato] = Field(default_factory=list)
+    # ADR-073: cadeias de perpetuação — produzidas junto com contratos_recurso
+    cadeias_perpetuacao: list[CadeiaPerpetuacao] = Field(default_factory=list)
+    # ADR-077: recurso instancial — mapa de utilização por slot de contrato
+    instancias_recurso: list[InstanciaRecurso] = Field(default_factory=list)
+    composicao_equipes_atividade: list[ComposicaoEquipeAtividade] = Field(default_factory=list)
+    resumo_utilizacao_contratos: list[ResumoUtilizacaoContrato] = Field(default_factory=list)
+    # ADR-078: pré-processamento estrutural de compartilhamento
+    relatorio_oportunidades: RelatorioOportunidades | None = None
     requisitos: list[RequisitoRecurso] = Field(default_factory=list)
     alocacoes: list[Alocacao] = Field(default_factory=list)
     conflitos_pico: list[ConflitoPico] = Field(default_factory=list)
@@ -993,6 +1455,11 @@ class CanonicalModel(BaseModel):
     curva_abc_insumo: "CurvaABCInsumo | None" = None
     s_curve: "SCurve | None" = None
     cubo_analitico: "CuboAnalitico | None" = None  # cubo 4D: categoria×atividade×tempo×BDI
+    # Tabela BDI efetiva usada para construir cubo_analitico e calcular preços (Skill-08).
+    # Persistida para garantir que o lazy-build do serviço e o _build_from_pool (ADR-086)
+    # usem exatamente a mesma formulação BDI — elimina divergência entre pipeline e on-demand.
+    # Usa forward ref para evitar import circular com o módulo bdi.
+    tabela_bdi_efetiva: TabelaBdi | None = None
 
     # ADR-059: Campanhas de permanência de equipamentos.
     analise_campanhas: "AnaliseFrequenciaCampanhas | None" = None
@@ -1039,7 +1506,12 @@ class ItemCustoAquisicao(BaseModel):
 
 
 class ResultadoReconciliado(BaseModel):
-    """Resultado após aplicar delta de custos de aquisição de recurso (06A)."""
+    """LEGADO — resultado após delta de aquisição de recurso (skill 06A, removida).
+
+    Todos os campos são populados com zeros pela skill-08 atual. Mantido apenas para
+    retrocompatibilidade de serialização e fixtures de testes. Não usar em código novo.
+    Candidato a remoção quando os fixtures de teste forem migrados.
+    """
 
     model_config = ConfigDict(extra="ignore")
 
@@ -1179,7 +1651,15 @@ class Lever(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    tipo: Literal["EXPAND_POOL", "REDUCE_DURATION", "ADD_TEAMS", "REVIEW_BDI"]
+    tipo: Literal[
+        # Legado (ADR-021)
+        "EXPAND_POOL", "REDUCE_DURATION", "ADD_TEAMS", "REVIEW_BDI",
+        # Baseados em LeverEquilibrio real (ADR-082) — pool-aware
+        "SERIALIZAR_CRONOGRAMA",      # fechar_gap_escala: serializar equipes, estender prazo
+        "MELHORAR_PRATICABILIDADE",   # fechar_gap_praticabilidade: reordenar por época climática
+        "OTIMIZAR_POOL",              # fechar_gap_pool: reduzir overhead mob/demob/ociosidade
+        "RECALIBRAR_PU",              # revisao_bdi_minima: recalibrar PU para cobrir custo real
+    ]
     checkpoint_skill: str
     parametros: dict = Field(default_factory=dict)
     delta_margem_estimado: float

@@ -9,6 +9,13 @@ calculado pela skill 06. Detecta três condições:
 
 A fórmula é derivada inteiramente dos dados do pipeline; não depende de preço de
 referência do catálogo (precos_unitarios_sbdi foi removido).
+
+Nível de severidade:
+  VAL-COB-NEG é AVISO (não ERRO): margem negativa é um sinal financeiro relevante,
+  mas não constitui falha técnica do pipeline. O projeto pode ser planejado e os
+  artefatos gerados; a decisão de ajustar preços ou dimensionamento é do gestor.
+  Converter para ERRO bloquearia skills 07-15, impedindo a geração do relatório
+  financeiro completo que seria o principal instrumento de diagnóstico.
 """
 
 from __future__ import annotations
@@ -56,7 +63,7 @@ def validar_cobertura_item(
         return [
             ValidacaoItem(
                 codigo="VAL-COB-NEG",
-                status="ERRO",
+                status="AVISO",  # AVISO, não ERRO: sinal financeiro, não falha técnica do pipeline
                 mensagem=(
                     f"Item '{item_id}': preço de venda ({venda_rs}) abaixo do custo da equipe ({custo_rs}). "
                     f"Margem={margem_pct:.2f}%. Revisar dimensionamento ou repassar ao cliente."

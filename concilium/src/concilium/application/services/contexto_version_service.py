@@ -22,9 +22,10 @@ from typing import Any
 class ConfigVersionService:
     """Serviço genérico de versionamento para qualquer entidade em config/<subdir>/."""
 
-    def __init__(self, config_root: Path, subdir: str) -> None:
+    def __init__(self, config_root: Path, subdir: str, *, include_flat_files: bool = False) -> None:
         self._root = Path(config_root) / subdir
         self._subdir = subdir
+        self._include_flat_files = include_flat_files
 
     # ── Resolução ────────────────────────────────────────────────────────────
 
@@ -42,6 +43,13 @@ class ConfigVersionService:
             if available:
                 return json.loads(available[-1].read_text(encoding="utf-8"))
 
+        flat_file = self._root / f"{entity_id}.json"
+        if flat_file.exists():
+            try:
+                return json.loads(flat_file.read_text(encoding="utf-8"))
+            except Exception:
+                return None
+
         return None
 
     def current_version(self, entity_id: str) -> str:
@@ -52,6 +60,7 @@ class ConfigVersionService:
     def list_entities(self) -> list[dict[str, Any]]:
         """Lista todas as entidades disponíveis com histórico de versões."""
         result: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
 
         for entity_dir in sorted(self._root.iterdir()):
             if not entity_dir.is_dir():
@@ -74,12 +83,61 @@ class ConfigVersionService:
                     },
                 }
             )
+            seen_ids.add(str(meta.get("id") or entity_dir.name))
+
+        if self._include_flat_files:
+            for flat in sorted(self._root.glob("*.json")):
+                flat_id = flat.stem
+                if flat_id in seen_ids:
+                    continue
+                try:
+                    payload = json.loads(flat.read_text(encoding="utf-8"))
+                except Exception:
+                    continue
+                entity_id = str(payload.get("id") or payload.get("codigo") or flat_id)
+                if entity_id in seen_ids:
+                    continue
+                item = {
+                    "id": entity_id,
+                    "nome": payload.get("nome") or entity_id,
+                    "descricao": payload.get("descricao") or "",
+                    "current_version": "v1",
+                    "versions": [
+                        {
+                            "version": "v1",
+                            "created_at": payload.get("created_at"),
+                            "created_by": payload.get("created_by"),
+                            "motivo": payload.get("motivo") or "base_flat_file",
+                        }
+                    ],
+                    **{
+                        k: payload[k]
+                        for k in payload
+                        if k not in ("id", "nome", "descricao", "current_version") and not str(k).startswith("$")
+                    },
+                }
+                result.append(item)
+                seen_ids.add(entity_id)
 
         return result
 
     def list_versions(self, entity_id: str) -> list[dict[str, Any]]:
         entity_dir = self._root / entity_id
         if not entity_dir.is_dir():
+            flat_file = self._root / f"{entity_id}.json"
+            if flat_file.exists():
+                try:
+                    payload = json.loads(flat_file.read_text(encoding="utf-8"))
+                except Exception:
+                    payload = {}
+                return [
+                    {
+                        "version": "v1",
+                        "created_at": payload.get("created_at"),
+                        "created_by": payload.get("created_by"),
+                        "motivo": payload.get("motivo") or "base_flat_file",
+                    }
+                ]
             return [{"version": "v1", "motivo": "base"}]
         return self._list_versions(entity_dir)
 
@@ -111,6 +169,15 @@ class ConfigVersionService:
             base = json.loads(existing[-1].read_text(encoding="utf-8"))
             for k in ("version", "created_at", "created_by", "motivo"):
                 base.pop(k, None)
+        else:
+            flat_file = self._root / f"{entity_id}.json"
+            if flat_file.exists():
+                try:
+                    base = json.loads(flat_file.read_text(encoding="utf-8"))
+                except Exception:
+                    base = {}
+                for k in ("version", "created_at", "created_by", "motivo"):
+                    base.pop(k, None)
 
         new_entry = {
             "version": new_v,
@@ -131,6 +198,17 @@ class ConfigVersionService:
                 meta = json.loads(meta_file.read_text(encoding="utf-8"))
                 meta["current_version"] = new_v
                 meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+            elif meta_file is None:
+                bootstrap_meta = {
+                    "id": new_entry.get("id") or entity_id,
+                    "nome": new_entry.get("nome") or entity_id,
+                    "descricao": new_entry.get("descricao") or "",
+                    "current_version": new_v,
+                }
+                (entity_dir / "meta.json").write_text(
+                    json.dumps(bootstrap_meta, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
 
         return new_entry
 
@@ -144,9 +222,7 @@ class ConfigVersionService:
         all_keys = (set(a) | set(b)) - _skip
         diff: dict[str, Any] = {}
         for k in sorted(all_keys):
-            va, vb = a.get(k), b.get(k)
-            if va != vb:
-                diff[k] = {"de": va, "para": vb}
+            _diff_values(path=k, left=a.get(k), right=b.get(k), out=diff)
 
         return {
             "entity_id": entity_id,
@@ -248,7 +324,23 @@ class JurisdictionVersionService(ConfigVersionService):
     """Versiona overlays de jurisdição em config/jurisdicoes/ (ADR-066)."""
 
     def __init__(self, config_root: Path) -> None:
-        super().__init__(config_root, "jurisdicoes")
+        super().__init__(config_root, "jurisdicoes", include_flat_files=True)
 
     def list_jurisdicoes(self) -> list[dict[str, Any]]:
         return self.list_entities()
+
+
+def _diff_values(path: str, left: Any, right: Any, out: dict[str, Any]) -> None:
+    if left == right:
+        return
+    if isinstance(left, dict) and isinstance(right, dict):
+        keys = sorted(set(left) | set(right))
+        for key in keys:
+            child = f"{path}.{key}"
+            _diff_values(child, left.get(key), right.get(key), out)
+        return
+    if isinstance(left, list) and isinstance(right, list):
+        if left != right:
+            out[path] = {"de": left, "para": right}
+        return
+    out[path] = {"de": left, "para": right}

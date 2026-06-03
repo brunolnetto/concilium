@@ -14,10 +14,10 @@
   "custo_direto_unitario_planilha": 8949.590455,
   "precos_unitarios_sbdi": {
     "mo": 0.0,
-    "diesel": 0.0,
-    "material": 4267.599522,
-    "equipamentos": 4681.990933,
-    "total": 8949.590455
+    "equipamentos": 861.333333,
+    "diesel": 395.78,
+    "material": 0.0,
+    "total": 1257.113333
   },
   "producao_id_ref": "CPU-DREN-CORPO-BSCC-200X200-PROD-001"
 }

@@ -30,14 +30,14 @@ def _resolve_env_path(*, primary: str, default: str) -> Path:
 
 def _config_root() -> Path:
     return _resolve_env_path(
-        primary="CONCILIUM_CONFIG_ROOT",
+        primary="CONCILIUM__CONFIG_ROOT",
         default=_tools_root() / "config",  # type: ignore[arg-type]
     )
 
 
 def _projetos_root() -> Path:
     return _resolve_env_path(
-        primary="CONCILIUM_PROJECTS_ROOT",
+        primary="CONCILIUM__PROJECTS_ROOT",
         default=_tools_root() / "projetos",  # type: ignore[arg-type]
     )
 
