@@ -1,0 +1,16 @@
+{
+  "codigo": "AGIS-E0016",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Escavadeira Hidráulica sobre esteira 48T",
+  "unidade": "h",
+  "preco_unitario": 374.55,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "categoria": "TERRAPLENAGEM",
+  "atributos_especificos": {
+    "consumo_litros_hora": 30.0,
+    "horas_mes": 200,
+    "rental_unit": "hora_produtiva"
+  },
+  "consumo_litros_hora": 7.0
+}

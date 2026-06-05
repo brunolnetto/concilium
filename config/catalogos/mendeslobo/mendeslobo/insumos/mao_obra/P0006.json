@@ -1,0 +1,13 @@
+{
+  "codigo": "P0006",
+  "tipo": "MAO_OBRA",
+  "descricao": "Auxiliar administrativo",
+  "unidade": "mês",
+  "preco_unitario": 6917.6448,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "salario_base": 3358.08,
+    "tipo_contrato": "CLT"
+  }
+}

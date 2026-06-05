@@ -1,0 +1,26 @@
+{
+  "id": "CPU-TERRA-ATI-005-PROD-001",
+  "codigo": "CPU-TERRA-ATI-005-PROD-001",
+  "descricao": "Produção CPU-TERRA-ATI-005",
+  "origem": "PROPRIA",
+  "valor_horario": 0.14,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-TOPOGRAFO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-AUX-TOPO",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-ESTACAO-TOTAL",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

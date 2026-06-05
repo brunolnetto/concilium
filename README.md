@@ -1,584 +1,285 @@
-<!-- 
-README - AGIS Skills Integration com Claude API
-Integração Sistemática que FORÇA Claude a usar Skills
-Resposta completa à pergunta: "Como acoplar as skills de forma sistemática?"
--->
+﻿# Concilium
 
-# 🎯 AGIS-Claude Integration Framework
+Framework deterministico para planejamento temporal e financeiro de obras, com
+pipeline manifest-driven de skills, versionamento de projeto e interfaces via
+CLI, API, UI e MCP.
 
-> **Solução:** Como acoplar os skills ao Claude de forma sistemática, forçando-o a usar dados reais e não halucinar.
+## Visao geral
 
----
+- Core de execucao em pipeline por skills, com validacoes e artefatos versionados.
+- Catalogo tecnicamente governado (CPU, insumos, producoes/produtividades).
+- Persistencia por projeto/versao com trilha de execucao.
+- Operacao por multiplas superficies:
+	- CLI (`concilium`)
+	- API HTTP (`concilium-api`)
+	- UI Streamlit (`concilium-ui`)
+	- MCP server (ferramentas para agentes)
 
-## 📊 O que foi Criado
+## Stack
 
-Você agora tem um **framework completo de 3 camadas** que integra sistematicamente os skills do AGIS com Claude:
+- Python 3.11+
+- Typer + Rich (CLI)
+- FastAPI + Uvicorn (API)
+- Streamlit (UI)
+- Pydantic v2 (modelos)
+- FastMCP (MCP server)
+- Pytest + Ruff + Mypy (qualidade)
 
-### 1️⃣ Framework Principal
+## Estrutura principal
 
-**Arquivo:** [`skills_integration_framework.py`](./skills_integration_framework.py) (470 linhas)
+- `src/concilium/presentation/main.py`: entrada da CLI
+- `src/concilium/presentation/api/app.py`: app FastAPI
+- `src/concilium/presentation/ui/prototype_streamlit.py`: UI Streamlit
+- `src/concilium/application/runtime.py`: orquestracao do runtime
+- `src/concilium/application/skills/manifests/`: skills por manifesto `skill.toml`
+- `src/concilium/infrastructure/storage/`: armazenamento de projeto e versao
+- `config/`: contextos, perfis, catalogos, referencias e jurisdicoes
+- `tests/unit` e `tests/integration`: testes automatizados
 
-```
-SkillsIntegrationFramework
-├── Tool Definitions (8 tools em 4 layers)
-├── Dependency Validation (checa ordem correta)
-├── Gate-Based Circuit Breaker (4 portões de validação)
-├── Audit Trail Logger (compliance)
-└── Claude Tools JSON Generator
-```
+## Skills atualmente presentes
 
-**Funcionalidades:**
-- ✅ Define 8 Claude Tools mapeando os 4 skills
-- ✅ Valida sequência de chamadas de tools
-- ✅ Implementa 4 gates de validação (camadas)
-- ✅ Registra cada execução para auditoria
-- ✅ Exporta configurações para API Claude
+As skills sao auto-descobertas em
+`src/concilium/application/skills/manifests`:
 
-### 2️⃣ Cliente Claude Utils
+- `01-escopo-e-eap`
+- `02-produtividade-climatica`
+- `03-catalogo-de-recursos`
+- `04-cronograma`
+- `05-equipes-e-alocacao`
+- `06-precificacao-unitaria`
+- `07-custos-indiretos`
+- `08-consolidacao-financeira`
+- `09-relatorio-e-artefatos`
+- `10-diagnostico-criticidade`
+- `11-avaliacao-intervencoes`
+- `12-registro-decisoes`
+- `13-assessor-replanejamento`
+- `14-explorador-cenarios`
+- `15-relatorio-executivo`
 
-**Arquivo:** [`claude_agis_client.py`](./claude_agis_client.py) (440 linhas)
+## Instalacao
 
-```
-ClaudeAGISClient
-├── Client.create_system_message()      → System prompt enforcer
-├── Client.get_available_tools()        → Tool definitions
-├── Client.validate_tool_call_sequence()  → Valida dependências
-├── Client.process_tool_call()          → Log + framework
-└── Client.generate_audit_trail_report() → Compliance report
-```
-
-**Ao usar:**
-```python
-client = ClaudeAGISClient()
-
-# 1. Enviar para Claude
-system = client.create_system_message()
-tools = client.get_available_tools()
-
-# 2. Receber resposta da Claude
-# Claude chama tools...
-
-# 3. Validar
-validation = client.validate_tool_call_sequence(tool_calls)
-if validation["valid"]:
-    # Aceitar resposta
-```
-
-### 3️⃣ Exemplo Funcional Completo
-
-**Arquivo:** [`exemplo_claude_api.py`](./exemplo_claude_api.py) (580 linhas)
-
-Mostra fluxo completo:
-```
-User Query → Claude (with constraints) → Tool Calls
-  ↓
-Framework validates sequence
-  ↓
-Skills execute real data
-  ↓
-Gates validate (4 camadas)
-  ↓
-Final decision: GO/NOGO with audit trail
-```
-
-**Como rodar:**
-```bash
-python exemplo_claude_api.py
-
-# Output:
-# ✅ ANÁLISE VALIDADA COM SUCESSO
-# ✅ Sequência de tools: VÁLIDA
-# ✅ Gate 1 (Base Data): PASS
-# ✅ Gate 2 (Cost Delta): PASS
-# ✅ Gate 3 (Schedule): PASS
-# ✅ Gate 4 (Profitability): PASS
-```
-
-### 4️⃣ Configurações Exportadas
-
-**Pasta:** `claude_integration/`
-
-```
-claude_integration/
-├── claude_tools.json       ← 8 tools em formato Claude API
-└── system_prompt.md       ← System prompt com enforcement
-```
-
-**claude_tools.json** (enviado para Claude API):
-```json
-{
-  "tools": [
-    {
-      "name": "load_base_data",
-      "description": "[LAYER 1] Load foundational data...",
-      "parameters": {
-        "table_name": {
-          "enum": ["MÃO DE OBRA", "EQUIPAMENTOS", ...]
-        }
-      }
-    },
-    ... (7 mais tools)
-  ]
-}
-```
-
-**system_prompt.md** (Sistema de enforcement):
-```markdown
-# CRITICAL CONSTRAINT: You MUST use tools systematically
-
-❌ "In my experience, margins are typically..."
-✅ "Tool load_base_data returned..."
-
-Mandatory Tools:
-- layer 1: load_base_data, validate_base_data
-- layer 2: calculate_crew_cost, validate_cost_delta  ← ENCARGOS
-- layer 3: validate_schedule, calculate_resultado
-- layer 4: validate_profitability, generate_health_report
-
-Execution Gates (ALL MUST PASS):
-Gate 1 ← Base Data Validation
-Gate 2 ← Cost Convergence Check
-Gate 3 ← Schedule Completion
-Gate 4 ← Profitability Check
-```
-
----
-
-## 🔒 Como Funciona o "Forcing"
-
-### Problema Original
-```
-Claude: "In my experience, margins are 10%"  ← ❌ Alucinação
-Usuario: "Mas qual é a margem REAL do AGIS?"
-Claude: "Bem, assumindo custos padrão..."    ← ❌ Mais alucinação
-```
-
-### Solução: 3 Camadas de Constraint
-
-#### Camada 1: System Prompt
-
-```markdown
-❌ What you CANNOT do:
-- Estimate costs with "typical rates"
-- Assume profitability based on experience
-- Skip data validation
-- Guess percentages
-
-✅ What you MUST do:
-- Call load_base_data for any table
-- Call validate_base_data before using data
-- Apply ENCARGOS multiplier (66%)
-- Follow 4-layer workflow exactly
-```
-
-**Resultado:** Claude toma ciência que não pode estimar.
-
-#### Camada 2: Tool Schema Enforcement
-
-```python
-# Claude must call exactly like this:
-{
-  "name": "load_base_data",
-  "input": {
-    "table_name": "MÃO DE OBRA"  # ← Must pick from enum
-  }
-}
-
-# Cannot call with:
-{
-  "name": "estimate_costs",      # ← Doesn't exist
-  "input": {"guess": "10%"}       # ← Rejected
-}
-```
-
-**Resultado:** Tool definitions forçam forma correta.
-
-#### Camada 3: Circuit Breaker (Gates)
-
-```python
-# Framework checks AFTER Claude responds:
-
-has_load_base_data? 
-  → NO: ❌ REJECT "Must load real data"
-  
-has_validate_base_data?
-  → NO: ❌ REJECT "Must validate data"
-
-has_calculate_crew_cost with apply_encargos=True?
-  → NO: ❌ REJECT "Must apply 66% multiplier"
-
-validate_cost_delta passed (delta < 5%)?
-  → NO: ❌ REJECT "Costs don't converge"
-
-validate_profitability (8-10% margin)?
-  → NO: ❌ REJECT "Profitability out of range"
-
-ALL gates passed?
-  → YES: ✅ ACCEPT response
-```
-
-**Resultado:** Resposta bloqueada até passar todos os gates.
-
----
-
-## 🏗️ Arquitetura Visual
-
-```
-┌──────────────────────────────────────────┐
-│  User: "Analyze LOTE 09 - GO or NOGO?"   │
-└─────────────────┬────────────────────────┘
-                  │
-     ┌────────────▼─────────────┐
-     │  Claude LLM              │
-     │ + System Prompt (forced) │
-     │ + Tool Definitions       │
-     └─────────────┬────────────┘
-                   │
-         Tool Calls (via API)
-         Layer 1: load_base_data
-         Layer 1: validate_base_data
-         Layer 2: calculate_crew_cost
-         Layer 2: validate_cost_delta ← ENCARGOS
-         Layer 3: validate_schedule
-         Layer 3: calculate_resultado
-         Layer 4: validate_profitability
-         Layer 4: generate_health_report
-                   │
-     ┌─────────────▼────────────┐
-     │ Framework Validation     │
-     │ ├─ Check dependencies    │
-     │ ├─ Execute skills        │
-     │ ├─ Validate 4 gates      │
-     │ └─ Log audit trail       │
-     └─────────────┬────────────┘
-                   │
-         All gates pass?
-         ├─ YES: ✅ Accept "Project is GO"
-         └─ NO:  ❌ Reject "Gates failed, see audit"
-                   │
-     ┌─────────────▼────────────┐
-     │ User receives            │
-     │ ✅ Data-backed decision  │
-     │ ✅ Audit trail (why?)    │
-     │ ✅ Compliance report     │
-     └──────────────────────────┘
-```
-
----
-
-## 🎯 O Que Cada Arquivo Faz
-
-| Arquivo | Linhas | Propósito | Quando Usar |
-|---------|--------|----------|-------------|
-| `skills_integration_framework.py` | 470 | Core framework | Sempre (importado pelos outros) |
-| `claude_agis_client.py` | 440 | Client wrapper | Integração com API Claude |
-| `exemplo_claude_api.py` | 580 | Exemplo executável | Demonstração / testes |
-| `INTEGRACAO_CLAUDE_ARQUITECTURA.md` | 600 | Documentação | Entender design |
-| `CHECKLIST_DEPLOYMENT.md` | 400 | Guia produção | Deploy real |
-
----
-
-## 🚀 Como Usar (3 Opções)
-
-### Opção 1: Rodar Exemplo Sem API
+### Desenvolvimento
 
 ```bash
-python exemplo_claude_api.py
+pip install -e ".[dev]"
+pre-commit install
 ```
 
-Mostra completo fluxo sem precisar de chave Anthropic.
-
-**Output:**
-```
-✅ Framework initialized with 8 tools
-✅ Tool sequence is VALID
-✅ All gates PASSED
-✅ ANÁLISE VALIDADA COM SUCESSO
-```
-
-### Opção 2: Integrar Com Claude API Real
-
-```python
-from anthropic import Anthropic
-from claude_agis_client import ClaudeAGISClient
-from exemplo_claude_api import AGISClaudeIntegration
-
-# Setup
-agis = AGISClaudeIntegration()
-client = Anthropic()
-
-# Configuração API
-api_config = agis.prepare_api_request()
-
-# Chamar Claude
-response = client.messages.create(
-    model=api_config["model"],
-    max_tokens=api_config["max_tokens"],
-    system=api_config["system"],  # ← Force tool usage
-    tools=api_config["tools"],     # ← Define tools
-    messages=[{"role": "user", "content": "Analise LOTE 09"}]
-)
-
-# Validar resposta
-result = agis.process_claude_response(response, context)
-if result["success"]:
-    print(f"✅ GO / NOGO: {result['response']}")
-    print(f"Audit: {result['audit_trail']}")
-```
-
-### Opção 3: Wrapper em API REST
-
-```python
-from fastapi import FastAPI
-from ejemplo_claude_api import AGISClaudeIntegration
-
-app = FastAPI()
-agis = AGISClaudeIntegration()
-
-@app.post("/analyze")
-async def analyze(project: str, query: str, sheet_path: str):
-    # Chamar Claude com constraints
-    # Validar resposta
-    # Retornar resultado verificado
-    pass
-```
-
----
-
-## ⚙️ Configuração Rápida (5 minutos)
+### Instalacao limpa
 
 ```bash
-# 1. Copiar arquivos
-cp skills_integration_framework.py ./
-cp claude_agis_client.py ./
-cp exemplo_claude_api.py ./
-cp CHECKLIST_DEPLOYMENT.md ./
+python -m venv .venv
+# Linux/macOS
+source .venv/bin/activate
+# Windows PowerShell
+# .venv\Scripts\Activate.ps1
 
-# 2. Testar
-python exemplo_claude_api.py
+pip install --upgrade pip
+pip install .
 
-# 3. Instalar Anthropic (se usar API real)
-pip install anthropic
-
-# 4. Exportar configs para Claude
-python skills_integration_framework.py
-# → Cria: claude_integration/claude_tools.json
-# → Cria: claude_integration/system_prompt.md
+concilium --help
+concilium-api --help
+concilium-ui --help
 ```
 
----
+## Execucao local
 
-## 🔑 Conceitos-Chave
+### CLI
 
-### Tool Definitions
-Definem exatamente que tools estão disponíveis e suas assinaturas:
-```json
-"parameters": {
-  "table_name": {
-    "enum": ["MÃO DE OBRA", "MATERIAIS", ...]  ← Força escolha correta
-  }
-}
+```bash
+concilium --help
+concilium project --help
+concilium configuration --help
+concilium catalog --help
 ```
 
-### Dependency Chain
-Claude não pode pular camadas:
-```
-❌ load_base_data (sem validate primeiro)
-❌ calculate_crew_cost (sem load_base_data)
-❌ validate_profitability (sem cost calculations)
+### API
 
-✅ load_base_data → validate → calculate → validate
+```bash
+concilium-api
 ```
 
-### Gate-Based Validation
-Cada layer requer validação antes de prosseguir:
-```
-Gate 1: Are base tables valid?       → if NO, STOP
-Gate 2: Cost convergence < 5%?       → if NO, STOP
-Gate 3: Schedule 100% complete?      → if NO, STOP
-Gate 4: Profitability 8-10% range?   → if NO, STOP
-All gates PASS = Final decision GO/NOGO
-```
+Default local: `127.0.0.1:8000`.
+Swagger: `http://127.0.0.1:8000/swagger`.
 
-### Audit Trail
-Cada tool call é registrado:
-```
-[10:30:45] load_base_data(MÃO DE OBRA)
-          → Success: 150 rows, 8 columns
+### UI
 
-[10:30:46] validate_base_data(MÃO DE OBRA)
-          → Success: valid=True, warnings=0
-
-[10:30:47] calculate_crew_cost(activity=Escavação, ...)
-          → Success: total=R$ 6.640/month (with ENCARGOS)
+```bash
+concilium-ui
 ```
 
-Pro compliance / auditoria construção.
+Default local: `127.0.0.1:8501`.
 
----
+## Execucao com Docker Compose
 
-## ✅ Validações Incluídas
-
-### 1. Dependency Validation
-Checa se tools foram chamados em ordem correta.
-
-### 2. Schema Validation
-Checa se parâmetros correspondem às definições.
-
-### 3. Gate Validation
-Checa se cada layer passou validação.
-
-### 4. Numeric Validation
-Checa se números vêm de tools, não estimativas.
-
-### 5. Audit Trail
-Registra tudo para compliance.
-
----
-
-## 🎓 Exemplo: Como "Forcing" Funciona
-
-### Cenário: Usuário pergunta a margem
-
-**SEM Framework:**
-```
-User: "Qual é a margem de lucro do projeto?"
-Claude: "Baseado em minha experiência, típicamente é 10%"
-Sistema: Aceita resposta
-Resultado: ❌ Alucinação, número inventado
+```bash
+docker compose -f cd/development/docker-compose.yml up --build
 ```
 
-**COM Framework:**
-```
-User: "Qual é a margem de lucro do projeto?"
+Servicos:
 
-Claude recebe:
-├─ System Prompt: "❌ Cannot estimate margins"
-├─ Tools: load_base_data, validate_base_data, ...
-└─ Rules: Must follow 4-layer workflow
+- API em `http://localhost:8000`
+- UI em `http://localhost:8501`
 
-Claude thinks:
-1. User quer saber margem
-2. System prompt diz não posso estimar
-3. Preciso chamar tools para calcular real
-4. Vou chamar load_base_data primeiro
+## Fluxo rapido de projeto (CLI)
 
-Claude calls:
-→ load_base_data(table_name="MATERIAIS")
-→ validate_base_data(table_name="MATERIAIS")
-→ calculate_crew_cost(...)
-→ validate_cost_delta(...)
-→ validate_schedule(...)
-→ calculate_resultado(...)
-→ validate_profitability(...)
-→ generate_health_report(...)
+```bash
+# Criar projeto
+concilium project init "Projeto Exemplo" --contexto samples
 
-Framework validates:
-✅ All tools called in order
-✅ All gates passed
-✅ Data comes from real tables
+# Ver status
+concilium project status "Projeto Exemplo"
 
-Final response:
-"Based on real data from AGIS tables, the margin is 8.6%,
-which is within target range 8-10%. Project decision: GO"
+# Rodar skill
+concilium project run 01-escopo-e-eap --project "Projeto Exemplo" --inputs '{}'
 
-Audit trail provided for compliance.
+# Validar projeto
+concilium validate project "Projeto Exemplo"
 
-Resultado: ✅ Data-backed, verifiable, auditable
+# Aprovar versao
+concilium project approve "Projeto Exemplo@v1" --as eng_senior
 ```
 
----
+## Variaveis de ambiente (resumo)
 
-## 📋 Checklist para Produção
+Arquivo de referencia: `.env.example`.
 
-- [ ] Atualizar `skills/2-operational-calc/skill.py` para aplicar ENCARGOS
-- [ ] Testar framework com `python exemplo_claude_api.py`
-- [ ] Instalar Anthropic: `pip install anthropic`
-- [ ] Copiar `claude_integration/` para production
-- [ ] Configurar `ANTHROPIC_API_KEY`
-- [ ] Rodar testes e2e
-- [ ] Deploy API
+### Diretorios
 
-Ver [`CHECKLIST_DEPLOYMENT.md`](./CHECKLIST_DEPLOYMENT.md) para detalhes.
+- `CONCILIUM__ROOT`
+- `CONCILIUM__CONFIG_ROOT`
+- `CONCILIUM__PROJECTS_ROOT`
+- `CONCILIUM__BENCHMARK_PROJECTS_ROOT`
+- `CONCILIUM__STORE_BACKEND` (opções: `local_json`, `sharepoint`, `s3`; default: `filesystem`)
 
----
+Backends de store:
 
-## 🆘 Troubleshooting
+1. `local_json` (alias: `filesystem`) — store local por diretório/JSON
+2. `sharepoint` — via Graph API (`concilium[sharepoint]`)
+3. `s3` — via S3 API com `aioboto3` (`concilium[s3]`)
 
-| Problema | Causa | Solução |
-|----------|-------|---------|
-| "Unknown tool" | Tool name incorreto | Verificar `claude_tools.json` |
-| Validação falha | Dependencies quebradas | Ver `audit_trail` qual gate falhou |
-| Resposta rejeitada | Gates não passarem | Checar `validate_gates()` output |
-| ENCARGOS não aplicado | `skill.py` não atualizado | Atualizar Layer 2 com multiplier 0.66 |
+### Runtime config (transicao de YAML para env/file)
 
----
+Precedencia do arquivo de runtime:
 
-## 📞 Próximas Etapas
+1. `CONCILIUM__RUNTIME_CONFIG_FILE`
+2. `CONCILIUM__CONFIG_FILE` (legado)
+3. `CONCILIUM__CONFIG_ROOT/concilium.yaml`
 
-1. **Rodar exemplo:** 
-   ```bash
-   python exemplo_claude_api.py
-   ```
+Formatos suportados: `.yaml/.yml`, `.json`, `.toml`.
 
-2. **Revisar arquitetura:**
-   Ler [`INTEGRACAO_CLAUDE_ARQUITECTURA.md`](./INTEGRACAO_CLAUDE_ARQUITECTURA.md)
+Override granular por env (sem editar arquivo):
 
-3. **Preparar produção:**
-   Seguir [`CHECKLIST_DEPLOYMENT.md`](./CHECKLIST_DEPLOYMENT.md)
+- Prefixo: `CONCILIUM__CFG__`
+- Exemplo: `CONCILIUM__CFG__progress__spi__ahead_threshold=1.1`
 
-4. **Integrar com Claude real:**
-   Copiar código de `exemplo_claude_api.py` para seu cliente
+### Mapping de benchmark (EAP -> CPU)
 
-5. **Testar com LOTE 09:**
-   ```python
-   agis = AGISClaudeIntegration()
-   result = agis.process_claude_response(..., context)
-   ```
+Precedencia:
 
----
+1. `CONCILIUM__BENCHMARK_CPU_MAPPING_RULES_FILE`
+2. `CONCILIUM__CPU_MAPPING_RULES_FILE` (legado, apenas transicao)
+3. default interno em `config/referencias/cpu_mapping_rules.json`
 
-## 📚 Documentos Inclusos
+### API/UI desacopladas
 
-1. **`skills_integration_framework.py`** - Framework core
-2. **`claude_agis_client.py`** - Client wrapper
-3. **`exemplo_claude_api.py`** - Exemplo funcional
-4. **`INTEGRACAO_CLAUDE_ARQUITECTURA.md`** - Design deep-dive
-5. **`CHECKLIST_DEPLOYMENT.md`** - Guia de produção
-6. **`README.md`** - Este arquivo
+- Bind da API:
+	- `CONCILIUM__API_HOST`
+	- `CONCILIUM__API_PORT`
+- URL canonica da API:
+	- `CONCILIUM__API_BASE_URL`
+- Bind da UI:
+	- `CONCILIUM__UI_HOST`
+	- `CONCILIUM__UI_PORT`
+- URL da API consumida pela UI:
+	- `CONCILIUM__UI_API_BASE_URL`
 
----
+Precedencia da URL da API na UI:
 
-## 🎓 Resumo Final
+1. `CONCILIUM__UI_API_BASE_URL`
+2. `CONCILIUM__API_BASE_URL`
+3. `http://{CONCILIUM__API_HOST}:{CONCILIUM__API_PORT}`
 
-### Pergunta Original
-> "Como acoplar as skills à interface do Claude de forma sistemática, forçando-o a utilizá-las e não halucinar?"
+Arquivos de referencia para deploy desacoplado:
 
-### Resposta Implementada
-✅ **Framework de 3 Camadas:**
-1. **System Prompt** - Proíbe alucinações explicitamente
-2. **Tool Definitions** - Força forma correta de chamar skills
-3. **Framework Validation** - Bloqueia resposta até passar todos os gates
+- `.env.api.example`
+- `.env.ui.example`
 
-### Resultado
-- ✅ Claude **não pode estimar** (system prompt proíbe)
-- ✅ Claude **não pode chamar tools errados** (schema enforce)
-- ✅ Claude **não pode pular camadas** (dependencies bloqueiam)
-- ✅ Claude **não pode dar resposta sem dados reais** (gates obrigam)
+Arquivos usados pelo `cd/development/docker-compose.yml`:
 
-### Implementação
-- ✅ Framework funcional (470 linhas, testado)
-- ✅ Cliente wrapper (440 linhas, pronto)
-- ✅ Exemplo executável (580 linhas, demonstrado)
-- ✅ Documentação completa
+- `.env.api`
+- `.env.ui`
 
-### Próximo
-- ⏳ Atualizar `skills/2-operational-calc/skill.py` com ENCARGOS
-- ⏳ Integrar com Claude API real
-- ⏳ Deploy
+Profiles de deploy:
 
----
+- API: `docker compose -f cd/development/docker-compose.yml --profile api up --build`
+- UI: `docker compose -f cd/development/docker-compose.yml --profile ui up --build`
+- Stack completo: `docker compose -f cd/development/docker-compose.yml --profile deploy up --build`
 
-**Status: ✅ Framework Sistemático Implementado e Funcionando**
+## Qualidade e manutencao
 
-Teste agora: `python exemplo_claude_api.py` → Verá tudo funcionando!
+```bash
+# Testes rapidos
+make test
+
+# Lint
+make lint
+
+# Type check
+make type-check
+
+# Formatacao
+make fmt
+
+# Cobertura
+make coverage
+```
+
+## Governanca de commits
+
+Este repositorio implementa governanca automatizada de commits para manter qualidade e rastreabilidade do historico.
+
+### Setup inicial
+
+```bash
+# Automatico (recomendado)
+python scripts/dev/setup_commit_governance.py
+
+# Manual
+pre-commit install
+pre-commit install --hook-type commit-msg
+git config commit.template .git-commit-template
+```
+
+### Regras principais
+
+- **Limites tecnicos**: ≤15 arquivos (recomendado), ≤30 arquivos (maximo)
+- **Formato obrigatorio**: `tipo(escopo): mensagem` (Conventional Commits)
+- **Tipos validos**: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `style`, `build`, `ci`, `chore`, `revert`
+
+### Ferramentas
+
+```bash
+# Validar tamanho antes de commitar
+python scripts/dev/validate_commit_size.py
+
+# Auditar historico
+python scripts/dev/audit_commit_history.py
+
+# Ver hotspots (arquivos mais modificados)
+python scripts/dev/audit_commit_history.py --detailed
+```
+
+### Documentacao
+
+- **Guia completo**: [COMMIT_GOVERNANCE.md](COMMIT_GOVERNANCE.md)
+- **Guia rapido**: [COMMIT_GOVERNANCE_QUICKSTART.md](COMMIT_GOVERNANCE_QUICKSTART.md)
+- **Conventional Commits**: https://www.conventionalcommits.org/
+
+## Documentacao tecnica
+
+- Arquitetura e ADRs: `docs/engineering/0-architecture/`
+- NEPs e backlog de produto: `docs/engineering/2-development/neps/`
+- Notas tecnicas de engenharia: `docs/engineering/3-technical_notes/`
+

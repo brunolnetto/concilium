@@ -1,0 +1,62 @@
+{
+  "id": "CPU-TERRA-COMPAC-PN-PROD-001",
+  "codigo": "CPU-TERRA-COMPAC-PN-PROD-001",
+  "descricao": "Compactação 100% Proctor Normal — Planilha AGIS 2026-05",
+  "origem": "PLANILHA_AGIS_2026_05",
+  "valor_horario": 173.01,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "AGIS-FN-OPER-ROLO",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "AGIS-FN-OPER-TRAT-PNEU",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "AGIS-FN-OPER-MOTON",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "AGIS-FN-MOTOR-PIPA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "AGIS-FN-AJUD",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "AGIS-FN-GREDISTA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "AGIS-FN-ENCAR",
+        "num_pessoas": 0.5
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "AGIS-ROLO-PC-10T",
+        "num_unidades": 2,
+        "consumo_litros_hora": 16.0
+      },
+      {
+        "equip_id": "AGIS-TRATOR-PNEU-GRADE",
+        "num_unidades": 1,
+        "consumo_litros_hora": 18.0
+      },
+      {
+        "equip_id": "AGIS-MOTON-140K",
+        "num_unidades": 1,
+        "consumo_litros_hora": 22.0
+      },
+      {
+        "equip_id": "AGIS-CAM-PIPA-18K",
+        "num_unidades": 1,
+        "consumo_litros_hora": 7.0
+      }
+    ]
+  },
+  "custo_hora_total_referencia": 1579.83
+}

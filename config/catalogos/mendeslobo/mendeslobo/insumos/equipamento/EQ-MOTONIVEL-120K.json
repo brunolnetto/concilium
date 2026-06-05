@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-MOTONIVEL-120K",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Motoniveladora 120K",
+  "unidade": "h",
+  "preco_unitario": 186.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0020",
+    "valor_locacao_mensal": 37200,
+    "horas_mes": 200,
+    "consumo_litros_hora": 9.0
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

@@ -1,0 +1,24 @@
+{
+  "codigo": "CPU-TERRA-ATI-003",
+  "descricao": "Desmatamento, destocamento, limpeza",
+  "unidade": "m2",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.144,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "precos_unitarios_sbdi": {
+    "mo": 0.535596,
+    "equipamentos": 0.387908,
+    "diesel": 0.228458,
+    "material": 0.0,
+    "total": 1.151962
+  },
+  "producao_id_ref": "CPU-TERRA-ATI-003-PROD-001",
+  "custo_direto_unitario_planilha_engine": 1.151962,
+  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=286.3 + B_base=142.3×(1+1.777) + diesel_SICRO=168.6) / C=738.00 = 1.1520 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L."
+}

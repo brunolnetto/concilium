@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install \
+            ruff \
+            mypy \
+            pytest \
+            pytest-json-report \
+            pytest-asyncio \
+            pytest-cov \
+            requests \
+            httpx \
+            jmespath \
+            import-linter
+
+      - name: Ruff check (strict)
+        run: |
+          python -m ruff check src/concilium tests --ignore B008
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install \
+            ruff \
+            mypy \
+            pytest \
+            pytest-json-report \
+            pytest-asyncio \
+            pytest-cov \
+            requests \
+            httpx \
+            jmespath \
+            import-linter
+
+      - name: Mypy
+        run: |
+          python -m mypy src/concilium --ignore-missing-imports --no-error-summary --exclude 'src/concilium/application/skills/manifests'
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: |
+            pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install \
+            ruff \
+            mypy \
+            pytest \
+            pytest-json-report \
+            pytest-asyncio \
+            pytest-cov \
+            requests \
+            httpx \
+            jmespath \
+            import-linter
+
+      - name: Run tests (fast profile)
+        run: |
+          python -m pytest tests -q --tb=short -m "not slow and not flaky" --json-report --json-report-file=.pytest-report.json
+
+      - name: Upload pytest report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: .pytest-report.json
+          if-no-files-found: ignore

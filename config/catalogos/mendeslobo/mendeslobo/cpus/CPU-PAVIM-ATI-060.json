@@ -1,0 +1,35 @@
+{
+  "codigo": "CPU-PAVIM-ATI-060",
+  "descricao": "Demolição de pavimento asfáltico",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "PAVIMENTACAO",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-OPER-ESCAV",
+      "coeficiente": 2.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-MOTOR-CAM-BASC",
+      "coeficiente": 2.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-E0016",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0050",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0008",
+      "coeficiente": 2.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
+  "producao_id_ref": "CPU-PAVIM-ATI-060-PROD-001"
+}

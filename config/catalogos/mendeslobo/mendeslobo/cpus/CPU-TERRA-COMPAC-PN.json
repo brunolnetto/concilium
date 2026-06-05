@@ -1,0 +1,19 @@
+{
+  "codigo": "CPU-TERRA-COMPAC-PN",
+  "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR NORMAL",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [],
+  "custo_direto_unitario_planilha": 9.068829,
+  "precos_unitarios_sbdi": {
+    "mo": 4.57384,
+    "equipamentos": 4.292469,
+    "diesel": 2.464384,
+    "material": 0.0,
+    "total": 11.330692
+  },
+  "producao_id_ref": "CPU-TERRA-COMPAC-PN-PROD-001",
+  "custo_direto_unitario_planilha_engine": 11.330692,
+  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=742.6 + B_base=285.0×(1+1.777) + diesel_SICRO=426.4) / C=173.01 = 11.3307 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L."
+}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Artefatos — Concilium</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" crossorigin>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+  <div class="text-center max-w-md">
+    <div class="text-5xl mb-4">📦</div>
+    <h1 class="text-xl font-bold text-gray-900 mb-2">Visualizador de Artefatos</h1>
+    <p class="text-sm text-gray-500 mb-6">PDF, Gantt e Excel inline — sem download.</p>
+    <div id="status" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
+      ADR-101 Fase 5 — em desenvolvimento
+    </div>
+  </div>
+  <script>
+    window.addEventListener('message', (e) => {
+      const msg = e.data;
+      if (msg?.result) {
+        document.getElementById('status').textContent = 'Conectado ao host MCP.';
+        document.getElementById('status').className = 'bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700';
+      }
+    });
+    window.parent.postMessage({ jsonrpc: '2.0', id: 1, method: 'ui/initialize', params: { protocolVersion: '2026-01-26', capabilities: {} } }, '*');
+  </script>
+</body>
+</html>

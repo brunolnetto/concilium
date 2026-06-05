@@ -1,0 +1,215 @@
+name: Build → Blue-Green Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag existente no ACR para re-deploy (vazio = build nova)"
+        required: false
+        default: ""
+
+env:
+  REGISTRY:        conciliumacr.azurecr.io
+  IMAGE_NAME:      concilium
+  RESOURCE_GROUP:  ${{ vars.RESOURCE_GROUP || 'concilium-rg' }}
+  LOCATION:        brazilsouth
+  AGW_NAME:        concilium-agw
+  ACI_BASE:        concilium-cg
+  KV_NAME:         concilium-kv
+
+permissions:
+  id-token: write
+  contents: read
+
+# ── Job 1: Build & Push ───────────────────────────────────────────────────────
+jobs:
+  build:
+    name: Build & Push → ACR
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.tag.outputs.value }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolver tag da imagem
+        id: tag
+        run: |
+          if [[ -n "${{ inputs.image_tag }}" ]]; then
+            echo "value=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            SHORT="${GITHUB_SHA:0:8}"
+            echo "value=${SHORT}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build & push via ACR Tasks (cloud build)
+        if: inputs.image_tag == ''
+        run: |
+          az acr login --name conciliumacr
+          az acr build \
+            --registry conciliumacr \
+            --image "${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}" \
+            --image "${{ env.IMAGE_NAME }}:latest" \
+            --file Dockerfile \
+            --platform linux/amd64 \
+            .
+          echo "✓ Imagem: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}"
+
+      - name: Verificar imagem existente (re-deploy)
+        if: inputs.image_tag != ''
+        run: |
+          az acr login --name conciliumacr
+          az acr repository show-tags \
+            --name conciliumacr \
+            --repository "${{ env.IMAGE_NAME }}" \
+            --query "[?@=='${{ steps.tag.outputs.value }}']" \
+            --output tsv | grep -q . || \
+            (echo "Tag '${{ steps.tag.outputs.value }}' não existe no ACR" && exit 1)
+          echo "✓ Imagem verificada: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}"
+
+# ── Job 2: Deploy slot inativo (Green) ───────────────────────────────────────
+  deploy-green:
+    name: Deploy → Slot Inativo
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+    outputs:
+      inactive_slot: ${{ steps.slots.outputs.inactive }}
+      active_slot:   ${{ steps.slots.outputs.active }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Determinar slots ativo/inativo
+        id: slots
+        run: |
+          ACTIVE=$(az group show --name "${{ env.RESOURCE_GROUP }}" \
+            --query "tags.active_slot" -o tsv 2>/dev/null | tr -d '[:space:]' || echo "blue")
+          [[ "$ACTIVE" == "blue" ]] && INACTIVE="green" || INACTIVE="blue"
+          echo "active=$ACTIVE"   >> "$GITHUB_OUTPUT"
+          echo "inactive=$INACTIVE" >> "$GITHUB_OUTPUT"
+          echo "Active: $ACTIVE → Deploying to: $INACTIVE"
+
+      - name: Deploy slot '${{ steps.slots.outputs.inactive }}'
+        env:
+          IMAGE_TAG:       ${{ needs.build.outputs.image_tag }}
+          AZURE_ACCOUNT:   ${{ vars.CONCILIUM__AZURE_ACCOUNT }}
+          AZURE_CONTAINER: ${{ vars.CONCILIUM__AZURE_CONTAINER }}
+          AZURE_KEY:       ${{ secrets.CONCILIUM__AZURE_KEY }}
+          OTEL_ENDPOINT:   ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          CI: "true"
+        run: |
+          chmod +x cd/scripts/deploy.sh
+          cd/scripts/deploy.sh deploy "$IMAGE_TAG"
+
+# ── Job 3: Smoke Tests contra o slot inativo ─────────────────────────────────
+  smoke:
+    name: Smoke Tests → Slot '${{ needs.deploy-green.outputs.inactive_slot }}'
+    runs-on: ubuntu-latest
+    needs: [build, deploy-green]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Aguardar estabilização (30s)
+        run: sleep 30
+
+      - name: Executar smoke tests exaustivos
+        env:
+          INACTIVE_SLOT:       ${{ needs.deploy-green.outputs.inactive_slot }}
+          SMOKE_CLIENT_ID:     ${{ vars.SMOKE_CLIENT_ID || 'smoke-test' }}
+          SMOKE_CLIENT_SECRET: ${{ secrets.SMOKE_CLIENT_SECRET }}
+          RESOURCE_GROUP:      ${{ env.RESOURCE_GROUP }}
+          ACI_BASE:            ${{ env.ACI_BASE }}
+          CI: "true"
+        run: |
+          chmod +x cd/scripts/deploy.sh
+          cd/scripts/deploy.sh smoke --slot "$INACTIVE_SLOT"
+
+# ── Job 4a: Promote (smoke passou) ───────────────────────────────────────────
+  promote:
+    name: Promote → Produção
+    runs-on: ubuntu-latest
+    needs: [build, deploy-green, smoke]
+    if: needs.smoke.result == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Promover slot '${{ needs.deploy-green.outputs.inactive_slot }}' → produção
+        env:
+          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
+          AGW_NAME:       ${{ env.AGW_NAME }}
+          ACI_BASE:       ${{ env.ACI_BASE }}
+          CI: "true"
+        run: |
+          chmod +x cd/scripts/deploy.sh
+          cd/scripts/deploy.sh promote
+
+      - name: Resumo do deploy
+        run: |
+          chmod +x cd/scripts/deploy.sh
+          cd/scripts/deploy.sh status
+
+# ── Job 4b: Rollback (smoke falhou) ──────────────────────────────────────────
+  rollback:
+    name: Rollback — Manter Produção Atual
+    runs-on: ubuntu-latest
+    needs: [deploy-green, smoke]
+    if: needs.smoke.result == 'failure'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deletar slot '${{ needs.deploy-green.outputs.inactive_slot }}' (produção intacta)
+        env:
+          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
+          ACI_BASE:       ${{ env.ACI_BASE }}
+          CI: "true"
+        run: |
+          chmod +x cd/scripts/deploy.sh
+          cd/scripts/deploy.sh rollback
+
+      - name: Notificar falha
+        run: |
+          echo "::error::Smoke tests falharam — rollback executado automaticamente."
+          echo "::error::Slot '${{ needs.deploy-green.outputs.inactive_slot }}' deletado."
+          echo "::error::Produção (${{ needs.deploy-green.outputs.active_slot }}) intacta."
+          exit 1

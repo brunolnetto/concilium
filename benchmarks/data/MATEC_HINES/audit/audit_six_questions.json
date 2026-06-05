@@ -1,0 +1,70 @@
+{
+  "slug": "MATEC_HINES",
+  "resumo": {
+    "passa": 0,
+    "falha": 5,
+    "na": 1,
+    "total": 6
+  },
+  "respostas": [
+    {
+      "pergunta": "1) Insumos/CPUs/produtividades/composicao de equipes iguais?",
+      "status": "FALHA",
+      "evidencia": {
+        "cpus_iguais": true,
+        "equipes_iguais": false
+      }
+    },
+    {
+      "pergunta": "2) Custo direto (catálogo vs referência) igual?",
+      "status": "FALHA",
+      "evidencia": {
+        "ref": 1390348.47,
+        "concilium_catalogo": 0.0,
+        "delta": -1390348.47
+      }
+    },
+    {
+      "pergunta": "3) Orcamento de itens esta correto?",
+      "status": "FALHA",
+      "evidencia": {
+        "itens": {
+          "eap-1_3": 0.0,
+          "eap-1_2": 0.0,
+          "eap-1_5": 0.0,
+          "eap-1_1": -1866460.8
+        },
+        "qtd_itens": 4
+      }
+    },
+    {
+      "pergunta": "4) Indiretos aplicados corretamente?",
+      "status": "FALHA",
+      "evidencia": {
+        "ref": 5000000.0,
+        "concilium": 0.0,
+        "delta": -5000000.0
+      }
+    },
+    {
+      "pergunta": "5) Ponto de equilibrio por EAP coincide?",
+      "status": "N/A",
+      "evidencia": {
+        "motivo": "Referencia nao possui dados de ponto_equilibrio (nem C_FIXO) para confronto",
+        "ref_count": 0,
+        "concilium_count": 0
+      }
+    },
+    {
+      "pergunta": "6) Resultado final coincide?",
+      "status": "FALHA",
+      "evidencia": {
+        "deltas": {
+          "preco_venda_total": -28000000.0,
+          "custo_total": -22753070.3,
+          "margem_bruta": -0.19
+        }
+      }
+    }
+  ]
+}

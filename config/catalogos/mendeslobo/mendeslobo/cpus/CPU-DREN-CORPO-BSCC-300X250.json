@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-CORPO-BSCC-300X250",
+  "descricao": "CORPO BSCC 3,00 X 2,50 M - MOLDADO NO LOCAL - ALTURA DO ATERRO 2,00 A 6,00 M - AREIA E BRITA COMERCIAIS - PADRÃO VALEC",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-CORPO-BSCC-300X250",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 11693.767707,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "equipamentos": 1033.6,
+    "diesel": 474.936,
+    "material": 0.0,
+    "total": 1508.536
+  },
+  "producao_id_ref": "CPU-DREN-CORPO-BSCC-300X250-PROD-001"
+}

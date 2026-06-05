@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-BOCA-BSCC-200X150",
+  "descricao": "BOCA BSCC 2,00 X 1,50 M - ESCONSIDADE 0° - AREIA E BRITA COMERCIAIS",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-BOCA-BSCC-200X150",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 15806.598336,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "equipamentos": 3427.172583,
+    "diesel": 940.365757,
+    "material": 0.0,
+    "total": 4367.53834
+  },
+  "producao_id_ref": "CPU-DREN-BOCA-BSCC-200X150-PROD-001"
+}

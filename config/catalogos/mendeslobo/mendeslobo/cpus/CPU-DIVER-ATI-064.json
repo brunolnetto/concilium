@@ -1,0 +1,15 @@
+{
+  "codigo": "CPU-DIVER-ATI-064",
+  "descricao": "Instalação guia 1,00×0,30×0,15",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "DIVERSOS",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-GUIA-CONCRETO-PADRAO",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "producao_id_ref": "CPU-DIVER-ATI-064-PROD-001"
+}

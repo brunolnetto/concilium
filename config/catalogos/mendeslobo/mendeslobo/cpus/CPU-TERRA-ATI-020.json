@@ -1,0 +1,15 @@
+{
+  "codigo": "CPU-TERRA-ATI-020",
+  "descricao": "Espalhamento areia/pó de pedra 5cm",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-BTTC-CORPO-DN1200-PA2",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-020-PROD-001"
+}

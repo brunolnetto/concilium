@@ -1,0 +1,77 @@
+# Template de Mensagem de Commit — Concilium
+#
+# Formato: <tipo>(<escopo>): <resumo em português, ≤72 caracteres>
+#
+# [corpo opcional: contexto, motivação, impacto]
+#
+# [footer opcional: refs, breaking changes, co-autores]
+#
+# ── TIPOS ──────────────────────────────────────────────────────────────
+# feat      Nova funcionalidade
+# fix       Correção de bug
+# refactor  Mudança de código sem alterar comportamento
+# perf      Melhoria de performance
+# test      Adicionar ou corrigir testes
+# docs      Documentação
+# style     Formatação (não afeta lógica)
+# build     Build system, dependências
+# ci        CI/CD, automação
+# chore     Tarefas de manutenção
+# revert    Reverter commit anterior
+#
+# ── ESCOPOS COMUNS ─────────────────────────────────────────────────────
+# api, cli, ui, mcp                  — superfícies de interação
+# skills, catalog, runtime           — core do sistema
+# storage, config, validation        — infraestrutura
+# benchmark, audit, migration        — utilitários
+# docs, tests, ci                    — suporte
+#
+# ── EXEMPLOS ───────────────────────────────────────────────────────────
+#
+# feat(catalog): adicionar validação de CPU duplicados
+#
+# Implementa validação que detecta entradas duplicadas no
+# catálogo CPU durante o carregamento. Previne inconsistências
+# em precificação quando há códigos repetidos.
+#
+# Refs: #234
+#
+# -----------------------------------------------------------------------
+#
+# fix(skills): corrigir cálculo de BDI em precificação
+#
+# O multiplicador de BDI estava usando valor fixo 1.3 ao invés
+# de ler do perfil de contexto. Agora lê corretamente de
+# config/perfis/{contexto}.json no campo bdi.tipo_3.
+#
+# BREAKING CHANGE: projetos com override manual de BDI precisam
+# migrar para o novo formato de perfil.
+#
+# Refs: ADR-089, #456
+#
+# -----------------------------------------------------------------------
+#
+# refactor(skills): reorganizar manifests por domínio funcional
+#
+# [EXCEÇÃO: refatoração estrutural]
+# - Move 15 skills para estrutura skill/<dominio>/<nome>/
+# - Preserva compatibilidade via aliases em __init__.py
+# - Mudança atômica para evitar estado inconsistente
+#
+# Impacta 43 arquivos mas sem mudança de comportamento.
+# Testes de regressão passam 100%.
+#
+# Refs: NEP-042
+#
+# ═══════════════════════════════════════════════════════════════════════
+# CONFIGURAR ESTE TEMPLATE:
+#
+# 1. Copie este arquivo para .git/hooks/commit-msg.template
+# 2. Configure git para usar o template:
+#    git config commit.template .git/hooks/commit-msg.template
+#
+# 3. Ao executar `git commit`, este template será aberto no editor
+#
+# Alternativamente, use via CLI:
+#    git commit -t .git/hooks/commit-msg.template
+# ═══════════════════════════════════════════════════════════════════════

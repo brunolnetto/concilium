@@ -1,0 +1,11 @@
+{
+  "id": "f37903e3-f138-4d5f-b21e-632a6da00f7f",
+  "nome": "PRIVATE_LOG",
+  "contexto_id": "mendeslobo",
+  "criado_em": "2026-06-04T22:37:00.017012+00:00",
+  "current_version": "v1",
+  "catalogo_base": null,
+  "derivado_de_benchmark": "PRIVATE_LOG",
+  "benchmark_versao": 1,
+  "benchmark_execution_id": null
+}

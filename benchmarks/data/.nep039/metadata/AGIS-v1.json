@@ -1,0 +1,12 @@
+{
+  "benchmark_id": "AGIS",
+  "nome": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
+  "origem": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
+  "tags": [
+    "real",
+    "benchmark"
+  ],
+  "criado_em": "2026-05-27T22:59:05.569094",
+  "versao": 1,
+  "imutavel": false
+}

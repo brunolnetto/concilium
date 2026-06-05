@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-BSTC-CORPO-DN1000-PA2",
+  "tipo": "MATERIAL",
+  "descricao": "Areia Média Lavada",
+  "unidade": "m3",
+  "preco_unitario": 110.0,
+  "fonte_preco": "cotacao_mercado",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "TERRAPLENAGEM"
+}

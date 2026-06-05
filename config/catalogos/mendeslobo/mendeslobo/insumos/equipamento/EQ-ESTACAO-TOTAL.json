@@ -1,0 +1,21 @@
+{
+  "codigo": "EQ-ESTACAO-TOTAL",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Estação Total",
+  "unidade": "h",
+  "preco_unitario": 15.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E-TOPO-01",
+    "valor_locacao_mensal": 3000,
+    "horas_mes": 200,
+    "consumo_litros_hora": 0.0
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_compartilhavel",
+    "capacidade_cobertura": 1,
+    "fracao_uso": 1.0
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

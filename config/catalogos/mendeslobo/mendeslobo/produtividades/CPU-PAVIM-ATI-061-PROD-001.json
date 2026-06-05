@@ -1,0 +1,50 @@
+{
+  "id": "CPU-PAVIM-ATI-061-PROD-001",
+  "codigo": "CPU-PAVIM-ATI-061-PROD-001",
+  "descricao": "Produção CPU-PAVIM-ATI-061",
+  "origem": "PROPRIA",
+  "valor_horario": 74.07,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-VIBRO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-PNEU",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCARREG-CAPA",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0041",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0036",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0037",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0008",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

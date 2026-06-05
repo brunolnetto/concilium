@@ -1,0 +1,42 @@
+{
+  "id": "CPU-PAVIM-PAV-BASE-BGTC-PROD-001",
+  "codigo": "CPU-PAVIM-PAV-BASE-BGTC-PROD-001",
+  "descricao": "Produção CPU-PAVIM-PAV-BASE-BGTC",
+  "origem": "PROPRIA",
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MOTOR-CAM-BASC",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "MO-SERV-GERAL",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-MOTONIVEL-140K",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-ROLO-PE-CARNEIRO",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-CAM-BASC-14M3",
+        "num_unidades": 2
+      }
+    ]
+  },
+  "historico_observacoes": [],
+  "valor_horario": 22.0
+}

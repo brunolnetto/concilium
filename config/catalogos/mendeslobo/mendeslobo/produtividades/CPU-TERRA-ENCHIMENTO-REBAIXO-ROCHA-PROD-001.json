@@ -1,0 +1,42 @@
+{
+  "id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001",
+  "codigo": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001",
+  "descricao": "Produção CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+  "origem": "PROPRIA",
+  "valor_horario": 149.51,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0043",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "P0048",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0028",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0021",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0035",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

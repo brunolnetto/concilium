@@ -1,0 +1,20 @@
+{
+  "codigo": "CPU-PAVIM-PAV-BASE-BGTC",
+  "descricao": "Base de BGTC — execução e compactação",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "PAVIMENTACAO",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-BGTC-MIX",
+      "coeficiente": 1.05,
+      "categoria_custo": "MATERIAL"
+    },
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 1.45454545,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "producao_id_ref": "CPU-PAVIM-PAV-BASE-BGTC-PROD-001"
+}

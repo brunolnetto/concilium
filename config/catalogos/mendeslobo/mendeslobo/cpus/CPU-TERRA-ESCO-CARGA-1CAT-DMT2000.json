@@ -1,0 +1,26 @@
+{
+  "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+  "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.12203368,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "_nota_integridade": "NEP-029 D5c: composicao_itens incompleta — contém apenas diesel (gap 11.6× vs precos_unitarios_sbdi). MO e equipamentos ausentes. Fonte primária de preço: precos_unitarios_sbdi. Completar composicao_itens com funcoes (P0040/P0001/P0065/P0032) e EQ-E0016 quando produtividade-hora estiver calibrada.",
+  "custo_direto_unitario_planilha": 7.534195,
+  "precos_unitarios_sbdi": {
+    "mo": 4.142625,
+    "equipamentos": 4.855134,
+    "diesel": 1.012505,
+    "material": 0.0,
+    "total": 10.010264
+  },
+  "producao_id_ref": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001",
+  "custo_direto_unitario_planilha_engine": 10.010264,
+  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=1125.8 + B_base=345.9×(1+1.777) + diesel_SICRO=234.8) / C=231.87 = 10.0103 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L."
+}

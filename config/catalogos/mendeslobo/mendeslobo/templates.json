@@ -1,0 +1,172 @@
+{
+  "$schema_item": "https://concilium.framework/schemas/v1/template_obra",
+  "$comment": "Templates-base por tipo de obra. Sugerem EAP de partida; usuário customiza livremente (DEC-03).",
+  "templates": [
+    {
+      "codigo": "TPL-TERRAPLENAGEM-RODOVIARIA",
+      "tipo_obra": "TERRAPLENAGEM",
+      "descricao": "Template para serviços típicos de terraplenagem em obra rodoviária",
+      "criterios_aplicacao": "Aplicável a obras com escavação, transporte e compactação de aterros.",
+      "itens_padrao": [
+        {
+          "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
+          "descricao_item": "Escavação, carga e transporte de material de 1ª categoria — DMT <= 2.000 m",
+          "unidade": "m³",
+          "obrigatoriedade": "essencial",
+          "criterio_medicao": "Volume medido em corte pelo método das seções médias (DNIT 027/2006-PRO)",
+          "criterio_medicao_norma": "DNIT 027/2006-PRO"
+        },
+        {
+          "cpu_id": "COMPACT-ATERRO-100PN",
+          "descricao_item": "Aterro compactado a 100% do Proctor Normal",
+          "unidade": "m³",
+          "obrigatoriedade": "essencial",
+          "criterio_medicao": "Volume medido em aterro compactado (DNIT 136/2018-ES)",
+          "criterio_medicao_norma": "DNIT 136/2018-ES"
+        }
+      ]
+    },
+    {
+      "codigo": "TPL-PAVIMENTACAO-ASFALTICA",
+      "tipo_obra": "PAVIMENTACAO",
+      "descricao": "Template para pavimentação asfáltica padrão (base BGTC + capa CBUQ)",
+      "itens_padrao": [
+        {
+          "cpu_id": "PAV-BASE-BGTC",
+          "descricao_item": "Base de Brita Graduada Tratada com Cimento (BGTC)",
+          "unidade": "m³",
+          "obrigatoriedade": "essencial",
+          "criterio_medicao": "Volume compactado na pista (DNIT 303/2009-ES)",
+          "criterio_medicao_norma": "DNIT 303/2009-ES"
+        },
+        {
+          "cpu_id": "PAV-CBUQ-FAIXA-C",
+          "descricao_item": "Capa de Concreto Betuminoso Usinado a Quente (CBUQ) — Faixa C",
+          "unidade": "t",
+          "obrigatoriedade": "essencial",
+          "criterio_medicao": "Peso medido em balança ou volume x densidade teórica (DNIT 032/2005-ES)",
+          "criterio_medicao_norma": "DNIT 032/2005-ES"
+        }
+      ]
+    },
+    {
+      "codigo": "TPL-SANEAMENTO-COLETOR",
+      "tipo_obra": "SANEAMENTO",
+      "descricao": "Template para coletor de esgoto urbano em manilha cerâmica",
+      "itens_padrao": [
+        {
+          "cpu_id": "DREN-MAN-DN300",
+          "descricao_item": "Coletor de esgoto em manilha cerâmica DN 300mm",
+          "unidade": "m",
+          "obrigatoriedade": "essencial",
+          "criterio_medicao": "Comprimento medido pelo eixo da tubulação assentada (ABNT NBR 9648)",
+          "criterio_medicao_norma": "ABNT NBR 9648"
+        },
+        {
+          "cpu_id": "POCO-VISITA-PADRAO",
+          "descricao_item": "Poço de visita em anéis de concreto pré-moldado",
+          "unidade": "un",
+          "obrigatoriedade": "essencial",
+          "criterio_medicao": "Unidade executada e aceita (ABNT NBR 9649)",
+          "criterio_medicao_norma": "ABNT NBR 9649"
+        }
+      ]
+    }
+  ],
+  "estruturas_indiretas": [
+    {
+      "codigo": "ADM_PEQUENA",
+      "descricao": "Estrutura ADM básica para obras até R$ 10M",
+      "mao_de_obra": [
+        {
+          "funcao_id": "ENCARREG-GERAL",
+          "quantidade": 1
+        },
+        {
+          "funcao_id": "AUX-ADM",
+          "quantidade": 1
+        }
+      ],
+      "verbas": [
+        {
+          "descricao": "Aluguel container/escritório",
+          "valor_mensal": 5000.0
+        }
+      ]
+    },
+    {
+      "codigo": "ADM_MEDIA",
+      "descricao": "Estrutura ADM para obras de médio porte (até R$ 50M)",
+      "mao_de_obra": [
+        {
+          "funcao_id": "ENG-CIVIL",
+          "quantidade": 1
+        },
+        {
+          "funcao_id": "ENCARREG-GERAL",
+          "quantidade": 1
+        },
+        {
+          "funcao_id": "ALMOXARIFE",
+          "quantidade": 1
+        },
+        {
+          "funcao_id": "AUX-ADM",
+          "quantidade": 3
+        }
+      ],
+      "equipamentos": [
+        {
+          "descricao": "Veículos e Mobilidade ADM",
+          "valor_mensal": 25000.0
+        }
+      ],
+      "verbas": [
+        {
+          "descricao": "Alojamento e alimentação",
+          "valor_mensal": 85000.0
+        }
+      ]
+    },
+    {
+      "codigo": "ADM_GRANDE",
+      "descricao": "Estrutura ADM robusta para obras de grande porte (> R$ 50M)",
+      "mao_de_obra": [
+        {
+          "funcao_id": "GERENTE",
+          "quantidade": 1
+        },
+        {
+          "funcao_id": "ENG-CIVIL",
+          "quantidade": 2
+        },
+        {
+          "funcao_id": "ENCARREG-GERAL",
+          "quantidade": 2
+        },
+        {
+          "funcao_id": "ALMOXARIFE",
+          "quantidade": 2
+        },
+        {
+          "funcao_id": "AUX-ADM",
+          "quantidade": 7
+        }
+      ],
+      "equipamentos": [
+        {
+          "descricao": "Veic/Escritório + Canteiro",
+          "valor_mensal": 138514.67
+        }
+      ],
+      "verbas": [
+        {
+          "descricao": "Estrutura completa (Aloj/Alim/Seg/TI)",
+          "valor_mensal": 1787562.5
+        }
+      ]
+    }
+  ],
+  "data_referencia_preco": "2025-05-01",
+  "fonte_preco": "referencia_base_original"
+}

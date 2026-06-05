@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-CORPO-BSTC-120-PA3",
+  "descricao": "CORPO DE BSTC D = 1,20 M PA3 - AREIA, BRITA E PEDRA DE MÃO COMERCIAIS",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-CORPO-BSTC-120-PA3",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 3542.829247,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "equipamentos": 462.933333,
+    "diesel": 156.58496,
+    "material": 0.0,
+    "total": 619.518293
+  },
+  "producao_id_ref": "CPU-DREN-CORPO-BSTC-120-PA3-PROD-001"
+}

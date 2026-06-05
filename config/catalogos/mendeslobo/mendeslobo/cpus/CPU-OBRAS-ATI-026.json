@@ -1,0 +1,15 @@
+{
+  "codigo": "CPU-OBRAS-ATI-026",
+  "descricao": "Corpo BSTC D=1,00m PA2 — Padrão VALEC",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "OBRAS_ARTE",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-BSTC-TUBO-DN1000-PA2",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "producao_id_ref": "CPU-OBRAS-ATI-026-PROD-001"
+}

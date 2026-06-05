@@ -1,0 +1,30 @@
+{
+  "id": "CPU-TERRA-ATI-024-PROD-001",
+  "codigo": "CPU-TERRA-ATI-024-PROD-001",
+  "descricao": "Produção CPU-TERRA-ATI-024",
+  "origem": "PROPRIA",
+  "valor_horario": 149.51,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-OPER-MOTO",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-OPER-ROLO-COMP",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0028",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-ESCAV-VALA-1CAT",
+  "descricao": "ESCAVAÇÃO MECÂNICA DE VALA EM MATERIAL DE 1ª CATEGORIA",
+  "unidade": "m³",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-ESCAV-VALA-1CAT",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 14.234015,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "equipamentos": 4.235318,
+    "diesel": 2.191564,
+    "material": 0.0,
+    "total": 6.426882
+  },
+  "producao_id_ref": "CPU-DREN-ESCAV-VALA-1CAT-PROD-001"
+}

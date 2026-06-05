@@ -1,0 +1,26 @@
+{
+  "codigo": "EQ-E0031",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Spread",
+  "unidade": "h",
+  "preco_unitario": 36.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0031",
+    "valor_locacao_mensal": 7200.0,
+    "horas_mes": 200,
+    "consumo_litros_hora": 2.0,
+    "decomposicao_equip": {
+      "custo_capital_h": 8.0,
+      "custo_mao_obra_h": 10.0,
+      "custo_diesel_h": 12.4,
+      "custo_material_h": 5.6
+    }
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

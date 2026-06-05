@@ -1,0 +1,15 @@
+{
+  "codigo": "MA-AGIS-CPU-TERRA-COMPAC-FINAL-ROCHA",
+  "tipo": "MATERIAL",
+  "descricao": "[AGIS-REF] COMPACTAÇÃO DE CAMADA FINAL DE ATERRO DE ROCHA",
+  "unidade": "m3",
+  "preco_unitario": 14.437181,
+  "fonte_preco": "PLANILHA_AGIS_2026_03",
+  "nota_correcao": "NEP-029 D5a: alinhado com precos_unitarios_sbdi.total da CPU-TERRA-COMPAC-FINAL-ROCHA (era 17.262724, gap +19.6%)",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2026-03-01",
+  "categoria": "TERRAPLENAGEM"
+}
