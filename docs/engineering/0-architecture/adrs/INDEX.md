@@ -133,6 +133,83 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [067](ADR-067-master-catalog-write-api.md) | API de Escrita no Catálogo Mestre | ✅ Implementado | ADR-040, ADR-066, ADR-064, ADR-041 |
 | [068](ADR-068-calendario-operacional-feriados-recesso.md) | Calendario Operacional de Producao (Feriados e Recesso) | 🔴 Proposto | ADR-007, ADR-038, ADR-046, ADR-058, ADR-060, ADR-061 |
 | [069](ADR-069-cubo-analitico-faces-granularidades-ux.md) | Cubo Analitico Navegavel por Faces, Medidas e Granularidades para UX Analitica | ✅ Implementado | ADR-058, ADR-059, ADR-060, ADR-061, ADR-068, NEP-024 |
+| [070](ADR-070-exploracao-deterministica-espaco-configuracao-go.md) | Exploracao Deterministica do Espaco de Configuracao Operacional para Viabilidade de GO | 🔴 Proposto | ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061 |
+| [071](ADR-071-resource-contract-model.md) | Resource Contract Model — Custo de Pool de Recursos por Contrato | ✅ Implementado | ADR-046, ADR-016, ADR-030, ADR-072 |
+| [072](ADR-072-productive-duration-window-constraint.md) | Direção A: Duração Produtiva e Restrição de Janela de Corredor | ✅ Implementado | ADR-004, ADR-046, ADR-071 |
+| [073](ADR-073-instance-matching-perpetuacao.md) | Instance Matching e Perpetuação de Recursos Π | ✅ Implementado | ADR-071, ADR-072, ADR-046 |
+| [074](ADR-074-ramp-integration-auto-schedule.md) | Integração de Perfil de Rampa em AUTO_SCHEDULE | ✅ Implementado | ADR-072, ADR-073, ADR-046, ADR-054 |
+
+### ADRs de Otimização Avançada e Diagnóstico Financeiro (075–078)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [075](adr-075-optimization-problem-conciliation.md) | Pipeline-Motor: Scheduling × Matching — Dois Problemas de Otimização (CP-SAT + min-cost flow) | ✅ Implementado | ADR-046, ADR-054, ADR-059, ADR-073, ADR-074 |
+| [076](ADR-076-calibracao-pu-diagnostico-frentes.md) | Calibração de PU e Diagnóstico Quantitativo de Frentes em `ponto_equilibrio` | ✅ Implementado | ADR-060, ADR-071, ADR-072, ADR-075 |
+| [077](ADR-077-recurso-instancial-utilizacao.md) | Recurso Instancial — Mapa de Utilização de Equipamento e Mão-de-Obra | ✅ Implementado | ADR-071, ADR-072, ADR-073, ADR-046 |
+| [078](ADR-078-pre-processamento-estrutural-compartilhamento.md) | Pré-Processamento Estrutural de Compartilhamento — gap_max, η, Ω, ΔC_pot, λ_0 | ✅ Implementado | ADR-071, ADR-072, ADR-073, ADR-075, ADR-077 |
+| [079](ADR-079-ativacao-economica-compartilhamento.md) | Ativação Econômica — G_r^viável, Matching Econômico, λ₀, custo_standby_idle, Desmobilização Antecipada | ✅ Implementado | ADR-073, ADR-075, ADR-077, ADR-078 |
+
+### ADRs de Custo de Permanência e Cronograma de Obras (080–081)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [080](ADR-080-custo-diferenciado-permanencia-mob-tardia-taxa-ociosa.md) | Custo Diferenciado de Permanência — Mobilização Tardia por Instância, Taxa Ociosa por Componente e Desmobilização Antecipada Efetiva | ⬜ Supersedido por ADR-085 | ADR-071, ADR-073, ADR-077, ADR-079 |
+| [081](ADR-081-precedencia-eap-derivacao-automatica-threshold-conclusao.md) | Precedência EAP com Derivação Automática e Threshold de Conclusão Parcial | ✅ Implementado | ADR-004, ADR-046, ADR-072, ADR-074 |
+
+### ADRs de Diagnóstico Operacional (082–)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [082](ADR-082-bdi-mapeamento-ofensores-operacionais.md) | Painel de Ajuste de Ponto de Equilíbrio: Ofensores de Produtividade, Levers de Ação e Cobertura BDI | ✅ Implementado | ADR-040, ADR-053, ADR-060, ADR-074, ADR-076 |
+
+### ADRs de Partição Causal de Custo de Pool (083–085)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [083](ADR-083-custo-particionado-pool-muitos-para-muitos.md) | Custo Particionado de Pool Muitos-para-Muitos — Decomposição Causal via Diagrama de Euler | ✅ Implementado | ADR-071, ADR-073, ADR-077, ADR-079 |
+| [084](ADR-084-custo-particionado-pool-com-predecessao-parcial-em-dag.md) | Custo Particionado de Pool com Predecessão Parcial em DAG | ✅ Implementado | ADR-081, ADR-083 |
+| [085](ADR-085-custo-instancial-composicional-temporal.md) | Custo Instancial Composicional Temporal — Linha do Tempo por Instância, Taxa Ociosa por Componente e Base Bottom-Up de Precificação | ✅ Implementado | ADR-071, ADR-077, ADR-079, ADR-080, ADR-083, ADR-084, ADR-023, ADR-039, ADR-076 |
+| [086](ADR-086-cubo-pool-instancial-exploracao-honesta.md) | Cubo de Pool Instancial — Exploração Honesta e Descritiva da Decomposição Composicional-Temporal de Recursos | ✅ Implementado | ADR-085, ADR-077, ADR-073, ADR-083, ADR-084, ADR-069, ADR-021, ADR-037, ADR-018 |
+
+### ADRs de Modelo Dimensional e Decomposição de Insumo (087–090)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [087](ADR-087-modelo-dimensional-hierarquico.md) | Modelo Dimensional Hierárquico — {natureza}.{atividade}.{categoria_insumo}.{propriedade} | ✅ Implementado | ADR-069, ADR-086, ADR-085, ADR-023, ADR-030 |
+| [088](ADR-088-decomposicao-subcomposicional-equipamento.md) | Decomposição Sub-composicional de Equipamento — Aluguel, Combustível e Manutenção como Sub-propriedades | ✅ Implementado | ADR-087, ADR-085, ADR-086, ADR-030, ADR-077, ADR-079 |
+| [089](ADR-089-bdi-por-sub-propriedade.md) | BDI por Sub-propriedade (Amend ADR-023) — amend parcial: ADR-090 reclassifica diesel como material.combustivel | ✅ Implementado | ADR-087, ADR-088, ADR-023, ADR-055 |
+| [090](ADR-090-bdi-sistematico-diesel-material-indiretos.md) | BDI Sistemático — Diesel como Material + Decomposição de Indiretos por Categoria | ✅ Implementado | ADR-087, ADR-088, ADR-089, ADR-023, ADR-009 |
+
+### ADRs de Produção e Deploy (091–096)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [091](ADR-091-pool-minimo-variavel-otimizacao.md) | Pool Mínimo como Variável de Otimização — Eliminação de `rcpsp_spec.resource_pool` como Entrada | ✅ Implementado | ADR-046, ADR-071, ADR-088, ADR-092 |
+| [092](ADR-092-formulario-qqp-eap.md) | Formulário QQP/EAP — Interface de Entrada Estruturada para Agentes e Humanos Semi-Instruídos | ✅ Implementado (Fase 5 pendente validação real) | ADR-091, ADR-093, ADR-037 |
+| [093](ADR-093-mcp-artefatos-zip-bundle.md) | MCP como Serviço de Artefatos — Download de Relatórios, Gráficos, Planilhas e Zip Bundle | ✅ Implementado | ADR-037, ADR-018, ADR-092, ADR-096 |
+| [094](ADR-094-jwt-auth-layer.md) | Camada de Autenticação JWT — App Cloud-Ready antes do Deploy | ✅ Implementado | ADR-096 |
+| [095](ADR-095-observabilidade-opentelemetry.md) | Observabilidade Agnóstica de Sink — OpenTelemetry para API e MCP | ✅ Implementado | ADR-096, ADR-094 |
+| [096](ADR-096-deploy-azure-acr-aci-dns.md) | Deploy Azure — ACR → ACI → Application Gateway → DNS → Domínio Mendes Lobo | ✅ Implementado | ADR-094, ADR-095 |
+
+### ADRs de Domínio Fiscal e Tributário (097)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [097](ADR-097-tributacao-social.md) | Modelagem de Tributação Social sobre Salário Base — Encargos SINTRACON, INSS Progressivo e IRRF 2026 | 🔄 Parcialmente Implementado | ADR-056, ADR-009, ADR-023 |
+
+### ADRs de Segurança e Resiliência (098–099)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [098](ADR-098-rate-limiting-slowapi.md) | Rate Limiting com SlowAPI — Proteção contra DDoS e Uso Abusivo da API e MCP | ✅ Implementado | ADR-094, ADR-096 |
+| [099](ADR-099-rbac-roles-permissoes.md) | RBAC — Roles e Permissões para Redução de Superfície de Ataque | ✅ Implementado | ADR-094, ADR-098 |
+
+### ADRs de Performance e Escalabilidade (100–)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [100](ADR-100-catalog-query-engine-duckdb.md) | Catalog Query Engine: DuckDB para Performance e Escalabilidade | ✅ Implementado | ADR-012, ADR-017, ADR-066 |
+| [101](ADR-101-mcp-apps-interface-interativa.md) | MCP Apps — Interface Interativa de Relatórios e Formulários no Chat | 🔄 Parcialmente Implementado (Fases 1-2 ✅) | ADR-092, ADR-093, ADR-096, ADR-099 |
 
 **Legenda:** ✅ Implementado · 🔄 Parcialmente Implementado · 🔴 Proposto/Aceito · ⬜ Supersedido
 
@@ -160,11 +237,11 @@ graph TD
     subgraph MATUR["ADRs de Maturação (020–033)"]
         A023[ADR-023\nBDI Categoria]
         A024[ADR-024\nReferências]
-        A028[ADR-028\nBalanço × Margem]
+        A028["ADR-028\nBalanco x Margem"]
         A029[ADR-029\nDDD Package]
         A030[ADR-030\nCPU Team + Fuel]
         A031[ADR-031\nEscopos e Planos]
-        A032[ADR-032\nCPU×Insumo×Jurisdição]
+        A032["ADR-032\nCPU x Insumo x Jurisdicao"]
         A033[ADR-033\nBlob Storage]
     end
 
@@ -188,7 +265,7 @@ graph TD
         A050[ADR-050\nCLI Unificada]
         A051[ADR-051\nGovernança Benchmark]
         A052[ADR-052\nHousekeeping ADRs]
-        A053[ADR-053\nCPU×Produção Separação]
+        A053["ADR-053\nCPU x Producao"]
         A054[ADR-054\nWMP Policy System]
         A055[ADR-055\nCBS/IBS BDI Reform]
     end
@@ -257,8 +334,15 @@ graph TD
     A028 --> A055
     A038 --> A055
 
+    %% ── Nós referenciados em arestas — definição explícita ─────────────
+    A025[ADR-025\nMCP Policy]
+    A056[ADR-056\nDebt Remediation]
+    A057[ADR-057\nMemorial BDI]
+    A060["ADR-060\nPonto Equilibrio"]
+    A062[ADR-062\nVersionamento]
+
     A058[ADR-058\nABC Granular]
-    A059[ADR-059\nRecurso Permanência]
+    A059[ADR-059\nRecurso Permanencia]
     A010[ADR-010\nActivity Cost]
     A027[ADR-027\nCPU Sensitivity]
     A039 --> A058
@@ -302,20 +386,105 @@ graph TD
 
     class A064,A065,A066 green
     class A058,A059 green
+
+    A071[ADR-071\nResource Contract\nModel]
+    A046 --> A071
+    A016 --> A071
+    A030 --> A071
+
+    A072[ADR-072\nDireção A\nDur. Produtiva]
+    A004 --> A072
+    A046 --> A072
+    A071 --> A072
+
+    A073["ADR-073\nInstance Matching\nPerpetuacao Pi"]
+    A071 --> A073
+    A072 --> A073
+    A046 --> A073
+
+    A074[ADR-074\nRamp Integration\nAUTO_SCHEDULE]
+    A072 --> A074
+    A073 --> A074
+    A046 --> A074
+
+    class A071,A072,A073,A074 green
+
+    A075["ADR-075\nPipeline-Motor\nScheduling x Matching"]
+    A046 --> A075
+    A054 --> A075
+    A059 --> A075
+    A073 --> A075
+    A074 --> A075
+
+    A076["ADR-076\nCalibração PU\nFrentes PE"]
+    A060 --> A076
+    A071 --> A076
+    A072 --> A076
+    A075 --> A076
+
+    A077["ADR-077\nRecurso Instancial\nMapa Utilização"]
+    A071 --> A077
+    A072 --> A077
+    A073 --> A077
+    A046 --> A077
+
+    A078["ADR-078\nPré-Processamento\nCompartilhamento"]
+    A071 --> A078
+    A072 --> A078
+    A073 --> A078
+    A075 --> A078
+    A077 --> A078
+
+    A079["ADR-079\nAtivação Econômica\nCompartilhamento"]
+    A073 --> A079
+    A075 --> A079
+    A077 --> A079
+    A078 --> A079
+
+    class A075,A076,A077,A078,A079 green
+
+    A080["ADR-080\nCusto Diferenciado\nPermanência\n(Mob Tardia, Taxa Ociosa)"]
+    A071 --> A080
+    A073 --> A080
+    A077 --> A080
+    A079 --> A080
+
+    A081["ADR-081\nPrecedência EAP\nDerivação Auto\n+ Threshold θ"]
+    A004 --> A081
+    A046 --> A081
+    A072 --> A081
+    A074 --> A081
+
+    A082["ADR-082\nPainel Equilíbrio\nOfensores + Levers"]
+    A060 --> A082
+    A076 --> A082
+    A074 --> A082
+
+    class A080 yellow
+    class A081,A082 green
+    class A025,A056,A057,A060,A062 green
+
+    %% ── ADRs de Produção e Deploy ──────────────────────────────────────
+    A091["ADR-091\nPool Minimo\nOtimizacao"]
+    A046 --> A091
+    A071 --> A091
+
+    A092["ADR-092\nFormulário QQP/EAP\n(Fase 2 ok)"]
+    A091 --> A092
+
+    A094["ADR-094\nJWT Auth\n✅ Completo"]
+    A095["ADR-095\nOpenTelemetry\n✅"]
+    A096["ADR-096\nDeploy Azure\n✅"]
+    A098["ADR-098\nRate Limiting\n✅"]
+    A094 --> A096
+    A095 --> A096
+    A094 --> A098
+    A096 --> A098
+
+    class A091 green
+    class A092 yellow
+    class A094,A095,A096,A098 green
 ```
-
----
-
-## Débitos de Sincronia (Arquitetura x Execução)
-
-| ID | Débito / Assincronia | Impacto | Ação Corretiva | Estado |
-|---|---|---|---|---|
-| S1 | ADR-049 ausente do índice até este ajuste | Falha de rastreabilidade em governança | Indexado com status e dependências | ✅ Fechado |
-| S2 | Referência cruzada incorreta no ADR-049 (Planilha-first apontando para ADR-050) | Ambiguidade de decisão técnica | Corrigido para ADR-044 | ✅ Fechado |
-| S3 | Redundância documental de ADR-049 em arquivos satélite | Risco de divergência de fonte de verdade | Mantido apenas ADR raiz | ✅ Fechado |
-| S4 | Numeração duplicada ADR-043a/043b | Ruído de governança e automação | Renumerado para ADR-043 e ADR-051 | ✅ Fechado |
-| S5 | Inconsistência histórica de nomenclatura (adr_ vs adr-) | Risco para tooling de descoberta e lint documental | Arquivos normalizados para `adr-XXX-kebab` | ✅ Fechado |
-| S6 | Ausência de contrato único de CLI para projeto/benchmark | Saídas heterogêneas e custo operacional maior | Implementado via namespace `validate` (project/benchmark/projeto) | ✅ Fechado |
 
 ---
 
@@ -327,6 +496,7 @@ graph TD
 | `adr-014-mcp-facade-interaction.md` | Padrão de interação detalhado, absorvido pela nova fachada | ADR-037 |
 | `adr-017-catalog-lifecycle-management.md` | Gestão do lifecycle do catálogo, supersedida pela hierarquia Master/Project | ADR-040 |
 | ~~`ADR-037-mcp-business-tools.md`~~ | Conceito precursor absorvido pelo ADR-037 | ADR-037 |
+| `ADR-080-custo-diferenciado-permanencia-mob-tardia-taxa-ociosa.md` | Mob tardia / idle escalar / desmob efetiva — generalizado para taxa ociosa por componente e base bottom-up de BDI | ADR-085 |
 
 ---
 

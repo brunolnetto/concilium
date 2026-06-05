@@ -88,12 +88,12 @@ class SharePointCredential:
 **Configuração via variáveis de ambiente** (sem segredo em disco):
 
 ```bash
-CONCILIUM_SP_TENANT_ID=<tenant-uuid>
-CONCILIUM_SP_CLIENT_ID=<app-registration-uuid>
-CONCILIUM_SP_CLIENT_SECRET=<secret>          # dev/CI
-CONCILIUM_SP_CERT_PATH=/path/to/cert.pem     # produção (preferido)
-CONCILIUM_SP_DRIVE_ID=<drive-id>
-CONCILIUM_SP_ROOT_PATH=Concilium/producao
+CONCILIUM__SP_TENANT_ID=<tenant-uuid>
+CONCILIUM__SP_CLIENT_ID=<app-registration-uuid>
+CONCILIUM__SP_CLIENT_SECRET=<secret>          # dev/CI
+CONCILIUM__SP_CERT_PATH=/path/to/cert.pem     # produção (preferido)
+CONCILIUM__SP_DRIVE_ID=<drive-id>
+CONCILIUM__SP_ROOT_PATH=Concilium/producao
 ```
 
 **Permissões mínimas necessárias (Microsoft Graph):**
@@ -233,7 +233,7 @@ A estrutura é idêntica ao filesystem local — nenhum consumidor precisa saber
 | **F4 — CatalogLoader backend** | `CatalogBackend.SHAREPOINT` integrado ao `CatalogLoader` | ✅ Concluído |
 | **F5 — ProjectStore backend** | `StorageProjectHandle` + `StorageProjectRepository` via `BlobStoragePort` | ✅ Concluído |
 | **F6 — Aprovação** | `aprovar_versao()` na `BlobStoragePort` + SharePoint checkin major version | ✅ Concluído |
-| **F7 — CLI e MCP config** | `concilium health` verifica conectividade SharePoint quando `CONCILIUM_SP_DRIVE_ID` presente | ✅ Concluído |
+| **F7 — CLI e MCP config** | `concilium health` verifica conectividade SharePoint quando `CONCILIUM__SP_DRIVE_ID` presente | ✅ Concluído |
 
 ## Arquivos criados/modificados
 

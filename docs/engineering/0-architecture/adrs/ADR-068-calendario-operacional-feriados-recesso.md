@@ -1,6 +1,6 @@
 # ADR-068: Calendario Operacional de Producao (Feriados e Recesso)
 
-**Status:** Proposta
+**Status:** Implementada
 **Data:** 2026-05-22
 **Autor:** Engenheiro Senior
 **Relacionado:** ADR-007, ADR-038, ADR-046, ADR-058, ADR-060, ADR-061
@@ -150,29 +150,29 @@ No canonico, incluir:
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | Modelo `CalendarioOperacional` + loader de configuracao | Proposto |
-| F2 | Calculo `fator_calendario_semanal` e artefato no canonico | Proposto |
-| F3 | Integracao no cronograma (`fator_total = clima * calendario`) | Proposto |
-| F4 | Novo fator no Diagnostico PE (`F_CALENDARIO`) | Proposto |
-| F5 | Backtracking com recomendacao temporal orientada por calendario | Proposto |
-| F6 | Endpoints/API/UI de simulacao e visualizacao | Proposto |
-| F7 | Atualizacao Excel + documentacao + testes regressivos | Proposto |
+| F1 | Modelo `CalendarioOperacional` + loader de configuracao | Concluido |
+| F2 | Calculo `fator_calendario_semanal` e artefato no canonico | Concluido |
+| F3 | Integracao no cronograma (`fator_total = clima * calendario`) | Concluido |
+| F4 | Novo fator no Diagnostico PE (`F_CALENDARIO`) | Concluido |
+| F5 | Backtracking com recomendacao temporal orientada por calendario | Concluido |
+| F6 | Endpoints/API/UI de simulacao e visualizacao | Concluido |
+| F7 | Atualizacao Excel + documentacao + testes regressivos | Concluido |
 
 ---
 
 ## 8. Definition of Done
 
 ### Fase 1-3
-- [ ] Calendario operacional versionado e carregado com precedencia correta
-- [ ] Cronograma refletindo feriados/recessos em `dias_uteis_efetivos`
-- [ ] Testes de paridade com calendario neutro (`fator_calendario = 1.0`)
+- [x] Calendario operacional versionado e carregado com precedencia correta
+- [x] Cronograma refletindo feriados/recessos em `dias_uteis_efetivos`
+- [x] Testes de paridade com calendario neutro (`fator_calendario = 1.0`)
 
 ### Fase 4-5
-- [ ] Diagnostico PE com `F_CALENDARIO` e sem dupla contagem com clima
-- [ ] Backtracking sugerindo ajuste temporal com impacto estimado em custo/prazo
-- [ ] Validacao roundtrip mantendo tolerancias de ADR-061
+- [x] Diagnostico PE com `F_CALENDARIO` e sem dupla contagem com clima
+- [x] Backtracking sugerindo ajuste temporal com impacto estimado em custo/prazo
+- [x] Validacao roundtrip mantendo tolerancias de ADR-061
 
 ### Fase 6-7
-- [ ] API para consultar/simular calendario efetivo por semana
-- [ ] UI com visao semanal de clima x calendario x fator total
-- [ ] Excel com secao de calendario operacional e contribuicao no PE
+- [x] API para consultar/simular calendario efetivo por semana
+- [x] UI com visao semanal de clima x calendario x fator total
+- [x] Excel com secao de calendario operacional e contribuicao no PE

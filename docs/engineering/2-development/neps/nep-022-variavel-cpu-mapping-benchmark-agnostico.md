@@ -12,7 +12,7 @@
 
 ## Contexto
 
-A variável `CONCILIUM_CPU_MAPPING_RULES_FILE` induzia interpretação de uso global, apesar do consumo estar concentrado em utilitário de benchmark (`cpu_mapper`).
+A variável `CONCILIUM__CPU_MAPPING_RULES_FILE` induzia interpretação de uso global, apesar do consumo estar concentrado em utilitário de benchmark (`cpu_mapper`).
 
 ## Causa Raiz
 
@@ -20,7 +20,7 @@ Nome da env var não explicitava o escopo de benchmark.
 
 ## Implementação
 
-- Nova variável principal: `CONCILIUM_BENCHMARK_CPU_MAPPING_RULES_FILE`.
+- Nova variável principal: `CONCILIUM__BENCHMARK_CPU_MAPPING_RULES_FILE`.
 - Compatibilidade retroativa preservada com a variável legada.
 - Atualização de `.env.example` com semântica explícita de escopo benchmark.
 

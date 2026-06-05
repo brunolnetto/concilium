@@ -1,6 +1,6 @@
 # NEP-024: Cubo analítico multidimensional com granularidade temporal múltipla
 
-**Status:** Backlog  
+**Status:** Conclu?do  
 **Prioridade:** 🟠 Alto  
 **Área:** Domínio  
 **Tipo:** Feature + Governança  

@@ -28,9 +28,9 @@ descreve como replicar o processo para os 11 benchmarks restantes e validar os r
 ```powershell
 # Python do venv (executar no diretório concilium/)
 $python = "C:\Users\bruno\OneDrive - Mendes Lobo\MendesLobo Construtora\Agente Engenheiro Sênior\.venv\Scripts\python.exe"
-$env:CONCILIUM_ROOT = "C:\Users\bruno\OneDrive - Mendes Lobo\MendesLobo Construtora\Agente Engenheiro Sênior\concilium"
-$env:CONCILIUM_CONFIG_ROOT = "$env:CONCILIUM_ROOT\config"
-$env:CONCILIUM_PROJECTS_ROOT = "$env:CONCILIUM_ROOT\projetos"
+$env:CONCILIUM__ROOT = "C:\Users\bruno\OneDrive - Mendes Lobo\MendesLobo Construtora\Agente Engenheiro Sênior\concilium"
+$env:CONCILIUM__CONFIG_ROOT = "$env:CONCILIUM__ROOT\config"
+$env:CONCILIUM__PROJECTS_ROOT = "$env:CONCILIUM__ROOT\projetos"
 ```
 
 ### 2.2 Estado do Catálogo (já aplicado em 2026-05-11)
@@ -80,10 +80,10 @@ Criar `C:\Temp\run_bench_SLUG.py` substituindo `SLUG` pelo nome (ex: LUNDIN):
 
 ```python
 import sys, os, json
-ROOT = os.environ['CONCILIUM_ROOT']
+ROOT = os.environ['CONCILIUM__ROOT']
 sys.path.insert(0, os.path.join(ROOT, 'src'))
-os.environ.setdefault('CONCILIUM_CONFIG_ROOT', os.path.join(ROOT, 'config'))
-os.environ.setdefault('CONCILIUM_PROJECTS_ROOT', os.path.join(ROOT, 'projetos'))
+os.environ.setdefault('CONCILIUM__CONFIG_ROOT', os.path.join(ROOT, 'config'))
+os.environ.setdefault('CONCILIUM__PROJECTS_ROOT', os.path.join(ROOT, 'projetos'))
 from concilium.application.benchmarks import BenchmarkFacade
 facade = BenchmarkFacade.from_env()
 report = facade.run_single('LUNDIN', reset=True)  # <-- mudar slug aqui

@@ -45,7 +45,7 @@ Criar `src/concilium/application/benchmarks/facade.py` que encapsula toda a lóg
 - Sumarização de resultados (`build_summary`)
 - **Conversão de semanas numéricas → ISO-week** antes de injetar no `BenchmarkInputDeriver`
 
-O facade resolve a Unicode-path issue ao usar apenas `os.environ['CONCILIUM_ROOT']` e nunca `Path(__file__)` para descobrir raízes.
+O facade resolve a Unicode-path issue ao usar apenas `os.environ['CONCILIUM__ROOT']` e nunca `Path(__file__)` para descobrir raízes.
 
 ### 2. Adicionar `BenchmarkWeekMapper` na camada de aplicação
 

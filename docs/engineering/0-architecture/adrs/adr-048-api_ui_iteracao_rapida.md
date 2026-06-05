@@ -48,7 +48,7 @@ Projeto criado por benchmark deve ser classificado como `hot_project`, preservan
 
 ### D7. Fixar raiz de configuracao/catalogo no ambiente de execucao
 
-API e UI devem declarar `CONCILIUM_CONFIG_ROOT` e montar explicitamente `./config` no ambiente de desenvolvimento para evitar ambiguidade de fonte de catalogo.
+API e UI devem declarar `CONCILIUM__CONFIG_ROOT` e montar explicitamente `./config` no ambiente de desenvolvimento para evitar ambiguidade de fonte de catalogo.
 
 ### Reuso de entidades e DDD
 
@@ -345,8 +345,8 @@ Fazer separacao de deploy apenas quando houver sinais objetivos:
 
 Os servicos de API e UI devem compartilhar os mesmos volumes de projeto e benchmark, e declarar explicitamente:
 
-- `CONCILIUM_ROOT=/workspace/concilium`
-- `CONCILIUM_CONFIG_ROOT=/workspace/concilium/config`
+- `CONCILIUM__ROOT=/workspace/concilium`
+- `CONCILIUM__CONFIG_ROOT=/workspace/concilium/config`
 - bind mount `./config:/workspace/concilium/config`
 
 Essa definicao evita divergencia entre execucao local e container ao carregar catalogos, perfis e referencias.
@@ -529,7 +529,7 @@ A UI precisa oferecer leitura e escrita controlada em um ciclo curto de iteracao
 
 - [x] Navegacao entre versoes e artefatos.
 - [x] Preservacao de lineage de versao base e derivada nos reruns.
-- [x] Configurar ambiente de dev com `CONCILIUM_CONFIG_ROOT` e mount explicito de `./config`.
+- [x] Configurar ambiente de dev com `CONCILIUM__CONFIG_ROOT` e mount explicito de `./config`.
 - [x] Historico de execucoes e bifurcacoes com visualizacao dedicada (timeline/arvore).
 - [x] Consolidar audit trail completo por acao de UI (usuario, timestamp, payload e resultado).
 

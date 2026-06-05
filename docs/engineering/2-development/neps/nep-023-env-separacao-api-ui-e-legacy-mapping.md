@@ -12,23 +12,23 @@
 
 ## Contexto
 
-O `.env.example` já refletia a migração para `CONCILIUM_BENCHMARK_CPU_MAPPING_RULES_FILE`,
+O `.env.example` já refletia a migração para `CONCILIUM__BENCHMARK_CPU_MAPPING_RULES_FILE`,
 mas ainda precisava:
 
-1. reforçar que `CONCILIUM_CPU_MAPPING_RULES_FILE` é legado apenas para transição,
+1. reforçar que `CONCILIUM__CPU_MAPPING_RULES_FILE` é legado apenas para transição,
 2. preparar variáveis de rede para cenário de API e UI desacopladas.
 
 ## Decisão
 
-- Manter `CONCILIUM_BENCHMARK_CPU_MAPPING_RULES_FILE` como variável principal para mapeamento de benchmark.
-- Preservar `CONCILIUM_CPU_MAPPING_RULES_FILE` somente como compatibilidade temporária.
+- Manter `CONCILIUM__BENCHMARK_CPU_MAPPING_RULES_FILE` como variável principal para mapeamento de benchmark.
+- Preservar `CONCILIUM__CPU_MAPPING_RULES_FILE` somente como compatibilidade temporária.
 - Introduzir bloco de variáveis API/UI no `.env.example` para deployments com serviços separados:
-  - `CONCILIUM_API_HOST`
-  - `CONCILIUM_API_PORT`
-  - `CONCILIUM_API_BASE_URL`
-  - `CONCILIUM_UI_HOST`
-  - `CONCILIUM_UI_PORT`
-  - `CONCILIUM_UI_API_BASE_URL`
+  - `CONCILIUM__API_HOST`
+  - `CONCILIUM__API_PORT`
+  - `CONCILIUM__API_BASE_URL`
+  - `CONCILIUM__UI_HOST`
+  - `CONCILIUM__UI_PORT`
+  - `CONCILIUM__UI_API_BASE_URL`
 
 ## Critério de Aceite
 
