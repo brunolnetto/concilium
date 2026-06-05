@@ -14,10 +14,10 @@
   "custo_direto_unitario_planilha": 49043.124912,
   "precos_unitarios_sbdi": {
     "mo": 0.0,
-    "diesel": 0.0,
-    "material": 24454.01328,
-    "equipamentos": 24589.111632,
-    "total": 49043.124912
+    "equipamentos": 5168.0,
+    "diesel": 2374.68,
+    "material": 0.0,
+    "total": 7542.68
   },
   "producao_id_ref": "CPU-DREN-CORPO-BTCC-100-PROD-001"
 }

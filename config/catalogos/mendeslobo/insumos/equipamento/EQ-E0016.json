@@ -21,5 +21,6 @@
     "capacidade_cobertura": 1
   },
   "data_referencia_preco": "2025-05-01",
-  "categoria": "DIVERSOS"
+  "categoria": "DIVERSOS",
+  "consumo_litros_hora": 7.0
 }

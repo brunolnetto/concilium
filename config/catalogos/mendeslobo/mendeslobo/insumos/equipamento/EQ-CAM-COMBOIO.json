@@ -1,0 +1,21 @@
+{
+  "codigo": "EQ-CAM-COMBOIO",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão comboio",
+  "unidade": "h",
+  "preco_unitario": 125.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0008",
+    "valor_locacao_mensal": 25000,
+    "horas_mes": 200,
+    "consumo_litros_hora": 2.5
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_compartilhavel",
+    "capacidade_cobertura": 1,
+    "fracao_uso": 0.3
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

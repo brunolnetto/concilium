@@ -1,0 +1,25 @@
+{
+  "codigo": "MA-ACO-CA50-12MM",
+  "tipo": "MATERIAL",
+  "descricao": "Aço CA-50 (barra 12mm)",
+  "unidade": "kg",
+  "preco_unitario": 6.8,
+  "fonte_preco": "cotacao_mercado",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS",
+  "regionalizacao": [
+    {
+      "jurisdicao_id": "BR-CE",
+      "preco_unitario": 6.2696,
+      "fonte_preco": "SICRO_DNIT",
+      "data_referencia": "2026-01-01",
+      "sicro_codigo": "M0004",
+      "sicro_descricao": "Aço CA 50",
+      "url_fonte": "https://www.gov.br/dnit/pt-br/assuntos/planejamento-e-pesquisa/custos-referenciais/sistemas-de-custos/sicro/relatorios/relatorios-sicro/nordeste/ceara/2026/janeiro/ce-01-2026.7z"
+    }
+  ]
+}

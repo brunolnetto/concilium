@@ -4,20 +4,16 @@
   "unidade": "m3",
   "origem": "PROPRIA",
   "categoria": "TERRAPLENAGEM",
-  "composicao_itens": [
-    {
-      "insumo_id": "MA-AGIS-CPU-TERRA-COMPAC-FINAL-ROCHA",
-      "coeficiente": 1.0,
-      "categoria_custo": "MATERIAL"
-    }
-  ],
+  "composicao_itens": [],
   "custo_direto_unitario_planilha": 17.262724,
   "precos_unitarios_sbdi": {
-    "mo": 8.775281,
-    "diesel": 5.6619,
+    "mo": 6.49818,
+    "equipamentos": 6.435,
+    "diesel": 4.37157,
     "material": 0.0,
-    "equipamentos": 0.0,
-    "total": 14.437181
+    "total": 17.30475
   },
-  "producao_id_ref": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001"
+  "producao_id_ref": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
+  "custo_direto_unitario_planilha_engine": 17.30475,
+  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=643.5 + B_base=234.0×(1+1.777) + diesel_SICRO=437.2) / C=100.00 = 17.3047 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L."
 }

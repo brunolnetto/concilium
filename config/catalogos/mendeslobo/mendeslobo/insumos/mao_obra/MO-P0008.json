@@ -1,0 +1,21 @@
+{
+  "codigo": "MO-P0008",
+  "tipo": "MAO_OBRA",
+  "descricao": "Auxiliar de Escritório",
+  "unidade": "mes",
+  "preco_unitario": 1674.2,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "CLT",
+    "horas_extras_pct_padrao": 0,
+    "_audit_encargos": "Removido: custo_com_encargos=2705.84 (fator=1.62). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009).",
+    "tipo_contrato": "CLT"
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "codigo_sicro": "P0008",
+  "categoria": "DIVERSOS"
+}

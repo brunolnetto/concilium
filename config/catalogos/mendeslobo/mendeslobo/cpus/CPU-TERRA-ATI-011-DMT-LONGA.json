@@ -1,0 +1,15 @@
+{
+  "codigo": "CPU-TERRA-ATI-011-DMT-LONGA",
+  "descricao": "Esc/carg/transp 1ª cat DMT>3km — diesel de escala",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-ESCALA",
+      "coeficiente": 4.2,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-011-DMT-LONGA-PROD-001"
+}

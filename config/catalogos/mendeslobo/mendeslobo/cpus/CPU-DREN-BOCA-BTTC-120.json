@@ -1,0 +1,23 @@
+{
+  "codigo": "CPU-DREN-BOCA-BTTC-120",
+  "descricao": "BOCA BTTC D = 1,20 M - ESCONSIDADE 0° - AREIA E BRITA COMERCIAIS - ALAS ESCONSAS",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "DRENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-AGIS-CPU-DREN-BOCA-BTTC-120",
+      "coeficiente": 1.0,
+      "categoria_custo": "MATERIAL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 15587.892236,
+  "precos_unitarios_sbdi": {
+    "mo": 0.0,
+    "equipamentos": 3427.172583,
+    "diesel": 940.365757,
+    "material": 0.0,
+    "total": 4367.53834
+  },
+  "producao_id_ref": "CPU-DREN-BOCA-BTTC-120-PROD-001"
+}

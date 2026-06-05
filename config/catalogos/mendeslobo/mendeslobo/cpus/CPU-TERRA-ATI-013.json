@@ -1,0 +1,38 @@
+{
+  "codigo": "CPU-TERRA-ATI-013",
+  "descricao": "Esc/carg/transp 2ªcat DMT<=2000m",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-OPER-ESCAV",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-MOTOR-CAM-BASC",
+      "coeficiente": 4.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-ENCARREG-TERRA",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "EQ-E0018",
+      "coeficiente": 1.0,
+      "categoria_custo": "EQUIPAMENTO"
+    },
+    {
+      "insumo_id": "EQ-E0008",
+      "coeficiente": 3.0,
+      "categoria_custo": "EQUIPAMENTO"
+    }
+  ],
+  "producao_id_ref": "CPU-TERRA-ATI-013-PROD-001",
+  "atributos_categoria": {
+    "dmt_referencia_m": 1500.0
+  }
+}

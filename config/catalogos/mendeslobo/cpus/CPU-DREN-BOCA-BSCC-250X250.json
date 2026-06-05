@@ -14,10 +14,10 @@
   "custo_direto_unitario_planilha": 32365.334784,
   "precos_unitarios_sbdi": {
     "mo": 0.0,
-    "diesel": 0.0,
-    "material": 19738.944,
-    "equipamentos": 12626.390784,
-    "total": 32365.334784
+    "equipamentos": 7996.863975,
+    "diesel": 2194.221874,
+    "material": 0.0,
+    "total": 10191.085849
   },
   "producao_id_ref": "CPU-DREN-BOCA-BSCC-250X250-PROD-001"
 }

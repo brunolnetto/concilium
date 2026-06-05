@@ -43,11 +43,11 @@
   ],
   "custo_direto_unitario_planilha": 5.623821,
   "precos_unitarios_sbdi": {
-    "mo": 1.65023,
-    "diesel": 3.973591,
+    "mo": 0.0,
+    "equipamentos": 2.255836,
+    "diesel": 0.992693,
     "material": 0.0,
-    "equipamentos": 0.0,
-    "total": 5.623821
+    "total": 3.248529
   },
   "producao_id_ref": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA-PROD-001"
 }

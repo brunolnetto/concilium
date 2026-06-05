@@ -14,10 +14,10 @@
   "custo_direto_unitario_planilha": 3245.799247,
   "precos_unitarios_sbdi": {
     "mo": 0.0,
-    "diesel": 0.0,
-    "material": 1983.601589,
-    "equipamentos": 1262.197658,
-    "total": 3245.799247
+    "equipamentos": 462.933333,
+    "diesel": 156.58496,
+    "material": 0.0,
+    "total": 619.518293
   },
   "producao_id_ref": "CPU-DREN-CORPO-BSTC-120-PA2-PROD-001"
 }

@@ -1,0 +1,21 @@
+{
+  "codigo": "MO-P0067",
+  "tipo": "MAO_OBRA",
+  "descricao": "Técnico de Enfermagem",
+  "unidade": "mes",
+  "preco_unitario": 2594.04,
+  "fonte_preco": "negociado",
+  "atributos_especificos": {
+    "categoria_sindical": "CLT",
+    "horas_extras_pct_padrao": 0,
+    "_audit_encargos": "Removido: custo_com_encargos=4192.49 (fator=1.62). Encargos devem ser calculados via perfil.percentual_encargos (ADR-009).",
+    "tipo_contrato": "CLT"
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "codigo_sicro": "P0067",
+  "categoria": "DIVERSOS"
+}

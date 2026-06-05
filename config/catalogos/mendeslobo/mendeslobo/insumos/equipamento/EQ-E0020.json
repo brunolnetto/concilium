@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-E0020",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Espargidor de Ligante Betuminoso",
+  "unidade": "h",
+  "preco_unitario": 98.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0020",
+    "valor_locacao_mensal": 19600.0,
+    "horas_mes": 200,
+    "consumo_litros_hora": 2.5
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

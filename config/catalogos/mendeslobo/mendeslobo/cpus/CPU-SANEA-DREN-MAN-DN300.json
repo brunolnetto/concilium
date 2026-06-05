@@ -1,0 +1,25 @@
+{
+  "codigo": "CPU-SANEA-DREN-MAN-DN300",
+  "descricao": "Coletor tronco DN300 em manilha cerâmica — abertura, assentamento, reaterro",
+  "unidade": "m",
+  "origem": "PROPRIA",
+  "categoria": "SANEAMENTO",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-MANILHA-CERAM-300",
+      "coeficiente": 1.05,
+      "categoria_custo": "MATERIAL"
+    },
+    {
+      "insumo_id": "MA-AREIA-MEDIA",
+      "coeficiente": 0.42,
+      "categoria_custo": "MATERIAL"
+    },
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 2.26666667,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "producao_id_ref": "CPU-SANEA-DREN-MAN-DN300-PROD-001"
+}

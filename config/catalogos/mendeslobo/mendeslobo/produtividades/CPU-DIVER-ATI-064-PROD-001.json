@@ -1,0 +1,34 @@
+{
+  "id": "CPU-DIVER-ATI-064-PROD-001",
+  "codigo": "CPU-DIVER-ATI-064-PROD-001",
+  "descricao": "Produção CPU-DIVER-ATI-064",
+  "origem": "PROPRIA",
+  "valor_horario": 15.0,
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "MO-ENCARREG-TERRA",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "MO-MONTADOR-MF",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "MO-AJUDANTE",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "EQ-E0026",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "EQ-E0002",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "historico_observacoes": []
+}

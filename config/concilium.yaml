@@ -10,8 +10,8 @@ catalog:
   offline_fallback: true
   # google_sheets:  # ?? manter/retirar
   #   spreadsheet_id: ""
-  #   credentials_env: CONCILIUM_GOOGLE_CREDENTIALS
+  #   credentials_env: CONCILIUM__GOOGLE_CREDENTIALS
   # sharepoint:
   #   site_url: ""
   #   list_name: ""
-  #   credentials_env: CONCILIUM_SHAREPOINT_CREDENTIALS
+  #   credentials_env: CONCILIUM__SHAREPOINT_CREDENTIALS

@@ -1,0 +1,21 @@
+{
+  "codigo": "EQ-CAM-GUINDAUTO",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão carroceria com guindauto",
+  "unidade": "h",
+  "preco_unitario": 150.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0007",
+    "valor_locacao_mensal": 30000,
+    "horas_mes": 200,
+    "consumo_litros_hora": 2.5
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_compartilhavel",
+    "capacidade_cobertura": 1,
+    "fracao_uso": 0.5
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

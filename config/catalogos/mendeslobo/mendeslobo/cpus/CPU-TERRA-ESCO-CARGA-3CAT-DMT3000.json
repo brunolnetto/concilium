@@ -1,0 +1,25 @@
+{
+  "codigo": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
+  "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT 2000m a 3000m",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "TERRAPLENAGEM",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 2.12049866,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "custo_direto_unitario_planilha": 18.111293,
+  "precos_unitarios_sbdi": {
+    "mo": 6.97815,
+    "equipamentos": 13.056767,
+    "diesel": 2.05007,
+    "material": 0.0,
+    "total": 22.084988
+  },
+  "producao_id_ref": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-PROD-001",
+  "custo_direto_unitario_planilha_engine": 22.084988,
+  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=1856.2 + B_base=357.2×(1+1.777) + diesel_SICRO=291.4) / C=142.16 = 22.0850 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L."
+}

@@ -14,10 +14,10 @@
   "custo_direto_unitario_planilha": 23905.584984,
   "precos_unitarios_sbdi": {
     "mo": 0.0,
-    "diesel": 0.0,
-    "material": 11279.1942,
-    "equipamentos": 12626.390784,
-    "total": 23905.584984
+    "equipamentos": 3427.172583,
+    "diesel": 940.365757,
+    "material": 0.0,
+    "total": 4367.53834
   },
   "producao_id_ref": "CPU-DREN-BOCA-BDCAP-100-PROD-001"
 }

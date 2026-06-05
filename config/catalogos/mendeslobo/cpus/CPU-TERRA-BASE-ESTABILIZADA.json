@@ -13,11 +13,11 @@
   ],
   "custo_direto_unitario_planilha": 87.262804,
   "precos_unitarios_sbdi": {
-    "mo": 5.120826,
-    "diesel": 12.141978,
-    "material": 70.0,
-    "equipamentos": 0.0,
-    "total": 87.262804
+    "mo": 0.0,
+    "equipamentos": 3.487325,
+    "diesel": 0.985473,
+    "material": 0.0,
+    "total": 4.472798
   },
   "producao_id_ref": "CPU-TERRA-BASE-ESTABILIZADA-PROD-001"
 }

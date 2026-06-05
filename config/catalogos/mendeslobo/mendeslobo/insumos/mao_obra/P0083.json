@@ -1,0 +1,13 @@
+{
+  "codigo": "P0083",
+  "tipo": "MAO_OBRA",
+  "descricao": "SOLDADOR",
+  "unidade": "mês",
+  "preco_unitario": 5051.1859,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "atributos_especificos": {
+    "salario_base": 2452.032,
+    "tipo_contrato": "CLT"
+  }
+}

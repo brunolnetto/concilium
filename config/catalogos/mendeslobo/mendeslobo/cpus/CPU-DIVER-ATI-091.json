@@ -1,0 +1,20 @@
+{
+  "codigo": "CPU-DIVER-ATI-091",
+  "descricao": "Porteira Metálica padrão VALEC (Fornecimento e Instalação)",
+  "unidade": "un",
+  "origem": "PROPRIA",
+  "categoria": "DIVERSOS",
+  "composicao_itens": [
+    {
+      "insumo_id": "MO-OFICIAL",
+      "coeficiente": 1.0,
+      "categoria_custo": "MAO_OBRA"
+    },
+    {
+      "insumo_id": "MO-AJUDANTE",
+      "coeficiente": 2.0,
+      "categoria_custo": "MAO_OBRA"
+    }
+  ],
+  "producao_id_ref": "CPU-DIVER-ATI-091-PROD-001"
+}

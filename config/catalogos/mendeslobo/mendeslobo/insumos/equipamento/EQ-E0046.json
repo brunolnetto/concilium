@@ -1,0 +1,20 @@
+{
+  "codigo": "EQ-E0046",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Serra clipper",
+  "unidade": "h",
+  "preco_unitario": 143.0,
+  "fonte_preco": "catalogo_proprio",
+  "atributos_especificos": {
+    "codigo_planilha": "E0046",
+    "valor_locacao_mensal": 28600.0,
+    "horas_mes": 200,
+    "consumo_litros_hora": 0.5
+  },
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "DIVERSOS"
+}

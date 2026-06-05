@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-BDTC-CORPO-DN1000-PA2",
+  "tipo": "MATERIAL",
+  "descricao": "Brita 03",
+  "unidade": "m3",
+  "preco_unitario": 140.0,
+  "fonte_preco": "cotacao_mercado",
+  "classe_compartilhamento": {
+    "classe": "exclusivo_dedicado",
+    "capacidade_cobertura": 1
+  },
+  "data_referencia_preco": "2025-05-01",
+  "categoria": "OBRAS_ARTE"
+}

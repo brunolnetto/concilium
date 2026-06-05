@@ -1,0 +1,14 @@
+{
+  "codigo": "EQ-HIDROSSEMEADORA",
+  "descricao": "Hidrossemeadora rebocável",
+  "tipo": "EQUIPAMENTO",
+  "unidade": "h",
+  "preco_unitario": 35.0,
+  "data_referencia_preco": "2025-05-01",
+  "atributos_especificos": {
+    "potencia_hp": 45.0,
+    "horas_mes": 208.0
+  },
+  "categoria": "DIVERSOS",
+  "fonte_preco": "catalogo_proprio"
+}
