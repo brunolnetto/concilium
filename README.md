@@ -114,7 +114,7 @@ Default local: `127.0.0.1:8501`.
 ## Execucao com Docker Compose
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f cd/development/docker-compose.yml up --build
 ```
 
 Servicos:
@@ -147,11 +147,11 @@ Arquivo de referencia: `.env.example`.
 
 ### Diretorios
 
-- `CONCILIUM_ROOT`
-- `CONCILIUM_CONFIG_ROOT`
-- `CONCILIUM_PROJECTS_ROOT`
-- `CONCILIUM_BENCHMARK_PROJECTS_ROOT`
-- `CONCILIUM_STORE_BACKEND` (opções: `local_json`, `sharepoint`, `s3`; default: `filesystem`)
+- `CONCILIUM__ROOT`
+- `CONCILIUM__CONFIG_ROOT`
+- `CONCILIUM__PROJECTS_ROOT`
+- `CONCILIUM__BENCHMARK_PROJECTS_ROOT`
+- `CONCILIUM__STORE_BACKEND` (opções: `local_json`, `sharepoint`, `s3`; default: `filesystem`)
 
 Backends de store:
 
@@ -163,59 +163,59 @@ Backends de store:
 
 Precedencia do arquivo de runtime:
 
-1. `CONCILIUM_RUNTIME_CONFIG_FILE`
-2. `CONCILIUM_CONFIG_FILE` (legado)
-3. `CONCILIUM_CONFIG_ROOT/concilium.yaml`
+1. `CONCILIUM__RUNTIME_CONFIG_FILE`
+2. `CONCILIUM__CONFIG_FILE` (legado)
+3. `CONCILIUM__CONFIG_ROOT/concilium.yaml`
 
 Formatos suportados: `.yaml/.yml`, `.json`, `.toml`.
 
 Override granular por env (sem editar arquivo):
 
-- Prefixo: `CONCILIUM_CFG__`
-- Exemplo: `CONCILIUM_CFG__progress__spi__ahead_threshold=1.1`
+- Prefixo: `CONCILIUM__CFG__`
+- Exemplo: `CONCILIUM__CFG__progress__spi__ahead_threshold=1.1`
 
 ### Mapping de benchmark (EAP -> CPU)
 
 Precedencia:
 
-1. `CONCILIUM_BENCHMARK_CPU_MAPPING_RULES_FILE`
-2. `CONCILIUM_CPU_MAPPING_RULES_FILE` (legado, apenas transicao)
+1. `CONCILIUM__BENCHMARK_CPU_MAPPING_RULES_FILE`
+2. `CONCILIUM__CPU_MAPPING_RULES_FILE` (legado, apenas transicao)
 3. default interno em `config/referencias/cpu_mapping_rules.json`
 
 ### API/UI desacopladas
 
 - Bind da API:
-	- `CONCILIUM_API_HOST`
-	- `CONCILIUM_API_PORT`
+	- `CONCILIUM__API_HOST`
+	- `CONCILIUM__API_PORT`
 - URL canonica da API:
-	- `CONCILIUM_API_BASE_URL`
+	- `CONCILIUM__API_BASE_URL`
 - Bind da UI:
-	- `CONCILIUM_UI_HOST`
-	- `CONCILIUM_UI_PORT`
+	- `CONCILIUM__UI_HOST`
+	- `CONCILIUM__UI_PORT`
 - URL da API consumida pela UI:
-	- `CONCILIUM_UI_API_BASE_URL`
+	- `CONCILIUM__UI_API_BASE_URL`
 
 Precedencia da URL da API na UI:
 
-1. `CONCILIUM_UI_API_BASE_URL`
-2. `CONCILIUM_API_BASE_URL`
-3. `http://{CONCILIUM_API_HOST}:{CONCILIUM_API_PORT}`
+1. `CONCILIUM__UI_API_BASE_URL`
+2. `CONCILIUM__API_BASE_URL`
+3. `http://{CONCILIUM__API_HOST}:{CONCILIUM__API_PORT}`
 
 Arquivos de referencia para deploy desacoplado:
 
 - `.env.api.example`
 - `.env.ui.example`
 
-Arquivos usados pelo `docker-compose.dev.yml`:
+Arquivos usados pelo `cd/development/docker-compose.yml`:
 
 - `.env.api`
 - `.env.ui`
 
 Profiles de deploy:
 
-- API: `docker compose -f docker-compose.dev.yml --profile api up --build`
-- UI: `docker compose -f docker-compose.dev.yml --profile ui up --build`
-- Stack completo: `docker compose -f docker-compose.dev.yml --profile deploy up --build`
+- API: `docker compose -f cd/development/docker-compose.yml --profile api up --build`
+- UI: `docker compose -f cd/development/docker-compose.yml --profile ui up --build`
+- Stack completo: `docker compose -f cd/development/docker-compose.yml --profile deploy up --build`
 
 ## Qualidade e manutencao
 
@@ -235,6 +235,47 @@ make fmt
 # Cobertura
 make coverage
 ```
+
+## Governanca de commits
+
+Este repositorio implementa governanca automatizada de commits para manter qualidade e rastreabilidade do historico.
+
+### Setup inicial
+
+```bash
+# Automatico (recomendado)
+python scripts/dev/setup_commit_governance.py
+
+# Manual
+pre-commit install
+pre-commit install --hook-type commit-msg
+git config commit.template .git-commit-template
+```
+
+### Regras principais
+
+- **Limites tecnicos**: ≤15 arquivos (recomendado), ≤30 arquivos (maximo)
+- **Formato obrigatorio**: `tipo(escopo): mensagem` (Conventional Commits)
+- **Tipos validos**: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `style`, `build`, `ci`, `chore`, `revert`
+
+### Ferramentas
+
+```bash
+# Validar tamanho antes de commitar
+python scripts/dev/validate_commit_size.py
+
+# Auditar historico
+python scripts/dev/audit_commit_history.py
+
+# Ver hotspots (arquivos mais modificados)
+python scripts/dev/audit_commit_history.py --detailed
+```
+
+### Documentacao
+
+- **Guia completo**: [COMMIT_GOVERNANCE.md](COMMIT_GOVERNANCE.md)
+- **Guia rapido**: [COMMIT_GOVERNANCE_QUICKSTART.md](COMMIT_GOVERNANCE_QUICKSTART.md)
+- **Conventional Commits**: https://www.conventionalcommits.org/
 
 ## Documentacao tecnica
 

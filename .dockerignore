@@ -1,0 +1,17 @@
+.git
+.gitignore
+.pytest_cache
+.ruff_cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+# dados em runtime → sempre montados como volume, não precisam no contexto de build
+projetos/
+benchmarks/
+# artefatos de teste e documentação nunca são necessários na imagem
+tests/
+docs/
+# config/ NÃO excluída aqui: a imagem de produção precisa embuti-la via "COPY ."
+# Em dev, o Dockerfile.dev faz apenas "COPY src" → config nunca entra na imagem dev

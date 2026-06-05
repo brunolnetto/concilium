@@ -1,0 +1,79 @@
+repos:
+  # ── Formatação e Linting ────────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.2
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # ── Governança de Commits (Custom Hooks) ────────────────────────────────
+  - repo: local
+    hooks:
+      # Validação de tamanho de commit
+      - id: validate-commit-size
+        name: Validar tamanho do commit
+        entry: python scripts/dev/validate_commit_size.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+
+      # Validação de formato de mensagem (Conventional Commits)
+      - id: validate-commit-msg
+        name: Validar formato de mensagem
+        entry: python scripts/dev/validate_commit_msg.py
+        language: system
+        pass_filenames: false
+        stages: [commit-msg]
+
+  # ── Segurança ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevenir commits de arquivos grandes
+      - id: check-added-large-files
+        args: ['--maxkb=1024']  # 1 MB
+        exclude: |
+          (?x)^(
+            benchmarks/data/.*\.(json|csv|xlsx?)$|
+            tests/fixtures/.*$|
+            tests/samples/.*$
+          )$
+
+      # Detectar merge conflicts não resolvidos
+      - id: check-merge-conflict
+
+      # Detectar chaves privadas
+      - id: detect-private-key
+
+      # Remover espaços em branco no final de linhas
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      # Garantir final de arquivo com newline
+      - id: end-of-file-fixer
+        exclude: |
+          (?x)^(
+            .*\.json$|
+            .*\.csv$
+          )$
+
+      # Validar YAML
+      - id: check-yaml
+        args: [--safe]
+        exclude: |
+          (?x)^(
+            .*\.github/.*$
+          )$
+
+      # Validar TOML
+      - id: check-toml
+
+      # Validar JSON
+      - id: check-json
+        exclude: |
+          (?x)^(
+            \.vscode/.*$|
+            .*\.ipynb$
+          )$

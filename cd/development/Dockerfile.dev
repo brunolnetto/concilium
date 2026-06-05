@@ -1,0 +1,46 @@
+# Dockerfile de desenvolvimento — single-stage, deps de dev incluídas, hot-reload via compose watch.
+# Para produção, use o Dockerfile multi-stage na raiz do projeto.
+#
+# Base: python:3.12-slim-bookworm (Docker Hub, sem necessidade de autenticação ghcr.io).
+# uv instalado via pip; comportamento idêntico à imagem oficial ghcr.io/astral-sh/uv.
+FROM python:3.12-slim-bookworm
+
+RUN pip install --no-cache-dir uv
+
+# Cria usuário não-root (sobreposto por `user: root` no compose em dev para env mutável)
+RUN groupadd --system --gid 999 nonroot \
+ && useradd --system --gid 999 --uid 999 --create-home nonroot
+
+WORKDIR /workspace/concilium
+
+# uv: compilar bytecode, copiar em vez de symlink (necessário em volume mounted)
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+# Ferramentas CLI instaladas pelo uv ficam acessíveis sem PATH manual
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
+# Dev: inclui dependências de desenvolvimento
+ENV UV_NO_DEV=0
+
+# Dependências do sistema
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Camada 1 — dependências: só reconstruída quando pyproject.toml / uv.lock mudam
+# COPY explícito (em vez de --mount=type=bind) gera layer cacheável e contexto mínimo (~100 KB)
+COPY pyproject.toml uv.lock* README.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project
+
+# Camada 2 — código-fonte: reconstruída em toda alteração de src/
+# O contexto de build inclui apenas src/ (≈10 MB); config/, benchmarks/, tests/ ficam fora via .dockerignore
+COPY src ./src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen
+
+# Coloca executáveis do venv no PATH (concilium-api, concilium-ui, concilium-mcp)
+ENV PATH="/workspace/concilium/.venv/bin:$PATH"
+
+# Reseta entrypoint padrão do uv; cada serviço define seu CMD no compose
+ENTRYPOINT []
