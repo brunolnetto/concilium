@@ -44,10 +44,10 @@ def _hc_check_catalogs(rows: list, contexto_ids: list, config_dir: object) -> No
 
 
 def _hc_check_sharepoint(rows: list) -> None:
-    """Appends SharePoint connectivity row if CONCILIUM_SP_DRIVE_ID is set."""
+    """Appends SharePoint connectivity row if CONCILIUM__SP_DRIVE_ID is set."""
     import os
 
-    sp_drive = os.environ.get("CONCILIUM_SP_DRIVE_ID", "")
+    sp_drive = os.environ.get("CONCILIUM__SP_DRIVE_ID", "")
     if not sp_drive:
         return
     try:

@@ -37,8 +37,10 @@ def _mc_merge_alternativas(ref: dict, bench_dir: object, changed: bool) -> tuple
     alt_path = bench_dir / "alternativas.json"
     if alt_path.exists():
         alt_data = json.loads(alt_path.read_text(encoding="utf-8"))
-        if ref.get("cenarios") != alt_data:
-            ref["cenarios"] = alt_data
+        # v2: cenarios fica em spec; v1: fica no topo
+        container = ref.get("spec") if "spec" in ref else ref
+        if container.get("cenarios") != alt_data:  # type: ignore[union-attr]
+            container["cenarios"] = alt_data  # type: ignore[index]
             changed = True
     return alt_path, changed
 
@@ -153,10 +155,12 @@ def _validate_and_apply_modo(alt_id: str, modo: str, variant_ref: dict) -> None:
     import typer
     from rich import print as rprint
 
+    # v2: rcpsp_spec fica em spec; v1: fica no topo
+    _spec_container = variant_ref.get("spec") if "spec" in variant_ref else variant_ref
     if modo == "MANUAL":
-        variant_ref.pop("rcpsp_spec", None)
+        _spec_container.pop("rcpsp_spec", None)  # type: ignore[union-attr]
     elif modo == "AUTO":
-        if not variant_ref.get("rcpsp_spec"):
+        if not _spec_container.get("rcpsp_spec"):  # type: ignore[union-attr]
             rprint(f"[red]Alternativa {alt_id}: modo AUTO exige rcpsp_spec.[/red]")
             raise typer.Exit(1) from None
     else:
@@ -170,7 +174,9 @@ def _prepare_one_task(alt: dict, base_ref: dict, ref_path, load_spec_from_dict):
 
     alt_id = str(alt.get("id") or "ALT")
     modo = str(alt.get("modo") or "AUTO").upper()
-    if str(base_ref.get("mode") or "").lower() == "benchmark_config" and modo != "AUTO":
+    # v2: mode fica em meta; v1: fica no topo
+    _ref_mode = str((base_ref.get("meta") or base_ref).get("mode") or "").lower()
+    if _ref_mode == "benchmark_config" and modo != "AUTO":
         rprint(f"[yellow]Alternativa {alt_id}: modo '{modo}' sobrescrito para AUTO (benchmark_config).[/yellow]")
         modo = "AUTO"
     overrides = alt.get("overrides") or {}

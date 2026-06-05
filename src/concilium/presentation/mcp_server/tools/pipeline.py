@@ -15,13 +15,123 @@ from concilium.presentation.mcp_server._context import (
     _runtime,
     _wrap_response,
 )
+from concilium.infrastructure.auth.permission_guard import permission
+from concilium.presentation.mcp_server.rate_limit import mcp_rate_limit
 
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas de pipeline no servidor MCP."""
 
-    # ── 4. Avançar pipeline ──────────────────────────────────────────────
+    # ── 4a. Disparar pipeline (assíncrono) ───────────────────────────────
     @server.tool()
+    @permission("project:run")
+    @mcp_rate_limit()
+    def disparar_pipeline(
+        project_id: str,
+        skill_id: str | None = None,
+        inputs: dict[str, Any] | None = None,
+        escopo_id: str | None = None,
+        plano_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Dispara execução de pipeline em background (não-bloqueante).
+
+        ⚠️ USE ESTA TOOL em vez de avancar_pipeline para evitar timeouts no cliente MCP.
+
+        Args:
+            project_id: ID do projeto (vindo de listar_projetos ou iniciar_orcamento)
+            skill_id: Opcional. ID da skill a executar. Se omitido, escolhe automaticamente
+                      a próxima na sequência canônica.
+            inputs: Inputs específicos da skill. Cronograma requer num_equipes_por_item.
+            escopo_id: ID do escopo (ADR-031). Auto-inferido se único.
+            plano_id: ID do plano (ADR-031). Auto-inferido se escopo tiver plano ativo único.
+
+        Returns:
+            job_id, status="EM_EXECUCAO", disparado_em
+
+        Uso:
+            # Disparar
+            job = disparar_pipeline(project_id="X", skill_id="04-cronograma")
+            # → {job_id: "job-abc123", status: "EM_EXECUCAO", disparado_em: "..."}
+
+            # Aguardar alguns segundos e consultar
+            resultado = consultar_job_pipeline(job_id="job-abc123")
+            # → {status: "CONCLUIDO", skill_executada: "04-cronograma", proxima_sugerida: "05-financeiro"}
+        """
+        from concilium.application.jobs import get_job_service
+
+        service = get_job_service()
+        job_dto = service.disparar_pipeline(project_id, skill_id, inputs, escopo_id, plano_id)
+        return _wrap_response(job_dto.model_dump())
+
+    # ── 4b. Consultar job de pipeline ────────────────────────────────────
+    @server.tool()
+    @permission("project:read")
+    @mcp_rate_limit()
+    def consultar_job_pipeline(job_id: str) -> dict[str, Any]:
+        """Consulta status e resultado de um job de pipeline disparado com disparar_pipeline.
+
+        Args:
+            job_id: ID do job retornado por disparar_pipeline
+
+        Returns:
+            status (PENDENTE/EM_EXECUCAO/CONCLUIDO/ERRO), resultado (se CONCLUIDO), erro (se ERRO)
+
+        Status possíveis:
+            - PENDENTE: Job criado mas ainda não iniciou
+            - EM_EXECUCAO: Skill em execução
+            - CONCLUIDO: Skill executada com sucesso
+            - ERRO: Erro durante execução
+        """
+        from concilium.application.jobs import get_job_service
+
+        service = get_job_service()
+        try:
+            job_dto = service.consultar_job(job_id)
+            return _wrap_response(job_dto.model_dump())
+        except ValueError as e:
+            return _wrap_response({"error": str(e)})
+
+    # ── 4c. Listar jobs de pipeline ──────────────────────────────────────
+    @server.tool()
+    @permission("project:read")
+    @mcp_rate_limit()
+    def listar_jobs_pipeline(project_id: str | None = None) -> dict[str, Any]:
+        """Lista todos os jobs de pipeline (opcionalmente filtrados por projeto).
+
+        Args:
+            project_id: Opcional. Se fornecido, retorna apenas jobs deste projeto.
+
+        Returns:
+            Lista de jobs com status e timestamps, estatísticas do sistema
+        """
+        from concilium.application.jobs import get_job_service
+
+        service = get_job_service()
+        job_list_dto = service.listar_jobs(project_id)
+        return _wrap_response(job_list_dto.model_dump())
+
+    # ── 4d. Estatísticas do sistema de jobs ──────────────────────────────
+    @server.tool()
+    @permission("project:read")
+    @mcp_rate_limit()
+    def obter_estatisticas_jobs() -> dict[str, Any]:
+        """Retorna estatísticas do sistema de jobs de pipeline.
+
+        Útil para diagnóstico de capacidade e health check do worker pool.
+
+        Returns:
+            Configuração (max_concurrent_jobs, TTL), contadores, health status
+        """
+        from concilium.application.jobs import get_job_service
+
+        service = get_job_service()
+        stats_dto = service.obter_estatisticas()
+        return _wrap_response(stats_dto.model_dump())
+
+    # ── 4. Avançar pipeline (síncrono — DEPRECATED) ──────────────────────
+    @server.tool()
+    @permission("project:run")
+    @mcp_rate_limit()
     def avancar_pipeline(
         project_id: str,
         skill_id: str | None = None,
@@ -29,7 +139,10 @@ def register(server: FastMCP) -> None:
         escopo_id: str | None = None,
         plano_id: str | None = None,
     ) -> dict[str, Any]:
-        """Executa a próxima skill pendente do pipeline (ou skill_id explícito).
+        """[DEPRECATED] Executa a próxima skill pendente do pipeline (BLOQUEANTE).
+
+        ⚠️ ATENÇÃO: Esta tool é SÍNCRONA e pode bloquear o cliente MCP por 30-120s.
+        Use disparar_pipeline() + consultar_job_pipeline() para execução assíncrona.
 
         Args:
             project_id: ID do projeto (vindo de listar_projetos ou iniciar_orcamento)

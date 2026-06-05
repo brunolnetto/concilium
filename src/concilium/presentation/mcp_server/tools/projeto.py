@@ -27,7 +27,7 @@ def register(server: FastMCP) -> None:
         """Lista os projetos existentes no sistema com versão atual e contexto."""
         proj_root = _projetos_root()
         if not proj_root.exists():
-            return {"projetos": [], "projetos_root": str(proj_root)}
+            return _wrap_response({"projetos": [], "projetos_root": str(proj_root)})
 
         out = []
         for p in sorted(proj_root.iterdir()):
@@ -47,7 +47,7 @@ def register(server: FastMCP) -> None:
                 )
             except Exception as e:
                 out.append({"id": p.name, "erro": str(e)})
-        return {"projetos": out, "projetos_root": str(proj_root)}
+        return _wrap_response({"projetos": out, "projetos_root": str(proj_root)})
 
     # ── 3. Iniciar orçamento ─────────────────────────────────────────────
     @server.tool()
@@ -398,3 +398,17 @@ def register(server: FastMCP) -> None:
         if diff:
             result["diff"] = diff
         return result
+
+    # ADR-101: _meta.ui para MCP Apps (Fase 1)
+    _ui_metas = {
+        "consultar_status": {
+            "ui": {"resourceUri": "ui://concilium/dashboard-resultado", "permissions": []}
+        },
+    }
+    for tool_name, meta in _ui_metas.items():
+        try:
+            tool = server._tool_manager._tools.get(tool_name)
+            if tool is not None:
+                tool.meta = meta
+        except Exception:
+            pass

@@ -48,8 +48,10 @@ def _resolve_deadline_weeks(deadline_weeks, ref_raw: dict) -> int:
     try:
         from datetime import date
 
-        d_ini = date.fromisoformat(ref_raw["data_inicio"])
-        d_fim = date.fromisoformat(ref_raw["data_termino"])
+        # v2: datas ficam em meta; v1: ficam no topo
+        meta = ref_raw.get("meta") or ref_raw
+        d_ini = date.fromisoformat(meta["data_inicio"])
+        d_fim = date.fromisoformat(meta["data_termino"])
         return max(1, ((d_fim - d_ini).days // 7) + 1)
     except (KeyError, ValueError):
         return 60
@@ -72,7 +74,8 @@ def schedule_run(
     from concilium.application.scheduling import explore_schedules
 
     ref_raw = json.loads(spec_path.read_text(encoding="utf-8"))
-    rcpsp_spec = ref_raw.get("rcpsp_spec")
+    # v2: rcpsp_spec fica em spec; v1: fica no topo
+    rcpsp_spec = (ref_raw.get("spec") or ref_raw).get("rcpsp_spec")
     if not rcpsp_spec:
         rprint("[red]rcpsp_spec nao encontrado em referencia.json[/red]")
         raise typer.Exit(1)
@@ -149,3 +152,97 @@ def _emit_result(data: dict, output: Path | None) -> None:
         rprint(f"[green]Resultado salvo em:[/green] {output}")
     else:
         rprint(payload)
+
+
+@app.command("compare")
+def schedule_compare(
+    spec_path: Path = typer.Argument(
+        ...,
+        help="Caminho para referencia.json contendo seccao rcpsp_spec.",
+        exists=True,
+        readable=True,
+    ),
+    algorithms: str = typer.Option(
+        "",
+        "--algorithms",
+        "-a",
+        help="Algoritmos separados por vírgula (default: CP-SAT,LNS,MINSLK).",
+    ),
+    deadline_weeks: int | None = typer.Option(None, "--deadline", "-d"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Salva resultado JSON neste caminho."),
+) -> None:
+    """Compara todos os algoritmos de scheduling sobre o mesmo rcpsp_spec.
+
+    Opera diretamente no layer de scheduling (sem pipeline completo).
+    Útil para comparar solvers num problema isolado antes de rodar o benchmark.
+
+    Exemplos:\b
+        concilium benchmark schedule compare referencia.json
+        concilium benchmark schedule compare referencia.json --algorithms MINSLK,LPT,MAXRES
+        concilium benchmark schedule compare referencia.json -d 52 -o result.json
+    """
+    from rich.table import Table
+
+    from concilium.application.scheduling import compare_all_algorithms
+
+    ref_raw = json.loads(spec_path.read_text(encoding="utf-8"))
+    # v2: rcpsp_spec fica em spec; v1: fica no topo
+    rcpsp_spec = (ref_raw.get("spec") or ref_raw).get("rcpsp_spec")
+    if not rcpsp_spec:
+        rprint("[red]rcpsp_spec nao encontrado em referencia.json[/red]")
+        raise typer.Exit(1)
+
+    activities = _activities_from_spec(rcpsp_spec)
+    pool = _pool_from_spec(rcpsp_spec)
+    dag = _dag_from_spec(rcpsp_spec, activities)
+    weeks = _resolve_deadline_weeks(deadline_weeks, ref_raw)
+    algos = [a.strip() for a in algorithms.split(",") if a.strip()] or None
+
+    rprint(
+        f"[cyan]Comparando algoritmos:[/cyan] {len(activities)} atividades, "
+        f"{len(pool.resources)} tipo(s) de recurso, deadline={weeks}w"
+    )
+
+    results = compare_all_algorithms(activities, dag, pool, weeks, algorithms=algos)
+
+    if not results:
+        rprint("[red]Nenhum resultado obtido.[/red]")
+        raise typer.Exit(1)
+
+    # ── Rich table ────────────────────────────────────────────────────────────
+    table = Table(title="Comparação de Algoritmos — RCPSP")
+    table.add_column("Algoritmo", style="cyan")
+    table.add_column("Makespan", justify="right")
+    table.add_column("Quality", justify="right")
+    table.add_column("Feasible")
+    table.add_column("Status / Erro")
+
+    best = next((r for r in results if not r.error and r.schedule.feasible), None)
+    for r in results:
+        if r.error:
+            table.add_row(r.heuristic, "—", "—", "✗", f"[red]{r.error[:60]}[/red]")
+        else:
+            marker = " ◀" if r is best else ""
+            table.add_row(
+                r.heuristic,
+                f"{r.schedule.makespan}w",
+                f"{r.quality_score:.4f}",
+                "[green]✓[/green]" if r.schedule.feasible else "[red]✗[/red]",
+                f"[green]OK{marker}[/green]" if r.schedule.feasible else "[yellow]infeasible[/yellow]",
+            )
+
+    rprint(table)
+
+    if output:
+        data = [
+            {
+                "algorithm": r.heuristic,
+                "makespan": r.schedule.makespan,
+                "quality_score": round(r.quality_score, 6),
+                "feasible": r.schedule.feasible,
+                "error": r.error,
+            }
+            for r in results
+        ]
+        output.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        rprint(f"[green]Salvo em:[/green] {output}")

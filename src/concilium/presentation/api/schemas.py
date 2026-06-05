@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class EapItemIn(BaseModel):
@@ -50,6 +50,8 @@ class RunProjectRequest(BaseModel):
     # True (default) = inject mobilizacao_policy_override.json into Skill 04.
     # False = skip WMP even if the file exists (allows reverting to explicit allocation).
     use_mobilizacao_policy: bool = True
+    # True = requires a project-local benchmark_reference.catalog baseline; no master fallback.
+    use_strict_catalog_baseline: bool = False
 
 
 class RerunProjectRequest(BaseModel):
@@ -58,6 +60,8 @@ class RerunProjectRequest(BaseModel):
     fork_version: bool = True
     skill_inputs_override: dict[str, dict[str, Any]] = Field(default_factory=dict)
     use_saved_overrides: bool = True
+    use_mobilizacao_policy: bool = True
+    use_strict_catalog_baseline: bool = False
 
 
 class ForkVersionRequest(BaseModel):
@@ -84,6 +88,10 @@ class RunProjectResponse(BaseModel):
     finished_at: str | None = None
     base_version: str | None = None
     fork_version: bool = False
+    use_mobilizacao_policy: bool = True
+    use_strict_catalog_baseline: bool = False
+    catalogo_base_origem: str | None = None
+    catalogo_base_hash: str | None = None
     skills_log: list[dict[str, Any]]
     skills_progress: list[dict[str, Any]] = Field(default_factory=list)
     summary: dict[str, Any]
@@ -95,6 +103,8 @@ class RunStartResponse(BaseModel):
     project_id: str
     run_id: str
     status: str
+    use_mobilizacao_policy: bool = True
+    use_strict_catalog_baseline: bool = False
 
 
 # ADR-054: Workforce Mobilization Policy API schemas
@@ -138,3 +148,115 @@ class SimulateRequest(BaseModel):
         default_factory=dict,
         description="Practicability factors by ISO week. Overrides project praticabilidade for this simulation.",
     )
+
+
+class SimulateCalendarioOperacionalRequest(BaseModel):
+    """Override pontual de fator de calendário para simulação semanal."""
+
+    fator_calendario_semanal: dict[str, float] = Field(default_factory=dict)
+
+
+# ADR-062/065/066: typed contracts for versioned configuration endpoints
+
+
+class RangeInput(BaseModel):
+    min: float
+    max: float
+
+
+class ConfigVersionCreateRequest(BaseModel):
+    """Base request for POST /api/{entity}/{id}/versions.
+
+    Supports both payload shapes already used by UI:
+    - {"motivo": "...", "fields": {...}, "_make_current": true}
+    - {"motivo": "...", <fieldA>: ..., <fieldB>: ...}
+    """
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    motivo: str = Field(min_length=1)
+    fields: dict[str, Any] | None = None
+    make_current: bool | None = Field(default=None, alias="_make_current")
+
+    def extract_fields(self) -> dict[str, Any]:
+        """Return normalized fields regardless of request shape."""
+        payload = self.model_dump(exclude_none=True, by_alias=True)
+        explicit = payload.pop("fields", None)
+        payload.pop("motivo", None)
+        payload.pop("_make_current", None)
+        if isinstance(explicit, dict):
+            return explicit
+        return payload
+
+
+class PerfilVersionCreateRequest(ConfigVersionCreateRequest):
+    faixa_margem_alvo: RangeInput | None = None
+    faixa_margem_aceitavel: RangeInput | None = None
+    razao_indireto_direto_alvo: RangeInput | None = None
+
+    @model_validator(mode="after")
+    def validate_ranges(self) -> "PerfilVersionCreateRequest":
+        for label, faixa, lower, upper in (
+            ("faixa_margem_alvo", self.faixa_margem_alvo, 0.0, 1.0),
+            ("faixa_margem_aceitavel", self.faixa_margem_aceitavel, 0.0, 1.0),
+            ("razao_indireto_direto_alvo", self.razao_indireto_direto_alvo, 0.0, 2.0),
+        ):
+            if faixa is None:
+                continue
+            if faixa.min > faixa.max:
+                raise ValueError(f"{label}: min deve ser <= max")
+            if faixa.min < lower or faixa.max > upper:
+                raise ValueError(f"{label}: valores fora do intervalo permitido [{lower}, {upper}]")
+        return self
+
+
+class ContextoVersionCreateRequest(ConfigVersionCreateRequest):
+    catalogo_id: str | None = None
+    jurisdicao_id: str | None = None
+    perfil_id: str | None = None
+    referencia_id: str | None = None
+    tema_id: str | None = None
+    nome: str | None = None
+    descricao: str | None = None
+
+
+class TemaVersionCreateRequest(ConfigVersionCreateRequest):
+    empresa: str | None = None
+    perfil_exibicao: str | None = None
+    cores: dict[str, str] | None = None
+    fontes: dict[str, Any] | None = None
+
+
+class JurisdicaoVersionCreateRequest(ConfigVersionCreateRequest):
+    cpus: dict[str, Any] | None = None
+    insumos: dict[str, Any] | None = None
+    provedores_referencia: list[dict[str, Any]] | None = None
+
+
+class ConfigEntityListResponse(BaseModel):
+    items: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ConfigEntityVersionsResponse(BaseModel):
+    versions: list[dict[str, Any]] = Field(default_factory=list)
+    perfil_id: str | None = None
+    contexto_id: str | None = None
+    tema_id: str | None = None
+    jurisdicao_id: str | None = None
+
+
+class ConfigVersionCreateResponse(BaseModel):
+    version: str
+    created_at: str | None = None
+    created_by: str | None = None
+    motivo: str | None = None
+    model_config = ConfigDict(extra="allow")
+
+
+class ConfigCompareResponse(BaseModel):
+    entity_id: str
+    subdir: str
+    version_a: str
+    version_b: str
+    changed: dict[str, Any] = Field(default_factory=dict)
+    unchanged: list[str] = Field(default_factory=list)

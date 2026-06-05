@@ -51,3 +51,17 @@ def register(server: FastMCP) -> None:
                 "mensagem": f"Sugestão {sugestao_id} aplicada na versão {new_version}.",
             }
         )
+
+    # ADR-101: _meta.ui para MCP Apps (Fase 1)
+    _ui_metas = {
+        "simular_cenario_replan": {
+            "ui": {"resourceUri": "ui://concilium/diagnostico-pe", "permissions": []}
+        },
+    }
+    for tool_name, meta in _ui_metas.items():
+        try:
+            tool = server._tool_manager._tools.get(tool_name)
+            if tool is not None:
+                tool.meta = meta
+        except Exception:
+            pass

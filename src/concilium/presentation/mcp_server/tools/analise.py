@@ -77,3 +77,55 @@ def register(server: FastMCP) -> None:
                 results[pid] = "Sem dados"  # type: ignore[assignment]
 
         return _wrap_response({"comparacao": results})
+
+    @server.tool()
+    def explorar_pool_recursos(
+        project_id: str,
+        face: str = "instancia_ciclo_vida",
+        escopo_id: str | None = None,
+        plano_id: str | None = None,
+        granularidade: str = "mes",
+        atividade_id: str | None = None,
+        instancia_id: str | None = None,
+    ) -> dict[str, Any]:
+        """ADR-086: Explora a decomposição composicional-temporal do pool de recursos.
+
+        Retorna linhas + narrativa honesta (física vs. causal) para investigar por que uma
+        atividade/instância custou o que custou, separando o que cada slot *fez* (prod/idle/off,
+        custo por componente) do que é *imputado* causalmente (ociosidade ao sucessor, mob/demob
+        na cadeia) e da economia vs. execução autônoma.
+
+        Faces: instancia_ciclo_vida | custo_estado_componente | utilizacao_temporal |
+        atividade_instancia | causa_custo | economia_pool | cadeia_perpetuacao.
+        """
+        from concilium.application.services.cubo_pool_projection import (
+            resolve_cubo_pool_projection,
+        )
+        from concilium.presentation.mcp_server.tools.escopo import _resolve_escopo_id
+
+        store = _project(project_id)
+        try:
+            eid = _resolve_escopo_id(store, escopo_id)
+            es = store.escopo(eid)
+            pid = plano_id or es.active_plan().plano_id  # type: ignore[union-attr]
+            canonical = es.plan(pid).load_canonical()
+        except Exception as e:
+            return {"erro": str(e)}
+
+        if not canonical:
+            return {"erro": "Plano sem dados canônicos. Execute avancar_pipeline primeiro."}
+        if not (getattr(canonical, "contratos_recurso", None) or getattr(canonical, "instancias_recurso", None)):
+            return {"erro": "Sem pool de recursos neste plano (rcpsp_spec ausente em skill-05)."}
+
+        proj = resolve_cubo_pool_projection(
+            canonical, face=face, granularidade=granularidade,
+            atividade_id=atividade_id, instancia_id=instancia_id,
+        )
+        return _wrap_response({
+            "project_id": project_id, "escopo_id": eid, "plano_id": pid,
+            "face": proj["face"], "natureza": proj["natureza"],
+            "narrativa": proj["narrativa"],
+            "rows": proj["rows"],
+            "totais": proj["totais"],
+            "invariantes_ok": proj["invariantes_ok"],
+        })

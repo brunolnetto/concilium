@@ -28,7 +28,7 @@ def _impl_listar_contextos() -> dict[str, Any]:
     rt = _runtime()
     contextos_dir = _config_root() / "contextos"
     if not contextos_dir.exists():
-        return {"contextos": []}
+        return _wrap_response({"contextos": []})
 
     contextos = []
     for p in sorted(contextos_dir.glob("*.json")):

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulário QQP/EAP — Concilium</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" crossorigin>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    .cpu-badge { display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600; }
+    .cpu-alta  { background:#dcfce7;color:#15803d; }
+    .cpu-media { background:#fef9c3;color:#854d0e; }
+    .cpu-none  { background:#fee2e2;color:#991b1b; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4">
+
+<!-- ── MCP App Bridge ───────────────────────────────────────────────────────── -->
+<script>
+// Implementação direta do protocolo postMessage para MCP Apps
+// Ref: https://apps.extensions.modelcontextprotocol.io
+class MCPAppBridge {
+  constructor() {
+    this._id = 0;
+    this._pending = new Map();
+    this._initialized = false;
+    this._handlers = {};
+    window.addEventListener('message', (e) => this._onMessage(e));
+  }
+
+  async initialize() {
+    return new Promise((resolve) => {
+      const id = ++this._id;
+      this._pending.set(id, resolve);
+      window.parent.postMessage({
+        jsonrpc: '2.0', id,
+        method: 'ui/initialize',
+        params: { protocolVersion: '2026-01-26', capabilities: {} }
+      }, '*');
+      // Fallback para dev/preview sem host MCP
+      setTimeout(() => {
+        if (this._pending.has(id)) {
+          this._pending.delete(id);
+          this._initialized = false;
+          resolve({ mode: 'standalone' });
+        }
+      }, 1500);
+    });
+  }
+
+  async callTool(name, args) {
+    if (!this._initialized) throw new Error('Bridge not initialized');
+    return new Promise((resolve, reject) => {
+      const id = ++this._id;
+      this._pending.set(id, { resolve, reject });
+      window.parent.postMessage({
+        jsonrpc: '2.0', id,
+        method: 'tools/call',
+        params: { name, arguments: args }
+      }, '*');
+    });
+  }
+
+  _onMessage(event) {
+    const msg = event.data;
+    if (!msg || msg.jsonrpc !== '2.0') return;
+    if (msg.id !== undefined && this._pending.has(msg.id)) {
+      const handler = this._pending.get(msg.id);
+      this._pending.delete(msg.id);
+      if (typeof handler === 'function') {
+        this._initialized = true;
+        handler(msg.result || msg);
+      } else if (msg.error) {
+        handler.reject(new Error(msg.error.message));
+      } else {
+        handler.resolve(msg.result);
+      }
+    }
+    if (msg.method) {
+      const h = this._handlers[msg.method];
+      if (h) h(msg.params);
+    }
+  }
+
+  on(method, handler) { this._handlers[method] = handler; }
+}
+
+const bridge = new MCPAppBridge();
+</script>
+
+<!-- ── UI ──────────────────────────────────────────────────────────────────── -->
+<div class="max-w-2xl mx-auto">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">📋 Novo Projeto — QQP/EAP</h1>
+    <p class="text-sm text-gray-500 mt-1">Preencha os serviços e o sistema mapeia os CPUs automaticamente.</p>
+  </div>
+
+  <!-- Seção 1: Identificação -->
+  <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">1 — Identificação</h2>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Nome do projeto *</label>
+        <input id="f-nome" type="text" placeholder="Ex: Rodovia CE-040 — Lote 09/10"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de obra *</label>
+        <select id="f-tipo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          <option value="terraplenagem">Terraplenagem</option>
+          <option value="pavimentacao">Pavimentação</option>
+          <option value="saneamento">Saneamento</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Localização *</label>
+        <input id="f-local" type="text" placeholder="Cidade, UF"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Contexto *</label>
+        <input id="f-contexto" type="text" placeholder="Ex: mendeslobo" value="mendeslobo"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Objetivo de pool</label>
+        <select id="f-objetivo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          <option value="balanceado">Balanceado</option>
+          <option value="minimizar_prazo">Minimizar prazo</option>
+          <option value="minimizar_custo">Minimizar custo</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Data de início *</label>
+        <input id="f-inicio" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Data de término</label>
+        <input id="f-termino" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção 2: QQP -->
+  <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">2 — QQP — Serviços</h2>
+      <button id="btn-sugerir" onclick="sugerirCPUs()"
+        class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1">
+        🔍 Sugerir CPUs
+      </button>
+    </div>
+
+    <!-- Cabeçalho da tabela -->
+    <div class="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 mb-2 px-1">
+      <div class="col-span-5">Descrição do serviço</div>
+      <div class="col-span-2">Quantidade</div>
+      <div class="col-span-2">Und.</div>
+      <div class="col-span-3">CPU sugerido</div>
+    </div>
+
+    <div id="servicos-list" class="space-y-2"></div>
+
+    <button onclick="addServico()"
+      class="mt-3 w-full border-2 border-dashed border-gray-200 rounded-lg py-2 text-sm text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
+      + Adicionar serviço
+    </button>
+  </section>
+
+  <!-- Seção 3: Revisão -->
+  <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">3 — Revisão</h2>
+    <div id="stats" class="flex gap-4 mb-4">
+      <div class="flex-1 bg-gray-50 rounded-lg p-3 text-center">
+        <div id="st-total" class="text-2xl font-bold text-gray-800">0</div>
+        <div class="text-xs text-gray-500">Serviços</div>
+      </div>
+      <div class="flex-1 bg-green-50 rounded-lg p-3 text-center">
+        <div id="st-mapeados" class="text-2xl font-bold text-green-700">0</div>
+        <div class="text-xs text-gray-500">Com CPU ✅</div>
+      </div>
+      <div class="flex-1 bg-amber-50 rounded-lg p-3 text-center">
+        <div id="st-pendentes" class="text-2xl font-bold text-amber-600">0</div>
+        <div class="text-xs text-gray-500">Sem CPU ⚠️</div>
+      </div>
+    </div>
+
+    <div id="resultado" class="hidden mb-4 p-4 rounded-lg"></div>
+
+    <button id="btn-criar" onclick="criarProjeto()" disabled
+      class="w-full py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors">
+      🚀 Criar Projeto
+    </button>
+  </section>
+</div>
+
+<!-- ── JavaScript ───────────────────────────────────────────────────────────── -->
+<script>
+let servicos = [];
+let nextId = 1;
+let bridgeReady = false;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // Set today as default start date
+  document.getElementById('f-inicio').value = new Date().toISOString().split('T')[0];
+
+  // Add 3 starter rows
+  addServico(); addServico(); addServico();
+
+  // Initialize MCP bridge
+  const result = await bridge.initialize();
+  bridgeReady = result.mode !== 'standalone';
+
+  if (!bridgeReady) {
+    showInfo('Rodando em modo standalone — chamadas de API simuladas.');
+  }
+});
+
+// ── Serviços ──────────────────────────────────────────────────────────────────
+function addServico() {
+  const id = nextId++;
+  servicos.push({ id, descricao: '', quantidade: 1, unidade: 'm³', cpu_id: '', confianca: '' });
+  renderServicos();
+}
+
+function removeServico(id) {
+  servicos = servicos.filter(s => s.id !== id);
+  renderServicos();
+}
+
+function renderServicos() {
+  const list = document.getElementById('servicos-list');
+  list.innerHTML = servicos.map(s => `
+    <div id="row-${s.id}" class="grid grid-cols-12 gap-2 items-center">
+      <div class="col-span-5">
+        <input type="text" value="${escHtml(s.descricao)}" placeholder="Ex: Escavação de material 3ª categoria"
+          onchange="updateSvc(${s.id}, 'descricao', this.value)"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="col-span-2">
+        <input type="number" value="${s.quantidade}" min="0" step="1000"
+          onchange="updateSvc(${s.id}, 'quantidade', parseFloat(this.value))"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-right">
+      </div>
+      <div class="col-span-2">
+        <input type="text" value="${escHtml(s.unidade)}" placeholder="m³"
+          onchange="updateSvc(${s.id}, 'unidade', this.value)"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div class="col-span-2 flex items-center gap-1">
+        ${s.cpu_id
+          ? `<span class="cpu-badge cpu-${s.confianca || 'media'}" title="${escHtml(s.cpu_id)}">${escHtml(s.cpu_id.length > 12 ? s.cpu_id.slice(0,12)+'…' : s.cpu_id)}</span>`
+          : `<span class="text-xs text-gray-400 italic">—</span>`}
+      </div>
+      <div class="col-span-1 flex justify-end">
+        <button onclick="removeServico(${s.id})" class="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none">✕</button>
+      </div>
+    </div>
+  `).join('');
+  updateStats();
+}
+
+function updateSvc(id, field, value) {
+  const s = servicos.find(s => s.id === id);
+  if (s) { s[field] = value; updateStats(); }
+}
+
+function updateStats() {
+  const com = servicos.filter(s => s.descricao && s.cpu_id).length;
+  const sem = servicos.filter(s => s.descricao && !s.cpu_id).length;
+  const total = servicos.filter(s => s.descricao).length;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-mapeados').textContent = com;
+  document.getElementById('st-pendentes').textContent = sem;
+
+  const btn = document.getElementById('btn-criar');
+  const nomeOk = document.getElementById('f-nome').value.trim();
+  const localOk = document.getElementById('f-local').value.trim();
+  btn.disabled = !(nomeOk && localOk && com > 0 && sem === 0);
+}
+
+// ── Sugerir CPUs ──────────────────────────────────────────────────────────────
+async function sugerirCPUs() {
+  const btn = document.getElementById('btn-sugerir');
+  btn.innerHTML = '<span class="spin inline-block">⏳</span> Buscando...';
+  btn.disabled = true;
+
+  const svcPayload = servicos
+    .filter(s => s.descricao)
+    .map(s => ({ descricao: s.descricao, quantidade: s.quantidade, unidade: s.unidade }));
+
+  try {
+    let result;
+    if (bridgeReady) {
+      result = await bridge.callTool('criar_projeto_formulario', {
+        nome: '_preview_',
+        contexto_id: document.getElementById('f-contexto').value || 'mendeslobo',
+        tipo_obra: document.getElementById('f-tipo').value,
+        localizacao: '_',
+        data_inicio: document.getElementById('f-inicio').value || '2026-01-01',
+        servicos: svcPayload,
+      });
+      // Extract from MCP tool result structure
+      if (result?.content?.[0]?.text) result = JSON.parse(result.content[0].text);
+    } else {
+      // Standalone mock
+      result = {
+        status: 'pendente_mapeamento',
+        mapeados: svcPayload.slice(0,1).map((s,i) => ({
+          item_id: `eap-1_${i+1}`, descricao: s.descricao,
+          cpu_id: 'CPU-TERRA-ATI-040', confianca: 'media',
+          quantidade: s.quantidade, unidade: s.unidade
+        })),
+        nao_mapeados: svcPayload.slice(1).map((s,i) => ({
+          item_id: `eap-1_${i+2}`, descricao: s.descricao
+        }))
+      };
+    }
+
+    // Apply suggestions
+    const todas = [...(result.mapeados || []), ...(result.nao_mapeados || [])];
+    servicos.forEach(s => {
+      if (!s.descricao) return;
+      const match = todas.find(m =>
+        m.descricao?.toLowerCase() === s.descricao.toLowerCase() ||
+        m.item_id === s.item_id
+      );
+      if (match?.cpu_id) {
+        s.cpu_id = match.cpu_id;
+        s.confianca = match.confianca || 'media';
+      }
+    });
+
+    const n = (result.mapeados || []).length;
+    const nd = (result.nao_mapeados || []).length;
+    renderServicos();
+    showInfo(nd === 0
+      ? `✅ ${n} serviços mapeados com sucesso.`
+      : `⚠️ ${n} mapeados, ${nd} sem CPU — preencha manualmente.`, nd === 0 ? 'green' : 'amber');
+  } catch(e) {
+    showInfo('Erro ao buscar CPUs: ' + e.message, 'red');
+  } finally {
+    btn.innerHTML = '🔍 Sugerir CPUs';
+    btn.disabled = false;
+  }
+}
+
+// ── Criar Projeto ──────────────────────────────────────────────────────────────
+async function criarProjeto() {
+  const btn = document.getElementById('btn-criar');
+  btn.innerHTML = '<span class="spin inline-block">⏳</span> Criando projeto...';
+  btn.disabled = true;
+
+  const payload = {
+    nome: document.getElementById('f-nome').value.trim(),
+    contexto_id: document.getElementById('f-contexto').value.trim(),
+    tipo_obra: document.getElementById('f-tipo').value,
+    localizacao: document.getElementById('f-local').value.trim(),
+    data_inicio: document.getElementById('f-inicio').value,
+    data_termino: document.getElementById('f-termino').value || null,
+    objetivo_pool: document.getElementById('f-objetivo').value,
+    servicos: servicos
+      .filter(s => s.descricao && s.cpu_id)
+      .map(s => ({
+        descricao: s.descricao,
+        quantidade: s.quantidade,
+        unidade: s.unidade,
+        cpu_id: s.cpu_id,
+      })),
+  };
+
+  try {
+    let result;
+    if (bridgeReady) {
+      const raw = await bridge.callTool('criar_projeto_formulario', payload);
+      result = raw?.content?.[0]?.text ? JSON.parse(raw.content[0].text) : raw;
+    } else {
+      result = { status: 'criado', project_id: 'demo-projeto', version: 'v1',
+        nota: '(Modo standalone — sem servidor MCP conectado)' };
+    }
+
+    if (result?.status === 'criado' || result?.project_id) {
+      showResult(`
+        <div class="text-green-800">
+          <div class="font-semibold text-lg mb-1">✅ Projeto criado!</div>
+          <div class="text-sm"><span class="font-mono bg-green-100 px-2 py-0.5 rounded">${result.project_id}</span>
+          versão ${result.version || 'v1'}</div>
+          ${result.nota ? `<div class="text-xs mt-2 opacity-75">${result.nota}</div>` : ''}
+          <div class="text-xs mt-2">Use <code>avancar_pipeline(project_id="${result.project_id}")</code> para executar as skills.</div>
+        </div>
+      `, 'green');
+    } else if (result?.status === 'pendente_mapeamento') {
+      showResult(`<div class="text-amber-700"><b>⚠️ Itens sem CPU:</b> ${(result.nao_mapeados||[]).map(i=>i.descricao).join(', ')}</div>`, 'amber');
+    } else {
+      showResult(`<div class="text-red-700">Erro: ${JSON.stringify(result?.erros || result?.erro || result)}</div>`, 'red');
+    }
+  } catch(e) {
+    showResult(`<div class="text-red-700">Erro: ${e.message}</div>`, 'red');
+  } finally {
+    btn.innerHTML = '🚀 Criar Projeto';
+    updateStats();
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showInfo(msg, color = 'blue') {
+  showResult(`<div class="text-${color}-700">${msg}</div>`, color);
+}
+
+function showResult(html, color = 'blue') {
+  const el = document.getElementById('resultado');
+  const colors = { green:'bg-green-50 border-green-200', blue:'bg-blue-50 border-blue-200',
+                   amber:'bg-amber-50 border-amber-200', red:'bg-red-50 border-red-200' };
+  el.className = `mb-4 p-4 rounded-lg border ${colors[color] || colors.blue}`;
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
+document.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('input', updateStats);
+});
+</script>
+</body>
+</html>
