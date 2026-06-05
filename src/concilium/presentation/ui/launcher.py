@@ -12,7 +12,7 @@ def _default_ui_entrypoint() -> Path:
 
 
 def resolve_ui_entrypoint() -> Path:
-    custom = (os.environ.get("CONCILIUM_UI_ENTRYPOINT") or "").strip()
+    custom = (os.environ.get("CONCILIUM__UI_ENTRYPOINT") or "").strip()
     if custom:
         return Path(custom)
     return _default_ui_entrypoint()

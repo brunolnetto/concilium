@@ -134,9 +134,17 @@ def _cmb_enrich_funcoes(funcoes: list, catalog_id: str) -> list[dict]:
             continue
         funcao_id = str(funcao.get("funcao_id") or "").strip()
         insumo = insumos_index.get(funcao_id) or {}
+        descricao = (
+            funcao.get("descricao")
+            or insumo.get("descricao")
+            or funcao.get("funcao")
+            or funcao_id
+            or ""
+        )
         enriched.append(
             {
                 **funcao,
+                "descricao": descricao,
                 "regime": funcao.get("regime") or _cmb_regime_label(insumo),
                 "salario_base": funcao.get("salario_base") or insumo.get("preco_unitario"),
             }
@@ -335,6 +343,12 @@ def _cmb_render_composicao_expander(composicao: list) -> None:
     """Render the direct inputs expander for a CPU."""
     if composicao:
         with st.expander("🧱 Insumos Diretos", expanded=True):
+            # Guia de categorias de custo como legenda estática (ADR-023)
+            _cat_guide = " · ".join(f"**{k}** {v}" for k, v in _CAT_LABELS.items())
+            st.caption(
+                f"Categorias BDI: {_cat_guide}  \n"
+                "A categoria define qual alíquota de BDI é aplicada; MO e EQ têm alíquotas diferentes."
+            )
             composicao_rows = list(composicao)
             comp_rows = [
                 {
@@ -358,7 +372,7 @@ def _cmb_clear_catalog_cache(catalog_id: str) -> None:
 
 def _cmb_render_edit_expander(base_url: str, catalog_id: str, cpu: dict, codigo: str) -> None:
     """Render the master-catalog edit form expander for a CPU."""
-    with st.expander("✏️ Editar no catálogo mestre", expanded=False):
+    with st.expander("📝 Propriedades da CPU", expanded=False):
         edited = render_typed_form(cpu, CPU_EDITABLE_FIELDS, CPU_READONLY_FIELDS, key=f"master-cpu-edit-{codigo}")
         motivo = st.text_input("Motivo *", placeholder="Ex: Atualização pós-medição", key=f"master-cpu-motivo-{codigo}")
         col_save, col_hint = st.columns([2, 3])
@@ -525,15 +539,6 @@ def _render_composition_dialog(base_url: str, actor: str, catalog_id: str, cpu: 
         )
     else:
         edited = _rcd_empty_editor(catalog_id, codigo)
-
-    # ── Guia de categorias ────────────────────────────────────────────────
-    with st.expander("📖 Guia de categorias de custo", expanded=False):
-        for k, v in _CAT_LABELS.items():
-            st.markdown(f"- **{k}** — {v}")
-        st.caption(
-            "A categoria define qual alíquota de BDI é aplicada ao custo deste insumo. "
-            "Mão de obra e equipamentos têm BDIs diferentes (ADR-023)."
-        )
 
     st.divider()
     motivo = st.text_input(

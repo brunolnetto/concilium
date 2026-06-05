@@ -27,6 +27,10 @@ _LIGHT = """\
     --ml-verde:       #276749;
     --ml-vermelho:    #9B1C1C;
     --ml-amarelo:     #92400E;
+    --ml-btn-primary-bg:     #C05C18;
+    --ml-btn-primary-border: #C05C18;
+    --ml-btn-primary-hover:  #A04A12;
+    --ml-btn-secondary-bg:   transparent;
     color-scheme: light;"""
 
 _DARK = """\
@@ -45,6 +49,10 @@ _DARK = """\
     --ml-verde:       #68D391;
     --ml-vermelho:    #FC8181;
     --ml-amarelo:     #F6AD55;
+    --ml-btn-primary-bg:     #1A3A5C;
+    --ml-btn-primary-border: #2B6CB0;
+    --ml-btn-primary-hover:  #2B6CB0;
+    --ml-btn-secondary-bg:   transparent;
     color-scheme: dark;"""
 
 _SHARED = """\
@@ -114,7 +122,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
 /* ── Navegação: botões nav no sidebar ───────────────────────────────────── */
 /* Botão ativo (primary) já tem estilo navy preenchido da regra global.    */
 /* Botões inativos (secondary): remover borda, deixar discreto.            */
-[data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
+[data-testid="stSidebar"] .stButton [data-testid="stBaseButton-secondary"] {{
     border: 1px solid var(--ml-border) !important;
     border-radius: 8px !important;
     padding: 0.55rem 0.9rem !important;
@@ -125,14 +133,14 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
     color: var(--ml-muted) !important;
     background: transparent !important;
 }}
-[data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {{
+[data-testid="stSidebar"] .stButton [data-testid="stBaseButton-secondary"]:hover {{
     background: var(--ml-navy-lt) !important;
     border-color: var(--ml-navy) !important;
     color: var(--ml-navy) !important;
     border-left: 3px solid var(--ml-orange) !important;
     padding-left: 0.7rem !important;
 }}
-[data-testid="stSidebar"] .stButton > button[kind="primary"] {{
+[data-testid="stSidebar"] .stButton [data-testid="stBaseButton-primary"] {{
     background: var(--ml-navy-lt) !important;
     border: none !important;
     border-left: 3px solid var(--ml-orange) !important;
@@ -144,7 +152,7 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
     text-align: left !important;
     justify-content: flex-start !important;
 }}
-[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {{
+[data-testid="stSidebar"] .stButton [data-testid="stBaseButton-primary"]:hover {{
     background: var(--ml-navy-lt) !important;
     transform: none !important;
     box-shadow: none !important;
@@ -163,9 +171,11 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
 .ml-project-ctx-meta code {{ font-family: var(--ml-mono); font-size: 0.75em; background: var(--ml-border); padding: 0.05em 0.3em; border-radius: 3px; }}
 
 /* ── Botões — padrão semântico ──────────────────────────────────────────── */
-/* primary = salvar / criar / executar / confirmar exclusão              */
-/* secondary = carregar / comparar / filtrar / navegar / cancelar        */
-.stButton > button, .stFormSubmitButton > button {{
+/* primary   = salvar / criar / executar / confirmar exclusão             */
+/* secondary = carregar / comparar / filtrar / navegar / cancelar         */
+/* Streamlit ≥ 1.36: seletor correto é data-testid="stBaseButton-{type}" */
+/* Especificidade elevada (.stButton ancestor) para sobrepor CSS Streamlit */
+[data-testid^="stBaseButton-"] {{
     font-family: var(--ml-font) !important;
     font-weight: 600 !important;
     border-radius: 6px !important;
@@ -174,23 +184,31 @@ html, body, .stApp, [data-testid="stAppViewContainer"] {{
     font-size: 0.875rem !important;
     letter-spacing: 0.01em !important;
 }}
-.stButton > button[kind="primary"], .stFormSubmitButton > button[kind="primary"] {{
-    background: var(--ml-navy) !important;
-    border: 1.5px solid var(--ml-navy) !important;
+/* primary — laranja em light, navy em dark (tokens adaptativos por tema) */
+.stButton [data-testid="stBaseButton-primary"],
+.stFormSubmitButton [data-testid="stBaseButton-primary"],
+.stDownloadButton [data-testid="stBaseButton-primary"] {{
+    background: var(--ml-btn-primary-bg) !important;
+    border: 1.5px solid var(--ml-btn-primary-border) !important;
     color: #FFFFFF !important;
 }}
-.stButton > button[kind="primary"]:hover {{
-    background: var(--ml-navy-md) !important;
-    border-color: var(--ml-navy-md) !important;
+.stButton [data-testid="stBaseButton-primary"]:hover,
+.stFormSubmitButton [data-testid="stBaseButton-primary"]:hover,
+.stDownloadButton [data-testid="stBaseButton-primary"]:hover {{
+    background: var(--ml-btn-primary-hover) !important;
+    border-color: var(--ml-btn-primary-hover) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 3px 12px rgba(26,58,92,0.22) !important;
 }}
-.stButton > button[kind="secondary"], .stFormSubmitButton > button[kind="secondary"] {{
+.stButton [data-testid="stBaseButton-secondary"],
+.stFormSubmitButton [data-testid="stBaseButton-secondary"],
+.stDownloadButton [data-testid="stBaseButton-secondary"] {{
     background: transparent !important;
     border: 1.5px solid var(--ml-border) !important;
     color: var(--ml-ink) !important;
 }}
-.stButton > button[kind="secondary"]:hover {{
+.stButton [data-testid="stBaseButton-secondary"]:hover,
+.stFormSubmitButton [data-testid="stBaseButton-secondary"]:hover {{
     background: var(--ml-navy-lt) !important;
     border-color: var(--ml-navy-md) !important;
     color: var(--ml-navy) !important;
@@ -261,17 +279,19 @@ code, pre {{ font-family: var(--ml-mono) !important; background: var(--ml-navy-l
     background: var(--ml-panel) !important;
 }}
 [data-testid="stExpander"] > div {{ background: var(--ml-panel) !important; }}
-/* Botões dentro de expanders herdam o mesmo estilo semântico da regra global.  */
-/* Força override para garantir que o tema prevaleça sobre estilos default do   */
-/* Streamlit que possam sobrescrever dentro de containers aninhados.             */
-[data-testid="stExpander"] .stButton > button[kind="primary"],
-[data-testid="stExpander"] .stFormSubmitButton > button[kind="primary"] {{
-    background: var(--ml-navy) !important;
-    border: 1.5px solid var(--ml-navy) !important;
+/* Botões dentro de expanders e tabs — reforça tokens adaptativos por tema. */
+[data-testid="stExpander"] .stButton [data-testid="stBaseButton-primary"],
+[data-testid="stTabs"] .stButton [data-testid="stBaseButton-primary"],
+[data-testid="stExpander"] .stFormSubmitButton [data-testid="stBaseButton-primary"],
+[data-testid="stTabs"] .stFormSubmitButton [data-testid="stBaseButton-primary"] {{
+    background: var(--ml-btn-primary-bg) !important;
+    border: 1.5px solid var(--ml-btn-primary-border) !important;
     color: #FFFFFF !important;
 }}
-[data-testid="stExpander"] .stButton > button[kind="secondary"],
-[data-testid="stExpander"] .stFormSubmitButton > button[kind="secondary"] {{
+[data-testid="stExpander"] .stButton [data-testid="stBaseButton-secondary"],
+[data-testid="stTabs"] .stButton [data-testid="stBaseButton-secondary"],
+[data-testid="stExpander"] .stFormSubmitButton [data-testid="stBaseButton-secondary"],
+[data-testid="stTabs"] .stFormSubmitButton [data-testid="stBaseButton-secondary"] {{
     background: transparent !important;
     border: 1.5px solid var(--ml-border) !important;
     color: var(--ml-ink) !important;

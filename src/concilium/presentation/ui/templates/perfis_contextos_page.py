@@ -16,6 +16,7 @@ from ._perfis_helpers_a import (
     _render_entity_section,
 )
 from ._perfis_helpers_b import (
+    _render_contexto_detail,
     _render_perfil_detail,
     _render_temas_section,
 )
@@ -74,6 +75,7 @@ def render_configuracao_page() -> None:
             compare_path="/api/contextos/compare",
             entity_label="Contexto",
             key_prefix="ctx",
+            extra_renderer=_render_contexto_detail,
         )
 
     with tabs[3]:
