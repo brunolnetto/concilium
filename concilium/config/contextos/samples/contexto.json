@@ -1,6 +1,0 @@
-{
-  "id": "samples",
-  "nome": "Samples — casos de teste",
-  "descricao": "Contexto para amostras sintéticas: casos feliz, delta-PE e cronograma (para iteração futura com dados reais)",
-  "current_version": "v1"
-}

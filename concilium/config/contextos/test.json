@@ -1,8 +1,0 @@
-{
-  "$comment": "Contexto para testes automatizados — catálogo estável (snapshot do mendeslobo no momento de criação dos testes, não evolui com produção)",
-  "id": "test",
-  "perfil_id": "mendeslobo",
-  "jurisdicao_id": "BR",
-  "referencia_id": "SICRO_2024_CE",
-  "catalogo_id": "test"
-}

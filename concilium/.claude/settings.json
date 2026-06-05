@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(wsl -d Ubuntu bash -c \"python3 /tmp/preencher_predecessores.py\")",
-      "Bash(wsl -d Ubuntu bash -c 'python3 -c \" *)"
-    ]
-  }
-}
