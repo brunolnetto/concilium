@@ -1,0 +1,12 @@
+{
+  "benchmark_id": "MATEC_HINES",
+  "nome": "MATEC HINES - Guarulhos (SP)",
+  "origem": "MATEC HINES - Guarulhos (SP)",
+  "tags": [
+    "real",
+    "benchmark"
+  ],
+  "criado_em": "2026-05-15T16:10:35.747609",
+  "versao": 1,
+  "imutavel": false
+}

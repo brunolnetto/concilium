@@ -1,0 +1,11 @@
+{
+  "id": "a7bcb4b3-3b59-479a-909c-d6e329ced5fb",
+  "nome": "CTC",
+  "contexto_id": "mendeslobo",
+  "criado_em": "2026-06-04T22:35:59.480361+00:00",
+  "current_version": "v1",
+  "catalogo_base": null,
+  "derivado_de_benchmark": "CTC",
+  "benchmark_versao": 1,
+  "benchmark_execution_id": null
+}

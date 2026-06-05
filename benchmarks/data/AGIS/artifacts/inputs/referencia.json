@@ -3081,6 +3081,39 @@
       "ESC-3CAT": 10,
       "ATERRO": 5
     },
+    "resource_costs": {
+      "_comment": "ADR-078: custos de mob/demob/idle por unidade de recurso. Valores estimados para benchmark AGIS.",
+      "DESMAT": {
+        "custo_mob_unit": 20000.0,
+        "custo_demob_unit": 10000.0,
+        "custo_idle_semanal_unit": 3000.0,
+        "unidade_faturamento": "dia_cal"
+      },
+      "ESC-1CAT": {
+        "custo_mob_unit": 40000.0,
+        "custo_demob_unit": 20000.0,
+        "custo_idle_semanal_unit": 6000.0,
+        "unidade_faturamento": "dia_cal"
+      },
+      "ESC-2CAT": {
+        "custo_mob_unit": 60000.0,
+        "custo_demob_unit": 30000.0,
+        "custo_idle_semanal_unit": 9000.0,
+        "unidade_faturamento": "dia_cal"
+      },
+      "ESC-3CAT": {
+        "custo_mob_unit": 80000.0,
+        "custo_demob_unit": 40000.0,
+        "custo_idle_semanal_unit": 12000.0,
+        "unidade_faturamento": "dia_cal"
+      },
+      "ATERRO": {
+        "custo_mob_unit": 50000.0,
+        "custo_demob_unit": 25000.0,
+        "custo_idle_semanal_unit": 7500.0,
+        "unidade_faturamento": "dia_cal"
+      }
+    },
     "precedence": []
   },
   "mode": "benchmark_config",

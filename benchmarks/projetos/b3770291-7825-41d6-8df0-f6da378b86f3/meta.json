@@ -1,0 +1,11 @@
+{
+  "id": "b3770291-7825-41d6-8df0-f6da378b86f3",
+  "nome": "VALE",
+  "contexto_id": "mendeslobo",
+  "criado_em": "2026-06-04T22:37:30.265761+00:00",
+  "current_version": "v1",
+  "catalogo_base": null,
+  "derivado_de_benchmark": "VALE",
+  "benchmark_versao": 1,
+  "benchmark_execution_id": null
+}

@@ -1,0 +1,11 @@
+{
+  "id": "fb43f266-9ff5-41ca-bd75-52da9369384b",
+  "nome": "MATEC_UBERLANDIA",
+  "contexto_id": "mendeslobo",
+  "criado_em": "2026-06-04T22:36:41.882275+00:00",
+  "current_version": "v1",
+  "catalogo_base": null,
+  "derivado_de_benchmark": "MATEC_UBERLANDIA",
+  "benchmark_versao": 1,
+  "benchmark_execution_id": null
+}

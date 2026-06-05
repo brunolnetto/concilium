@@ -1,0 +1,11 @@
+{
+  "id": "2bad3b4f-8a12-4bf1-9a9f-07d083a3dc4c",
+  "nome": "ROSH",
+  "contexto_id": "mendeslobo",
+  "criado_em": "2026-06-04T22:37:08.250563+00:00",
+  "current_version": "v1",
+  "catalogo_base": null,
+  "derivado_de_benchmark": "ROSH",
+  "benchmark_versao": 1,
+  "benchmark_execution_id": null
+}

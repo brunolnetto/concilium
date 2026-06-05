@@ -1,0 +1,16 @@
+{
+  "artifact_id": "8bab9bf5-5e70-4922-a5da-bed1130162a7",
+  "version": "v1",
+  "kind": "canonical",
+  "schema_name": "CanonicalModel",
+  "schema_version": "2026-05-03",
+  "created_at": "2026-06-04T22:37:07.697570Z",
+  "created_by": "04-cronograma",
+  "trace_id": null,
+  "parent_refs": [],
+  "state": "draft",
+  "content_hash": "ca86e8323853f4f435def701a90ae87ff84801d8bc3662d9c17fb48147911dae",
+  "catalog_snapshot_id": null,
+  "bdi_perfil_id": null,
+  "referencia_ids": []
+}

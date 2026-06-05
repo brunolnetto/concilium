@@ -1,0 +1,5 @@
+{
+  "slug": "ROSH",
+  "status": "indisponivel",
+  "motivo": "[Errno 2] No such file or directory: '\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\pingu\\\\github\\\\agente_engenheiro_senior\\\\concilium\\\\benchmarks\\\\data\\\\ROSH\\\\referencia.json'"
+}

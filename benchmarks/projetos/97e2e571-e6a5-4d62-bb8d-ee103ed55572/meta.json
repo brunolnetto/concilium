@@ -1,0 +1,11 @@
+{
+  "id": "97e2e571-e6a5-4d62-bb8d-ee103ed55572",
+  "nome": "LUNDIN",
+  "contexto_id": "mendeslobo",
+  "criado_em": "2026-06-04T22:36:13.138294+00:00",
+  "current_version": "v1",
+  "catalogo_base": null,
+  "derivado_de_benchmark": "LUNDIN",
+  "benchmark_versao": 1,
+  "benchmark_execution_id": null
+}

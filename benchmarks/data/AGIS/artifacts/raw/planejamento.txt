@@ -1,0 +1,29 @@
+ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA 																				% TOTAL PROJETO
+				PREÇO UNITÁRIO				VALOR DE BDI					 R$ SUB TOTAL UNIT S/ BDI 	 R$ SUB TOTAL PROJETO S/ BDI 				 R$ SUB TOTAL UNIT C/ BDI 	R$ SUB TOTAL PROJETO C/ BDI				 R$  TOTAL PROJETO 	
+				 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 BDI 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 SER/MAT/M.O/COMB/EQUIP 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 MATERIAL/M.O/EQUIP 	 SERVIÇOS 	MATERIAL	 DIESEL 	 M.O 		
+																								
+1	MVP 09 e MVP 10													 -   	 -   	 29.875.878,94 	 17.014.032,93 	 692.869,58 	 -   	 -   	 31.070.914,10 	 22.113.986,47 	 53.184.900,58 	100,0%
+1.0	 DESMATAMENTO, DESTOCAMENTO E LIMPEZA DE AREA COM ARVORES DE DIAMETRO ATÉ 15 CM 	 M2 	 2.400.000,00 			 0,29 	 0,58 	 TER 	 -   	 -   	 0,01 	 0,17 	 0,87 	 -   	 -   	 706.032,52 	 1.390.675,23 	 1,06 	 -   	 -   	 734.273,82 	 1.807.529,90 	 2.541.803,72 	4,8%
+	  DESTOCAMENTO DE ÁRVORES COM DIÂMETRO DE 0,15 A 0,3M 	 UN 	 2.500,00 			 9,57 	 19,64 	 TER 	 -   	 -   	 0,38 	 5,89 	 29,21 	 -   	 -   	 23.934,38 	 49.101,96 	 35,48 	 -   	 -   	 24.891,75 	 63.820,27 	 88.712,02 	0,2%
+	  DESTOCAMENTO DE ÁRVORES COM DIÂMETRO MAIOR QUE 0,3M 	 UN 	 700,00 			 21,28 	 43,65 	 TER 	 -   	 -   	 0,85 	 13,08 	 64,92 	 -   	 -   	 14.892,50 	 30.552,33 	 78,86 	 -   	 -   	 15.488,20 	 39.710,39 	 55.198,59 	0,1%
+1.1	ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M	M3	 107.463,11 			 4,71 	 2,95 	 TER 	 -   	 -   	 0,19 	 0,88 	 7,66 	 -   	 -   	 506.137,53 	 316.847,44 	 8,73 	 -   	 -   	 526.383,03 	 411.822,41 	 938.205,44 	1,8%
+1.2	ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT DE 2000 ATÉ 3000M	M3	 336.915,09 			 5,18 	 3,28 	 TER 	 -   	 -   	 0,21 	 0,98 	 8,46 	 -   	 -   	 1.743.983,67 	 1.106.689,36 	 9,65 	 -   	 -   	 1.813.743,02 	 1.438.419,31 	 3.252.162,34 	6,1%
+1.3	ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT ATÉ 2000M	M3	 105.311,33 			 6,25 	 3,85 	 TER 	 -   	 -   	 0,25 	 1,15 	 10,09 	 -   	 -   	 657.938,71 	 405.065,07 	 11,50 	 -   	 -   	 684.256,26 	 526.483,26 	 1.210.739,51 	2,3%
+1.4	ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT DE 2000 ATÉ 3000M	M3	 585.945,77 			 6,63 	 4,02 	 TER 	 -   	 -   	 0,27 	 1,20 	 10,65 	 -   	 -   	 3.883.884,39 	 2.353.941,23 	 12,12 	 -   	 -   	 4.039.239,76 	 3.059.534,72 	 7.098.774,48 	13,3%
+1.5	ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT ATÉ 2000M	M3	 304.634,46 			 9,69 	 5,19 	 TER 	 -   	 -   	 0,39 	 1,55 	 14,87 	 -   	 -   	 2.950.561,26 	 1.579.816,64 	 16,81 	 -   	 -   	 3.068.583,71 	 2.053.366,41 	 5.121.950,12 	9,6%
+1.6	ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT DE 2000 ATÉ 3000M	M3	 676.519,04 			 11,79 	 6,43 	 TER 	 -   	 -   	 0,47 	 1,93 	 18,22 	 -   	 -   	 7.979.213,87 	 4.349.961,06 	 20,62 	 -   	 -   	 8.298.382,43 	 5.653.861,16 	 13.952.243,59 	26,2%
+1.7	COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR NORMAL	M3	 1.135.635,30 			 6,20 	 2,94 	 TER 	 -   	 -   	 0,25 	 0,88 	 9,13 	 -   	 -   	 7.037.169,45 	 3.333.101,87 	 10,26 	 -   	 -   	 7.318.656,23 	 4.332.198,60 	 11.650.854,83 	21,9%
+1.8	COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR INTERMEDIÁRIO	M3	 29.411,00 			 8,10 	 3,84 	 TER 	 -   	 -   	 0,32 	 1,15 	 11,94 	 -   	 -   	 238.293,74 	 112.866,02 	 13,41 	 -   	 -   	 247.825,48 	 146.697,59 	 394.523,07 	0,7%
+1.9	CONSTRUÇÃO DE CORPO DE ATERRO COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE	M3	 981.153,50 			 4,07 	 1,80 	 TER 	 -   	 -   	 0,16 	 0,54 	 5,87 	 -   	 -   	 3.993.868,13 	 1.768.479,51 	 6,58 	 -   	 -   	 4.153.622,86 	 2.298.580,95 	 6.452.203,81 	12,1%
+1.10	COMPACTAÇÃO DE CAMADA FINAL DE ATERRO DE ROCHA	M3	 24.721,17 			 5,66 	 8,78 	 TER 	 -   	 -   	 0,23 	 2,63 	 14,44 	 -   	 -   	 139.968,79 	 216.935,21 	 17,29 	 -   	 -   	 145.567,54 	 281.961,50 	 427.529,05 	0,8%
+								 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+								 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+								 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+																								
+	INDIRETOS													 -   	 -   	 3.510.978,00 	 16.073.561,37 		 -   	 -   	 3.651.417,12 	 20.124.944,18 	 23.776.361,30 	100,0%
+	ADM	VB	 1,00 			 3.510.978,00 	 10.255.772,43 	 IND 	 -   	 -   	 140.439,12 	 2.584.994,03 	 13.766.750,43 	 -   	 -   	 3.510.978,00 	 10.255.772,43 	 16.492.183,58 	 -   	 -   	 3.651.417,12 	 12.840.766,46 	 16.492.183,58 	69,4%
+	TOPOGRAFIA	VB	 1,00 				 863.205,59 	 IND 	 -   	 -   	 -   	 217.573,21 	 863.205,59 	 -   	 -   	 -   	 863.205,59 	 1.080.778,80 	 -   	 -   	 -   	 1.080.778,80 	 1.080.778,80 	4,5%
+	LABORATORIO	VB	 1,00 				 140.291,10 	 IND 	 -   	 -   	 -   	 35.360,74 	 140.291,10 	 -   	 -   	 -   	 140.291,10 	 175.651,84 	 -   	 -   	 -   	 175.651,84 	 175.651,84 	0,7%
+	QSMS	VB	 1,00 				 759.691,82 	 IND 	 -   	 -   	 -   	 191.482,29 	 759.691,82 	 -   	 -   	 -   	 759.691,82 	 951.174,12 	 -   	 -   	 -   	 951.174,12 	 951.174,12 	4,0%
+	MOB/DESMOB	VB	 1,00 				 4.054.600,43 	 IND 	 -   	 -   	 -   	 1.021.972,55 	 4.054.600,43 	 -   	 -   	 -   	 4.054.600,43 	 5.076.572,97 	 -   	 -   	 -   	 5.076.572,97 	 5.076.572,97 	21,4%
+														 -   	 -   	 33.386.856,95 	 33.087.594,30 		 -   	 -   	 34.722.331,23 	 42.238.930,65 	 76.961.261,88 	
