@@ -45,7 +45,7 @@ class RegimePermanencia:
         Convenções (referência de mercado, construção civil brasileira):
         - MOB ≈ 20% do custo mensal (transporte + setup)
         - DEMOB ≈ 15% do custo mensal
-        - Standby semanal ≈ 30% do custo semanal ativo (manutenção mínima)
+        - Standby semanal ≈ 100% do custo semanal ativo (NEP-031 L2: aluguel integral)
         """
         from concilium.domain.constants import SEMANAS_POR_MES
 
@@ -54,7 +54,7 @@ class RegimePermanencia:
             tipo_id=tipo_id,
             custo_mob=round(custo_mensal_ativo * 0.20, 2),
             custo_demob=round(custo_mensal_ativo * 0.15, 2),
-            custo_standby_semanal=round(custo_semanal * 0.30, 2),
+            custo_standby_semanal=round(custo_semanal * 1.0, 2)  # NEP-031 L2,
         )
 
 

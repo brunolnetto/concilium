@@ -17,22 +17,27 @@ CATEGORIA_TIPO_MAPA: dict[str, list[str]] = {
 CARACTERES_PROIBIDOS = ["Ã§", "Ã£", "â‰¥", "â‰¤", "â†’"]
 RANGE_SENSATO_POR_UNIDADE: dict[str, tuple[float, float]] = {
     "mes": (0.001, 1.0),
+    "mês": (0.001, 1.0),  # Variante acentuada
     "h": (0.0001, 100.0),
     "litro": (0.001, 1000.0),
     "l": (0.001, 1000.0),
     "kg": (0.001, 10000.0),
     "m": (0.001, 100.0),
     "m2": (0.001, 1000.0),
+    "m²": (0.001, 1000.0),  # Variante com símbolo
     "m3": (0.001, 100.0),
+    "m³": (0.001, 100.0),  # Variante com símbolo
     "ton": (0.0001, 1000.0),
     "t": (0.0001, 1000.0),
     "saco": (0.001, 100.0),
     "unidade": (0.001, 100.0),
+    "un": (0.001, 100.0),  # Forma abreviada de unidade
 }
 
 RANGE_OBRIGATORIO_POR_UNIDADE: dict[str, tuple[float, float]] = {
     **RANGE_SENSATO_POR_UNIDADE,
     "mes": (1e-7, 12.0),
+    "mês": (1e-7, 12.0),  # Variante acentuada com range estendido
 }
 
 
@@ -61,12 +66,17 @@ class ValidadorCPUInsumo:
         "M³": "m3",
         "m³": "m3",
         "UN": "un",
+        "Un": "un",
         "UNID": "un",
         "unid": "un",
+        "UNIDADE": "unidade",
+        "Unidade": "unidade",
         "H": "h",
         "HORA": "h",
         "MES": "mes",
         "MÊS": "mes",
+        "mês": "mes",
+        "Mês": "mes",
         "KG": "kg",
         "TON": "t",
         "T": "t",
@@ -139,8 +149,13 @@ class ValidadorCPUInsumo:
     ) -> ValidacaoItem:
         from concilium.domain.services.conversor_unidades import ConversorUnidades
 
-        unidade_insumo = str(insumo.get("unidade", "")).strip().lower()
-        unidade_composicao = str(composicao_item.get("unidade", unidade_insumo)).strip().lower()
+        unidade_insumo_raw = str(insumo.get("unidade", "")).strip()
+        unidade_composicao_raw = str(composicao_item.get("unidade", unidade_insumo_raw)).strip()
+        
+        # Normalizar unidades para formas canônicas (m² → m2, mês → mes, etc.)
+        unidade_insumo = self.UNIDADES_NORM_MAP.get(unidade_insumo_raw, unidade_insumo_raw.lower())
+        unidade_composicao = self.UNIDADES_NORM_MAP.get(unidade_composicao_raw, unidade_composicao_raw.lower())
+        
         coeficiente = composicao_item.get("coeficiente")
 
         if unidade_composicao != unidade_insumo:
@@ -161,7 +176,7 @@ class ValidadorCPUInsumo:
             return ValidacaoItem(
                 codigo="VAL-CPU-INS-05",
                 status="ERRO",
-                mensagem=f"Unidade '{unidade_insumo}' do insumo não é reconhecida no mapa de ranges",
+                mensagem=f"Unidade '{unidade_insumo_raw}' (normalizada: '{unidade_insumo}') do insumo não é reconhecida no mapa de ranges",
             )
 
         if coeficiente_val is None:

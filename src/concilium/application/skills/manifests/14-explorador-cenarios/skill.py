@@ -1,18 +1,23 @@
-"""Skill 14 — Plan Space Explorer (ADR-021).
+"""Skill 14 — Plan Space Explorer (ADR-021 / ADR-082 revisado).
 
-Explora o espaço combinatorial de intervenções sobre o plano:
-  - AMARELO/VERMELHO: busca greedy por sequência mínima de levers que atinge VERDE
-  - VERDE: scan de sensibilidade revelando oportunidades de aumento de margem
+Explora o espaço de intervenções sobre o plano:
+  - AMARELO/VERMELHO: busca greedy por sequência mínima que atinge VERDE
+  - VERDE: scan de oportunidades de aumento de margem
 
-Levers disponíveis:
-  EXPAND_POOL       — elimina delta de BUY/HIRE via pool próprio
-  REDUCE_DURATION   — reduz indiretos proporcionalmente à compressão de prazo
-  ADD_TEAMS         — reduz permanência em atividades A+ (confiança BAIXA)
-  REVIEW_BDI        — revisão de composição de BDI (confiança BAIXA, catch-all)
+Levers derivados diretamente dos LeverEquilibrio reais (ADR-082) já calculados em
+``canonical.ponto_equilibrio[].levers_equilibrio`` — com deltas em R$ auditáveis e
+base de margem operacional honesta (venda_plus, custo instancial real, ADR-085).
+
+Mapeamento lever_id → Lever.tipo:
+  fechar_gap_escala           → SERIALIZAR_CRONOGRAMA
+  fechar_gap_praticabilidade  → MELHORAR_PRATICABILIDADE
+  fechar_gap_pool             → OTIMIZAR_POOL
+  revisao_bdi_minima          → RECALIBRAR_PU
 """
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any
 
 from concilium.application.skills.base import SkillResult
@@ -27,10 +32,24 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-_REVIEW_BDI_DELTA = 0.018  # estimativa heurística conservadora de ganho de margem
-_ADD_TEAMS_PERMANENCIA_GAIN = 0.20  # redução de permanência com mais equipes
-_ADD_TEAMS_COST_SENSITIVITY = 0.10  # % de redução de custo direto por menos permanência
-_EXPAND_POOL_EFFICIENCY = 0.80  # fração do delta_reconciliado evitável com pool próprio
+_LEVER_ID_TO_TIPO: dict[str, str] = {
+    "fechar_gap_escala":          "SERIALIZAR_CRONOGRAMA",
+    "fechar_gap_praticabilidade": "MELHORAR_PRATICABILIDADE",
+    "fechar_gap_pool":            "OTIMIZAR_POOL",
+    "revisao_bdi_minima":         "RECALIBRAR_PU",
+}
+_LEVER_CHECKPOINT: dict[str, str] = {
+    "SERIALIZAR_CRONOGRAMA":    "04-cronograma",
+    "MELHORAR_PRATICABILIDADE": "04-cronograma",
+    "OTIMIZAR_POOL":            "05-equipes-e-alocacao",
+    "RECALIBRAR_PU":            "06-precificacao-unitaria",
+}
+_LEVER_CONFIANCA: dict[str, str] = {
+    "SERIALIZAR_CRONOGRAMA":    "ALTA",
+    "MELHORAR_PRATICABILIDADE": "MEDIA",
+    "OTIMIZAR_POOL":            "ALTA",
+    "RECALIBRAR_PU":            "MEDIA",
+}
 
 
 def _classify_status(margem: float, faixa_alvo: dict, faixa_aceitavel: dict) -> StatusMargem:
@@ -41,145 +60,88 @@ def _classify_status(margem: float, faixa_alvo: dict, faixa_aceitavel: dict) -> 
     return "VERMELHO"
 
 
-def _semanas_projeto(canonical_in: CanonicalModel) -> int:
-    """Retorna duração total do projeto em semanas a partir das datas do projeto."""
-    proj = canonical_in.projeto
-    delta = (proj.data_termino - proj.data_inicio).days
-    return max(int(delta / 7), 1)
-
-
-def _bl_expand_pool_lever(recon, venda: float):
-    """Builds EXPAND_POOL lever or returns None if not applicable."""
-    if recon is None or recon.delta_custo_total <= 0 or venda <= 0:
-        return None
-    delta_evitavel = recon.delta_custo_total * _EXPAND_POOL_EFFICIENCY
-    dm = round(delta_evitavel / venda, 6)
-    nomes = list({item.tipo_nome for item in recon.itens_aquisicao})[:3]
-    return Lever(
-        tipo="EXPAND_POOL",
-        checkpoint_skill="03-catalogo-de-recursos",
-        parametros={f"pool.{n}.quantidade_total": "+1" for n in nomes},
-        delta_margem_estimado=dm,
-        custo_aplicacao=recon.delta_custo_total * 0.20,
-        ratio_beneficio=round(dm / max(recon.delta_custo_total * 0.20 / venda, 1e-6), 4),
-        confianca="ALTA",
-        controle="SEMI_TUNAVEL",
-        justificativa=(
-            f"Elimina {dm * 100:.2f}% de custo de aquisi\u00e7\u00e3o BUY/HIRE ({len(recon.itens_aquisicao)} item(s)). "
-            "Requer verifica\u00e7\u00e3o de disponibilidade de mercado."
-        ),
-    )
-
-
-def _bl_reduce_duration_lever(canonical_in, venda: float, inputs: dict):
-    """Builds REDUCE_DURATION lever or returns None if not applicable."""
-    indiretos = canonical_in.indiretos or []
-    custo_indireto_total = sum(i.custo_total for i in indiretos)
-    if custo_indireto_total <= 0 or venda <= 0:
-        return None
-    semanas_total = _semanas_projeto(canonical_in)
-    semanas_reducao = int(inputs.get("semanas_reducao_alvo", max(2, semanas_total * 0.10)))
-    fracao_reducao = semanas_reducao / semanas_total
-    dm = round(fracao_reducao * custo_indireto_total / venda, 6)
-    return Lever(
-        tipo="REDUCE_DURATION",
-        checkpoint_skill="04-cronograma",
-        parametros={
-            "deadline_weeks": str(semanas_total - semanas_reducao),
-            "algorithm": "MINSLK",
-        },
-        delta_margem_estimado=dm,
-        custo_aplicacao=0.0,
-        ratio_beneficio=round(dm / max(fracao_reducao, 1e-6), 4),
-        confianca="MEDIA",
-        controle="TUNAVEL",
-        justificativa=(
-            f"Reduzir {semanas_reducao} sem. ({fracao_reducao * 100:.0f}% do prazo) "
-            f"corta indiretos em ~{dm * 100:.2f}% de margem. "
-            "Verificar praticabilidade do ritmo acelerado."
-        ),
-    )
-
-
-def _batl_custo_a_plus(a_plus: list, resultado: Any) -> float:
-    """Computes custo_a_plus sum for ADD_TEAMS lever."""
-    total = resultado.custo.total or 0
-    result = 0.0
-    for a in a_plus:
-        result += getattr(a.custo, "valor_raw", 0.0) * total
-    return result
-
-
-def _bl_add_teams_lever(canonical_in, venda: float):
-    """Builds ADD_TEAMS lever or returns None if not applicable."""
-    ccr = canonical_in.cost_criticality_report
-    if ccr is None:
-        return None
-    atividades_cc = getattr(ccr, "atividades", None) or []
-    a_plus = [a for a in atividades_cc if getattr(a, "classe", "") == "A+"]
-    if not a_plus or not canonical_in.resultado:
-        return None
-    custo_a_plus = _batl_custo_a_plus(a_plus, canonical_in.resultado)
-    dm = round(custo_a_plus * _ADD_TEAMS_COST_SENSITIVITY * _ADD_TEAMS_PERMANENCIA_GAIN / max(venda, 1), 6)
-    if dm <= 0:
-        return None
-    top3 = a_plus[:3]
-    params = {}
-    for a in top3:
-        params[getattr(a, "atividade_id", "?")] = "+1 equipe"
-    return Lever(
-        tipo="ADD_TEAMS",
-        checkpoint_skill="03-equipes-diretas",
-        parametros=params,
-        delta_margem_estimado=dm,
-        custo_aplicacao=0.0,
-        ratio_beneficio=round(dm, 6),
-        confianca="BAIXA",
-        controle="TUNAVEL",
-        justificativa=(
-            f"{len(a_plus)} atividade(s) A+. Mais equipes reduz permanência em "
-            f"~{_ADD_TEAMS_PERMANENCIA_GAIN * 100:.0f}% -> ganho estimado de {dm * 100:.2f}% de margem."
-        ),
-    )
-
-
 def _build_levers(
     canonical_in: CanonicalModel,
-    margem_atual: float,
     venda: float,
-    faixa_alvo: dict,
-    inputs: dict,
 ) -> list[Lever]:
-    """Constrói lista de levers disponíveis a partir do estado canônico."""
+    """Agrega LeverEquilibrio reais (ADR-082) de ponto_equilibrio em Levers do PlanSpace.
+
+    Cada LeverEquilibrio tem ``delta_margin`` em R$ e ``delta_margin_pct`` como fração
+    da venda_cpu do item. Agrupa por tipo de ação e soma os deltas para obter o impacto
+    total de cada intervenção sobre toda a carteira de atividades.
+
+    Base: venda_plus (custo instancial × BDI) — o preço operacional honesto.
+    Todos os overheads imputados são explicáveis e auditáveis no CuboPoolInstancial.
+    """
+    if venda <= 0:
+        return []
+
+    # Agrega por tipo PSE: soma delta_margin_pct de todos os itens
+    agg: dict[str, dict] = defaultdict(lambda: {
+        "delta_rs": 0.0, "delta_pct": 0.0, "itens": [], "restricoes": []
+    })
+
+    for pe in (canonical_in.ponto_equilibrio or []):
+        for lv in (pe.levers_equilibrio or []):
+            tipo_pse = _LEVER_ID_TO_TIPO.get(lv.id)
+            if tipo_pse is None:
+                continue
+            d = agg[tipo_pse]
+            d["delta_rs"] += float(lv.delta_margin or 0.0)
+            # delta_margin_pct é relativo à venda_cpu do item; reescalamos para venda total
+            item_venda = float(pe.custo_venda_cpu or 0.0)
+            if item_venda > 0 and venda > 0:
+                d["delta_pct"] += float(lv.delta_margin or 0.0) / venda
+            d["itens"].append(pe.item_id)
+            d["restricoes"].extend(lv.restricoes or [])
+
     levers: list[Lever] = []
-    recon = canonical_in.resultado_reconciliado
-    lv = _bl_expand_pool_lever(recon, venda)
-    if lv is not None:
-        levers.append(lv)
-    lv = _bl_reduce_duration_lever(canonical_in, venda, inputs)
-    if lv is not None:
-        levers.append(lv)
-    lv = _bl_add_teams_lever(canonical_in, venda)
-    if lv is not None:
-        levers.append(lv)
-    # ── REVIEW_BDI: catch-all heurístico ─────────────────────
-    if venda > 0:
+    for tipo_pse, d in agg.items():
+        delta_rs = round(d["delta_rs"], 2)
+        delta_pct = round(d["delta_pct"], 6)
+        if delta_rs <= 0:
+            continue
+        n_itens = len(set(d["itens"]))
+        restricoes_unicas = list(dict.fromkeys(d["restricoes"]))[:3]
+        restr_txt = "; ".join(restricoes_unicas) if restricoes_unicas else ""
         levers.append(
             Lever(
-                tipo="REVIEW_BDI",
-                checkpoint_skill="07-custos-indiretos",
-                parametros={},
-                delta_margem_estimado=_REVIEW_BDI_DELTA,
+                tipo=tipo_pse,
+                checkpoint_skill=_LEVER_CHECKPOINT[tipo_pse],
+                parametros={
+                    "delta_margem_rs": str(int(delta_rs)),
+                    "n_atividades": str(n_itens),
+                    "itens": ",".join(sorted(set(d["itens"])))[:200],
+                },
+                delta_margem_estimado=delta_pct,
                 custo_aplicacao=0.0,
-                ratio_beneficio=_REVIEW_BDI_DELTA,
-                confianca="BAIXA",
-                controle="SEMI_TUNAVEL",
+                ratio_beneficio=round(delta_pct, 6),
+                confianca=_LEVER_CONFIANCA[tipo_pse],
+                controle="TUNAVEL",
                 justificativa=(
-                    "Revisão da composição de BDI e custos indiretos. "
-                    "Estimativa conservadora de 1.8% de ganho de margem com otimização de categorias."
+                    f"{tipo_pse} — {n_itens} atividade(s). "
+                    f"Δ margem R$ {delta_rs:,.0f} ({delta_pct * 100:.2f}% da venda). "
+                    + (f"Restrições: {restr_txt}" if restr_txt else "Sem restrições identificadas.")
                 ),
             )
         )
+
+    # Fallback: se ponto_equilibrio não populado, lever heurístico conservador
+    if not levers:
+        indiretos = canonical_in.indiretos or []
+        custo_ind = sum(i.custo_total for i in indiretos)
+        proj = canonical_in.projeto
+        semanas_total = max(int((proj.data_termino - proj.data_inicio).days / 7), 1)
+        if custo_ind > 0:
+            dm = round(0.10 * custo_ind / venda, 6)
+            levers.append(Lever(
+                tipo="REDUCE_DURATION", checkpoint_skill="04-cronograma",
+                parametros={"deadline_weeks": str(int(semanas_total * 0.9))},
+                delta_margem_estimado=dm, custo_aplicacao=0.0, ratio_beneficio=dm,
+                confianca="BAIXA", controle="TUNAVEL",
+                justificativa="Fallback: redução de 10% no prazo → corte proporcional de indiretos.",
+            ))
+
     levers.sort(key=lambda lv: -lv.ratio_beneficio)
     return levers
 
@@ -218,9 +180,9 @@ def _repair_path(
 
 
 def _risco_lever(lever: Lever) -> str:
-    if lever.confianca == "ALTA" and lever.tipo in ("REDUCE_DURATION", "EXPAND_POOL"):
+    if lever.confianca == "ALTA":
         return "BAIXO"
-    if lever.confianca == "BAIXA" or lever.tipo == "ADD_TEAMS":
+    if lever.confianca == "BAIXA":
         return "ALTO"
     return "MEDIO"
 
@@ -243,27 +205,32 @@ def run_explorador_cenarios(
 ) -> SkillResult:
     """Popula 'plan_space_result' com repair_path e/ou oportunidades.
 
-    Pré-condição: resultado (06) populado.
+    Base de margem: venda_plus (preço operacional honesto, ADR-085 D5).
+    Levers: derivados de canonical.ponto_equilibrio[].levers_equilibrio (ADR-082).
     """
     validacoes: list[ValidacaoItem] = []
 
-    recon = canonical_in.resultado_reconciliado
     resultado = canonical_in.resultado
+    recon = canonical_in.resultado_reconciliado
 
     if resultado is None:
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-PSE-PRECONDICAO",
                 status="ERRO",
-                mensagem="resultado (06) ausente — execute 06-consolidar antes.",
+                mensagem="resultado (08) ausente — execute 08-consolidar antes.",
             )
         )
         return SkillResult(canonical_in, validacoes)
 
-    # Prefere resultado reconciliado
-    margem_entrada = recon.margem_reconciliada_pct if recon else resultado.margem_pct
-    status_entrada: StatusMargem = recon.status_margem_reconciliado if recon else resultado.status_margem
-    venda = recon.venda_total_com_bdi if recon else resultado.venda.total_com_bdi
+    # Base operacional honesta: venda_plus (custo instancial × BDI, ADR-085)
+    # Fallback para total_com_bdi (catálogo) se venda_plus ausente
+    venda_plus = float(resultado.venda.total_custo_plus or 0.0)
+    venda = venda_plus if venda_plus > 0 else float(resultado.venda.total_com_bdi or 0.0)
+
+    # Margem operacional: resultado_financeiro / venda_plus (já calculado em skill-08)
+    margem_entrada = float(resultado.margem_pct or 0.0)
+    status_entrada: StatusMargem = resultado.status_margem or "VERMELHO"
 
     # Thresholds
     faixa_alvo = {"min": 0.08, "max": 0.10}
@@ -272,17 +239,16 @@ def run_explorador_cenarios(
         faixa_alvo = perfil.get("faixa_margem_alvo", faixa_alvo)
         faixa_aceitavel = perfil.get("faixa_margem_aceitavel", faixa_aceitavel)
 
-    levers = _build_levers(canonical_in, margem_entrada, venda, faixa_alvo, inputs)
+    levers = _build_levers(canonical_in, venda)
 
     repair: RepairPath | None = None
     oportunidades: list[OportunidadeVerde] = []
 
     if status_entrada != "VERDE":
         repair = _repair_path(levers, margem_entrada, faixa_alvo, faixa_aceitavel)
-        levers_nao_usados = levers[len(repair.passos) :]
+        levers_nao_usados = levers[len(repair.passos):]
         oportunidades = _rec_build_oportunidades(levers, levers_nao_usados)
     else:
-        # VERDE: todos os levers são oportunidades de melhoria
         oportunidades = sorted(_rec_build_oportunidades(levers), key=lambda o: -o.margem_adicional_estimada)
 
     psr = PlanSpaceResult(
@@ -298,22 +264,30 @@ def run_explorador_cenarios(
     if repair is not None:
         viavel_str = "viável" if repair.viavel else "incompleto"
         status_rep = "OK" if repair.viavel else "AVISO"
+        # Converte delta de frações para R$ para a mensagem
+        delta_total_rs = sum(lv.delta_margem_estimado * venda for lv in levers)
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-PSE-02",
                 status=status_rep,
                 mensagem=(
                     f"Repair {viavel_str}: margem projetada {repair.margem_projetada * 100:.2f}%"
-                    f" em {len(repair.passos)} passo(s)."
+                    f" em {len(repair.passos)} passo(s). "
+                    f"Potencial total dos levers: R$ {delta_total_rs:,.0f} "
+                    f"({len(levers)} lever(s) de {', '.join(set(lv.tipo for lv in levers))})."
                 ),
             )
         )
     else:
+        delta_total_rs = sum(lv.delta_margem_estimado * venda for lv in levers)
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-PSE-02",
                 status="OK",
-                mensagem=f"Plano VERDE. {len(oportunidades)} oportunidade(s) de melhoria mapeadas.",
+                mensagem=(
+                    f"Plano {status_entrada}. {len(oportunidades)} oportunidade(s). "
+                    f"Potencial R$ {delta_total_rs:,.0f} em melhorias adicionais de margem."
+                ),
             )
         )
 

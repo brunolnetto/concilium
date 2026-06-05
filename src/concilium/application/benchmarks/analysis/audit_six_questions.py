@@ -304,7 +304,14 @@ def run_audit(slug: str, root: Path | None = None) -> dict[str, Any]:
     """
     r = root or _DEFAULT_ROOT
     data_dir = r / "benchmarks" / "data" / slug
-    ref = _load_json(data_dir / "referencia.json")
+    ref_path = None
+    for p in (data_dir / "artifacts" / "inputs" / "referencia.json", data_dir / "referencia.json"):
+        if p.exists():
+            ref_path = p
+            break
+    if ref_path is None:
+        raise FileNotFoundError(f"referencia.json não encontrado para slug={slug}")
+    ref = _load_json(ref_path)
     extr_path = data_dir / "extracao_intermediarios.json"
     extr = _load_json(extr_path) if extr_path.exists() else {}
     canonical_path = _resolve_canonical_path(extr, ref, r)

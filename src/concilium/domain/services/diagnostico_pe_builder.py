@@ -24,22 +24,73 @@ _CROSS_TERM_THRESHOLD = 0.05
 
 
 def _compute_item_metrics(active: list) -> dict[str, float]:
-    """Calcula η_real, p_medio, cov_np, eps_cross, validade a partir das semanas ativas."""
+    """Calcula η_real, p_medio, cov_np, eps_cross, validade a partir das semanas ativas.
+
+    NEP-035 (Seção 5): agregação correta por capacidade máxima q_max_celula.
+
+    A eficiência agregada é a média ponderada pelas capacidades:
+        η_agg = Σ_j(η_j · q_max_j) / Σ_j(q_max_j)
+
+    Quando os pesos q_max são iguais entre semanas (ramp plano) isso reduz à
+    média simples. Quando variam (ramp/subalocação), a ponderação evita que
+    semanas com alta capacidade (mais equipes) subdeterminem a eficiência média.
+
+    O termo cruzado `eps_cross` (Cov(n, p)/n̄) quantifica o acoplamento entre
+    fatores na agregação: eps_cross ≈ 0 indica que os fatores são separáveis no
+    agregado; |eps_cross| > CROSS_TERM_THRESHOLD indica acoplamento material.
+    """
     N_total = sum(d.num_equipes for d in active)
-    prod_weighted = sum(d.eficiencia * d.num_equipes for d in active)
-    eta_real = prod_weighted / N_total if N_total > 0 else 1.0
+    # ADR-082: fator efetivo η_j = fator_total = η_s · η_p · η_w
+    def _eta(d: Any) -> float:
+        ft = getattr(d, "fator_total", None)
+        return float(ft) if ft is not None else float(d.eficiencia)
+
+    # NEP-035: pesos = q_max_celula (capacidade teórica); fallback = n_j (retrocompat)
+    def _weight(d: Any) -> float:
+        qmax = getattr(d, "q_max_celula", None)
+        if qmax is not None and float(qmax) > 0:
+            return float(qmax)
+        return float(d.num_equipes)
+
+    Q_max_total = sum(_weight(d) for d in active)
+    prod_weighted = sum(_eta(d) * _weight(d) for d in active)
+    eta_real = prod_weighted / Q_max_total if Q_max_total > 0 else 1.0
     T_weeks = len(active)
-    p_medio = sum(d.eficiencia for d in active) / T_weeks
+    p_medio = sum(_eta(d) for d in active) / T_weeks
+    clima_medio = sum(float(getattr(d, "fator_clima", _eta(d))) for d in active) / T_weeks
+    # η_s e η_p médios (NEP-035) — disponíveis quando campos foram populados
+    eta_s_medio = (
+        sum(float(getattr(d, "eta_s", 1.0)) for d in active) / T_weeks
+    )
+    eta_p_medio = (
+        sum(float(getattr(d, "eta_p", float(getattr(d, "fator_clima", 1.0)))) for d in active) / T_weeks
+    )
+    eta_w_medio = (
+        sum(float(getattr(d, "eta_w", float(d.eficiencia))) for d in active) / T_weeks
+    )
+    calendario_medio = sum(float(getattr(d, "fator_calendario", 1.0)) for d in active) / T_weeks
+    calendario_ponderado_n = (
+        sum(float(getattr(d, "fator_calendario", 1.0)) * _weight(d) for d in active) / Q_max_total if Q_max_total > 0 else 1.0
+    )
     n_medio = N_total / T_weeks
-    cov_np = prod_weighted / T_weeks - p_medio * n_medio
-    eps_cross = eta_real - p_medio + cov_np / n_medio if n_medio > 0 else 0.0
+    # Termo cruzado calculado a partir dos pesos de capacidade (Seção 5 do modelo)
+    p_medio_cap = prod_weighted / T_weeks if T_weeks > 0 else p_medio
+    cov_np = p_medio_cap - p_medio * (Q_max_total / T_weeks)
+    eps_cross = eta_real - p_medio + cov_np / max(Q_max_total / T_weeks, 1e-9)
     validade = abs(cov_np / (n_medio * p_medio)) < _CROSS_TERM_THRESHOLD if n_medio * p_medio > 0 else True
     return {
         "N_total": N_total,
+        "Q_max_total": Q_max_total,
         "prod_weighted": prod_weighted,
         "eta_real": eta_real,
         "T_weeks": T_weeks,
         "p_medio": p_medio,
+        "clima_medio": clima_medio,
+        "eta_s_medio": eta_s_medio,
+        "eta_p_medio": eta_p_medio,
+        "eta_w_medio": eta_w_medio,
+        "calendario_medio": calendario_medio,
+        "calendario_ponderado_n": calendario_ponderado_n,
         "n_medio": n_medio,
         "cov_np": cov_np,
         "eps_cross": eps_cross,
@@ -70,22 +121,53 @@ def _build_gap_fatores(
     N_total = metrics["N_total"]
     eta_real = metrics["eta_real"]
     p_medio = metrics["p_medio"]
+    clima_medio = metrics.get("clima_medio", p_medio)
+    calendario_medio = metrics.get("calendario_medio", 1.0)
+    calendario_ponderado_n = metrics.get("calendario_ponderado_n", calendario_medio)
 
     gap_direto_estimado = c_fixo_semanal * N_total * (1.0 - eta_real)
     gap_ind_estimado = float((ca.custo_indireto_atribuido if ca else 0) * (1.0 - eta_real))
     gap_total_estimado = gap_direto_estimado + gap_ind_estimado
     escala = abs(gap_total) / max(abs(gap_total_estimado), 1.0) if gap_total_estimado else 1.0
 
-    f_eta_clima_rs = c_fixo_semanal * N_total * max(0.0, 1.0 - p_medio) * escala
+    # Base de indisponibilidade civil+climática separada por pesos relativos.
+    indisponibilidade_total = c_fixo_semanal * N_total * max(0.0, 1.0 - p_medio) * escala
+    peso_clima = max(0.0, 1.0 - clima_medio)
+    peso_cal = max(0.0, 1.0 - calendario_medio)
+    soma_pesos = peso_clima + peso_cal
+    if soma_pesos > 0:
+        f_eta_clima_rs = indisponibilidade_total * (peso_clima / soma_pesos)
+        gap_cal_total_rs = indisponibilidade_total * (peso_cal / soma_pesos)
+    else:
+        f_eta_clima_rs = indisponibilidade_total
+        gap_cal_total_rs = 0.0
+
+    # Parcela evitável por alocação temporal (concentração em semanas com baixa operação civil).
+    eps_cal_timing = max(0.0, calendario_medio - calendario_ponderado_n)
+    f_calendario_rs = c_fixo_semanal * N_total * eps_cal_timing * escala
+    f_calendario_rs = min(max(0.0, f_calendario_rs), gap_cal_total_rs)
+    f_calendario_estrutural_rs = max(0.0, gap_cal_total_rs - f_calendario_rs)
+
     f_cross_rs = c_fixo_semanal * N_total * max(0.0, p_medio - eta_real) * escala
     f_ind_clima_rs = gap_ind_estimado * p_medio / max(eta_real, 0.01) * escala if eta_real < p_medio else 0.0
     f_ind_ramp_rs = max(0.0, gap_ind_estimado * escala - f_ind_clima_rs)
-    f_residual_rs = max(0.0, abs(gap_total) - f_eta_clima_rs - f_cross_rs - f_ind_clima_rs - f_ind_ramp_rs)
+    f_residual_rs = max(
+        0.0,
+        abs(gap_total)
+        - f_eta_clima_rs
+        - f_calendario_rs
+        - f_calendario_estrutural_rs
+        - f_cross_rs
+        - f_ind_clima_rs
+        - f_ind_ramp_rs,
+    )
 
     f1_rs = _compute_f1_quantizacao(canonical_in, resultado, gap_total)
 
     fatores_raw = [
         ("F_ETA_CLIMA", f_eta_clima_rs),
+        ("F_CALENDARIO", f_calendario_rs),
+        ("F_CALENDARIO_ESTRUTURAL", f_calendario_estrutural_rs),
         ("F_ETA_CROSS", f_cross_rs),
         ("F_IND_CLIMA", f_ind_clima_rs),
         ("F_IND_RAMP", f_ind_ramp_rs),

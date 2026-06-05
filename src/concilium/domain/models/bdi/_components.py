@@ -21,9 +21,14 @@ from ._base import CategoriaBdi
 class ComponentesBdi(BaseModel):
     """Decomposição auditável de um BDI por categoria de custo (ADR-023 §D1).
 
-    Fórmula TCU Acórdão 2622/2013:
-        BDI = (1 + AC + DF + R + CR + L) / (1 - T) - 1
+    Fórmula TCU Acórdão 2622/2013 — numerador multiplicativo:
+        BDI = [(1+AC) × (1+DF) × (1+R) × (1+CR) × (1+L)] / (1 - T) - 1
     onde T = cofins + iss + pis + cssl + ir.
+
+    O numerador usa produto (não soma) dos fatores de overhead, conforme o
+    Acórdão TCU e a planilha de referência. A forma aditiva (1+AC+DF+R+L)
+    é uma simplificação que subestima o BDI em ~0,9 pp para os valores típicos
+    de terraplenagem.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -53,8 +58,12 @@ class ComponentesBdi(BaseModel):
 
     @property
     def bdi_total(self) -> float:
-        """BDI calculado pela fórmula TCU. Retorna fração (ex: 0.3450 = 34,50%)."""
-        numerador = 1 + self.overhead
+        """BDI calculado pela fórmula TCU multiplicativa. Retorna fração (ex: 0.2997 = 29,97%).
+
+        Numerador: produto dos fatores — (1+AC)(1+DF)(1+R)(1+CR)(1+L)
+        Denominador: 1 - T  (tributos sobre o preço de venda)
+        """
+        numerador = (1 + self.ac) * (1 + self.df) * (1 + self.r) * (1 + self.cr) * (1 + self.l)
         denominador = 1 - self.tributos
         if denominador <= 0:
             raise ValueError(f"Tributos totais >= 1 ({self.tributos:.4f}); BDI indefinido.")
@@ -104,10 +113,11 @@ class ComponentesBdi(BaseModel):
 
 
 class TabelaBdi(BaseModel):
-    """Tabela de BDI para todos os cinco tipos de custo de um projeto (ADR-023 §D1).
+    """Tabela de BDI para todos os tipos de custo de um projeto (ADR-023 §D1 / ADR-090).
 
-    Funciona como template-base da construtora. A configuração efetiva por projeto
-    é obtida via `resolver_componentes_bdi(base, perfil)` em §D7.
+    ADR-090: `diesel` é um alias de `material` (ambos = 4%, fornecimento de mercadoria).
+    O campo `diesel` é mantido por retrocompatibilidade de serialização e para rastreamento
+    diferenciado de crédito CBS/IBS em `TaxSimulationScenario` (ADR-055).
     """
 
     model_config = ConfigDict(frozen=True)
@@ -116,85 +126,99 @@ class TabelaBdi(BaseModel):
     material: ComponentesBdi
     servicos: ComponentesBdi
     indireto: ComponentesBdi
+    # ADR-090: diesel = material (mesma taxa 4%); campo mantido por retrocompat + CBS/IBS
     diesel: ComponentesBdi
     data_vigencia: date
 
     def para_categoria(self, categoria: CategoriaBdi) -> ComponentesBdi:
+        # ADR-090: DIESEL delega para material (mesma ComponentesBdi)
+        if categoria == "DIESEL":
+            return self.material
         return getattr(self, categoria.lower())
 
 
-# Valores padrão derivados da planilha rfi_catalog.xlsm (abril/2026).
-# Tributos (cofins, iss, pis, cssl, ir) importados de domain/constants.py (ADR-056 §T3).
+# Valores calibrados pela planilha AGIS / Ferrovia Nova Transnordestina (2026-03)
+# e validados pelo benchmark AGIS (delta preco_venda < 0.1% vs referência).
 #
-# BDI efetivos calculados pela fórmula TCU = (1+OH)/(1-T) - 1:
-#   mao_obra  : OH=16,50%  T=13,38%  →  BDI=34,50%
-#   material  : OH= 5,00%  T= 0,00%  →  BDI= 5,00%
-#   servicos  : OH=16,50%  T=13,38%  →  BDI=34,50%
-#   indireto  : OH= 6,00%  T=13,38%  →  BDI=22,37%
-#   diesel    : OH= 9,00%  T=13,38%  →  BDI=25,84%
+# Tributos: obras de terraplenagem e infraestrutura ferroviária beneficiam-se de
+# isenção de COFINS e PIS (regime cumulativo / desoneração). ISS incide sobre
+# serviços de MO, serviços e indiretos; NÃO incide sobre fornecimento de material
+# e diesel (tratados como venda de mercadoria).
+#
+# BDI efetivos (fórmula multiplicativa TCU Acórdão 2622/2013):
+#   mao_obra  : (1+AC)(1+DF)(1+R)(1+L) / (1-T) - 1  →  BDI ≈ 29,97%
+#   material  : (1+L)                                 →  BDI =  4,00%
+#   servicos  : igual a mao_obra                      →  BDI ≈ 29,97%
+#   indireto  : (1+AC)(1+DF)(1+R)(1+L) / (1-T) - 1  →  BDI ≈ 25,21%
+#   diesel    : (1+L)                                 →  BDI =  4,00%
 DEFAULT_BDI_TABELA = TabelaBdi(
     mao_obra=ComponentesBdi(
+        # AC=5%, DF=1.5%, R=1%, L=9%  |  ISS=5%, CSSL=1.99%, IR=2.74% (COFINS/PIS isentos)
         ac=0.050,
         df=0.015,
         r=0.010,
         cr=0.000,
         l=0.090,
-        cofins=BDI_COFINS,
-        iss=BDI_ISS,
-        pis=BDI_PIS,
-        cssl=BDI_CSSL,
-        ir=BDI_IR,
+        cofins=0.000,  # isenção COFINS — obras de infraestrutura
+        iss=BDI_ISS,   # 5,00%
+        pis=0.000,     # isenção PIS — obras de infraestrutura
+        cssl=BDI_CSSL, # 1,99%
+        ir=BDI_IR,     # 2,74%
     ),
     material=ComponentesBdi(
-        # Material (fornecimento): ISS não incide sobre venda de mercadoria
-        ac=0.050,
+        # Fornecimento de material: apenas lucro, sem tributos sobre prestação de serviço
+        ac=0.000,
         df=0.000,
         r=0.000,
         cr=0.000,
-        l=0.000,
-        cofins=BDI_TRIBUTOS_MATERIAL,
-        iss=BDI_TRIBUTOS_MATERIAL,
-        pis=BDI_TRIBUTOS_MATERIAL,
-        cssl=BDI_TRIBUTOS_MATERIAL,
-        ir=BDI_TRIBUTOS_MATERIAL,
+        l=0.040,   # L=4%
+        cofins=0.000,
+        iss=0.000,
+        pis=0.000,
+        cssl=0.000,
+        ir=0.000,
     ),
     servicos=ComponentesBdi(
+        # Serviços (equipamentos): mesmo tratamento da mão de obra
         ac=0.050,
         df=0.015,
         r=0.010,
         cr=0.000,
         l=0.090,
-        cofins=BDI_COFINS,
+        cofins=0.000,
         iss=BDI_ISS,
-        pis=BDI_PIS,
+        pis=0.000,
         cssl=BDI_CSSL,
         ir=BDI_IR,
     ),
     indireto=ComponentesBdi(
-        ac=0.040,
-        df=0.000,
-        r=0.000,
+        # Custos indiretos: AC=5%, DF=1.5%, R=1%, L=5% (lucro menor que diretos)
+        ac=0.050,
+        df=0.015,
+        r=0.010,
         cr=0.000,
-        l=0.020,
-        cofins=BDI_COFINS,
+        l=0.050,   # L=5% (planilha AGIS)
+        cofins=0.000,
         iss=BDI_ISS,
-        pis=BDI_PIS,
+        pis=0.000,
         cssl=BDI_CSSL,
         ir=BDI_IR,
     ),
     diesel=ComponentesBdi(
-        ac=0.040,
+        # ADR-090: diesel = material (fornecimento de mercadoria consumida no campo).
+        # BDI idêntico ao material (4%). Campo mantido por retrocompat + CBS/IBS credit_ratio.
+        ac=0.000,
         df=0.000,
         r=0.000,
         cr=0.000,
-        l=0.050,
-        cofins=BDI_COFINS,
-        iss=BDI_ISS,
-        pis=BDI_PIS,
-        cssl=BDI_CSSL,
-        ir=BDI_IR,
+        l=0.040,   # L=4% — idêntico ao material
+        cofins=0.000,
+        iss=0.000,
+        pis=0.000,
+        cssl=0.000,
+        ir=0.000,
     ),
-    data_vigencia=date(2026, 4, 1),
+    data_vigencia=date(2026, 3, 1),  # calibrado em março/2026 via planilha AGIS
 )
 
 

@@ -157,10 +157,54 @@ def calcular_pu_composicao_itens(
     }
 
 
+def _converter_rental_unit(
+    preco_original: float,
+    rental_unit: str | None,
+    producao_horaria: float = 1.0,
+    horas_dia: float = 8.0,
+    horas_mes: float = 193.6
+) -> float:
+    """NEP-031 L1: Converte preco de aluguel para custo por hora produtiva.
+    
+    Args:
+        preco_original: Preco na unidade original (R$/hora, R$/dia ou R$/mes)
+        rental_unit: Unidade de aluguel ("hora_produtiva", "dia_calendario", "mes", None)
+        producao_horaria: Fator de producao horaria (eta_p, ex: 0.8 = 80% utilizacao)
+        horas_dia: Horas de trabalho por dia calendario (default: 8h)
+        horas_mes: Horas de trabalho por mes (default: 193.6h = 22 dias x 8.8h)
+    
+    Returns:
+        Custo por hora produtiva (R$/h_produtiva)
+    
+    Conversoes:
+        - hora_produtiva (None/default): preco ja esta em R$/h produtiva -> sem conversao
+        - dia_calendario: (preco / horas_dia) / producao_horaria
+          Ex: R$800/dia com eta_p=0.8 -> (800/8)/0.8 = R$125/h_produtiva
+        - mes: (preco / horas_mes) / producao_horaria
+          Ex: R$15500/mes com eta_p=0.8 -> (15500/193.6)/0.8 = R$100/h_produtiva
+    """
+    if not rental_unit or rental_unit == "hora_produtiva":
+        return preco_original
+    
+    if rental_unit == "dia_calendario":
+        # R$/dia -> R$/h_calendario -> R$/h_produtiva
+        custo_hora_calendario = preco_original / horas_dia
+        return custo_hora_calendario / producao_horaria if producao_horaria > 0 else custo_hora_calendario
+    
+    if rental_unit == "mes":
+        # R$/mes -> R$/h_calendario -> R$/h_produtiva
+        custo_hora_calendario = preco_original / horas_mes
+        return custo_hora_calendario / producao_horaria if producao_horaria > 0 else custo_hora_calendario
+    
+    # Fallback: unidade desconhecida, retorna sem conversao
+    return preco_original
+
+
 def calcular_pu(
     producao: dict,
     insumo_index: dict[str, dict],
     params: ParametrosCalculo | None = None,
+    catalog_session: object | None = None,
 ) -> BreakdownPU:
     """Calcula PU para uma unica producao a partir da composicao da equipe.
 
@@ -182,8 +226,15 @@ def calcular_pu(
             bd.referencias_faltantes.append(fid)
             continue
         salario = float(ins.get("preco_unitario") or 0)
-        hm = _horas_mes(ins, params)
-        bd.custo_mo_h += (salario / hm) * _alpha(ins, params) * num_pessoas
+        unidade_fn = (ins.get("unidade") or "mes").strip().lower()
+        if unidade_fn == "h":
+            # Taxa horária já carregada (convenção planilha AGIS: inclui encargos).
+            # Uso direto sem multiplicar por alpha para evitar dupla contagem.
+            bd.custo_mo_h += salario * num_pessoas
+        else:
+            # Salário mensal — converte para horário e aplica fator de encargos
+            hm = _horas_mes(ins, params)
+            bd.custo_mo_h += (salario / hm) * _alpha(ins, params) * num_pessoas
 
     for eq in equipamentos:
         eid = eq.get("equip_id", "")
@@ -192,9 +243,18 @@ def calcular_pu(
         if ins is None:
             bd.referencias_faltantes.append(eid)
             continue
-        preco_h = float(ins.get("preco_unitario") or 0)
+        preco_raw = float(ins.get("preco_unitario") or 0)
+        rental_unit = ins.get("rental_unit")
+        producao_h = float(eq.get("producao_horaria") or 1.0)
+        preco_h = _converter_rental_unit(preco_raw, rental_unit, producao_h)
         bd.custo_equip_h += preco_h * num_un
+        # Precedência de consumo: entry da produção → atributos_especificos do insumo
         consumo = float(eq.get("consumo_litros_hora") or 0)
+        if not consumo:
+            atrib_eq = (ins or {}).get("atributos_especificos") or {}
+            consumo = float(atrib_eq.get("consumo_litros_hora") or 0)
+            if consumo:
+                bd.alertas.append(f"Equipamento '{eid}': consumo_litros_hora lido de atributos_especificos do insumo.")
         bd.custo_diesel_h += consumo * params.preco_diesel * num_un
 
     for mat in materiais:
@@ -302,4 +362,51 @@ def calcular_catalogo(
         "referencias_faltantes": refs_faltantes,
         "pu_divergentes": pu_divergentes,
         "breakdown_por_producao": breakdowns,
+    }
+
+
+def derivar_precos_unitarios_sbdi(
+    producao: dict,
+    insumo_index: dict[str, dict],
+    params: ParametrosCalculo | None = None,
+    catalog_session: object | None = None,
+) -> dict:
+    """NEP-029 D2: Deriva precos_unitarios_sbdi a partir de parâmetros operacionais.
+
+    Calcula o preço unitário por categoria decompondo o custo horário total da equipe
+    (MO + equipamentos + diesel + materiais) pela produtividade horária da CPU.
+
+    Fórmula:
+        PU_categoria = custo_categoria_hora / producao.valor_horario
+
+    A categoria de diesel inclui fallback ao campo atributos_especificos.consumo_litros_hora
+    do insumo quando o campo não estiver na entry da equipe.
+
+    Args:
+        producao: dict do arquivo de produção da CPU (com composicao_padrao_equipe).
+        insumo_index: dict{codigo → insumo} com preços de labor, equipamento e material.
+        params: ParametrosCalculo (encargos, preco_diesel, horas_mes). None → defaults.
+
+    Returns:
+        dict compatível com cpu.precos_unitarios_sbdi, incluindo chave "_meta" com
+        rastreabilidade (producao_id, valor_horario, referencias_faltantes, alertas).
+        Retorna {} se valor_horario=0 ou equipe vazia.
+    """
+    bd = calcular_pu(producao, insumo_index, params, catalog_session=catalog_session)
+    if not bd.valor_horario or bd.valor_horario <= 0:
+        return {}
+
+    vh = bd.valor_horario
+    return {
+        "mo": round(bd.custo_mo_h / vh, 6),
+        "diesel": round(bd.custo_diesel_h / vh, 6),
+        "equipamentos": round(bd.custo_equip_h / vh, 6),
+        "material": round(bd.custo_material_h / vh, 6),
+        "total": round(bd.custo_total_h / vh, 6),
+        "_meta": {
+            "producao_id": bd.producao_id,
+            "valor_horario": vh,
+            "referencias_faltantes": bd.referencias_faltantes,
+            "alertas": bd.alertas,
+        },
     }

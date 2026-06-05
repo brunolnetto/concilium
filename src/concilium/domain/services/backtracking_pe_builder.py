@@ -60,6 +60,17 @@ def _get_gap_fator(item, codigo: str) -> float:
     return 0.0
 
 
+def _count_calendar_constrained_weeks(sa: Any) -> int:
+    if not (sa and sa.distribuicao_semanal):
+        return 0
+    constrained = 0
+    for d in sa.distribuicao_semanal.values():
+        fator = float(getattr(d, "fator_calendario", 1.0) or 1.0)
+        if fator < 0.999:
+            constrained += 1
+    return constrained
+
+
 def _get_item_cubo_hint(diagnostico: DiagnosticoPERelatorio, atividade_id: str) -> dict[str, Any]:
     bloco = getattr(diagnostico, "explicacao_natureza_periodo", None)
     if not isinstance(bloco, dict):
@@ -245,6 +256,38 @@ class BacktrackingPEBuilder:
             confianca=3,
         )
 
+    def _solve_timing_calendario(
+        self, item: DiagnosticoPEItem, sa: Any, alvo: float, gap: float
+    ) -> SolucaoInversa | None:
+        """Solução C2: inversa temporal orientada por feriados/recesso."""
+        if not (sa and sa.distribuicao_semanal):
+            return None
+        gap_cal = _get_gap_fator(item, "F_CALENDARIO")
+        if gap_cal <= 50:
+            return None
+        semanas_restritas = _count_calendar_constrained_weeks(sa)
+        if semanas_restritas <= 0:
+            return None
+
+        deslocamento = float(max(1, min(8, semanas_restritas)))
+        pe_recalc = item.gap_rs + gap_cal
+        err = abs(pe_recalc - alvo)
+        return SolucaoInversa(
+            parametro="T0_CALENDARIO",
+            valor_atual=0.0,
+            valor_requerido=deslocamento,
+            delta_abs=deslocamento,
+            delta_pct=0.0,
+            impacto_preco_pct=0.0,
+            impacto_produtividade_pct=0.0,
+            impacto_recursos_pct=0.0,
+            impacto_prazo_semanas=deslocamento,
+            pe_gap_recalculado=round(pe_recalc, 2),
+            roundtrip_valido=err < _tol(gap) * 5,
+            erro_roundtrip=round(err, 2),
+            confianca=3,
+        )
+
     def _solve_n_max(
         self, item: DiagnosticoPEItem, equipe: Any, sa: Any, alvo: float, gap: float
     ) -> SolucaoInversa | None:
@@ -340,6 +383,9 @@ class BacktrackingPEBuilder:
         sol_timing = self._solve_timing(item, sa, alvo, gap)
         if sol_timing is not None:
             solucoes.append(sol_timing)
+        sol_timing_cal = self._solve_timing_calendario(item, sa, alvo, gap)
+        if sol_timing_cal is not None:
+            solucoes.append(sol_timing_cal)
         sol_n_max = self._solve_n_max(item, equipe, sa, alvo, gap)
         if sol_n_max is not None:
             solucoes.append(sol_n_max)

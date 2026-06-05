@@ -94,13 +94,51 @@ def _build_categoria_from_dict(
 def _build_semanal_breakdown(
     categoria: IndirectoCategoria,
     n_semanas: int,
+    custo_total_override: float | None = None,
 ) -> list[IndiretoSemanal]:
     """Gera breakdown semanal para uma categoria (ADR-009 §D2)."""
     result: list[IndiretoSemanal] = []
     if categoria.driver == "permanencia":
-        mo_sem = (categoria.mao_de_obra.custo_fixo_mensal if categoria.mao_de_obra else 0.0) / _SEMANAS_POR_MES
-        eq_sem = (categoria.equipamentos.custo_fixo_mensal if categoria.equipamentos else 0.0) / _SEMANAS_POR_MES
-        vb_sem = (categoria.verbas.custo_fixo_mensal if categoria.verbas else 0.0) / _SEMANAS_POR_MES
+        mo_mensal = categoria.mao_de_obra.custo_fixo_mensal if categoria.mao_de_obra else 0.0
+        eq_mensal = categoria.equipamentos.custo_fixo_mensal if categoria.equipamentos else 0.0
+        vb_mensal = categoria.verbas.custo_fixo_mensal if categoria.verbas else 0.0
+        mensal_total = mo_mensal + eq_mensal + vb_mensal
+
+        if custo_total_override is not None and n_semanas > 0 and mensal_total > 0:
+            # Preserva a proporção entre componentes e garante soma semanal == custo total utilizado na categoria.
+            frac_mo = mo_mensal / mensal_total
+            frac_eq = eq_mensal / mensal_total
+            frac_vb = vb_mensal / mensal_total
+
+            custo_sem_base = round(float(custo_total_override) / n_semanas, 2)
+            acumulado = 0.0
+            for w in range(n_semanas):
+                if w < (n_semanas - 1):
+                    custo_sem = custo_sem_base
+                else:
+                    custo_sem = round(float(custo_total_override) - acumulado, 2)
+                acumulado += custo_sem
+
+                mo_sem = round(custo_sem * frac_mo, 2)
+                eq_sem = round(custo_sem * frac_eq, 2)
+                vb_sem = round(custo_sem - mo_sem - eq_sem, 2)
+
+                result.append(
+                    IndiretoSemanal(
+                        semana=w,
+                        categoria=categoria.categoria,
+                        custo_mao_de_obra=mo_sem,
+                        custo_equipamentos=eq_sem,
+                        custo_verbas=vb_sem,
+                        custo_semanal=round(custo_sem, 2),
+                        ativa=True,
+                    )
+                )
+            return result
+
+        mo_sem = mo_mensal / _SEMANAS_POR_MES
+        eq_sem = eq_mensal / _SEMANAS_POR_MES
+        vb_sem = vb_mensal / _SEMANAS_POR_MES
         custo_sem = mo_sem + eq_sem + vb_sem
         for w in range(n_semanas):
             result.append(
@@ -212,7 +250,9 @@ def _process_mob_categoria(
         custo = round(custo * policy_scale[dv4_policy], 2)
         cat_obj = cat_obj.model_copy(update={"custo_fixo_total": custo})
     indir = Indireto(
-        categoria="MOB", descricao=descricao, mobilizacoes=mobs, permanencia_meses=float(prazo_meses), custo_total=custo
+        categoria="MOB", descricao=descricao, mobilizacoes=mobs, permanencia_meses=float(prazo_meses), custo_total=custo,
+        # ADR-090: MOB é overhead administrativo → BDI_indireto
+        custo_mobilizacao=round(custo, 2),
     )
     return indir, _build_semanal_breakdown(cat_obj, n_semanas)
 
@@ -259,8 +299,12 @@ def _apply_dv4_scale_to_categoria(
     dv4_policy: str | None,
     policy_scale: dict,
     n_semanas: int,
+    prazo_meses: float | None = None,
 ) -> tuple[float, IndirectoCategoria]:
-    custo = cat_obj.custo_total_para_semanas(n_semanas)
+    if cat_obj.driver == "permanencia" and prazo_meses is not None:
+        custo = round(cat_obj.custo_fixo_mensal * float(prazo_meses), 2)
+    else:
+        custo = cat_obj.custo_total_para_semanas(n_semanas)
     if dv4_policy and dv4_policy in policy_scale:
         scale = policy_scale[dv4_policy]
         custo = round(custo * scale, 2)
@@ -268,21 +312,64 @@ def _apply_dv4_scale_to_categoria(
     return custo, cat_obj
 
 
+def _sub_custos_indireto(cat_obj: "IndirectoCategoria", custo_total: float) -> dict[str, float]:
+    """ADR-090: calcula sub-custos por categoria_insumo para BDI diferenciado.
+
+    Se os componentes de cat_obj têm custo explícito, usa-os diretamente.
+    Senão, distribui custo_total pelas frações de custo_fixo_mensal de cada componente.
+    """
+    def _comp_custo(comp) -> float:
+        if comp is None:
+            return 0.0
+        if hasattr(comp, "custo_total") and (comp.custo_total or 0.0) > 0:
+            return float(comp.custo_total)
+        return float(comp.custo_fixo_mensal or 0.0)
+
+    c_mo    = _comp_custo(cat_obj.mao_de_obra)
+    c_eq    = _comp_custo(cat_obj.equipamentos)
+    c_verba = _comp_custo(cat_obj.verbas)
+    c_base  = c_mo + c_eq + c_verba
+
+    if c_base > 0 and custo_total > 0:
+        scale = custo_total / c_base
+        return {
+            "custo_mao_obra":     round(c_mo    * scale, 2),
+            "custo_equipamentos": round(c_eq    * scale, 2),
+            "custo_verba":        round(c_verba * scale, 2),
+            "custo_combustivel":  0.0,
+            "custo_mobilizacao":  0.0,
+        }
+    # Fallback: sem dados de composição → tudo como verba (taxa mais conservadora)
+    return {
+        "custo_mao_obra": 0.0, "custo_equipamentos": 0.0,
+        "custo_verba": round(custo_total, 2), "custo_combustivel": 0.0, "custo_mobilizacao": 0.0,
+    }
+
+
 def _build_indireto_from_cat_obj(
     codigo: str,
     descricao: str,
-    cat_obj: IndirectoCategoria,
+    cat_obj: "IndirectoCategoria",
     custo: float,
     n_semanas: int,
+    prazo_meses: float | None = None,
 ) -> Indireto:
+    permanencia_meses = float(prazo_meses) if prazo_meses is not None else round(n_semanas / _SEMANAS_POR_MES, 2)
+    subs = _sub_custos_indireto(cat_obj, custo)
     return Indireto(
         categoria=codigo,  # type: ignore[arg-type]
         descricao=descricao,
         funcoes=[item for item in (cat_obj.mao_de_obra.itens if cat_obj.mao_de_obra else [])],
         equipamentos=[item for item in (cat_obj.equipamentos.itens if cat_obj.equipamentos else [])],
         verbas_mensais=[item for item in (cat_obj.verbas.itens if cat_obj.verbas else [])],
-        permanencia_meses=round(n_semanas / _SEMANAS_POR_MES, 2),
+        permanencia_meses=permanencia_meses,
         custo_total=custo,
+        # ADR-090: sub-custos para BDI diferenciado por categoria_insumo
+        custo_mao_obra=subs["custo_mao_obra"],
+        custo_equipamentos=subs["custo_equipamentos"],
+        custo_combustivel=subs["custo_combustivel"],
+        custo_verba=subs["custo_verba"],
+        custo_mobilizacao=subs["custo_mobilizacao"],
     )
 
 

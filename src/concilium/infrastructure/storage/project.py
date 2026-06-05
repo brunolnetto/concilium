@@ -78,7 +78,16 @@ class ProjectStore:
         path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
 
     @classmethod
-    def init(cls, projetos_root: Path, nome: str, contexto_id: str, catalogo_base: str | None = None) -> "ProjectStore":
+    def init(
+        cls,
+        projetos_root: Path,
+        nome: str,
+        contexto_id: str,
+        catalogo_base: str | None = None,
+        derivado_de_benchmark: str | None = None,
+        benchmark_versao: int | None = None,
+        benchmark_execution_id: str | None = None,
+    ) -> "ProjectStore":
         """Cria novo projeto. Retorna o ProjectStore configurado."""
         project_id = str(uuid4())
         proj_root = projetos_root / project_id
@@ -97,6 +106,9 @@ class ProjectStore:
             "criado_em": datetime.now(UTC).isoformat(),
             "current_version": None,
             "catalogo_base": catalogo_base,
+            "derivado_de_benchmark": derivado_de_benchmark,
+            "benchmark_versao": benchmark_versao,
+            "benchmark_execution_id": benchmark_execution_id,
         }
         (proj_root / cls.META_FILE).write_text(json.dumps(meta, indent=2))
         return cls(proj_root)

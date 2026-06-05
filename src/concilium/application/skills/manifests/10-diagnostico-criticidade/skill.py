@@ -128,6 +128,32 @@ def _compute_rankings(raw: list) -> tuple:
     return pcts_custo, pcts_dur, pcts_rec, pcts_sens, ranks_custo, ranks_dur, ranks_rec, ranks_sens
 
 
+def _compute_severity_scores(raw: list) -> list[float]:
+    """Combina dimensões de criticidade em um score único determinístico.
+
+    Priorizamos custo e duração (impacto financeiro/cronograma), sem perder sinal de
+    recurso e sensibilidade. Pesos estáveis evitam classificação por ordem de entrada.
+    """
+    scores: list[float] = []
+    for r in raw:
+        score = (
+            float(r["cost_share"]) * 0.50
+            + float(r["duration_share"]) * 0.25
+            + float(r["recurso_float"]) * 0.15
+            + float(r["margin_sensitivity"]) * 0.10
+        )
+        scores.append(score)
+    return scores
+
+
+def _build_lexicographic_ranks(raw: list, severity_scores: list[float]) -> list[int]:
+    order = sorted(range(len(raw)), key=lambda idx: (-severity_scores[idx], str(raw[idx]["atividade_id"])))
+    ranks = [0] * len(raw)
+    for pos, idx in enumerate(order, 1):
+        ranks[idx] = pos
+    return ranks
+
+
 def _build_profiles(
     raw: list,
     pcts_custo: list,
@@ -139,8 +165,13 @@ def _build_profiles(
     ranks_rec: list,
     ranks_sens: list,
 ) -> list:
+    severity_scores = _compute_severity_scores(raw)
+    lex_ranks = _build_lexicographic_ranks(raw, severity_scores)
+    top_20 = math.ceil(len(raw) * 0.2)
     profiles: list[CriticidadeProfile] = []
     for i, r in enumerate(raw):
+        rank_lex = lex_ranks[i]
+        on_frontier = rank_lex <= top_20
         profiles.append(
             CriticidadeProfile(
                 atividade_id=r["atividade_id"],
@@ -156,9 +187,9 @@ def _build_profiles(
                 sensibilidade=DimensaoCriticidade(
                     valor_raw=round(r["margin_sensitivity"], 4), rank=ranks_sens[i], percentil=round(pcts_sens[i], 4)
                 ),
-                pareto_frontier=True,
-                rank_lexicografico=i + 1,
-                classe=_classify(i + 1, len(raw), True),
+                pareto_frontier=on_frontier,
+                rank_lexicografico=rank_lex,
+                classe=_classify(rank_lex, len(raw), on_frontier),
                 interpretacao="Análise consolidada",
             )
         )

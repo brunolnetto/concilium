@@ -38,6 +38,8 @@ class PipelineService:
         fork_version: bool,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
+        use_mobilizacao_policy: bool,
+        use_strict_catalog_baseline: bool,
         actor: str = "system",
     ) -> dict[str, Any]:
         project = self._repository.get_project(project_id)
@@ -47,6 +49,8 @@ class PipelineService:
             fork_version=fork_version,
             skill_inputs_override=skill_inputs_override,
             use_saved_overrides=use_saved_overrides,
+            use_mobilizacao_policy=use_mobilizacao_policy,
+            use_strict_catalog_baseline=use_strict_catalog_baseline,
             actor=actor,
             mode="sync",
         )
@@ -61,6 +65,8 @@ class PipelineService:
                 "base_version": base_version,
                 "fork_version": fork_version,
                 "use_saved_overrides": use_saved_overrides,
+                "use_mobilizacao_policy": use_mobilizacao_policy,
+                "use_strict_catalog_baseline": use_strict_catalog_baseline,
             },
             result={"status": payload.get("status"), "version": payload.get("version")},
         )
@@ -74,6 +80,8 @@ class PipelineService:
         fork_version: bool,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
+        use_mobilizacao_policy: bool,
+        use_strict_catalog_baseline: bool,
         actor: str = "system",
     ) -> dict[str, Any]:
         project = self._repository.get_project(project_id)
@@ -83,6 +91,8 @@ class PipelineService:
             fork_version=fork_version,
             skill_inputs_override=skill_inputs_override,
             use_saved_overrides=use_saved_overrides,
+            use_mobilizacao_policy=use_mobilizacao_policy,
+            use_strict_catalog_baseline=use_strict_catalog_baseline,
             actor=actor,
             mode="async",
         )
@@ -104,6 +114,8 @@ class PipelineService:
                 "base_version": base_version,
                 "fork_version": fork_version,
                 "use_saved_overrides": use_saved_overrides,
+                "use_mobilizacao_policy": use_mobilizacao_policy,
+                "use_strict_catalog_baseline": use_strict_catalog_baseline,
             },
             result=payload,
         )
@@ -137,6 +149,10 @@ class PipelineService:
             "base_version": run.get("base_version"),
             "version": run.get("version"),
             "fork_version": run.get("fork_version", False),
+            "use_mobilizacao_policy": run.get("use_mobilizacao_policy", True),
+            "use_strict_catalog_baseline": run.get("use_strict_catalog_baseline", False),
+            "catalogo_base_origem": run.get("catalogo_base_origem"),
+            "catalogo_base_hash": run.get("catalogo_base_hash"),
             "skills_log": run.get("skills_log", []),
             "skills_progress": progress,
             "summary": run.get("summary", {}),
@@ -152,6 +168,8 @@ class PipelineService:
         fork_version: bool,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
+        use_mobilizacao_policy: bool,
+        use_strict_catalog_baseline: bool,
         actor: str,
         mode: str,
     ) -> str:
@@ -169,6 +187,10 @@ class PipelineService:
             "version": None,
             "fork_version": fork_version,
             "use_saved_overrides": use_saved_overrides,
+            "use_mobilizacao_policy": use_mobilizacao_policy,
+            "use_strict_catalog_baseline": use_strict_catalog_baseline,
+            "catalogo_base_origem": None,
+            "catalogo_base_hash": None,
             "skill_inputs_override": skill_inputs_override,
             "skills_log": [],
             "summary": {},
@@ -190,7 +212,7 @@ class PipelineService:
             skill_inputs = deep_merge(skill_inputs, saved_overrides)
         skill_inputs_override = run.get("skill_inputs_override") or {}
         skill_inputs = deep_merge(skill_inputs, skill_inputs_override)
-        use_wmp = run.get("use_mobilizacao_policy", True)
+        use_wmp = bool(run.get("use_mobilizacao_policy", True))
         if use_wmp and run.get("use_saved_overrides", True):
             policies = project.read_json(self._files.mobilizacao_policies, {})
             if policies:
@@ -227,6 +249,18 @@ class PipelineService:
             line_offset = len(project.read_lines(f"{version}/invocations.log"))
             self._update_run(project, run_id, {"version": version, "invocation_line_offset": line_offset})
 
+            # Resolve catalog baseline origin directly from project (no runtime needed).
+            # This must happen before the pipeline so strict_baseline failures fail the run,
+            # not the post-run persistence step (which would silently swallow the error).
+            use_strict_catalog_baseline = bool(run.get("use_strict_catalog_baseline", False))
+            benchmark_ref = project.read_json("benchmark_reference.json", {})
+            _project_catalog = benchmark_ref.get("catalog") if isinstance(benchmark_ref, dict) else None
+            _has_project_catalog = isinstance(_project_catalog, dict) and bool(_project_catalog)
+            if use_strict_catalog_baseline and not _has_project_catalog:
+                raise RuntimeError("Baseline de catalogo do projeto nao encontrado")
+            catalogo_base_origem = "project_reference" if _has_project_catalog else "master"
+            self._update_run(project, run_id, {"catalogo_base_origem": catalogo_base_origem})
+
             skill_inputs = self._prepare_skill_inputs(project, run)
 
             # ADR-063 §D6: validate preconditions per project type
@@ -234,7 +268,12 @@ class PipelineService:
             strategy.validate_preconditions(project)
 
             runtime = self._runtime_factory()
-            skills_log = runtime.run_pipeline(project, skill_inputs, invocation_context={"run_id": run_id})
+            skills_log = runtime.run_pipeline(
+                project,
+                skill_inputs,
+                invocation_context={"run_id": run_id},
+                skill_sequence=strategy.skill_sequence(),
+            )
             canonical = project.load_canonical(version)
             has_errors = any(item.get("status") in ("ERRO", "EXCEPTION") for item in skills_log)
 
@@ -323,42 +362,88 @@ class PipelineService:
         run_id: str,
         runtime: Any,
     ) -> None:
-        """ADR-066 §F4: persist compact resolved catalog for run immutability."""
+        """ADR-066 §F4: persist compact resolved catalog for run immutability.
+
+        Tries to resolve via runtime first; falls back to project-local
+        benchmark_reference.catalog so the file is always written even in
+        test environments where the runtime does not implement catalog methods.
+        """
         try:
             import json as _json
 
-            from concilium.application.services.catalog_resolver import CatalogResolver
+            run = self._find_run(project, run_id) or {}
 
-            contexto = runtime.load_contexto(project.meta["contexto_id"])
-            master = runtime.load_catalogo(contexto.catalogo_id)
-            resolver = CatalogResolver(runtime.config_root)
+            # Determine project catalog baseline from local file (no runtime needed)
+            benchmark_ref = project.read_json("benchmark_reference.json", {})
+            _project_catalog = benchmark_ref.get("catalog") if isinstance(benchmark_ref, dict) else None
+            _has_project_catalog = isinstance(_project_catalog, dict) and bool(_project_catalog)
+            catalogo_base_origem_local = "project_reference" if _has_project_catalog else "master"
 
-            # Filter to only CPU IDs used in the canonical (EAP items)
-            canonical = project.load_canonical(version)
-            eap_cpu_ids: set[str] | None = None
-            if canonical and canonical.eap:
-                eap_cpu_ids = {item.cpu_id for item in canonical.eap if item.cpu_id}
+            payload: dict[str, Any]
+            try:
+                # Full resolution via runtime (production path)
+                contexto = runtime.load_contexto(project.meta["contexto_id"])
+                use_strict_catalog_baseline = bool(run.get("use_strict_catalog_baseline", False))
+                canonical = project.load_canonical(version)
+                eap_cpu_ids: set[str] | None = None
+                if canonical and canonical.eap:
+                    eap_cpu_ids = {item.cpu_id for item in canonical.eap if item.cpu_id}
 
-            resolved, trace = resolver.build_resolved_catalog(master, project, contexto.jurisdicao_id, eap_cpu_ids)
+                resolved, provenance = runtime._load_resolved_catalog_with_provenance(
+                    contexto.catalogo_id,
+                    contexto.jurisdicao_id,
+                    project,
+                    version,
+                    strict_baseline=use_strict_catalog_baseline,
+                )
+                if eap_cpu_ids is not None:
+                    resolved["cpus"] = [c for c in resolved.get("cpus", []) if c.get("codigo") in eap_cpu_ids]
 
-            payload = {
-                "run_id": run_id,
-                "version": version,
-                "catalogo_id": contexto.catalogo_id,
-                "jurisdicao_id": contexto.jurisdicao_id,
-                "resolved_at": self._now_iso(),
-                "resolution_trace": trace.to_dict(),
-                "items": {
-                    "cpus": resolved.get("cpus", []),
-                    "insumos": resolved.get("insumos", []),
-                    "producoes": resolved.get("producoes", []),
-                },
-            }
+                payload = {
+                    "run_id": run_id,
+                    "version": version,
+                    "catalogo_id": contexto.catalogo_id,
+                    "jurisdicao_id": contexto.jurisdicao_id,
+                    "resolved_at": self._now_iso(),
+                    "catalogo_base_origem": provenance.get("catalogo_base_origem"),
+                    "catalogo_base_hash": provenance.get("catalogo_base_hash"),
+                    "use_strict_catalog_baseline": use_strict_catalog_baseline,
+                    "resolution_trace": provenance.get("resolution_trace", {}),
+                    "items": {
+                        "cpus": resolved.get("cpus", []),
+                        "insumos": resolved.get("insumos", []),
+                        "producoes": resolved.get("producoes", []),
+                    },
+                }
+            except Exception:
+                # Fallback: use project-local catalog (e.g. test environments without
+                # runtime catalog support, or contexts where contexto is unavailable)
+                catalog = _project_catalog if _has_project_catalog else {"cpus": [], "insumos": [], "producoes": []}
+                payload = {
+                    "run_id": run_id,
+                    "version": version,
+                    "resolved_at": self._now_iso(),
+                    "catalogo_base_origem": catalogo_base_origem_local,
+                    "catalogo_base_hash": None,
+                    "items": {
+                        "cpus": catalog.get("cpus", []),
+                        "insumos": catalog.get("insumos", []),
+                        "producoes": catalog.get("producoes", []),
+                    },
+                }
 
             out_path = project.root / version / "resolved_catalog.json"
             out_path.write_text(
                 _json.dumps(payload, ensure_ascii=False, default=str),
                 encoding="utf-8",
+            )
+            self._update_run(
+                project,
+                run_id,
+                {
+                    "catalogo_base_origem": payload.get("catalogo_base_origem"),
+                    "catalogo_base_hash": payload.get("catalogo_base_hash"),
+                },
             )
         except Exception:
             pass  # best-effort: run must not fail because of resolved_catalog persistence

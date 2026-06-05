@@ -38,7 +38,7 @@ def _rb_try_tax_scenario(inputs: dict, validacoes: list) -> dict | None:
         bdi_mo = tabela_cbs_ibs.mao_obra.bdi_total
         bdi_mat = tabela_cbs_ibs.material.bdi_total
         bdi_dies = tabela_cbs_ibs.diesel.bdi_total
-        bdi_equip = round(0.70 * bdi_mo + 0.30 * bdi_dies, 6)
+        bdi_equip = tabela_cbs_ibs.servicos.bdi_total
         t_ef = scenario.tributos_efetivos_por_categoria()
         split_note = " ⚠️ split_payment ativo." if scenario.split_payment else ""
         validacoes.append(

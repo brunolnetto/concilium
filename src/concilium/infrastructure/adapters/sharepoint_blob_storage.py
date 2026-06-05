@@ -52,11 +52,11 @@ class SharePointBlobStorage(BlobStoragePort):
 
     @classmethod
     def from_env(cls, *, cache_dir: Path | None = None) -> SharePointBlobStorage:
-        """Instancia a partir das variáveis de ambiente CONCILIUM_SP_*."""
-        drive_id = os.environ.get("CONCILIUM_SP_DRIVE_ID", "")
-        root_path = os.environ.get("CONCILIUM_SP_ROOT_PATH", "Concilium/producao")
+        """Instancia a partir das variáveis de ambiente CONCILIUM__SP_*."""
+        drive_id = os.environ.get("CONCILIUM__SP_DRIVE_ID", "")
+        root_path = os.environ.get("CONCILIUM__SP_ROOT_PATH", "Concilium/producao")
         if not drive_id:
-            raise OSError("CONCILIUM_SP_DRIVE_ID é obrigatório.")
+            raise OSError("CONCILIUM__SP_DRIVE_ID é obrigatório.")
         return cls(
             drive_id=drive_id,
             root_path=root_path,
@@ -280,6 +280,29 @@ class SharePointBlobStorage(BlobStoragePort):
         if r.status_code == 404:
             raise FileNotFoundError(f"Arquivo não encontrado para aprovar: {path}")
         r.raise_for_status()
+
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
+        """Cria um sharing link anônimo de leitura com expiração (ADR-093 D4).
+
+        Usa Graph ``createLink`` (type=view, scope=anonymous). Quando a política do
+        tenant proíbe links anônimos, a chamada falha e retornamos ``None`` (o
+        chamador recai no transporte base64).
+        """
+        from datetime import datetime, timedelta, timezone
+
+        httpx = self._client()
+        exp = (datetime.now(timezone.utc) + timedelta(seconds=max(60, ttl_segundos))).isoformat()
+        try:
+            r = httpx.post(
+                f"{self._item_url(path)}:/createLink",
+                headers=self._headers({"Content-Type": "application/json"}),
+                json={"type": "view", "scope": "anonymous", "expirationDateTime": exp},
+            )
+            if r.status_code in (200, 201):
+                return (r.json().get("link") or {}).get("webUrl")
+        except Exception:  # noqa: BLE001
+            return None
+        return None
 
     def health_check(self) -> dict[str, Any]:
         """Verifica conectividade com o SharePoint Drive (ADR-047 §D7)."""

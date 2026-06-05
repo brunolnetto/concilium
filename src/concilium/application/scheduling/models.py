@@ -15,30 +15,68 @@ class ScheduleError(Exception):
 
 @dataclass
 class Activity:
-    """A schedulable activity with resource requirements and duration."""
+    """A schedulable activity with resource requirements and duration.
+
+    ADR-072 (Direção A): ``duration_weeks`` is the *productive* duration
+    derived from Q / production_rate, NOT the corridor calendar span.
+    ``window_weeks``, when set, is the corridor calendar span — the outer
+    envelope within which the productive activity must be scheduled.
+    Constraint enforced by the scheduler: finish ≤ window_weeks from t=0.
+    """
 
     activity_id: str
     description: str
     duration_weeks: int
     required_resources: dict[str, int] = field(default_factory=dict)
+    # ADR-072: corridor window (calendar span); None = no window constraint
+    window_weeks: int | None = None
+    # ADR-074: normalized ramp profile per week; values in [0.0, 1.0] where 1.0 = peak demand.
+    # Length must equal duration_weeks when set.
+    # Actual demand for resource r at week offset t = max(0, round(required_resources[r] × ramp_profile[t]))
+    # None = flat demand (legacy behaviour, no change).
+    ramp_profile: list[float] | None = None
 
     def __post_init__(self) -> None:
         if self.duration_weeks < 1:
             raise ValueError(f"duration_weeks must be >= 1, got {self.duration_weeks}")
+        if self.window_weeks is not None and self.window_weeks < self.duration_weeks:
+            raise ValueError(
+                f"window_weeks ({self.window_weeks}) must be >= duration_weeks ({self.duration_weeks})"
+            )
+        if self.ramp_profile is not None:
+            if len(self.ramp_profile) != self.duration_weeks:
+                raise ValueError(
+                    f"ramp_profile length ({len(self.ramp_profile)}) must equal "
+                    f"duration_weeks ({self.duration_weeks})"
+                )
 
 
 @dataclass
 class ActivityDAG:
-    """Directed Acyclic Graph of activities with precedence constraints."""
+    """Directed Acyclic Graph of activities with precedence constraints.
+
+    ADR-081: ``thresholds`` maps (pred_id, succ_id) → completion_threshold_pct ∈ [0,1].
+    Default value for any missing pair is 1.0 (classic FS 100%).
+
+    Semântica de threshold para FS:
+        start_j ≥ start_i + ceil(θ × duration_i)
+    θ=1.0 → comportamento clássico FS.  θ=0.0 → equivalente a SS.
+    """
 
     activities: list[Activity]
     precedence: list[tuple[str, str]] = field(default_factory=list)
+    # ADR-081: per-edge completion threshold. Missing pair → 1.0 (FS strict).
+    thresholds: dict[tuple[str, str], float] = field(default_factory=dict)
 
     def _activity_map(self) -> dict[str, Activity]:
         return {a.activity_id: a for a in self.activities}
 
     def get_activity(self, activity_id: str) -> Activity:
         return self._activity_map()[activity_id]
+
+    def get_threshold(self, pred_id: str, succ_id: str) -> float:
+        """Return completion_threshold_pct for edge (pred_id → succ_id). Default 1.0."""
+        return self.thresholds.get((pred_id, succ_id), 1.0)
 
     def predecessors(self, activity_id: str) -> list[str]:
         """Return list of immediate predecessor IDs."""
@@ -87,6 +125,8 @@ class ScheduledActivity:
     end_week: int
     duration_weeks: int
     assigned_resources: dict[str, int] = field(default_factory=dict)
+    # ADR-074: propagated from Activity.ramp_profile for post-scheduling cost computation
+    ramp_profile: list[float] | None = None
 
 
 @dataclass

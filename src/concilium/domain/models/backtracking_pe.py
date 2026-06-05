@@ -9,6 +9,7 @@ _PARAM_LABELS: dict[str, str] = {
     "P": "Melhorar produtividade do equipamento",
     "N_MAX": "Aumentar equipes paralelas",
     "T0_RAMP": "Mudar época de início da mobilização",
+    "T0_CALENDARIO": "Deslocar janela para semanas sem feriado/recesso",
     "COMBINADA": "Combinação de ajustes",
 }
 
@@ -17,6 +18,7 @@ _PARAM_IMPACTO_CLIENTE: dict[str, str] = {
     "P": "Sem repasse — requer calibração de CPU",
     "N_MAX": "Sem repasse — requer mais recursos",
     "T0_RAMP": "Sem repasse — requer flexibilidade de cronograma",
+    "T0_CALENDARIO": "Sem repasse — requer flexibilidade de cronograma",
     "COMBINADA": "Depende da combinação",
 }
 

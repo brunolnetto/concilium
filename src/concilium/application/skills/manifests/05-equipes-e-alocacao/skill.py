@@ -22,11 +22,13 @@ from concilium.domain.constants import (
 )
 from concilium.domain.models.canonical import (
     Alocacao,
+    CadeiaPerpetuacao,
     CanonicalModel,
     ConflitoPico,
     EquipamentoEquipeDireta,
     EquipeDireta,
     FuncaoEquipeDireta,
+    RecursoContrato,
     RecursoPool,
     RequisitoRecurso,
     TipoRecurso,
@@ -38,12 +40,18 @@ from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 try:
     from ._skill_helpers_a import (
+        _aplicar_custo_instancial_adr085,
+        _build_contratos_recurso,
         _build_dimensionamento,
+        _build_instancias_recurso,
+        _enrich_particao_overhead,
+        particionar_contrato,
     )
     from ._skill_helpers_b import (
         _build_alocacoes_pool,
         _build_requisitos_e_tipos,
     )
+    from ._skill_helpers_pre import _build_pre_processamento_compartilhamento
 except ImportError:
     import importlib.util
     from pathlib import Path
@@ -57,9 +65,19 @@ except ImportError:
     _mod_b = importlib.util.module_from_spec(_spec_b)  # type: ignore[arg-type]
     _spec_b.loader.exec_module(_mod_b)  # type: ignore[union-attr]
 
+    _spec_pre = importlib.util.spec_from_file_location("skill05_helpers_pre", _here / "_skill_helpers_pre.py")
+    _mod_pre = importlib.util.module_from_spec(_spec_pre)  # type: ignore[arg-type]
+    _spec_pre.loader.exec_module(_mod_pre)  # type: ignore[union-attr]
+
     _build_dimensionamento = _mod_a._build_dimensionamento
+    _build_contratos_recurso = _mod_a._build_contratos_recurso
+    _build_instancias_recurso = _mod_a._build_instancias_recurso
+    _aplicar_custo_instancial_adr085 = _mod_a._aplicar_custo_instancial_adr085
+    _enrich_particao_overhead = _mod_a._enrich_particao_overhead
+    particionar_contrato = _mod_a.particionar_contrato
     _build_alocacoes_pool = _mod_b._build_alocacoes_pool
     _build_requisitos_e_tipos = _mod_b._build_requisitos_e_tipos
+    _build_pre_processamento_compartilhamento = _mod_pre._build_pre_processamento_compartilhamento
 
 
 def _resolve_salario(preco, unidade: str, salario_override) -> float:
@@ -111,8 +129,13 @@ def _calcular_custo_funcao(
         if custo_com_encargos and custo_com_encargos > 0:
             custo_unit = custo_com_encargos * (1 + he_pct)
         else:
-            enc = _resolve_encargo_funcao(atrib, encargo_override, enc_horista, enc_mensalista, categoria)
-            custo_unit = salario * (1 + enc) * (1 + he_pct)
+            # ADR-097: taxa horária all-in (AGIS-FN-*): "inclui encargos" → usar direto
+            nota = str(atrib.get("nota", "")).lower()
+            if "inclui encargos" in nota:
+                custo_unit = salario * (1 + he_pct)
+            else:
+                enc = _resolve_encargo_funcao(atrib, encargo_override, enc_horista, enc_mensalista, categoria)
+                custo_unit = salario * (1 + enc) * (1 + he_pct)
     return salario, he_pct, round(custo_unit, 2)
 
 
@@ -194,7 +217,7 @@ def _calcular_custo_equipamento(
         EquipamentoEquipeDireta(
             equip_id=insumo["codigo"],
             descricao=insumo["descricao"],
-            num_unidades=num_unidades,
+            num_unidades=max(1, round(float(num_unidades))),  # canônico físico: int
             custo_mensal=round(custo_base, 2),
             consumo_litros_hora=consumo if consumo > 0 else None,
             custo_combustivel_mensal=round(custo_comb, 2),
@@ -356,18 +379,19 @@ def _processar_funcoes_item(
             custo_unitario_override=unit_override,
         )
         enc_field = float(enc_override) if enc_override is not None else perc_horista
+        num_p_raw = float(f.get("num_pessoas", 1) or 1)
         funcoes_mod.append(
             FuncaoEquipeDireta(
                 funcao_id=insumo["codigo"],
                 descricao=insumo["descricao"],
-                num_pessoas=f["num_pessoas"],
+                num_pessoas=max(1, round(num_p_raw)),  # canônico físico: int
                 salario_base=sal,
                 percentual_encargos=enc_field,
                 horas_extras_pct=he,
                 custo_mensal_unitario=unit,
             )
         )
-        custo_mo += unit * f["num_pessoas"]
+        custo_mo += unit * num_p_raw  # custo usa coeficiente original (float)
     return funcoes_mod, custo_mo
 
 
@@ -714,6 +738,97 @@ def run_equipes_e_alocacao(
     equipes = _build_dimensionamento(canonical_in, inputs, catalogo, ctx, validacoes)
     sched_acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     cron_lookup = {sa.activity_id: sa for sa in sched_acts}
+
+    # ADR-071/073: Pool Contract Model + Perpetuation Chains
+    contratos_recurso: list[RecursoContrato] = []
+    cadeias_perpetuacao = []
+    rcpsp_spec = inputs.get("rcpsp_spec") if isinstance(inputs.get("rcpsp_spec"), dict) else None
+    if rcpsp_spec:
+        contratos_recurso, atribuicao, cadeias_perpetuacao = _build_contratos_recurso(
+            equipes, rcpsp_spec, cron_lookup, validacoes
+        )
+        # Atualiza custo_total de cada equipe coberta pelo pool contract
+        for eq in equipes:
+            if eq.item_id in atribuicao:
+                custo_attr, tipo_id, frac = atribuicao[eq.item_id]
+                eq.custo_total_autonomo = eq.custo_total
+                eq.custo_total = custo_attr
+                eq.contrato_tipo_id = tipo_id
+                eq.fracao_atribuicao = frac
+        if contratos_recurso:
+            tipos_ids = ", ".join(c.tipo_id for c in contratos_recurso)
+            total_contratos = sum(c.custo_total_contrato for c in contratos_recurso)
+            n_cadeias = sum(c.n_cadeias for c in contratos_recurso)
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-POOL-CONTRATO-OK",
+                    status="OK",
+                    mensagem=(
+                        f"ADR-071: {len(contratos_recurso)} contrato(s) de pool gerado(s) "
+                        f"[{tipos_ids}] — custo total R$ {total_contratos:,.2f}."
+                    ),
+                )
+            )
+            if cadeias_perpetuacao:
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-PERPETUACAO-OK",
+                        status="OK",
+                        mensagem=(
+                            f"ADR-073: {len(cadeias_perpetuacao)} cadeia(s) de perpetuação "
+                            f"({n_cadeias} total mob/demob vs "
+                            f"{sum(len(c.items_cobertos) for c in contratos_recurso)} naive)."
+                        ),
+                    )
+                )
+
+    # ADR-077: mapa instancial de utilização — executado quando há pool contracts
+    instancias_recurso = []
+    composicao_equipes_atividade = []
+    resumo_utilizacao_contratos = []
+    if contratos_recurso and rcpsp_spec:
+        instancias_recurso, composicao_equipes_atividade, resumo_utilizacao_contratos = (
+            _build_instancias_recurso(contratos_recurso, rcpsp_spec, cron_lookup, validacoes)
+        )
+        if resumo_utilizacao_contratos:
+            n_ok = sum(1 for r in resumo_utilizacao_contratos if r.status_utilizacao == "OK")
+            taxa_media = round(
+                sum(r.taxa_utilizacao_pct for r in resumo_utilizacao_contratos)
+                / len(resumo_utilizacao_contratos),
+                1,
+            )
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-INSTANCIA-RECURSO-OK",
+                    status="OK",
+                    mensagem=(
+                        f"ADR-077: {len(instancias_recurso)} instância(s) mapeadas em "
+                        f"{len(resumo_utilizacao_contratos)} contrato(s) — "
+                        f"{n_ok}/{len(resumo_utilizacao_contratos)} OK, "
+                        f"taxa média {taxa_media:.1f}%."
+                    ),
+                )
+            )
+        # ADR-083: enriquece overhead_ocioso / custo_ocioso_imputado com gaps instanciais reais
+        if instancias_recurso and cadeias_perpetuacao:
+            _enrich_particao_overhead(contratos_recurso, cadeias_perpetuacao, instancias_recurso)
+
+        # ADR-085: substitui custo_total_contrato pelo custo instancial composicional
+        # (mob tardia + taxa ociosa por componente + desmob antecipada efetiva).
+        # Executado por último: reescala atribuição/partição preservando a invariante
+        # Σ custo_total_particionado == custo_total_contrato e atualiza eq.custo_total (N4).
+        if instancias_recurso:
+            _aplicar_custo_instancial_adr085(
+                contratos_recurso, instancias_recurso, equipes, validacoes
+            )
+
+    # ADR-078: pré-processamento estrutural de compartilhamento
+    relatorio_oportunidades = None
+    if contratos_recurso and rcpsp_spec and rcpsp_spec.get("resource_costs"):
+        relatorio_oportunidades = _build_pre_processamento_compartilhamento(
+            contratos_recurso, rcpsp_spec, cron_lookup, validacoes
+        )
+
     requisitos, tipos = _build_requisitos_e_tipos(equipes, canonical_in, cron_lookup, validacoes)
     alocacoes, pool_dict = _build_alocacoes_pool(requisitos, canonical_in, tipos)
     conflitos: list[ConflitoPico] = []
@@ -727,6 +842,12 @@ def run_equipes_e_alocacao(
     novo = canonical_in.model_copy(
         update={
             "equipes_diretas": equipes,
+            "contratos_recurso": contratos_recurso,
+            "cadeias_perpetuacao": cadeias_perpetuacao,
+            "instancias_recurso": instancias_recurso,
+            "composicao_equipes_atividade": composicao_equipes_atividade,
+            "resumo_utilizacao_contratos": resumo_utilizacao_contratos,
+            "relatorio_oportunidades": relatorio_oportunidades,
             "tipos_recurso": list(tipos.values()),
             "recurso_pool": list(pool_dict.values()),
             "requisitos": requisitos,

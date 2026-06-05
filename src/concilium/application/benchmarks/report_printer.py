@@ -65,12 +65,19 @@ class BenchmarkReportPrinter:
         fmt_indireto = f"R$ {indireto:>14,.2f}" if indireto is not None else "  (nao disponivel)"
         fmt_venda = f"R$ {preco_venda:>14,.2f}" if preco_venda is not None else "  (nao disponivel)"
         bdi_pct = f"{bdi * 100:.2f}%" if bdi is not None else "N/A"
-        print("     base metodologia        : Catalogo (CPU x quantidade s/BDI)")
+        # Preço operacional honesto (total_com_bdi = custo instancial × BDI)
+        preco_venda_cat = ferramenta.get("preco_venda_catalogo")
+        fmt_venda_cat = f"R$ {preco_venda_cat:>14,.2f}" if preco_venda_cat is not None else ""
+        print("     base metodologia        : Operacional (custo instancial x BDI)")
         print(f"     custo_direto            : {fmt_catalogo}   <- CPUxqty (alinhado c/ Referencia)")
         print(f"     custo_indireto          : {fmt_indireto}")
         print(
-            f"     preco_venda (P_bruto)   : {fmt_venda}   <- direto(c/BDI_cat) + indireto(c/BDI) = markup efetivo {bdi_pct}"  # noqa: E501
+            f"     preco_venda (operac.)   : {fmt_venda}   <- custo instancial x BDI + indireto x BDI = markup efetivo {bdi_pct}"  # noqa: E501
         )
+        if fmt_venda_cat:
+            print(
+                f"     preco_venda (catalogo)  : {fmt_venda_cat}   <- CPUxqty x BDI (ref. mercado)"  # noqa: E501
+            )
 
     def _print_composicao_final(self, confronto: dict) -> None:
         if not confronto.get("composicao_final"):

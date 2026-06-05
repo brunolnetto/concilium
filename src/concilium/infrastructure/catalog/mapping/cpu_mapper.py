@@ -3,13 +3,8 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
-
-_RULES_ENV = "CONCILIUM_BENCHMARK_CPU_MAPPING_RULES_FILE"
-_LEGACY_RULES_ENV = "CONCILIUM_CPU_MAPPING_RULES_FILE"
-
 
 def _tools_root() -> Path:
     # src/concilium/infrastructure/catalog/mapping -> src -> RAIZ
@@ -17,12 +12,6 @@ def _tools_root() -> Path:
 
 
 def _rules_file() -> Path:
-    env_path = os.environ.get(_RULES_ENV)
-    if env_path:
-        return Path(env_path)
-    legacy_path = os.environ.get(_LEGACY_RULES_ENV)
-    if legacy_path:
-        return Path(legacy_path)
     return _tools_root() / "config" / "referencias" / "cpu_mapping_rules.json"
 
 

@@ -44,20 +44,20 @@ class S3BlobStorage(BlobStoragePort):
 
     @classmethod
     def from_env(cls) -> "S3BlobStorage":
-        bucket = (os.environ.get("CONCILIUM_S3_BUCKET") or "").strip()
+        bucket = (os.environ.get("CONCILIUM__S3_BUCKET") or "").strip()
         if not bucket:
-            raise OSError("CONCILIUM_S3_BUCKET é obrigatório para CONCILIUM_STORE_BACKEND=s3.")
+            raise OSError("CONCILIUM__S3_BUCKET é obrigatório para CONCILIUM__STORE_BACKEND=s3.")
 
         return cls(
             bucket=bucket,
-            region=(os.environ.get("CONCILIUM_S3_REGION") or "").strip() or None,
-            root_prefix=(os.environ.get("CONCILIUM_S3_ROOT_PREFIX") or "").strip(),
-            endpoint_url=(os.environ.get("CONCILIUM_S3_ENDPOINT_URL") or "").strip() or None,
-            addressing_style=(os.environ.get("CONCILIUM_S3_ADDRESSING_STYLE") or "").strip() or None,
-            aws_access_key_id=(os.environ.get("CONCILIUM_S3_ACCESS_KEY_ID") or "").strip() or None,
-            aws_secret_access_key=(os.environ.get("CONCILIUM_S3_SECRET_ACCESS_KEY") or "").strip() or None,
-            aws_session_token=(os.environ.get("CONCILIUM_S3_SESSION_TOKEN") or "").strip() or None,
-            server_side_encryption=(os.environ.get("CONCILIUM_S3_SERVER_SIDE_ENCRYPTION") or "").strip() or None,
+            region=(os.environ.get("CONCILIUM__S3_REGION") or "").strip() or None,
+            root_prefix=(os.environ.get("CONCILIUM__S3_ROOT_PREFIX") or "").strip(),
+            endpoint_url=(os.environ.get("CONCILIUM__S3_ENDPOINT_URL") or "").strip() or None,
+            addressing_style=(os.environ.get("CONCILIUM__S3_ADDRESSING_STYLE") or "").strip() or None,
+            aws_access_key_id=(os.environ.get("CONCILIUM__S3_ACCESS_KEY_ID") or "").strip() or None,
+            aws_secret_access_key=(os.environ.get("CONCILIUM__S3_SECRET_ACCESS_KEY") or "").strip() or None,
+            aws_session_token=(os.environ.get("CONCILIUM__S3_SESSION_TOKEN") or "").strip() or None,
+            server_side_encryption=(os.environ.get("CONCILIUM__S3_SERVER_SIDE_ENCRYPTION") or "").strip() or None,
         )
 
     @staticmethod
@@ -183,3 +183,18 @@ class S3BlobStorage(BlobStoragePort):
     def aprovar_versao(self, path: str) -> None:
         # S3 não oferece check-in/lock sem configurações adicionais de object lock.
         return
+
+    async def _presign(self, key: str, ttl_segundos: int) -> str:
+        async with self._session.client("s3", **self._client_kwargs) as client:
+            return await client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self._bucket, "Key": key},
+                ExpiresIn=max(60, ttl_segundos),
+            )
+
+    def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
+        """URL pré-assinada S3 (get_object) com expiração (ADR-093 D4)."""
+        try:
+            return self._run(self._presign(self._full_key(path), ttl_segundos))
+        except Exception:  # noqa: BLE001
+            return None

@@ -8,7 +8,7 @@ Resolve dois problemas:
   2. Cronogramas com chaves numéricas de semana ("1", "2"...) não eram reconhecidos
      pelo BenchmarkInputDeriver que espera ISO-week keys ("2026-W02").
 
-Uso típico via CONCILIUM_ROOT env var:
+Uso típico via CONCILIUM__ROOT env var:
 
     import os
     from pathlib import Path
@@ -53,19 +53,19 @@ class BenchmarkFacade:
 
     @classmethod
     def from_env(cls) -> BenchmarkFacade:
-        """Cria facade a partir de CONCILIUM_ROOT (ou variáveis individuais)."""
-        root_str = os.environ.get("CONCILIUM_ROOT")
+        """Cria facade a partir de CONCILIUM__ROOT (ou variáveis individuais)."""
+        root_str = os.environ.get("CONCILIUM__ROOT")
         if root_str:
             root = Path(root_str)
         else:
             # Fallback: usa cwd como raiz (compatível com scripts legados em benchmarks/)
             root = Path.cwd().parent
 
-        config_root = Path(os.environ.get("CONCILIUM_CONFIG_ROOT", str(root / "config")))
+        config_root = Path(os.environ.get("CONCILIUM__CONFIG_ROOT", str(root / "config")))
         benchmarks_root = root / "benchmarks" / "data"
         # Projetos de benchmark ficam isolados em benchmarks/projetos/
-        # (CONCILIUM_PROJECTS_ROOT sobrescreve apenas para pipelines reais)
-        projects_root = Path(os.environ.get("CONCILIUM_BENCHMARK_PROJECTS_ROOT", str(root / "benchmarks" / "projetos")))
+        # (CONCILIUM__PROJECTS_ROOT sobrescreve apenas para pipelines reais)
+        projects_root = Path(os.environ.get("CONCILIUM__BENCHMARK_PROJECTS_ROOT", str(root / "benchmarks" / "projetos")))
 
         return cls(
             benchmarks_root=benchmarks_root,

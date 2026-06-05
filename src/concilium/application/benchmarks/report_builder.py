@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 from .projection import BenchmarkProjection
 from .spec_loader import ProjectSpec
+
+
+def _load_inference_service() -> Any:
+    mod = importlib.import_module("concilium.application.benchmarks.inference")
+    svc_cls = getattr(mod, "BenchmarkInferenceService", None)
+    if svc_cls is None:
+        raise RuntimeError("BenchmarkInferenceService indisponivel")
+    return svc_cls
 
 
 def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProjection) -> None:
@@ -200,14 +209,6 @@ _ACTION_TABLE: dict[tuple[str, str], tuple[str, str]] = {
 }
 
 
-def _sum_indireto(custo: dict) -> float:
-    total = 0.0
-    for k, v in custo.items():
-        if isinstance(v, (int, float)) and str(k).startswith("indireto_"):
-            total += v
-    return total
-
-
 class BenchmarkReportBuilder:
     _PHASE_BY_METRIC = {
         "custo_direto": "06-consolidacao",
@@ -276,34 +277,8 @@ class BenchmarkReportBuilder:
 
     @staticmethod
     def _extract_referencia_confronto(ref: dict[str, Any]) -> dict[str, Any] | None:
-        resultado = ref.get("resultado") if isinstance(ref, dict) else None
-        if not isinstance(resultado, dict):
-            return None
-
-        # Preferimos o artefato de confronto da planilha real quando existir.
-        confronto_ref = resultado.get("benchmark_confronto_referencia")
-        if isinstance(confronto_ref, dict):
-            return {
-                "custo_direto": confronto_ref.get("custo_direto"),
-                "custo_indireto": confronto_ref.get("custo_indireto"),
-                "custo_total": confronto_ref.get("custo_total"),
-                "preco_venda": confronto_ref.get("preco_venda"),
-            }
-
-        # Fallback: resultado.canonical (presente em alguns arquivos de referência).
-        canonical = resultado.get("canonical")
-        if isinstance(canonical, dict):
-            custo: dict = canonical.get("custo") if isinstance(canonical.get("custo"), dict) else {}  # type: ignore[assignment]
-            venda: dict = canonical.get("venda") if isinstance(canonical.get("venda"), dict) else {}  # type: ignore[assignment]
-            custo_indireto = _sum_indireto(custo)
-            return {
-                "custo_direto": custo.get("direto_equipes"),
-                "custo_indireto": custo_indireto if custo_indireto != 0 else None,
-                "custo_total": custo.get("total"),
-                "preco_venda": venda.get("total_com_bdi") or venda.get("total_custo_plus"),
-            }
-
-        return None
+        svc_cls = _load_inference_service()
+        return svc_cls.derive(ref).reference_projection
 
     @staticmethod
     def _build_composicao_final(
@@ -351,6 +326,7 @@ class BenchmarkReportBuilder:
         results_log: list[dict[str, Any]],
         ref: dict[str, Any] | None,
         canonical: Any,
+        inference_pack: Any | None = None,
     ) -> dict[str, Any]:
         projection = BenchmarkProjection.from_canonical(canonical)
         report: dict[str, Any] = {
@@ -362,7 +338,9 @@ class BenchmarkReportBuilder:
             "confronto": {},
         }
         if ref:
-            ref_confronto = self._extract_referencia_confronto(ref)
+            ref_confronto = getattr(inference_pack, "reference_projection", None)
+            if ref_confronto is None:
+                ref_confronto = self._extract_referencia_confronto(ref)
             if ref_confronto is not None:
                 report["confronto"]["referencia"] = ref_confronto
         _add_ferramenta_data(report["confronto"], projection)

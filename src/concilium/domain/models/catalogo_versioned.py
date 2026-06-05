@@ -62,6 +62,8 @@ class VersaoInsumo(BaseModel):
     preco_unitario: float = Field(ge=0)
     fonte_preco: Literal["catalogo_proprio", "tabela_referencia", "cotacao_mercado", "negociado"]
     tabela_referencia_id: str | None = None
+    # NEP-031 L1: rental_unit especifica como equipamento e alugado
+    rental_unit: Literal["hora_produtiva", "dia_calendario", "mes"] | None = None
     historico_alteracoes: list[RegistroAlteracao] = Field(default_factory=list)
     auditado_por: str
     auditado_em: datetime

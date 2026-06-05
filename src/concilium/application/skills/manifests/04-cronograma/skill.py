@@ -27,6 +27,7 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     AtividadeIntervalo,
     CanonicalModel,
+    CalendarioOperacionalSemanal,
     Cronograma,
     DistribuicaoSemanal,
     ScheduleCandidateCanonical,
@@ -71,6 +72,186 @@ def _build_producao_lookup(catalogo: dict[str, Any]) -> dict[str, dict]:
     return {p["id"]: p for p in lista}
 
 
+def _build_insumos_lookup(catalogo: dict[str, Any]) -> dict[str, dict]:
+    """Indexa insumos do catálogo por código."""
+    return {ins["codigo"]: ins for ins in catalogo.get("insumos", []) if ins.get("codigo")}
+
+
+def _custo_hora_equipe(
+    composicao: dict,
+    insumos_lookup: dict[str, dict],
+    horas_mes: float,
+    taxa_encargos: float,
+    custo_hora_referencia: float | None = None,
+) -> float:
+    """Computa custo horário total da equipe a partir da composição padrão.
+
+    Quando ``custo_hora_referencia`` está disponível (planilha AGIS 2026-05), usa-o
+    diretamente sem precisar de lookup de insumos — elimina dependência de catálogo e
+    garante identidade exata P_canonico = C (produção da planilha).
+
+    Fórmula (NEP-029 D2):
+      custo_hora_mo  = Σ funcoes: n_pessoas × (preco_unit / horas_mes) × (1 + taxa_encargos)
+                       onde preco_unit está em R$/mês quando unidade='mes',
+                            ou em R$/h quando unidade='h'
+      custo_hora_eq  = Σ equips: n_unidades × preco_hora_equip       (unidade='h')
+      custo_hora_comb = Σ equips: n_unidades × consumo_L_h × preco_diesel
+      total          = custo_hora_mo + custo_hora_eq + custo_hora_comb
+
+    Diesel é buscado pelos códigos MA-DIESEL-S10, MA-DIESEL ou MA-DIESEL-ESCALA.
+    Retorna 0.0 se a composição estiver incompleta (insumos não encontrados).
+    """
+    if custo_hora_referencia and custo_hora_referencia > 0:
+        return float(custo_hora_referencia)
+    custo_hora = 0.0
+
+    # ── Mão de obra ──────────────────────────────────────────────────────────
+    for func in composicao.get("funcoes", []):
+        fid = func.get("funcao_id") or ""
+        n = float(func.get("num_pessoas", 1) or 1)  # planilha usa frações (0.5, 0.17)
+        ins = insumos_lookup.get(fid)
+        if not ins:
+            continue
+        pu = float(ins.get("preco_unitario", 0) or 0)
+        unidade = str(ins.get("unidade", "mes")).lower()
+        if unidade in ("h", "hora"):
+            # Taxa horária já em R$/h.
+            # Se o insumo indica que encargos já estão incluídos (convenção AGIS-FN-*),
+            # não aplicar taxa_encargos adicionalmente.
+            nota = str((ins.get("atributos_especificos") or {}).get("nota", "")).lower()
+            ja_com_encargos = "inclui encargos" in nota   # substring sem acentos
+            encargos = 0.0 if ja_com_encargos else taxa_encargos
+            custo_hora += n * pu * (1.0 + encargos)
+        else:
+            # Taxa mensal → converte para horária e aplica encargos
+            taxa_hora = pu / horas_mes if horas_mes > 0 else 0.0
+            custo_hora += n * taxa_hora * (1.0 + taxa_encargos)
+
+    # ── Equipamentos ─────────────────────────────────────────────────────────
+    diesel_ins: dict | None = None
+    for cod in ("MA-DIESEL-S10", "MA-DIESEL", "MA-DIESEL-ESCALA"):
+        if cod in insumos_lookup:
+            diesel_ins = insumos_lookup[cod]
+            break
+
+    for equip in composicao.get("equipamentos", []):
+        eid = equip.get("equip_id") or ""
+        n = float(equip.get("num_unidades", 1) or 1)  # planilha usa frações (0.17)
+        ins = insumos_lookup.get(eid)
+        if ins:
+            pu = float(ins.get("preco_unitario", 0) or 0)
+            custo_hora += n * pu  # equipment insumos are in R$/h
+
+        # Combustível — consumo em L/h pode vir do registro de producao (dois nomes:
+        # consumo_litros_hora_estimado ou consumo_litros_hora) ou do insumo de equip.
+        consumo = float(
+            equip.get("consumo_litros_hora_estimado") or
+            equip.get("consumo_litros_hora") or
+            0
+        )
+        if consumo == 0 and ins:
+            consumo = float((ins.get("atributos_especificos") or {}).get("consumo_litros_hora", 0) or 0)
+        if consumo > 0 and diesel_ins:
+            # Usa preco_unitario (referência da planilha, ex: 6,99 R$/L).
+            # Preço regionalizado (SICRO) é referência de mercado regional, não o
+            # preço contratual — não usar para calibração de produtividade.
+            preco_diesel = float(diesel_ins.get("preco_unitario", 0) or 0)
+            custo_hora += n * consumo * preco_diesel
+
+    return custo_hora
+
+
+def _enrich_producao_canonico(
+    cpu_lookup: dict[str, dict],
+    producao_lookup: dict[str, dict],
+    insumos_lookup: dict[str, dict],
+    horas_mes: float,
+    taxa_encargos: float,
+    validacoes: list,
+) -> None:
+    """NEP-029 D2: enriquece producao_lookup com valor_horario_canonico.
+
+    Para cada CPU que possui precos_unitarios_sbdi.total > 0, deriva a
+    produtividade canônica P_canonico = custo_hora_equipe / PU_sbdi de modo
+    que P_engine = P_catalog por construção:
+
+        custo_direto_engine = custo_hora × Q / P_canonico = PU_sbdi × Q
+
+    O valor é gravado em producao_lookup[prod_id]['valor_horario_canonico'] e
+    _resolve_productivity o prefere sobre 'valor_horario'. Isso garante que
+    fe_nec = 1/η_p (apenas clima), eliminando o resíduo de mismatch de base.
+
+    Emite VAL-PROD-CANONICO por CPU reportando o ratio P_canonico/P_original
+    para rastreabilidade.
+    """
+    for cpu in cpu_lookup.values():
+        cpu_id = cpu.get("codigo") or "?"
+        pu_sbdi = float((cpu.get("precos_unitarios_sbdi") or {}).get("total") or 0)
+        if pu_sbdi <= 0:
+            continue
+
+        prod_id = cpu.get("producao_id_ref") or ""
+        prod = producao_lookup.get(prod_id)
+        if not prod:
+            continue
+
+        # composicao_padrao_equipe está no producao record (ADR-053)
+        composicao = prod.get("composicao_padrao_equipe") or {}
+        if not composicao:
+            continue
+
+        # Prioriza o custo horário de referência da planilha (gravado no registro de producao)
+        # — zero dependência de lookup de insumos, identidade exata P_canonico = C.
+        custo_hora_ref = prod.get("custo_hora_total_referencia")
+        custo_hora = _custo_hora_equipe(
+            composicao, insumos_lookup, horas_mes, taxa_encargos,
+            custo_hora_referencia=custo_hora_ref,
+        )
+        if custo_hora <= 0:
+            continue
+
+        P_canonico = custo_hora / pu_sbdi
+        P_original = float(prod.get("valor_horario") or prod.get("producao_horaria") or 0)
+
+        ratio = P_canonico / P_original if P_original > 0 else None
+
+        # Guarda de ratio: só aplicar P_canonico quando a discrepância é calibração
+        # (≤50% de diferença). Discrepâncias acima disso indicam dado de catálogo
+        # inconsistente (e.g., valor_horario padrão copiado incorretamente) — sinalizar
+        # como VAL-PROD-INCONSISTENCIA e preservar P_original para não quebrar o scheduler.
+        _RATIO_MIN, _RATIO_MAX = 0.5, 2.0
+        if ratio is not None and not (_RATIO_MIN <= ratio <= _RATIO_MAX):
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-PROD-INCONSISTENCIA",
+                    status="AVISO",
+                    mensagem=(
+                        f"CPU {cpu_id}: ratio P_can/P_orig={ratio:.3f} fora do intervalo aceitável "
+                        f"[{_RATIO_MIN},{_RATIO_MAX}]. "
+                        f"P_canonico={P_canonico:.2f} vs P_original={P_original:.2f}. "
+                        f"PU_sbdi={pu_sbdi:.4f} implica custo={custo_hora:.1f} R$/h → "
+                        "valor_horario ou precos_unitarios_sbdi precisa correção no catálogo."
+                    ),
+                )
+            )
+            continue  # não aplica P_canonico — preserva P_original
+
+        prod["valor_horario_canonico"] = P_canonico
+
+        ratio_txt = f" (ratio={ratio:.3f})" if ratio else ""
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-PROD-CANONICO",
+                status="OK",
+                mensagem=(
+                    f"CPU {cpu_id}: P_canonico={P_canonico:.2f} "
+                    f"[custo_hora={custo_hora:.2f}/PU_sbdi={pu_sbdi:.4f}]{ratio_txt}. "
+                    "fe_nec → 1/η_p (resíduo de base eliminado)."
+                ),
+            )
+        )
+
+
 def _lookup_eficiencia(
     semana_key: str,
     prat_semanal: dict[str, float],
@@ -91,12 +272,133 @@ def _lookup_eficiencia(
     return 1.0
 
 
+def _build_dist_cell(
+    producao_semanal_base: float,
+    num_eq: int,
+    n_max: int,
+    fator_clima: float,
+    fator_calendario: float,
+    quantitativo: float,
+    qtd_acumulada: float,
+    M_max: float = 1.0,
+) -> DistribuicaoSemanal:
+    """Monta uma célula semanal com decomposição causal completa (NEP-035).
+
+    Decomposição η = η_s · η_p · η_w onde:
+      η_s  = n_j / n_max                  (alocação — fração da força máxima planejada)
+      η_p  = fator_clima × fator_calendario (praticabilidade)
+      η_w  = m_ij / M_max                  (gestão; M_max=1.0 até calibração)
+      η    = η_s · η_p · η_w = fator_total
+
+    q_max_celula = producao_semanal_base × n_max × M_max  (capacidade teórica semanal)
+    perda_fisica = q_max_celula × η_s - q_executada        (produção perdida em unidades físicas)
+
+    eficiencia = η_w = m_ij/M_max = utilização (≠ praticabilidade; corrige ADR-082-cons)
+    """
+    n_max_safe = max(1, n_max)
+    n_eq_safe = max(0, num_eq)
+    praticabilidade = fator_clima * fator_calendario
+    eta_s = min(1.0, n_eq_safe / n_max_safe)
+    eta_p = praticabilidade
+    q_max = producao_semanal_base * n_max_safe * M_max
+    capacidade_real = q_max * eta_s * eta_p
+    qtd_remanescente = max(0.0, quantitativo - qtd_acumulada)
+    qtd_executada = min(capacidade_real, qtd_remanescente)
+    eta_w = (qtd_executada / (capacidade_real * M_max)) if capacidade_real > 0 else 0.0
+    eta_w = min(1.0, eta_w)
+    eta_total = eta_s * eta_p * eta_w
+    perda = max(0.0, q_max - qtd_executada)
+    qtd_acumulada_nova = qtd_acumulada + qtd_executada
+    pct = qtd_acumulada_nova / quantitativo if quantitativo > 0 else 0.0
+    return DistribuicaoSemanal(
+        num_equipes=n_eq_safe,
+        qtd_executada=round(qtd_executada, 2),
+        qtd_acumulada=round(qtd_acumulada_nova, 2),
+        pct=round(pct, 4),
+        eficiencia=round(eta_w, 4),
+        fator_clima=round(fator_clima, 4),
+        fator_calendario=round(fator_calendario, 4),
+        fator_total=round(eta_total, 4),
+        eta_s=round(eta_s, 4),
+        eta_p=round(eta_p, 4),
+        eta_w=round(eta_w, 4),
+        q_max_celula=round(q_max, 2),
+        perda_fisica=round(perda, 2),
+    )
+
+
 def _week_to_month(semana_key: str) -> str:
     """Converte 'AAAA-Www' para 'MM-YYYY'."""
     year_str, week_str = semana_key.split("-W")
     week_num = int(week_str)
     month_num = max(1, min(12, (week_num - 1) // 4 + 1))
     return f"{month_num:02d}-{year_str}"
+
+
+def _event_occurs_on_day(evento: dict[str, Any], day: date) -> bool:
+    """Avalia recorrência anual/unica para um dia civil."""
+    try:
+        inicio = date.fromisoformat(str(evento.get("inicio")))
+        fim = date.fromisoformat(str(evento.get("fim")))
+    except Exception:
+        return False
+
+    recorrencia = str(evento.get("recorrencia") or "anual")
+    if recorrencia == "anual":
+        if inicio.month > fim.month or (inicio.month == fim.month and inicio.day > fim.day):
+            # Janela anual atravessando ano civil (ex.: 20/12 a 10/01)
+            start_ref = date(day.year, inicio.month, inicio.day)
+            end_ref = date(day.year + 1, fim.month, fim.day)
+            prev_start = date(day.year - 1, inicio.month, inicio.day)
+            prev_end = date(day.year, fim.month, fim.day)
+            return (start_ref <= day <= end_ref) or (prev_start <= day <= prev_end)
+        return (day.month, day.day) >= (inicio.month, inicio.day) and (day.month, day.day) <= (fim.month, fim.day)
+
+    return inicio <= day <= fim
+
+
+def _build_fator_calendario_semanal(
+    semanas_obra: list[str],
+    data_inicio: date,
+    dias_semana_regime: int,
+    calendario_config: dict[str, Any] | None,
+) -> tuple[dict[str, float], list[CalendarioOperacionalSemanal]]:
+    eventos = list((calendario_config or {}).get("eventos", []) or [])
+    fatores: dict[str, float] = {}
+    artefato: list[CalendarioOperacionalSemanal] = []
+
+    for idx, semana_key in enumerate(semanas_obra):
+        week_start = data_inicio + timedelta(weeks=idx)
+        dias_uteis_base = float(dias_semana_regime)
+        dias_uteis_efetivos = 0.0
+        eventos_aplicados: set[str] = set()
+
+        for d in range(dias_semana_regime):
+            dia = week_start + timedelta(days=d)
+            fator_dia = 1.0
+            for evento in eventos:
+                if not isinstance(evento, dict):
+                    continue
+                if _event_occurs_on_day(evento, dia):
+                    fator_evt = float(evento.get("fator_operacao", 0.0) or 0.0)
+                    fator_dia = min(fator_dia, max(0.0, min(1.0, fator_evt)))
+                    if evento.get("id"):
+                        eventos_aplicados.add(str(evento["id"]))
+            dias_uteis_efetivos += fator_dia
+
+        fator = dias_uteis_efetivos / dias_uteis_base if dias_uteis_base > 0 else 1.0
+        fatores[semana_key] = round(max(0.0, min(1.0, fator)), 4)
+        artefato.append(
+            CalendarioOperacionalSemanal(
+                semana_iso=semana_key,
+                dias_uteis_base=round(dias_uteis_base, 2),
+                dias_uteis_efetivos=round(dias_uteis_efetivos, 2),
+                fator_calendario=fatores[semana_key],
+                eventos_aplicados=tuple(sorted(eventos_aplicados)),
+            )
+        )
+
+    return fatores, artefato
 
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -167,28 +469,225 @@ def _relax_pool(pool: ResourcePool, factor: float = 1.1) -> ResourcePool:
 # ────────────────────────────────────────────────────────────────────────────
 
 
-def _extract_activities_from_spec(spec: dict) -> list[Activity]:
-    """Extrai atividades a partir de rcpsp_spec (ADR-046)."""
-    return [
-        Activity(
-            activity_id=a["item_id"],
-            description=a.get("descricao", a["item_id"]),
-            duration_weeks=int(a["duration_weeks"]),
-            required_resources=dict(a["required_resources"]),
+def _compute_ramp_profile(
+    duration_weeks: int,
+    ramp_params: dict,
+    n_pico: int,
+) -> list[float]:
+    """ADR-074: Derive normalized ramp profile from ramp_params.
+
+    Returns a list of *duration_weeks* floats in [0.0, 1.0] where 1.0 = peak demand.
+
+    ramp_params keys:
+      n_inicial: int            starting resource count at week 0 (default: 0)
+      taxa_mobilizacao: float   resource units added per week during ramp-up
+                                (default: n_pico → instant ramp = flat at plateau)
+      taxa_desmobilizacao: float resource units removed per week during ramp-down
+                                (default: same as taxa_mobilizacao)
+
+    The three phases are:
+      Ramp-up:    t in [0, T_up)            → floor(n_inicial + taxa_mob * (t+1)), clamped to n_pico
+      Plateau:    t in [T_up, T_up+T_plat)  → n_pico
+      Ramp-down:  t in [T_up+T_plat, end)   → max(0, n_pico - taxa_demob * (offset+1))
+
+    If T_up + T_down > duration_weeks the plateau is 0 and ramp-down is truncated.
+    """
+    if duration_weeks <= 0 or n_pico <= 0:
+        return [0.0] * max(0, duration_weeks)
+
+    n_init = int(ramp_params.get("n_inicial", 0))
+    # Default: ramp up in 1 step (instant = flat at peak)
+    taxa_mob = float(ramp_params.get("taxa_mobilizacao", float(n_pico)))
+    taxa_demob = float(ramp_params.get("taxa_desmobilizacao", taxa_mob))
+
+    # Phase durations
+    if taxa_mob > 0 and n_pico > n_init:
+        t_up = math.ceil((n_pico - n_init) / taxa_mob)
+    else:
+        t_up = 0
+    if taxa_demob > 0:
+        t_down = math.ceil(n_pico / taxa_demob)
+    else:
+        t_down = 0
+
+    t_plateau = max(0, duration_weeks - t_up - t_down)
+    # If ramp phases exceed duration, truncate ramp-down
+    if t_up + t_down > duration_weeks:
+        t_down = max(0, duration_weeks - t_up)
+        t_plateau = 0
+
+    profile: list[float] = []
+    for t in range(duration_weeks):
+        if t < t_up:
+            val = min(float(n_pico), n_init + taxa_mob * (t + 1))
+        elif t < t_up + t_plateau:
+            val = float(n_pico)
+        else:
+            offset = t - t_up - t_plateau
+            val = max(0.0, n_pico - taxa_demob * (offset + 1))
+        profile.append(round(min(1.0, val / n_pico), 6))
+
+    return profile
+
+
+def _mean_praticabilidade(canonical_in: CanonicalModel) -> float:
+    """Praticabilidade média do projeto (Σ percentual_produtivo_semanal / N).
+
+    ADR-082-cons: usada para dimensionar a duração produtiva de forma consistente
+    com a produção semanal climática — sem isso, a duração (P nominal) é curta
+    demais e Σ q_ij < Q (sub-entrega). Retorna 1.0 quando não há dado climático
+    (projetos sem praticabilidade ficam inalterados).
+    """
+    prat = getattr(canonical_in, "praticabilidade", None)
+    sem = None
+    if isinstance(prat, dict):
+        sem = prat.get("percentual_produtivo_semanal")
+    elif prat is not None:
+        sem = getattr(prat, "percentual_produtivo_semanal", None)
+    if isinstance(sem, dict) and sem:
+        vals = [float(v) for v in sem.values() if isinstance(v, (int, float)) and v > 0]
+        if vals:
+            return max(0.05, min(1.0, sum(vals) / len(vals)))
+    return 1.0
+
+
+def _compute_productive_weeks(
+    item_id: str,
+    n_resources: int,
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict,
+    producao_lookup: dict,
+    validacoes: list,
+) -> int | None:
+    """ADR-072 (Direção A): duração produtiva = ceil(Q / (P × h/dia × d/sem × n_resources)).
+
+    Nota (ADR-082-cons): a praticabilidade NÃO entra aqui — estender a duração por
+    clima tornaria o RCPSP inviável sob prazos apertados (decisão de prazo/pool,
+    não default silencioso). A sub-entrega resultante (Σ q_ij < Q quando clima < 1)
+    é tornada explícita pela checagem de completude (VAL-CRON-01) em ambos os modos.
+    Retorna None quando não é possível calcular.
+    """
+    eap_item = next((e for e in canonical_in.eap if e.item_id == item_id), None)
+    if not eap_item:
+        return None
+    Q = float(getattr(eap_item, "quantitativo", 0))
+    if Q <= 0:
+        return None
+    cpu_id = getattr(eap_item, "cpu_id", "") or ""
+    cpu = cpu_lookup.get(cpu_id)
+    if not cpu:
+        return None
+    P = _resolve_productivity(cpu, producao_lookup, validacoes)
+    if P <= 0:
+        return None
+    regime = canonical_in.projeto.regime_trabalho
+    prod_per_week = P * regime.horas_dia * regime.dias_semana * n_resources
+    if prod_per_week <= 0:
+        return None
+    return max(1, math.ceil(Q / prod_per_week))
+
+
+def _extract_activities_from_spec(
+    spec: dict,
+    canonical_in: CanonicalModel | None = None,
+    cpu_lookup: dict | None = None,
+    producao_lookup: dict | None = None,
+    validacoes: list | None = None,
+) -> list[Activity]:
+    """Extrai atividades a partir de rcpsp_spec (ADR-046, ADR-072, ADR-074).
+
+    Quando ``canonical_in``, ``cpu_lookup`` e ``producao_lookup`` são
+    fornecidos, aplica Direção A (ADR-072): substitui ``duration_weeks`` pela
+    duração produtiva calculada a partir de Q / taxa de produção, mantendo a
+    janela original em ``window_weeks`` para restrição de corredor.
+
+    ADR-074: Quando ``ramp_params`` presente na atividade da spec, deriva
+    ``ramp_profile`` normalizado (lista de floats [0,1] com length = duration_weeks).
+    O ramp é aplicado após a redução de duração para a duração produtiva.
+    """
+    use_productive = canonical_in is not None and cpu_lookup is not None and producao_lookup is not None
+    activities = []
+    for a in spec["activities"]:
+        window_w = int(a["duration_weeks"])
+        productive_w = window_w  # fallback: sem alteração
+        if use_productive:
+            n_res = max(1, sum(a.get("required_resources", {}).values()))
+            computed = _compute_productive_weeks(
+                a["item_id"],
+                n_res,
+                canonical_in,  # type: ignore[arg-type]
+                cpu_lookup,  # type: ignore[arg-type]
+                producao_lookup,  # type: ignore[arg-type]
+                validacoes or [],
+            )
+            if computed is not None and computed < window_w:
+                productive_w = computed
+
+        # ADR-074: derive ramp_profile from ramp_params if present
+        ramp_profile: list[float] | None = None
+        ramp_params = a.get("ramp_params")
+        if ramp_params and isinstance(ramp_params, dict) and productive_w > 0:
+            req = dict(a.get("required_resources", {}))
+            n_pico = max(req.values()) if req else 1
+            ramp_profile = _compute_ramp_profile(productive_w, ramp_params, n_pico)
+
+        activities.append(
+            Activity(
+                activity_id=a["item_id"],
+                description=a.get("descricao", a["item_id"]),
+                duration_weeks=productive_w,
+                required_resources=dict(a.get("required_resources", {})),
+                window_weeks=window_w if productive_w < window_w else None,
+                ramp_profile=ramp_profile,
+            )
         )
-        for a in spec["activities"]
-    ]
+    return activities
 
 
-def _extract_pool_from_spec(spec: dict) -> ResourcePool:
-    """Extrai pool de recursos a partir de rcpsp_spec (ADR-046)."""
-    return ResourcePool(resources={k: int(v) for k, v in spec["resource_pool"].items()})
+def _extract_pool_from_spec(spec: dict, canonical_in: CanonicalModel | None = None) -> ResourcePool:
+    """Extrai (ou infere) o pool de recursos a partir de rcpsp_spec.
+
+    ADR-046: pool explícito é usado como está.
+    ADR-091: quando ``resource_pool`` está ausente/vazio, o pool é *derivado* do
+    problema (atividades + precedência + objetivo de negócio em ``pool_config``).
+    Atividades sem ``required_resources`` na spec têm ``e_{i,r}`` derivado de
+    ``EquipeDireta.equipamentos`` (Fase 1). O pool inferido é gravado de volta em
+    ``spec['resource_pool']`` — assim skill-05 e a persistência enxergam o mesmo
+    pool — e o diagnóstico do tradeoff tempo×custo fica em ``spec['pool_inferido_diag']``.
+    """
+    explicit = spec.get("resource_pool") or {}
+    if explicit:
+        return ResourcePool(resources={k: int(v) for k, v in explicit.items()})
+
+    from concilium.application.scheduling import inferir_pool_minimo_from_spec
+
+    equipes = list(getattr(canonical_in, "equipes_diretas", []) or []) if canonical_in else None
+    pool, diag = inferir_pool_minimo_from_spec(spec, equipes=equipes)
+    spec["resource_pool"] = dict(pool)
+    spec["pool_inferido_diag"] = diag
+    return ResourcePool(resources={k: int(v) for k, v in pool.items()})
 
 
-def _extract_dag_from_spec(spec: dict, activities: list[Activity]) -> ActivityDAG:
-    """Extrai DAG de precedência a partir de rcpsp_spec (ADR-046)."""
-    precedence = [(str(p[0]), str(p[1])) for p in spec.get("precedence", [])]
-    return ActivityDAG(activities=activities, precedence=precedence)
+def _extract_dag_from_spec(
+    spec: dict,
+    activities: list[Activity],
+    eap_items: list | None = None,
+) -> ActivityDAG:
+    """ADR-081: Extrai DAG de precedência do rcpsp_spec e/ou da EAP.
+
+    Fontes (por prioridade):
+    1. eap[].predecessores  — fonte canônica, inclui completion_threshold_pct
+    2. rcpsp_spec.precedence — override/suplemento (para par já na EAP, prevalece)
+
+    Formato suportado para rcpsp_spec.precedence:
+      - [pred_id, succ_id]            → θ=1.0 (FS clássico)
+      - [pred_id, succ_id, theta]     → θ=float fornecido
+    """
+    from concilium.application.skills.manifests._04_cronograma_skill_helpers import (
+        extract_dag_from_spec_or_eap,
+    )
+
+    return extract_dag_from_spec_or_eap(spec, activities, eap_items)
 
 
 def _to_canonical_candidate(
@@ -207,6 +706,7 @@ def _to_canonical_candidate(
                 end_week=a.end_week,
                 duration_weeks=a.duration_weeks,
                 assigned_resources=dict(a.assigned_resources),
+                ramp_profile=a.ramp_profile,  # ADR-074: propagate for distribuicao_semanal
             )
             for a in schedule_output.scheduled_activities
         ],
@@ -296,7 +796,13 @@ def _resolve_productivity(
     producao_lookup: dict[str, dict],
     validacoes: list[ValidacaoItem],
 ) -> float:
-    """Resolve produtividade da CPU via producao_id_ref (ADR-053 Fase 3)."""
+    """Resolve produtividade da CPU via producao_id_ref (ADR-053 Fase 3).
+
+    Usa 'valor_horario' do registro de producao para o scheduling. 'valor_horario_canonico'
+    (NEP-029 D2) é populado pelo _enrich_producao_canonico() como indicador de calibração
+    mas NÃO é usado para scheduling — seu uso é no PE builder para fe_nec ajustado.
+    A atualização do catalog é feita manualmente após validação humana.
+    """
     prod_id_ref = cpu.get("producao_id_ref")
     if prod_id_ref and prod_id_ref in producao_lookup:
         prod_item = producao_lookup[prod_id_ref]
@@ -370,16 +876,23 @@ def _infer_teams_from_resources(
     cpu: dict,
     week_offset: int,
     total_weeks: int,
+    ramp_profile: list[float] | None = None,
 ) -> int:
     """Infere num_equipes a partir de assigned_resources.
 
     ADR-046: assigned_resources é demanda por semana (unidades/semana),
     não total acumulado. Retorna a soma direta das unidades de recurso
     alocadas, que corresponde ao número de equipes ativas nessa semana.
+
+    ADR-074: Quando ``ramp_profile`` é fornecido, escala a demanda peak pelo
+    fator da semana. ``ramp_profile[week_offset]`` ∈ [0.0, 1.0] onde 1.0 = pico.
     """
     if not assigned_resources:
         return 0
-    return int(sum(assigned_resources.values()))
+    peak = int(sum(assigned_resources.values()))
+    if ramp_profile is not None and week_offset < len(ramp_profile):
+        return max(0, round(peak * ramp_profile[week_offset]))
+    return peak
 
 
 def _aggregate_to_monthly(distribuicao_por_item: dict[str, dict[str, DistribuicaoSemanal]]) -> dict[str, dict]:
@@ -423,6 +936,7 @@ def _emm_process_item(
     regime: Any,
     prat_semanal: dict,
     prat_mensal: dict,
+    fator_calendario_semanal: dict[str, float],
     semanas_obra: list,
     num_equipes_por_item: dict,
     validacoes: list,
@@ -431,24 +945,20 @@ def _emm_process_item(
     P = _resolve_productivity(cpu, producao_lookup, validacoes)
     producao_semanal_base = P * regime.horas_dia * regime.dias_semana
     equipes_semanas = num_equipes_por_item.get(item.item_id, {})
+    # NEP-035: n_max = pico de alocação planejado para a atividade (η_s = n_j / n_max)
+    n_max = max((max(0, equipes_semanas.get(s, 0)) for s in semanas_obra), default=1) or 1
     distribuicao = {}
     qtd_acumulada = 0.0
     for semana_key in semanas_obra:
         num_eq = max(0, equipes_semanas.get(semana_key, 0))
-        eficiencia = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
-        qtd_executada = producao_semanal_base * eficiencia * num_eq
-        qtd_remanescente = item.quantitativo - qtd_acumulada
-        if qtd_executada > qtd_remanescente:
-            qtd_executada = max(0.0, qtd_remanescente)
-        qtd_acumulada += qtd_executada
-        pct = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
-        distribuicao[semana_key] = DistribuicaoSemanal(
-            num_equipes=num_eq,
-            qtd_executada=round(qtd_executada, 2),
-            qtd_acumulada=round(qtd_acumulada, 2),
-            pct=round(pct, 4),
-            eficiencia=round(eficiencia, 4),
+        fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
+        fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
+        cell = _build_dist_cell(
+            producao_semanal_base, num_eq, n_max, fator_clima, fator_calendario,
+            item.quantitativo, qtd_acumulada,
         )
+        qtd_acumulada = cell.qtd_acumulada
+        distribuicao[semana_key] = cell
     erros_completude = []
     pct_completude = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
     if pct_completude < 0.999:
@@ -466,6 +976,7 @@ def _execute_manual_mode(
     regime: Any,
     prat_semanal: dict[str, float],
     prat_mensal: dict[str, float],
+    fator_calendario_semanal: dict[str, float],
     catalogo: dict[str, Any],
     validacoes: list[ValidacaoItem],
 ) -> dict[str, dict[str, DistribuicaoSemanal]]:
@@ -492,6 +1003,7 @@ def _execute_manual_mode(
             regime,
             prat_semanal,
             prat_mensal,
+            fator_calendario_semanal,
             semanas_obra,
             num_equipes_por_item,
             validacoes,
@@ -516,18 +1028,43 @@ def _rasfc_extract_inputs(
     canonical_in: CanonicalModel,
     inputs: dict,
     validacoes: list,
+    cpu_lookup: dict | None = None,
+    producao_lookup: dict | None = None,
 ) -> tuple[list, Any, Any, int] | None:
     """Extracts (activities, dag, pool, deadline_weeks) from spec or canonical. Returns None on error."""
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
-        activities = _extract_activities_from_spec(rcpsp_spec)
+        # ADR-091 Fase 4: pool_config é entrada de negócio first-class. Quando
+        # fornecido em inputs (ou pela UI/formulário QQP/EAP), é propagado para a
+        # spec antes da inferência, sem expor resource_pool ao usuário.
+        pool_config_in = inputs.get("pool_config")
+        if isinstance(pool_config_in, dict) and "pool_config" not in rcpsp_spec:
+            rcpsp_spec["pool_config"] = pool_config_in
+        # ADR-072: pass lookups so productive duration is computed
+        activities = _extract_activities_from_spec(rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, validacoes)
         if not activities:
             validacoes.append(
                 ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="rcpsp_spec sem atividades.")
             )
             return None
-        pool = _extract_pool_from_spec(rcpsp_spec)
-        dag = _extract_dag_from_spec(rcpsp_spec, activities)
+        pool = _extract_pool_from_spec(rcpsp_spec, canonical_in)
+        # ADR-091: se o pool foi inferido, registra o tradeoff tempo×custo
+        diag = rcpsp_spec.get("pool_inferido_diag")
+        if isinstance(diag, dict):
+            notas = "; ".join(diag.get("notas", [])) or "sem restrições adicionais"
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-POOL-INFER",
+                    status="OK",
+                    mensagem=(
+                        f"Pool inferido (objetivo={diag.get('objetivo')}): "
+                        f"{diag.get('pool_inferido')} | makespan~{diag.get('makespan_estimado_semanas')}sem "
+                        f"(mín {diag.get('makespan_minimo_semanas')}sem) | {notas}"
+                    ),
+                )
+            )
+        # ADR-081: passa eap_items para derivar precedência com thresholds
+        dag = _extract_dag_from_spec(rcpsp_spec, activities, eap_items=canonical_in.eap or [])
     else:
         activities = _extract_activities(canonical_in)
         if not activities:
@@ -575,6 +1112,7 @@ def _rasfc_run_heuristics(
         deadline_weeks=deadline_weeks,
         heuristics=heuristics,
         top_n=int(inputs.get("top_n", 3)),
+        strategy=strategy,
     )
     relaxed_flag = False
 
@@ -587,6 +1125,7 @@ def _rasfc_run_heuristics(
             deadline_weeks=deadline_weeks,
             heuristics=heuristics,
             top_n=3,
+            strategy=strategy,
         )
         if explored:
             relaxed_flag = True
@@ -601,13 +1140,16 @@ def _run_auto_schedule_fallback_chain(
     canonical_in: CanonicalModel,
     inputs: dict[str, Any],
     validacoes: list[ValidacaoItem],
+    cpu_lookup: dict | None = None,
+    producao_lookup: dict | None = None,
 ) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None]:
     """Executa fallback chain (heurísticas -> relax -> MILP).
 
     ADR-046: se inputs contiver 'rcpsp_spec', usa extratores baseados na spec
     em vez de tentar derivar do canônico (que pode estar incompleto).
+    ADR-072: cpu_lookup/producao_lookup usados para derivar duração produtiva.
     """
-    extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes)
+    extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
     if extracted is None:
         return [], None
     activities, dag, pool, deadline_weeks = extracted
@@ -644,6 +1186,7 @@ def _convert_schedule_to_distribuicao(
     regime: Any,
     prat_semanal: dict[str, float],
     prat_mensal: dict[str, float],
+    fator_calendario_semanal: dict[str, float],
     validacoes: list[ValidacaoItem],
 ) -> dict[str, dict[str, DistribuicaoSemanal]]:
     """Converte scheduled activities para distribuicao_semanal."""
@@ -672,6 +1215,16 @@ def _convert_schedule_to_distribuicao(
 
         P = _resolve_productivity(cpu, producao_lookup, validacoes)
         producao_semanal_base = P * regime.horas_dia * regime.dias_semana
+        # NEP-035: pré-cômputo de n_max (pico de alocação da atividade) para η_s = n_j/n_max.
+        # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
+        ramp = getattr(sa, "ramp_profile", None)
+        n_max = max(
+            (
+                _infer_teams_from_resources(sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp)
+                for off in range(sa.duration_weeks)
+            ),
+            default=1,
+        ) or 1
         distribuicao = {}
         qtd_acumulada = 0.0
 
@@ -684,23 +1237,39 @@ def _convert_schedule_to_distribuicao(
             )
 
             inferred_num_equipes = _infer_teams_from_resources(
-                sa.assigned_resources, cpu, week_offset, sa.duration_weeks
+                sa.assigned_resources, cpu, week_offset, sa.duration_weeks,
+                ramp_profile=ramp,
             )
-            eficiencia = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
-            qtd_executada = producao_semanal_base * eficiencia * inferred_num_equipes
-            qtd_remanescente = item.quantitativo - qtd_acumulada
-            if qtd_executada > qtd_remanescente:
-                qtd_executada = max(0.0, qtd_remanescente)
-            qtd_acumulada += qtd_executada
-            pct = qtd_acumulada / item.quantitativo if item.quantitativo > 0 else 0.0
+            fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
+            fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
+            cell = _build_dist_cell(
+                producao_semanal_base, inferred_num_equipes, n_max, fator_clima, fator_calendario,
+                item.quantitativo, qtd_acumulada,
+            )
+            qtd_acumulada = cell.qtd_acumulada
+            distribuicao[semana_key] = cell
 
-            distribuicao[semana_key] = DistribuicaoSemanal(
-                num_equipes=inferred_num_equipes,
-                qtd_executada=round(qtd_executada, 2),
-                qtd_acumulada=round(qtd_acumulada, 2),
-                pct=round(pct, 4),
-                eficiencia=round(eficiencia, 4),
-            )
+        # ADR-082-cons: checagem de completude também no caminho AUTO_SCHEDULE
+        # (antes só existia no modo manual) — torna VISÍVEL a sub-entrega Σ q_ij < Q
+        # antes silenciosa. Não bloqueia (AVISO): entregar Q sob clima é decisão de
+        # prazo/pool (estender janela ou +equipes — ADR-091), não um default.
+        if item.quantitativo > 0:
+            pct_completude = qtd_acumulada / item.quantitativo
+            if pct_completude < 0.999:
+                p_bar = _mean_praticabilidade(canonical_in)
+                semanas_nec = math.ceil(sa.duration_weeks / p_bar) if p_bar > 0 else sa.duration_weeks
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-CRON-01",
+                        status="AVISO",
+                        mensagem=(
+                            f"Item '{item_id}' sub-entrega: Σ q_ij = {pct_completude * 100:.1f}% de Q na "
+                            f"janela agendada ({sa.duration_weeks}sem). Clima reduz a produção semanal além "
+                            f"da capacidade da janela. Para entregar Q (p̄={p_bar:.2f}): ~{semanas_nec}sem "
+                            "OU +equipes (decisão de prazo/pool — ADR-091)."
+                        ),
+                    )
+                )
 
         distribuicao_por_item[item_id] = distribuicao
 
@@ -993,6 +1562,7 @@ def _determine_mode_and_distribuicao(
     regime: object,
     prat_semanal: dict,
     prat_mensal: dict,
+    fator_calendario_semanal: dict[str, float],
     catalogo: dict,
     validacoes: list,
 ) -> tuple[str | None, dict, list, object, bool]:
@@ -1001,7 +1571,10 @@ def _determine_mode_and_distribuicao(
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
         mode = "AUTO_SCHEDULE"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO (rcpsp_spec)."))
-        schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(canonical_in, inputs, validacoes)
+        # ADR-072: pass lookups for productive-duration derivation
+        schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
+            canonical_in, inputs, validacoes, cpu_lookup, producao_lookup
+        )
         if not schedule_selected:
             return mode, {}, schedule_candidates, None, True
         distribuicao_por_item = _convert_schedule_to_distribuicao(
@@ -1013,6 +1586,7 @@ def _determine_mode_and_distribuicao(
             regime,
             prat_semanal,
             prat_mensal,
+            fator_calendario_semanal,
             validacoes,
         )
         return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False
@@ -1029,6 +1603,7 @@ def _determine_mode_and_distribuicao(
             regime,
             prat_semanal,
             prat_mensal,
+            fator_calendario_semanal,
             catalogo,
             validacoes,
         )
@@ -1037,7 +1612,10 @@ def _determine_mode_and_distribuicao(
     elif _can_extract_dag(canonical_in):
         mode = "AUTO_SCHEDULE"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO."))
-        schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(canonical_in, inputs, validacoes)
+        # ADR-072: pass lookups for productive-duration derivation
+        schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
+            canonical_in, inputs, validacoes, cpu_lookup, producao_lookup
+        )
         if not schedule_selected:
             return mode, {}, schedule_candidates, None, True
         distribuicao_por_item = _convert_schedule_to_distribuicao(
@@ -1049,6 +1627,7 @@ def _determine_mode_and_distribuicao(
             regime,
             prat_semanal,
             prat_mensal,
+            fator_calendario_semanal,
             validacoes,
         )
         return mode, distribuicao_por_item, schedule_candidates, schedule_selected, False
@@ -1068,8 +1647,21 @@ def _build_scheduled_activities(
     canonical_in: object,
     distribuicao_por_item: dict,
     semanas_obra: list,
+    schedule_selected: object | None = None,
 ) -> list:
     from datetime import timedelta
+
+    # Build lookup: activity_id → assigned_resources from the scheduler output.
+    # In AUTO mode, schedule_selected is a ScheduleCandidateCanonical whose
+    # scheduled_activities carry the RCPSP resource assignments.  In MANUAL mode
+    # schedule_selected is None (or has no activities), so assigned_resources stays
+    # empty — which is correct, as manual allocation doesn't model RCPSP resources.
+    assigned_lookup: dict[str, dict] = {}
+    if schedule_selected is not None:
+        for sa in getattr(schedule_selected, "scheduled_activities", []):
+            ar = getattr(sa, "assigned_resources", None)
+            if ar:
+                assigned_lookup[sa.activity_id] = dict(ar)
 
     scheduled_activities_out = []
     for item in canonical_in.eap:  # type: ignore[union-attr]
@@ -1088,6 +1680,7 @@ def _build_scheduled_activities(
                 data_inicio=data_inicio,
                 data_fim=data_fim,
                 distribuicao_semanal=distribuicao_semanal,
+                assigned_resources=assigned_lookup.get(item.item_id, {}),
             )
         )
     return scheduled_activities_out
@@ -1101,7 +1694,7 @@ def _build_cronograma_out(
     distribuicao_mensal: dict,
     validacoes: list,
 ) -> object:
-    AVAILABLE_SCHEDULE_ALGORITHMS = ("MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP")
+    AVAILABLE_SCHEDULE_ALGORITHMS = ("MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP", "CP-SAT", "LNS")
     if mode == "MANUAL_ALLOCATION":
         _algo = "manual_allocation"
     elif schedule_selected and schedule_selected.heuristic in AVAILABLE_SCHEDULE_ALGORITHMS:  # type: ignore[union-attr]
@@ -1212,7 +1805,24 @@ def run_cronograma(
     semanas_obra = _semanas_entre(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
     cpu_lookup = _build_cpu_lookup(catalogo)
     producao_lookup = _build_producao_lookup(catalogo)
+    # NEP-029 D2: enriquecer producao_lookup com P_canonico = custo_hora / PU_sbdi.
+    # NEP-029 D2: enriquece producao_lookup com P_canonico = custo_hora/PU_sbdi.
+    # IMPORTANTE: P_canonico fica em 'valor_horario_canonico' mas NÃO substitui
+    # 'valor_horario' para o scheduling (_resolve_productivity não o consome).
+    # Finalidade: indicador diagnóstico de calibração — fe_nec_ajustado via PE builder.
+    # Atualização de catálogo é passo manual explícito, não automático de runtime.
+    insumos_lookup = _build_insumos_lookup(catalogo)
+    horas_mes = regime.horas_dia * regime.dias_semana * 4.345  # semanas/mês
+    taxa_encargos = float(inputs.get("taxa_encargos_mo", 1.0))  # default 100% encargos
+    _enrich_producao_canonico(cpu_lookup, producao_lookup, insumos_lookup, horas_mes, taxa_encargos, validacoes)
     prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
+    calendario_config = inputs.get("calendario_operacional") if isinstance(inputs.get("calendario_operacional"), dict) else {}
+    fator_calendario_semanal, calendario_operacional = _build_fator_calendario_semanal(
+        semanas_obra,
+        canonical_in.projeto.data_inicio,
+        regime.dias_semana,
+        calendario_config,
+    )
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
 
@@ -1241,6 +1851,7 @@ def run_cronograma(
         regime,
         prat_semanal,
         prat_mensal,
+        fator_calendario_semanal,
         catalogo,
         validacoes,
     )
@@ -1248,7 +1859,9 @@ def run_cronograma(
         return SkillResult(canonical_in, validacoes)
 
     pool_violations = _check_pool_violations(canonical_in, distribuicao_por_item, cpu_lookup, validacoes)
-    scheduled_activities_out = _build_scheduled_activities(canonical_in, distribuicao_por_item, semanas_obra)
+    scheduled_activities_out = _build_scheduled_activities(
+        canonical_in, distribuicao_por_item, semanas_obra, schedule_selected
+    )
     distribuicao_mensal = _aggregate_to_monthly(distribuicao_por_item)
     cronograma_out = _build_cronograma_out(
         mode, schedule_selected, scheduled_activities_out, semanas_obra, distribuicao_mensal, validacoes
@@ -1261,6 +1874,8 @@ def run_cronograma(
         update={
             "cronograma": cronograma_out,
             "intervalos_atividade": intervalos,
+            "fator_calendario_semanal": fator_calendario_semanal,
+            "calendario_operacional": calendario_operacional,
             "constraint_violations": pool_violations if pool_violations else canonical_in.constraint_violations,
             "curvas_forca": wmp_curves if wmp_curves else canonical_in.curvas_forca,
             "analise_campanhas": analise_campanhas,

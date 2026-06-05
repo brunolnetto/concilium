@@ -41,13 +41,13 @@ class SharePointCredential:
 
     @classmethod
     def from_env(cls) -> SharePointCredential:
-        """Instancia a partir das variáveis de ambiente CONCILIUM_SP_*."""
-        tenant_id = os.environ.get("CONCILIUM_SP_TENANT_ID", "")
-        client_id = os.environ.get("CONCILIUM_SP_CLIENT_ID", "")
-        secret = os.environ.get("CONCILIUM_SP_CLIENT_SECRET")
-        cert = os.environ.get("CONCILIUM_SP_CERT_PATH")
+        """Instancia a partir das variáveis de ambiente CONCILIUM__SP_*."""
+        tenant_id = os.environ.get("CONCILIUM__SP_TENANT_ID", "")
+        client_id = os.environ.get("CONCILIUM__SP_CLIENT_ID", "")
+        secret = os.environ.get("CONCILIUM__SP_CLIENT_SECRET")
+        cert = os.environ.get("CONCILIUM__SP_CERT_PATH")
         if not tenant_id or not client_id:
-            raise OSError("CONCILIUM_SP_TENANT_ID e CONCILIUM_SP_CLIENT_ID são obrigatórios.")
+            raise OSError("CONCILIUM__SP_TENANT_ID e CONCILIUM__SP_CLIENT_ID são obrigatórios.")
         return cls(
             tenant_id=tenant_id,
             client_id=client_id,

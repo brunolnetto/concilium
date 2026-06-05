@@ -164,6 +164,33 @@ class WorkforcePolicySimulator:
         Demobilization is modelled only when semanas_plateau is explicitly set.
         When semanas_plateau is None, the activity stays at n_maximo until Q is
         delivered — demobilization is a post-delivery cost consideration.
+
+        ---
+        NEP-031 L6 — Equivalência com a fórmula do enunciado (§5):
+
+        O enunciado descreve:
+            m_j = round(m_max × j/r)        j = 1 … r   [ramp-up]
+            m_j = m_max                      r < j ≤ n-d [plateau]
+            m_j = round(m_max × (n-j+1)/d)  j > n-d     [ramp-down]
+
+        Esta implementação usa parâmetros diferentes mas equivalentes:
+            taxa_mobilizacao  ≈  m_max / r   (equipes por semana, no ramp-up)
+            taxa_desmobilizacao ≈ m_max / d  (equipes por semana, no ramp-down)
+            n_inicial         ≥  0           (equipes no início; enunciado implica 0)
+
+        Diferenças intencionais:
+        1. Arredondamento: `floor` em vez de `round`. Preferimos arredondamento
+           conservador (nunca sobre-aloca) ao invés de arredondamento simétrico.
+        2. `n_inicial > 0`: permite mobilização parcial prévia (ex.: equipe de setup).
+           O enunciado assume implicitamente n_inicial = 0 (início do zero).
+        3. `semanas_plateau`: quando None, a plateau não tem fim definido —
+           o simulador continua até Q ser atingido. O enunciado exige n e d explícitos.
+
+        Parametrização equivalente ao enunciado:
+            n_inicial = 0
+            taxa_mobilizacao = m_max / r
+            semanas_plateau = n - r - d     (onde n = duração total em semanas)
+            taxa_desmobilizacao = m_max / d
         """
         # Week at which n_maximo is first reached
         if policy.taxa_mobilizacao > 0:
