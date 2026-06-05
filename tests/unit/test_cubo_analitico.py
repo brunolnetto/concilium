@@ -144,6 +144,13 @@ def _make_canonical(n_atividades: int = 2, with_schedule: bool = True):
 
 
 class TestCelulaAnalitica:
+    def _cell(self, comp: str, cat_insumo: str = "mao_obra", prop: str = "salario_encargos") -> CelulaAnalitica:
+        return CelulaAnalitica(
+            natureza="direto", atividade_id="eap-01",
+            categoria_insumo=cat_insumo, propriedade=prop,
+            semana_iso="2026-W23", componente_bdi=comp, valor_rs=100.0,
+        )
+
     @pytest.mark.parametrize(
         "comp,expected_is",
         [
@@ -156,7 +163,7 @@ class TestCelulaAnalitica:
         ],
     )
     def test_cell_classification(self, comp, expected_is):
-        c = CelulaAnalitica("mao_obra", "eap-01", "2026-W23", comp, 100.0)
+        c = self._cell(comp)
         if expected_is == "custo_direto":
             assert c.is_custo_direto()
             assert not c.is_overhead()
@@ -170,9 +177,38 @@ class TestCelulaAnalitica:
             assert c.is_tributo()
 
     def test_frozen(self):
-        c = CelulaAnalitica("mao_obra", "eap-01", "2026-W01", "custo_direto", 100.0)
+        c = self._cell("custo_direto")
         with pytest.raises((AttributeError, TypeError)):
             c.valor_rs = 999  # type: ignore[misc]
+
+    def test_categoria_backward_compat(self):
+        """Backward compat: material.combustivel → categoria='diesel' (ADR-090)."""
+        c_diesel = CelulaAnalitica(
+            natureza="direto", atividade_id="eap-01",
+            categoria_insumo="material", propriedade="combustivel",  # ADR-090
+            semana_iso="2026-W01", componente_bdi="custo_direto", valor_rs=50.0,
+            valor_fisico=10.0, unidade_fisica="L",
+        )
+        assert c_diesel.categoria == "diesel"          # backward compat via property
+        assert c_diesel.consumo_diesel_L == 10.0       # backward compat via property
+        assert c_diesel.is_diesel()
+
+        c_mat = CelulaAnalitica(
+            natureza="direto", atividade_id="eap-01",
+            categoria_insumo="material", propriedade="consumivel",
+            semana_iso="2026-W01", componente_bdi="custo_direto", valor_rs=80.0,
+        )
+        assert c_mat.categoria == "material"
+        assert c_mat.consumo_diesel_L == 0.0
+        assert not c_mat.is_diesel()
+
+        c_eq = CelulaAnalitica(
+            natureza="direto", atividade_id="eap-01",
+            categoria_insumo="equipamento", propriedade="aluguel",
+            semana_iso="2026-W01", componente_bdi="custo_direto", valor_rs=100.0,
+        )
+        assert c_eq.categoria == "equipamento"
+        assert not c_eq.is_diesel()
 
 
 # ---------------------------------------------------------------------------
@@ -216,17 +252,23 @@ class TestCuboAnaliticoBuilder:
         assert "diesel" in cats
 
     def test_eleven_bdi_components_per_active_cell(self):
-        """For each (cat, atv, semana) group, all BDI components should appear."""
+        """BDI components por célula refletem o perfil da categoria.
+
+        mao_obra/servicos/equipamento: múltiplos overhead + tributos → >= 6 componentes
+        material/diesel: BDI = apenas L (lucro), sem overhead/tributos → 2 componentes
+        Calibração AGIS: COFINS/PIS = 0% (isenção infraestrutura); diesel/material = L=4%.
+        """
         canonical = _make_canonical()
         cubo = CuboAnaliticoBuilder().build(canonical)
         groups: dict[tuple, set] = defaultdict(set)
         for c in cubo.celulas:
             groups[(c.categoria, c.atividade_id, c.semana_iso)].add(c.componente_bdi)
         for key, comps in groups.items():
-            # material has 0 tributos (BDI_MATERIAL has T=0) so may have fewer components
-            if key[0] != "material":
-                # At least cost_direto + overhead + margem + some tributos
-                assert len(comps) >= 6, f"Expected >= 6 components for {key}, got {len(comps)}"
+            # material e diesel: BDI = só lucro → custo_direto + margem_l (2 componentes)
+            if key[0] in ("material", "diesel"):
+                continue
+            # mao_obra e serviços: AC + DF + R + L + ISS + CSSL + IR → >= 6
+            assert len(comps) >= 6, f"Expected >= 6 components for {key}, got {len(comps)}"
 
     def test_no_insumo_id_field_in_cells(self):
         """Cells should NOT have insumo_id — that's CurvaABC's job."""
@@ -303,13 +345,18 @@ class TestProjections:
         non_material = {c.semana_iso for c in cubo.celulas if c.categoria != "material"}
         assert trib_semanas >= non_material
 
-    def test_exposicao_tributaria_por_tipo_has_five_types(self):
+    def test_exposicao_tributaria_por_tipo_has_active_types(self):
+        """Apenas tributos não-zero aparecem na exposição. Calibração AGIS: COFINS/PIS = 0%."""
         canonical = _make_canonical()
         cubo = CuboAnaliticoBuilder().build(canonical)
         trib_tipo = cubo.exposicao_tributaria_por_tipo()
-        # All 5 tributary types should be present for non-material categories
-        expected = {"tributo_cofins", "tributo_iss", "tributo_pis", "tributo_cssl", "tributo_ir"}
-        assert set(trib_tipo.keys()) == expected
+        # DEFAULT calibrado AGIS: COFINS=0%, PIS=0% → apenas ISS, CSSL, IR contribuem
+        assert "tributo_iss" in trib_tipo
+        assert "tributo_cssl" in trib_tipo
+        assert "tributo_ir" in trib_tipo
+        # COFINS e PIS podem estar ausentes ou com valor zero (isenção infraestrutura)
+        for k, v in trib_tipo.items():
+            assert v >= 0, f"Tributo negativo: {k}={v}"
 
     def test_exposicao_tributaria_total_consistent(self):
         canonical = _make_canonical()

@@ -85,9 +85,9 @@ class TestSharePointCredential:
         from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointCredential
 
         env = {
-            "CONCILIUM_SP_TENANT_ID": "t-id",
-            "CONCILIUM_SP_CLIENT_ID": "c-id",
-            "CONCILIUM_SP_CLIENT_SECRET": "secret",
+            "CONCILIUM__SP_TENANT_ID": "t-id",
+            "CONCILIUM__SP_CLIENT_ID": "c-id",
+            "CONCILIUM__SP_CLIENT_SECRET": "secret",
         }
         with patch.dict(os.environ, env):
             cred = SharePointCredential.from_env()

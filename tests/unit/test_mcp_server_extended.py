@@ -33,8 +33,8 @@ def server_env(monkeypatch, tmp_path):
     """Configure env pointing to real config and a fresh tmp projects dir."""
     projects = tmp_path / "projetos"
     projects.mkdir()
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(projects))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(projects))
     return {"config": str(CONFIG_ROOT), "projects": str(projects), "projects_path": projects}
 
 
@@ -48,15 +48,15 @@ def server(server_env):
 
 def test_resolve_env_path_primary(monkeypatch, tmp_path):
     target = str(tmp_path / "primary")
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", target)
-    result = _resolve_env_path(primary="CONCILIUM_CONFIG_ROOT", default="./cfg")
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", target)
+    result = _resolve_env_path(primary="CONCILIUM__CONFIG_ROOT", default="./cfg")
     assert str(result) == target
 
 
 def test_resolve_env_path_default(monkeypatch):
-    monkeypatch.delenv("CONCILIUM_CONFIG_ROOT", raising=False)
-    monkeypatch.delenv("CONCILIUM_CONFIG", raising=False)
-    result = _resolve_env_path(primary="CONCILIUM_CONFIG_ROOT", default="./cfg")
+    monkeypatch.delenv("CONCILIUM__CONFIG_ROOT", raising=False)
+    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
+    result = _resolve_env_path(primary="CONCILIUM__CONFIG_ROOT", default="./cfg")
     # Path normalizes the string on both platforms
     assert Path("./cfg") == result
 
@@ -118,8 +118,8 @@ def test_listar_contextos_no_dir(monkeypatch, tmp_path):
     empty_cfg = tmp_path / "empty_config"
     empty_cfg.mkdir()
     # No contextos subdir
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(empty_cfg))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projs"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(empty_cfg))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs"))
     srv = build_server()
     # Can build without error even with missing contextos dir
     assert srv is not None
@@ -145,8 +145,8 @@ async def test_listar_projetos_with_projects(server, server_env):
 @pytest.mark.asyncio
 async def test_listar_projetos_no_root(monkeypatch, tmp_path):
     """listar_projetos when projects root doesn't exist → returns empty."""
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "nonexistent"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "nonexistent"))
     srv = build_server()
     result = await srv.call_tool("listar_projetos", arguments={})
     assert result is not None
@@ -502,8 +502,8 @@ async def test_listar_contextos_empty_contextos_dir(monkeypatch, tmp_path):
     cfg = tmp_path / "cfg_empty"
     cfg.mkdir()
     (cfg / "contextos").mkdir()  # exists but no *.json files
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(cfg))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projs"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(cfg))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs"))
     srv = build_server()
     result = await srv.call_tool("listar_contextos", arguments={})
     assert result is not None
@@ -727,8 +727,8 @@ def test_server_main_config_not_exists(monkeypatch, tmp_path):
     """server.main() raises RuntimeError when config_root doesn't exist (lines 379-383)."""
     from concilium.presentation.mcp_server.server import main as srv_main
 
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(tmp_path / "no_config"))
-    monkeypatch.delenv("CONCILIUM_CONFIG", raising=False)
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "no_config"))
+    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     with pytest.raises(RuntimeError, match="não encontrado"):
         srv_main()
 
@@ -739,8 +739,8 @@ def test_server_main_config_not_dir(monkeypatch, tmp_path):
 
     fake_file = tmp_path / "config_file.txt"
     fake_file.write_text("x")
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(fake_file))
-    monkeypatch.delenv("CONCILIUM_CONFIG", raising=False)
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(fake_file))
+    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     with pytest.raises(RuntimeError, match="não é diretório"):
         srv_main()
 
@@ -751,8 +751,8 @@ def test_server_main_calls_server_run(monkeypatch, tmp_path):
 
     from concilium.presentation.mcp_server.server import main as srv_main
 
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projs"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs"))
 
     with patch("concilium.presentation.mcp_server.server.build_server") as mock_build:
         mock_srv = MagicMock()
@@ -766,8 +766,8 @@ def test_mcp_main_module_entry_point(monkeypatch, tmp_path):
     import runpy
     from unittest.mock import MagicMock, patch
 
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(tmp_path / "projs2"))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs2"))
 
     _mod = "concilium.presentation.mcp_server.__main__"
     _saved = sys.modules.pop(_mod, None)

@@ -252,6 +252,33 @@ class TestSkill07CriticidadeEnrichment:
             if rows:
                 assert "criticidade" not in rows[0]
 
+    def test_resultado_prefers_catalog_direct_cost_when_available(self):
+        """Relatório financeiro deve usar custo direto de catálogo quando existir."""
+        from concilium.domain.models.canonical import CustoTotal, Resultado, Venda
+
+        mod = _load_skill("09-relatorio-e-artefatos")
+        canonical_in = self._canonical_with_resultado(with_criticidade=False)
+        resultado = Resultado(
+            venda=Venda(total_sem_bdi=5_000.0, total_com_bdi=7_000.0),
+            custo=CustoTotal(
+                direto_equipes=15_000.0,
+                direto_catalogo=5_000.0,
+                indireto_adm=1_000.0,
+                total=6_000.0,
+            ),
+            resultado_financeiro=1_000.0,
+            margem_pct=0.1,
+            status_margem="VERDE",
+            validacoes=[],
+        )
+        canonical_in = canonical_in.model_copy(update={"resultado": resultado})
+
+        result = mod.run_relatorio_e_artefatos(canonical_in=canonical_in, inputs={}, perfil={})
+        relatorio = getattr(result, "relatorio", None)
+        assert relatorio is not None
+        assert relatorio["RESULTADO"]["custo_direto"] == 5000.0
+        assert relatorio["RESULTADO"]["custo_direto_fonte"] == "catalogo"
+
 
 # ── render_planejamento: criticidade column ──────────────────────────────────
 

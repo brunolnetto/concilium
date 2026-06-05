@@ -6,7 +6,14 @@ from uuid import UUID
 
 import pytest
 
-from concilium.application.runtime import Runtime, RuntimeError, _json_default
+from concilium.application.runtime import (
+    Runtime,
+    RuntimeError,
+    _md_to_pdf_bytes,
+    _json_default,
+    _md_planejamento,
+    _memorial_bdi_to_md,
+)
 from concilium.infrastructure.storage.project import ProjectStore
 
 # ── _json_default ─────────────────────────────────────────────────────────────
@@ -201,8 +208,83 @@ def test_run_skill_wraps_erro_tecnico(config_root, projeto_terraplenagem):
     r = Runtime(config_root)
     p = projeto_terraplenagem
     v = p.new_version()
-    with patch(
-        "concilium.application.runtime.SKILLS", {"dummy": lambda **_: (_ for _ in ()).throw(ValueError("boom"))}
+    dummy = {"dummy": lambda **_: (_ for _ in ()).throw(ValueError("boom"))}
+    # SKILLS é importado em dois namespaces (runtime.__init__ via get_skill_contract
+    # e mixins.execution via run_skill); ambos precisam ser substituídos para que a
+    # falha ocorra na execução da skill (e seja envolvida), não no lookup do registry.
+    with patch("concilium.application.runtime.SKILLS", dummy), patch(
+        "concilium.application.runtime.mixins.execution.SKILLS", dummy
     ):
         with pytest.raises(RuntimeError, match="Falha técnica ao executar skill"):
             r.run_skill("dummy", p, v, inputs={})
+
+
+def test_md_planejamento_accepts_subtotal_sem_bdi_component_keys():
+    plan = [
+        {
+            "item_id": "eap-1",
+            "descricao": "Servico teste",
+            "unidade": "m3",
+            "quantitativo": 10,
+            "subtotal_sem_bdi_mo": 100.0,
+            "subtotal_sem_bdi_eq": 200.0,
+            "subtotal_sem_bdi_diesel": 300.0,
+            "subtotal_sem_bdi_mat": 400.0,
+            "subtotal_sem_bdi": 1000.0,
+            "subtotal_com_bdi": 1200.0,
+        }
+    ]
+
+    # Após a redesenho do relatório (pacote runtime), a tabela de planejamento é
+    # enxuta (item · descrição · c/BDI). O teste garante que as chaves de componente
+    # sem_bdi são aceitas sem quebrar e que o subtotal_com_bdi é renderizado.
+    md = "\n".join(_md_planejamento(plan))
+    assert "| eap-1 | Servico teste | R$ 1,200.00 |" in md
+
+
+def test_memorial_bdi_md_reads_current_schema_fields():
+    memorial = {
+        "meta": {"projeto_id": "proj-123", "gerado_em": "2026-05-23T18:54:12+00:00"},
+        "bdi_por_categoria": {
+            "mao_obra": {
+                "ac": 0.05,
+                "df": 0.015,
+                "r": 0.01,
+                "cr": 0.0,
+                "l": 0.09,
+                "tributos_total": 0.1338,
+                "bdi_total": 0.345,
+            }
+        },
+        "aplicacao_por_item": [
+            {
+                "item_id": "eap-1",
+                "subtotal_sem_bdi": 1000.0,
+                "subtotal_com_bdi": 1345.0,
+                "bdi_aplicado": 0.345,
+            }
+        ],
+        "venda_total_com_bdi": 2000.0,
+        "custo_direto_total": 1000.0,
+        "overhead_total": 300.0,
+        "tributos_total": 200.0,
+        "margem_total": 500.0,
+        "margem_pct": 0.25,
+    }
+
+    # Renderer atual (pacote runtime): colunas AC|DF|R|Lucro|Overhead|Tributos|BDI
+    # na seção "BDI por Categoria" + seção "Resumo Financeiro".
+    md = _memorial_bdi_to_md(memorial)
+    assert "**Projeto:** proj-123" in md
+    assert "## BDI por Categoria" in md
+    assert "| mao_obra | 5.00% | 1.50% | 1.00% | 9.00% | 0.00% | 13.38% | **34.50%** |" in md
+    assert "**Venda Total c/ BDI**" in md
+    assert "R$ 2,000.00" in md
+    assert "25.00%" in md
+
+
+def test_md_to_pdf_bytes_handles_unicode_text():
+    md = "# Relatorio\n\nLinha com acentos: ação, preço, São Paulo, — dash."
+    pdf = _md_to_pdf_bytes(md, "Teste")
+    assert pdf is not None
+    assert len(pdf) > 100

@@ -21,14 +21,20 @@ class _FakeService:
         fork_version: bool,
         skill_inputs_override: dict,
         use_saved_overrides: bool,
+        use_mobilizacao_policy: bool,
+        use_strict_catalog_baseline: bool,
         actor: str,
     ):
         assert project_id == "proj-123"
         assert actor == "tester"
+        assert use_mobilizacao_policy is False
+        assert use_strict_catalog_baseline is True
         return {
             "project_id": project_id,
             "run_id": "run-abc",
             "status": "queued",
+            "use_mobilizacao_policy": use_mobilizacao_policy,
+            "use_strict_catalog_baseline": use_strict_catalog_baseline,
         }
 
 
@@ -44,6 +50,8 @@ def test_start_run_project_route_accepts_post_on_runs_start_path():
             "fork_version": True,
             "skill_inputs_override": {},
             "use_saved_overrides": True,
+            "use_mobilizacao_policy": False,
+            "use_strict_catalog_baseline": True,
         },
         headers={"X-User": "tester"},
     )
@@ -53,3 +61,5 @@ def test_start_run_project_route_accepts_post_on_runs_start_path():
     assert body["project_id"] == "proj-123"
     assert body["run_id"] == "run-abc"
     assert body["status"] == "queued"
+    assert body["use_mobilizacao_policy"] is False
+    assert body["use_strict_catalog_baseline"] is True

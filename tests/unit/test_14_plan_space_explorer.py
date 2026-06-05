@@ -8,7 +8,9 @@ from concilium.domain.models.canonical import (
     Coordenadas,
     CustoTotal,
     Indireto,
+    LeverEquilibrio,
     Meta,
+    PontoEquilibrio,
     Projeto,
     RegimeTrabalho,
     Resultado,
@@ -69,6 +71,19 @@ def _canonical(**kwargs):
     return CanonicalModel(**base)
 
 
+def _pe_com_levers(item_id: str, venda_cpu: float, levers: list[LeverEquilibrio]) -> PontoEquilibrio:
+    """Cria um PontoEquilibrio com levers reais (ADR-082) para testes do PlanSpace."""
+    return PontoEquilibrio(
+        item_id=item_id,
+        custo_fixo_equipe=venda_cpu * 0.8,
+        custo_venda_cpu=venda_cpu,
+        delta=venda_cpu * 0.05,
+        delta_pct=0.05,
+        status_validacao="OK",
+        levers_equilibrio=levers,
+    )
+
+
 def test_precondicao_sem_resultado():
     """Sem resultado → ERRO de pré-condição."""
     c = _canonical()
@@ -77,8 +92,29 @@ def test_precondicao_sem_resultado():
     assert any(v.codigo == "VAL-PSE-PRECONDICAO" for v in result.validacoes)
 
 
-def test_verde_sem_conflitos_retorna_oportunidades():
-    """VERDE sem conflitos → plan_space_result preenchido, repair_path None."""
+def test_verde_com_pe_levers_retorna_oportunidades():
+    """VERDE com PE levers reais (ADR-082) → plan_space_result com oportunidades."""
+    lever = LeverEquilibrio(
+        id="fechar_gap_escala", tipo="custo",
+        descricao="Serializar cronograma", delta_margin=50_000.0, delta_margin_pct=0.05,
+        viavel=True,
+    )
+    pe = _pe_com_levers("eap-1", 1_000_000.0, [lever])
+    c = _canonical(resultado=_resultado(0.09, "VERDE"), ponto_equilibrio=[pe])
+    result = run_explorador_cenarios(c, {}, _PERFIL)
+    assert not result.has_errors
+    psr = result.canonical.plan_space_result
+    assert psr is not None
+    assert psr.status_entrada == "VERDE"
+    assert psr.repair_path is None
+    # Com PE lever real, deve ter ao menos 1 oportunidade (SERIALIZAR_CRONOGRAMA)
+    assert len(psr.oportunidades) >= 1
+    tipos = {o.lever.tipo for o in psr.oportunidades}
+    assert "SERIALIZAR_CRONOGRAMA" in tipos
+
+
+def test_verde_sem_pe_levers_sem_oportunidades():
+    """VERDE sem PE levers e sem indiretos → sem oportunidades (honesto: sem dados = sem sugestões)."""
     c = _canonical(resultado=_resultado(0.09, "VERDE"))
     result = run_explorador_cenarios(c, {}, _PERFIL)
     assert not result.has_errors
@@ -86,40 +122,45 @@ def test_verde_sem_conflitos_retorna_oportunidades():
     assert psr is not None
     assert psr.status_entrada == "VERDE"
     assert psr.repair_path is None
-    # Deve ter ao menos REVIEW_BDI como oportunidade
-    assert len(psr.oportunidades) >= 1
 
 
-def test_amarelo_gera_repair_path():
-    """AMARELO → repair_path populado com ao menos 1 passo."""
-    c = _canonical(resultado=_resultado(0.07, "AMARELO"))
+def test_amarelo_com_pe_levers_gera_repair_path():
+    """AMARELO + PE levers reais → repair_path com levers ADR-082."""
+    lever_escala = LeverEquilibrio(
+        id="fechar_gap_escala", tipo="custo", descricao="Serializar",
+        delta_margin=30_000.0, delta_margin_pct=0.03, viavel=True,
+    )
+    lever_bdi = LeverEquilibrio(
+        id="revisao_bdi_minima", tipo="preco", descricao="Recalibrar PU",
+        delta_margin=20_000.0, delta_margin_pct=0.02, viavel=True,
+    )
+    pe = _pe_com_levers("eap-1", 1_000_000.0, [lever_escala, lever_bdi])
+    c = _canonical(resultado=_resultado(0.07, "AMARELO"), ponto_equilibrio=[pe])
     result = run_explorador_cenarios(c, {}, _PERFIL)
     assert not result.has_errors
     psr = result.canonical.plan_space_result
     assert psr.status_entrada == "AMARELO"
     assert psr.repair_path is not None
     assert len(psr.repair_path.passos) >= 1
+    tipos = {p.lever.tipo for p in psr.repair_path.passos}
+    assert tipos & {"SERIALIZAR_CRONOGRAMA", "RECALIBRAR_PU"}
 
 
-def test_repair_com_expand_pool():
-    """VERMELHO + conflito BUY + reconciliado → EXPAND_POOL no repair path."""
-    recon = ResultadoReconciliado(
-        delta_custo_total=150_000.0,
-        venda_total_com_bdi=1_000_000.0,
-        custo_total_reconciliado=960_000.0,
-        margem_reconciliada_pct=0.04,
-        status_margem_reconciliado="VERMELHO",
-        itens_aquisicao=[],
-    )
-    c = _canonical(
-        resultado=_resultado(0.09, "VERDE"),  # base verde
-        resultado_reconciliado=recon,  # reconciliado vermelho
-    )
+def test_repair_com_levers_pool_e_praticabilidade():
+    """VERMELHO + PE levers pool/praticabilidade → tipos corretos no repair path."""
+    levers = [
+        LeverEquilibrio(id="fechar_gap_pool", tipo="custo", descricao="Pool",
+                        delta_margin=80_000.0, delta_margin_pct=0.08, viavel=True),
+        LeverEquilibrio(id="fechar_gap_praticabilidade", tipo="custo", descricao="Prat.",
+                        delta_margin=20_000.0, delta_margin_pct=0.02, viavel=True),
+    ]
+    pe = _pe_com_levers("eap-1", 1_000_000.0, levers)
+    c = _canonical(resultado=_resultado(0.04, "VERMELHO"), ponto_equilibrio=[pe])
     result = run_explorador_cenarios(c, {}, _PERFIL)
     psr = result.canonical.plan_space_result
     assert psr.status_entrada == "VERMELHO"
     tipos = {p.lever.tipo for p in psr.repair_path.passos}
-    assert "EXPAND_POOL" in tipos
+    assert tipos & {"OTIMIZAR_POOL", "MELHORAR_PRATICABILIDADE"}
 
 
 def test_repair_com_indiretos_gera_reduce_duration():
@@ -135,16 +176,15 @@ def test_repair_com_indiretos_gera_reduce_duration():
 
 
 def test_repair_viavel_delta_suficiente():
-    """Se delta total de levers >= delta necessário, repair deve ser viável."""
-    recon = ResultadoReconciliado(
-        delta_custo_total=500_000.0,  # grande delta → EXPAND_POOL resolve sozinho
-        venda_total_com_bdi=1_000_000.0,
-        custo_total_reconciliado=960_000.0,
-        margem_reconciliada_pct=0.04,
-        status_margem_reconciliado="VERMELHO",
-        itens_aquisicao=[],
+    """Se soma dos PE levers ≥ gap necessário, repair deve ser viável."""
+    # Margem entrada = 4%, alvo = 8% → gap = 4 p.p. = 0.04
+    # PE lever com delta_margin_pct = 0.10 (10%) resolve sozinho
+    lever = LeverEquilibrio(
+        id="fechar_gap_escala", tipo="custo", descricao="Serializar",
+        delta_margin=100_000.0, delta_margin_pct=0.10, viavel=True,
     )
-    c = _canonical(resultado=_resultado(0.09, "VERDE"), resultado_reconciliado=recon)
+    pe = _pe_com_levers("eap-1", 1_000_000.0, [lever])
+    c = _canonical(resultado=_resultado(0.04, "VERMELHO"), ponto_equilibrio=[pe])
     result = run_explorador_cenarios(c, {}, _PERFIL)
     psr = result.canonical.plan_space_result
     assert psr.repair_path.viavel is True

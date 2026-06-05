@@ -304,3 +304,48 @@ def test_02_auto_algorithm_registrado_no_cronograma():
     result = run_cronograma(canonical, {"deadline_weeks": 20})
     assert result.canonical.cronograma is not None
     assert result.canonical.cronograma.algorithm != "manual_allocation"
+
+
+def test_02_auto_assigned_resources_propagated_from_rcpsp_spec():
+    """assigned_resources from rcpsp_spec must appear in final scheduled_activities.
+
+    Regression guard for the bug where _build_scheduled_activities created a
+    new ScheduledActivityCanonical without copying assigned_resources from the
+    intermediate ScheduleCandidateCanonical, leaving all entries as {}.
+    """
+    # Build a 2-item canonical whose EAP IDs match the rcpsp_spec item_ids.
+    canonical = _make_canonical(num_activities=2, deadline_days=60)
+
+    rcpsp_spec = {
+        "activities": [
+            {
+                "item_id": "eap-01",
+                "descricao": "Atividade 1",
+                "duration_weeks": 4,
+                "required_resources": {"maq": 2},
+            },
+            {
+                "item_id": "eap-02",
+                "descricao": "Atividade 2",
+                "duration_weeks": 3,
+                "required_resources": {"maq": 1},
+            },
+        ],
+        "resource_pool": {"maq": 3},
+        "precedence": [],
+        "deadline_weeks": 8,
+    }
+
+    result = run_cronograma(canonical, {"rcpsp_spec": rcpsp_spec})
+    assert result.canonical.cronograma is not None, "cronograma must be produced"
+
+    sched = {sa.activity_id: sa for sa in result.canonical.cronograma.scheduled_activities}
+    assert "eap-01" in sched, "eap-01 must appear in scheduled_activities"
+    assert "eap-02" in sched, "eap-02 must appear in scheduled_activities"
+
+    assert sched["eap-01"].assigned_resources == {"maq": 2}, (
+        "eap-01 should carry assigned_resources={'maq': 2} from rcpsp_spec"
+    )
+    assert sched["eap-02"].assigned_resources == {"maq": 1}, (
+        "eap-02 should carry assigned_resources={'maq': 1} from rcpsp_spec"
+    )

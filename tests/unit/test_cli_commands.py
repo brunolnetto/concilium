@@ -64,8 +64,8 @@ def env_with_config(tmp_path, monkeypatch) -> dict[str, str]:
     config = _config_root()
     projects = tmp_path / "projetos"
     projects.mkdir()
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(config))
-    monkeypatch.setenv("CONCILIUM_PROJECTS_ROOT", str(projects))
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(projects))
     return {"config": str(config), "projects": str(projects)}
 
 
@@ -87,8 +87,8 @@ def test_cli_init_invalid_contexto(env_with_config):
 
 def test_cli_init_missing_config(monkeypatch, tmp_path):
     """Startup callback exits 1 when config root doesn't exist."""
-    monkeypatch.setenv("CONCILIUM_CONFIG_ROOT", str(tmp_path / "no_config"))
-    monkeypatch.delenv("CONCILIUM_CONFIG", raising=False)
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "no_config"))
+    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     result = runner.invoke(app, ["project", "init", "X", "--contexto", "mendeslobo"])
     assert result.exit_code == 1
 

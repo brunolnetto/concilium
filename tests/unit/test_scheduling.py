@@ -455,10 +455,10 @@ class TestScheduleValidator:
 
 
 class TestScheduleSelection:
-    """Test select_scheduling_algorithm() decision logic."""
+    """Test select_scheduling_algorithm() decision logic (ADR-075 thresholds)."""
 
-    def test_small_critical_uses_milp(self):
-        """Problem size ≤50 + critical → MILP."""
+    def test_small_uses_cpsat(self):
+        """n ≤ 200, any criticality → CP-SAT (ADR-075 Mode A)."""
         strategy = select_scheduling_algorithm(
             num_activities=30,
             num_resource_types=3,
@@ -466,11 +466,11 @@ class TestScheduleSelection:
             deadline_margin_pct=0.3,
             criticality="high",
         )
-        assert strategy.algorithm == "MILP"
-        assert strategy.timeout_seconds == 30
+        assert strategy.algorithm == "CP-SAT"
+        assert strategy.timeout_seconds == 60
 
-    def test_medium_uses_serial_prb(self):
-        """50 < activities ≤ 150 → Serial PRB with multi-heuristic."""
+    def test_medium_uses_cpsat(self):
+        """n ≤ 200, medium criticality → CP-SAT (ADR-075 Mode A)."""
         strategy = select_scheduling_algorithm(
             num_activities=100,
             num_resource_types=4,
@@ -478,12 +478,10 @@ class TestScheduleSelection:
             deadline_margin_pct=0.2,
             criticality="medium",
         )
-        assert strategy.algorithm == "SerialScheduler"
-        assert "MINSLK" in strategy.heuristics
-        assert len(strategy.heuristics) >= 3
+        assert strategy.algorithm == "CP-SAT"
 
-    def test_large_uses_serial_with_parallel(self):
-        """activities > 150 → Serial + Parallel leveling."""
+    def test_boundary_200_uses_cpsat(self):
+        """n = 200 (boundary) → CP-SAT (ADR-075 Mode A)."""
         strategy = select_scheduling_algorithm(
             num_activities=200,
             num_resource_types=5,
@@ -491,11 +489,22 @@ class TestScheduleSelection:
             deadline_margin_pct=0.1,
             criticality="low",
         )
-        assert "SerialScheduler" in strategy.algorithm
-        assert strategy.leveling_pass is True
+        assert strategy.algorithm == "CP-SAT"
+        assert strategy.leveling_pass is False
 
-    def test_default_is_serial_prb(self):
-        """Default fallback is SerialScheduler."""
+    def test_large_uses_lns(self):
+        """n > 200 → LNS (ADR-075 Mode B)."""
+        strategy = select_scheduling_algorithm(
+            num_activities=201,
+            num_resource_types=5,
+            contract_duration_weeks=30,
+            deadline_margin_pct=0.1,
+            criticality="low",
+        )
+        assert strategy.algorithm == "LNS"
+
+    def test_default_medium_uses_cpsat(self):
+        """Default for medium-sized problem is CP-SAT."""
         strategy = select_scheduling_algorithm(
             num_activities=75,
             num_resource_types=3,
@@ -503,7 +512,7 @@ class TestScheduleSelection:
             deadline_margin_pct=0.25,
             criticality="medium",
         )
-        assert strategy.algorithm == "SerialScheduler"
+        assert strategy.algorithm == "CP-SAT"
 
 
 class TestExploreSchedules:
@@ -598,7 +607,7 @@ class TestIntegration:
     """Integration tests combining multiple components."""
 
     def test_end_to_end_small_project(self):
-        """End-to-end test: small project → MILP strategy → schedule."""
+        """End-to-end test: small project → CP-SAT strategy → schedule."""
         acts = [
             Activity("A", "Escav", 1, {"ESCAV": 1}),
             Activity("B", "Carga", 1, {"CAMINHAO": 1}),
@@ -614,7 +623,7 @@ class TestIntegration:
             deadline_margin_pct=0.5,
             criticality="high",
         )
-        assert strategy.algorithm == "MILP"
+        assert strategy.algorithm == "CP-SAT"
 
         # Schedule
         scheduler = SerialScheduler(priority_rule="MINSLK")
