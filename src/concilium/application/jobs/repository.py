@@ -9,6 +9,7 @@ sem afetar a camada de aplicação.
 from __future__ import annotations
 
 import threading
+from os import getenv
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -144,6 +145,20 @@ _repository: JobRepository | None = None
 _repository_lock = threading.Lock()
 
 
+def _repository_backend() -> str:
+    return (getenv("CONCILIUM__JOBS_REPOSITORY", "inmemory") or "inmemory").strip().lower()
+
+
+def _build_repository() -> JobRepository:
+    backend = _repository_backend()
+    if backend == "inmemory":
+        return InMemoryJobRepository()
+    raise ValueError(
+        "Backend de jobs não suportado: "
+        f"{backend!r}. Use CONCILIUM__JOBS_REPOSITORY=inmemory."
+    )
+
+
 def get_job_repository() -> JobRepository:
     """Retorna repositório singleton.
 
@@ -155,9 +170,7 @@ def get_job_repository() -> JobRepository:
     if _repository is None:
         with _repository_lock:
             if _repository is None:
-                # TODO: Ler de configuração qual implementação usar
-                # Por enquanto, sempre InMemory
-                _repository = InMemoryJobRepository()
+                _repository = _build_repository()
 
     return _repository
 

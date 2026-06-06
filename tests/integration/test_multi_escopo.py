@@ -1,4 +1,4 @@
-"""Testes de integração: multi-escopo, planos paralelos e shim legado (ADR-031)."""
+"""Testes de integração: multi-escopo e planos paralelos (ADR-031)."""
 
 from __future__ import annotations
 

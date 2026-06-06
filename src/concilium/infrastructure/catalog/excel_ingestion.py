@@ -5,7 +5,10 @@ Lê planilhas de referência (Source of Truth humana), aplica validações de do
 """
 
 import json
+from io import BytesIO
 from datetime import date
+
+from openpyxl import load_workbook
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 from concilium.domain.validations.circular_deps import validar_sem_ciclos
@@ -18,17 +21,57 @@ class ExcelIngestionPipeline:
     def __init__(self, storage: BlobStoragePort):
         self.storage = storage
 
+    @staticmethod
+    def _extract_rows_from_sheet(workbook, sheet_name: str) -> list[dict]:
+        if sheet_name not in workbook.sheetnames:
+            return []
+
+        sheet = workbook[sheet_name]
+        rows = list(sheet.iter_rows(values_only=True))
+        if not rows:
+            return []
+
+        header_row: tuple | None = None
+        start_idx = 0
+        for idx, row in enumerate(rows):
+            if any(cell not in (None, "") for cell in row):
+                header_row = row
+                start_idx = idx + 1
+                break
+        if header_row is None:
+            return []
+
+        headers = [str(cell).strip() if cell is not None else "" for cell in header_row]
+        if not any(headers):
+            return []
+
+        parsed: list[dict] = []
+        for row in rows[start_idx:]:
+            if not any(cell not in (None, "") for cell in row):
+                continue
+            item: dict = {}
+            for i, header in enumerate(headers):
+                if not header:
+                    continue
+                item[header] = row[i] if i < len(row) else None
+            if item:
+                parsed.append(item)
+        return parsed
+
     def parse_planilha(self, excel_bytes: bytes) -> dict[str, list[dict]]:
         """Lê os bytes do Excel e extrai as entidades brutas.
 
-        Na implementação real, usaria pandas/openpyxl para ler as abas 'Insumos',
-        'CPUs' e 'Jurisdição'.
+        Extrai as abas principais: Insumos, CPUs e Jurisdição.
         """
-        # TODO: Implementar parser real com pandas
-        # return parse_excel_to_dict(excel_bytes)
-
-        # Mock do retorno para manter o fluxo
-        return {"insumos": [], "cpus": [], "jurisdicoes": []}
+        workbook = load_workbook(filename=BytesIO(excel_bytes), read_only=True, data_only=True)
+        try:
+            return {
+                "insumos": self._extract_rows_from_sheet(workbook, "Insumos"),
+                "cpus": self._extract_rows_from_sheet(workbook, "CPUs"),
+                "jurisdicoes": self._extract_rows_from_sheet(workbook, "Jurisdição"),
+            }
+        finally:
+            workbook.close()
 
     def processar_catalogo(self, data_base: date, versao_tag: str, excel_bytes: bytes) -> str:
         """Executa o pipeline completo de ingestão.

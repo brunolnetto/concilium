@@ -43,10 +43,6 @@ class ConfigurationManager:
         if runtime_file:
             return Path(runtime_file).expanduser().resolve()
 
-        legacy_file = st.config_file_legacy
-        if legacy_file:
-            return Path(legacy_file).expanduser().resolve()
-
         config_root = (os.getenv("CONCILIUM_CONFIG_ROOT") or "").strip()
         if config_root:
             return Path(config_root).expanduser().resolve() / "concilium.yaml"

@@ -146,7 +146,7 @@ def _patch_mcp_with_auth(server: FastMCP) -> None:
 
 
 def main() -> None:
-    """Entry point para `python -m concilium.mcp_server`.
+    """Entry point para `python -m concilium.presentation.mcp`.
 
     Variáveis de ambiente:
       CONCILIUM__MCP_TRANSPORT  — "stdio" (padrão), "streamable-http" ou "sse"
@@ -160,7 +160,7 @@ def main() -> None:
     if not config_root.exists():
         raise RuntimeError(
             "Diretório de configuração não encontrado: "
-            f"{config_root}. Defina CONCILIUM__CONFIG_ROOT ou CONCILIUM__CONFIG."
+            f"{config_root}. Defina CONCILIUM__CONFIG_ROOT."
         )
     if not config_root.is_dir():
         raise RuntimeError(f"Configuração inválida: {config_root} não é diretório.")

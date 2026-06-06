@@ -8,7 +8,7 @@ from collections import defaultdict
 COLORS = ["#1a3a5c", "#c05c18", "#5aabdc", "#e8a030", "#5adc8e", "#a07ad8", "#dc5a8e"]
 
 SERIE_LABEL_MAP: dict[str, str] = {
-    # Componentes BDI individuais (uppercase — legacy renderers)
+    # Componentes BDI individuais (uppercase — renderizadores históricos)
     "overhead_AC": "Adm. Central (AC)",
     "overhead_DF": "Desp. Financeiras (DF)",
     "overhead_R": "Risco / Seguro (R)",

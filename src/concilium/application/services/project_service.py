@@ -46,9 +46,9 @@ def _debug_storage_info(project: Any) -> dict[str, Any]:
 
 
 def _resolve_project_type(meta: dict[str, Any]) -> str:
-    """Resolve project type with legacy compatibility.
+    """Resolve project type with historical payload compatibility.
 
-    Legacy projects may lack `tipo_projeto`. In that case, infer by benchmark_slug.
+    Older projects may lack `tipo_projeto`. In that case, infer by benchmark_slug.
     """
     raw = str(meta.get("tipo_projeto") or "").strip().lower()
     if raw in {"hot_project", "project"}:
@@ -86,8 +86,8 @@ def _is_valid_canonical_eap(payload: dict[str, Any]) -> bool:
 _REF_YYYY_MM_RE = re.compile(r"^\d{4}-\d{2}$")
 
 
-def _extract_legacy_eap_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """Extract legacy EAP rows from known historical payload locations."""
+def _extract_historical_eap_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract historical EAP rows from known payload locations."""
     src = payload.get("eap")
     if isinstance(src, list):
         return [row for row in src if isinstance(row, dict)]
@@ -237,7 +237,7 @@ class ProjectService:
                 if source == "canonical.cpus.itens_eap":
                     raw_rows = _extract_canonical_eap_rows(ref_payload)
                 else:
-                    raw_rows = _extract_legacy_eap_rows(ref_payload)
+                    raw_rows = _extract_historical_eap_rows(ref_payload)
                 normalized_rows: list[dict[str, Any]] = []
                 seen_item_ids: set[str] = set()
                 for idx, row in enumerate(raw_rows, start=1):
@@ -251,7 +251,7 @@ class ProjectService:
                     normalized_rows.append(normalized)
                 if normalized_rows:
                     eap = normalized_rows
-                    eap_source = f"benchmark_reference:{source or 'legacy'}"
+                    eap_source = f"benchmark_reference:{source or 'historical'}"
 
         if not eap:
             canonical = project.load_canonical()
@@ -715,22 +715,22 @@ class ProjectService:
         if isinstance(cpus_block, dict) and isinstance(cpus_block.get("itens_eap"), list):
             return "canonical.cpus.itens_eap"
         if isinstance(payload.get("eap"), list):
-            return "legacy.eap_root"
+            return "historical.eap_root"
         skill_inputs = payload.get("skill_inputs")
         if isinstance(skill_inputs, dict):
             escopo = skill_inputs.get("01-escopo-e-eap")
             if isinstance(escopo, dict):
                 if isinstance(escopo.get("eap"), list):
-                    return "legacy.skill_inputs.01-escopo-e-eap.eap"
+                    return "historical.skill_inputs.01-escopo-e-eap.eap"
                 nested = escopo.get("inputs_escopo")
                 if isinstance(nested, dict) and isinstance(nested.get("eap"), list):
-                    return "legacy.skill_inputs.01-escopo-e-eap.inputs_escopo.eap"
+                    return "historical.skill_inputs.01-escopo-e-eap.inputs_escopo.eap"
         return None
 
     def _validate_benchmark_reference_contract(self, payload: dict[str, Any]) -> None:
         """Enforce canonical benchmark reference contract for EAP.
 
-        Sprint 3 (NEP-026): legacy EAP paths are no longer accepted.
+        Sprint 3 (NEP-026): historical EAP paths are no longer accepted.
         """
         source = self._resolve_eap_source(payload)
         if source is None:
@@ -741,11 +741,11 @@ class ProjectService:
 
         if source != "canonical.cpus.itens_eap":
             logger.error(
-                "VAL-CONTRACT-EAP-LEGACY-BLOQUEADO: source=%s action=reject_legacy_payload",
+                "VAL-CONTRACT-EAP-HISTORICO-BLOQUEADO: source=%s action=reject_historical_payload",
                 source,
             )
             raise ValueError(
-                "VAL-CONTRACT-EAP-LEGACY-BLOQUEADO: use somente 'cpus.itens_eap' no benchmark_reference."
+                "VAL-CONTRACT-EAP-HISTORICO-BLOQUEADO: use somente 'cpus.itens_eap' no benchmark_reference."
             )
 
         cpus_block = payload.get("cpus") if isinstance(payload.get("cpus"), dict) else {}
@@ -802,10 +802,10 @@ class ProjectService:
 
         source = self._resolve_eap_source(payload)
         if source and source != "canonical.cpus.itens_eap":
-            legacy_rows = _extract_legacy_eap_rows(payload)
+            historical_rows = _extract_historical_eap_rows(payload)
             canonical_items: list[dict[str, Any]] = []
             seen_item_ids: set[str] = set()
-            for idx, row in enumerate(legacy_rows, start=1):
+            for idx, row in enumerate(historical_rows, start=1):
                 normalized = self._normalize_eap_item(row, ordem_padrao=idx)
                 if normalized is None:
                     continue

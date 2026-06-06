@@ -23,7 +23,7 @@ def _fake_projection() -> SimpleNamespace:
     )
 
 
-def test_report_reference_projection_parity_legacy_vs_v2(monkeypatch) -> None:
+def test_report_reference_projection_parity_historical_vs_v2(monkeypatch) -> None:
     builder = BenchmarkReportBuilder()
     spec = ProjectSpec(nome="Projeto Teste", slug="proj-teste", contexto_id="ctx")
     ref = {

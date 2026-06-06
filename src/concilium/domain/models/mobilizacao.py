@@ -138,7 +138,7 @@ class CurvaForca(BaseModel):
         return sum(s.num_equipes for s in self.semanas)
 
     def to_num_equipes_por_semana(self) -> dict[str, int]:
-        """Convert to the legacy Skill 04 MANUAL mode input format.
+        """Convert to the historical Skill 04 MANUAL mode input format.
 
         Returns {semana_iso: num_equipes} for all weeks where semana_iso is known.
         Falls back to str(offset) as key when not anchored to calendar.

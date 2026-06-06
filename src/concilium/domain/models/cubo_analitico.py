@@ -340,7 +340,7 @@ class CuboAnalitico:
     def group_by(self, *dims: str) -> dict[tuple, float]:
         """Agrega valor_rs por dimensões.
 
-        Dimensões válidas (legacy + ADR-087):
+        Dimensões válidas (histórico + ADR-087):
             "categoria", "atividade_id", "semana_iso", "componente_bdi",
             "natureza", "categoria_insumo", "propriedade"
         """

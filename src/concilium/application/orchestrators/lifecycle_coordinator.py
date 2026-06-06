@@ -51,7 +51,7 @@ class LifecycleCoordinator:
 
         # 1. Data Management Gate
         if force_data_gate:
-            self._audit_data_governance_legacy(project, version)
+            self._audit_data_governance_historical(project, version)
 
         normalized_inputs = self._inject_project_catalog_layers(project, inputs)
 
@@ -88,7 +88,7 @@ class LifecycleCoordinator:
 
         return enriched
 
-    def _audit_data_governance_legacy(self, project: ProjectStore, version: str):
+    def _audit_data_governance_historical(self, project: ProjectStore, version: str):
         """Auditoria para projetos legados (sem EscopoStore)."""
         _ = version
         contexto_id = project.meta.get("contexto_id")

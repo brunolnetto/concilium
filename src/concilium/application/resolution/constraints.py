@@ -129,7 +129,7 @@ class ConstraintFilter:
         intent: SemanticIntent,
         cpu: CPUCanonical,
     ) -> tuple[bool, list[ConstraintResult]]:
-        """Roda todos os checks. CPU elegível somente se TODOS passam.
+        """Roda todos os checks. CPU elegível somente se todos passam.
 
         Returns:
             (elegível, lista de ConstraintResult com detalhes).

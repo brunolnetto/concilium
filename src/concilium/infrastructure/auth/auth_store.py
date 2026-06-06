@@ -196,15 +196,15 @@ class AuthStore:
     def get_client_roles(self, client_id: str, secret: str) -> list[str] | None:
         """Validate credentials and return roles. None if invalid.
 
-        Precedence: file store (ADR-099) → env var CONCILIUM__AUTH_CLIENTS (ADR-094 legacy).
-        Legacy clients with 'scopes' are mapped to equivalent roles.
+        Precedence: file store (ADR-099) → env var CONCILIUM__AUTH_CLIENTS (ADR-094 historical).
+        Historical clients with 'scopes' are mapped to equivalent roles.
         """
         with self._lock:
             records = [ClientRecord(**r) for r in self._read("clients.json")]
         for r in records:
             if r.client_id == client_id and r.active and _verify(secret, r.secret_hash):
                 return r.roles
-        # Fallback: env-var store (ADR-094 legacy) → map scopes to roles
+        # Fallback: env-var store (ADR-094 historical) → map scopes to roles
         from concilium.infrastructure.auth.client_store import validate_client as _env_validate
         from concilium.infrastructure.auth.permission_guard import LEGACY_SCOPE_TO_ROLE
         scopes = _env_validate(client_id, secret)

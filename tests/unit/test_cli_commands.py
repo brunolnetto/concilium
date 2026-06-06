@@ -88,7 +88,6 @@ def test_cli_init_invalid_contexto(env_with_config):
 def test_cli_init_missing_config(monkeypatch, tmp_path):
     """Startup callback exits 1 when config root doesn't exist."""
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "no_config"))
-    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     result = runner.invoke(app, ["project", "init", "X", "--contexto", "mendeslobo"])
     assert result.exit_code == 1
 

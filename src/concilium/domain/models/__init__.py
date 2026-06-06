@@ -4,7 +4,7 @@ Lazy-loaded via __getattr__ so that importing any single model does not
 trigger a full cascade of all submodule imports at startup.
 
 ADR-029 Fase 2: arquivos movidos de concilium.models -> concilium.domain.models.
-O pacote concilium.models mantém um shim de retrocompatibilidade por 1 sprint.
+O pacote concilium.models mantém uma camada temporária de retrocompatibilidade.
 """
 
 from __future__ import annotations

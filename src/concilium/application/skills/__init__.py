@@ -19,10 +19,6 @@ from concilium.application.skills.registry import SkillRegistry  # noqa: F401 �
 _MANIFESTS = Path(__file__).parent / "manifests"
 _IMPORT_LOCK = threading.Lock()
 
-SHIM_ID = "skills.dynamic_alias"
-SHIM_TARGET = "concilium.application.skills.<skill_name>"
-SHIM_SCOPE = "import-alias"
-
 
 def _skill_pkg_name(skill_id: str) -> str:
     return f"_concilium_skillpkg_{skill_id.replace('-', '_')}"
@@ -82,7 +78,7 @@ class _SkillProxy(types.ModuleType):
     """Lazy-loading module proxy registered in sys.modules at package init time.
 
     Allows ``from concilium.application.skills import run_cronograma`` (and all
-    other skill submodule-style imports) to work without shim files on disk.
+    other skill submodule-style imports) to work without generated files on disk.
     The proxy is transparently replaced in sys.modules with the real module
     the first time any attribute is accessed.
     """
@@ -191,7 +187,7 @@ _discover_skills = _discover_manifest_index
 
 
 def list_compat_aliases() -> dict[str, str]:
-    """Retorna mapeamento de compat alias -> módulo real lazy."""
+    """Retorna mapeamento alias -> módulo real lazy."""
     return {
         _get_compat_alias(skill_id): _skill_mod_name(skill_id)
         for skill_id in _MANIFEST_INDEX
@@ -257,7 +253,7 @@ SKILLS: _LazySkillsDict = _LazySkillsDict(_MANIFEST_INDEX)
 
 # ── Auto-registra proxies preguiçosos para todos os manifests descobertos ─────
 # Permite `from concilium.application.skills import run_cronograma` (e similares)
-# sem nenhum arquivo shim no disco. Custo: só iteração do índice já em memória.
+# sem arquivos extras no disco. Custo: só iteração do índice já em memória.
 for _sid in _MANIFEST_INDEX:
     _alias = _get_compat_alias(_sid)
     if _alias not in sys.modules:

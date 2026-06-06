@@ -34,7 +34,7 @@ def _tools_root() -> Path:
     return candidate
 
 
-def _require_existing_dir(path: Path, *, label: str, env_keys: tuple[str, str]) -> Path:
+def _require_existing_dir(path: Path, *, label: str, env_keys: tuple[str, ...]) -> Path:
     """Valida diretÃ³rio obrigatÃ³rio e retorna erro amigÃ¡vel quando invÃ¡lido."""
     if not path.exists():
         keys = " ou ".join(env_keys)
@@ -68,7 +68,7 @@ def config_root() -> Path:
     return _require_existing_dir(
         _config_root(),
         label="DiretÃ³rio de configuraÃ§Ã£o",
-        env_keys=("CONCILIUM__CONFIG_ROOT", "CONCILIUM__CONFIG"),
+        env_keys=("CONCILIUM__CONFIG_ROOT",),
     )
 
 

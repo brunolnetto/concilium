@@ -57,7 +57,7 @@ def test_validate_benchmark_reference_contract_filters_invalid_and_duplicate_row
 
 
 @pytest.mark.parametrize(
-    "legacy_payload",
+    "historical_payload",
     [
         {"eap": [{"item_id": "L1", "cpu_id": "CPU-999"}]},
         {"skill_inputs": {"01-escopo-e-eap": {"eap": [{"item_id": "L2", "cpu_id": "CPU-998"}]}}},
@@ -70,9 +70,11 @@ def test_validate_benchmark_reference_contract_filters_invalid_and_duplicate_row
         },
     ],
 )
-def test_validate_benchmark_reference_contract_rejects_legacy_eap_sources(legacy_payload: dict) -> None:
-    with pytest.raises(ValueError, match="VAL-CONTRACT-EAP-LEGACY-BLOQUEADO"):
-        _svc()._validate_benchmark_reference_contract(legacy_payload)
+def test_validate_benchmark_reference_contract_rejects_historical_eap_sources(
+    historical_payload: dict,
+) -> None:
+    with pytest.raises(ValueError, match="VAL-CONTRACT-EAP-HISTORICO-BLOQUEADO"):
+        _svc()._validate_benchmark_reference_contract(historical_payload)
 
 
 def test_ui_helpers_read_only_canonical_eap_contract() -> None:
@@ -85,7 +87,7 @@ def test_ui_helpers_read_only_canonical_eap_contract() -> None:
         }
     }
 
-    legacy_ref = {
+    historical_ref = {
         "eap": [{"item_id": "L1", "cpu_id": "CPU-999"}],
         "skill_inputs": {"01-escopo-e-eap": {"eap": [{"item_id": "L2", "cpu_id": "CPU-998"}]}},
     }
@@ -93,8 +95,8 @@ def test_ui_helpers_read_only_canonical_eap_contract() -> None:
     assert safe_count_eap(canonical_ref) == 2
     assert len(extract_eap_items_for_policy(canonical_ref)) == 2
 
-    assert safe_count_eap(legacy_ref) == 0
-    assert extract_eap_items_for_policy(legacy_ref) == []
+    assert safe_count_eap(historical_ref) == 0
+    assert extract_eap_items_for_policy(historical_ref) == []
 
 
 def test_extract_bdi_dict_keeps_only_canonical_keys() -> None:

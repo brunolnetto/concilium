@@ -1455,7 +1455,7 @@ def _compute_particao_por_tipo(
                 custo_total_particionado=custo_total_particionado,
                 economia_mob=economia_mob,
                 overhead_ocioso=custo_ocioso_imputado,
-                # Fase 3 — disponível mesmo no fallback sem eule (ADR-083/089 §legacy-fix)
+                # Fase 3 — disponível mesmo no fallback sem eule (ADR-083/089 §historical-fix)
                 # custo_produtivo_exclusivo = produtivo puro (sem sobreposição no fallback)
                 custo_produtivo_exclusivo=custo_produtivo,
                 custo_produtivo_compartilhado=0.0,

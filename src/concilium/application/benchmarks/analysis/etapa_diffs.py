@@ -268,7 +268,7 @@ def _summarize(diffs: list[dict], *, label_key: str = "campo") -> str:
 
 
 def _find_benchmark_report(slug: str, root: Path) -> Path | None:
-    """Localiza benchmark_report.json: caminho organizado primeiro, fallback legacy."""
+    """Localiza benchmark_report.json: caminho organizado primeiro, fallback histórico."""
     candidates = [
         root / "benchmarks" / "data" / slug.upper() / "artifacts" / "outputs" / "benchmark_report.json",
         root / "benchmarks" / "data" / slug.upper() / "outputs" / "benchmark_report.json",

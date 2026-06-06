@@ -10,7 +10,7 @@ Cada variável tem uma classificação que determina como ela deve ser configura
   [comp]  Computed   — derivada de outras variáveis se não configurada explicitamente
 
 Startup validation: startup_check() — chame no início de cada entry point.
-Falha com ConfigurationError listando TODOS os problemas de uma vez.
+Falha com ConfigurationError listando todos os problemas de uma vez.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Variável                              Tipo    Default          Domínio
@@ -19,7 +19,6 @@ Variável                              Tipo    Default          Domínio
 CONCILIUM__ROOT                       [opt]   <cwd do pkg>     StorageSettings.root
 CONCILIUM__CONFIG_ROOT                [opt]   ROOT/config      StorageSettings.config_root
 CONCILIUM__RUNTIME_CONFIG_FILE        [opt]   —                StorageSettings.runtime_config_file
-CONCILIUM__CONFIG_FILE                [opt]   —                StorageSettings.config_file_legacy (legado)
 ── Storage (StorageSettings) ────────────────────────────────────────────────
 CONCILIUM__STORE_BACKEND              [opt]   filesystem       StorageSettings.backend
 CONCILIUM__STORE_PROJECTS_PREFIX      [opt]   projetos         StorageSettings.projects_prefix
@@ -621,9 +620,6 @@ class StorageSettings:
     runtime_config_file: Path | None
     """CONCILIUM__RUNTIME_CONFIG_FILE — arquivo de config runtime (YAML/JSON/TOML)."""
 
-    config_file_legacy: Path | None
-    """CONCILIUM__CONFIG_FILE — alias legado de CONCILIUM__RUNTIME_CONFIG_FILE."""
-
     backend: str
     """CONCILIUM__STORE_BACKEND — "filesystem" (default), "azure_blob", "s3", "sharepoint", "gdrive"."""
 
@@ -651,7 +647,6 @@ class StorageSettings:
             root=root,
             config_root=config_root,
             runtime_config_file=_path("CONCILIUM__RUNTIME_CONFIG_FILE"),
-            config_file_legacy=_path("CONCILIUM__CONFIG_FILE"),
             backend=_str("CONCILIUM__STORE_BACKEND", "filesystem"),
             projects_prefix=_str("CONCILIUM__STORE_PROJECTS_PREFIX", "projetos"),
             projects_root=_path("CONCILIUM__PROJECTS_ROOT", root / "projetos"),

@@ -63,7 +63,7 @@ def _compare_equipes(canonical_equipes: list, ref_equipes: list) -> list[dict[st
 
 
 def _find_benchmark_report(slug: str, root: Path) -> Path | None:
-    """Localiza benchmark_report.json: caminho organizado primeiro, fallback legacy."""
+    """Localiza benchmark_report.json: caminho organizado primeiro, fallback histórico."""
     organized = root / "benchmarks" / "data" / slug.upper() / "artifacts" / "outputs" / "benchmark_report.json"
     if organized.exists():
         return organized

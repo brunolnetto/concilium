@@ -15,7 +15,7 @@ from . import (
     pool_utilizacao_temporal,
     scurve_custo,
 )
-from ._legacy_fallback import build_legacy_fallback
+from ._relatorio_fallback import build_relatorio_fallback
 
 # (module, filename)
 _FACE_MODULES = [
@@ -85,7 +85,7 @@ def build_all(
     graficos_dict = _build_graficos_dict(relatorio)
     result = _build_faces(canonical, cubo, graficos_dict)
     if not result:
-        result.update(build_legacy_fallback(relatorio or {}))
+        result.update(build_relatorio_fallback(relatorio or {}))
     return result
 
 

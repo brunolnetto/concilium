@@ -90,7 +90,7 @@ def explore_schedules(
     Dispatches to the algorithm specified by *strategy*:
       - "CP-SAT":  exact RCPSP via OR-Tools CP-SAT (ADR-075 Mode A, n ≤ 200)
       - "LNS":     Lagrangian + SSGS heuristic (ADR-075 Mode B, n > 200)
-      - any other: SerialScheduler multi-heuristic SGS (legacy / explicit override)
+    - any other: SerialScheduler multi-heuristic SGS (historical / explicit override)
 
     Args:
         activities:         List of activities to schedule (used by SerialScheduler path).

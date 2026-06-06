@@ -335,7 +335,7 @@ class AtividadeIntervalo(BaseModel):
 
 
 class CronogramaItem(BaseModel):
-    """Per-item weekly schedule (legacy format — use Cronograma for new code)."""
+    """Per-item weekly schedule (historical format — use Cronograma for new code)."""
 
     model_config = ConfigDict(extra="ignore")
 

@@ -26,7 +26,7 @@ from ._commands_benchmark_helpers import (
     _execute_plan_space_tasks,
     _mc_merge_alternativas,
     _mc_merge_equipes,
-    _mc_remove_legacy,
+    _mc_remove_historical,
     _prepare_plan_space_tasks,
     _save_plan_space_markdown,
     _save_plan_space_results,
@@ -64,7 +64,7 @@ def merge_catalog(
 
     ref_path.write_text(json.dumps(ref, indent=2, ensure_ascii=False), encoding="utf-8")
     rprint(f"[green]referencia.json atualizado:[/green] {ref_path}")
-    _mc_remove_legacy(keep, alt_path, eq_path)
+    _mc_remove_historical(keep, alt_path, eq_path)
 
 
 _DEFAULT_ROOT = Path(__file__).resolve().parents[4]

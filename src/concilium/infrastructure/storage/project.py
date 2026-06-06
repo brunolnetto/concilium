@@ -362,7 +362,7 @@ class ProjectStore:
         return sorted(p.name for p in d.iterdir() if p.is_dir())
 
     def escopo(self, escopo_id: str = "default") -> EscopoStore:
-        """Retorna EscopoStore (ou shim legado se projeto for pré-ADR-031)."""
+        """Retorna EscopoStore para o escopo solicitado."""
         return EscopoStore(self.root / "escopos" / escopo_id)
 
     def create_escopo(

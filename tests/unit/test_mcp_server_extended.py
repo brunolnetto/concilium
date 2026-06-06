@@ -55,7 +55,6 @@ def test_resolve_env_path_primary(monkeypatch, tmp_path):
 
 def test_resolve_env_path_default(monkeypatch):
     monkeypatch.delenv("CONCILIUM__CONFIG_ROOT", raising=False)
-    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     result = _resolve_env_path(primary="CONCILIUM__CONFIG_ROOT", default="./cfg")
     # Path normalizes the string on both platforms
     assert Path("./cfg") == result
@@ -728,7 +727,6 @@ def test_server_main_config_not_exists(monkeypatch, tmp_path):
     from concilium.presentation.mcp.server import main as srv_main
 
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "no_config"))
-    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     with pytest.raises(RuntimeError, match="não encontrado"):
         srv_main()
 
@@ -740,7 +738,6 @@ def test_server_main_config_not_dir(monkeypatch, tmp_path):
     fake_file = tmp_path / "config_file.txt"
     fake_file.write_text("x")
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(fake_file))
-    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     with pytest.raises(RuntimeError, match="não é diretório"):
         srv_main()
 
@@ -762,7 +759,7 @@ def test_server_main_calls_server_run(monkeypatch, tmp_path):
 
 
 def test_mcp_main_module_entry_point(monkeypatch, tmp_path):
-    """Running concilium.mcp_server as __main__ calls main() → server.run() (line 5 of __main__.py)."""
+    """Running concilium.presentation.mcp as __main__ calls main() → server.run()."""
     import runpy
     from unittest.mock import MagicMock, patch
 

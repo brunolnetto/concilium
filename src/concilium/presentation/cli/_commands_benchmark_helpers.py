@@ -57,8 +57,8 @@ def _mc_merge_equipes(ref: dict, bench_dir: object, changed: bool) -> tuple:
     return eq_path, changed
 
 
-def _mc_remove_legacy(keep: bool, alt_path: object, eq_path: object) -> None:
-    """Removes legacy alternativas.json and equipes.json if keep is False."""
+def _mc_remove_historical(keep: bool, alt_path: object, eq_path: object) -> None:
+    """Removes historical alternativas.json and equipes.json if keep is False."""
     if keep:
         return
     for p in (alt_path, eq_path):

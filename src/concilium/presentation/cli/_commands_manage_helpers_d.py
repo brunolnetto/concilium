@@ -61,9 +61,9 @@ def _check_catalog_semantics(cpus: list, prods: list, erros: list, avisos: list)
         ref = cpu.get("producao_id_ref")
         if ref and ref not in prod_ids:
             erros.append(f"CPU {cpu.get('codigo')}: producao_id_ref inexistente ({ref})")
-    legacy_keys = ["producao_horaria", "producao_id", "equipe"]
+    historical_keys = ["producao_horaria", "producao_id", "equipe"]
     for cpu in cpus:
-        presentes = [k for k in legacy_keys if k in cpu]
+        presentes = [k for k in historical_keys if k in cpu]
         if presentes:
             avisos.append(f"CPU {cpu.get('codigo')}: campos legados presentes {presentes}")
 

@@ -40,7 +40,6 @@ def test_startup_config_root_is_file_not_dir(monkeypatch, tmp_path):
     fake_file = tmp_path / "config.txt"
     fake_file.write_text("x")
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(fake_file))
-    monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
     result = runner.invoke(app, ["project", "init", "X"])
     assert result.exit_code == 1
 

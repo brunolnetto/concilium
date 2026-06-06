@@ -14,14 +14,9 @@ from concilium.infrastructure.settings import StorageSettings
 from concilium.infrastructure.storage.project import ProjectStore
 
 
-def _resolve_env_path(primary: str, default: str, legacy: str | None = None) -> Path:
-    """Resolve caminho a partir de env var, com fallback opcional de alias legado."""
+def _resolve_env_path(primary: str, default: str) -> Path:
+    """Resolve caminho a partir de env var com fallback para default."""
     candidates = [primary]
-    if legacy:
-        candidates.append(legacy)
-    elif primary == "CONCILIUM__CONFIG_ROOT":
-        # Compatibilidade retroativa com alias antigo usado por alguns testes/scripts.
-        candidates.append("CONCILIUM__CONFIG")
 
     for key in candidates:
         raw = (os.environ.get(key) or "").strip()

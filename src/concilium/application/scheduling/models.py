@@ -33,7 +33,7 @@ class Activity:
     # ADR-074: normalized ramp profile per week; values in [0.0, 1.0] where 1.0 = peak demand.
     # Length must equal duration_weeks when set.
     # Actual demand for resource r at week offset t = max(0, round(required_resources[r] × ramp_profile[t]))
-    # None = flat demand (legacy behaviour, no change).
+    # None = flat demand (historical behaviour, no change).
     ramp_profile: list[float] | None = None
 
     def __post_init__(self) -> None:

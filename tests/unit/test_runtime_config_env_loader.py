@@ -39,10 +39,10 @@ def test_runtime_config_env_override_has_precedence(monkeypatch, tmp_path):
     assert mod.get_storage().runtime_config_file == f2
 
 
-def test_runtime_config_file_legacy_alias_is_supported(monkeypatch, tmp_path):
+def test_runtime_config_ignores_removed_historical_alias(monkeypatch, tmp_path):
     cfg_file = tmp_path / "config.json"
     cfg_file.write_text("{}")
     monkeypatch.setenv("CONCILIUM__CONFIG_FILE", str(cfg_file))
     mod = _reload_settings(monkeypatch)
     st = mod.get_storage()
-    assert st.config_file_legacy == cfg_file
+    assert st.runtime_config_file is None
