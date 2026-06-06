@@ -126,10 +126,10 @@ def main():
     print("  • src/concilium/application/jobs/service.py")
     print("  • src/concilium/application/jobs/__init__.py")
     print("\nArquivos atualizados:")
-    print("  • src/concilium/presentation/mcp_server/tools/pipeline.py")
+    print("  • src/concilium/presentation/mcp/tools/pipeline.py")
     print("\nArquivos removidos:")
-    print("  • src/concilium/presentation/mcp_server/pipeline_jobs.py")
-    print("  • src/concilium/presentation/mcp_server/pipeline_job_state.py")
+    print("  • src/concilium/presentation/mcp/pipeline_jobs.py")
+    print("  • src/concilium/presentation/mcp/pipeline_job_state.py")
     
     return 0
 

@@ -104,7 +104,7 @@ def _impl_catalog_validate_schema(
     fail_on_warning: bool = typer.Option(False, "--strict", help="Falha também em avisos semânticos"),
 ):
     """Valida catálogo contra JSON Schemas (Draft 2020-12) e regras semânticas básicas."""
-    from concilium.presentation.mcp_server._context import _runtime
+    from concilium.presentation.mcp._context import _runtime
 
     try:
         cpu_v, prod_v, ins_v = _build_schema_validators(Path("config") / "schemas" / "catalog")
@@ -151,7 +151,7 @@ def _impl_catalog_tendencia(
     from pathlib import Path
 
     from concilium.application.catalog.price_trend import calcular_tendencia
-    from concilium.presentation.mcp_server._context import _config_root
+    from concilium.presentation.mcp._context import _config_root
 
     console = Console()
     bundle_path = _config_root() / "catalogos" / contexto_id / ".catalog_bundle.json"
@@ -226,7 +226,7 @@ def _impl_catalog_audit_reasonability(
 ) -> None:
     """Gera artefato auditável de razoabilidade CPU x equipe x produtividade via CLI."""
     from concilium.application.services.catalog_reasonability import build_catalog_reasonability_artifact
-    from concilium.presentation.mcp_server._context import _runtime
+    from concilium.presentation.mcp._context import _runtime
 
     rt = _runtime()
     ctx = rt.load_contexto(contexto_id)

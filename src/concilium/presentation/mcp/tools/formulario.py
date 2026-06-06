@@ -20,13 +20,13 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.auth.permission_guard import permission
-from concilium.presentation.mcp_server._context import (
+from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
     _projetos_root,
     _runtime,
     _wrap_response,
 )
-from concilium.presentation.mcp_server.rate_limit import mcp_rate_limit
+from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ def _suggest_cpu(descricao: str) -> tuple[str | None, int]:
 
     # ── 2. Fallback: sobreposição de palavras com descrições do catálogo ─────
     try:
-        from concilium.presentation.mcp_server._context import _config_root
+        from concilium.presentation.mcp._context import _config_root
         import json as _json
         cpus_dir = _config_root() / "catalogos"
         # Busca o primeiro diretório de catálogo disponível

@@ -6,7 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from concilium.presentation.mcp_server._context import (
+from concilium.presentation.mcp._context import (
     _config_root,
     _projetos_root,
     _runtime,

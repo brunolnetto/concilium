@@ -19,7 +19,7 @@ Adicione ao `.mcp.json` na raiz do projeto:
       "command": "wsl",
       "args": [
         "-e", "bash", "-c",
-        "cd /home/pingu/github/agente_engenheiro_senior/concilium && source .venv/bin/activate && python -m concilium.presentation.mcp_server.server"
+        "cd /home/pingu/github/agente_engenheiro_senior/concilium && source .venv/bin/activate && python -m concilium.presentation.mcp.server"
       ],
       "env": {
         "CONCILIUM__CONFIG_ROOT": "/home/pingu/github/agente_engenheiro_senior/concilium/config",
@@ -41,7 +41,7 @@ Reinicie o VS Code após criar o arquivo. O `.mcp.json` deve ser adicionado ao `
 
 Se o servidor não responder após 60s:
 1. Verifique os logs stderr para erros de configuração
-2. Teste manualmente no WSL: `wsl -e bash -c "cd /seu/path && source .venv/bin/activate && python -m concilium.presentation.mcp_server.server"`
+2. Teste manualmente no WSL: `wsl -e bash -c "cd /seu/path && source .venv/bin/activate && python -m concilium.presentation.mcp.server"`
 3. Confirme que `CONCILIUM__CONFIG_ROOT` aponta para um diretório válido com `concilium.yaml`
 4. Se usar contexto com muitos CPUs (>500), considere otimizar o cache do catálogo
 
@@ -126,7 +126,7 @@ Arquivo: `%APPDATA%\Claude\claude_desktop_config.json`
       "command": "wsl",
       "args": [
         "-e", "bash", "-c",
-        "cd /home/pingu/github/agente_engenheiro_senior/concilium && source .venv/bin/activate && python -m concilium.presentation.mcp_server.server"
+        "cd /home/pingu/github/agente_engenheiro_senior/concilium && source .venv/bin/activate && python -m concilium.presentation.mcp.server"
       ],
       "env": {
         "CONCILIUM__CONFIG_ROOT": "/home/pingu/github/agente_engenheiro_senior/concilium/config",

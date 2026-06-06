@@ -6,7 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from concilium.presentation.mcp_server._context import _project, _wrap_response
+from concilium.presentation.mcp._context import _project, _wrap_response
 
 
 def register(server: FastMCP) -> None:
@@ -20,7 +20,7 @@ def register(server: FastMCP) -> None:
         """
         store = _project(project_id)
         # Lógica de resolução de escopo/plano omitida para brevidade, usando helper interno
-        from concilium.presentation.mcp_server.tools.escopo import _resolve_escopo_id
+        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
 
         try:
             eid = _resolve_escopo_id(store, escopo_id)
@@ -101,7 +101,7 @@ def register(server: FastMCP) -> None:
         from concilium.application.services.cubo_pool_projection import (
             resolve_cubo_pool_projection,
         )
-        from concilium.presentation.mcp_server.tools.escopo import _resolve_escopo_id
+        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
 
         store = _project(project_id)
         try:

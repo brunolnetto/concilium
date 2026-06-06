@@ -9,7 +9,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.storage.project import ProjectStore
-from concilium.presentation.mcp_server._context import (
+from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
     _project,
     _projetos_root,

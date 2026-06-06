@@ -8,7 +8,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from concilium.presentation.mcp_server._context import _config_root, _wrap_response
+from concilium.presentation.mcp._context import _config_root, _wrap_response
 
 
 def register(server: FastMCP) -> None:
@@ -194,7 +194,7 @@ def register(server: FastMCP) -> None:
         from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
         from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
         from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
-        from concilium.presentation.mcp_server._context import _config_root
+        from concilium.presentation.mcp._context import _config_root
 
         config_dir = _config_root()
         bench_root = config_dir.parent / "benchmarks" / "data"

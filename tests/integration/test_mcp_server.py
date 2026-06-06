@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from concilium.presentation.mcp_server.server import build_server
+from concilium.presentation.mcp.server import build_server
 
 # ── Conjunto canônico de tools (atualizar aqui quando adicionar novas) ─────────
 # sistema (1): ping

@@ -9,7 +9,7 @@ ConfiguraÃ§Ã£o no Claude Desktop (claude_desktop_config.json):
       "mcpServers": {
         "concilium": {
           "command": "python",
-          "args": ["-m", "concilium.presentation.mcp_server"],
+          "args": ["-m", "concilium.presentation.mcp"],
           "env": {
             "CONCILIUM__CONFIG_ROOT": "/path/to/config",
             "CONCILIUM__PROJECTS_ROOT": "/path/to/projetos"
@@ -46,11 +46,11 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.telemetry import patch_fastmcp_server, setup_telemetry
-from concilium.presentation.mcp_server._context import _config_root
-from concilium.presentation.mcp_server.middleware import McpAuthMiddleware
+from concilium.presentation.mcp._context import _config_root
+from concilium.presentation.mcp.middleware import McpAuthMiddleware
 
 _APPS_DIR = Path(__file__).parent / "apps"
-from concilium.presentation.mcp_server.tools import (
+from concilium.presentation.mcp.tools import (
     analise,
     artifacts,
     benchmark,
@@ -81,9 +81,11 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
 
     # NEP-039: Register benchmark metadata tools
     from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
-    from concilium.infrastructure.settings import settings
+    from concilium.infrastructure.settings import get_storage
+    storage = get_storage()
+    benchmark_projects_root = storage.benchmark_projects_root or (storage.root / "benchmarks" / "projetos")
     benchmark_store = FileSystemBenchmarkStore(
-        root=Path(settings.benchmarks_root) / ".nep039"
+        root=Path(benchmark_projects_root) / ".nep039"
     )
     benchmark_nep039.register(server, benchmark_store)
 

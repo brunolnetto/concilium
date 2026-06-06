@@ -72,7 +72,7 @@ def _impl_catalog_survey(
     """Gera planilha de pesquisa (Mapa de Cotação ou Aferição de Produtividade)."""
     from concilium.infrastructure.exporters.price_survey import PriceSurveyExporter
     from concilium.infrastructure.exporters.productivity_survey import ProductivitySurveyExporter
-    from concilium.presentation.mcp_server._context import _config_root, _runtime
+    from concilium.presentation.mcp._context import _config_root, _runtime
 
     rt = _runtime()
     ctx = rt.load_contexto(contexto_id)
@@ -194,7 +194,7 @@ def _impl_catalog_promote(
         CatalogGovernanceError,
         validate_and_resolve_insumo_file,
     )
-    from concilium.presentation.mcp_server._context import _config_root, _runtime
+    from concilium.presentation.mcp._context import _config_root, _runtime
 
     if not force:
         rprint(
@@ -283,7 +283,7 @@ def _impl_catalog_search(
     contexto_id: str = typer.Option(..., "--contexto", "-c"), query: str = typer.Argument(..., help="Termo de busca")
 ):
     """Busca CPUs por termo no código ou descrição."""
-    from concilium.presentation.mcp_server._context import _runtime
+    from concilium.presentation.mcp._context import _runtime
 
     rt = _runtime()
     ctx = rt.load_contexto(contexto_id)

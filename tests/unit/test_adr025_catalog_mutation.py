@@ -212,13 +212,13 @@ class TestReferenciaItem:
 class TestCatalogMutationGuard:
     def test_guard_import(self):
         """CatalogMutationGuard is importable."""
-        from concilium.presentation.mcp_server.guards.catalog_guard import CatalogMutationGuard
+        from concilium.presentation.mcp.guards.catalog_guard import CatalogMutationGuard
 
         assert CatalogMutationGuard is not None
 
     def test_guard_allows_when_no_pipeline_running(self):
         """Guard should not raise when pipeline is not active."""
-        from concilium.presentation.mcp_server.guards.catalog_guard import CatalogMutationGuard
+        from concilium.presentation.mcp.guards.catalog_guard import CatalogMutationGuard
 
         guard = CatalogMutationGuard()
         # Should not raise

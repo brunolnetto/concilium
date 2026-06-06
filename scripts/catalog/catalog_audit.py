@@ -1,4 +1,4 @@
-from concilium.presentation.mcp_server._context import _runtime
+from concilium.presentation.mcp._context import _runtime
 from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 

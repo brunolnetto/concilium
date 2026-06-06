@@ -228,7 +228,7 @@ class TestGateSkillsConstant:
     def test_gate_predecessors_uses_gate_skills(self):
         """_GATE_PREDECESSORS values should only contain IDs from _GATE_SKILLS."""
         from concilium.application.runtime import _GATE_SKILLS
-        from concilium.presentation.mcp_server._context import _GATE_PREDECESSORS
+        from concilium.presentation.mcp._context import _GATE_PREDECESSORS
 
         for skill_id, gate_preds in _GATE_PREDECESSORS.items():
             for pred in gate_preds:

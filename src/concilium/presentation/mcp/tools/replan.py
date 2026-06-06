@@ -6,7 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from concilium.presentation.mcp_server._context import _lifecycle_coordinator, _project, _wrap_response
+from concilium.presentation.mcp._context import _lifecycle_coordinator, _project, _wrap_response
 
 
 def register(server: FastMCP) -> None:

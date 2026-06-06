@@ -102,7 +102,7 @@ def _impl_catalog_quality(contexto_id: str = typer.Option(..., "--contexto", "-c
     from concilium.domain.validations.circular_deps import verificar_ciclos_cpu
     from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo
     from concilium.infrastructure.repositories.insumo import RepositorioInsumo
-    from concilium.presentation.mcp_server._context import _runtime
+    from concilium.presentation.mcp._context import _runtime
 
     rt = _runtime()
     ctx = rt.load_contexto(contexto_id)
@@ -162,7 +162,7 @@ def _impl_catalog_simulate(
 ):
     """Simula produção e compara regimes CLT (1.77) vs PJ (1.06) lado a lado."""
     from concilium.domain.services.simulation import SimuladorEngenharia
-    from concilium.presentation.mcp_server._context import _runtime
+    from concilium.presentation.mcp._context import _runtime
 
     rt = _runtime()
     ctx = rt.load_contexto(contexto_id)
@@ -253,7 +253,7 @@ def _impl_catalog_export(
 ):
     """Exporta o catálogo completo para Excel (Auder-Ready)."""
     from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
-    from concilium.presentation.mcp_server._context import _runtime
+    from concilium.presentation.mcp._context import _runtime
 
     rt = _runtime()
     ctx = rt.load_contexto(contexto_id)

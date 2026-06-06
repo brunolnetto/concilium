@@ -14,14 +14,14 @@ import pytest
 from mcp.server.fastmcp.exceptions import ToolError
 
 from concilium.infrastructure.storage.project import ProjectStore
-from concilium.presentation.mcp_server._context import (
+from concilium.presentation.mcp._context import (
     _config_root,
     _project,
     _projetos_root,
     _resolve_env_path,
     _runtime,
 )
-from concilium.presentation.mcp_server.server import build_server
+from concilium.presentation.mcp.server import build_server
 
 pytestmark = [pytest.mark.slow]
 
@@ -489,7 +489,7 @@ def test_mcp_main_importable():
     """The __main__ entry point is importable (covers __main__.py:5)."""
     import importlib
 
-    mod = importlib.import_module("concilium.presentation.mcp_server.__main__")
+    mod = importlib.import_module("concilium.presentation.mcp.__main__")
     assert hasattr(mod, "main")
 
 
@@ -540,7 +540,7 @@ async def test_iniciar_orcamento_skill_has_errors(server, server_env):
     mock_result.has_errors = True
     mock_result.validacoes = [MagicMock(status="ERRO", codigo="VAL-TEST-01")]
 
-    with patch("concilium.presentation.mcp_server.tools.projeto._runtime") as mock_rt_fn:
+    with patch("concilium.presentation.mcp.tools.projeto._runtime") as mock_rt_fn:
         mock_rt = MagicMock()
         mock_rt_fn.return_value = mock_rt
         mock_rt.load_contexto.return_value = MagicMock(referencia_id="test_ref")
@@ -567,7 +567,7 @@ async def test_iniciar_orcamento_generic_exception(server, server_env):
     """iniciar_orcamento returns error dict when run_skill raises generic Exception (lines 192-193)."""
     from unittest.mock import MagicMock, patch
 
-    with patch("concilium.presentation.mcp_server.tools.projeto._runtime") as mock_rt_fn:
+    with patch("concilium.presentation.mcp.tools.projeto._runtime") as mock_rt_fn:
         mock_rt = MagicMock()
         mock_rt_fn.return_value = mock_rt
         mock_rt.load_contexto.return_value = MagicMock(referencia_id="test_ref")
@@ -638,7 +638,7 @@ async def test_avancar_pipeline_generic_exception_from_skill(server, server_env)
     es.create_plan("plano-principal")
     proj_id = store.root.name
 
-    with patch("concilium.presentation.mcp_server.tools.pipeline._lifecycle_coordinator") as mock_lc_fn:
+    with patch("concilium.presentation.mcp.tools.pipeline._lifecycle_coordinator") as mock_lc_fn:
         mock_coord = MagicMock()
         mock_lc_fn.return_value = mock_coord
         mock_coord.avancar_plano.side_effect = ValueError("unexpected error")
@@ -725,7 +725,7 @@ async def test_aprovar_versao_approve_raises(server, server_env):
 
 def test_server_main_config_not_exists(monkeypatch, tmp_path):
     """server.main() raises RuntimeError when config_root doesn't exist (lines 379-383)."""
-    from concilium.presentation.mcp_server.server import main as srv_main
+    from concilium.presentation.mcp.server import main as srv_main
 
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "no_config"))
     monkeypatch.delenv("CONCILIUM__CONFIG", raising=False)
@@ -735,7 +735,7 @@ def test_server_main_config_not_exists(monkeypatch, tmp_path):
 
 def test_server_main_config_not_dir(monkeypatch, tmp_path):
     """server.main() raises RuntimeError when config_root is a file not dir (lines 384-385)."""
-    from concilium.presentation.mcp_server.server import main as srv_main
+    from concilium.presentation.mcp.server import main as srv_main
 
     fake_file = tmp_path / "config_file.txt"
     fake_file.write_text("x")
@@ -749,12 +749,12 @@ def test_server_main_calls_server_run(monkeypatch, tmp_path):
     """server.main() calls server.run() when config is valid (lines 386-387)."""
     from unittest.mock import MagicMock, patch
 
-    from concilium.presentation.mcp_server.server import main as srv_main
+    from concilium.presentation.mcp.server import main as srv_main
 
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
     monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs"))
 
-    with patch("concilium.presentation.mcp_server.server.build_server") as mock_build:
+    with patch("concilium.presentation.mcp.server.build_server") as mock_build:
         mock_srv = MagicMock()
         mock_build.return_value = mock_srv
         srv_main()
@@ -769,13 +769,13 @@ def test_mcp_main_module_entry_point(monkeypatch, tmp_path):
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
     monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs2"))
 
-    _mod = "concilium.presentation.mcp_server.__main__"
+    _mod = "concilium.presentation.mcp.__main__"
     _saved = sys.modules.pop(_mod, None)
     try:
-        with patch("concilium.presentation.mcp_server.server.build_server") as mock_build:
+        with patch("concilium.presentation.mcp.server.build_server") as mock_build:
             mock_srv = MagicMock()
             mock_build.return_value = mock_srv
-            runpy.run_module("concilium.presentation.mcp_server", run_name="__main__", alter_sys=False)
+            runpy.run_module("concilium.presentation.mcp", run_name="__main__", alter_sys=False)
         mock_srv.run.assert_called_once()
     finally:
         if _saved is not None:

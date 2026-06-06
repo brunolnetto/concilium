@@ -101,17 +101,17 @@ class PipelineJobStateMachine(StateMachine):
     @property
     def status_str(self) -> str:
         """Retorna status atual como string."""
-        return self.current_state.value
+        return str(self.current_state_value)
 
     @property
     def is_terminal(self) -> bool:
         """Verifica se job está em estado final."""
-        return self.current_state.final
+        return self.status_str in {"CONCLUIDO", "ERRO", "CANCELADO"}
 
     @property
     def pode_cancelar(self) -> bool:
         """Verifica se job pode ser cancelado."""
-        return self.current_state in (self.aguardando_fila, self.em_execucao)
+        return self.status_str in {"AGUARDANDO_FILA", "EM_EXECUCAO"}
 
     def validar_transicao(self, transicao: str) -> bool:
         """Valida se transição é possível sem executá-la.

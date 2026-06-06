@@ -250,18 +250,18 @@ def _build_resultado(
     venda_catalogo_plus = round(venda_com_bdi + venda_indireto, 2)
     venda_plus = round(venda_direto_eq + venda_indireto, 2)
 
-    # ── Pricing operacional honesto (todos os overheads são explicáveis e razoáveis) ──
+    # ── Pricing consolidado ───────────────────────────────────────────────────────
     # custo_operacional_real: o que de fato se gasta para executar o projeto.
     # Inclui permanência de MO (CLT integral mesmo em ociosidade), aluguel de EQ,
     # mob/demob, overhead de pool — tudo auditável no CuboPoolInstancial (ADR-086).
-    # O preço de venda correto é venda_plus (custo instancial × BDI), não o catálogo.
-    # venda_catalogo_plus permanece como referência de mercado no confronto de benchmark.
+    # O consolidado mantém venda_catalogo_plus como base de resultado e margem.
+    # venda_plus é mantido para análises operacionais complementares.
     custo_operacional_real = round(custo_direto + custo_indireto_total, 2)
-    resultado_fin = round(venda_plus - custo_operacional_real, 2)
-    margem = resultado_fin / venda_plus if venda_plus > 0 else 0.0
+    resultado_fin = round(venda_catalogo_plus - custo_operacional_real, 2)
+    margem = resultado_fin / venda_catalogo_plus if venda_catalogo_plus > 0 else 0.0
 
-    # markup efetivo: venda_plus / custo_real (para auditoria do BDI aplicado)
-    bdi_lucro = (venda_plus / custo_operacional_real - 1) if custo_operacional_real > 0 else 0.0
+    # markup efetivo: venda_catalogo_plus / custo_real (para auditoria do consolidado)
+    bdi_lucro = (venda_catalogo_plus / custo_operacional_real - 1) if custo_operacional_real > 0 else 0.0
 
     # custo_total_catalogo preservado para o confronto de benchmark (PU×Q + indireto)
     custo_total_catalogo = venda_sem_bdi + custo_indireto_total
@@ -298,11 +298,9 @@ def _build_resultado(
     res = Resultado(
         venda=Venda(
             total_sem_bdi=venda_sem_bdi,
-            # total_com_bdi = PREÇO OPERACIONAL HONESTO (custo instancial × BDI).
-            # Base: custo instancial real (N4 pool + idle MO/EQ + mob/demob),
-            # todos auditáveis e explicáveis no CuboPoolInstancial (ADR-086).
-            # O catálogo (PU×Q) é referência de mercado, não base de precificação.
-            total_com_bdi=venda_plus,
+            # total_com_bdi mantém contrato histórico de benchmark (PU×Q×BDI + indiretos).
+            # A visão operacional (custo instancial × BDI) segue em total_custo_plus.
+            total_com_bdi=venda_catalogo_plus,
             total_custo_plus=venda_plus,
             # total_custo_plus_catalogo: benchmark de mercado (PU×Q×BDI).
             # Lido por projection.py para o gate do confronto — benchmark estável.

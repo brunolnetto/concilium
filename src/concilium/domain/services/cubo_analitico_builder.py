@@ -35,7 +35,7 @@ from concilium.domain.models.cubo_analitico import CelulaAnalitica, CuboAnalitic
 _PROP_BDI_MAP: list[tuple[str, str, str, str, str]] = [
     # campo_equipe_direta           cat_insumo      propriedade          cat_bdi    unidade
     ("custo_mao_obra_mensal",         "mao_obra",    "salario_encargos", "mao_obra", ""),
-    ("custo_equipamentos_mensal",     "equipamento", "aluguel",          "material", ""),  # ADR-090: equipment = capital good, uses material BDI (4%)
+    ("custo_equipamentos_mensal",     "equipamento", "aluguel",          "servicos", ""),
     ("custo_combustivel_total_mensal","material",    "combustivel",      "material", "L"),
     ("custo_material_mensal",         "material",    "consumivel",       "material", ""),
 ]
@@ -151,18 +151,18 @@ class CuboAnaliticoBuilder:
 
         # ADR-089/090: BDI e decomposição indexados por (categoria_insumo, propriedade)
         # ADR-090: combustivel usa BDI_material (= 4%), mesma taxa de insumos físicos.
-        # Equipment (aluguel/manutencao) uses material BDI (4%) per AGIS reference methodology.
+        # Equipment (aluguel/manutencao) segue perfil de serviços para decomposição completa.
         self._bdi: dict[tuple[str, str], float] = {
             ("mao_obra",    "salario_encargos"): self._tabela.mao_obra.bdi_total,
-            ("equipamento", "aluguel"):          self._tabela.material.bdi_total,  # Fixed: equipment = capital good, not service
-            ("equipamento", "manutencao"):       self._tabela.material.bdi_total,  # Fixed: maintenance uses material BDI
+            ("equipamento", "aluguel"):          self._tabela.servicos.bdi_total,
+            ("equipamento", "manutencao"):       self._tabela.servicos.bdi_total,
             ("material",    "consumivel"):       self._tabela.material.bdi_total,
             ("material",    "combustivel"):      self._tabela.material.bdi_total,  # ADR-090
         }
         self._decomp: dict[tuple[str, str], dict[str, float]] = {
             ("mao_obra",    "salario_encargos"): self._tabela.mao_obra.decomposicao_no_preco(),
-            ("equipamento", "aluguel"):          self._tabela.material.decomposicao_no_preco(),  # Fixed: uses material BDI
-            ("equipamento", "manutencao"):       self._tabela.material.decomposicao_no_preco(),  # Fixed: uses material BDI
+            ("equipamento", "aluguel"):          self._tabela.servicos.decomposicao_no_preco(),
+            ("equipamento", "manutencao"):       self._tabela.servicos.decomposicao_no_preco(),
             ("material",    "consumivel"):       self._tabela.material.decomposicao_no_preco(),
             ("material",    "combustivel"):      self._tabela.material.decomposicao_no_preco(),  # ADR-090
         }

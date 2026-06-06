@@ -174,6 +174,32 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+
+def _env_fingerprint() -> tuple[tuple[str, str], ...]:
+    """Fingerprint determinístico das env vars relevantes para settings."""
+    tracked: list[tuple[str, str]] = []
+    for key, value in os.environ.items():
+        if key.startswith("CONCILIUM__") or key in {
+            "OTEL_SDK_DISABLED",
+            "OTEL_SERVICE_NAME",
+            "OTEL_EXPORTER_OTLP_ENDPOINT",
+        }:
+            tracked.append((key, value))
+    tracked.sort(key=lambda item: item[0])
+    return tuple(tracked)
+
+
+_last_env_fingerprint: tuple[tuple[str, str], ...] | None = None
+
+
+def _refresh_if_env_changed() -> None:
+    """Invalida cache de settings quando env vars mudam no mesmo processo."""
+    global _last_env_fingerprint
+    current = _env_fingerprint()
+    if _last_env_fingerprint != current:
+        _reset_all()
+        _last_env_fingerprint = current
+
 # ── Helpers de parsing ────────────────────────────────────────────────────────
 
 
@@ -244,6 +270,7 @@ _api: ApiSettings | None = None
 
 
 def get_api() -> ApiSettings:
+    _refresh_if_env_changed()
     global _api
     if _api is None:
         _api = ApiSettings.from_env()
@@ -287,6 +314,7 @@ _mcp: McpSettings | None = None
 
 
 def get_mcp() -> McpSettings:
+    _refresh_if_env_changed()
     global _mcp
     if _mcp is None:
         _mcp = McpSettings.from_env()
@@ -319,6 +347,7 @@ _mcp_proxy: McpProxySettings | None = None
 
 
 def get_mcp_proxy() -> McpProxySettings:
+    _refresh_if_env_changed()
     global _mcp_proxy
     if _mcp_proxy is None:
         _mcp_proxy = McpProxySettings.from_env()
@@ -367,6 +396,7 @@ _ui: UiSettings | None = None
 
 
 def get_ui() -> UiSettings:
+    _refresh_if_env_changed()
     global _ui
     if _ui is None:
         _ui = UiSettings.from_env()
@@ -424,6 +454,7 @@ _auth: AuthSettings | None = None
 
 
 def get_auth() -> AuthSettings:
+    _refresh_if_env_changed()
     global _auth
     if _auth is None:
         _auth = AuthSettings.from_env()
@@ -632,6 +663,7 @@ _storage: StorageSettings | None = None
 
 
 def get_storage() -> StorageSettings:
+    _refresh_if_env_changed()
     global _storage
     if _storage is None:
         _storage = StorageSettings.from_env()
@@ -683,6 +715,7 @@ _telemetry: TelemetrySettings | None = None
 
 
 def get_telemetry() -> TelemetrySettings:
+    _refresh_if_env_changed()
     global _telemetry
     if _telemetry is None:
         _telemetry = TelemetrySettings.from_env()
@@ -729,6 +762,7 @@ _runtime: RuntimeSettings | None = None
 
 
 def get_runtime() -> RuntimeSettings:
+    _refresh_if_env_changed()
     global _runtime
     if _runtime is None:
         _runtime = RuntimeSettings.from_env()
@@ -869,8 +903,9 @@ def _check_auth(auth: "AuthSettings") -> list[str]:
 
 def _reset_all() -> None:
     """Invalida todos os singletons. Usar em fixtures de teste para isolar env vars."""
-    global _api, _mcp, _mcp_proxy, _ui, _auth, _storage, _telemetry, _runtime
+    global _api, _mcp, _mcp_proxy, _ui, _auth, _storage, _telemetry, _runtime, _last_env_fingerprint
     _api = _mcp = _mcp_proxy = _ui = _auth = _storage = _telemetry = _runtime = None
+    _last_env_fingerprint = None
 
 
 # ── Resumo de diagnóstico ─────────────────────────────────────────────────────

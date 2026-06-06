@@ -13,6 +13,7 @@ In production (ACI), the container's Managed Identity must have
 
 from __future__ import annotations
 
+import os
 import warnings
 from functools import lru_cache
 from pathlib import Path
@@ -63,7 +64,10 @@ def _read_pem(env_pem: str, env_path: str, *, kv_secret: str) -> bytes | None:
         "CONCILIUM__JWT_PRIVATE_KEY_PATH": auth.jwt_private_key_path,
         "CONCILIUM__JWT_PUBLIC_KEY_PATH": auth.jwt_public_key_path,
     }
-    raw = pem_by_name.get(env_pem, "")
+    # Preserva bytes exatamente como definidos na env var (incluindo newline final).
+    raw = os.environ.get(env_pem)
+    if raw is None:
+        raw = pem_by_name.get(env_pem, "")
     if raw.strip():
         return raw.encode()
     path_str = path_by_name.get(env_path, "").strip()

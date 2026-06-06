@@ -13,7 +13,7 @@ from concilium.application.orchestrators.catalog_governance import (
     validate_and_resolve_insumo_file,
     validate_and_resolve_producao_file,
 )
-from concilium.presentation.mcp_server._context import _config_root, _projetos_root, _runtime, _wrap_response
+from concilium.presentation.mcp._context import _config_root, _projetos_root, _runtime, _wrap_response
 
 
 def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:

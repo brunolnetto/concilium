@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class JobDTO(BaseModel):
@@ -31,8 +31,8 @@ class JobDTO(BaseModel):
     progresso: str | None = Field(None, description="Mensagem textual de progresso")
     progresso_percentual: float | None = Field(None, ge=0.0, le=1.0, description="Progresso de 0.0 a 1.0")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "job_id": "job-abc123def456",
                 "status": "EM_EXECUCAO",
@@ -50,6 +50,7 @@ class JobDTO(BaseModel):
                 "progresso_percentual": 0.45,
             }
         }
+    )
 
 
 class JobStatsDTO(BaseModel):
@@ -77,8 +78,8 @@ class SystemStatsDTO(BaseModel):
     contadores: dict[str, Any] = Field(..., description="Contadores em tempo real")
     sistema: dict[str, bool] = Field(..., description="Status de componentes do sistema")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "configuracao": {
                     "max_concurrent_jobs": 3,
@@ -99,3 +100,4 @@ class SystemStatsDTO(BaseModel):
                 },
             }
         }
+    )

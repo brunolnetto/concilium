@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from concilium.presentation.mcp_server._context import _config_root, _wrap_response
+from concilium.presentation.mcp._context import _config_root, _wrap_response
 
 
 def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:

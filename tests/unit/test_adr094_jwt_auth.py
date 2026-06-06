@@ -323,32 +323,32 @@ class TestJWTMiddleware:
 
 class TestScopeGuard:
     def test_no_op_when_auth_disabled(self):
-        from concilium.presentation.mcp_server.guards.scope_guard import check_scope
+        from concilium.presentation.mcp.guards.scope_guard import check_scope
         clean = {k: v for k, v in os.environ.items() if k != "CONCILIUM__AUTH_ENABLED"}
         with patch.dict(os.environ, clean, clear=True):
             check_scope("avancar_pipeline")  # deve passar sem erro
 
     def test_passes_with_correct_scope(self):
-        from concilium.presentation.mcp_server.guards.scope_guard import check_scope, set_roles
+        from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles(["operator"])
             check_scope("avancar_pipeline")  # operator tem project:run
 
     def test_raises_with_missing_scope(self):
-        from concilium.presentation.mcp_server.guards.scope_guard import check_scope, set_roles
+        from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles(["viewer"])
             with pytest.raises(PermissionError, match="project:run"):
                 check_scope("avancar_pipeline")
 
     def test_unmapped_tool_passes_regardless(self):
-        from concilium.presentation.mcp_server.guards.scope_guard import check_scope, set_roles
+        from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles([])  # sem nenhum role
             check_scope("ferramenta_nao_mapeada")  # deve passar
 
     def test_error_message_lists_missing_permission(self):
-        from concilium.presentation.mcp_server.guards.scope_guard import check_scope, set_roles
+        from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles([])
             with pytest.raises(PermissionError) as exc_info:

@@ -142,15 +142,15 @@ class JobService:
             # Obtém dependências
             if self._runtime_factory is None or self._project_factory is None:
                 # Fallback para imports de MCP (manter compatibilidade)
-                from concilium.presentation.mcp_server._context import _runtime, _project
+                from concilium.presentation.mcp._context import _runtime, _project
                 rt = _runtime()
                 store = _project(job["project_id"])
             else:
                 rt = self._runtime_factory()
                 store = self._project_factory(job["project_id"])
 
-            from concilium.presentation.mcp_server.tools.escopo import _resolve_escopo_id
-            from concilium.presentation.mcp_server.tools.pipeline import _run_pipeline_on_plano
+            from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
+            from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
 
             # Cria callback de progresso
             progress_callback = self._criar_progress_callback(job_id)
@@ -233,10 +233,6 @@ class JobService:
         # Salva no repositório
         self._repo.save(job_id, job_data)
 
-        # Submete ao executor
-        if self._executor:
-            self._executor.submit(self._executar_pipeline_async, job_id)
-
         # Calcula posição na fila
         jobs = self._repo.list_all()
         posicao_fila = sum(
@@ -245,9 +241,9 @@ class JobService:
             if j["status"] == "AGUARDANDO_FILA" and j["disparado_em"] < job_data["disparado_em"]
         )
 
-        return JobDTO(
+        response = JobDTO(
             job_id=job_id,
-            status=sm.status_str,
+            status="AGUARDANDO_FILA",
             project_id=project_id,
             skill_id=skill_id,
             escopo_id=escopo_id,
@@ -261,6 +257,12 @@ class JobService:
             progresso=f"Posição na fila: {posicao_fila}" if posicao_fila > 0 else "Aguardando worker...",
             progresso_percentual=None,
         )
+
+        # Submete ao executor após montar a resposta inicial para evitar condição de corrida.
+        if self._executor:
+            self._executor.submit(self._executar_pipeline_async, job_id)
+
+        return response
 
     def consultar_job(self, job_id: str) -> JobDTO:
         """Consulta status e resultado de um job.

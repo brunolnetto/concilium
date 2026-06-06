@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import uuid
 from pathlib import Path
 from typing import Any
@@ -9,24 +10,45 @@ from typing import Any
 from concilium.application.runtime import _GATE_SKILLS, Runtime  # noqa: F401 (re-exportado)
 from concilium.application.runtime import RuntimeError as ConciliumRuntimeError  # noqa: F401 (re-exportado)
 from concilium.application.skills.registry import SkillRegistry
-from concilium.infrastructure.settings import get_storage
+from concilium.infrastructure.settings import StorageSettings
 from concilium.infrastructure.storage.project import ProjectStore
+
+
+def _resolve_env_path(primary: str, default: str, legacy: str | None = None) -> Path:
+    """Resolve caminho a partir de env var, com fallback opcional de alias legado."""
+    candidates = [primary]
+    if legacy:
+        candidates.append(legacy)
+    elif primary == "CONCILIUM__CONFIG_ROOT":
+        # Compatibilidade retroativa com alias antigo usado por alguns testes/scripts.
+        candidates.append("CONCILIUM__CONFIG")
+
+    for key in candidates:
+        raw = (os.environ.get(key) or "").strip()
+        if raw:
+            return Path(raw).expanduser()
+    return Path(default)
+
+
+def _storage_live() -> StorageSettings:
+    """Lê settings diretamente do ambiente atual (sem cache global)."""
+    return StorageSettings.from_env()
 
 
 def _tools_root() -> Path:
     """Raiz do repositório, independente do CWD."""
-    return get_storage().root
+    return _storage_live().root
 
 
 # ── Configuração via env vars ──────────────────────────────────────────────
 
 
 def _config_root() -> Path:
-    return get_storage().config_root
+    return _storage_live().config_root
 
 
 def _projetos_root() -> Path:
-    return get_storage().projects_root or (_tools_root() / "projetos")
+    return _storage_live().projects_root or (_tools_root() / "projetos")
 
 
 def _runtime() -> Runtime:

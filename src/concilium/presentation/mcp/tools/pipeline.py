@@ -7,7 +7,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
-from concilium.presentation.mcp_server._context import (
+from concilium.presentation.mcp._context import (
     ConciliumRuntimeError,
     _get_or_create_trace_id,
     _lifecycle_coordinator,
@@ -16,7 +16,7 @@ from concilium.presentation.mcp_server._context import (
     _wrap_response,
 )
 from concilium.infrastructure.auth.permission_guard import permission
-from concilium.presentation.mcp_server.rate_limit import mcp_rate_limit
+from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 
 def register(server: FastMCP) -> None:
@@ -158,7 +158,7 @@ def register(server: FastMCP) -> None:
         rt = _runtime()
         store = _project(project_id)
 
-        from concilium.presentation.mcp_server.tools.escopo import _resolve_escopo_id
+        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
 
         eid = _resolve_escopo_id(store, escopo_id)
         es = store.escopo(eid)

@@ -1,6 +1,5 @@
-"""Entry point: python -m concilium.presentation.mcp_server"""
-
-from concilium.presentation.mcp_server.server import main
+"""Compat shim for python -m concilium.presentation.mcp."""
+from concilium.presentation.mcp.server import main
 
 if __name__ == "__main__":
     main()

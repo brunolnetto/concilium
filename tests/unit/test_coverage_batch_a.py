@@ -66,11 +66,11 @@ class TestMcpServerMain:
         """Importing mcp_server.__main__ should expose main (covers lines 2,4)."""
         import importlib
 
-        mod = importlib.import_module("concilium.presentation.mcp_server.__main__")
+        mod = importlib.import_module("concilium.presentation.mcp.__main__")
         assert hasattr(mod, "main")
 
     def test_main_is_callable(self):
-        from concilium.presentation.mcp_server.server import main
+        from concilium.presentation.mcp.server import main
 
         assert callable(main)
 

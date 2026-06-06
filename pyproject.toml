@@ -39,10 +39,10 @@ dependencies = [
 
 [project.scripts]
 concilium = "concilium.presentation.main:main"
-concilium-mcp = "concilium.presentation.mcp_server.server:main"
+concilium-mcp = "concilium.presentation.mcp.server:main"
 concilium-api = "concilium.presentation.api.app:main"
 concilium-ui = "concilium.presentation.ui.launcher:main"
-concilium-mcp-proxy = "concilium.presentation.mcp_proxy.proxy:main"
+concilium-mcp-proxy = "concilium.presentation.mcp.proxy:main"
 
 [project.optional-dependencies]
 # ADR-047: SharePoint backend (instalar com: pip install 'concilium[sharepoint]')
