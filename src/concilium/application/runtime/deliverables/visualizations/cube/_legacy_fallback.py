@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from ._common import init_mpl
 
+SHIM_ID = "visualizations.cube.legacy_fallback"
+SHIM_TARGET = "cube projection charts"
+SHIM_SCOPE = "runtime-fallback"
+
 
 def build_legacy_fallback(relatorio: dict) -> dict[str, bytes]:
     if not isinstance(relatorio, dict):
@@ -131,3 +135,11 @@ def build_legacy_fallback(relatorio: dict) -> dict[str, bytes]:
             plt.close("all")
 
     return out
+
+
+__all__ = [
+    "SHIM_ID",
+    "SHIM_TARGET",
+    "SHIM_SCOPE",
+    "build_legacy_fallback",
+]
