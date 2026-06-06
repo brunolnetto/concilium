@@ -22,7 +22,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
+
+from concilium.infrastructure.settings import get_auth
 
 
 def validate_client(client_id: str, client_secret: str) -> list[str] | None:
@@ -50,7 +51,7 @@ def _verify_secret(provided: str, entry: dict) -> bool:
 
 
 def _load_store() -> dict:
-    raw = os.environ.get("CONCILIUM__AUTH_CLIENTS", "").strip()
+    raw = get_auth().clients_json.strip()
     if not raw:
         return {}
     return json.loads(raw)

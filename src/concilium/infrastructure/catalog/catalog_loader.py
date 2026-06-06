@@ -400,9 +400,9 @@ class CatalogLoader:
                 )
             cpus, insumos, produtividades, funcoes = _load_sharepoint(self._sharepoint_storage, catalog_name)
         elif self.backend == CatalogBackend.GOOGLE_SHEETS:
-            import os  # noqa: PLC0415
+            from concilium.infrastructure.settings import get_storage
 
-            creds_path = os.environ.get("CONCILIUM__GOOGLE_CREDENTIALS", "")
+            creds_path = get_storage().gdrive.google_credentials_path
             spreadsheet_id = ""  # lido do config yaml
             cpus, insumos, produtividades, _ = _load_google_sheets(catalog_name, spreadsheet_id, creds_path)  # type: ignore[misc]
             funcoes = []

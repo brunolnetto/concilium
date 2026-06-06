@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+from concilium.infrastructure.settings import get_storage
 
 
 class S3BlobStorage(BlobStoragePort):
@@ -44,20 +44,21 @@ class S3BlobStorage(BlobStoragePort):
 
     @classmethod
     def from_env(cls) -> "S3BlobStorage":
-        bucket = (os.environ.get("CONCILIUM__S3_BUCKET") or "").strip()
+        s3 = get_storage().s3
+        bucket = s3.bucket.strip()
         if not bucket:
             raise OSError("CONCILIUM__S3_BUCKET é obrigatório para CONCILIUM__STORE_BACKEND=s3.")
 
         return cls(
             bucket=bucket,
-            region=(os.environ.get("CONCILIUM__S3_REGION") or "").strip() or None,
-            root_prefix=(os.environ.get("CONCILIUM__S3_ROOT_PREFIX") or "").strip(),
-            endpoint_url=(os.environ.get("CONCILIUM__S3_ENDPOINT_URL") or "").strip() or None,
-            addressing_style=(os.environ.get("CONCILIUM__S3_ADDRESSING_STYLE") or "").strip() or None,
-            aws_access_key_id=(os.environ.get("CONCILIUM__S3_ACCESS_KEY_ID") or "").strip() or None,
-            aws_secret_access_key=(os.environ.get("CONCILIUM__S3_SECRET_ACCESS_KEY") or "").strip() or None,
-            aws_session_token=(os.environ.get("CONCILIUM__S3_SESSION_TOKEN") or "").strip() or None,
-            server_side_encryption=(os.environ.get("CONCILIUM__S3_SERVER_SIDE_ENCRYPTION") or "").strip() or None,
+            region=s3.region.strip() or None,
+            root_prefix=s3.root_prefix.strip(),
+            endpoint_url=s3.endpoint_url.strip() or None,
+            addressing_style=s3.addressing_style.strip() or None,
+            aws_access_key_id=s3.access_key_id.strip() or None,
+            aws_secret_access_key=s3.secret_access_key.strip() or None,
+            aws_session_token=s3.session_token.strip() or None,
+            server_side_encryption=s3.server_side_encryption.strip() or None,
         )
 
     @staticmethod

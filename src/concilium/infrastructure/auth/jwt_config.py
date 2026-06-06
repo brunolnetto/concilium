@@ -13,11 +13,12 @@ In production (ACI), the container's Managed Identity must have
 
 from __future__ import annotations
 
-import os
 import warnings
 from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple
+
+from concilium.infrastructure.settings import get_auth
 
 
 class RS256KeyPair(NamedTuple):
@@ -53,10 +54,19 @@ def load_key_pair() -> RS256KeyPair:
 
 
 def _read_pem(env_pem: str, env_path: str, *, kv_secret: str) -> bytes | None:
-    raw = os.environ.get(env_pem, "")
+    auth = get_auth()
+    pem_by_name = {
+        "CONCILIUM__JWT_PRIVATE_KEY_PEM": auth.jwt_private_key_pem,
+        "CONCILIUM__JWT_PUBLIC_KEY_PEM": auth.jwt_public_key_pem,
+    }
+    path_by_name = {
+        "CONCILIUM__JWT_PRIVATE_KEY_PATH": auth.jwt_private_key_path,
+        "CONCILIUM__JWT_PUBLIC_KEY_PATH": auth.jwt_public_key_path,
+    }
+    raw = pem_by_name.get(env_pem, "")
     if raw.strip():
         return raw.encode()
-    path_str = os.environ.get(env_path, "").strip()
+    path_str = path_by_name.get(env_path, "").strip()
     if path_str:
         return Path(path_str).read_bytes()
     return _read_from_key_vault(kv_secret)
@@ -64,7 +74,7 @@ def _read_pem(env_pem: str, env_path: str, *, kv_secret: str) -> bytes | None:
 
 def _read_from_key_vault(secret_name: str) -> bytes | None:
     """Fetch a PEM secret from Azure Key Vault using Managed Identity."""
-    kv_url = os.environ.get("CONCILIUM__JWT_KEY_VAULT_URL", "").strip()
+    kv_url = get_auth().key_vault_url.strip()
     if not kv_url:
         return None
     try:

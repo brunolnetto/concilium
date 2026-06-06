@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from concilium.infrastructure.settings import get_storage
 
 logger = __import__("logging").getLogger(__name__)
 _GRAPH_SCOPE = "https://graph.microsoft.com/.default"
@@ -42,10 +43,11 @@ class SharePointCredential:
     @classmethod
     def from_env(cls) -> SharePointCredential:
         """Instancia a partir das variáveis de ambiente CONCILIUM__SP_*."""
-        tenant_id = os.environ.get("CONCILIUM__SP_TENANT_ID", "")
-        client_id = os.environ.get("CONCILIUM__SP_CLIENT_ID", "")
-        secret = os.environ.get("CONCILIUM__SP_CLIENT_SECRET")
-        cert = os.environ.get("CONCILIUM__SP_CERT_PATH")
+        sp = get_storage().sharepoint
+        tenant_id = sp.tenant_id
+        client_id = sp.client_id
+        secret = sp.client_secret
+        cert = sp.cert_path
         if not tenant_id or not client_id:
             raise OSError("CONCILIUM__SP_TENANT_ID e CONCILIUM__SP_CLIENT_ID são obrigatórios.")
         return cls(

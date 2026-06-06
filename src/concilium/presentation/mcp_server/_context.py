@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import uuid
 from pathlib import Path
 from typing import Any
@@ -10,36 +9,24 @@ from typing import Any
 from concilium.application.runtime import _GATE_SKILLS, Runtime  # noqa: F401 (re-exportado)
 from concilium.application.runtime import RuntimeError as ConciliumRuntimeError  # noqa: F401 (re-exportado)
 from concilium.application.skills.registry import SkillRegistry
+from concilium.infrastructure.settings import get_storage
 from concilium.infrastructure.storage.project import ProjectStore
 
 
 def _tools_root() -> Path:
     """Raiz do repositório, independente do CWD."""
-    # Sobe 4 níveis: mcp_server -> presentation -> concilium -> src -> RAIZ
-    return Path(__file__).resolve().parents[4]
+    return get_storage().root
 
 
 # ── Configuração via env vars ──────────────────────────────────────────────
 
 
-def _resolve_env_path(*, primary: str, default: str) -> Path:
-    if os.environ.get(primary):
-        return Path(os.environ[primary])
-    return Path(default)
-
-
 def _config_root() -> Path:
-    return _resolve_env_path(
-        primary="CONCILIUM__CONFIG_ROOT",
-        default=_tools_root() / "config",  # type: ignore[arg-type]
-    )
+    return get_storage().config_root
 
 
 def _projetos_root() -> Path:
-    return _resolve_env_path(
-        primary="CONCILIUM__PROJECTS_ROOT",
-        default=_tools_root() / "projetos",  # type: ignore[arg-type]
-    )
+    return get_storage().projects_root or (_tools_root() / "projetos")
 
 
 def _runtime() -> Runtime:

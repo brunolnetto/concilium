@@ -485,11 +485,15 @@ class BenchmarkSpecLoader:
 
 
 def load_spec_from_json(path: Path | str) -> ProjectSpec:
-    config_root = Path(os.environ.get("CONCILIUM__CONFIG_ROOT", Path.cwd() / "config"))
+    from concilium.infrastructure.settings import get_storage
+
+    config_root = get_storage().config_root
     return BenchmarkSpecLoader(config_root).load(path)
 
 
 def load_spec_from_dict(ref: dict[str, Any], path: Path | str) -> ProjectSpec:
     """Carrega ProjectSpec a partir de um dict ja em memoria (sem I/O de disco)."""
-    config_root = Path(os.environ.get("CONCILIUM__CONFIG_ROOT", Path.cwd() / "config"))
+    from concilium.infrastructure.settings import get_storage
+
+    config_root = get_storage().config_root
     return BenchmarkSpecLoader(config_root).load_from_dict(ref, path)

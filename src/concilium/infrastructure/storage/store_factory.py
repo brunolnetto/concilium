@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from concilium.application.services.project_repository import ProjectRepository
+from concilium.infrastructure.settings import get_storage
 
 from .file_project_repository import FileProjectRepository
 
@@ -24,7 +25,7 @@ _BACKEND_ALIASES: dict[str, str] = {
 
 
 def _projects_prefix() -> str:
-    value = (os.environ.get("CONCILIUM__STORE_PROJECTS_PREFIX") or "projetos").strip().strip("/")
+    value = get_storage().projects_prefix.strip().strip("/")
     return value or "projetos"
 
 
@@ -33,7 +34,7 @@ def _build_sharepoint_repository() -> ProjectRepository:
 
     from .storage_project_repository import StorageProjectRepository
 
-    cache_dir_raw = (os.environ.get("CONCILIUM__SP_CACHE_DIR") or "").strip()
+    cache_dir_raw = get_storage().sharepoint.cache_dir.strip()
     cache_dir = Path(cache_dir_raw).expanduser() if cache_dir_raw else None
     storage = SharePointBlobStorage.from_env(cache_dir=cache_dir)
     return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
@@ -68,7 +69,7 @@ def _build_gdrive_repository() -> ProjectRepository:
 
 def resolve_store_backend() -> str:
     """Resolve backend name for project repository from environment."""
-    value = (os.environ.get("CONCILIUM__STORE_BACKEND") or DEFAULT_STORE_BACKEND).strip().lower()
+    value = (get_storage().backend or DEFAULT_STORE_BACKEND).strip().lower()
     value = value or DEFAULT_STORE_BACKEND
     return _BACKEND_ALIASES.get(value, value)
 

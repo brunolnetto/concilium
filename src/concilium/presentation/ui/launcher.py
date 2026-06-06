@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 import subprocess
 from pathlib import Path
 
+from concilium.infrastructure.settings import get_ui
 from concilium.presentation.ui.config import resolve_ui_bind_host, resolve_ui_bind_port
 
 
@@ -12,7 +12,7 @@ def _default_ui_entrypoint() -> Path:
 
 
 def resolve_ui_entrypoint() -> Path:
-    custom = (os.environ.get("CONCILIUM__UI_ENTRYPOINT") or "").strip()
+    custom = get_ui().entrypoint
     if custom:
         return Path(custom)
     return _default_ui_entrypoint()

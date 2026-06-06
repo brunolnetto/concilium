@@ -1,12 +1,12 @@
 """CLI shared utilities for Typer subcommands."""
 
 import json
-import os
 from pathlib import Path
 
 import typer
 from rich import print as rprint
 
+from concilium.infrastructure.settings import get_storage
 from concilium.infrastructure.storage.store_factory import build_project_repository
 
 
@@ -22,25 +22,16 @@ def _looks_like_workspace_root(path: Path) -> bool:
 
 def _tools_root() -> Path:
     """Resolve raiz do workspace, mesmo com pacote instalado no venv."""
-    env_root = os.environ.get("CONCILIUM__ROOT")
-    if env_root:
-        candidate = Path(env_root).expanduser()
-        if _looks_like_workspace_root(candidate):
-            return candidate.resolve()
+    candidate = get_storage().root
+    if _looks_like_workspace_root(candidate):
+        return candidate.resolve()
 
     cwd = Path.cwd().resolve()
     for candidate in (cwd, *cwd.parents):
         if _looks_like_workspace_root(candidate):
             return candidate
 
-    return Path(__file__).resolve().parents[4]
-
-
-def _resolve_env_path(*, primary: str, default: Path) -> Path:
-    """Resolve path de configuraÃ§Ã£o com compatibilidade retroativa."""
-    if os.environ.get(primary):
-        return Path(os.environ[primary])
-    return default
+    return candidate
 
 
 def _require_existing_dir(path: Path, *, label: str, env_keys: tuple[str, str]) -> Path:
@@ -55,18 +46,12 @@ def _require_existing_dir(path: Path, *, label: str, env_keys: tuple[str, str]) 
 
 def _config_root() -> Path:
     """Returns config root path (without validation)."""
-    return _resolve_env_path(
-        primary="CONCILIUM__CONFIG_ROOT",
-        default=_tools_root() / "config",
-    )
+    return get_storage().config_root
 
 
 def _projetos_root() -> Path:
     """Returns projects root path (without validation)."""
-    return _resolve_env_path(
-        primary="CONCILIUM__PROJECTS_ROOT",
-        default=_tools_root() / "projetos",
-    )
+    return get_storage().projects_root or (_tools_root() / "projetos")
 
 
 def _benchmark_projects_root() -> Path:
@@ -75,12 +60,7 @@ def _benchmark_projects_root() -> Path:
     Benchmarks devem persistir projetos em diretório dedicado para não poluir
     os projetos reais operados via CLI/MCP.
     """
-    return Path(
-        os.environ.get(
-            "CONCILIUM__BENCHMARK_PROJECTS_ROOT",
-            str(_tools_root() / "benchmarks" / "projetos"),
-        )
-    )
+    return get_storage().benchmark_projects_root or (_tools_root() / "benchmarks" / "projetos")
 
 
 def config_root() -> Path:

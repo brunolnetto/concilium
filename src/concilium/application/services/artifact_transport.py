@@ -15,7 +15,6 @@ ambiente é trocar a implementação do transporte — nenhum chamador muda.
 from __future__ import annotations
 
 import base64
-import os
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -146,7 +145,9 @@ def get_transport(nome: str | None = None, *, max_mb: float = 10.0) -> ArtifactT
     Valores: ``local`` (default) | ``azure_blob`` | ``sharepoint`` | ``gdrive`` | ``s3``.
     Backends remotos entregam via URL temporária; local entrega base64/caminho.
     """
-    escolha = (nome or os.environ.get("CONCILIUM__ARTIFACT_TRANSPORT") or "local").strip().lower()
+    from concilium.infrastructure.settings import get_runtime
+
+    escolha = (nome or get_runtime().artifact_transport or "local").strip().lower()
     if escolha in ("local", ""):
         return LocalBase64Transport(max_mb=max_mb)
     return BlobStorageTransport(_blob_port_from_env(escolha))

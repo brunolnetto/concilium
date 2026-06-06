@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+from concilium.infrastructure.settings import get_storage
 
 from ._sharepoint_auth import SharePointCredential, _BlobCache  # noqa: F401
 
@@ -53,8 +53,9 @@ class SharePointBlobStorage(BlobStoragePort):
     @classmethod
     def from_env(cls, *, cache_dir: Path | None = None) -> SharePointBlobStorage:
         """Instancia a partir das variáveis de ambiente CONCILIUM__SP_*."""
-        drive_id = os.environ.get("CONCILIUM__SP_DRIVE_ID", "")
-        root_path = os.environ.get("CONCILIUM__SP_ROOT_PATH", "Concilium/producao")
+        sp = get_storage().sharepoint
+        drive_id = sp.drive_id
+        root_path = sp.root_path
         if not drive_id:
             raise OSError("CONCILIUM__SP_DRIVE_ID é obrigatório.")
         return cls(

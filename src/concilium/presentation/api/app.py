@@ -99,12 +99,11 @@ app = create_app()
 
 
 def main() -> None:
-    import os
     import uvicorn
 
-    from concilium.infrastructure.settings import startup_check
+    from concilium.infrastructure.settings import get_api, startup_check
     startup_check()
 
     host, port = resolve_api_bind()
-    reload = os.environ.get("CONCILIUM__API_RELOAD", "0") not in ("0", "false", "no", "")
+    reload = get_api().reload
     uvicorn.run("concilium.presentation.api.app:app", host=host, port=port, reload=reload)

@@ -13,11 +13,11 @@ dele, o link não expira sozinho — o chamador deve revogar quando apropriado.
 from __future__ import annotations
 
 import io
-import os
 from datetime import UTC
 from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+from concilium.infrastructure.settings import get_storage
 
 _FOLDER_MIME = "application/vnd.google-apps.folder"
 
@@ -40,12 +40,13 @@ class GoogleDriveBlobStorage(BlobStoragePort):
 
     @classmethod
     def from_env(cls) -> GoogleDriveBlobStorage:
-        root = (os.environ.get("CONCILIUM__GDRIVE_ROOT_FOLDER_ID") or "").strip()
+        gdrive = get_storage().gdrive
+        root = gdrive.root_folder_id.strip()
         if not root:
             raise OSError("CONCILIUM__GDRIVE_ROOT_FOLDER_ID é obrigatório para o backend Google Drive.")
         return cls(
             root_folder_id=root,
-            service_account_json=(os.environ.get("CONCILIUM__GDRIVE_SA_JSON") or "").strip() or None,
+            service_account_json=gdrive.service_account_json.strip() or None,
         )
 
     # ── SDK / serviço ───────────────────────────────────────────────────────

@@ -22,12 +22,12 @@ Uso típico via CONCILIUM__ROOT env var:
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .batch import BenchmarkBatchRunner
+from concilium.infrastructure.settings import get_storage
 from .input_derivation import normalize_referencia_weeks
 from .report_builder import BenchmarkReportBuilder
 from .report_printer import BenchmarkReportPrinter
@@ -54,18 +54,13 @@ class BenchmarkFacade:
     @classmethod
     def from_env(cls) -> BenchmarkFacade:
         """Cria facade a partir de CONCILIUM__ROOT (ou variáveis individuais)."""
-        root_str = os.environ.get("CONCILIUM__ROOT")
-        if root_str:
-            root = Path(root_str)
-        else:
-            # Fallback: usa cwd como raiz (compatível com scripts legados em benchmarks/)
-            root = Path.cwd().parent
-
-        config_root = Path(os.environ.get("CONCILIUM__CONFIG_ROOT", str(root / "config")))
+        st = get_storage()
+        root = st.root if st.root.exists() else Path.cwd().parent
+        config_root = st.config_root
         benchmarks_root = root / "benchmarks" / "data"
         # Projetos de benchmark ficam isolados em benchmarks/projetos/
         # (CONCILIUM__PROJECTS_ROOT sobrescreve apenas para pipelines reais)
-        projects_root = Path(os.environ.get("CONCILIUM__BENCHMARK_PROJECTS_ROOT", str(root / "benchmarks" / "projetos")))
+        projects_root = st.benchmark_projects_root or (root / "benchmarks" / "projetos")
 
         return cls(
             benchmarks_root=benchmarks_root,

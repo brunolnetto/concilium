@@ -10,6 +10,8 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from concilium.infrastructure.settings import get_storage
+
 
 class ConfigurationManager:
     """Singleton configuration manager."""
@@ -31,23 +33,21 @@ class ConfigurationManager:
     @staticmethod
     def _project_root() -> Path:
         """Resolve project root with optional env override."""
-        env_root = (os.environ.get("CONCILIUM_ROOT") or "").strip()
-        if env_root:
-            return Path(env_root).expanduser().resolve()
-        return Path(__file__).resolve().parents[3]
+        return get_storage().root
 
     @staticmethod
     def _resolve_config_path(project_root: Path) -> Path:
         """Resolve runtime config file path with precedence by environment."""
-        runtime_file = (os.environ.get("CONCILIUM_RUNTIME_CONFIG_FILE") or "").strip()
+        st = get_storage()
+        runtime_file = st.runtime_config_file
         if runtime_file:
             return Path(runtime_file).expanduser().resolve()
 
-        legacy_file = (os.environ.get("CONCILIUM_CONFIG_FILE") or "").strip()
+        legacy_file = st.config_file_legacy
         if legacy_file:
             return Path(legacy_file).expanduser().resolve()
 
-        config_root = (os.environ.get("CONCILIUM_CONFIG_ROOT") or "").strip()
+        config_root = (os.getenv("CONCILIUM_CONFIG_ROOT") or "").strip()
         if config_root:
             return Path(config_root).expanduser().resolve() / "concilium.yaml"
 

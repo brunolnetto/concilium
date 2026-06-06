@@ -9,11 +9,11 @@ Skipped paths: /auth/token, /health, /, /swagger, /openapi.json, /redoc
 
 from __future__ import annotations
 
-import os
-
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from concilium.infrastructure.settings import get_auth
 
 _SKIP_PATHS: frozenset[str] = frozenset({
     "/",
@@ -48,7 +48,7 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
 
 def _auth_enabled() -> bool:
-    return os.environ.get("CONCILIUM__AUTH_ENABLED", "0").lower() not in ("0", "false", "no", "")
+    return get_auth().enabled
 
 
 def _unauthorized(detail: str) -> JSONResponse:

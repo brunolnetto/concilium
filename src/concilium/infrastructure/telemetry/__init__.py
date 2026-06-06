@@ -13,10 +13,11 @@ entra em traces. Apenas metadados operacionais: IDs, durações, status, contage
 
 from __future__ import annotations
 
-import os
 from contextlib import nullcontext
 from functools import wraps
 from typing import Any
+
+from concilium.infrastructure.settings import get_telemetry
 
 # ── OTEL availability guard ───────────────────────────────────────────────────
 
@@ -48,7 +49,8 @@ def setup_telemetry() -> None:
 
     if not _OTEL_AVAILABLE:
         return
-    if os.environ.get("OTEL_SDK_DISABLED", "").lower() == "true":
+    telemetry = get_telemetry()
+    if telemetry.otel_sdk_disabled:
         return
 
     _setup_tracing()
@@ -61,10 +63,11 @@ def _setup_tracing() -> None:
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    resource = Resource({SERVICE_NAME: os.environ.get("OTEL_SERVICE_NAME", "concilium")})
+    telemetry = get_telemetry()
+    resource = Resource({SERVICE_NAME: telemetry.otel_service_name})
     provider = TracerProvider(resource=resource)
 
-    otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    otlp_endpoint = telemetry.otlp_endpoint
     if otlp_endpoint:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/v1/traces")))
@@ -85,10 +88,11 @@ def _setup_metrics() -> None:
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
-    resource = Resource({SERVICE_NAME: os.environ.get("OTEL_SERVICE_NAME", "concilium")})
+    telemetry = get_telemetry()
+    resource = Resource({SERVICE_NAME: telemetry.otel_service_name})
     readers: list = []
 
-    otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    otlp_endpoint = telemetry.otlp_endpoint
     if otlp_endpoint:
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader

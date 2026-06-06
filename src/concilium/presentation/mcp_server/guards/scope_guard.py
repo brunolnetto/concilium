@@ -22,7 +22,7 @@ adaptador HTTP) e verifica via ROLE_PERMISSIONS.
 
 from __future__ import annotations
 
-import os
+from concilium.infrastructure.settings import get_auth
 
 # Re-exporta os símbolos de permission_guard para compatibilidade
 from concilium.infrastructure.auth.permission_guard import (
@@ -58,9 +58,7 @@ def check_scope(tool_name: str) -> None:
     No-op quando AUTH_ENABLED=0 (desenvolvimento local).
     """
     # Skip if auth is disabled
-    if os.environ.get("CONCILIUM__AUTH_ENABLED", "0").lower() in (
-        "0", "false", "no", "off", ""
-    ):
+    if not get_auth().enabled:
         return
     
     # If tool doesn't require permission, allow

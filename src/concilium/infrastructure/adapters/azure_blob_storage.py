@@ -13,11 +13,11 @@ SAS via account key (delegação por chave) ou user-delegation key (Managed Iden
 
 from __future__ import annotations
 
-import os
 from datetime import UTC
 from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+from concilium.infrastructure.settings import get_storage
 
 
 class AzureBlobStorage(BlobStoragePort):
@@ -41,15 +41,16 @@ class AzureBlobStorage(BlobStoragePort):
 
     @classmethod
     def from_env(cls) -> AzureBlobStorage:
-        container = (os.environ.get("CONCILIUM__AZURE_CONTAINER") or "").strip()
+        azure = get_storage().azure
+        container = azure.container.strip()
         if not container:
             raise OSError("CONCILIUM__AZURE_CONTAINER é obrigatório para o backend Azure Blob.")
         return cls(
             container=container,
-            account=(os.environ.get("CONCILIUM__AZURE_ACCOUNT") or "").strip() or None,
-            account_key=(os.environ.get("CONCILIUM__AZURE_KEY") or "").strip() or None,
-            connection_string=(os.environ.get("CONCILIUM__AZURE_CONNECTION_STRING") or "").strip() or None,
-            root_prefix=(os.environ.get("CONCILIUM__AZURE_ROOT_PREFIX") or "").strip(),
+            account=azure.account.strip() or None,
+            account_key=azure.key.strip() or None,
+            connection_string=azure.connection_string.strip() or None,
+            root_prefix=azure.root_prefix.strip(),
         )
 
     # ── SDK / cliente ───────────────────────────────────────────────────────

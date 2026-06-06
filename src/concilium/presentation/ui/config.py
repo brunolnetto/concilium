@@ -2,25 +2,23 @@
 
 from __future__ import annotations
 
-import os
+from concilium.infrastructure.settings import get_api, get_ui
 
 
 def _env_str(name: str, default: str) -> str:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    value = value.strip()
-    return value or default
+    if name == "CONCILIUM__API_HOST":
+        return get_api().host or default
+    if name == "CONCILIUM__UI_HOST":
+        return get_ui().host or default
+    return default
 
 
 def _env_int(name: str, default: int) -> int:
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    try:
-        return int(raw)
-    except (TypeError, ValueError):
-        return default
+    if name == "CONCILIUM__API_PORT":
+        return get_api().port
+    if name == "CONCILIUM__UI_PORT":
+        return get_ui().port
+    return default
 
 
 def resolve_api_bind_host() -> str:
@@ -41,11 +39,11 @@ def resolve_api_base_url() -> str:
     2. CONCILIUM__API_BASE_URL (valor canônico compartilhado)
     3. CONCILIUM__API_HOST + CONCILIUM__API_PORT
     """
-    ui_override = os.environ.get("CONCILIUM__UI_API_BASE_URL", "").strip()
+    ui_override = get_ui().api_base_url_override.strip()
     if ui_override:
         return ui_override.rstrip("/")
 
-    api_base = os.environ.get("CONCILIUM__API_BASE_URL", "").strip()
+    api_base = get_api().base_url.strip()
     if api_base:
         return api_base.rstrip("/")
 

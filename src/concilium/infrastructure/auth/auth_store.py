@@ -15,12 +15,13 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
 import secrets
 import threading
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+from concilium.infrastructure.settings import get_auth
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -114,7 +115,7 @@ class AuthStore:
 
     def __init__(self, data_dir: Path | None = None) -> None:
         if data_dir is None:
-            raw = os.environ.get("CONCILIUM__AUTH_DATA_PATH", "").strip()
+            raw = get_auth().data_path.strip()
             data_dir = Path(raw).expanduser().resolve() if raw else Path.home() / ".concilium" / "auth"
         self._dir = data_dir
         self._dir.mkdir(parents=True, exist_ok=True)

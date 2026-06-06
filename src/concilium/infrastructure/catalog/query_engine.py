@@ -472,11 +472,14 @@ class CatalogSession:
     def __init__(self) -> None:
         if not _AVAILABLE:
             raise ImportError("duckdb não está instalado. pip install duckdb>=1.0.0")
-        import duckdb, os, tempfile
+        import duckdb
+        from concilium.infrastructure.settings import get_runtime
+
+        runtime = get_runtime()
         self._conn = duckdb.connect(":memory:")
         # ── Drive-spill config ───────────────────────────────────────────────
-        mem_limit = os.environ.get("CONCILIUM__DUCKDB_MEMORY", "512MB")
-        spill_dir = os.environ.get("CONCILIUM__DUCKDB_SPILL_DIR", tempfile.gettempdir())
+        mem_limit = runtime.duckdb_memory
+        spill_dir = runtime.duckdb_spill_dir
         self._conn.execute(f"SET memory_limit='{mem_limit}'")
         self._conn.execute(f"SET temp_directory='{spill_dir}'")
         self._conn.execute("SET threads=4")

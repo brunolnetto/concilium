@@ -45,9 +45,9 @@ def _hc_check_catalogs(rows: list, contexto_ids: list, config_dir: object) -> No
 
 def _hc_check_sharepoint(rows: list) -> None:
     """Appends SharePoint connectivity row if CONCILIUM__SP_DRIVE_ID is set."""
-    import os
+    from concilium.infrastructure.settings import get_storage
 
-    sp_drive = os.environ.get("CONCILIUM__SP_DRIVE_ID", "")
+    sp_drive = get_storage().sharepoint.drive_id
     if not sp_drive:
         return
     try:

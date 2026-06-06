@@ -293,6 +293,38 @@ def get_mcp() -> McpSettings:
     return _mcp
 
 
+@dataclass(frozen=True)
+class McpProxySettings:
+    """Configuração do proxy stdio -> HTTP do MCP."""
+
+    server_url: str
+    """CONCILIUM_SERVER_URL — URL base do servidor MCP HTTP."""
+
+    device_id: str
+    """CONCILIUM_DEVICE_ID — identificador local do dispositivo."""
+
+    device_code: str
+    """CONCILIUM_DEVICE_CODE — código de ativação para bootstrap de refresh token."""
+
+    @classmethod
+    def from_env(cls) -> "McpProxySettings":
+        return cls(
+            server_url=_str("CONCILIUM_SERVER_URL", "https://mcp.mendesloboconstrucao.com.br").rstrip("/"),
+            device_id=_str("CONCILIUM_DEVICE_ID", "default"),
+            device_code=_str("CONCILIUM_DEVICE_CODE", ""),
+        )
+
+
+_mcp_proxy: McpProxySettings | None = None
+
+
+def get_mcp_proxy() -> McpProxySettings:
+    global _mcp_proxy
+    if _mcp_proxy is None:
+        _mcp_proxy = McpProxySettings.from_env()
+    return _mcp_proxy
+
+
 # ── UiSettings ────────────────────────────────────────────────────────────────
 
 
@@ -580,9 +612,9 @@ class StorageSettings:
 
     @classmethod
     def from_env(cls) -> "StorageSettings":
-        root_raw = (os.environ.get("CONCILIUM__ROOT") or "").strip()
+        root_raw = _str("CONCILIUM__ROOT", "")
         root = Path(root_raw).expanduser().resolve() if root_raw else Path(__file__).resolve().parents[3]
-        config_root_raw = (os.environ.get("CONCILIUM__CONFIG_ROOT") or "").strip()
+        config_root_raw = _str("CONCILIUM__CONFIG_ROOT", "")
         config_root = Path(config_root_raw).expanduser().resolve() if config_root_raw else root / "config"
         return cls(
             root=root,
@@ -620,6 +652,15 @@ class TelemetrySettings:
     otel_console: bool
     """CONCILIUM__OTEL_CONSOLE — habilita console exporter OTEL em dev local."""
 
+    otel_sdk_disabled: bool
+    """OTEL_SDK_DISABLED — desativa telemetria OTEL por completo."""
+
+    otel_service_name: str
+    """OTEL_SERVICE_NAME — nome lógico do serviço exportado."""
+
+    otlp_endpoint: str
+    """OTEL_EXPORTER_OTLP_ENDPOINT — endpoint OTLP HTTP (sem sufixo /v1/*)."""
+
     rate_limit_global: str
     """CONCILIUM__RATE_LIMIT_GLOBAL — limite global de requests (default: 200/minute)."""
 
@@ -630,6 +671,9 @@ class TelemetrySettings:
     def from_env(cls) -> "TelemetrySettings":
         return cls(
             otel_console=_flag("CONCILIUM__OTEL_CONSOLE"),
+            otel_sdk_disabled=_flag("OTEL_SDK_DISABLED"),
+            otel_service_name=_str("OTEL_SERVICE_NAME", "concilium"),
+            otlp_endpoint=_str("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
             rate_limit_global=_str("CONCILIUM__RATE_LIMIT_GLOBAL", "200/minute"),
             rate_limit_storage_uri=_str("CONCILIUM__RATE_LIMIT_STORAGE_URI", "memory://"),
         )
@@ -825,8 +869,8 @@ def _check_auth(auth: "AuthSettings") -> list[str]:
 
 def _reset_all() -> None:
     """Invalida todos os singletons. Usar em fixtures de teste para isolar env vars."""
-    global _api, _mcp, _ui, _auth, _storage, _telemetry, _runtime
-    _api = _mcp = _ui = _auth = _storage = _telemetry = _runtime = None
+    global _api, _mcp, _mcp_proxy, _ui, _auth, _storage, _telemetry, _runtime
+    _api = _mcp = _mcp_proxy = _ui = _auth = _storage = _telemetry = _runtime = None
 
 
 # ── Resumo de diagnóstico ─────────────────────────────────────────────────────

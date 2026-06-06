@@ -32,17 +32,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import sys
 import threading
 import time
 from pathlib import Path
 
+from concilium.infrastructure.settings import get_mcp_proxy
+
 # ── Config from env ───────────────────────────────────────────────────────────
 
-_SERVER_URL = os.environ.get("CONCILIUM_SERVER_URL", "https://mcp.mendesloboconstrucao.com.br").rstrip("/")
-_DEVICE_ID = os.environ.get("CONCILIUM_DEVICE_ID", "default").strip()
-_DEVICE_CODE = os.environ.get("CONCILIUM_DEVICE_CODE", "").strip()
+_MCP_PROXY_SETTINGS = get_mcp_proxy()
+_SERVER_URL = _MCP_PROXY_SETTINGS.server_url
+_DEVICE_ID = _MCP_PROXY_SETTINGS.device_id
+_DEVICE_CODE = _MCP_PROXY_SETTINGS.device_code
 
 _TOKEN_DIR = Path.home() / ".concilium" / "tokens"
 _TOKEN_DIR.mkdir(parents=True, exist_ok=True)

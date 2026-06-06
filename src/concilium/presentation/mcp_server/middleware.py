@@ -14,8 +14,9 @@ streamable_http_app() e sse_app() com este middleware.
 
 from __future__ import annotations
 
-import os
 from typing import Any
+
+from concilium.infrastructure.settings import get_auth
 
 
 class McpAuthMiddleware:
@@ -76,9 +77,7 @@ class McpAuthMiddleware:
 
 
 def _auth_enabled() -> bool:
-    return os.environ.get("CONCILIUM__AUTH_ENABLED", "0").lower() not in (
-        "0", "false", "no", "off", ""
-    )
+    return get_auth().enabled
 
 
 async def _send_json_response(

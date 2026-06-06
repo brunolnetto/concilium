@@ -14,7 +14,7 @@ class CloudBlobStorageAdapter(BlobStoragePort):
         self.provider = provider
 
         # Em produção, validaria credenciais:
-        # self.api_key = os.environ.get(f"{provider}_API_KEY")
+        # Example placeholder for provider secrets lookup.
         # if not self.api_key:
         #     raise ValueError(f"Credenciais ausentes para provedor {provider}")
 

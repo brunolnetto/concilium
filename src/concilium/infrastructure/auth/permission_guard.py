@@ -23,9 +23,10 @@ Decorators disponíveis (funcionam em FastAPI routes e MCP tools):
 from __future__ import annotations
 
 import contextvars
-import os
 from functools import wraps
 from typing import Any
+
+from concilium.infrastructure.settings import get_auth
 
 # ── Permissões granulares ─────────────────────────────────────────────────────
 
@@ -124,9 +125,7 @@ def require_permission(perm: str, token_roles: list[str]) -> None:
 
 
 def _auth_enabled() -> bool:
-    return os.environ.get("CONCILIUM__AUTH_ENABLED", "0").lower() not in (
-        "0", "false", "no", "off", ""
-    )
+    return get_auth().enabled
 
 
 # ── Mapeamento MCP tool → permissão ──────────────────────────────────────────
