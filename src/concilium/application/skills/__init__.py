@@ -19,6 +19,10 @@ from concilium.application.skills.registry import SkillRegistry  # noqa: F401 �
 _MANIFESTS = Path(__file__).parent / "manifests"
 _IMPORT_LOCK = threading.Lock()
 
+SHIM_ID = "skills.dynamic_alias"
+SHIM_TARGET = "concilium.application.skills.<skill_name>"
+SHIM_SCOPE = "import-alias"
+
 
 def _skill_pkg_name(skill_id: str) -> str:
     return f"_concilium_skillpkg_{skill_id.replace('-', '_')}"
@@ -186,6 +190,14 @@ def _discover_manifest_meta() -> dict[str, dict]:
 _discover_skills = _discover_manifest_index
 
 
+def list_compat_aliases() -> dict[str, str]:
+    """Retorna mapeamento de compat alias -> módulo real lazy."""
+    return {
+        _get_compat_alias(skill_id): _skill_mod_name(skill_id)
+        for skill_id in _MANIFEST_INDEX
+    }
+
+
 class _LazySkillsDict:
     """Dict de skills com carregamento lazy dos módulos Python.
 
@@ -274,6 +286,10 @@ def __getattr__(name: str) -> Any:
 __all__ = [f"run_{k.split('-', 1)[1].replace('-', '_')}" for k in _MANIFEST_INDEX.keys()] + [
     "SKILLS",
     "MANIFEST_META",
+    "SHIM_ID",
+    "SHIM_TARGET",
+    "SHIM_SCOPE",
+    "list_compat_aliases",
     "SkillResult",
     "SkillRegistry",
 ]
