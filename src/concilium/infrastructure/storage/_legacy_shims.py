@@ -11,6 +11,10 @@ from concilium.domain.models.escopo import StatusPlano
 
 from .escopo_store import EscopoStore, PlanoStore
 
+SHIM_ID = "storage.adr031.layout"
+SHIM_TARGET = "EscopoStore/PlanoStore"
+SHIM_SCOPE = "runtime-adapter"
+
 # ── Shim de retrocompatibilidade (ADR-031 §D9) ──────────────────────────────
 
 
@@ -148,3 +152,12 @@ class _LegacyEscopoShim(EscopoStore):
     def approve_plan(self, plano_id: str) -> list[str]:
         self._project_store.approve(plano_id)
         return []
+
+
+__all__ = [
+    "SHIM_ID",
+    "SHIM_TARGET",
+    "SHIM_SCOPE",
+    "_LegacyEscopoShim",
+    "_LegacyPlanoShim",
+]
