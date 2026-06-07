@@ -116,7 +116,7 @@
         "quantitativo": 25000.0,
         "predecessores": [
           {
-            "item_id": "1.7",
+            "item_id": "1.6",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0

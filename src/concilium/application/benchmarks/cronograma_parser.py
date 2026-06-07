@@ -72,9 +72,10 @@ def _infer_predecessores(
     """Infer predecessores from item structure and order.
 
     Rules:
-    1. Items within same section (e.g., 2.1, 2.2, 2.3) depend on previous item
-    2. First item of section depends on previous section's last item
+    1. Items within same section (e.g., 2.1, 2.2, 2.3) depend on previous existing item in same section
+    2. If no previous item in section, depend on last item of previous section
     3. Very first item (1.1) has no dependencies
+    4. Handles gaps in numbering (e.g., 1.1 → 1.3 without 1.2)
 
     Section headers are not included as predecessors since they're excluded from EAP.
 
@@ -90,12 +91,21 @@ def _infer_predecessores(
     item_num = int(parts[1]) if len(parts) > 1 else 1
 
     predecessores = []
+    item_ids_in_section = set()
+
+    # Build set of all item_ids that actually exist in this section
+    for i in items:
+        i_parts = i.item_id.split(".")
+        if len(i_parts) == 2 and int(i_parts[0]) == section:
+            try:
+                item_ids_in_section.add(int(i_parts[1]))
+            except ValueError:
+                pass
 
     # If first item in section, depend on last item of previous section (if exists)
     if item_num == 1:
         if section > 1:
             # Previous section exists - find its last item
-            # Look for items in previous section to infer the last one
             prev_section_str = str(section - 1)
             last_prev_item = None
             max_prev_num = 0
@@ -118,14 +128,43 @@ def _infer_predecessores(
                 })
         # else: section == 1, first item overall, no predecessors
     else:
-        # Depend on previous item in same section
-        prev_item_id = f"{section}.{item_num - 1}"
-        predecessores.append({
-            "item_id": prev_item_id,
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 1.0  # Must finish before this can start
-        })
+        # Find previous existing item in same section (may not be item_num - 1 due to gaps)
+        prev_found = None
+        for num in range(item_num - 1, 0, -1):
+            if num in item_ids_in_section:
+                prev_found = f"{section}.{num}"
+                break
+
+        if prev_found:
+            predecessores.append({
+                "item_id": prev_found,
+                "tipo": "FS",
+                "lag": 0,
+                "completion_threshold_pct": 1.0  # Must finish before this can start
+            })
+        else:
+            # No previous item in section, depend on last item of previous section
+            if section > 1:
+                prev_section_str = str(section - 1)
+                last_prev_item = None
+                max_prev_num = 0
+                for i in items:
+                    if i.item_id.startswith(prev_section_str + "."):
+                        try:
+                            prev_num = int(i.item_id.split(".")[1])
+                            if prev_num > max_prev_num:
+                                max_prev_num = prev_num
+                                last_prev_item = i.item_id
+                        except (ValueError, IndexError):
+                            pass
+
+                if last_prev_item:
+                    predecessores.append({
+                        "item_id": last_prev_item,
+                        "tipo": "FS",
+                        "lag": 0,
+                        "completion_threshold_pct": 1.0
+                    })
 
     return predecessores
 

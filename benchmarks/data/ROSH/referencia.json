@@ -68,7 +68,7 @@
         "quantitativo": 115500.0,
         "predecessores": [
           {
-            "item_id": "1.4",
+            "item_id": "1.3",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -84,7 +84,7 @@
         "quantitativo": 115500.0,
         "predecessores": [
           {
-            "item_id": "1.9",
+            "item_id": "1.5",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -100,7 +100,7 @@
         "quantitativo": 7150.0,
         "predecessores": [
           {
-            "item_id": "1.13",
+            "item_id": "1.10",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -116,7 +116,7 @@
         "quantitativo": 28875.0,
         "predecessores": [
           {
-            "item_id": "1.16",
+            "item_id": "1.14",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -132,7 +132,7 @@
         "quantitativo": 17820.0,
         "predecessores": [
           {
-            "item_id": "1.20",
+            "item_id": "1.17",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -148,7 +148,7 @@
         "quantitativo": 46200.0,
         "predecessores": [
           {
-            "item_id": "1.24",
+            "item_id": "1.21",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -164,7 +164,7 @@
         "quantitativo": 5720.0,
         "predecessores": [
           {
-            "item_id": "1.28",
+            "item_id": "1.25",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -180,7 +180,7 @@
         "quantitativo": 110000.0,
         "predecessores": [
           {
-            "item_id": "1.32",
+            "item_id": "1.29",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0

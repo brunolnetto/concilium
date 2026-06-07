@@ -36,7 +36,7 @@
         "quantitativo": 15600.0,
         "predecessores": [
           {
-            "item_id": "1.2",
+            "item_id": "1.1",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
@@ -116,7 +116,7 @@
         "quantitativo": 6300.0,
         "predecessores": [
           {
-            "item_id": "3.2",
+            "item_id": "3.1",
             "tipo": "FS",
             "lag": 0,
             "completion_threshold_pct": 1.0
