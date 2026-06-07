@@ -425,10 +425,12 @@ def _extract_activities(canonical: CanonicalModel) -> list[Activity]:
             )
         return activities
 
+    # Fallback to EAP: must use activity_id format "item_id-atv-1" to match DAG edges
     for item in canonical.eap:
+        activity_id = f"{item.item_id}-atv-1"
         activities.append(
             Activity(
-                activity_id=item.item_id,
+                activity_id=activity_id,
                 description=item.descricao,
                 duration_weeks=1,
                 required_resources={},

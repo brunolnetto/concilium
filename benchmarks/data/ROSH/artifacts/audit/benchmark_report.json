@@ -4,24 +4,21 @@
   "versao": "v1",
   "skills_log": [
     {
-      "skill": "02-produtividade-climatica",
-      "status": "OK",
-      "duration_ms": 2617,
-      "avisos": []
-    },
-    {
-      "skill": "03-catalogo-de-recursos",
-      "status": "OK",
-      "duration_ms": 107,
-      "avisos": []
-    },
-    {
-      "skill": "04-cronograma",
+      "skill": "01-escopo-e-eap",
       "status": "ERRO",
-      "duration_ms": 98,
-      "avisos": [],
+      "duration_ms": 1713,
+      "avisos": [
+        "14 EAP items referenciam CPUs inexistentes no catálogo: '1.1' (CPU-MOB-001), '1.2' (CPU-MOB-002), '1.3' (CPU-MOB-003)..."
+      ],
       "erros": [
-        "EAP vazia no canônico."
+        "Precedência inválida: 1.4 -> 1.5 (item não encontrado na EAP)",
+        "Precedência inválida: 1.9 -> 1.10 (item não encontrado na EAP)",
+        "Precedência inválida: 1.13 -> 1.14 (item não encontrado na EAP)",
+        "Precedência inválida: 1.16 -> 1.17 (item não encontrado na EAP)",
+        "Precedência inválida: 1.20 -> 1.21 (item não encontrado na EAP)",
+        "Precedência inválida: 1.24 -> 1.25 (item não encontrado na EAP)",
+        "Precedência inválida: 1.28 -> 1.29 (item não encontrado na EAP)",
+        "Precedência inválida: 1.32 -> 1.33 (item não encontrado na EAP)"
       ]
     }
   ],

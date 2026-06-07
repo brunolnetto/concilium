@@ -1,9 +1,9 @@
 {
   "meta": {
-    "timestamp": "2026-06-07T21:05:51.427879+00:00",
+    "gerado_em": "2026-06-07T22:52:54.254379+00:00",
     "total": 12
   },
-  "summary": [
+  "rows": [
     {
       "Projeto": "AGIS",
       "Status": "INVIAVEL/AVISO",
@@ -14,7 +14,7 @@
     },
     {
       "Projeto": "CTC",
-      "Status": "INVIAVEL/AVISO",
+      "Status": "APROVADO/AVISO",
       "Delta Direto %": "N/A",
       "Delta Indireto %": "N/A",
       "Delta Total %": "N/A",
