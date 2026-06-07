@@ -1,6 +1,6 @@
 {
   "meta": {
-    "gerado_em": "2026-06-07T23:27:02.231021+00:00",
+    "gerado_em": "2026-06-07T23:32:28.470203+00:00",
     "total": 12
   },
   "rows": [
@@ -14,7 +14,7 @@
     },
     {
       "Projeto": "CTC",
-      "Status": "APROVADO/AVISO",
+      "Status": "INVIAVEL/AVISO",
       "Delta Direto %": "N/A",
       "Delta Indireto %": "N/A",
       "Delta Total %": "N/A",

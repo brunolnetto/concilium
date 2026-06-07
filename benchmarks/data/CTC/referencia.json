@@ -106,15 +106,6 @@
             "completion_threshold_pct": 1.0
           }
         ]
-      },
-      {
-        "item_id": "1.1",
-        "ordem": 7,
-        "cpu_id": "CPU-MOB-001",
-        "descricao": "REMOÇÃO DO SOLO VEGETAL, E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA",
-        "unidade": "M3",
-        "quantitativo": 79231.92,
-        "predecessores": []
       }
     ],
     "cronograma": [
@@ -145,11 +136,6 @@
       },
       {
         "item_id": "1.6",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.1",
         "producao_diaria": 0.0,
         "semanas": {}
       }

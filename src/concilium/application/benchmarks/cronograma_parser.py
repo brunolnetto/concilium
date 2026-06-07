@@ -277,11 +277,19 @@ class CronogramaParser:
                         producao_diaria=producao_diaria,
                     ))
 
+        # Deduplicate items by item_id (keep first occurrence)
+        seen_ids: set[str] = set()
+        unique_items = []
+        for item in items:
+            if item.item_id not in seen_ids:
+                unique_items.append(item)
+                seen_ids.add(item.item_id)
+
         # Convert to EAP format with inferred predecessores
         eap_items = []
         ordem = 1
 
-        for item in items:
+        for item in unique_items:
             cpu_id = _find_cpu_for_item(item.descricao, self.cpus_map) or "CPU-UNKNOWN"
             predecessores = _infer_predecessores(items, item.item_id, secao_map)
 
