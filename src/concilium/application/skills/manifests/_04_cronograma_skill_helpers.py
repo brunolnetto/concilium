@@ -18,7 +18,7 @@ from concilium.application.scheduling.models import Activity, ActivityDAG
 def extract_dag_from_spec_or_eap(
     spec: dict,
     activities: list[Activity],
-    eap_items: "list[EapItem] | None" = None,
+    eap_items: list[EapItem] | None = None,
 ) -> ActivityDAG:
     """Constrói ActivityDAG a partir de rcpsp_spec e/ou spec.eap (ADR-081).
 

@@ -1,18 +1,13 @@
 """Testes para Proveniência de Benchmark em Projetos (NEP-039 Fase 3)."""
-from datetime import datetime, date
+
+from datetime import date, datetime
 from uuid import uuid4
 
-import pytest
-
-from src.concilium.domain.benchmark.models import (
-    BenchmarkMetadata,
-    BenchmarkExecution,
-)
 from src.concilium.domain.models.canonical import (
-    Meta,
-    Projeto,
     CanonicalModel,
     Coordenadas,
+    Meta,
+    Projeto,
 )
 
 

@@ -1,13 +1,13 @@
 """Testes para ciclo de vida completo benchmark → execução → proveniência."""
+
 from datetime import datetime
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 
 from src.concilium.domain.benchmark.models import (
-    BenchmarkMetadata,
     BenchmarkExecution,
+    BenchmarkMetadata,
 )
 from src.concilium.infrastructure.storage.benchmark_store import (
     FileSystemBenchmarkStore,
@@ -48,9 +48,7 @@ def test_ciclo_vida_benchmark_completo(benchmark_store):
     benchmark_store.save_metadata(meta_v1)
 
     # Passo 3: Tentar editar v1 deve gerar v2
-    meta_v2 = benchmark_store.create_new_version(
-        "AGIS_2025_Q1", patch={"tags": ["civil", "updated"]}
-    )
+    meta_v2 = benchmark_store.create_new_version("AGIS_2025_Q1", patch={"tags": ["civil", "updated"]})
 
     # Verificações
     assert meta_v2.versao == 2

@@ -18,7 +18,6 @@ from collections.abc import Callable
 from io import BytesIO
 from xml.sax.saxutils import escape as _xml_escape
 
-
 _MD_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 _MD_BOLD_RE = re.compile(r"\*\*([^*]+)\*\*")
 _MD_INLINE_CODE_RE = re.compile(r"`([^`]+)`")
@@ -286,9 +285,7 @@ def _parse_md_to_story(
 
         # ---- Horizontal rule ----
         if stripped == "---":
-            story.append(
-                HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=2 * mm)
-            )
+            story.append(HRFlowable(width="100%", thickness=0.5, color=colors.grey, spaceAfter=2 * mm))
             continue
 
         # ---- Empty line ----

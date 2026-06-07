@@ -641,7 +641,7 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
         "categoria_componente": False,  # cross-tab estático: categoria × componente
         "atividade_componente": False,  # breakdown por atividade, sem eixo temporal
         "diesel_temporal": True,
-        "abc_curva": False,             # pareto por insumo, sem tempo
+        "abc_curva": False,  # pareto por insumo, sem tempo
         "s_curve_custo": True,
         "recursos_ativos_tempo": True,
     }
@@ -697,9 +697,9 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
     # Apenas os filtros relevantes à face selecionada ficam visíveis.
     # Calcula larguras proporcionais: categoria/componente = 2, atividade = 3.
     _filter_specs = [
-        ("categoria",  2, "cat"),
+        ("categoria", 2, "cat"),
         ("componente", 2, "comp"),
-        ("atividade",  3, "act"),
+        ("atividade", 3, "act"),
     ]
     _active = [(dim, w, k) for dim, w, k in _filter_specs if active_filter_cfg.get(dim)]
 
@@ -820,8 +820,11 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
             d3.metric(f"Média/{granularidade}", f"{media_l:,.0f} L")
             # Sugestão de tanque: pico × fator de segurança (1.5 × ciclo de reabastecimento estimado em 2 períodos)
             tanque_sugerido = pico_l * 1.5 * 2
-            d4.metric("Tanque sugerido ×3", f"{tanque_sugerido:,.0f} L",
-                      help="Estimativa conservadora: pico × 1,5 (fator segurança) × 2 (ciclo de reabastecimento). Ajuste conforme frequência de entrega.")
+            d4.metric(
+                "Tanque sugerido ×3",
+                f"{tanque_sugerido:,.0f} L",
+                help="Estimativa conservadora: pico × 1,5 (fator segurança) × 2 (ciclo de reabastecimento). Ajuste conforme frequência de entrega.",
+            )
         else:
             c1, c2, c3 = st.columns(3)
             c1.metric("Preço de venda", f"R$ {float(totals.get('total_preco_venda', 0.0)):,.0f}")
@@ -2066,7 +2069,7 @@ def render_deliverables_config(base_url: str, project_id: str, actor: str) -> No
         "relatorio.pdf",
         value=_get("relatorio_pdf", True),
         key=f"deliv-{project_id}-rpdf",
-        help="PDF gerado do Markdown via fpdf2",
+        help="PDF nativo financeiro (ReportLab)",
     )
 
     if st.button(
@@ -2908,7 +2911,9 @@ def _cpu_equipe_parts(cpu: dict) -> tuple[list, list, list]:
     """Extracts (funcoes, equipamentos, composicao_itens) from a CPU dict."""
     equipe_block = cpu.get("equipe")
     if not isinstance(equipe_block, dict):
-        equipe_block = cpu.get("composicao_padrao_equipe") if isinstance(cpu.get("composicao_padrao_equipe"), dict) else {}
+        equipe_block = (
+            cpu.get("composicao_padrao_equipe") if isinstance(cpu.get("composicao_padrao_equipe"), dict) else {}
+        )
     funcoes = list((equipe_block or {}).get("funcoes") or [])
     equipamentos = list((equipe_block or {}).get("equipamentos") or [])
     composicao_itens = list(cpu.get("composicao_itens") or cpu.get("composicao_completa") or [])
@@ -3011,9 +3016,7 @@ def _render_cpu_comp_expander(
     """Renders the composition editor expander for one CPU."""
     descricao = cpu.get("descricao", "")
     funcoes, equipamentos, composicao_itens = _cpu_equipe_parts(cpu)
-    _comp_cats = sorted(
-        {it.get("categoria_custo", "?") for it in composicao_itens}
-    )
+    _comp_cats = sorted({it.get("categoria_custo", "?") for it in composicao_itens})
     _parts: list[str] = []
     if funcoes:
         _parts.append(f"MO:{len(funcoes)}")

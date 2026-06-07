@@ -54,9 +54,7 @@ def register(server: FastMCP) -> None:
 
     # ADR-101: _meta.ui para MCP Apps (Fase 1)
     _ui_metas = {
-        "simular_cenario_replan": {
-            "ui": {"resourceUri": "ui://concilium/diagnostico-pe", "permissions": []}
-        },
+        "simular_cenario_replan": {"ui": {"resourceUri": "ui://concilium/diagnostico-pe", "permissions": []}},
     }
     for tool_name, meta in _ui_metas.items():
         try:

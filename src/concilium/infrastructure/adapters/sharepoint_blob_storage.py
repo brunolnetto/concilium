@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -289,10 +290,10 @@ class SharePointBlobStorage(BlobStoragePort):
         tenant proíbe links anônimos, a chamada falha e retornamos ``None`` (o
         chamador recai no transporte base64).
         """
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         httpx = self._client()
-        exp = (datetime.now(timezone.utc) + timedelta(seconds=max(60, ttl_segundos))).isoformat()
+        exp = (datetime.now(UTC) + timedelta(seconds=max(60, ttl_segundos))).isoformat()
         try:
             r = httpx.post(
                 f"{self._item_url(path)}:/createLink",

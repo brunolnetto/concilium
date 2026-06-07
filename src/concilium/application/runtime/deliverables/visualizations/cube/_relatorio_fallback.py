@@ -50,7 +50,8 @@ def build_relatorio_fallback(relatorio: dict) -> dict[str, bytes]:
             n_cols = min(max(1, len(tipos)), 4)
             n_rows = (len(tipos) + n_cols - 1) // n_cols
             fig, axes = plt.subplots(
-                n_rows, n_cols,
+                n_rows,
+                n_cols,
                 figsize=(max(7, n_cols * 4.5), max(4, n_rows * 3.6)),
                 squeeze=False,
             )
@@ -69,7 +70,7 @@ def build_relatorio_fallback(relatorio: dict) -> dict[str, bytes]:
                 )
                 axis.set_title(tipo, fontsize=10, fontweight="bold")
                 axis.grid(axis="y", alpha=0.3)
-            for axis in flat_axes[len(tipos):]:
+            for axis in flat_axes[len(tipos) :]:
                 axis.set_visible(False)
             fig.suptitle("Instancias de Recurso", fontsize=12, fontweight="bold")
             fig.tight_layout()
@@ -118,7 +119,9 @@ def build_relatorio_fallback(relatorio: dict) -> dict[str, bytes]:
             height = 0.35
             fig, ax = plt.subplots(figsize=(12, max(4, len(items) * 0.65 + 2)))
             ax.barh([idx + height / 2 for idx in y], venda, height, color="#1a3a5c", alpha=0.85, label="Venda")
-            ax.barh([idx - height / 2 for idx in y], operacional, height, color="#c05c18", alpha=0.75, label="Operacional")
+            ax.barh(
+                [idx - height / 2 for idx in y], operacional, height, color="#c05c18", alpha=0.75, label="Operacional"
+            )
             ax.set_yticks(y)
             ax.set_yticklabels(items, fontsize=8)
             ax.set_xlabel("R$ (Mi)", fontsize=9)

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import pytest
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Novos campos de modelo
 # ─────────────────────────────────────────────────────────────────────────────
@@ -25,24 +24,35 @@ class TestNovosCamposModelo:
         from concilium.domain.models.canonical import InstanciaRecurso
 
         defaults = dict(
-            instancia_id="ATERRO-04", contrato_id="contrato-aterro",
-            tipo_id="ATERRO", numero=4,
-            semana_entrada="2026-W23", semana_saida="2027-W21",
+            instancia_id="ATERRO-04",
+            contrato_id="contrato-aterro",
+            tipo_id="ATERRO",
+            numero=4,
+            semana_entrada="2026-W23",
+            semana_saida="2027-W21",
         )
         return InstanciaRecurso(**{**defaults, **kwargs})
 
     def test_instancia_recurso_tem_desmob_antecipada_aplicada(self):
-        inst = self._inst(semanas_ativas=6, semanas_standby=43,
-                          taxa_utilizacao_pct=12.2, custo_standby=322500.0,
-                          atividades_cobertas=["eap-1_10"])
+        inst = self._inst(
+            semanas_ativas=6,
+            semanas_standby=43,
+            taxa_utilizacao_pct=12.2,
+            custo_standby=322500.0,
+            atividades_cobertas=["eap-1_10"],
+        )
         assert hasattr(inst, "desmob_antecipada_aplicada")
         assert inst.desmob_antecipada_aplicada is False
 
     def test_instancia_recurso_desmob_aplicada_pode_ser_true(self):
-        inst = self._inst(semanas_ativas=37, semanas_standby=11,
-                          taxa_utilizacao_pct=77.1, custo_standby=132000.0,
-                          atividades_cobertas=["eap-1_5", "eap-1_6"],
-                          desmob_antecipada_aplicada=True)
+        inst = self._inst(
+            semanas_ativas=37,
+            semanas_standby=11,
+            taxa_utilizacao_pct=77.1,
+            custo_standby=132000.0,
+            atividades_cobertas=["eap-1_5", "eap-1_6"],
+            desmob_antecipada_aplicada=True,
+        )
         assert inst.desmob_antecipada_aplicada is True
 
     def test_recurso_contrato_tem_mobilizacao_por_instancia(self):
@@ -96,7 +106,9 @@ class TestIdleRateDiferenciado:
 
     def test_custo_sem_standby_usa_taxa_plena(self):
         """Quando não há standby, custo = c_unit × active_weeks × n_units."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         # Instância com 10 semanas ativas, 0 standby
         custo = calcular_custo_contrato_por_instancia(
@@ -112,7 +124,9 @@ class TestIdleRateDiferenciado:
 
     def test_custo_com_standby_usa_idle_quando_disponivel(self):
         """Standby cobrado a c_idle (menor) quando disponível."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         custo = calcular_custo_contrato_por_instancia(
             active_weeks=10,
@@ -127,7 +141,9 @@ class TestIdleRateDiferenciado:
 
     def test_custo_standby_sem_idle_usa_taxa_plena(self):
         """Fallback: quando c_idle=0, standby usa c_unit (comportamento legado)."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         custo_idle = calcular_custo_contrato_por_instancia(
             active_weeks=10,
@@ -150,7 +166,9 @@ class TestIdleRateDiferenciado:
 
     def test_c_idle_menor_que_c_unit_reduz_custo_total(self):
         """Usar c_idle < c_unit reduz o custo comparado ao modelo legado (c_unit para tudo)."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         custo_novo = calcular_custo_contrato_por_instancia(
             active_weeks=35,
@@ -179,7 +197,9 @@ class TestIdleRateDiferenciado:
 class TestDesmobEfetivaReduzCusto:
     def test_desmob_elimina_trailing_standby(self):
         """Com early demob, trailing standby é substituído por custo de desmob."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         # Sem early demob: 35 ativas + 43 trailing standby
         custo_sem_desmob = calcular_custo_contrato_por_instancia(
@@ -229,7 +249,9 @@ class TestDesmobEfetivaReduzCusto:
 class TestMobilizacaoTardia:
     def test_instancia_tardia_tem_menos_semanas_de_contrato(self):
         """Uma instância mobilizada na semana 36 (não na 1) tem contrato menor."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         # ATERRO-04 no AGIS iter-3: mobilizada semana 36, dura até semana 41 (6 semanas)
         custo_tardio = calcular_custo_contrato_por_instancia(
@@ -253,17 +275,25 @@ class TestMobilizacaoTardia:
 
     def test_reducao_custo_mob_tardia_agis_aterro04(self):
         """Economia estimada com mob tardia de ATERRO-04: ~R$297k (43 semanas × R$7500 - R$25k demob)."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         custo_baseline = calcular_custo_contrato_por_instancia(
-            active_weeks=6, standby_weeks=43,
-            custo_unit_semanal=150000.0, custo_idle_semanal=7500.0,
-            custo_mob=50000.0, custo_demob=0.0,
+            active_weeks=6,
+            standby_weeks=43,
+            custo_unit_semanal=150000.0,
+            custo_idle_semanal=7500.0,
+            custo_mob=50000.0,
+            custo_demob=0.0,
         )
         custo_otimizado = calcular_custo_contrato_por_instancia(
-            active_weeks=6, standby_weeks=0,
-            custo_unit_semanal=150000.0, custo_idle_semanal=7500.0,
-            custo_mob=50000.0, custo_demob=25000.0,
+            active_weeks=6,
+            standby_weeks=0,
+            custo_unit_semanal=150000.0,
+            custo_idle_semanal=7500.0,
+            custo_mob=50000.0,
+            custo_demob=25000.0,
         )
         economia = custo_baseline - custo_otimizado
         # 43 × 7500 - 25000 = 322500 - 25000 = 297500
@@ -278,7 +308,9 @@ class TestMobilizacaoTardia:
 class TestCompatibilidadeRetroativa080:
     def test_sem_c_idle_comportamento_identico_ao_anterior(self):
         """Sem c_idle, custo = c_unit × (active + standby) + mob + demob."""
-        from concilium.application.skills.manifests._05_equipes_custo_helpers import calcular_custo_contrato_por_instancia  # noqa
+        from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+            calcular_custo_contrato_por_instancia,
+        )  # noqa
 
         custo = calcular_custo_contrato_por_instancia(
             active_weeks=10,
@@ -295,8 +327,12 @@ class TestCompatibilidadeRetroativa080:
         from concilium.domain.models.canonical import InstanciaRecurso
 
         inst = InstanciaRecurso(
-            instancia_id="X-01", contrato_id="c", tipo_id="X", numero=1,
-            semana_entrada="2026-W01", semana_saida="2026-W10",
+            instancia_id="X-01",
+            contrato_id="c",
+            tipo_id="X",
+            numero=1,
+            semana_entrada="2026-W01",
+            semana_saida="2026-W10",
         )
         assert inst.desmob_antecipada_aplicada is False
 

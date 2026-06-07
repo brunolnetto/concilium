@@ -36,8 +36,8 @@ def reload_catalog() -> dict[str, object]:
             del runtime._config_cache[k]
 
         # Deleta o bundle em disco para forçar reconstrução completa na próxima carga
-        from pathlib import Path
         from concilium.presentation.cli.shared import config_root
+
         cfg = config_root()
         deleted_bundles = []
         for bundle in cfg.rglob(".catalog_bundle.json"):

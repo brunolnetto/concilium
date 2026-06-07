@@ -9,13 +9,19 @@ from __future__ import annotations
 
 from ._common import COLORS, init_mpl
 
-_COMP_LABELS = {"mo": "MO (CLT)", "eq": "Equip.", "comb": "Combustível", "mat": "Material"}
+_COMP_LABELS = {
+    "mo": "Mão-de-obra",
+    "eq": "Equipamento",
+    "comb": "Combustível",
+    "mat": "Material",
+}
 _ESTADO_LABELS = {"prod": "Produtivo", "idle": "Ocioso", "off": "Desmobilizado"}
 
 
 def build(canonical, cubo=None) -> bytes | None:
     try:
         from concilium.application.services.cubo_pool_projection import resolve_cubo_pool_projection
+
         proj = resolve_cubo_pool_projection(canonical, face="custo_estado_componente")
     except Exception:
         return None
@@ -32,6 +38,7 @@ def build(canonical, cubo=None) -> bytes | None:
     try:
         # Constrói matriz: estado → {comp → valor}
         from collections import defaultdict
+
         matrix: dict[str, dict[str, float]] = defaultdict(dict)
         for r in rows:
             estado = r.get("estado", "")
@@ -53,25 +60,29 @@ def build(canonical, cubo=None) -> bytes | None:
 
         for ci, (comp_key, comp_label) in enumerate(zip(comp_keys, comps)):
             vals = [matrix[e].get(comp_label, matrix[e].get(comp_key, 0.0)) / 1e6 for e in estados]
-            ax.bar(x, vals, bar_width, bottom=bottoms, color=COLORS[ci % len(COLORS)],
-                   alpha=0.85, label=comp_label)
+            ax.bar(x, vals, bar_width, bottom=bottoms, color=COLORS[ci % len(COLORS)], alpha=0.85, label=comp_label)
             bottoms = [b + v for b, v in zip(bottoms, vals)]
 
         ax.set_xticks(x)
         ax.set_xticklabels(estados, fontsize=10)
         ax.set_ylabel("Custo (R$ M)", fontsize=10)
-        ax.set_title("Custo do Pool por Estado × Componente\n"
-                     "(ocioso = MO integral CLT + EQ locação reduzida; comb/mat = 0)",
-                     fontsize=11, fontweight="bold")
-        ax.legend(fontsize=9)
+        ax.set_title("Custo do Pool por Estado e Componente", fontsize=11, fontweight="bold")
+        ax.legend(fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=4, frameon=False)
         ax.grid(axis="y", alpha=0.3)
 
-        narrativa = (proj.get("narrativa") or [])
-        for i, n_txt in enumerate(narrativa[:2]):
-            fig.text(0.02, -0.04 - i * 0.05, n_txt, fontsize=7.5, color="#555",
-                     transform=ax.transAxes, ha="left")
+        narrativa = proj.get("narrativa") or []
+        if narrativa:
+            fig.text(
+                0.01,
+                0.01,
+                narrativa[0],
+                fontsize=7.5,
+                color="#555",
+                ha="left",
+                wrap=True,
+            )
 
-        fig.tight_layout()
+        fig.tight_layout(rect=(0, 0.07, 1, 1))
         return fig_to_bytes(fig)
     except Exception:
         plt.close("all")

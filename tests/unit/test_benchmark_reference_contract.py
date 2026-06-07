@@ -61,13 +61,7 @@ def test_validate_benchmark_reference_contract_filters_invalid_and_duplicate_row
     [
         {"eap": [{"item_id": "L1", "cpu_id": "CPU-999"}]},
         {"skill_inputs": {"01-escopo-e-eap": {"eap": [{"item_id": "L2", "cpu_id": "CPU-998"}]}}},
-        {
-            "skill_inputs": {
-                "01-escopo-e-eap": {
-                    "inputs_escopo": {"eap": [{"item_id": "L3", "cpu_id": "CPU-997"}]}
-                }
-            }
-        },
+        {"skill_inputs": {"01-escopo-e-eap": {"inputs_escopo": {"eap": [{"item_id": "L3", "cpu_id": "CPU-997"}]}}}},
     ],
 )
 def test_validate_benchmark_reference_contract_rejects_historical_eap_sources(

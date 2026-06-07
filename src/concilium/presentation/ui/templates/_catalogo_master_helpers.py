@@ -134,13 +134,7 @@ def _cmb_enrich_funcoes(funcoes: list, catalog_id: str) -> list[dict]:
             continue
         funcao_id = str(funcao.get("funcao_id") or "").strip()
         insumo = insumos_index.get(funcao_id) or {}
-        descricao = (
-            funcao.get("descricao")
-            or insumo.get("descricao")
-            or funcao.get("funcao")
-            or funcao_id
-            or ""
-        )
+        descricao = funcao.get("descricao") or insumo.get("descricao") or funcao.get("funcao") or funcao_id or ""
         enriched.append(
             {
                 **funcao,

@@ -188,10 +188,7 @@ _discover_skills = _discover_manifest_index
 
 def list_compat_aliases() -> dict[str, str]:
     """Retorna mapeamento alias -> módulo real lazy."""
-    return {
-        _get_compat_alias(skill_id): _skill_mod_name(skill_id)
-        for skill_id in _MANIFEST_INDEX
-    }
+    return {_get_compat_alias(skill_id): _skill_mod_name(skill_id) for skill_id in _MANIFEST_INDEX}
 
 
 class _LazySkillsDict:

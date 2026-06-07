@@ -7,6 +7,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import (
     ConciliumRuntimeError,
     _get_or_create_trace_id,
@@ -15,7 +16,6 @@ from concilium.presentation.mcp._context import (
     _runtime,
     _wrap_response,
 )
-from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 

@@ -33,22 +33,22 @@ from concilium.domain.models.canonical import (
 )
 
 _LEVER_ID_TO_TIPO: dict[str, str] = {
-    "fechar_gap_escala":          "SERIALIZAR_CRONOGRAMA",
+    "fechar_gap_escala": "SERIALIZAR_CRONOGRAMA",
     "fechar_gap_praticabilidade": "MELHORAR_PRATICABILIDADE",
-    "fechar_gap_pool":            "OTIMIZAR_POOL",
-    "revisao_bdi_minima":         "RECALIBRAR_PU",
+    "fechar_gap_pool": "OTIMIZAR_POOL",
+    "revisao_bdi_minima": "RECALIBRAR_PU",
 }
 _LEVER_CHECKPOINT: dict[str, str] = {
-    "SERIALIZAR_CRONOGRAMA":    "04-cronograma",
+    "SERIALIZAR_CRONOGRAMA": "04-cronograma",
     "MELHORAR_PRATICABILIDADE": "04-cronograma",
-    "OTIMIZAR_POOL":            "05-equipes-e-alocacao",
-    "RECALIBRAR_PU":            "06-precificacao-unitaria",
+    "OTIMIZAR_POOL": "05-equipes-e-alocacao",
+    "RECALIBRAR_PU": "06-precificacao-unitaria",
 }
 _LEVER_CONFIANCA: dict[str, str] = {
-    "SERIALIZAR_CRONOGRAMA":    "ALTA",
+    "SERIALIZAR_CRONOGRAMA": "ALTA",
     "MELHORAR_PRATICABILIDADE": "MEDIA",
-    "OTIMIZAR_POOL":            "ALTA",
-    "RECALIBRAR_PU":            "MEDIA",
+    "OTIMIZAR_POOL": "ALTA",
+    "RECALIBRAR_PU": "MEDIA",
 }
 
 
@@ -77,12 +77,10 @@ def _build_levers(
         return []
 
     # Agrega por tipo PSE: soma delta_margin_pct de todos os itens
-    agg: dict[str, dict] = defaultdict(lambda: {
-        "delta_rs": 0.0, "delta_pct": 0.0, "itens": [], "restricoes": []
-    })
+    agg: dict[str, dict] = defaultdict(lambda: {"delta_rs": 0.0, "delta_pct": 0.0, "itens": [], "restricoes": []})
 
-    for pe in (canonical_in.ponto_equilibrio or []):
-        for lv in (pe.levers_equilibrio or []):
+    for pe in canonical_in.ponto_equilibrio or []:
+        for lv in pe.levers_equilibrio or []:
             tipo_pse = _LEVER_ID_TO_TIPO.get(lv.id)
             if tipo_pse is None:
                 continue
@@ -134,13 +132,19 @@ def _build_levers(
         semanas_total = max(int((proj.data_termino - proj.data_inicio).days / 7), 1)
         if custo_ind > 0:
             dm = round(0.10 * custo_ind / venda, 6)
-            levers.append(Lever(
-                tipo="REDUCE_DURATION", checkpoint_skill="04-cronograma",
-                parametros={"deadline_weeks": str(int(semanas_total * 0.9))},
-                delta_margem_estimado=dm, custo_aplicacao=0.0, ratio_beneficio=dm,
-                confianca="BAIXA", controle="TUNAVEL",
-                justificativa="Fallback: redução de 10% no prazo → corte proporcional de indiretos.",
-            ))
+            levers.append(
+                Lever(
+                    tipo="REDUCE_DURATION",
+                    checkpoint_skill="04-cronograma",
+                    parametros={"deadline_weeks": str(int(semanas_total * 0.9))},
+                    delta_margem_estimado=dm,
+                    custo_aplicacao=0.0,
+                    ratio_beneficio=dm,
+                    confianca="BAIXA",
+                    controle="TUNAVEL",
+                    justificativa="Fallback: redução de 10% no prazo → corte proporcional de indiretos.",
+                )
+            )
 
     levers.sort(key=lambda lv: -lv.ratio_beneficio)
     return levers
@@ -246,7 +250,7 @@ def run_explorador_cenarios(
 
     if status_entrada != "VERDE":
         repair = _repair_path(levers, margem_entrada, faixa_alvo, faixa_aceitavel)
-        levers_nao_usados = levers[len(repair.passos):]
+        levers_nao_usados = levers[len(repair.passos) :]
         oportunidades = _rec_build_oportunidades(levers, levers_nao_usados)
     else:
         oportunidades = sorted(_rec_build_oportunidades(levers), key=lambda o: -o.margem_adicional_estimada)

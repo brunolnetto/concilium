@@ -7,8 +7,6 @@ Written before implementation (red phase).
 
 from __future__ import annotations
 
-import pytest
-
 from concilium.application.scheduling.lns_scheduler import LnsScheduler
 from concilium.application.scheduling.models import (
     Activity,
@@ -18,7 +16,6 @@ from concilium.application.scheduling.models import (
 )
 from concilium.domain.models.optimization import RampProfile
 from concilium.domain.services.matching_oracle import MatchingOracle
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

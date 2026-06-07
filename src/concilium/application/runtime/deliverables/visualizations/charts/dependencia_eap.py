@@ -7,8 +7,8 @@ from ._common import init_mpl
 # --- Constantes visuais ---
 _NODE_W = 2.8
 _NODE_H = 0.7
-_H_SPACING = 4.0   # distância horizontal entre níveis
-_V_SPACING = 1.4   # distância vertical entre nós no mesmo nível
+_H_SPACING = 4.0  # distância horizontal entre níveis
+_V_SPACING = 1.4  # distância vertical entre nós no mesmo nível
 _FG_DARK = "#1a3a5c"
 _FG_LIGHT = "#d6e4f0"
 
@@ -23,6 +23,7 @@ def build_dependencia_eap(cronograma: dict) -> bytes | None:
 # ---------------------------------------------------------------------------
 # Helpers de grafo
 # ---------------------------------------------------------------------------
+
 
 def _pred_id_from(pred) -> str:
     return pred.get("item_id") if isinstance(pred, dict) else str(pred)
@@ -62,6 +63,7 @@ def _build_pred_count(tasks: list) -> tuple[list[str], dict[str, set[str]]]:
 
 def _init_queue(nodes: list, pred_count: dict):
     from collections import deque
+
     in_deg = {n: len(pred_count[n]) for n in nodes}
     return deque(n for n in nodes if in_deg[n] == 0), in_deg
 
@@ -110,6 +112,7 @@ def _assign_positions(tasks: list) -> tuple[dict, dict]:
 # Renderer principal
 # ---------------------------------------------------------------------------
 
+
 def _build_name_map(tasks: list) -> dict[str, str]:
     return {str(t.get("item_id", "")): (t.get("name") or str(t.get("item_id", ""))) for t in tasks}
 
@@ -151,8 +154,13 @@ def _draw_single_edge(ax, pos: dict, pred_id: str, succ_id: str, edge_label: str
     )
     mx, my = (start[0] + end[0]) / 2, (start[1] + end[1]) / 2 + 0.18
     ax.text(
-        mx, my, edge_label,
-        ha="center", va="bottom", fontsize=7, color=_FG_DARK,
+        mx,
+        my,
+        edge_label,
+        ha="center",
+        va="bottom",
+        fontsize=7,
+        color=_FG_DARK,
         path_effects=[pe.withStroke(linewidth=2, foreground="white")],
     )
 
@@ -183,7 +191,7 @@ def _break_long_label(label: str) -> str:
         for d in (offset, -offset):
             idx = mid + d
             if 0 < idx < len(label) and label[idx] == " ":
-                return label[:idx] + "\n" + label[idx + 1:]
+                return label[:idx] + "\n" + label[idx + 1 :]
     return label
 
 
@@ -192,7 +200,8 @@ def _draw_nodes(ax, tasks: list, pos: dict, name_map: dict, mpatches) -> None:
         label = _break_long_label(name_map.get(item_id, item_id))
         rect = mpatches.FancyBboxPatch(
             (x - _NODE_W / 2, y - _NODE_H / 2),
-            _NODE_W, _NODE_H,
+            _NODE_W,
+            _NODE_H,
             boxstyle="round,pad=0.04",
             facecolor=_FG_LIGHT,
             edgecolor=_FG_DARK,
@@ -201,9 +210,13 @@ def _draw_nodes(ax, tasks: list, pos: dict, name_map: dict, mpatches) -> None:
         )
         ax.add_patch(rect)
         ax.text(
-            x, y, label,
-            ha="center", va="center",
-            fontsize=7.5, fontweight="bold",
+            x,
+            y,
+            label,
+            ha="center",
+            va="center",
+            fontsize=7.5,
+            fontweight="bold",
             color=_FG_DARK,
             zorder=4,
             wrap=False,
@@ -221,6 +234,7 @@ def _build_networkx(tasks: list) -> bytes | None:
     try:
         import matplotlib.patches as mpatches
         import matplotlib.patheffects as pe
+
         plt, fig_to_bytes = init_mpl()
     except ImportError:
         return None

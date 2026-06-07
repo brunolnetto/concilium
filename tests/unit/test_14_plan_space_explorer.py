@@ -14,7 +14,6 @@ from concilium.domain.models.canonical import (
     Projeto,
     RegimeTrabalho,
     Resultado,
-    ResultadoReconciliado,
     ValidacaoItem,
     Venda,
 )
@@ -95,8 +94,11 @@ def test_precondicao_sem_resultado():
 def test_verde_com_pe_levers_retorna_oportunidades():
     """VERDE com PE levers reais (ADR-082) → plan_space_result com oportunidades."""
     lever = LeverEquilibrio(
-        id="fechar_gap_escala", tipo="custo",
-        descricao="Serializar cronograma", delta_margin=50_000.0, delta_margin_pct=0.05,
+        id="fechar_gap_escala",
+        tipo="custo",
+        descricao="Serializar cronograma",
+        delta_margin=50_000.0,
+        delta_margin_pct=0.05,
         viavel=True,
     )
     pe = _pe_com_levers("eap-1", 1_000_000.0, [lever])
@@ -127,12 +129,20 @@ def test_verde_sem_pe_levers_sem_oportunidades():
 def test_amarelo_com_pe_levers_gera_repair_path():
     """AMARELO + PE levers reais → repair_path com levers ADR-082."""
     lever_escala = LeverEquilibrio(
-        id="fechar_gap_escala", tipo="custo", descricao="Serializar",
-        delta_margin=30_000.0, delta_margin_pct=0.03, viavel=True,
+        id="fechar_gap_escala",
+        tipo="custo",
+        descricao="Serializar",
+        delta_margin=30_000.0,
+        delta_margin_pct=0.03,
+        viavel=True,
     )
     lever_bdi = LeverEquilibrio(
-        id="revisao_bdi_minima", tipo="preco", descricao="Recalibrar PU",
-        delta_margin=20_000.0, delta_margin_pct=0.02, viavel=True,
+        id="revisao_bdi_minima",
+        tipo="preco",
+        descricao="Recalibrar PU",
+        delta_margin=20_000.0,
+        delta_margin_pct=0.02,
+        viavel=True,
     )
     pe = _pe_com_levers("eap-1", 1_000_000.0, [lever_escala, lever_bdi])
     c = _canonical(resultado=_resultado(0.07, "AMARELO"), ponto_equilibrio=[pe])
@@ -149,10 +159,22 @@ def test_amarelo_com_pe_levers_gera_repair_path():
 def test_repair_com_levers_pool_e_praticabilidade():
     """VERMELHO + PE levers pool/praticabilidade → tipos corretos no repair path."""
     levers = [
-        LeverEquilibrio(id="fechar_gap_pool", tipo="custo", descricao="Pool",
-                        delta_margin=80_000.0, delta_margin_pct=0.08, viavel=True),
-        LeverEquilibrio(id="fechar_gap_praticabilidade", tipo="custo", descricao="Prat.",
-                        delta_margin=20_000.0, delta_margin_pct=0.02, viavel=True),
+        LeverEquilibrio(
+            id="fechar_gap_pool",
+            tipo="custo",
+            descricao="Pool",
+            delta_margin=80_000.0,
+            delta_margin_pct=0.08,
+            viavel=True,
+        ),
+        LeverEquilibrio(
+            id="fechar_gap_praticabilidade",
+            tipo="custo",
+            descricao="Prat.",
+            delta_margin=20_000.0,
+            delta_margin_pct=0.02,
+            viavel=True,
+        ),
     ]
     pe = _pe_com_levers("eap-1", 1_000_000.0, levers)
     c = _canonical(resultado=_resultado(0.04, "VERMELHO"), ponto_equilibrio=[pe])
@@ -180,8 +202,12 @@ def test_repair_viavel_delta_suficiente():
     # Margem entrada = 4%, alvo = 8% → gap = 4 p.p. = 0.04
     # PE lever com delta_margin_pct = 0.10 (10%) resolve sozinho
     lever = LeverEquilibrio(
-        id="fechar_gap_escala", tipo="custo", descricao="Serializar",
-        delta_margin=100_000.0, delta_margin_pct=0.10, viavel=True,
+        id="fechar_gap_escala",
+        tipo="custo",
+        descricao="Serializar",
+        delta_margin=100_000.0,
+        delta_margin_pct=0.10,
+        viavel=True,
     )
     pe = _pe_com_levers("eap-1", 1_000_000.0, [lever])
     c = _canonical(resultado=_resultado(0.04, "VERMELHO"), ponto_equilibrio=[pe])

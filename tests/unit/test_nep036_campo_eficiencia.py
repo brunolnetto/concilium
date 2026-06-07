@@ -11,7 +11,9 @@ from concilium.domain.services.eficiencia_field_builder import CampoEficiencia, 
 def _cell(eta_s, eta_p, eta_w, q, q_max):
     return SimpleNamespace(
         fator_total=eta_s * eta_p * eta_w,
-        eta_s=eta_s, eta_p=eta_p, eta_w=eta_w,
+        eta_s=eta_s,
+        eta_p=eta_p,
+        eta_w=eta_w,
         eficiencia=eta_w,
         fator_clima=eta_p,
         qtd_executada=q,
@@ -106,12 +108,24 @@ class TestEficienciaFieldBuilder:
     def _canonical(self):
         """Canonical stub com 1 atividade, 2 semanas."""
         cell1 = SimpleNamespace(
-            fator_total=0.8, eta_s=1.0, eta_p=0.8, eta_w=1.0,
-            eficiencia=1.0, fator_clima=0.8, qtd_executada=80.0, q_max_celula=100.0,
+            fator_total=0.8,
+            eta_s=1.0,
+            eta_p=0.8,
+            eta_w=1.0,
+            eficiencia=1.0,
+            fator_clima=0.8,
+            qtd_executada=80.0,
+            q_max_celula=100.0,
         )
         cell2 = SimpleNamespace(
-            fator_total=0.9, eta_s=0.9, eta_p=1.0, eta_w=1.0,
-            eficiencia=1.0, fator_clima=1.0, qtd_executada=90.0, q_max_celula=100.0,
+            fator_total=0.9,
+            eta_s=0.9,
+            eta_p=1.0,
+            eta_w=1.0,
+            eficiencia=1.0,
+            fator_clima=1.0,
+            qtd_executada=90.0,
+            q_max_celula=100.0,
         )
         sa = SimpleNamespace(
             activity_id="act-1",

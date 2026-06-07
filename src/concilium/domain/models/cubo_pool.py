@@ -103,6 +103,7 @@ class CuboPoolInstancial:
         semana_iso: str | None = None,
     ) -> CuboPoolInstancial:
         """Filtra células por qualquer combinação de dimensões."""
+
         def keep(c: CelulaPoolInstancial) -> bool:
             return (
                 (contrato_id is None or c.contrato_id == contrato_id)
@@ -181,10 +182,17 @@ class CuboPoolInstancial:
             d = out.setdefault(
                 iid,
                 {
-                    "tipo_id": c.tipo_id, "contrato_id": c.contrato_id,
-                    "prod_w": 0, "idle_w": 0, "off_w": 0,
-                    "custo_mo": 0.0, "custo_eq": 0.0, "custo_comb": 0.0, "custo_mat": 0.0,
-                    "semana_mob": None, "semana_demob": None,
+                    "tipo_id": c.tipo_id,
+                    "contrato_id": c.contrato_id,
+                    "prod_w": 0,
+                    "idle_w": 0,
+                    "off_w": 0,
+                    "custo_mo": 0.0,
+                    "custo_eq": 0.0,
+                    "custo_comb": 0.0,
+                    "custo_mat": 0.0,
+                    "semana_mob": None,
+                    "semana_demob": None,
                 },
             )
             d[f"{c.estado}_w"] += 1
@@ -198,9 +206,7 @@ class CuboPoolInstancial:
                 if d["semana_demob"] is None or c.semana_iso > d["semana_demob"]:
                     d["semana_demob"] = c.semana_iso
         for d in out.values():
-            d["custo_total"] = round(
-                d["custo_mo"] + d["custo_eq"] + d["custo_comb"] + d["custo_mat"], 2
-            )
+            d["custo_total"] = round(d["custo_mo"] + d["custo_eq"] + d["custo_comb"] + d["custo_mat"], 2)
             for comp in _COMPONENTES:
                 d[f"custo_{comp}"] = round(d[f"custo_{comp}"], 2)
         return out
@@ -216,8 +222,7 @@ class CuboPoolInstancial:
                 continue
             k = (c.atividade_id, c.instancia_id)
             d = out.setdefault(
-                k, {"semana_inicio": c.semana_iso, "semana_fim": c.semana_iso,
-                     "machine_weeks": 0, "custo": 0.0}
+                k, {"semana_inicio": c.semana_iso, "semana_fim": c.semana_iso, "machine_weeks": 0, "custo": 0.0}
             )
             d["semana_inicio"] = min(d["semana_inicio"], c.semana_iso)
             d["semana_fim"] = max(d["semana_fim"], c.semana_iso)

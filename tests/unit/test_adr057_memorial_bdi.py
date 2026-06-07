@@ -17,11 +17,6 @@ import math
 import pytest
 
 from concilium.domain.constants import (
-    BDI_COFINS,
-    BDI_CSSL,
-    BDI_IR,
-    BDI_ISS,
-    BDI_PIS,
     ENCARGOS_CLT,
     ENCARGOS_MENSALISTA,
 )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from concilium.application.services.project_repository import ProjectRepository

@@ -385,9 +385,17 @@ def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> No
     """ADR-068: renderiza visão semanal de clima x calendário x fator total."""
     ws = wb.create_sheet("CALENDARIO.OP")
     _title_row(ws, 1, "CALENDARIO OPERACIONAL", 7)
+    ws.cell(
+        row=2,
+        column=1,
+        value=(
+            "Relevancia: evidencia a perda/ganho de produtividade por calendario e clima, "
+            "base para validar prazo e permanencia das equipes."
+        ),
+    ).font = _font(italic=True, size=9)
     _header_row(
         ws,
-        3,
+        4,
         [
             "Semana ISO",
             "Dias úteis base",
@@ -400,13 +408,13 @@ def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> No
     )
 
     _set_col_widths(ws, [14, 16, 18, 16, 12, 12, 38])
-    row = 4
+    row = 5
 
     calendario_rows = list(getattr(canonical, "calendario_operacional", []) or [])
     if not calendario_rows:
         _label(ws, row, 1, "Calendário operacional não disponível.", _fill(_C["row_alt"]))
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
-        _freeze(ws, "A4")
+        _freeze(ws, "A5")
         return
 
     clima_por_semana: dict[str, float] = {}
@@ -434,13 +442,15 @@ def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> No
         _label(ws, row, 3, float(row_data.get("dias_uteis_efetivos", 0.0) or 0.0), fill, align="right")
         _label(ws, row, 4, float(row_data.get("fator_calendario", 1.0) or 1.0), fill, align="right")
         _label(ws, row, 5, round(clima_por_semana.get(semana, 1.0), 4), fill, align="right")
-        _label(ws, row, 6, round(total_por_semana.get(semana, clima_por_semana.get(semana, 1.0)), 4), fill, align="right")
+        _label(
+            ws, row, 6, round(total_por_semana.get(semana, clima_por_semana.get(semana, 1.0)), 4), fill, align="right"
+        )
         eventos = row_data.get("eventos_aplicados", [])
         eventos_txt = ", ".join(eventos) if isinstance(eventos, (list, tuple)) else str(eventos or "")
         _label(ws, row, 7, eventos_txt, fill)
         row += 1
 
-    _freeze(ws, "A4")
+    _freeze(ws, "A5")
 
 
 # ── Aba DIRETOS ───────────────────────────────────────────────────────────────
@@ -840,10 +850,10 @@ def _xl_plan_row_vals(
     """Construct the values list for one planning row."""
     tot_s = f"=E{row}+G{row}+I{row}+K{row}"
     tot_c = f"=F{row}+H{row}+J{row}+L{row}"
-    mo_c = f"=E{row}*(1+BDI!$M$3)"
-    eq_c = f"=G{row}*(1+BDI!$M$5)"
-    dsl_c = f"=I{row}*(1+BDI!$M$7)"
-    mat_c = f"=K{row}*(1+BDI!$M$4)"
+    mo_c = f"=E{row}*(1+'MEMORIAL.BDI'!$M$3)"
+    eq_c = f"=G{row}*(1+'MEMORIAL.BDI'!$M$5)"
+    dsl_c = f"=I{row}*(1+'MEMORIAL.BDI'!$M$7)"
+    mat_c = f"=K{row}*(1+'MEMORIAL.BDI'!$M$4)"
     vals: list[Any] = [
         p.item_id,
         eap_item.descricao if eap_item else p.cpu_id,
@@ -1365,13 +1375,13 @@ def _xl_resultado_custo_composicao(res: Any, planejamento_total_row: int | None,
     """COMPOSIÇÃO DE CUSTO block — returns cd (direto base value)."""
     if not res:
         return 0.0
-    cd = res.custo.direto_catalogo or res.custo.direto_equipes
+    cd = res.custo.direto_equipes
     ci_total = res.custo.total - cd
     pvt = res.venda.total_com_bdi
     razao = ci_total / cd if cd > 0 else 0.0
     ci_pvt = ci_total / pvt if pvt > 0 else 0.0
     linha_fn(
-        "Total Direto (catálogo s/BDI)",
+        "Total Direto (equipes)",
         _xl_resultado_ref("PLANEJAMENTO", 13, planejamento_total_row, res.venda.total_sem_bdi),
     )
     linha_fn("Total Direto (c/BDI)", res.venda.total_com_bdi)
@@ -1519,13 +1529,11 @@ def render_resultado_ml(
     bloco("CUSTOS")
     row_custo_direto = row
     linha(
-        "Custo direto (catálogo s/BDI)",
-        _xl_resultado_ref(
-            "PLANEJAMENTO", 13, planejamento_total_row, res.custo.direto_catalogo or res.custo.direto_equipes
-        ),
+        "Custo direto (equipes)",
+        _xl_resultado_ref("PLANEJAMENTO", 13, planejamento_total_row, res.custo.direto_equipes),
     )
     _xl_resultado_indirect_cats(res, indiretos_refs, linha)
-    custo_ind = res.custo.total - (res.custo.direto_catalogo or res.custo.direto_equipes)
+    custo_ind = res.custo.total - res.custo.direto_equipes
     row_custo_indireto = row
     linha(
         "Custo indireto (subtotal)",
@@ -1851,7 +1859,7 @@ def _rir_render_cat_row(ws, row: int, cat: str, ind, ibd, fill, total_sem: float
 
 def _rir_render_kpis(ws, row: int, res, ncols: int) -> int:
     """Render KPI indicators section in INDIRETOS.RES. Returns next row."""
-    cd = res.custo.direto_catalogo or res.custo.direto_equipes
+    cd = res.custo.direto_equipes
     ci = res.custo.total - cd
     pvt = res.venda.total_com_bdi
     kpis = [
@@ -2053,13 +2061,13 @@ def _req_render_equip_rows(ws, row: int, eq, equip, fill) -> int:
 
 
 def render_equipe(wb: Workbook, canonical: CanonicalModel) -> None:
-    """EQUIPE — Composição detalhada de funções e equipamentos por equipe direta."""
-    ws = wb.create_sheet("EQUIPE")
+    """EQUIPE.DIRETO — Composição detalhada de funções e equipamentos por equipe direta."""
+    ws = wb.create_sheet("EQUIPE.DIRETO")
     NCOLS = 9
     _set_col_widths(ws, [12, 16, 28, 8, 6, 18, 10, 8, 18])
     _freeze(ws, "A3")
     row = 1
-    _title_row(ws, row, "EQUIPE — COMPOSIÇÃO DE RECURSOS DIRETOS POR ATIVIDADE", NCOLS)
+    _title_row(ws, row, "EQUIPE.DIRETO — COMPOSIÇÃO DE RECURSOS DIRETOS POR ATIVIDADE", NCOLS)
     row += 1
     _header_row(
         ws,
@@ -2101,6 +2109,109 @@ def render_equipe(wb: Workbook, canonical: CanonicalModel) -> None:
     cell.border = _border()
     f_tot = ("=" + "+".join(f"I{r}" for r in equipe_total_rows)) if equipe_total_rows else "0"
     _money(ws, row, NCOLS, f_tot, fill_tot, bold=True, color=_C["white"])
+
+
+def render_equipe_indireto(wb: Workbook, canonical: CanonicalModel, categoria: str) -> None:
+    """EQUIPE.INDIRETO.<CAT> — detalhamento de recursos indiretos por categoria."""
+    cat = str(categoria or "").upper()
+    ws = wb.create_sheet(f"EQUIPE.INDIRETO.{cat}")
+    NCOLS = 8
+    _set_col_widths(ws, [18, 18, 30, 8, 10, 16, 16, 28])
+    row = 1
+    _title_row(ws, row, f"EQUIPE.INDIRETO.{cat} — RECURSOS INDIRETOS", NCOLS)
+    row += 1
+
+    entry = next(
+        (ind for ind in (canonical.indiretos or []) if str(getattr(ind, "categoria", "")).upper() == cat), None
+    )
+    if entry is None:
+        ws.cell(row=row, column=1, value=f"Categoria {cat} não encontrada em indiretos.").font = _font(
+            italic=True, size=9
+        )
+        _auto_fit_columns(ws)
+        return
+
+    ws.cell(
+        row=row,
+        column=1,
+        value=(
+            f"Custo total: R$ {float(getattr(entry, 'custo_total', 0.0) or 0.0):,.2f} | "
+            f"MO: R$ {float(getattr(entry, 'custo_mao_obra', 0.0) or 0.0):,.2f} | "
+            f"EQ: R$ {float(getattr(entry, 'custo_equipamentos', 0.0) or 0.0):,.2f} | "
+            f"Comb: R$ {float(getattr(entry, 'custo_combustivel', 0.0) or 0.0):,.2f}"
+        ),
+    ).font = _font(italic=True, size=9)
+    row += 2
+
+    _header_row(ws, row, ["Natureza", "ID", "Descrição", "Qtd", "Un.", "Custo Unit.", "Custo Total", "Observação"])
+    row += 1
+
+    fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
+    has_rows = False
+    for idx, f in enumerate(getattr(entry, "funcoes", []) or []):
+        fill = fills[idx % 2]
+        qtd = float((f.get("num_pessoas") or f.get("quantidade") or 0) or 0)
+        unit = float((f.get("custo_mensal_unitario") or f.get("custo_unitario") or 0) or 0)
+        total = float((f.get("custo_total") or (qtd * unit)) or 0)
+        vals = [
+            "MÃO DE OBRA",
+            f.get("funcao_id") or f.get("id") or "-",
+            f.get("descricao") or "-",
+            qtd,
+            "pax",
+            unit,
+            total,
+            f.get("origem") or "",
+        ]
+        for col, val in enumerate(vals, 1):
+            cell = ws.cell(row=row, column=col, value=val)
+            cell.fill = fill
+            cell.border = _border()
+            if col in (6, 7):
+                cell.number_format = "R$ #,##0.00"
+            if col == 4:
+                cell.number_format = "0.00"
+                cell.alignment = _align("right")
+        row += 1
+        has_rows = True
+
+    start_idx = len(getattr(entry, "funcoes", []) or [])
+    for off, e in enumerate(getattr(entry, "equipamentos", []) or []):
+        fill = fills[(start_idx + off) % 2]
+        qtd = float((e.get("num_unidades") or e.get("quantidade") or 0) or 0)
+        unit = float((e.get("custo_mensal") or e.get("custo_unitario") or 0) or 0)
+        total = float((e.get("custo_total") or (qtd * unit)) or 0)
+        vals = [
+            "EQUIPAMENTO",
+            e.get("equip_id") or e.get("id") or "-",
+            e.get("descricao") or "-",
+            qtd,
+            "un",
+            unit,
+            total,
+            e.get("origem") or "",
+        ]
+        for col, val in enumerate(vals, 1):
+            cell = ws.cell(row=row, column=col, value=val)
+            cell.fill = fill
+            cell.border = _border()
+            if col in (6, 7):
+                cell.number_format = "R$ #,##0.00"
+            if col == 4:
+                cell.number_format = "0.00"
+                cell.alignment = _align("right")
+        row += 1
+        has_rows = True
+
+    if not has_rows:
+        ws.cell(
+            row=row, column=1, value=f"Sem equipes explícitas para {cat}; apenas total agregado em INDIRETOS.DET/RES."
+        ).font = _font(
+            italic=True,
+            size=9,
+        )
+
+    _auto_fit_columns(ws)
 
 
 # ── Aba EQUILIBRIO ────────────────────────────────────────────────────────────
@@ -2227,8 +2338,8 @@ def _write_hist_totals_row(ws: object, row: int, all_weeks: list, fill_tot: obje
 
 
 def render_histograma_eq(wb: Workbook, canonical: CanonicalModel) -> None:
-    """HIST.EQUIPAMENTOS — Demanda semanal de equipamentos (un. × semana ISO)."""
-    ws = wb.create_sheet("HIST.EQUIPAMENTOS")
+    """ANALISE.HIST_EQUIP — Demanda semanal de equipamentos (un. × semana ISO)."""
+    ws = wb.create_sheet("ANALISE.HIST_EQUIP")
     acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
     all_weeks = sorted({w for act in acts for w in act.distribuicao_semanal})
     if not all_weeks:
@@ -2276,8 +2387,8 @@ def _aggregate_labor_demand(act: object, eq: object, all_weeks: list, func_data:
 
 
 def render_histograma_mo(wb: Workbook, canonical: CanonicalModel) -> None:
-    """HIST.MAO_OBRA — Demanda semanal de mão de obra (pessoas × semana ISO)."""
-    ws = wb.create_sheet("HIST.MAO_OBRA")
+    """ANALISE.HIST_MAO_OBRA — Demanda semanal de mão de obra (pessoas × semana ISO)."""
+    ws = wb.create_sheet("ANALISE.HIST_MAO_OBRA")
     acts = canonical.cronograma.scheduled_activities if canonical.cronograma else []
     all_weeks = sorted({w for act in acts for w in act.distribuicao_semanal})
     if not all_weeks:
@@ -2810,7 +2921,7 @@ def render_memorial_bdi(wb, canonical) -> None:
 
 
 def render_curva_abc(wb, canonical) -> None:
-    """CURVA.ABC — ABC por insumo (funcao_id / equip_id) do projeto (ADR-058)."""
+    """ANALISE.CURVA_ABC — ABC por insumo (funcao_id / equip_id) do projeto (ADR-058)."""
     from concilium.domain.services.curva_abc_builder import CurvaABCBuilder
 
     abc = getattr(canonical, "curva_abc_insumo", None)
@@ -2820,7 +2931,7 @@ def render_curva_abc(wb, canonical) -> None:
         except Exception:
             return
 
-    ws = wb.create_sheet("CURVA.ABC")
+    ws = wb.create_sheet("ANALISE.CURVA_ABC")
     NCOLS = 8
     _set_col_widths(ws, [22, 14, 12, 14, 14, 14, 8, 30])
     row = 1
@@ -2878,7 +2989,7 @@ def render_curva_abc(wb, canonical) -> None:
 
 
 def render_s_curve(wb, canonical) -> None:
-    """S-CURVE — Curva S de custo acumulado semana a semana (ADR-058)."""
+    """ANALISE.S_CURVE — Curva S de custo acumulado semana a semana (ADR-058)."""
     from concilium.domain.services.s_curve_builder import SCurveBuilder
 
     sc = getattr(canonical, "s_curve", None)
@@ -2890,7 +3001,7 @@ def render_s_curve(wb, canonical) -> None:
     if not sc.semanas_iso:
         return
 
-    ws = wb.create_sheet("S-CURVE")
+    ws = wb.create_sheet("ANALISE.S_CURVE")
     NCOLS = 8
     _set_col_widths(ws, [14, 14, 14, 14, 14, 14, 14, 18])
     row = 1
@@ -2962,7 +3073,7 @@ def render_campanha_frota(wb, canonical) -> None:
         try:
             analise = CampanhaEquipamentoBuilder().build(canonical)
         except Exception:
-            return
+            analise = None
 
     ws = wb.create_sheet("CAMPANHA.FROTA")
     NCOLS = 12
@@ -2970,74 +3081,103 @@ def render_campanha_frota(wb, canonical) -> None:
     row = 1
     _title_row(ws, row, "CAMPANHAS DE PERMANENCIA DE EQUIPAMENTOS (ADR-059)", NCOLS)
     row += 1
-    ws.cell(
-        row=row,
-        column=1,
-        value=f"Campanhas: {analise.n_campanhas}  |  "
-        f"Economia vs. dismissal: R$ {analise.economia_total:,.2f}  |  "
-        f"Standby total: R$ {analise.custo_standby_total:,.2f}  |  "
-        f"Economia liquida: R$ {analise.economia_liquida:,.2f}",
-    ).font = _font(italic=True, size=9)
-    row += 2
-    _header_row(
-        ws,
-        row,
-        [
-            "Instancia",
-            "Tipo Equip.",
-            "Sem. Entrada",
-            "Sem. Saida",
-            "Sem. Ativas",
-            "Sem. Standby",
-            "Mob (R$)",
-            "Demob (R$)",
-            "Standby Total",
-            "Custo Camp.",
-            "Economia",
-            "Atividades",
-        ],
-    )
-    row += 1
-    ws.freeze_panes = f"A{row}"
+    if analise is None:
+        ws.cell(row=row, column=1, value="Campanhas de permanencia nao disponiveis para este projeto.").font = _font(
+            italic=True, size=9
+        )
+        row += 2
+    else:
+        ws.cell(
+            row=row,
+            column=1,
+            value=f"Campanhas: {analise.n_campanhas}  |  "
+            f"Economia vs. dismissal: R$ {analise.economia_total:,.2f}  |  "
+            f"Standby total: R$ {analise.custo_standby_total:,.2f}  |  "
+            f"Economia liquida: R$ {analise.economia_liquida:,.2f}",
+        ).font = _font(italic=True, size=9)
+        row += 2
 
-    fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
-    for i, camp in enumerate(analise.campanhas):
-        fill = fills[i % 2]
-        economia_color = _C["verde"] if camp.economia_vs_dismissal > 0 else _C["preto"]
-        for j, v in enumerate(
+        if analise.n_campanhas == 0:
+            n_equip_tipos = len(
+                {
+                    str(e.equip_id)
+                    for eq in (canonical.equipes_diretas or [])
+                    for e in (eq.equipamentos or [])
+                    if getattr(e, "equip_id", "")
+                }
+            )
+            n_ativ_com_equip = sum(1 for eq in (canonical.equipes_diretas or []) if (eq.equipamentos or []))
+            ws.cell(
+                row=row,
+                column=1,
+                value=(
+                    "Nenhuma campanha detectada. Interpretação: cronograma sem gaps elegíveis para compartilhamento "
+                    f"(tipos equip.: {n_equip_tipos}; atividades com equipamento: {n_ativ_com_equip})."
+                ),
+            ).font = _font(italic=True, size=9)
+            row += 2
+
+        _header_row(
+            ws,
+            row,
             [
-                camp.instancia_id,
-                camp.tipo_id,
-                camp.semana_entrada,
-                camp.semana_saida,
-                camp.semanas_ativas,
-                camp.semanas_standby,
-                camp.custo_mob,
-                camp.custo_demob,
-                camp.custo_standby_total,
-                camp.custo_campanha,
-                camp.economia_vs_dismissal,
-                " | ".join(camp.atividades),
+                "Instancia",
+                "Tipo Equip.",
+                "Sem. Entrada",
+                "Sem. Saida",
+                "Sem. Ativas",
+                "Sem. Standby",
+                "Mob (R$)",
+                "Demob (R$)",
+                "Standby Total",
+                "Custo Camp.",
+                "Economia",
+                "Atividades",
             ],
-            1,
-        ):
-            cell = ws.cell(row=row, column=j, value=v)
-            cell.fill = fill
-            cell.border = _border()
-            if j in (7, 8, 9, 10):
-                cell.number_format = "R$ #,##0.00"
-            if j == 11:
-                cell.number_format = "R$ #,##0.00"
-                cell.font = _font(bold=True, color=economia_color)
+        )
         row += 1
+        ws.freeze_panes = f"A{row}"
 
-    if analise.alertas_custo_duplicado:
-        row += 1
-        _section_row(ws, row, "ALERTAS VAL-CAMP-01 — Dismissals potencialmente mais caros que standby", NCOLS)
-        row += 1
-        for alert in analise.alertas_custo_duplicado:
-            ws.cell(row=row, column=1, value=alert).font = _font(color=_C["amarelo"], size=9)
+        fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
+        for i, camp in enumerate(analise.campanhas):
+            fill = fills[i % 2]
+            economia_color = _C["verde"] if camp.economia_vs_dismissal > 0 else _C["preto"]
+            for j, v in enumerate(
+                [
+                    camp.instancia_id,
+                    camp.tipo_id,
+                    camp.semana_entrada,
+                    camp.semana_saida,
+                    camp.semanas_ativas,
+                    camp.semanas_standby,
+                    camp.custo_mob,
+                    camp.custo_demob,
+                    camp.custo_standby_total,
+                    camp.custo_campanha,
+                    camp.economia_vs_dismissal,
+                    " | ".join(camp.atividades),
+                ],
+                1,
+            ):
+                cell = ws.cell(row=row, column=j, value=v)
+                cell.fill = fill
+                cell.border = _border()
+                if j in (7, 8, 9, 10):
+                    cell.number_format = "R$ #,##0.00"
+                if j == 11:
+                    cell.number_format = "R$ #,##0.00"
+                    cell.font = _font(bold=True, color=economia_color)
             row += 1
+
+        if analise.alertas_custo_duplicado:
+            row += 1
+            _section_row(ws, row, "ALERTAS VAL-CAMP-01 — Dismissals potencialmente mais caros que standby", NCOLS)
+            row += 1
+            for alert in analise.alertas_custo_duplicado:
+                ws.cell(row=row, column=1, value=alert).font = _font(color=_C["amarelo"], size=9)
+                row += 1
+
+    _auto_fit_columns(ws)
 
 
 def _rcc_render_summary_section(ws, row: int, grupos, cubo, fills) -> int:
@@ -3145,7 +3285,8 @@ def render_cubo_comp(wb, canonical) -> None:
     ws.cell(
         row=row,
         column=1,
-        value=f"Regime BDI: {cubo.regime_bdi}  |  Total PV: R$ {cubo.total_preco_venda:,.2f}  |  "
+        value="Relevancia: evidencia composicao de preco por semana para auditoria de tributos/margem.  |  "
+        f"Regime BDI: {cubo.regime_bdi}  |  Total PV: R$ {cubo.total_preco_venda:,.2f}  |  "
         f"Custo Direto: {cubo.total_custo_direto / cubo.total_preco_venda * 100:.1f}%  |  "
         f"Margem: {cubo.pct_margem * 100:.1f}%  |  Tributos: {cubo.pct_tributos * 100:.1f}%",
     ).font = _font(italic=True, size=9)
@@ -3211,6 +3352,161 @@ def render_cubo_comp(wb, canonical) -> None:
     for i, (semana, comps) in enumerate(comp_temp.items()):
         fill = fills[i % 2]
         acum, row = _rcc_render_temporal_row(ws, row, semana, comps, fill, total_pv, acum)
+    _auto_fit_columns(ws)
+
+
+def render_memorial_mao_obra(wb: Workbook, canonical: CanonicalModel) -> None:
+    """MEMORIAL.MAO_OBRA — base de mão de obra efetivamente usada no projeto."""
+    ws = wb.create_sheet("MEMORIAL.MAO_OBRA")
+    _set_col_widths(ws, [22, 32, 12, 14, 16])
+    row = 1
+    _title_row(ws, row, "MEMORIAL.MAO_OBRA — INSUMOS UTILIZADOS", 5)
+    row += 1
+    ws.cell(row=row, column=1, value="Fonte: composições de EQUIPE.DIRETO e indiretos por categoria.").font = _font(
+        italic=True, size=9
+    )
+    row += 2
+    _header_row(ws, row, ["Funcao ID", "Descricao", "Papel", "Qtd Base", "Custo Mensal Unit."])
+    row += 1
+
+    agg: dict[str, dict[str, Any]] = {}
+    for eq in canonical.equipes_diretas or []:
+        for f in eq.funcoes or []:
+            key = str(f.funcao_id)
+            rec = agg.setdefault(
+                key,
+                {
+                    "descricao": f.descricao or key,
+                    "papel": getattr(f, "papel", "direto") or "direto",
+                    "qtd": 0.0,
+                    "custo": float(getattr(f, "custo_mensal_unitario", 0.0) or 0.0),
+                },
+            )
+            rec["qtd"] += float(getattr(f, "num_pessoas", 0.0) or 0.0) * float(
+                getattr(eq, "num_equipes_base", 0.0) or 0.0
+            )
+
+    fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
+    if not agg:
+        ws.cell(row=row, column=1, value="Sem dados de mão de obra para memorial.").font = _font(italic=True, size=9)
+    for i, (func_id, rec) in enumerate(sorted(agg.items())):
+        fill = fills[i % 2]
+        vals = [func_id, rec["descricao"], str(rec["papel"]).upper(), rec["qtd"], rec["custo"]]
+        for col, val in enumerate(vals, 1):
+            cell = ws.cell(row=row, column=col, value=val)
+            cell.fill = fill
+            cell.border = _border()
+            if col == 5:
+                cell.number_format = "R$ #,##0.00"
+            if col == 4:
+                cell.number_format = "0.00"
+                cell.alignment = _align("right")
+        row += 1
+    _auto_fit_columns(ws)
+
+
+def render_memorial_equipamentos(wb: Workbook, canonical: CanonicalModel) -> None:
+    """MEMORIAL.EQUIPAMENTOS — base de equipamentos efetivamente usada no projeto."""
+    ws = wb.create_sheet("MEMORIAL.EQUIPAMENTOS")
+    _set_col_widths(ws, [22, 32, 12, 16, 16, 16])
+    row = 1
+    _title_row(ws, row, "MEMORIAL.EQUIPAMENTOS — INSUMOS UTILIZADOS", 6)
+    row += 1
+    ws.cell(row=row, column=1, value="Fonte: composições de EQUIPE.DIRETO.").font = _font(italic=True, size=9)
+    row += 2
+    _header_row(ws, row, ["Equip ID", "Descricao", "Qtd Base", "Custo Mensal", "Comb. Mensal", "Total Mensal"])
+    row += 1
+
+    agg: dict[str, dict[str, Any]] = {}
+    for eq in canonical.equipes_diretas or []:
+        for e in eq.equipamentos or []:
+            key = str(e.equip_id or "")
+            if not key:
+                continue
+            rec = agg.setdefault(
+                key,
+                {
+                    "descricao": e.descricao or key,
+                    "qtd": 0.0,
+                    "custo": 0.0,
+                    "comb": 0.0,
+                },
+            )
+            n = float(getattr(e, "num_unidades", 0.0) or 0.0) * float(getattr(eq, "num_equipes_base", 0.0) or 0.0)
+            rec["qtd"] += n
+            rec["custo"] += float(getattr(e, "custo_mensal", 0.0) or 0.0) * n
+            rec["comb"] += float(getattr(e, "custo_combustivel_mensal", 0.0) or 0.0) * n
+
+    fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
+    if not agg:
+        ws.cell(row=row, column=1, value="Sem dados de equipamentos para memorial.").font = _font(italic=True, size=9)
+    for i, (equip_id, rec) in enumerate(sorted(agg.items())):
+        fill = fills[i % 2]
+        total = float(rec["custo"]) + float(rec["comb"])
+        vals = [equip_id, rec["descricao"], rec["qtd"], rec["custo"], rec["comb"], total]
+        for col, val in enumerate(vals, 1):
+            cell = ws.cell(row=row, column=col, value=val)
+            cell.fill = fill
+            cell.border = _border()
+            if col >= 4:
+                cell.number_format = "R$ #,##0.00"
+            if col == 3:
+                cell.number_format = "0.00"
+                cell.alignment = _align("right")
+        row += 1
+    _auto_fit_columns(ws)
+
+
+def render_memorial_materiais(wb: Workbook, canonical: CanonicalModel) -> None:
+    """MEMORIAL.MATERIAIS — materiais e valores vindos do planejamento/catálogo."""
+    ws = wb.create_sheet("MEMORIAL.MATERIAIS")
+    _set_col_widths(ws, [14, 36, 12, 16, 16, 16])
+    row = 1
+    _title_row(ws, row, "MEMORIAL.MATERIAIS — ITENS COM MATERIAL", 6)
+    row += 1
+    ws.cell(
+        row=row,
+        column=1,
+        value="Fonte: PLANEJAMENTO (preco_unitario.material e subtotal sem/com BDI).",
+    ).font = _font(italic=True, size=9)
+    row += 2
+    _header_row(ws, row, ["Item ID", "CPU ID", "Qtd", "PU Mat. s/BDI", "Subtotal Mat. s/BDI", "Subtotal Mat. c/BDI"])
+    row += 1
+
+    fills = [_fill(_C["white"]), _fill(_C["row_alt"])]
+    has_rows = False
+    for i, p in enumerate(canonical.planejamento or []):
+        pu_mat = float(getattr(getattr(p, "preco_unitario", None), "material", 0.0) or 0.0)
+        if pu_mat <= 0.0:
+            continue
+        fill = fills[i % 2]
+        qtd = float(getattr(p, "quantitativo", 0.0) or 0.0)
+        sem_bdi = float(getattr(getattr(getattr(p, "subtotal", None), "sem_bdi", None), "material", 0.0) or 0.0)
+        com_bdi = float(getattr(getattr(getattr(p, "subtotal", None), "com_bdi", None), "material", 0.0) or 0.0)
+        vals = [getattr(p, "item_id", "-"), getattr(p, "cpu_id", "-"), qtd, pu_mat, sem_bdi, com_bdi]
+        for col, val in enumerate(vals, 1):
+            cell = ws.cell(row=row, column=col, value=val)
+            cell.fill = fill
+            cell.border = _border()
+            if col >= 4:
+                cell.number_format = "R$ #,##0.00"
+            if col == 3:
+                cell.number_format = "0.00"
+                cell.alignment = _align("right")
+        row += 1
+        has_rows = True
+
+    if not has_rows:
+        ws.cell(row=row, column=1, value="Sem materiais com custo explícito neste planejamento.").font = _font(
+            italic=True, size=9
+        )
+
+    _auto_fit_columns(ws)
+
+
+def _reorder_workbook_tabs(wb: Workbook, preferred_order: list[str]) -> None:
+    order_idx = {name: i for i, name in enumerate(preferred_order)}
+    wb._sheets.sort(key=lambda ws: (order_idx.get(ws.title, len(preferred_order)), ws.title))
 
 
 class ExcelRenderer:
@@ -3224,10 +3520,14 @@ class ExcelRenderer:
     def render(self) -> Workbook:
         """Renderiza as abas na ordem definida e retorna workbook."""
         render_memorial_bdi(self.wb, self.canonical)
+        render_memorial_mao_obra(self.wb, self.canonical)
+        render_memorial_equipamentos(self.wb, self.canonical)
+        render_memorial_materiais(self.wb, self.canonical)
+        render_campanha_frota(self.wb, self.canonical)
+        render_calendario_operacional(self.wb, self.canonical)
+        render_cubo_comp(self.wb, self.canonical)
         render_curva_abc(self.wb, self.canonical)
         render_s_curve(self.wb, self.canonical)
-        render_campanha_frota(self.wb, self.canonical)
-        render_cubo_comp(self.wb, self.canonical)
         diretos_total_row = render_diretos(self.wb, self.canonical)
         render_diretos_res(self.wb, self.canonical)
         indiretos_refs = render_indiretos_ml(self.wb, self.canonical)
@@ -3236,8 +3536,9 @@ class ExcelRenderer:
         render_cronograma(self.wb, self.canonical)
         render_cronograma_res(self.wb, self.canonical)
         render_equipe(self.wb, self.canonical)
+        for cat in ("QSMS", "TOP", "LAB", "ADM"):
+            render_equipe_indireto(self.wb, self.canonical, cat)
         render_equilibrio(self.wb, self.canonical)
-        render_calendario_operacional(self.wb, self.canonical)
         render_resultado_ml(
             self.wb,
             self.canonical,
@@ -3249,7 +3550,41 @@ class ExcelRenderer:
         render_histograma_eq(self.wb, self.canonical)
         render_histograma_mo(self.wb, self.canonical)
         # CURVA.ABC já renderizada na posição 2 (acima) — removido condicional duplicado (P1)
-        render_graficos(self.wb, self.canonical)
+        for ws in self.wb.worksheets:
+            if ws.title not in {"MEMORIAL.BDI", "CUBO.COMP", "CAMPANHA.FROTA", "PLANEJAMENTO", "RESULTADO"}:
+                _auto_fit_columns(ws)
+
+        _reorder_workbook_tabs(
+            self.wb,
+            [
+                "RESULTADO",
+                "EQUILIBRIO",
+                "PLANEJAMENTO",
+                "CRONOGRAMA.RES",
+                "CRONOGRAMA.DET",
+                "DIRETOS.RES",
+                "DIRETOS.DET",
+                "INDIRETOS.RES",
+                "INDIRETOS.DET",
+                "EQUIPE.DIRETO",
+                "EQUIPE.INDIRETO.QSMS",
+                "EQUIPE.INDIRETO.TOP",
+                "EQUIPE.INDIRETO.LAB",
+                "EQUIPE.INDIRETO.ADM",
+                "MEMORIAL.BDI",
+                "MEMORIAL.MAO_OBRA",
+                "MEMORIAL.EQUIPAMENTOS",
+                "MEMORIAL.MATERIAIS",
+                "CAMPANHA.FROTA",
+                "CALENDARIO.OP",
+                "CUBO.COMP",
+                "ANALISE.CURVA_ABC",
+                "ANALISE.S_CURVE",
+                "ANALISE.FC_CAIXA",
+                "ANALISE.HIST_EQUIP",
+                "ANALISE.HIST_MAO_OBRA",
+            ],
+        )
         return self.wb
 
     def save(self, output_path: Path) -> None:

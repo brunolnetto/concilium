@@ -287,9 +287,7 @@ def _render_entity_section(
     entity = emap.get(selected, {})
     versions = entity.get("versions") or []
     with st.expander("➕ Nova versão", expanded=False):
-        _render_new_version_form(
-            base_url, actor, versions_path_tpl.format(id=selected), selected, versions, key_prefix
-        )
+        _render_new_version_form(base_url, actor, versions_path_tpl.format(id=selected), selected, versions, key_prefix)
     _render_entity_tabs(base_url, actor, compare_path, selected, entity, versions, key_prefix, extra_renderer)
 
 

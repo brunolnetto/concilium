@@ -5,8 +5,8 @@ Atomic design templates - Full page layouts.
 
 from __future__ import annotations
 
-from datetime import date
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -264,7 +264,7 @@ def _pcat_mini_diff_text(base_cpu: dict[str, Any], ov_cpu: dict[str, Any]) -> st
     if flags["equipe"]:
         bf, be, _ = _pcat_cpu_parts(base_cpu)
         of, oe, _ = _pcat_cpu_parts(ov_cpu)
-        parts.append(f"Equipe: {len(bf)+len(be)} -> {len(of)+len(oe)}")
+        parts.append(f"Equipe: {len(bf) + len(be)} -> {len(of) + len(oe)}")
     if flags["composicao"]:
         _, _, bc = _pcat_cpu_parts(base_cpu)
         _, _, oc = _pcat_cpu_parts(ov_cpu)
@@ -497,7 +497,9 @@ def _pcat_render_health_panel(
         st.success("Sem alertas de saúde para o conjunto selecionado.")
 
 
-def _pcat_render_catalog_filters(project_id: str, rows: list[dict[str, Any]]) -> tuple[str, list[str], bool, bool, bool]:
+def _pcat_render_catalog_filters(
+    project_id: str, rows: list[dict[str, Any]]
+) -> tuple[str, list[str], bool, bool, bool]:
     c1, c2, c3 = st.columns([3, 2, 3])
     q = c1.text_input("Buscar CPU", placeholder="Código, descrição ou diff", key=f"pcat-q-{project_id}")
     categorias = sorted({r["categoria"] for r in rows if r["categoria"]})
@@ -709,7 +711,9 @@ def _render_project_catalog_section(base_url: str, project_id: str, actor: str) 
     eap_rows = _pcat_extract_eap_rows(reference)
     if step == "Selecionar CPU":
         st.info("Selecione uma ou mais CPUs na tabela acima para avançar ao passo de edição.")
-        _pcat_render_health_panel(selected_cpu_ids, {cid: base_index.get(cid) or {} for cid in selected_cpu_ids}, insumos_idx)
+        _pcat_render_health_panel(
+            selected_cpu_ids, {cid: base_index.get(cid) or {} for cid in selected_cpu_ids}, insumos_idx
+        )
     elif step == "Editar":
         _pcat_render_step_edit(project_id, selected_cpu_ids, base_index)
     else:

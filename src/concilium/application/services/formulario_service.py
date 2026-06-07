@@ -31,6 +31,7 @@ def suggest_cpu(descricao: str, config_root: Path | None = None) -> tuple[str | 
     # ── 1. Keyword rules ──────────────────────────────────────────────────────
     try:
         from concilium.infrastructure.catalog.mapping.cpu_mapper import _load_mapping_keywords
+
         rules = _load_mapping_keywords()
         if rules:
             for cpu_id, kws in rules.items():
@@ -50,6 +51,7 @@ def suggest_cpu(descricao: str, config_root: Path | None = None) -> tuple[str | 
     try:
         if config_root is None:
             from concilium.infrastructure.settings import get_storage
+
             root = get_storage().config_root
         else:
             root = config_root
@@ -209,8 +211,8 @@ def criar_projeto(
 
     # Todos mapeados → criar projeto
     from concilium.application.runtime import Runtime
-    from concilium.infrastructure.storage.project import ProjectStore
     from concilium.infrastructure.settings import get_storage
+    from concilium.infrastructure.storage.project import ProjectStore
 
     if projetos_root is None:
         projetos_root = get_storage().projects_root
@@ -239,6 +241,7 @@ def criar_projeto(
 
     try:
         from concilium.application.lifecycle_coordinator import LifecycleCoordinator
+
         coord = LifecycleCoordinator(rt)
         r = coord.avancar_projeto("01-escopo-e-eap", store, v, inputs=inputs_escopo)
     except Exception as exc:

@@ -102,11 +102,15 @@ class GoogleDriveBlobStorage(BlobStoragePort):
             if fid is None:
                 if not create:
                     return None
-                fid = self._files().create(
-                    body={"name": seg, "mimeType": _FOLDER_MIME, "parents": [parent]},
-                    fields="id",
-                    supportsAllDrives=True,
-                ).execute()["id"]
+                fid = (
+                    self._files()
+                    .create(
+                        body={"name": seg, "mimeType": _FOLDER_MIME, "parents": [parent]},
+                        fields="id",
+                        supportsAllDrives=True,
+                    )
+                    .execute()["id"]
+                )
             self._folder_cache[acc_key] = fid
             parent = fid
         return parent

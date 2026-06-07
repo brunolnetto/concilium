@@ -151,11 +151,11 @@ class ValidadorCPUInsumo:
 
         unidade_insumo_raw = str(insumo.get("unidade", "")).strip()
         unidade_composicao_raw = str(composicao_item.get("unidade", unidade_insumo_raw)).strip()
-        
+
         # Normalizar unidades para formas canônicas (m² → m2, mês → mes, etc.)
         unidade_insumo = self.UNIDADES_NORM_MAP.get(unidade_insumo_raw, unidade_insumo_raw.lower())
         unidade_composicao = self.UNIDADES_NORM_MAP.get(unidade_composicao_raw, unidade_composicao_raw.lower())
-        
+
         coeficiente = composicao_item.get("coeficiente")
 
         if unidade_composicao != unidade_insumo:

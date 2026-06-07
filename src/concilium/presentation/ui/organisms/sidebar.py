@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from html import escape
 import sys
+from html import escape
 from pathlib import Path
 
 import streamlit as st

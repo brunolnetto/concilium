@@ -7,13 +7,14 @@ Valida:
 - Listagem e estatísticas
 """
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, patch
 
 from concilium.application.jobs import (
-    JobService,
     JobDTO,
     JobListDTO,
+    JobService,
     SystemStatsDTO,
     get_job_service,
 )
@@ -37,6 +38,7 @@ def job_repository():
     """Fixture com repositório limpo."""
     reset_repository()
     from concilium.application.jobs.repository import get_job_repository
+
     return get_job_repository()
 
 
@@ -44,18 +46,18 @@ def job_repository():
 def job_service(job_config, job_repository):
     """Fixture com serviço limpo."""
     reset_job_service()
-    
+
     # Mock das dependências de execução
     mock_runtime = Mock()
     mock_project_factory = Mock()
-    
+
     service = JobService(
         repository=job_repository,
         config=job_config,
         runtime_factory=lambda: mock_runtime,
         project_factory=mock_project_factory,
     )
-    
+
     return service
 
 
@@ -69,7 +71,7 @@ class TestJobServiceBasics:
             skill_id="01-composicao",
             inputs={"foo": "bar"},
         )
-        
+
         assert isinstance(job, JobDTO)
         assert job.job_id.startswith("job-")
         assert job.status == "AGUARDANDO_FILA"
@@ -83,9 +85,9 @@ class TestJobServiceBasics:
     def test_consultar_job_retorna_dto(self, job_service):
         """Consultar job deve retornar JobDTO atualizado."""
         job = job_service.disparar_pipeline(project_id="proj-123")
-        
+
         consultado = job_service.consultar_job(job.job_id)
-        
+
         assert consultado.job_id == job.job_id
         assert consultado.status in ["AGUARDANDO_FILA", "EM_EXECUCAO", "CONCLUIDO", "ERRO"]
 
@@ -97,7 +99,7 @@ class TestJobServiceBasics:
     def test_listar_jobs_vazio(self, job_service):
         """Listar jobs sem nenhum job deve retornar lista vazia."""
         result = job_service.listar_jobs()
-        
+
         assert isinstance(result, JobListDTO)
         assert len(result.jobs) == 0
         assert result.estatisticas.aguardando_fila == 0
@@ -108,9 +110,9 @@ class TestJobServiceBasics:
         job1 = job_service.disparar_pipeline(project_id="proj-A")
         job2 = job_service.disparar_pipeline(project_id="proj-B")
         job3 = job_service.disparar_pipeline(project_id="proj-A")
-        
+
         result = job_service.listar_jobs(project_id="proj-A")
-        
+
         assert len(result.jobs) == 2
         assert all(j.project_id == "proj-A" for j in result.jobs)
 
@@ -123,9 +125,9 @@ class TestJobStatistics:
         # Dispara alguns jobs
         job_service.disparar_pipeline(project_id="proj-123")
         job_service.disparar_pipeline(project_id="proj-456")
-        
+
         stats = job_service.obter_estatisticas()
-        
+
         assert isinstance(stats, SystemStatsDTO)
         assert stats.configuracao["max_concurrent_jobs"] == 2
         assert stats.configuracao["job_ttl_hours"] == 1
@@ -136,15 +138,15 @@ class TestJobStatistics:
         # Dispara 3 jobs
         for i in range(3):
             job_service.disparar_pipeline(project_id=f"proj-{i}")
-        
+
         result = job_service.listar_jobs()
-        
+
         # Todos devem estar aguardando ou em execução
         total = (
-            result.estatisticas.aguardando_fila +
-            result.estatisticas.em_execucao +
-            result.estatisticas.concluido +
-            result.estatisticas.erro
+            result.estatisticas.aguardando_fila
+            + result.estatisticas.em_execucao
+            + result.estatisticas.concluido
+            + result.estatisticas.erro
         )
         assert total == 3
 
@@ -155,59 +157,59 @@ class TestJobRepository:
     def test_repository_save_and_get(self):
         """Repository deve salvar e recuperar job."""
         repo = InMemoryJobRepository()
-        
+
         job_data = {
             "job_id": "job-test123",
             "status": "AGUARDANDO_FILA",
             "project_id": "proj-123",
         }
-        
+
         repo.save("job-test123", job_data)
         retrieved = repo.get("job-test123")
-        
+
         assert retrieved == job_data
 
     def test_repository_get_nonexistent(self):
         """Repository deve retornar None para job inexistente."""
         repo = InMemoryJobRepository()
-        
+
         result = repo.get("job-naoexiste")
-        
+
         assert result is None
 
     def test_repository_list_all(self):
         """Repository deve listar todos os jobs."""
         repo = InMemoryJobRepository()
-        
+
         repo.save("job-1", {"job_id": "job-1"})
         repo.save("job-2", {"job_id": "job-2"})
-        
+
         all_jobs = repo.list_all()
-        
+
         assert len(all_jobs) == 2
         assert {j["job_id"] for j in all_jobs} == {"job-1", "job-2"}
 
     def test_repository_delete(self):
         """Repository deve deletar job."""
         repo = InMemoryJobRepository()
-        
+
         repo.save("job-test", {"job_id": "job-test"})
         assert repo.delete("job-test") is True
         assert repo.get("job-test") is None
-        
+
         # Deletar novamente retorna False
         assert repo.delete("job-test") is False
 
     def test_repository_delete_many(self):
         """Repository deve deletar múltiplos jobs."""
         repo = InMemoryJobRepository()
-        
+
         repo.save("job-1", {"job_id": "job-1"})
         repo.save("job-2", {"job_id": "job-2"})
         repo.save("job-3", {"job_id": "job-3"})
-        
+
         removed = repo.delete_many(["job-1", "job-2", "job-nonexistent"])
-        
+
         assert removed == 2
         assert repo.count() == 1
 
@@ -218,10 +220,10 @@ class TestSingletonBehavior:
     def test_get_job_service_returns_singleton(self):
         """get_job_service deve retornar mesma instância."""
         reset_job_service()
-        
+
         service1 = get_job_service()
         service2 = get_job_service()
-        
+
         assert service1 is service2
 
     def test_reset_job_service_clears_singleton(self):
@@ -229,7 +231,7 @@ class TestSingletonBehavior:
         service1 = get_job_service()
         reset_job_service()
         service2 = get_job_service()
-        
+
         assert service1 is not service2
 
 

@@ -9,10 +9,34 @@ class _CuboCategoriaStub:
     def __init__(self) -> None:
         # Totals imply: overhead=10%, lucro=20%, tributos=15% over custo_operacional.
         self.celulas = (
-            SimpleNamespace(atividade_id="ATV-001", categoria="mao_obra", semana_iso="2026-W10", componente_bdi="custo_direto", valor_rs=100.0),
-            SimpleNamespace(atividade_id="ATV-001", categoria="mao_obra", semana_iso="2026-W10", componente_bdi="overhead_ac", valor_rs=10.0),
-            SimpleNamespace(atividade_id="ATV-001", categoria="mao_obra", semana_iso="2026-W10", componente_bdi="margem_l", valor_rs=20.0),
-            SimpleNamespace(atividade_id="ATV-001", categoria="mao_obra", semana_iso="2026-W10", componente_bdi="tributo_iss", valor_rs=15.0),
+            SimpleNamespace(
+                atividade_id="ATV-001",
+                categoria="mao_obra",
+                semana_iso="2026-W10",
+                componente_bdi="custo_direto",
+                valor_rs=100.0,
+            ),
+            SimpleNamespace(
+                atividade_id="ATV-001",
+                categoria="mao_obra",
+                semana_iso="2026-W10",
+                componente_bdi="overhead_ac",
+                valor_rs=10.0,
+            ),
+            SimpleNamespace(
+                atividade_id="ATV-001",
+                categoria="mao_obra",
+                semana_iso="2026-W10",
+                componente_bdi="margem_l",
+                valor_rs=20.0,
+            ),
+            SimpleNamespace(
+                atividade_id="ATV-001",
+                categoria="mao_obra",
+                semana_iso="2026-W10",
+                componente_bdi="tributo_iss",
+                valor_rs=15.0,
+            ),
         )
 
     def composicao_por_categoria(self):

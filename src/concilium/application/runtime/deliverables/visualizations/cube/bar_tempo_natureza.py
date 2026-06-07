@@ -23,6 +23,7 @@ def build(canonical, cubo) -> bytes | None:
     except Exception:
         try:
             import matplotlib.pyplot as _plt
+
             _plt.close("all")
         except Exception:
             pass

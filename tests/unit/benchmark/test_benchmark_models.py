@@ -1,10 +1,11 @@
 """Testes unitários para modelos de domínio de benchmarks."""
+
 from datetime import datetime
 from uuid import uuid4
 
 from src.concilium.domain.benchmark.models import (
-    BenchmarkMetadata,
     BenchmarkExecution,
+    BenchmarkMetadata,
     BenchmarkState,
 )
 

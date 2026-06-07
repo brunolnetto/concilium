@@ -236,7 +236,9 @@ def _impl_catalog_audit_reasonability(
     producoes_legado = catalogo.get("producoes") if isinstance(catalogo.get("producoes"), list) else []
     artifact = build_catalog_reasonability_artifact(ctx.catalogo_id, cpus, produtividades + producoes_legado)
 
-    destination = Path(output) if output else Path("artifacts") / "audit" / f"catalog_reasonability_{ctx.catalogo_id}.json"
+    destination = (
+        Path(output) if output else Path("artifacts") / "audit" / f"catalog_reasonability_{ctx.catalogo_id}.json"
+    )
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(artifact, indent=2, ensure_ascii=False), encoding="utf-8")
 

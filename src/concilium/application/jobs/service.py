@@ -11,9 +11,10 @@ from __future__ import annotations
 import sys
 import threading
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from concilium.application.jobs.models import JobDTO, JobListDTO, JobStatsDTO, SystemStatsDTO
 from concilium.application.jobs.repository import JobRepository, get_job_repository
@@ -23,7 +24,7 @@ from concilium.infrastructure.settings import JobsSettings, get_jobs
 
 class JobService:
     """Serviço de gerenciamento de jobs de pipeline.
-    
+
     Responsabilidades:
     - Disparar execução assíncrona de jobs
     - Consultar status e resultados
@@ -52,7 +53,7 @@ class JobService:
         self._config = config or get_jobs()
         self._runtime_factory = runtime_factory
         self._project_factory = project_factory
-        
+
         self._executor: ThreadPoolExecutor | None = None
         self._gc_thread: threading.Thread | None = None
         self._gc_stop_event = threading.Event()
@@ -64,15 +65,12 @@ class JobService:
             with self._init_lock:
                 if self._executor is None:
                     self._executor = ThreadPoolExecutor(
-                        max_workers=self._config.max_concurrent_jobs,
-                        thread_name_prefix="pipeline-worker"
+                        max_workers=self._config.max_concurrent_jobs, thread_name_prefix="pipeline-worker"
                     )
-                
+
                 if self._gc_thread is None:
                     self._gc_thread = threading.Thread(
-                        target=self._garbage_collector_loop,
-                        daemon=True,
-                        name="pipeline-gc"
+                        target=self._garbage_collector_loop, daemon=True, name="pipeline-gc"
                     )
                     self._gc_thread.start()
 
@@ -83,7 +81,7 @@ class JobService:
 
     def _limpar_jobs_expirados(self) -> None:
         """Remove jobs finalizados há mais de job_ttl_hours."""
-        agora = datetime.now(timezone.utc)
+        agora = datetime.now(UTC)
         cutoff = agora - timedelta(hours=self._config.job_ttl_hours)
 
         jobs = self._repo.list_all()
@@ -112,6 +110,7 @@ class JobService:
         Returns:
             Função callback(mensagem, percentual)
         """
+
         def callback(mensagem: str, percentual: float | None = None) -> None:
             job = self._repo.get(job_id)
             if job:
@@ -142,7 +141,8 @@ class JobService:
             # Obtém dependências
             if self._runtime_factory is None or self._project_factory is None:
                 # Fallback para imports de MCP (manter compatibilidade)
-                from concilium.presentation.mcp._context import _runtime, _project
+                from concilium.presentation.mcp._context import _project, _runtime
+
                 rt = _runtime()
                 store = _project(job["project_id"])
             else:
@@ -217,7 +217,7 @@ class JobService:
             "inputs": inputs or {},
             "escopo_id": escopo_id,
             "plano_id": plano_id,
-            "disparado_em": datetime.now(timezone.utc).isoformat(),
+            "disparado_em": datetime.now(UTC).isoformat(),
             "iniciado_em": None,
             "finalizado_em": None,
             "resultado": None,
@@ -236,9 +236,7 @@ class JobService:
         # Calcula posição na fila
         jobs = self._repo.list_all()
         posicao_fila = sum(
-            1
-            for j in jobs
-            if j["status"] == "AGUARDANDO_FILA" and j["disparado_em"] < job_data["disparado_em"]
+            1 for j in jobs if j["status"] == "AGUARDANDO_FILA" and j["disparado_em"] < job_data["disparado_em"]
         )
 
         response = JobDTO(
@@ -278,9 +276,7 @@ class JobService:
         """
         job = self._repo.get(job_id)
         if not job:
-            raise ValueError(
-                f"Job '{job_id}' não encontrado (pode ter expirado após {self._config.job_ttl_hours}h)"
-            )
+            raise ValueError(f"Job '{job_id}' não encontrado (pode ter expirado após {self._config.job_ttl_hours}h)")
 
         sm: PipelineJobStateMachine = job["state_machine"]
 
@@ -323,7 +319,7 @@ class JobService:
         for j in jobs:
             sm: PipelineJobStateMachine | None = j.get("state_machine")
             status = sm.status_str if sm else j["status"]
-            
+
             if status == "AGUARDANDO_FILA":
                 stats.aguardando_fila += 1
             elif status == "EM_EXECUCAO":

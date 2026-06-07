@@ -9,8 +9,8 @@ sem afetar a camada de aplicação.
 from __future__ import annotations
 
 import threading
-from os import getenv
 from abc import ABC, abstractmethod
+from os import getenv
 from typing import Any
 
 
@@ -153,10 +153,7 @@ def _build_repository() -> JobRepository:
     backend = _repository_backend()
     if backend == "inmemory":
         return InMemoryJobRepository()
-    raise ValueError(
-        "Backend de jobs não suportado: "
-        f"{backend!r}. Use CONCILIUM__JOBS_REPOSITORY=inmemory."
-    )
+    raise ValueError(f"Backend de jobs não suportado: {backend!r}. Use CONCILIUM__JOBS_REPOSITORY=inmemory.")
 
 
 def get_job_repository() -> JobRepository:

@@ -1,8 +1,8 @@
 """Modelos de domínio para Benchmarks (NEP-039)."""
-from dataclasses import dataclass, field
+
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Optional
 
 
 class BenchmarkState(StrEnum):
@@ -41,4 +41,4 @@ class BenchmarkExecution:
     projeto_id: str  # Link para projeto criado/atualizado
     status: str  # BenchmarkState
     executado_em: datetime
-    discrepancia_sumario: Optional[dict] = None  # Diff com referência anterior
+    discrepancia_sumario: dict | None = None  # Diff com referência anterior

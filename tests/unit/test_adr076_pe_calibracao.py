@@ -11,14 +11,13 @@ Cobre as Opções C e D implementadas em skill-08 (_build_pe_for_equipe):
 
 from __future__ import annotations
 
+# Importação direta do helper — sem carregar a skill completa.
+import importlib.util
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
-
-# Importação direta do helper — sem carregar a skill completa.
-import importlib.util
-from pathlib import Path
 
 _helpers_path = (
     Path(__file__).resolve().parent.parent.parent
@@ -40,6 +39,7 @@ _bpe_process_equipe = _mod._bpe_process_equipe
 
 
 # ── fixtures / helpers ──────────────────────────────────────────────────────
+
 
 class _FakeSubtotalCat:
     def __init__(self, total: float):
@@ -64,7 +64,7 @@ def _make_equipe(
     custo_fixo_mensal: float = 100_000.0,
     permanencia_meses: float = 5.0,
     permanencia_efetiva_meses: float = 6.0,
-    custo_total: float = 700_000.0,       # custo_operacional_real (inclui pool)
+    custo_total: float = 700_000.0,  # custo_operacional_real (inclui pool)
     custo_total_autonomo: float = 600_000.0,
 ) -> Any:
     return SimpleNamespace(
@@ -80,7 +80,7 @@ def _make_equipe(
 def _make_plan(
     item_id: str = "eap-01",
     qty: float = 1000.0,
-    pu_sem_bdi: float = 500.0,       # PU × Q = 500 000 sem BDI
+    pu_sem_bdi: float = 500.0,  # PU × Q = 500 000 sem BDI
     bdi_factor: float = 0.15,
 ) -> _FakePlan:
     sem_bdi_total = pu_sem_bdi * qty
@@ -195,18 +195,21 @@ class TestBuildPeForEquipeNewFields:
         )
         plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0)
         # 10 semanas, 9 boas (fc=1.0) + 1 com lesao total (fc=0.0) → fv=0.90 exato
-        sched = _FakeSched("eap-01", [
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 1.0),
-            _FakeDistSem(1, 0.0),  # 1 semana com lesao total
-        ])
+        sched = _FakeSched(
+            "eap-01",
+            [
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 1.0),
+                _FakeDistSem(1, 0.0),  # 1 semana com lesao total
+            ],
+        )
         pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan}, sched_por_item={"eap-01": sched})
         assert pe is not None
         # fv = 0.9 → gap = 650_000 × 0.1 = 65_000
@@ -229,7 +232,7 @@ class TestBuildPeForEquipeNewFields:
         perm_nom = 5.0
         perm_ef = 10.0  # N=2 equipes
         custo_total_aut = 1_250_000.0  # custo_total_aut × fv = 1_250k × 0.8 = 1_000k = fixo×perm_ef
-        custo_total = 1_450_000.0     # custo_total_aut + gap_pool = 1_250k + 200k
+        custo_total = 1_450_000.0  # custo_total_aut + gap_pool = 1_250k + 200k
 
         eq = _make_equipe(
             custo_fixo_mensal=fixo,
@@ -241,21 +244,24 @@ class TestBuildPeForEquipeNewFields:
         plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0)
         # fv = 0.8 exato: 5 semanas × 2 equipes, 4 × fc=1.0 + 1 × fc=0.0
         # team_weeks = 10, active_weeks = 5, n_equipes_ef = 2.0, fv = 8/10 = 0.8
-        sched = _FakeSched("eap-01", [
-            _FakeDistSem(2, 1.0),
-            _FakeDistSem(2, 1.0),
-            _FakeDistSem(2, 1.0),
-            _FakeDistSem(2, 1.0),
-            _FakeDistSem(2, 0.0),
-        ])
+        sched = _FakeSched(
+            "eap-01",
+            [
+                _FakeDistSem(2, 1.0),
+                _FakeDistSem(2, 1.0),
+                _FakeDistSem(2, 1.0),
+                _FakeDistSem(2, 1.0),
+                _FakeDistSem(2, 0.0),
+            ],
+        )
         pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan}, sched_por_item={"eap-01": sched})
         assert pe is not None
 
-        custo_base = fixo * perm_nom              # 500k
-        N = perm_ef / perm_nom                    # 2.0
-        gap_escala = custo_base * (N - 1.0)       # 500k
+        custo_base = fixo * perm_nom  # 500k
+        N = perm_ef / perm_nom  # 2.0
+        gap_escala = custo_base * (N - 1.0)  # 500k
         fv = 0.8
-        gap_praticab = custo_total_aut * (1.0 - fv)   # 1_250k × 0.2 = 250k
+        gap_praticab = custo_total_aut * (1.0 - fv)  # 1_250k × 0.2 = 250k
         gap_pool = custo_total - custo_total_aut  # 200k
 
         # identidade: 500k + 500k + 250k + 200k = 1_450k = custo_total
@@ -373,8 +379,10 @@ class TestValidacaoFrentesNecessarias:
 
 # ── helpers para testes de lesão ──────────────────────────────────────────────
 
+
 class _FakeDistSem:
     """Simula DistribuicaoSemanal com fator_clima, fator_calendario."""
+
     def __init__(self, num_equipes: int = 2, fator_clima: float = 1.0, fator_calendario: float = 1.0):
         self.num_equipes = num_equipes
         self.fator_clima = fator_clima
@@ -384,9 +392,10 @@ class _FakeDistSem:
 
 class _FakeSched:
     """Simula ScheduledActivityCanonical com distribuicao_semanal."""
+
     def __init__(self, activity_id: str, semanas: list[_FakeDistSem]):
         self.activity_id = activity_id
-        self.distribuicao_semanal = {f"2026-W{i+1:02d}": s for i, s in enumerate(semanas)}
+        self.distribuicao_semanal = {f"2026-W{i + 1:02d}": s for i, s in enumerate(semanas)}
 
 
 # ── Testes de Lesão de Produtividade (ADR-076 Justificativa) ─────────────────
@@ -432,8 +441,9 @@ class TestLesaoFromSched:
 class TestLesaoFieldsInPE:
     """Campos de lesão aparecem corretamente no PontoEquilibrio."""
 
-    def _make_sched(self, n_equipes: int = 2, semanas: int = 7,
-                    fator_clima: float = 1.0, semanas_lesadas: int = 0) -> _FakeSched:
+    def _make_sched(
+        self, n_equipes: int = 2, semanas: int = 7, fator_clima: float = 1.0, semanas_lesadas: int = 0
+    ) -> _FakeSched:
         dists = []
         for i in range(semanas):
             fc = 0.80 if i < semanas_lesadas else fator_clima
@@ -524,7 +534,7 @@ class TestFase4LeverGapPool:
         """Extrai lever fechar_gap_pool ou None."""
         if pe is None:
             return None
-        for lv in (pe.levers_equilibrio or []):
+        for lv in pe.levers_equilibrio or []:
             if lv.id == "fechar_gap_pool":
                 return lv
         return None

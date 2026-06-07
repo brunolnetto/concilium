@@ -90,8 +90,7 @@ def _read_from_key_vault(secret_name: str) -> bytes | None:
         return value.encode() if value.strip() else None
     except ImportError:
         warnings.warn(
-            "azure-keyvault-secrets not installed. "
-            "Install with: pip install 'concilium[azure]'",
+            "azure-keyvault-secrets not installed. Install with: pip install 'concilium[azure]'",
             UserWarning,
             stacklevel=3,
         )

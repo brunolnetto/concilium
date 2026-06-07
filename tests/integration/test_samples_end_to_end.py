@@ -6,8 +6,6 @@ from typing import Any
 
 import pytest
 
-from concilium.infrastructure.storage.project import ProjectStore
-
 # ── Fixtures: Usamos diretamente as session-scoped do conftest.py ──────
 # Sem fixtures intermediárias para evitar recriação desnecessária
 
@@ -228,7 +226,7 @@ class TestExcelPersistency:
         version = proj.current_version()
 
         output_files = proj.list_output_files(version)
-        assert "relatorio.md" in output_files, "Relatório MD deve estar listado"
+        assert "relatorio.pdf" in output_files, "Relatório MD deve estar listado"
         assert "resultado_planejamento.xlsx" in output_files, "Excel deve estar listado"
         assert len(output_files) >= 2, "Deve ter no mínimo JSON e Excel"
 

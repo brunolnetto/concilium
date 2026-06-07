@@ -111,7 +111,7 @@ def activate_device(request: Request, response: Response, body: DeviceActivateRe
         refresh_token=rt.token_id,
         device_id=rt.device_id,
         client_id=rt.client_id,
-        scopes=rt.roles,   # campo legado mantido na resposta por compatibilidade
+        scopes=rt.roles,  # campo legado mantido na resposta por compatibilidade
         expires_at=rt.expires_at,
     )
 

@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import duckdb as _duckdb
+
     _AVAILABLE = True
 except ImportError:
     _AVAILABLE = False
@@ -62,9 +63,9 @@ class CatalogQueryEngine:
             insumos = engine.load_insumos()
     """
 
-    DB_FILENAME  = "catalog.duckdb"
-    TS_FILENAME  = "catalog.duckdb.timestamp"
-    SCHEMA_VER   = "2"  # base tables: cpus, insumos, produtividades, funcoes
+    DB_FILENAME = "catalog.duckdb"
+    TS_FILENAME = "catalog.duckdb.timestamp"
+    SCHEMA_VER = "2"  # base tables: cpus, insumos, produtividades, funcoes
 
     def __init__(self, catalog_dir: Path) -> None:
         self._dir = catalog_dir
@@ -148,18 +149,20 @@ class CatalogQueryEngine:
 
         # composicao_itens: CPU → lista de itens de composição
         comp_rows: list[tuple] = []
-        for cpu_raw_json, in conn.execute("SELECT raw_json FROM cpus").fetchall():
+        for (cpu_raw_json,) in conn.execute("SELECT raw_json FROM cpus").fetchall():
             cpu = json.loads(cpu_raw_json)
             codigo = cpu.get("codigo") or cpu.get("id") or ""
             for seq, item in enumerate(cpu.get("composicao_itens") or []):
-                comp_rows.append((
-                    codigo,
-                    seq,
-                    str(item.get("insumo_id") or ""),
-                    float(item.get("coeficiente") or 0),
-                    str(item.get("categoria_custo") or ""),
-                    str(item.get("unidade") or ""),
-                ))
+                comp_rows.append(
+                    (
+                        codigo,
+                        seq,
+                        str(item.get("insumo_id") or ""),
+                        float(item.get("coeficiente") or 0),
+                        str(item.get("categoria_custo") or ""),
+                        str(item.get("unidade") or ""),
+                    )
+                )
         conn.execute("""
             CREATE TABLE composicao_itens (
                 cpu_codigo TEXT, seq INT, insumo_id TEXT,
@@ -176,38 +179,47 @@ class CatalogQueryEngine:
         eq_rows: list[tuple] = []
         mat_rows: list[tuple] = []
 
-        for prod_raw_json, in conn.execute("SELECT raw_json FROM produtividades").fetchall():
+        for (prod_raw_json,) in conn.execute("SELECT raw_json FROM produtividades").fetchall():
             prod = json.loads(prod_raw_json)
             pid = str(prod.get("id") or prod.get("producao_id") or "")
             equipe = prod.get("composicao_padrao_equipe") or {}
 
             for fn in equipe.get("funcoes") or []:
-                fn_rows.append((
-                    pid,
-                    str(fn.get("funcao_id") or ""),
-                    float(fn.get("num_pessoas") or 1),
-                    str(fn.get("papel") or "direto"),
-                ))
+                fn_rows.append(
+                    (
+                        pid,
+                        str(fn.get("funcao_id") or ""),
+                        float(fn.get("num_pessoas") or 1),
+                        str(fn.get("papel") or "direto"),
+                    )
+                )
             for eq in equipe.get("equipamentos") or []:
-                eq_rows.append((
-                    pid,
-                    str(eq.get("equip_id") or eq.get("equipamento_id") or ""),
-                    float(eq.get("num_unidades") or 1),
-                    float(eq.get("consumo_litros_hora") or
-                          eq.get("consumo_litros_hora_estimado") or 0),
-                ))
+                eq_rows.append(
+                    (
+                        pid,
+                        str(eq.get("equip_id") or eq.get("equipamento_id") or ""),
+                        float(eq.get("num_unidades") or 1),
+                        float(eq.get("consumo_litros_hora") or eq.get("consumo_litros_hora_estimado") or 0),
+                    )
+                )
             for mat in equipe.get("materiais") or []:
-                mat_rows.append((
-                    pid,
-                    str(mat.get("insumo_id") or mat.get("material_id") or ""),
-                    float(mat.get("consumo_por_hora") or 0),
-                    str(mat.get("unidade") or ""),
-                ))
+                mat_rows.append(
+                    (
+                        pid,
+                        str(mat.get("insumo_id") or mat.get("material_id") or ""),
+                        float(mat.get("consumo_por_hora") or 0),
+                        str(mat.get("unidade") or ""),
+                    )
+                )
 
         for table, cols, rows in [
-            ("equipe_funcoes",     "prod_id TEXT, funcao_id TEXT, num_pessoas FLOAT, papel TEXT", fn_rows),
-            ("equipe_equipamentos","prod_id TEXT, equip_id TEXT, num_unidades FLOAT, consumo_litros_hora FLOAT", eq_rows),
-            ("equipe_materiais",   "prod_id TEXT, insumo_id TEXT, consumo_por_hora FLOAT, unidade TEXT", mat_rows),
+            ("equipe_funcoes", "prod_id TEXT, funcao_id TEXT, num_pessoas FLOAT, papel TEXT", fn_rows),
+            (
+                "equipe_equipamentos",
+                "prod_id TEXT, equip_id TEXT, num_unidades FLOAT, consumo_litros_hora FLOAT",
+                eq_rows,
+            ),
+            ("equipe_materiais", "prod_id TEXT, insumo_id TEXT, consumo_por_hora FLOAT, unidade TEXT", mat_rows),
         ]:
             conn.execute(f"CREATE TABLE {table} ({cols})")
             if rows:
@@ -246,7 +258,7 @@ class CatalogQueryEngine:
             try:
                 payload = json.loads(cpus_file.read_text(encoding="utf-8"))
                 cpus = payload.get("cpus", payload) if isinstance(payload, dict) else payload
-                for raw in (cpus or []):
+                for raw in cpus or []:
                     if isinstance(raw, dict):
                         rows.append(_cpu_row(raw))
             except Exception:
@@ -292,7 +304,7 @@ class CatalogQueryEngine:
                     try:
                         payload = json.loads(f.read_text(encoding="utf-8"))
                         items = payload.get("insumos", payload) if isinstance(payload, dict) else payload
-                        for raw in (items or []):
+                        for raw in items or []:
                             if isinstance(raw, dict):
                                 rows.append(_insumo_row(raw, tipo))
                     except Exception:
@@ -330,7 +342,7 @@ class CatalogQueryEngine:
                 try:
                     payload = json.loads(p.read_text(encoding="utf-8"))
                     items = payload.get("produtividades", payload) if isinstance(payload, dict) else payload
-                    for raw in (items or []):
+                    for raw in items or []:
                         if isinstance(raw, dict):
                             rows.append(_prod_row(raw))
                 except Exception:
@@ -354,7 +366,7 @@ class CatalogQueryEngine:
             try:
                 payload = json.loads(f.read_text(encoding="utf-8"))
                 items = payload.get("funcoes", payload) if isinstance(payload, dict) else payload
-                for raw in (items or []):
+                for raw in items or []:
                     if isinstance(raw, dict):
                         rows.append(_funcao_row(raw))
             except Exception:
@@ -473,6 +485,7 @@ class CatalogSession:
         if not _AVAILABLE:
             raise ImportError("duckdb não está instalado. pip install duckdb>=1.0.0")
         import duckdb
+
         from concilium.infrastructure.settings import get_runtime
 
         runtime = get_runtime()
@@ -486,7 +499,7 @@ class CatalogSession:
         self._loaded = False
 
     @classmethod
-    def from_resolved(cls, catalogo: dict[str, Any]) -> "CatalogSession":
+    def from_resolved(cls, catalogo: dict[str, Any]) -> CatalogSession:
         """Cria sessão a partir do catálogo resolvido (com overlays aplicados)."""
         session = cls()
         session._load(catalogo)
@@ -510,7 +523,7 @@ class CatalogSession:
         raw_insumos = catalogo.get("insumos", {})
         if isinstance(raw_insumos, dict):
             for tipo, items in raw_insumos.items():
-                for i in (items or []):
+                for i in items or []:
                     if isinstance(i, dict):
                         ins_rows.append(_insumo_row(i, tipo))
         elif isinstance(raw_insumos, list):
@@ -555,30 +568,48 @@ class CatalogSession:
             codigo = cpu_row[0]
             cpu = json.loads(cpu_row[4])
             for seq, item in enumerate(cpu.get("composicao_itens") or []):
-                comp_rows.append((
-                    codigo, seq,
-                    str(item.get("insumo_id") or ""),
-                    float(item.get("coeficiente") or 0),
-                    str(item.get("categoria_custo") or ""),
-                    str(item.get("unidade") or ""),
-                ))
+                comp_rows.append(
+                    (
+                        codigo,
+                        seq,
+                        str(item.get("insumo_id") or ""),
+                        float(item.get("coeficiente") or 0),
+                        str(item.get("categoria_custo") or ""),
+                        str(item.get("unidade") or ""),
+                    )
+                )
 
         for prod_row in prod_rows:
             pid = prod_row[0]
             prod = json.loads(prod_row[2])
             equipe = prod.get("composicao_padrao_equipe") or {}
             for fn in equipe.get("funcoes") or []:
-                fn_rows.append((pid, str(fn.get("funcao_id") or ""),
-                                 float(fn.get("num_pessoas") or 1), str(fn.get("papel") or "direto")))
+                fn_rows.append(
+                    (
+                        pid,
+                        str(fn.get("funcao_id") or ""),
+                        float(fn.get("num_pessoas") or 1),
+                        str(fn.get("papel") or "direto"),
+                    )
+                )
             for eq in equipe.get("equipamentos") or []:
-                eq_rows.append((pid, str(eq.get("equip_id") or eq.get("equipamento_id") or ""),
-                                 float(eq.get("num_unidades") or 1),
-                                 float(eq.get("consumo_litros_hora") or
-                                       eq.get("consumo_litros_hora_estimado") or 0)))
+                eq_rows.append(
+                    (
+                        pid,
+                        str(eq.get("equip_id") or eq.get("equipamento_id") or ""),
+                        float(eq.get("num_unidades") or 1),
+                        float(eq.get("consumo_litros_hora") or eq.get("consumo_litros_hora_estimado") or 0),
+                    )
+                )
             for mat in equipe.get("materiais") or []:
-                mat_rows.append((pid, str(mat.get("insumo_id") or mat.get("material_id") or ""),
-                                  float(mat.get("consumo_por_hora") or 0),
-                                  str(mat.get("unidade") or "")))
+                mat_rows.append(
+                    (
+                        pid,
+                        str(mat.get("insumo_id") or mat.get("material_id") or ""),
+                        float(mat.get("consumo_por_hora") or 0),
+                        str(mat.get("unidade") or ""),
+                    )
+                )
 
         conn.execute("""CREATE TABLE composicao_itens
             (cpu_codigo TEXT, seq INT, insumo_id TEXT, coeficiente FLOAT, categoria_custo TEXT, unidade TEXT)""")
@@ -588,9 +619,13 @@ class CatalogSession:
         conn.execute("CREATE INDEX idx_ci_ins ON composicao_itens(insumo_id)")
 
         for tbl, cols, rows in [
-            ("equipe_funcoes",     "prod_id TEXT, funcao_id TEXT, num_pessoas FLOAT, papel TEXT", fn_rows),
-            ("equipe_equipamentos","prod_id TEXT, equip_id TEXT, num_unidades FLOAT, consumo_litros_hora FLOAT", eq_rows),
-            ("equipe_materiais",   "prod_id TEXT, insumo_id TEXT, consumo_por_hora FLOAT, unidade TEXT", mat_rows),
+            ("equipe_funcoes", "prod_id TEXT, funcao_id TEXT, num_pessoas FLOAT, papel TEXT", fn_rows),
+            (
+                "equipe_equipamentos",
+                "prod_id TEXT, equip_id TEXT, num_unidades FLOAT, consumo_litros_hora FLOAT",
+                eq_rows,
+            ),
+            ("equipe_materiais", "prod_id TEXT, insumo_id TEXT, consumo_por_hora FLOAT, unidade TEXT", mat_rows),
         ]:
             conn.execute(f"CREATE TABLE {tbl} ({cols})")
             if rows:
@@ -601,8 +636,13 @@ class CatalogSession:
 
         self._loaded = True
         elapsed = round((time.perf_counter() - t0) * 1000)
-        logger.debug("CatalogSession loaded in %dms (%d CPUs, %d insumos, %d prods)",
-                     elapsed, len(cpu_rows), len(ins_rows), len(prod_rows))
+        logger.debug(
+            "CatalogSession loaded in %dms (%d CPUs, %d insumos, %d prods)",
+            elapsed,
+            len(cpu_rows),
+            len(ins_rows),
+            len(prod_rows),
+        )
 
     # ── Queries SQL vectorizadas ──────────────────────────────────────────────
 
@@ -611,7 +651,8 @@ class CatalogSession:
 
         Substitui o loop Python em pu_calculator.py:121-163.
         """
-        rows = self._conn.execute("""
+        rows = self._conn.execute(
+            """
             SELECT
                 ci.insumo_id,
                 ci.coeficiente,
@@ -625,9 +666,18 @@ class CatalogSession:
             LEFT JOIN insumos       i  ON i.id  = ci.insumo_id
             WHERE ci.cpu_codigo = ?
             ORDER BY ci.seq
-        """, [cpu_codigo]).fetchall()
-        cols = ["insumo_id", "coeficiente", "categoria_custo", "ci_unidade",
-                "preco_unitario", "insumo_tipo", "raw_json"]
+        """,
+            [cpu_codigo],
+        ).fetchall()
+        cols = [
+            "insumo_id",
+            "coeficiente",
+            "categoria_custo",
+            "ci_unidade",
+            "preco_unitario",
+            "insumo_tipo",
+            "raw_json",
+        ]
         result = []
         for r in rows:
             rec = dict(zip(cols, r))
@@ -641,15 +691,19 @@ class CatalogSession:
 
         Substitui os 3 loops Python em pu_calculator.py:166-231.
         """
-        funcoes = self._conn.execute("""
+        funcoes = self._conn.execute(
+            """
             SELECT ef.funcao_id, ef.num_pessoas, ef.papel, ip.preco_unitario, i.raw_json
             FROM equipe_funcoes ef
             LEFT JOIN insumos_precos ip ON ip.id = ef.funcao_id
             LEFT JOIN insumos       i  ON i.id  = ef.funcao_id
             WHERE ef.prod_id = ?
-        """, [prod_id]).fetchall()
+        """,
+            [prod_id],
+        ).fetchall()
 
-        equipamentos = self._conn.execute("""
+        equipamentos = self._conn.execute(
+            """
             SELECT ee.equip_id, ee.num_unidades, ee.consumo_litros_hora,
                    ip.preco_unitario,
                    COALESCE(ee.consumo_litros_hora, ip.consumo_litros_hora) AS consumo_efetivo,
@@ -658,15 +712,20 @@ class CatalogSession:
             LEFT JOIN insumos_precos ip ON ip.id = ee.equip_id
             LEFT JOIN insumos       i  ON i.id  = ee.equip_id
             WHERE ee.prod_id = ?
-        """, [prod_id]).fetchall()
+        """,
+            [prod_id],
+        ).fetchall()
 
-        materiais = self._conn.execute("""
+        materiais = self._conn.execute(
+            """
             SELECT em.insumo_id, em.consumo_por_hora, em.unidade, ip.preco_unitario, i.raw_json
             FROM equipe_materiais em
             LEFT JOIN insumos_precos ip ON ip.id = em.insumo_id
             LEFT JOIN insumos       i  ON i.id  = em.insumo_id
             WHERE em.prod_id = ?
-        """, [prod_id]).fetchall()
+        """,
+            [prod_id],
+        ).fetchall()
 
         def _parse(rows, cols):
             result = []
@@ -678,23 +737,23 @@ class CatalogSession:
             return result
 
         return {
-            "funcoes":      _parse(funcoes,      ["funcao_id","num_pessoas","papel","preco_unitario","raw_json"]),
-            "equipamentos": _parse(equipamentos, ["equip_id","num_unidades","consumo_litros_hora","preco_unitario","consumo_efetivo","raw_json"]),
-            "materiais":    _parse(materiais,    ["insumo_id","consumo_por_hora","unidade","preco_unitario","raw_json"]),
+            "funcoes": _parse(funcoes, ["funcao_id", "num_pessoas", "papel", "preco_unitario", "raw_json"]),
+            "equipamentos": _parse(
+                equipamentos,
+                ["equip_id", "num_unidades", "consumo_litros_hora", "preco_unitario", "consumo_efetivo", "raw_json"],
+            ),
+            "materiais": _parse(materiais, ["insumo_id", "consumo_por_hora", "unidade", "preco_unitario", "raw_json"]),
         }
 
     def find_cpus_by_categoria(self, categoria: str) -> list[dict[str, Any]]:
         """Filter O(log n) via índice em vez de O(n) scan Python."""
-        rows = self._conn.execute(
-            "SELECT raw_json FROM cpus WHERE categoria = ?", [categoria]
-        ).fetchall()
+        rows = self._conn.execute("SELECT raw_json FROM cpus WHERE categoria = ?", [categoria]).fetchall()
         return [json.loads(r[0]) for r in rows]
 
     def find_cpus_using_insumo(self, insumo_id: str) -> list[str]:
         """Índice reverso O(log n): quais CPUs usam este insumo."""
         rows = self._conn.execute(
-            "SELECT DISTINCT cpu_codigo FROM composicao_itens WHERE insumo_id = ?",
-            [insumo_id]
+            "SELECT DISTINCT cpu_codigo FROM composicao_itens WHERE insumo_id = ?", [insumo_id]
         ).fetchall()
         return [r[0] for r in rows]
 
@@ -702,7 +761,8 @@ class CatalogSession:
         """Estatísticas de preço por tipo — substitui Python aggregations em plausibility."""
         where = "WHERE tipo = ?" if tipo else ""
         params = [tipo] if tipo else []
-        rows = self._conn.execute(f"""
+        rows = self._conn.execute(
+            f"""
             SELECT
                 tipo,
                 COUNT(*)                                    AS n,
@@ -717,8 +777,10 @@ class CatalogSession:
             {where}
             GROUP BY tipo
             ORDER BY tipo
-        """, params).fetchall()
-        cols = ["tipo","n","media","desvio","minimo","maximo","mediana"]
+        """,
+            params,
+        ).fetchall()
+        cols = ["tipo", "n", "media", "desvio", "minimo", "maximo", "mediana"]
         return [dict(zip(cols, r)) for r in rows]
 
     def query(self, sql: str, params: list | None = None) -> list[tuple]:
@@ -728,7 +790,7 @@ class CatalogSession:
     def close(self) -> None:
         self._conn.close()
 
-    def __enter__(self) -> "CatalogSession":
+    def __enter__(self) -> CatalogSession:
         return self
 
     def __exit__(self, *_: Any) -> None:

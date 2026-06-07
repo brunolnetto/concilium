@@ -7,28 +7,26 @@ Implementa 5 ferramentas:
 4. editar_benchmark — Com controle de imutabilidade
 5. comparar_execucoes_benchmark — Diff estruturado (Fase 4)
 """
+
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
-from datetime import datetime
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.application.benchmarks.diff_service import BenchmarkDiffService
 from concilium.domain.benchmark.models import (
-    BenchmarkMetadata,
     BenchmarkExecution,
 )
 from concilium.infrastructure.storage.benchmark_store import (
     FileSystemBenchmarkStore,
 )
-from concilium.application.benchmarks.diff_service import BenchmarkDiffService
 
 
 def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
     """Registra ferramentas de benchmark no servidor MCP."""
 
-    @server.tool(
-        description="Consulta metadados de um benchmark sem executar o pipeline."
-    )
+    @server.tool(description="Consulta metadados de um benchmark sem executar o pipeline.")
     def consultar_benchmark(benchmark_id: str) -> dict[str, Any]:
         """Retorna metadados do benchmark.
 
@@ -66,9 +64,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
                 }
                 for e in history
             ],
-            "total_projetos_derivados": len(
-                {e.projeto_id for e in history if e.status == "SUCESSO"}
-            ),
+            "total_projetos_derivados": len({e.projeto_id for e in history if e.status == "SUCESSO"}),
         }
 
     @server.tool(description="Lista todos os benchmarks disponíveis no catálogo.")
@@ -97,9 +93,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
             ],
         }
 
-    @server.tool(
-        description="Executa benchmark e cria/atualiza um projeto. Sempre atrelado a projeto."
-    )
+    @server.tool(description="Executa benchmark e cria/atualiza um projeto. Sempre atrelado a projeto.")
     def executar_benchmark(
         benchmark_id: str,
         criar_novo_projeto: bool = True,
@@ -139,9 +133,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
             "mensagem": f"Benchmark '{benchmark_id}' v{meta.versao} enfileirado para execução. Project: {exec.projeto_id}",
         }
 
-    @server.tool(
-        description="Edita um benchmark com controle de imutabilidade. Imutável → gera v+1."
-    )
+    @server.tool(description="Edita um benchmark com controle de imutabilidade. Imutável → gera v+1.")
     def editar_benchmark(benchmark_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         """Edita benchmark. Se imutável, gera nova versão.
 
@@ -205,12 +197,8 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
             "mensagem": f"Benchmark '{benchmark_id}' v{meta.versao} marcado como imutável.",
         }
 
-    @server.tool(
-        description="Compara duas execuções de benchmark e retorna diff estruturado (Fase 4)."
-    )
-    def comparar_execucoes_benchmark(
-        execution_1_id: str, execution_2_id: str
-    ) -> dict[str, Any]:
+    @server.tool(description="Compara duas execuções de benchmark e retorna diff estruturado (Fase 4).")
+    def comparar_execucoes_benchmark(execution_1_id: str, execution_2_id: str) -> dict[str, Any]:
         """Compara duas execuções e retorna deltas estruturados.
 
         Args:

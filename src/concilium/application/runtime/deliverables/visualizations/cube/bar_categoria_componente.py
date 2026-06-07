@@ -19,16 +19,19 @@ def build(canonical, cubo) -> bytes | None:
     try:
         plt, fig_to_bytes = init_mpl()
         fig = render_stacked_bar(
-            plt, rows, columns,
+            plt,
+            rows,
+            columns,
             "Composicao de Custo por Categoria",
             use_millions,
             show_normalized=False,
-            annotate_bdi=True,
+            annotate_bdi=False,
         )
         return fig_to_bytes(fig) if fig is not None else None
     except Exception:
         try:
             import matplotlib.pyplot as _plt
+
             _plt.close("all")
         except Exception:
             pass

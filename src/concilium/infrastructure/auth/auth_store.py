@@ -23,8 +23,8 @@ from pathlib import Path
 
 from concilium.infrastructure.settings import get_auth
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _now() -> datetime:
     return datetime.now(UTC)
@@ -48,12 +48,13 @@ def _verify(provided: str, stored_hash: str) -> bool:
 
 # ── Data records ──────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ClientRecord:
     client_id: str
-    secret_hash: str          # "sha256:<hex>"
-    roles: list[str]          # ADR-099: ex. ["operator"], ["service-ci"]
-    created_at: str           # ISO-8601
+    secret_hash: str  # "sha256:<hex>"
+    roles: list[str]  # ADR-099: ex. ["operator"], ["service-ci"]
+    created_at: str  # ISO-8601
     active: bool = True
     notes: str = ""
     scopes: list[str] = field(default_factory=list)  # legado ADR-094, ignorado se roles presente
@@ -61,31 +62,32 @@ class ClientRecord:
 
 @dataclass
 class DeviceCodeRecord:
-    code: str                 # "RCODE-<hex>"
+    code: str  # "RCODE-<hex>"
     client_id: str
     device_id: str
     device_name: str
-    roles: list[str]          # ADR-099
-    expires_at: str           # ISO-8601
+    roles: list[str]  # ADR-099
+    expires_at: str  # ISO-8601
     used: bool = False
     scopes: list[str] = field(default_factory=list)  # legado
 
 
 @dataclass
 class RefreshTokenRecord:
-    token_id: str             # "RT-<hex>"
+    token_id: str  # "RT-<hex>"
     client_id: str
     device_id: str
     device_name: str
-    roles: list[str]          # ADR-099
-    issued_at: str            # ISO-8601
-    expires_at: str           # ISO-8601
+    roles: list[str]  # ADR-099
+    issued_at: str  # ISO-8601
+    expires_at: str  # ISO-8601
     revoked: bool = False
     last_used_at: str = ""
     scopes: list[str] = field(default_factory=list)  # legado
 
 
 # ── Store ─────────────────────────────────────────────────────────────────────
+
 
 class AuthStore:
     """Thread-safe auth data store backed by JSON files.
@@ -150,8 +152,10 @@ class AuthStore:
     ) -> ClientRecord:
         """Register a new client. Raises ValueError if client_id already exists."""
         from concilium.infrastructure.auth.permission_guard import (
-            LEGACY_SCOPE_TO_ROLE, VALID_ROLES,
+            LEGACY_SCOPE_TO_ROLE,
+            VALID_ROLES,
         )
+
         # Mapeia scopes legados para roles se necessário
         effective_roles = list(roles)
         if not effective_roles and scopes:
@@ -207,6 +211,7 @@ class AuthStore:
         # Fallback: env-var store (ADR-094 historical) → map scopes to roles
         from concilium.infrastructure.auth.client_store import validate_client as _env_validate
         from concilium.infrastructure.auth.permission_guard import LEGACY_SCOPE_TO_ROLE
+
         scopes = _env_validate(client_id, secret)
         if scopes is None:
             return None
@@ -300,10 +305,9 @@ class AuthStore:
             tokens = [RefreshTokenRecord(**r) for r in self._read("refresh_tokens.json")]
         now = _now()
         return [
-            t for t in tokens
-            if not t.revoked
-            and _parse(t.expires_at) >= now
-            and (client_id is None or t.client_id == client_id)
+            t
+            for t in tokens
+            if not t.revoked and _parse(t.expires_at) >= now and (client_id is None or t.client_id == client_id)
         ]
 
     def revoke_device(self, device_id: str) -> int:

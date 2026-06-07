@@ -195,7 +195,7 @@ class PerfilVersionCreateRequest(ConfigVersionCreateRequest):
     razao_indireto_direto_alvo: RangeInput | None = None
 
     @model_validator(mode="after")
-    def validate_ranges(self) -> "PerfilVersionCreateRequest":
+    def validate_ranges(self) -> PerfilVersionCreateRequest:
         for label, faixa, lower, upper in (
             ("faixa_margem_alvo", self.faixa_margem_alvo, 0.0, 1.0),
             ("faixa_margem_aceitavel", self.faixa_margem_aceitavel, 0.0, 1.0),

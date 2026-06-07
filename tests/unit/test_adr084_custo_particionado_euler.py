@@ -20,10 +20,7 @@ import pytest
 # ---------------------------------------------------------------------------
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
-_HELPERS_PATH = (
-    _ROOT
-    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py"
-)
+_HELPERS_PATH = _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py"
 
 sys.path.insert(0, str(_ROOT / "src"))
 
@@ -183,7 +180,8 @@ class TestDagPredecessorCritico:
         atrib = {it["item_id"]: (0.0, "produtivo", 3.0) for it in items}
         result = particionar_contrato(
             items_com_janela=items,
-            c_mob=0.0, c_demob=0.0,
+            c_mob=0.0,
+            c_demob=0.0,
             c_unit_semana=1.0,
             quantidade_contratada=1,
             T_contrato_start=0.0,

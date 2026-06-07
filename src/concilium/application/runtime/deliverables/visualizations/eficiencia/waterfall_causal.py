@@ -42,14 +42,25 @@ def plot_waterfall_causal(
     bars = ax.bar(labels, values, color=colors, alpha=0.85, edgecolor="white", linewidth=0.5)
     ax.axhline(1.0, color="green", linewidth=0.8, linestyle="--", alpha=0.5)
     for bar, val in zip(bars, values, strict=True):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.01,
-                f"{val:.3f}", ha="center", va="bottom", fontsize=9)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.01,
+            f"{val:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
     ax.set_ylim(0, 1.15)
     ax.set_ylabel("Eficiência (0–1)")
     ax.set_title(title)
     if dec.get("acoplamento_material"):
-        ax.annotate("⚠ Acoplamento material entre fatores (|ε_cross| > 5%)",
-                    xy=(0.5, 0.02), xycoords="axes fraction", ha="center",
-                    color="red", fontsize=8)
+        ax.annotate(
+            "⚠ Acoplamento material entre fatores (|ε_cross| > 5%)",
+            xy=(0.5, 0.02),
+            xycoords="axes fraction",
+            ha="center",
+            color="red",
+            fontsize=8,
+        )
     fig.tight_layout()
     return fig

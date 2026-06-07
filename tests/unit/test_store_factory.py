@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
 from concilium.infrastructure.storage import store_factory
+from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
 from concilium.infrastructure.storage.store_factory import build_project_repository, resolve_store_backend
 
 

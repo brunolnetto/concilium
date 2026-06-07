@@ -13,7 +13,6 @@ Cobertura:
 from __future__ import annotations
 
 import importlib.util
-import math
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -28,6 +27,7 @@ _HELPERS_B = (
     Path(__file__).parent.parent.parent
     / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_pre.py"
 )
+
 
 # ADR-078: a renderização da seção de oportunidades migrou de runtime.py
 # (refatorado em pacote) para o módulo de seções de relatório.
@@ -145,10 +145,7 @@ class TestEtaPerpetuacao:
 
     def test_decrescente_com_gap(self, helpers):
         """η deve diminuir à medida que o gap aumenta."""
-        etas = [
-            helpers._eta_perpetuacao(g, C_MOB, C_DEMOB, C_IDLE, "dia_cal")
-            for g in range(0, 10)
-        ]
+        etas = [helpers._eta_perpetuacao(g, C_MOB, C_DEMOB, C_IDLE, "dia_cal") for g in range(0, 10)]
         for a, b in zip(etas, etas[1:]):
             assert a >= b
 
@@ -284,12 +281,9 @@ def _make_rcpsp_spec_com_resource_costs():
     """Spec mínimo: 3 atividades usando ESC-3CAT, com resource_costs."""
     return {
         "activities": [
-            {"item_id": "A", "duration_weeks": 10,
-             "required_resources": {"ESC-3CAT": 4}},
-            {"item_id": "B", "duration_weeks": 10,
-             "required_resources": {"ESC-3CAT": 2}},
-            {"item_id": "C", "duration_weeks": 10,
-             "required_resources": {"ATERRO": 3}},
+            {"item_id": "A", "duration_weeks": 10, "required_resources": {"ESC-3CAT": 4}},
+            {"item_id": "B", "duration_weeks": 10, "required_resources": {"ESC-3CAT": 2}},
+            {"item_id": "C", "duration_weeks": 10, "required_resources": {"ATERRO": 3}},
         ],
         "resource_pool": {"ESC-3CAT": 6, "ATERRO": 3},
         "resource_costs": {
@@ -365,18 +359,14 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10)})
         validacoes: list = []
-        result = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        result = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         assert result is None
 
     def test_sem_resource_costs_emite_val_skip(self, helpers):
         """Sem resource_costs → VAL-PRE-PROCESSAMENTO-SKIP."""
         spec = {"activities": [], "resource_pool": {}}
         validacoes: list = []
-        helpers._build_pre_processamento_compartilhamento(
-            [], spec, {}, validacoes
-        )
+        helpers._build_pre_processamento_compartilhamento([], spec, {}, validacoes)
         codigos = [v.codigo for v in validacoes]
         assert "VAL-PRE-PROCESSAMENTO-SKIP" in codigos
 
@@ -386,9 +376,7 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (15, 25), "C": (1, 25)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         assert relatorio is not None
         viaveis = [o for o in relatorio.oportunidades if o.economicamente_viavel]
         assert len(viaveis) == 1
@@ -399,13 +387,9 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (25, 35), "C": (1, 25)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         assert relatorio is not None
-        inviavel = next(
-            (o for o in relatorio.oportunidades if not o.economicamente_viavel), None
-        )
+        inviavel = next((o for o in relatorio.oportunidades if not o.economicamente_viavel), None)
         assert inviavel is not None
 
     def test_atividades_sobrepostas_nao_geram_oportunidade(self, helpers):
@@ -415,9 +399,7 @@ class TestBuildPreProcessamento:
         # A e B se sobrepõem (B começa antes de A terminar)
         cron = _make_cron_lookup({"A": (1, 20), "B": (10, 30), "C": (1, 10)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         # Atividades A e B se sobrepõem para ESC-3CAT → nenhuma oportunidade ESC-3CAT
         if relatorio:
             assert all(o.gap_semanas >= 0 for o in relatorio.oportunidades)
@@ -426,12 +408,9 @@ class TestBuildPreProcessamento:
         """Oportunidades devem estar ordenadas por delta_c_pot decrescente."""
         spec = {
             "activities": [
-                {"item_id": "A", "duration_weeks": 10,
-                 "required_resources": {"ESC-3CAT": 4}},
-                {"item_id": "B", "duration_weeks": 10,
-                 "required_resources": {"ESC-3CAT": 4}},
-                {"item_id": "D", "duration_weeks": 10,
-                 "required_resources": {"ESC-3CAT": 2}},
+                {"item_id": "A", "duration_weeks": 10, "required_resources": {"ESC-3CAT": 4}},
+                {"item_id": "B", "duration_weeks": 10, "required_resources": {"ESC-3CAT": 4}},
+                {"item_id": "D", "duration_weeks": 10, "required_resources": {"ESC-3CAT": 2}},
             ],
             "resource_pool": {"ESC-3CAT": 6},
             "resource_costs": {
@@ -447,9 +426,7 @@ class TestBuildPreProcessamento:
         # A→B gap=2, A→D gap=5, B→D gap=3
         cron = _make_cron_lookup({"A": (1, 10), "B": (13, 23), "D": (17, 27)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio and len(relatorio.oportunidades) > 1:
             deltas = [o.delta_c_pot for o in relatorio.oportunidades]
             assert all(a >= b for a, b in zip(deltas, deltas[1:]))
@@ -460,13 +437,9 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio:
-            esperado = sum(
-                o.delta_c_pot for o in relatorio.oportunidades if o.economicamente_viavel
-            )
+            esperado = sum(o.delta_c_pot for o in relatorio.oportunidades if o.economicamente_viavel)
             assert relatorio.total_economia_pot == pytest.approx(esperado)
 
     def test_gap_max_por_tipo_inclui_tipo_com_costs(self, helpers):
@@ -475,9 +448,7 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio:
             assert "ESC-3CAT" in relatorio.gap_max_por_tipo
             assert relatorio.gap_max_por_tipo["ESC-3CAT"] == 9
@@ -488,9 +459,7 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio:
             for o in relatorio.oportunidades:
                 assert o.lambda0 == pytest.approx(o.delta_c_pot * o.omega_bundle)
@@ -501,9 +470,7 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
         validacoes: list = []
-        helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         codigos = [v.codigo for v in validacoes]
         assert "VAL-PRE-PROCESSAMENTO-OK" in codigos
 
@@ -514,9 +481,7 @@ class TestBuildPreProcessamento:
         # gap = 20 > gap_max = 9
         cron = _make_cron_lookup({"A": (1, 10), "B": (31, 41), "C": (1, 20)})
         validacoes: list = []
-        helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         codigos = [v.codigo for v in validacoes]
         assert "VAL-OPT-INVIAVEL" in codigos
 
@@ -526,13 +491,10 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio:
             opp = next(
-                (o for o in relatorio.oportunidades
-                 if o.atividade_i in ("A", "B") and o.atividade_j in ("A", "B")),
+                (o for o in relatorio.oportunidades if o.atividade_i in ("A", "B") and o.atividade_j in ("A", "B")),
                 None,
             )
             if opp:
@@ -545,9 +507,7 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT", "ATERRO"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (35, 45)})
         validacoes: list = []
-        relatorio = helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio:
             aterro_opps = [o for o in relatorio.oportunidades if o.tipo_id == "ATERRO"]
             assert len(aterro_opps) == 0
@@ -558,9 +518,7 @@ class TestBuildPreProcessamento:
         contratos = _make_contratos(["ESC-3CAT"])
         cron = _make_cron_lookup({"A": (1, 10), "B": (12, 22), "C": (1, 20)})
         validacoes: list = []
-        helpers._build_pre_processamento_compartilhamento(
-            contratos, spec, cron, validacoes
-        )
+        helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         esc = next(c for c in contratos if c.tipo_id == "ESC-3CAT")
         assert esc.gap_max_economico == 9
         assert esc.custo_mob_unit == C_MOB

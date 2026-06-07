@@ -30,16 +30,16 @@ class CampoEficiencia:
     Semanas fora da janela de uma atividade simplesmente não têm entrada.
     """
 
-    E: dict[str, dict[str, float]] = field(default_factory=dict)     # η total = η_s·η_p·η_w
-    S: dict[str, dict[str, float]] = field(default_factory=dict)     # η_s (alocação)
-    P_r: dict[str, dict[str, float]] = field(default_factory=dict)   # η_p (praticabilidade)
-    W: dict[str, dict[str, float]] = field(default_factory=dict)     # η_w (gestão)
-    Q: dict[str, dict[str, float]] = field(default_factory=dict)     # produção realizada q_ij
-    Q_max: dict[str, dict[str, float]] = field(default_factory=dict) # capacidade máxima q_max_ij
+    E: dict[str, dict[str, float]] = field(default_factory=dict)  # η total = η_s·η_p·η_w
+    S: dict[str, dict[str, float]] = field(default_factory=dict)  # η_s (alocação)
+    P_r: dict[str, dict[str, float]] = field(default_factory=dict)  # η_p (praticabilidade)
+    W: dict[str, dict[str, float]] = field(default_factory=dict)  # η_w (gestão)
+    Q: dict[str, dict[str, float]] = field(default_factory=dict)  # produção realizada q_ij
+    Q_max: dict[str, dict[str, float]] = field(default_factory=dict)  # capacidade máxima q_max_ij
 
     # metadados
-    atividades: list[str] = field(default_factory=list)   # I atividades
-    semanas: list[str] = field(default_factory=list)      # T semanas da obra (ordenadas)
+    atividades: list[str] = field(default_factory=list)  # I atividades
+    semanas: list[str] = field(default_factory=list)  # T semanas da obra (ordenadas)
 
     # ── Nível 1: série temporal global ────────────────────────────────────────
 
@@ -57,11 +57,7 @@ class CampoEficiencia:
                 soma_q[sem] = soma_q.get(sem, 0.0) + q
             for sem, qm in (self.Q_max.get(item_id) or {}).items():
                 soma_qmax[sem] = soma_qmax.get(sem, 0.0) + qm
-        return {
-            sem: soma_q.get(sem, 0.0) / soma_qmax[sem]
-            for sem, qmax in soma_qmax.items()
-            if qmax > 0
-        }
+        return {sem: soma_q.get(sem, 0.0) / soma_qmax[sem] for sem, qmax in soma_qmax.items() if qmax > 0}
 
     # ── Nível 2: decomposição causal global ───────────────────────────────────
 
@@ -79,7 +75,7 @@ class CampoEficiencia:
         eta_w_list: list[float] = []
         eta_list: list[float] = []
         for item_id in self.atividades:
-            for sem in (self.E.get(item_id) or {}):
+            for sem in self.E.get(item_id) or {}:
                 qm = (self.Q_max.get(item_id) or {}).get(sem, 0.0)
                 if qm <= 0:
                     continue
@@ -90,8 +86,7 @@ class CampoEficiencia:
                 eta_list.append((self.E.get(item_id) or {}).get(sem, 1.0))
 
         if not q_max_list:
-            return {"eta_s_global": 1.0, "eta_p_global": 1.0, "eta_w_global": 1.0,
-                    "eta_global": 1.0, "eps_cross": 0.0}
+            return {"eta_s_global": 1.0, "eta_p_global": 1.0, "eta_w_global": 1.0, "eta_global": 1.0, "eps_cross": 0.0}
 
         Q_total = sum(q_max_list)
         alpha = [qm / Q_total for qm in q_max_list]
@@ -117,10 +112,7 @@ class CampoEficiencia:
         for item_id in self.atividades:
             q_dict = self.Q.get(item_id) or {}
             qm_dict = self.Q_max.get(item_id) or {}
-            perdas = {
-                sem: max(0.0, qm_dict.get(sem, 0.0) - q_dict.get(sem, 0.0))
-                for sem in qm_dict
-            }
+            perdas = {sem: max(0.0, qm_dict.get(sem, 0.0) - q_dict.get(sem, 0.0)) for sem in qm_dict}
             if any(v > 0 for v in perdas.values()):
                 result[item_id] = perdas
         return result
@@ -140,14 +132,16 @@ class CampoEficiencia:
             total_qmax = sum((self.Q_max.get(item_id) or {}).values())
             total_q = sum((self.Q.get(item_id) or {}).values())
             eta_medio = total_q / total_qmax if total_qmax > 0 else 1.0
-            perdas_totais.append({
-                "item_id": item_id,
-                "perda_fisica_total": round(total_perda, 2),
-                "q_executada_total": round(total_q, 2),
-                "q_max_total": round(total_qmax, 2),
-                "eta_medio": round(eta_medio, 4),
-                "pct_perda": round(total_perda / total_qmax * 100, 1) if total_qmax > 0 else 0.0,
-            })
+            perdas_totais.append(
+                {
+                    "item_id": item_id,
+                    "perda_fisica_total": round(total_perda, 2),
+                    "q_executada_total": round(total_q, 2),
+                    "q_max_total": round(total_qmax, 2),
+                    "eta_medio": round(eta_medio, 4),
+                    "pct_perda": round(total_perda / total_qmax * 100, 1) if total_qmax > 0 else 0.0,
+                }
+            )
         perdas_totais.sort(key=lambda x: x["perda_fisica_total"], reverse=True)
         return perdas_totais[:top_n]
 
@@ -162,10 +156,7 @@ class CampoEficiencia:
 
         def _log_field(f: dict[str, dict[str, float]]) -> dict[str, dict[str, float]]:
             return {
-                iid: {
-                    sem: math.log(v) if v > 0 else float("nan")
-                    for sem, v in sem_dict.items()
-                }
+                iid: {sem: math.log(v) if v > 0 else float("nan") for sem, v in sem_dict.items()}
                 for iid, sem_dict in f.items()
             }
 

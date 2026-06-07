@@ -199,6 +199,7 @@ def _refresh_if_env_changed() -> None:
         _reset_all()
         _last_env_fingerprint = current
 
+
 # ── Helpers de parsing ────────────────────────────────────────────────────────
 
 
@@ -234,8 +235,6 @@ def _path(name: str, default: Path | None = None) -> Path | None:
     return Path(raw).expanduser().resolve()
 
 
-
-
 # ── ApiSettings ───────────────────────────────────────────────────────────────
 
 
@@ -256,7 +255,7 @@ class ApiSettings:
     """CONCILIUM__API_BASE_URL — URL canônica da API para consumidores (UI, scripts)."""
 
     @classmethod
-    def from_env(cls) -> "ApiSettings":
+    def from_env(cls) -> ApiSettings:
         return cls(
             host=_str("CONCILIUM__API_HOST", "127.0.0.1"),
             port=_int("CONCILIUM__API_PORT", 8000),
@@ -299,7 +298,7 @@ class McpSettings:
     """CONCILIUM__MCP_RATE_LIMIT_PERIOD_S — janela de rate limit em segundos (default: 60)."""
 
     @classmethod
-    def from_env(cls) -> "McpSettings":
+    def from_env(cls) -> McpSettings:
         return cls(
             transport=_str("CONCILIUM__MCP_TRANSPORT", "stdio"),
             host=_str("CONCILIUM__MCP_HOST", "0.0.0.0"),
@@ -334,7 +333,7 @@ class McpProxySettings:
     """CONCILIUM_DEVICE_CODE — código de ativação para bootstrap de refresh token."""
 
     @classmethod
-    def from_env(cls) -> "McpProxySettings":
+    def from_env(cls) -> McpProxySettings:
         return cls(
             server_url=_str("CONCILIUM_SERVER_URL", "https://mcp.mendesloboconstrucao.com.br").rstrip("/"),
             device_id=_str("CONCILIUM_DEVICE_ID", "default"),
@@ -382,7 +381,7 @@ class UiSettings:
         return f"http://{_api.host}:{_api.port}"
 
     @classmethod
-    def from_env(cls) -> "UiSettings":
+    def from_env(cls) -> UiSettings:
         return cls(
             host=_str("CONCILIUM__UI_HOST", "127.0.0.1"),
             port=_int("CONCILIUM__UI_PORT", 8501),
@@ -436,7 +435,7 @@ class AuthSettings:
     Default: ~/.concilium/auth/"""
 
     @classmethod
-    def from_env(cls) -> "AuthSettings":
+    def from_env(cls) -> AuthSettings:
         return cls(
             enabled=_flag("CONCILIUM__AUTH_ENABLED"),
             clients_json=_str("CONCILIUM__AUTH_CLIENTS", ""),
@@ -483,7 +482,7 @@ class AzureSettings:
     """CONCILIUM__AZURE_ROOT_PREFIX — prefixo raiz dentro do container."""
 
     @classmethod
-    def from_env(cls) -> "AzureSettings":
+    def from_env(cls) -> AzureSettings:
         return cls(
             account=_str("CONCILIUM__AZURE_ACCOUNT", ""),
             container=_str("CONCILIUM__AZURE_CONTAINER", ""),
@@ -525,7 +524,7 @@ class S3Settings:
     """CONCILIUM__S3_SERVER_SIDE_ENCRYPTION — "AES256" ou "aws:kms"."""
 
     @classmethod
-    def from_env(cls) -> "S3Settings":
+    def from_env(cls) -> S3Settings:
         return cls(
             bucket=_str("CONCILIUM__S3_BUCKET", ""),
             region=_str("CONCILIUM__S3_REGION", "us-east-1"),
@@ -565,7 +564,7 @@ class SharePointSettings:
     """CONCILIUM__SP_CACHE_DIR — cache local de metadados SharePoint."""
 
     @classmethod
-    def from_env(cls) -> "SharePointSettings":
+    def from_env(cls) -> SharePointSettings:
         return cls(
             tenant_id=_str("CONCILIUM__SP_TENANT_ID", ""),
             client_id=_str("CONCILIUM__SP_CLIENT_ID", ""),
@@ -591,7 +590,7 @@ class GDriveSettings:
     """CONCILIUM__GOOGLE_CREDENTIALS — caminho para credenciais Google (catalog loader legado)."""
 
     @classmethod
-    def from_env(cls) -> "GDriveSettings":
+    def from_env(cls) -> GDriveSettings:
         return cls(
             root_folder_id=_str("CONCILIUM__GDRIVE_ROOT_FOLDER_ID", ""),
             service_account_json=_str("CONCILIUM__GDRIVE_SA_JSON", ""),
@@ -638,7 +637,7 @@ class StorageSettings:
     gdrive: GDriveSettings = field(default_factory=GDriveSettings.from_env)
 
     @classmethod
-    def from_env(cls) -> "StorageSettings":
+    def from_env(cls) -> StorageSettings:
         root_raw = _str("CONCILIUM__ROOT", "")
         root = Path(root_raw).expanduser().resolve() if root_raw else Path(__file__).resolve().parents[3]
         config_root_raw = _str("CONCILIUM__CONFIG_ROOT", "")
@@ -695,7 +694,7 @@ class TelemetrySettings:
     """CONCILIUM__RATE_LIMIT_STORAGE_URI — backend de rate limit (default: memory://)."""
 
     @classmethod
-    def from_env(cls) -> "TelemetrySettings":
+    def from_env(cls) -> TelemetrySettings:
         return cls(
             otel_console=_flag("CONCILIUM__OTEL_CONSOLE"),
             otel_sdk_disabled=_flag("OTEL_SDK_DISABLED"),
@@ -742,8 +741,9 @@ class RuntimeSettings:
     """CONCILIUM__DUCKDB_SPILL_DIR — [opt] Diretório para overflow DuckDB (default: tmpdir do OS)."""
 
     @classmethod
-    def from_env(cls) -> "RuntimeSettings":
+    def from_env(cls) -> RuntimeSettings:
         import tempfile
+
         return cls(
             pdf_renderer=_str("CONCILIUM__PDF_RENDERER", "reportlab"),
             artifact_transport=_str("CONCILIUM__ARTIFACT_TRANSPORT", "local"),
@@ -781,7 +781,7 @@ class JobsSettings:
     """CONCILIUM__JOB_GC_INTERVAL_MINUTES — intervalo de garbage collection em minutos (default: 60)."""
 
     @classmethod
-    def from_env(cls) -> "JobsSettings":
+    def from_env(cls) -> JobsSettings:
         return cls(
             max_concurrent_jobs=_int("CONCILIUM__MAX_CONCURRENT_JOBS", 3),
             job_ttl_hours=_int("CONCILIUM__JOB_TTL_HOURS", 24),
@@ -830,7 +830,7 @@ def startup_check() -> None:
         raise ConfigurationError("\n".join(lines))
 
 
-def _check_storage(st: "StorageSettings") -> list[str]:
+def _check_storage(st: StorageSettings) -> list[str]:
     errors: list[str] = []
     b = st.backend
     if b == "azure_blob":
@@ -859,8 +859,7 @@ def _check_storage(st: "StorageSettings") -> list[str]:
                 errors.append(f"{var} é obrigatório quando STORE_BACKEND=sharepoint")
         if not st.sharepoint.client_secret and not st.sharepoint.cert_path:
             errors.append(
-                "CONCILIUM__SP_CLIENT_SECRET ou CONCILIUM__SP_CERT_PATH "
-                "é obrigatório quando STORE_BACKEND=sharepoint"
+                "CONCILIUM__SP_CLIENT_SECRET ou CONCILIUM__SP_CERT_PATH é obrigatório quando STORE_BACKEND=sharepoint"
             )
     elif b == "gdrive":
         if not st.gdrive.root_folder_id:
@@ -873,7 +872,7 @@ def _check_storage(st: "StorageSettings") -> list[str]:
     return errors
 
 
-def _check_auth(auth: "AuthSettings") -> list[str]:
+def _check_auth(auth: AuthSettings) -> list[str]:
     if not auth.enabled:
         return []
     errors: list[str] = []
@@ -887,8 +886,7 @@ def _check_auth(auth: "AuthSettings") -> list[str]:
         )
     if not auth.clients_json:
         errors.append(
-            "CONCILIUM__AUTH_CLIENTS está vazio mas auth está habilitado. "
-            "Defina um JSON com client_id/secret/scopes."
+            "CONCILIUM__AUTH_CLIENTS está vazio mas auth está habilitado. Defina um JSON com client_id/secret/scopes."
         )
     return errors
 

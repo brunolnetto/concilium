@@ -9,9 +9,9 @@ import pytest
 from concilium.application.runtime import (
     Runtime,
     RuntimeError,
-    _md_to_pdf_bytes,
     _json_default,
     _md_planejamento,
+    _md_to_pdf_bytes,
     _memorial_bdi_to_md,
 )
 from concilium.infrastructure.storage.project import ProjectStore
@@ -212,8 +212,9 @@ def test_run_skill_wraps_erro_tecnico(config_root, projeto_terraplenagem):
     # SKILLS é importado em dois namespaces (runtime.__init__ via get_skill_contract
     # e mixins.execution via run_skill); ambos precisam ser substituídos para que a
     # falha ocorra na execução da skill (e seja envolvida), não no lookup do registry.
-    with patch("concilium.application.runtime.SKILLS", dummy), patch(
-        "concilium.application.runtime.mixins.execution.SKILLS", dummy
+    with (
+        patch("concilium.application.runtime.SKILLS", dummy),
+        patch("concilium.application.runtime.mixins.execution.SKILLS", dummy),
     ):
         with pytest.raises(RuntimeError, match="Falha técnica ao executar skill"):
             r.run_skill("dummy", p, v, inputs={})

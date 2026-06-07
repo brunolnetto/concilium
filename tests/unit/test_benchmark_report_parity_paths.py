@@ -11,7 +11,7 @@ def _fake_projection() -> SimpleNamespace:
     return SimpleNamespace(
         ferramenta={
             "custo_direto": 100.0,
-            "custo_direto_catalogo": 100.0,
+            "custo_direto_pu_q": 100.0,  # sourced from venda.total_sem_bdi in production
             "custo_indireto": 20.0,
             "custo_total": 120.0,
             "preco_venda": 130.0,

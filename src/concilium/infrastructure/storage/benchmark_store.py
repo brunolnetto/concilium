@@ -1,11 +1,12 @@
 """Adapter: FileSystemBenchmarkStore — persistência em filesystem."""
+
 import json
 from datetime import datetime
 from pathlib import Path
 
 from concilium.domain.benchmark.models import (
-    BenchmarkMetadata,
     BenchmarkExecution,
+    BenchmarkMetadata,
 )
 from concilium.domain.benchmark.repository import BenchmarkRepositoryPort
 
@@ -24,13 +25,9 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
         """Salva BenchmarkMetadata como JSON."""
         if metadata.imutavel:
             # Se já foi imutável, não sobrescreve
-            existing = self.get_metadata_by_version(
-                metadata.benchmark_id, metadata.versao
-            )
+            existing = self.get_metadata_by_version(metadata.benchmark_id, metadata.versao)
             if existing and existing.imutavel:
-                raise PermissionError(
-                    f"Benchmark {metadata.benchmark_id} v{metadata.versao} é imutável."
-                )
+                raise PermissionError(f"Benchmark {metadata.benchmark_id} v{metadata.versao} é imutável.")
 
         filename = f"{metadata.benchmark_id}-v{metadata.versao}.json"
         path = self._metadata_dir / filename
@@ -47,9 +44,7 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
         latest = sorted(versions, key=lambda p: int(p.stem.split("-v")[1]))[-1]
         return self._from_dict(json.loads(latest.read_text()))
 
-    def get_metadata_by_version(
-        self, benchmark_id: str, version: int
-    ) -> BenchmarkMetadata | None:
+    def get_metadata_by_version(self, benchmark_id: str, version: int) -> BenchmarkMetadata | None:
         """Carrega versão específica."""
         path = self._metadata_dir / f"{benchmark_id}-v{version}.json"
         if not path.exists():
@@ -72,22 +67,16 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
         with self._audit_log.open("a", encoding="utf-8") as f:
             f.write(json.dumps(self._exec_to_dict(execution), default=str) + "\n")
 
-    def get_execution_history(
-        self, benchmark_id: str, limit: int = 50
-    ) -> list[BenchmarkExecution]:
+    def get_execution_history(self, benchmark_id: str, limit: int = 50) -> list[BenchmarkExecution]:
         """Últimas N execuções."""
         if not self._audit_log.exists():
             return []
         lines = self._audit_log.read_text().strip().split("\n")
-        execs = [
-            self._exec_from_dict(json.loads(line)) for line in lines if line
-        ]
+        execs = [self._exec_from_dict(json.loads(line)) for line in lines if line]
         filtered = [e for e in execs if e.benchmark_id == benchmark_id]
         return filtered[-limit:]
 
-    def create_new_version(
-        self, benchmark_id: str, patch: dict
-    ) -> BenchmarkMetadata:
+    def create_new_version(self, benchmark_id: str, patch: dict) -> BenchmarkMetadata:
         """Editar gera v+1."""
         current = self.get_metadata(benchmark_id)
         if not current:
@@ -113,9 +102,7 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
             raise ValueError(f"Benchmark {benchmark_id} não existe.")
 
         if current.imutavel:
-            raise PermissionError(
-                f"Benchmark {benchmark_id} é imutável. Use create_new_version() para editar."
-            )
+            raise PermissionError(f"Benchmark {benchmark_id} é imutável. Use create_new_version() para editar.")
 
         # Atualiza in-place se mutável
         updated = BenchmarkMetadata(

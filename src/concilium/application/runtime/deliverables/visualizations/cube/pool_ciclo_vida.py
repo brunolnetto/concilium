@@ -24,9 +24,8 @@ def _fget(d, key):
 def _try_project(canonical):
     try:
         from concilium.application.services.cubo_pool_projection import resolve_cubo_pool_projection
-        proj = resolve_cubo_pool_projection(
-            canonical, face="instancia_ciclo_vida", granularidade="mes", top_n=100
-        )
+
+        proj = resolve_cubo_pool_projection(canonical, face="instancia_ciclo_vida", granularidade="mes", top_n=100)
         return proj.get("rows") or []
     except Exception:
         return []
@@ -49,20 +48,21 @@ def _draw_row(ax, idx, r):
     if idle_w:
         ax.barh(idx, idle_w, left=off_w + prod_w, height=0.55, color=_COLOR_IDLE, alpha=0.85)
     custo = _fget(r, "custo_total")
-    label = f"R$ {custo/1e6:.1f}M" if custo >= 1e6 else f"R$ {custo/1e3:.0f}k"
+    label = f"R$ {custo / 1e6:.1f}M" if custo >= 1e6 else f"R$ {custo / 1e3:.0f}k"
     ax.text(total_w + 0.3, idx, label, va="center", fontsize=7.5, color="#333")
 
 
 def _setup_axes(ax, n, rows):
     from matplotlib.patches import Patch
+
     labels = [str(r.get("instancia_id", "")) for r in reversed(rows)]
     ax.set_yticks(list(range(n)))
     ax.set_yticklabels(labels, fontsize=8)
     ax.set_xlabel("Semanas de contrato (OFF + PROD + IDLE)", fontsize=9)
     ax.set_title(
-        "Ciclo de Vida das Instâncias de Pool\n"
-        "(sem. off = mob. tardia; amarelo = ocioso CLT+EQ; verde = produtivo)",
-        fontsize=11, fontweight="bold",
+        "Ciclo de Vida das Instâncias de Pool\n(sem. off = mob. tardia; amarelo = ocioso CLT+EQ; verde = produtivo)",
+        fontsize=11,
+        fontweight="bold",
     )
     legend_elems = [
         Patch(facecolor=_COLOR_IDLE, alpha=0.85, label="Ocioso (CLT integral + EQ reduzida)"),

@@ -76,9 +76,8 @@ def _resolve_ref_custo_direto(ref_resultado: dict[str, Any], ref_confronto: dict
 
 
 def _resolve_cur_custo_direto(cur_res: dict[str, Any]) -> float:
-    cur_cd = _norm_float((cur_res.get("custo") or {}).get("direto_catalogo"))
-    if cur_cd == 0:
-        cur_cd = _norm_float((cur_res.get("custo") or {}).get("direto_equipes"))
+    custo = cur_res.get("custo") or {}
+    cur_cd = _norm_float(custo.get("direto_equipes"))
     if cur_cd == 0:
         cur_cd = _norm_float(cur_res.get("custo_direto_total_equipes"))
     return cur_cd

@@ -1,10 +1,10 @@
 from .analysis import router as analysis_router
 from .auth import router as auth_router
-from .formulario import router as formulario_router
 from .benchmarks import router as benchmarks_router
 from .catalog import router as catalog_router
 from .catalogs import router as catalogs_router
 from .configuration import router as configuration_router
+from .formulario import router as formulario_router
 from .mobilization import router as mobilization_router
 from .overrides import router as overrides_router
 from .projects import router as projects_router

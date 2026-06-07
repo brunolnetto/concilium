@@ -19,7 +19,6 @@ Uso típico:
 from __future__ import annotations
 
 import secrets
-import sys
 
 import typer
 from rich import print as rprint
@@ -39,8 +38,9 @@ app = typer.Typer(
 def add_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente/usuário."),
     secret: str | None = typer.Option(None, "--secret", "-s", help="Secret. Gerado automaticamente se omitido."),
-    role: str = typer.Option("operator", "--role", "-r",
-                              help="Role RBAC: viewer | operator | engineer | admin | service-ci | auditor"),
+    role: str = typer.Option(
+        "operator", "--role", "-r", help="Role RBAC: viewer | operator | engineer | admin | service-ci | auditor"
+    ),
     notes: str = typer.Option("", "--notes", help="Observações opcionais."),
 ) -> None:
     """Registra um novo usuário/cliente no auth store.
@@ -69,7 +69,7 @@ def add_user(
     rprint(f"[green]✓ Usuário '{record.client_id}' criado.[/green]")
     rprint(f"  Role    : {', '.join(record.roles)}")
     if generated:
-        rprint(f"\n[yellow]Secret gerado (guarde agora — não será exibido de novo):[/yellow]")
+        rprint("\n[yellow]Secret gerado (guarde agora — não será exibido de novo):[/yellow]")
         rprint(f"  [bold]{secret}[/bold]")
 
 
@@ -137,11 +137,14 @@ def new_device(
     device: str = typer.Option(..., "--device", "-d", help="Nome do dispositivo (ex: macbook-bruno)."),
     scopes: list[str] | None = typer.Option(None, "--scope", help="Escopos. Default: herda do usuário."),
     expires: str = typer.Option("1h", "--expires", "-e", help="Expiração do código (ex: 1h, 30m)."),
-    show_config: bool = typer.Option(True, "--config/--no-config", help="Exibir bloco JSON para claude_desktop_config."),
+    show_config: bool = typer.Option(
+        True, "--config/--no-config", help="Exibir bloco JSON para claude_desktop_config."
+    ),
 ) -> None:
     """Gera um device code de uso único para o usuário configurar o Claude Desktop."""
-    from concilium.infrastructure.auth.auth_store import get_auth_store
     import json as _json
+
+    from concilium.infrastructure.auth.auth_store import get_auth_store
 
     store = get_auth_store()
     record = store.create_device_code(
@@ -155,10 +158,11 @@ def new_device(
     rprint(f"  Código  : [bold]{record.code}[/bold]")
     rprint(f"  Expira  : {record.expires_at[:19].replace('T', ' ')} UTC")
     rprint(f"  Roles   : {', '.join(record.roles)}")
-    rprint(f"  [dim]Uso único — inválido após primeiro uso ou após expirar.[/dim]")
+    rprint("  [dim]Uso único — inválido após primeiro uso ou após expirar.[/dim]")
 
     if show_config:
         from concilium.infrastructure.settings import get_storage
+
         storage = get_storage()
 
         config_block = {
@@ -174,7 +178,7 @@ def new_device(
             }
         }
 
-        rprint(f"\n[bold]Envie ao usuário — colar em claude_desktop_config.json:[/bold]")
+        rprint("\n[bold]Envie ao usuário — colar em claude_desktop_config.json:[/bold]")
         rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
         rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]\n")
         typer.echo(_json.dumps(config_block, indent=2, ensure_ascii=False))

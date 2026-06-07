@@ -1,13 +1,13 @@
 """Testes para Repository Port + Adapter de Benchmarks."""
+
 from datetime import datetime
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 
 from src.concilium.domain.benchmark.models import (
-    BenchmarkMetadata,
     BenchmarkExecution,
+    BenchmarkMetadata,
 )
 from src.concilium.infrastructure.storage.benchmark_store import (
     FileSystemBenchmarkStore,
@@ -120,9 +120,7 @@ def test_benchmark_store_gera_nova_versao_apos_edicao(benchmark_store):
     benchmark_store.save_metadata(meta_v1)
 
     # Edita → gera v2
-    meta_v2 = benchmark_store.create_new_version(
-        "AGIS_2025_Q1", patch={"nome": "AGIS v2", "tags": ["v2"]}
-    )
+    meta_v2 = benchmark_store.create_new_version("AGIS_2025_Q1", patch={"nome": "AGIS v2", "tags": ["v2"]})
 
     # v1 e v2 devem coexistir
     v1_loaded = benchmark_store.get_metadata_by_version("AGIS_2025_Q1", version=1)

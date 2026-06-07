@@ -1,4 +1,5 @@
 """Domain service for project version lifecycle rules."""
+
 from __future__ import annotations
 
 

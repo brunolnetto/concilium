@@ -12,11 +12,11 @@ try:
     from .state import StateManager
     from .templates.catalogo_master_page import render_catalogo_master_page
     from .templates.configuracao_page import render_configuracao_page
+    from .templates.formulario_qqp_page import render_formulario_qqp_page
     from .templates.project_page import (
         render_hot_project_template,
         render_normal_project_template,
     )
-    from .templates.formulario_qqp_page import render_formulario_qqp_page
     from .templates.projetos_page import render_projetos_page
     from .theme import apply_visual_identity
 except ImportError:
@@ -27,11 +27,11 @@ except ImportError:
     from concilium.presentation.ui.state import StateManager
     from concilium.presentation.ui.templates.catalogo_master_page import render_catalogo_master_page
     from concilium.presentation.ui.templates.configuracao_page import render_configuracao_page
+    from concilium.presentation.ui.templates.formulario_qqp_page import render_formulario_qqp_page
     from concilium.presentation.ui.templates.project_page import (
         render_hot_project_template,
         render_normal_project_template,
     )
-    from concilium.presentation.ui.templates.formulario_qqp_page import render_formulario_qqp_page
     from concilium.presentation.ui.templates.projetos_page import render_projetos_page
     from concilium.presentation.ui.theme import apply_visual_identity
 

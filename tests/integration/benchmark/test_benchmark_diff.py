@@ -1,6 +1,6 @@
 """Testes para Diff Estruturado de Benchmarks (NEP-039 Fase 4)."""
-from datetime import datetime, date
-from uuid import uuid4
+
+from datetime import datetime
 
 import pytest
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-from collections import defaultdict
 
 COLORS = ["#1a3a5c", "#c05c18", "#5aabdc", "#e8a030", "#5adc8e", "#a07ad8", "#dc5a8e"]
 
@@ -97,6 +96,9 @@ def build_payload(face: str, granularidade: str, top_n: int, canonical, cubo) ->
     from concilium.application.services.cube_projection_views import build_cube_projection_payload
 
     return build_cube_projection_payload(
-        canonical=canonical, cubo=cubo,
-        face=face, granularidade=granularidade, top_n=top_n,
+        canonical=canonical,
+        cubo=cubo,
+        face=face,
+        granularidade=granularidade,
+        top_n=top_n,
     )

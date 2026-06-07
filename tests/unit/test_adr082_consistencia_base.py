@@ -36,9 +36,13 @@ class TestBuildDistCell:
     def test_semana_pico_todos_os_eta_1(self):
         # n_j = n_max, clima=1, calend=1, sem fechamento → η_s=η_p=η_w=1
         cell = _cron._build_dist_cell(
-            producao_semanal_base=100.0, num_eq=2, n_max=2,
-            fator_clima=1.0, fator_calendario=1.0,
-            quantitativo=10_000.0, qtd_acumulada=0.0,
+            producao_semanal_base=100.0,
+            num_eq=2,
+            n_max=2,
+            fator_clima=1.0,
+            fator_calendario=1.0,
+            quantitativo=10_000.0,
+            qtd_acumulada=0.0,
         )
         assert cell.eta_s == 1.0
         assert cell.eta_p == 1.0
@@ -51,24 +55,32 @@ class TestBuildDistCell:
     def test_subalocacao_captura_eta_s(self):
         # n_j=1, n_max=2 → η_s=0.5; clima=1, calend=1
         cell = _cron._build_dist_cell(
-            producao_semanal_base=100.0, num_eq=1, n_max=2,
-            fator_clima=1.0, fator_calendario=1.0,
-            quantitativo=10_000.0, qtd_acumulada=0.0,
+            producao_semanal_base=100.0,
+            num_eq=1,
+            n_max=2,
+            fator_clima=1.0,
+            fator_calendario=1.0,
+            quantitativo=10_000.0,
+            qtd_acumulada=0.0,
         )
         assert abs(cell.eta_s - 0.5) < 1e-6
         assert cell.eta_p == 1.0
         assert cell.eta_w == 1.0
         assert abs(cell.fator_total - 0.5) < 1e-6
         assert cell.qtd_executada == 100.0  # 100 × 0.5
-        assert cell.q_max_celula == 200.0   # referência = pico n_max=2
+        assert cell.q_max_celula == 200.0  # referência = pico n_max=2
         assert abs(cell.perda_fisica - 100.0) < 1e-4  # q_max(200) - q_executada(100)
 
     def test_praticabilidade_captura_eta_p(self):
         # n_j=2, n_max=2, clima=0.8, calend=0.9 → η_p=0.72
         cell = _cron._build_dist_cell(
-            producao_semanal_base=100.0, num_eq=2, n_max=2,
-            fator_clima=0.8, fator_calendario=0.9,
-            quantitativo=10_000.0, qtd_acumulada=0.0,
+            producao_semanal_base=100.0,
+            num_eq=2,
+            n_max=2,
+            fator_clima=0.8,
+            fator_calendario=0.9,
+            quantitativo=10_000.0,
+            qtd_acumulada=0.0,
         )
         assert abs(cell.eta_s - 1.0) < 1e-6
         assert abs(cell.eta_p - 0.72) < 1e-6
@@ -79,9 +91,13 @@ class TestBuildDistCell:
     def test_fechamento_parcial_captura_eta_w(self):
         # n_j=2, n_max=2, clima=0.9, calend=0.8 → capacidade=144; remanescente=50 → η_w<1
         cell = _cron._build_dist_cell(
-            producao_semanal_base=100.0, num_eq=2, n_max=2,
-            fator_clima=0.9, fator_calendario=0.8,
-            quantitativo=10_000.0, qtd_acumulada=9_950.0,
+            producao_semanal_base=100.0,
+            num_eq=2,
+            n_max=2,
+            fator_clima=0.9,
+            fator_calendario=0.8,
+            quantitativo=10_000.0,
+            qtd_acumulada=9_950.0,
         )
         assert cell.qtd_executada == 50.0
         assert cell.eta_s == 1.0
@@ -93,10 +109,18 @@ class TestBuildDistCell:
     def test_identidade_fator_total_eta_produto(self):
         # fator_total deve ser sempre η_s × η_p × η_w (identidade fundamental)
         for n_eq, n_max, clima, calend in [
-            (1, 2, 0.8, 0.9), (2, 2, 1.0, 1.0), (1, 3, 0.6, 0.7),
+            (1, 2, 0.8, 0.9),
+            (2, 2, 1.0, 1.0),
+            (1, 3, 0.6, 0.7),
         ]:
             cell = _cron._build_dist_cell(
-                100.0, n_eq, n_max, clima, calend, 10_000.0, 0.0,
+                100.0,
+                n_eq,
+                n_max,
+                clima,
+                calend,
+                10_000.0,
+                0.0,
             )
             assert abs(cell.fator_total - cell.eta_s * cell.eta_p * cell.eta_w) < 1e-4, (
                 f"identidade falhou para n_eq={n_eq}, n_max={n_max}, clima={clima}, calend={calend}"
@@ -115,7 +139,7 @@ class TestBuildDistCell:
     def test_eficiencia_nao_e_clima(self):
         # garante que eficiencia (utilização) != clima×calendário (conflação corrigida)
         cell = _cron._build_dist_cell(100.0, 2, 2, 0.5, 0.5, 10_000.0, 0.0)
-        assert cell.eficiencia == 1.0   # η_w = 1 (sem fechamento parcial)
+        assert cell.eficiencia == 1.0  # η_w = 1 (sem fechamento parcial)
         assert abs(cell.fator_total - 0.25) < 1e-6  # = η_s(1) × η_p(0.25) × η_w(1)
 
 

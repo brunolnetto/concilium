@@ -153,7 +153,9 @@ def _build_equipe_rows(canonical_in: CanonicalModel) -> tuple[list[dict], list[d
 
     for eq in canonical_in.equipes_diretas:
         pe = pe_by_item.get(eq.item_id)
-        custo_operacional = float(getattr(pe, "custo_operacional_real", 0.0) if pe is not None else eq.custo_total or 0.0)
+        custo_operacional = float(
+            getattr(pe, "custo_operacional_real", 0.0) if pe is not None else eq.custo_total or 0.0
+        )
         custo_venda = float(getattr(pe, "custo_venda_cpu", 0.0) if pe is not None else 0.0)
         gap_operacional = round(custo_venda - custo_operacional, 2)
         # Gap percentual relativo ao custo operacional (mais interpretável para eficiência real).
@@ -287,19 +289,13 @@ def _bgs_build_graficos_dict(
         "values": [equip_totals[wk] for wk in eq_wks],
     }
     if equip_by_id:
-        eq_section["by_type"] = {
-            eid: [wk_map.get(wk, 0.0) for wk in eq_wks]
-            for eid, wk_map in equip_by_id.items()
-        }
+        eq_section["by_type"] = {eid: [wk_map.get(wk, 0.0) for wk in eq_wks] for eid, wk_map in equip_by_id.items()}
     mo_section: dict = {
         "labels": [str(wk) for wk in mo_wks],
         "values": [mo_totals[wk] for wk in mo_wks],
     }
     if mo_by_funcao:
-        mo_section["by_funcao"] = {
-            fid: [wk_map.get(wk, 0.0) for wk in mo_wks]
-            for fid, wk_map in mo_by_funcao.items()
-        }
+        mo_section["by_funcao"] = {fid: [wk_map.get(wk, 0.0) for wk in mo_wks] for fid, wk_map in mo_by_funcao.items()}
     return {
         "equipamentos": eq_section,
         "mao_obra": mo_section,
@@ -315,6 +311,7 @@ def _bgs_add_financeiro(graficos: dict, canonical_in, project_months: list) -> N
     """
     try:
         from ._skill_helpers_b import _cash_flow_rows as _cash_flow_rows_proportional
+
         cash_flow_rows = _cash_flow_rows_proportional(canonical_in, project_months)
     except Exception:
         cash_flow_rows = _cash_flow_rows(canonical_in, project_months)
@@ -362,6 +359,7 @@ def _minimal_break_even_combinations(levers: list[dict], deficit: float) -> list
     if deficit >= 0 or not levers:
         return []
     from itertools import combinations as _combns
+
     target = abs(deficit)
     result: list[dict] = []
     n = len(levers)
@@ -377,12 +375,14 @@ def _minimal_break_even_combinations(levers: list[dict], deficit: float) -> list
                 for sub in _combns(combo, sub_size)
             )
             if is_minimal:
-                result.append({
-                    "tier": size,
-                    "levers_ids": [levers[i]["id"] for i in combo],
-                    "delta_disponivel": round(soma, 2),
-                    "cobertura_pct": round(soma / target * 100, 1),
-                })
+                result.append(
+                    {
+                        "tier": size,
+                        "levers_ids": [levers[i]["id"] for i in combo],
+                        "delta_disponivel": round(soma, 2),
+                        "cobertura_pct": round(soma / target * 100, 1),
+                    }
+                )
     return sorted(result, key=lambda x: (x["tier"], x["cobertura_pct"]))
 
 
@@ -410,17 +410,16 @@ def _bgs_add_painel_equilibrio(graficos: dict, canonical_in: CanonicalModel) -> 
             )
             levers_agg[lever.id]["item_count"] += 1
 
-    levers_sorted = sorted(levers_agg.values(), key=lambda x: -x["delta_margin_total"])
+    # "fechar_gap_escala" representa serializacao/paralelismo de frentes e tende a
+    # gerar leitura ambigua no painel executivo. Mantemos foco em praticabilidade/pool.
+    levers_visiveis = [lv for lv in levers_agg.values() if lv.get("id") != "fechar_gap_escala"]
+    levers_sorted = sorted(levers_visiveis, key=lambda x: -x["delta_margin_total"])
     soma_levers = round(sum(lv["delta_margin_total"] for lv in levers_sorted), 2)
     combinacoes = _minimal_break_even_combinations(levers_sorted, delta_total)
 
     # Marca cada lever com sua participação nas combinações minimais
-    levers_em_combinacoes_tier1: set[str] = {
-        lid for c in combinacoes if c["tier"] == 1 for lid in c["levers_ids"]
-    }
-    levers_em_qualquer_combo: set[str] = {
-        lid for c in combinacoes for lid in c["levers_ids"]
-    }
+    levers_em_combinacoes_tier1: set[str] = {lid for c in combinacoes if c["tier"] == 1 for lid in c["levers_ids"]}
+    levers_em_qualquer_combo: set[str] = {lid for c in combinacoes for lid in c["levers_ids"]}
     for lv in levers_sorted:
         lv["break_even_solo"] = lv["id"] in levers_em_combinacoes_tier1
         lv["participa_combo"] = lv["id"] in levers_em_qualquer_combo
@@ -428,9 +427,13 @@ def _bgs_add_painel_equilibrio(graficos: dict, canonical_in: CanonicalModel) -> 
     # Multiplicador médio de PU ponderado por custo_venda (frentes_nec media)
     total_venda = sum(pe.custo_venda_cpu for pe in pe_list if pe.custo_venda_cpu > 0)
     frentes_nec_media = (
-        sum(pe.frentes_equivalentes_necessarias * pe.custo_venda_cpu for pe in pe_list if pe.custo_venda_cpu > 0)
-        / total_venda
-    ) if total_venda > 0 else 1.0
+        (
+            sum(pe.frentes_equivalentes_necessarias * pe.custo_venda_cpu for pe in pe_list if pe.custo_venda_cpu > 0)
+            / total_venda
+        )
+        if total_venda > 0
+        else 1.0
+    )
 
     graficos["painel_equilibrio"] = {
         "delta_total": delta_total,
@@ -537,16 +540,19 @@ def _rra_build_pe_rows(canonical_in: CanonicalModel, resultado_section: dict[str
         return []
 
     particao_by_item: dict[str, dict[str, float]] = {}
-    for contrato in (canonical_in.contratos_recurso or []):
-        for part in (getattr(contrato, "particao_por_item", None) or []):
+    for contrato in canonical_in.contratos_recurso or []:
+        for part in getattr(contrato, "particao_por_item", None) or []:
             item_id = getattr(part, "item_id", None)
             if not item_id:
                 continue
-            acc = particao_by_item.setdefault(item_id, {
-                "produtivo": 0.0,
-                "mob_demob": 0.0,
-                "ociosidade": 0.0,
-            })
+            acc = particao_by_item.setdefault(
+                item_id,
+                {
+                    "produtivo": 0.0,
+                    "mob_demob": 0.0,
+                    "ociosidade": 0.0,
+                },
+            )
             acc["produtivo"] += _f(getattr(part, "custo_produtivo", 0.0))
             acc["mob_demob"] += _f(getattr(part, "custo_mob_imputado", 0.0)) + _f(
                 getattr(part, "custo_demob_imputado", 0.0)
@@ -560,8 +566,7 @@ def _rra_build_pe_rows(canonical_in: CanonicalModel, resultado_section: dict[str
     if venda_global <= 0 and canonical_in.resultado is not None:
         venda_global = _f(canonical_in.resultado.venda.total_com_bdi)
     if custo_direto_global <= 0 and canonical_in.resultado is not None:
-        direto_catalogo = _f(canonical_in.resultado.custo.direto_catalogo)
-        custo_direto_global = direto_catalogo if direto_catalogo > 0 else _f(canonical_in.resultado.custo.direto_equipes)
+        custo_direto_global = _f(canonical_in.resultado.custo.direto_equipes)
     if custo_indireto_global <= 0 and canonical_in.resultado is not None:
         custo_indireto_global = (
             _f(canonical_in.resultado.custo.indireto_adm)
@@ -646,15 +651,9 @@ def _rra_build_resultado_section(
             return None
 
     direto_equipes = float(res.custo.direto_equipes or 0.0)
-    direto_catalogo = float(res.custo.direto_catalogo or 0.0)
-    # Fonte autoritativa para relatório financeiro: catálogo quando disponível,
-    # mantendo fallback para operacional apenas se catálogo não existir.
-    if direto_catalogo > 0:
-        custo_direto_auth = direto_catalogo
-        custo_direto_fonte = "catalogo"
-    else:
-        custo_direto_auth = direto_equipes
-        custo_direto_fonte = "operacional_equipes"
+    # Fonte autoritativa única do relatório: custo direto operacional instancial (direto_equipes).
+    custo_direto_auth = direto_equipes
+    custo_direto_fonte = "operacional_equipes"
 
     custo_indireto_calc = (
         float(res.custo.indireto_adm or 0.0)
@@ -667,7 +666,9 @@ def _rra_build_resultado_section(
     # Usar custo.total do modelo como fonte autoritativa (inclui todos os componentes
     # calculados por skill-08). Fallback para recálculo local apenas quando ausente.
     custo_total_canonical = float(res.custo.total or 0.0) if res.custo.total else None
-    custo_total_calc = custo_total_canonical if custo_total_canonical is not None else custo_direto_auth + custo_indireto_calc
+    custo_total_calc = (
+        custo_total_canonical if custo_total_canonical is not None else custo_direto_auth + custo_indireto_calc
+    )
     # Valores calculados são sempre a fonte primária do relatório (NEP-030).
     # A referência fica armazenada separadamente para a seção de confronto.
     razao_id = custo_indireto_calc / custo_direto_auth if custo_direto_auth > 0 else 0
@@ -681,8 +682,10 @@ def _rra_build_resultado_section(
         ref_total = _num(benchmark_reference_projection.get("custo_total"))
         ref_preco = _num(benchmark_reference_projection.get("preco_venda"))
         if ref_preco and ref_preco > 0:
+
             def _delta_pct(tool: float, ref: float) -> float | None:
                 return round((tool - ref) / ref * 100, 2) if ref and ref > 0 else None
+
             referencia = {
                 "custo_direto": ref_direto,
                 "custo_indireto": ref_indireto,
@@ -698,7 +701,6 @@ def _rra_build_resultado_section(
         "custo_total": custo_total_calc,
         "custo_direto": custo_direto_auth,
         "custo_direto_equipes": direto_equipes,
-        "custo_direto_catalogo": direto_catalogo,
         "custo_direto_fonte": custo_direto_fonte,
         "benchmark_guard_aplicado": False,  # guard removido (NEP-030)
         "custo_indireto": custo_indireto_calc,
@@ -768,19 +770,13 @@ def _rra_build_relatorio(
         "ACTIONABLE_INSIGHTS": _rra_build_actionable_insights(canonical_in),
         "validacoes_pipeline": validacoes_pipeline,
         # ADR-077: mapa instancial de utilização
-        "resumo_utilizacao_contratos": [
-            r.model_dump() for r in (canonical_in.resumo_utilizacao_contratos or [])
-        ],
-        "instancias_recurso": [
-            i.model_dump() for i in (canonical_in.instancias_recurso or [])
-        ],
+        "resumo_utilizacao_contratos": [r.model_dump() for r in (canonical_in.resumo_utilizacao_contratos or [])],
+        "instancias_recurso": [i.model_dump() for i in (canonical_in.instancias_recurso or [])],
         # ADR-086: decomposição explorável de pool (faces físicas + causais + narrativa honesta)
         "decomposicao_pool": _rra_build_decomposicao_pool(canonical_in),
         # ADR-078: pré-processamento estrutural de compartilhamento
         "relatorio_oportunidades": (
-            canonical_in.relatorio_oportunidades.model_dump()
-            if canonical_in.relatorio_oportunidades
-            else None
+            canonical_in.relatorio_oportunidades.model_dump() if canonical_in.relatorio_oportunidades else None
         ),
         # NEP-038: análise de compressão de cronograma por k-scaling
         "COMPRESSAO_CRONOGRAMA": _rra_build_compressao_cronograma(canonical_in),
@@ -796,7 +792,6 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
     Retorna None quando não há cronograma ou contratos suficientes.
     Falhas do CP-SAT são silenciosas (retorna None) para não bloquear o relatório.
     """
-    import math
 
     cronograma = canonical_in.cronograma
     if not cronograma or not cronograma.scheduled_activities:
@@ -811,13 +806,15 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
             Activity,
             ActivityDAG,
             ResourcePool,
+            ScheduledActivity,
             ScheduleMetrics,
             ScheduleOutput,
-            ScheduledActivity,
             compute_compression_sensitivities,
             format_compression_table,
         )
-        from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler  # noqa: F401 – verifica que ortools está disponível
+        from concilium.application.scheduling.cpsat_scheduler import (
+            CpSatScheduler,  # noqa: F401 – verifica que ortools está disponível
+        )
     except ImportError:
         return None
 
@@ -840,13 +837,18 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
         return None
 
     metrics = ScheduleMetrics(
-        makespan=makespan, resource_leveling_score=0.0, idle_time=0,
-        activity_fragmentation=0, critical_path_slack_min=0.0,
+        makespan=makespan,
+        resource_leveling_score=0.0,
+        idle_time=0,
+        activity_fragmentation=0,
+        critical_path_slack_min=0.0,
         resource_utilization_avg=0.0,
     )
     sched_output = ScheduleOutput(
-        scheduled_activities=sched_acts_sched, makespan=makespan,
-        feasible=True, metrics=metrics,
+        scheduled_activities=sched_acts_sched,
+        makespan=makespan,
+        feasible=True,
+        metrics=metrics,
     )
 
     # ── Reconstrói ActivityDAG ───────────────────────────────────────────────
@@ -862,19 +864,15 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
     aid_set = {a.activity_id for a in acts}
     prec: list[tuple[str, str]] = []
     thresh: dict[tuple[str, str], float] = {}
-    for item in (canonical_in.eap or []):
+    for item in canonical_in.eap or []:
         iid = item.item_id
         if iid not in aid_set:
             continue
-        for pred in (item.predecessores or []):
+        for pred in item.predecessores or []:
             pid = getattr(pred, "predecessor_id", None) or getattr(pred, "item_id", None)
             if pid and pid in aid_set and (pid, iid) not in set(prec):
                 prec.append((pid, iid))
-                th = (
-                    getattr(pred, "completion_threshold_pct", None)
-                    or getattr(pred, "threshold", None)
-                    or 1.0
-                )
+                th = getattr(pred, "completion_threshold_pct", None) or getattr(pred, "threshold", None) or 1.0
                 thresh[(pid, iid)] = float(th)
 
     dag = ActivityDAG(activities=acts, precedence=prec, thresholds=thresh)
@@ -902,9 +900,7 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
             "custo_mob_unit": float(getattr(ct, "custo_mob_unit", 0) or 0),
             "custo_demob_unit": float(getattr(ct, "custo_demob_unit", 0) or 0),
             "custo_idle_semanal_unit": float(
-                getattr(ct, "custo_idle_semanal_unit", None)
-                or getattr(ct, "custo_standby_unit", 0)
-                or 0
+                getattr(ct, "custo_idle_semanal_unit", None) or getattr(ct, "custo_standby_unit", 0) or 0
             ),
         }
 
@@ -940,10 +936,7 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
 
     # ── Serializa para o dict do relatório ───────────────────────────────────
     viáveis = [r for r in results if r.best_k is not None]
-    makespan_otimo = (
-        min(r.by_k[r.best_k].makespan_new for r in viáveis)
-        if viáveis else makespan
-    )
+    makespan_otimo = min(r.by_k[r.best_k].makespan_new for r in viáveis) if viáveis else makespan
 
     itens = []
     for r in results:

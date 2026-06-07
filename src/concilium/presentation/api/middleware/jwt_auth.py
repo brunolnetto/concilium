@@ -15,16 +15,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from concilium.infrastructure.settings import get_auth
 
-_SKIP_PATHS: frozenset[str] = frozenset({
-    "/",
-    "/health",
-    "/auth/token",
-    "/auth/device/activate",   # ADR-099: troca device code por refresh token
-    "/auth/token/refresh",     # ADR-099: troca refresh token por access token
-    "/swagger",
-    "/openapi.json",
-    "/redoc",
-})
+_SKIP_PATHS: frozenset[str] = frozenset(
+    {
+        "/",
+        "/health",
+        "/auth/token",
+        "/auth/device/activate",  # ADR-099: troca device code por refresh token
+        "/auth/token/refresh",  # ADR-099: troca refresh token por access token
+        "/swagger",
+        "/openapi.json",
+        "/redoc",
+    }
+)
 
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):
@@ -36,9 +38,10 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         if not auth_header.startswith("Bearer "):
             return _unauthorized("Authorization header ausente ou inválido.")
 
-        token = auth_header[len("Bearer "):].strip()
+        token = auth_header[len("Bearer ") :].strip()
         try:
             from concilium.infrastructure.auth.token_service import decode_token
+
             claims = decode_token(token)
         except Exception as exc:
             return _unauthorized(f"Token inválido: {exc}")

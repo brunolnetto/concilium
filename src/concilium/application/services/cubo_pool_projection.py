@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from concilium.domain.models.cubo_pool import bucket_periodo
 from concilium.domain.services.cubo_pool_builder import (
     CuboPoolInstancialBuilder,
     validar_invariantes_cubo_pool,
@@ -27,26 +26,47 @@ _ESTADO_LABEL = {"prod": "Produtivo", "idle": "Ocioso", "off": "Desmobilizado"}
 # Matriz de contrato: faces × metadados (ADR-086 D6.1)
 _FACES: dict[str, dict] = {
     "utilizacao_temporal": {
-        "label": "Utilização no tempo", "natureza": "fisica",
-        "unit_type": "count", "chart_hint": "bar_stacked"},
+        "label": "Utilização no tempo",
+        "natureza": "fisica",
+        "unit_type": "count",
+        "chart_hint": "bar_stacked",
+    },
     "custo_estado_componente": {
-        "label": "Custo por estado × componente", "natureza": "fisica",
-        "unit_type": "currency_brl", "chart_hint": "heatmap"},
+        "label": "Custo por estado × componente",
+        "natureza": "fisica",
+        "unit_type": "currency_brl",
+        "chart_hint": "heatmap",
+    },
     "instancia_ciclo_vida": {
-        "label": "Ciclo de vida por instância", "natureza": "fisica",
-        "unit_type": "currency_brl", "chart_hint": "table"},
+        "label": "Ciclo de vida por instância",
+        "natureza": "fisica",
+        "unit_type": "currency_brl",
+        "chart_hint": "table",
+    },
     "atividade_instancia": {
-        "label": "Rastreabilidade atividade ↔ slot", "natureza": "fisica",
-        "unit_type": "count", "chart_hint": "table"},
+        "label": "Rastreabilidade atividade ↔ slot",
+        "natureza": "fisica",
+        "unit_type": "count",
+        "chart_hint": "table",
+    },
     "causa_custo": {
-        "label": "Causa do custo (Euler)", "natureza": "causal",
-        "unit_type": "currency_brl", "chart_hint": "bar_stacked"},
+        "label": "Causa do custo (Euler)",
+        "natureza": "causal",
+        "unit_type": "currency_brl",
+        "chart_hint": "bar_stacked",
+    },
     "economia_pool": {
-        "label": "Economia vs. execução autônoma", "natureza": "causal",
-        "unit_type": "currency_brl", "chart_hint": "bar"},
+        "label": "Economia vs. execução autônoma",
+        "natureza": "causal",
+        "unit_type": "currency_brl",
+        "chart_hint": "bar",
+    },
     "cadeia_perpetuacao": {
-        "label": "Cadeias de perpetuação", "natureza": "estrutural",
-        "unit_type": "count", "chart_hint": "table"},
+        "label": "Cadeias de perpetuação",
+        "natureza": "estrutural",
+        "unit_type": "count",
+        "chart_hint": "table",
+    },
 }
 
 _GRANULARIDADES = ["semana", "mes", "trimestre", "ano"]
@@ -57,8 +77,12 @@ def cubo_pool_projection_contract() -> dict:
     return {
         "version": "adr086-v1",
         "faces": {
-            name: {"label": m["label"], "natureza": m["natureza"],
-                   "unit_type": m["unit_type"], "chart_hint": m["chart_hint"]}
+            name: {
+                "label": m["label"],
+                "natureza": m["natureza"],
+                "unit_type": m["unit_type"],
+                "chart_hint": m["chart_hint"],
+            }
             for name, m in _FACES.items()
         },
         "granularidades": _GRANULARIDADES,
@@ -99,12 +123,13 @@ def resolve_cubo_pool_projection(
             inst_num = int(num) if num.isdigit() else None
         cubo = cubo.slice(
             atividade_id=atividade_id if face in ("atividade_instancia",) else None,
-            tipo_id=tipo, instancia_numero=inst_num,
+            tipo_id=tipo,
+            instancia_numero=inst_num,
         )
 
     # Baseline autônomo autoritativo por item (ADR-085): EquipeDireta.custo_total_autonomo.
     autonomo_por_item: dict[str, float] = {}
-    for eq in (getattr(canonical_in, "equipes_diretas", None) or []):
+    for eq in getattr(canonical_in, "equipes_diretas", None) or []:
         iid = getattr(eq, "item_id", "")
         if iid:
             autonomo_por_item[iid] = float(getattr(eq, "custo_total_autonomo", 0.0) or 0.0)
@@ -119,8 +144,13 @@ def resolve_cubo_pool_projection(
         "cadeia_perpetuacao": _face_cadeia_perpetuacao,
     }
     columns, rows, narrativa, operator_meta = dispatch[face](
-        cubo, contratos, cadeias, granularidade=granularidade,
-        atividade_id=atividade_id, top_n=top_n, autonomo_por_item=autonomo_por_item,
+        cubo,
+        contratos,
+        cadeias,
+        granularidade=granularidade,
+        atividade_id=atividade_id,
+        top_n=top_n,
+        autonomo_por_item=autonomo_por_item,
     )
 
     truncado = len(rows) > top_n
@@ -163,12 +193,14 @@ def _face_utilizacao_temporal(cubo, contratos, cadeias, *, granularidade, **_):
     periodos = sorted({p for (p, _e) in util})
     rows = []
     for p in periodos:
-        rows.append({
-            "periodo": p,
-            "prod": util.get((p, "prod"), 0),
-            "idle": util.get((p, "idle"), 0),
-            "off": util.get((p, "off"), 0),
-        })
+        rows.append(
+            {
+                "periodo": p,
+                "prod": util.get((p, "prod"), 0),
+                "idle": util.get((p, "idle"), 0),
+                "off": util.get((p, "off"), 0),
+            }
+        )
     columns = [
         {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
         {"id": "prod", "label": "Produtivo", "dtype": "int", "role": "series"},
@@ -222,14 +254,22 @@ def _face_ciclo_vida(cubo, contratos, cadeias, *, top_n=300, **_):
     contrato_por_id = {c.contrato_id: c for c in contratos}
     rows = []
     for iid, d in sorted(cv.items()):
-        rows.append({
-            "instancia_id": iid, "tipo_id": d["tipo_id"],
-            "semana_mob": d["semana_mob"], "semana_demob": d["semana_demob"],
-            "prod_w": d["prod_w"], "idle_w": d["idle_w"], "off_w": d["off_w"],
-            "custo_mo": d["custo_mo"], "custo_eq": d["custo_eq"],
-            "custo_comb": d["custo_comb"], "custo_mat": d["custo_mat"],
-            "custo_total": d["custo_total"],
-        })
+        rows.append(
+            {
+                "instancia_id": iid,
+                "tipo_id": d["tipo_id"],
+                "semana_mob": d["semana_mob"],
+                "semana_demob": d["semana_demob"],
+                "prod_w": d["prod_w"],
+                "idle_w": d["idle_w"],
+                "off_w": d["off_w"],
+                "custo_mo": d["custo_mo"],
+                "custo_eq": d["custo_eq"],
+                "custo_comb": d["custo_comb"],
+                "custo_mat": d["custo_mat"],
+                "custo_total": d["custo_total"],
+            }
+        )
     rows.sort(key=lambda r: -r["custo_total"])
     columns = [
         {"id": "instancia_id", "label": "Instância", "dtype": "str", "role": "class"},
@@ -257,11 +297,16 @@ def _face_atividade_instancia(cubo, contratos, cadeias, *, atividade_id=None, **
     ai = cubo.atividade_instancia()
     rows = []
     for (atv, iid), d in sorted(ai.items()):
-        rows.append({
-            "atividade_id": atv, "instancia_id": iid,
-            "semana_inicio": d["semana_inicio"], "semana_fim": d["semana_fim"],
-            "machine_weeks": d["machine_weeks"], "custo": d["custo"],
-        })
+        rows.append(
+            {
+                "atividade_id": atv,
+                "instancia_id": iid,
+                "semana_inicio": d["semana_inicio"],
+                "semana_fim": d["semana_fim"],
+                "machine_weeks": d["machine_weeks"],
+                "custo": d["custo"],
+            }
+        )
     rows.sort(key=lambda r: (r["atividade_id"], r["instancia_id"]))
     columns = [
         {"id": "atividade_id", "label": "Atividade", "dtype": "str", "role": "class"},
@@ -285,23 +330,25 @@ def _face_atividade_instancia(cubo, contratos, cadeias, *, atividade_id=None, **
 
 def _iter_particoes(contratos):
     for c in contratos:
-        for p in (getattr(c, "particao_por_item", None) or []):
+        for p in getattr(c, "particao_por_item", None) or []:
             yield c, p
 
 
 def _face_causa_custo(cubo, contratos, cadeias, *, top_n=300, **_):
     rows = []
     for _c, p in _iter_particoes(contratos):
-        rows.append({
-            "atividade_id": p.item_id,
-            "produtivo_exclusivo": round(p.custo_produtivo_exclusivo, 2),
-            "produtivo_compartilhado": round(p.custo_produtivo_compartilhado, 2),
-            "ocioso_imputado": round(p.custo_ocioso_imputado, 2),
-            "mob_demob_imputado": round(p.custo_mob_imputado + p.custo_demob_imputado, 2),
-            "total_imputado": round(p.custo_total_particionado, 2),
-            "predecessor_critico": p.predecessor_critico_id or "",
-            "overlap_semanas": round(p.overlap_semanas, 1),
-        })
+        rows.append(
+            {
+                "atividade_id": p.item_id,
+                "produtivo_exclusivo": round(p.custo_produtivo_exclusivo, 2),
+                "produtivo_compartilhado": round(p.custo_produtivo_compartilhado, 2),
+                "ocioso_imputado": round(p.custo_ocioso_imputado, 2),
+                "mob_demob_imputado": round(p.custo_mob_imputado + p.custo_demob_imputado, 2),
+                "total_imputado": round(p.custo_total_particionado, 2),
+                "predecessor_critico": p.predecessor_critico_id or "",
+                "overlap_semanas": round(p.overlap_semanas, 1),
+            }
+        )
     rows.sort(key=lambda r: -r["total_imputado"])
     columns = [
         {"id": "atividade_id", "label": "Atividade", "dtype": "str", "role": "x"},
@@ -338,11 +385,16 @@ def _face_economia_pool(cubo, contratos, cadeias, *, top_n=300, autonomo_por_ite
         eco = round(aut - inst, 2)
         tot_aut += aut
         tot_inst += inst
-        rows.append({
-            "atividade_id": p.item_id, "custo_autonomo": aut, "custo_instancial": inst,
-            "economia": eco, "economia_pct": round((eco / aut * 100) if aut > 0 else 0.0, 1),
-            "baseline_disponivel": aut > 0,
-        })
+        rows.append(
+            {
+                "atividade_id": p.item_id,
+                "custo_autonomo": aut,
+                "custo_instancial": inst,
+                "economia": eco,
+                "economia_pct": round((eco / aut * 100) if aut > 0 else 0.0, 1),
+                "baseline_disponivel": aut > 0,
+            }
+        )
     rows.sort(key=lambda r: -r["economia"])
     columns = [
         {"id": "atividade_id", "label": "Atividade", "dtype": "str", "role": "x"},
@@ -364,23 +416,34 @@ def _face_economia_pool(cubo, contratos, cadeias, *, top_n=300, autonomo_por_ite
         )
     if sem_baseline:
         narrativa.append(f"⚠ {sem_baseline} atividade(s) sem baseline autônomo disponível (economia não calculável).")
-    return columns, rows, narrativa, {"custo_autonomo_total": round(tot_aut, 2),
-                                      "custo_instancial_total": round(tot_inst, 2),
-                                      "economia_total": eco_total,
-                                      "itens_sem_baseline": sem_baseline}
+    return (
+        columns,
+        rows,
+        narrativa,
+        {
+            "custo_autonomo_total": round(tot_aut, 2),
+            "custo_instancial_total": round(tot_inst, 2),
+            "economia_total": eco_total,
+            "itens_sem_baseline": sem_baseline,
+        },
+    )
 
 
 def _face_cadeia_perpetuacao(cubo, contratos, cadeias, *, top_n=300, **_):
     rows = []
     for ch in cadeias:
-        rows.append({
-            "cadeia_id": ch.cadeia_id, "tipo_id": ch.tipo_id,
-            "atividades": " → ".join(ch.item_ids),
-            "n_atividades": len(ch.item_ids),
-            "semanas_ativas": ch.semanas_ativas, "semanas_ociosas": ch.semanas_ociosas,
-            "n_mob_demob": ch.n_mobilizacoes + ch.n_desmobilizacoes,
-            "custo_standby": round(ch.custo_standby, 2),
-        })
+        rows.append(
+            {
+                "cadeia_id": ch.cadeia_id,
+                "tipo_id": ch.tipo_id,
+                "atividades": " → ".join(ch.item_ids),
+                "n_atividades": len(ch.item_ids),
+                "semanas_ativas": ch.semanas_ativas,
+                "semanas_ociosas": ch.semanas_ociosas,
+                "n_mob_demob": ch.n_mobilizacoes + ch.n_desmobilizacoes,
+                "custo_standby": round(ch.custo_standby, 2),
+            }
+        )
     rows.sort(key=lambda r: (-r["n_atividades"], r["cadeia_id"]))
     columns = [
         {"id": "cadeia_id", "label": "Cadeia", "dtype": "str", "role": "class"},

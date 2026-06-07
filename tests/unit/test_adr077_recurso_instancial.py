@@ -31,10 +31,10 @@ from concilium.domain.models.canonical import (
     ResumoUtilizacaoContrato,
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _make_instancia(
     tipo_id: str = "ESC-3CAT",
@@ -48,7 +48,7 @@ def _make_instancia(
     custo = 50_000.0 * semanas_standby
     return InstanciaRecurso(
         instancia_id=f"{tipo_id}-{numero:02d}",
-        contrato_id=f"contrato-{tipo_id.lower().replace('-','_')}",
+        contrato_id=f"contrato-{tipo_id.lower().replace('-', '_')}",
         tipo_id=tipo_id,
         numero=numero,
         semana_entrada="2026-W01",
@@ -68,7 +68,7 @@ def _make_contrato(
     custo_unit: float = 50_000.0,
 ) -> RecursoContrato:
     return RecursoContrato(
-        contrato_id=f"contrato-{tipo_id.lower().replace('-','_')}",
+        contrato_id=f"contrato-{tipo_id.lower().replace('-', '_')}",
         tipo_id=tipo_id,
         quantidade_contratada=quantidade,
         semana_inicio="2026-W01",
@@ -82,6 +82,7 @@ def _make_contrato(
 
 def _make_sched_activity(item_id: str, weeks: list[str], num_equipes: int = 1):
     """Simula um ScheduledActivityCanonical simplificado com distribuicao_semanal."""
+
     class _DistSemanal:
         def __init__(self, ne):
             self.num_equipes = ne
@@ -102,6 +103,7 @@ def _make_sched_activity(item_id: str, weeks: list[str], num_equipes: int = 1):
 # TestInstanciaRecursoModel
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestInstanciaRecursoModel:
     def test_instancia_minima(self):
         inst = _make_instancia(numero=1, semanas_ativas=48, semanas_standby=0)
@@ -116,14 +118,14 @@ class TestInstanciaRecursoModel:
         assert inst.custo_standby > 0
 
     def test_instancia_atividades_cobertas(self):
-        inst = _make_instancia(
-            numero=1, semanas_ativas=48, atividades=["eap-1_9"]
-        )
+        inst = _make_instancia(numero=1, semanas_ativas=48, atividades=["eap-1_9"])
         assert "eap-1_9" in inst.atividades_cobertas
 
     def test_instancia_multi_atividade(self):
         inst = _make_instancia(
-            numero=3, semanas_ativas=37, semanas_standby=11,
+            numero=3,
+            semanas_ativas=37,
+            semanas_standby=11,
             atividades=["eap-1_6", "eap-1_5"],
         )
         assert len(inst.atividades_cobertas) == 2
@@ -138,6 +140,7 @@ class TestInstanciaRecursoModel:
 # ─────────────────────────────────────────────────────────────────────────────
 # TestComposicaoEquipeAtividadeModel
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestComposicaoEquipeAtividadeModel:
     def test_composicao_basica(self):
@@ -179,6 +182,7 @@ class TestComposicaoEquipeAtividadeModel:
 # ─────────────────────────────────────────────────────────────────────────────
 # TestResumoUtilizacaoContratoModel
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestResumoUtilizacaoContratoModel:
     def test_resumo_basico(self):
@@ -232,6 +236,7 @@ class TestResumoUtilizacaoContratoModel:
 # TestBuildInstanciasRecurso — algoritmo central
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _weeks_range(start: int, end: int) -> list[str]:
     """Gera lista de weeks no formato '2026-Wxx' de start a end (inclusive)."""
     return [f"2026-W{w:02d}" for w in range(start, end + 1)]
@@ -249,12 +254,14 @@ class TestBuildInstanciasRecurso:
         from concilium.application.skills.manifests._05_helpers import (
             _build_instancias_recurso,
         )
+
         return _build_instancias_recurso
 
     def _run_esc3cat(self):
         """Executa _build_instancias_recurso para o cenário ESC-3CAT."""
         # Importa a função diretamente (sem pacote — via path)
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
@@ -373,12 +380,14 @@ class TestBuildInstanciasRecurso:
 # TestAtribuicaoGulosa
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestAtribuicaoGulosa:
     """Verifica que a prioridade de machine_weeks determina quais slots vão para qual atividade."""
 
     def _run_two_activities(self, mw_a: int, mw_b: int, req_a: int, req_b: int, pool: int):
         """Cenário simples: atividade A e B competem pelo mesmo pool em semanas disjuntas."""
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
@@ -414,6 +423,7 @@ class TestAtribuicaoGulosa:
         # Para este teste, usamos atividades de spans claramente distintos:
         # act-longue: 20w de duração; act-curta: 5w de duração
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
@@ -450,12 +460,14 @@ class TestAtribuicaoGulosa:
 # TestZeroDemandWeeks
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestZeroDemandWeeks:
     """Semanas do contrato sem atividade → standby para todas as instâncias."""
 
     def test_contrato_mais_longo_que_atividades(self):
         """Contrato de 10 semanas, atividade ativa em W1-W5 apenas."""
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
@@ -497,6 +509,7 @@ class TestZeroDemandWeeks:
 # ─────────────────────────────────────────────────────────────────────────────
 # TestStatusUtilizacao
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestStatusUtilizacao:
     """Testa thresholds: OK ≥ 65%, AVISO 35-65%, CRITICO < 35%."""
@@ -547,12 +560,14 @@ class TestStatusUtilizacao:
 # TestValidatorStandbyAlto
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestValidatorStandbyAlto:
     """Verifica que VAL-SLOT-STANDBY-ALTO é emitido quando standby > 35%."""
 
     def _run_with_standby(self, standby_pct: float):
         """Cenário com taxa = (1 - standby_pct/100)."""
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "helpers_a",
             _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py",
@@ -582,9 +597,13 @@ class TestValidatorStandbyAlto:
             "activities": [{"item_id": "act-a", "required_resources": {"T1": 1}}],
         }
         active_wks = _weeks_range(1, active_weeks) if active_weeks > 0 else []
-        sched_lookup = {
-            "act-a": _make_sched_activity("act-a", active_wks, num_equipes=1),
-        } if active_wks else {}
+        sched_lookup = (
+            {
+                "act-a": _make_sched_activity("act-a", active_wks, num_equipes=1),
+            }
+            if active_wks
+            else {}
+        )
         validacoes = []
         fn([contrato], rcpsp_spec, sched_lookup, validacoes)
         return validacoes
@@ -613,13 +632,12 @@ class TestValidatorStandbyAlto:
 # TestCanonicalModelCampos
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestCanonicalModelCampos:
     """Verifica que CanonicalModel aceita os novos campos ADR-077."""
 
     def test_canonical_aceita_instancias_recurso(self, tmp_path):
         """CanonicalModel deve ter o campo instancias_recurso."""
-        import json
-        from datetime import datetime
 
         inst = _make_instancia(numero=1, semanas_ativas=10)
         # Verifica que o campo existe sem precisar criar um canonical completo

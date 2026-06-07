@@ -183,7 +183,9 @@ def build_catalog_reasonability_artifact(
     grouped = _build_groups(rows)
     for key, items in grouped.items():
         prod_vals = [float(r["producao_horaria"]) for r in items if r["producao_horaria"] and r["producao_horaria"] > 0]
-        ppp_vals = [float(r["producao_por_pessoa"]) for r in items if r["producao_por_pessoa"] and r["producao_por_pessoa"] > 0]
+        ppp_vals = [
+            float(r["producao_por_pessoa"]) for r in items if r["producao_por_pessoa"] and r["producao_por_pessoa"] > 0
+        ]
 
         # Produtividade e produtividade por pessoa são domínios não negativos.
         prod_bounds = _robust_bounds(prod_vals, non_negative=True)

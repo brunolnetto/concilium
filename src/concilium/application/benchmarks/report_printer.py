@@ -57,8 +57,8 @@ class BenchmarkReportPrinter:
         if not ferramenta:
             print("     (sem resultado computado)")
             return
-        direto_catalogo = ferramenta.get("custo_direto_catalogo")
-        fmt_catalogo = f"R$ {direto_catalogo:>14,.2f}" if direto_catalogo is not None else "  (nao disponivel)"
+        direto_pu_q = ferramenta.get("custo_direto_pu_q")
+        fmt_pu_q = f"R$ {direto_pu_q:>14,.2f}" if direto_pu_q is not None else "  (nao disponivel)"
         indireto = ferramenta.get("custo_indireto")
         preco_venda = ferramenta.get("preco_venda")
         bdi = ferramenta.get("bdi_lucro_impostos")
@@ -69,14 +69,14 @@ class BenchmarkReportPrinter:
         preco_venda_cat = ferramenta.get("preco_venda_catalogo")
         fmt_venda_cat = f"R$ {preco_venda_cat:>14,.2f}" if preco_venda_cat is not None else ""
         print("     base metodologia        : Operacional (custo instancial x BDI)")
-        print(f"     custo_direto            : {fmt_catalogo}   <- CPUxqty (alinhado c/ Referencia)")
+        print(f"     custo_direto_pu_q       : {fmt_pu_q}   <- PUxQ (alinhado c/ Referencia)")
         print(f"     custo_indireto          : {fmt_indireto}")
         print(
             f"     preco_venda (operac.)   : {fmt_venda}   <- custo instancial x BDI + indireto x BDI = markup efetivo {bdi_pct}"  # noqa: E501
         )
         if fmt_venda_cat:
             print(
-                f"     preco_venda (catalogo)  : {fmt_venda_cat}   <- CPUxqty x BDI (ref. mercado)"  # noqa: E501
+                f"     preco_venda (PUxQ)      : {fmt_venda_cat}   <- PUxQ x BDI (ref. mercado)"  # noqa: E501
             )
 
     def _print_composicao_final(self, confronto: dict) -> None:

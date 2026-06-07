@@ -53,6 +53,7 @@ _RENEW_BEFORE_S = 600  # renova 10 min antes do vencimento
 
 # ── Token cache (local file) ──────────────────────────────────────────────────
 
+
 def _token_path() -> Path:
     return _TOKEN_DIR / f"{_DEVICE_ID}.json"
 
@@ -74,6 +75,7 @@ def _save_cache(data: dict) -> None:
 
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
+
 
 def _activate(http_client) -> str:
     """Exchange device code for refresh token. Returns token_id."""
@@ -99,7 +101,7 @@ def _activate(http_client) -> str:
 
 def _get_access_token(http_client) -> tuple[str, float]:
     """Return (access_token, expire_at_unix). Activates or refreshes as needed."""
-    import httpx, time as _time
+    import time as _time
 
     cache = _load_cache()
     refresh_token = cache.get("refresh_token")
@@ -115,7 +117,7 @@ def _get_access_token(http_client) -> tuple[str, float]:
             expires_in = data.get("expires_in", 28800)
             return data["access_token"], _time.time() + expires_in
         # refresh token invalid — re-activate
-        _log(f"Refresh token expirado/revogado. Re-ativando...")
+        _log("Refresh token expirado/revogado. Re-ativando...")
 
     # Activate device code → new refresh token
     refresh_token = _activate(http_client)
@@ -133,6 +135,7 @@ def _get_access_token(http_client) -> tuple[str, float]:
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
+
 def _log(msg: str) -> None:
     print(f"[concilium-mcp-proxy] {msg}", file=sys.stderr, flush=True)
 
@@ -144,8 +147,10 @@ def _die(msg: str) -> None:
 
 # ── MCP stdio ↔ HTTP bridge ───────────────────────────────────────────────────
 
+
 class _State:
     """Shared mutable state between the main loop and the token refresh thread."""
+
     def __init__(self, access_token: str, expire_at: float) -> None:
         self.access_token = access_token
         self.expire_at = expire_at
@@ -253,6 +258,7 @@ def _write_error(msg: dict, error: str) -> None:
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     """Entry point for concilium-mcp-proxy."""

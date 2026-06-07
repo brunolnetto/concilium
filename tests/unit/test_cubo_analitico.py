@@ -146,9 +146,13 @@ def _make_canonical(n_atividades: int = 2, with_schedule: bool = True):
 class TestCelulaAnalitica:
     def _cell(self, comp: str, cat_insumo: str = "mao_obra", prop: str = "salario_encargos") -> CelulaAnalitica:
         return CelulaAnalitica(
-            natureza="direto", atividade_id="eap-01",
-            categoria_insumo=cat_insumo, propriedade=prop,
-            semana_iso="2026-W23", componente_bdi=comp, valor_rs=100.0,
+            natureza="direto",
+            atividade_id="eap-01",
+            categoria_insumo=cat_insumo,
+            propriedade=prop,
+            semana_iso="2026-W23",
+            componente_bdi=comp,
+            valor_rs=100.0,
         )
 
     @pytest.mark.parametrize(
@@ -184,28 +188,41 @@ class TestCelulaAnalitica:
     def test_categoria_backward_compat(self):
         """Backward compat: material.combustivel → categoria='diesel' (ADR-090)."""
         c_diesel = CelulaAnalitica(
-            natureza="direto", atividade_id="eap-01",
-            categoria_insumo="material", propriedade="combustivel",  # ADR-090
-            semana_iso="2026-W01", componente_bdi="custo_direto", valor_rs=50.0,
-            valor_fisico=10.0, unidade_fisica="L",
+            natureza="direto",
+            atividade_id="eap-01",
+            categoria_insumo="material",
+            propriedade="combustivel",  # ADR-090
+            semana_iso="2026-W01",
+            componente_bdi="custo_direto",
+            valor_rs=50.0,
+            valor_fisico=10.0,
+            unidade_fisica="L",
         )
-        assert c_diesel.categoria == "diesel"          # backward compat via property
-        assert c_diesel.consumo_diesel_L == 10.0       # backward compat via property
+        assert c_diesel.categoria == "diesel"  # backward compat via property
+        assert c_diesel.consumo_diesel_L == 10.0  # backward compat via property
         assert c_diesel.is_diesel()
 
         c_mat = CelulaAnalitica(
-            natureza="direto", atividade_id="eap-01",
-            categoria_insumo="material", propriedade="consumivel",
-            semana_iso="2026-W01", componente_bdi="custo_direto", valor_rs=80.0,
+            natureza="direto",
+            atividade_id="eap-01",
+            categoria_insumo="material",
+            propriedade="consumivel",
+            semana_iso="2026-W01",
+            componente_bdi="custo_direto",
+            valor_rs=80.0,
         )
         assert c_mat.categoria == "material"
         assert c_mat.consumo_diesel_L == 0.0
         assert not c_mat.is_diesel()
 
         c_eq = CelulaAnalitica(
-            natureza="direto", atividade_id="eap-01",
-            categoria_insumo="equipamento", propriedade="aluguel",
-            semana_iso="2026-W01", componente_bdi="custo_direto", valor_rs=100.0,
+            natureza="direto",
+            atividade_id="eap-01",
+            categoria_insumo="equipamento",
+            propriedade="aluguel",
+            semana_iso="2026-W01",
+            componente_bdi="custo_direto",
+            valor_rs=100.0,
         )
         assert c_eq.categoria == "equipamento"
         assert not c_eq.is_diesel()

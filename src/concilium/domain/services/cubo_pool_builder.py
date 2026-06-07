@@ -72,34 +72,57 @@ def _compute_per_week_costs(inst, n_prod: int, n_idle: int) -> dict:
 
 def _append_week_cells(out, wk, inst, contrato, prod_map, idle_set, costs):
     if wk in prod_map:
-        out.append(CelulaPoolInstancial(
-            contrato_id=contrato.contrato_id, tipo_id=inst.tipo_id,
-            instancia_numero=inst.numero, semana_iso=wk, estado="prod",
-            atividade_id=prod_map[wk],
-            custo_mo=round(costs["p_mo"], 2), custo_eq=round(costs["p_eq"], 2),
-            custo_comb=round(costs["p_comb"], 2), custo_mat=round(costs["p_mat"], 2),
-        ))
+        out.append(
+            CelulaPoolInstancial(
+                contrato_id=contrato.contrato_id,
+                tipo_id=inst.tipo_id,
+                instancia_numero=inst.numero,
+                semana_iso=wk,
+                estado="prod",
+                atividade_id=prod_map[wk],
+                custo_mo=round(costs["p_mo"], 2),
+                custo_eq=round(costs["p_eq"], 2),
+                custo_comb=round(costs["p_comb"], 2),
+                custo_mat=round(costs["p_mat"], 2),
+            )
+        )
     elif wk in idle_set:
-        out.append(CelulaPoolInstancial(
-            contrato_id=contrato.contrato_id, tipo_id=inst.tipo_id,
-            instancia_numero=inst.numero, semana_iso=wk, estado="idle",
-            atividade_id=None,
-            custo_mo=round(costs["i_mo"], 2), custo_eq=round(costs["i_eq"], 2),
-            custo_comb=0.0, custo_mat=0.0,
-        ))
+        out.append(
+            CelulaPoolInstancial(
+                contrato_id=contrato.contrato_id,
+                tipo_id=inst.tipo_id,
+                instancia_numero=inst.numero,
+                semana_iso=wk,
+                estado="idle",
+                atividade_id=None,
+                custo_mo=round(costs["i_mo"], 2),
+                custo_eq=round(costs["i_eq"], 2),
+                custo_comb=0.0,
+                custo_mat=0.0,
+            )
+        )
     else:
-        out.append(CelulaPoolInstancial(
-            contrato_id=contrato.contrato_id, tipo_id=inst.tipo_id,
-            instancia_numero=inst.numero, semana_iso=wk, estado="off",
-            atividade_id=None,
-        ))
+        out.append(
+            CelulaPoolInstancial(
+                contrato_id=contrato.contrato_id,
+                tipo_id=inst.tipo_id,
+                instancia_numero=inst.numero,
+                semana_iso=wk,
+                estado="off",
+                atividade_id=None,
+            )
+        )
 
 
 def _check_off_zero(cubo) -> dict | None:
     for c in cubo.celulas:
         if c.estado == "off" and c.custo_total != 0.0:
-            return {"codigo": "VAL-POOL-CUBO-OFF-ZERO", "instancia": c.instancia_id,
-                    "semana": c.semana_iso, "custo": c.custo_total}
+            return {
+                "codigo": "VAL-POOL-CUBO-OFF-ZERO",
+                "instancia": c.instancia_id,
+                "semana": c.semana_iso,
+                "custo": c.custo_total,
+            }
     return None
 
 
@@ -116,12 +139,18 @@ def _contract_custo(contrato) -> float:
 
 def _check_h1(soma_por_contrato, contratos) -> list[dict]:
     violacoes: list[dict] = []
-    for contrato in (contratos or []):
+    for contrato in contratos or []:
         esperado = _contract_custo(contrato)
         obtido = round(soma_por_contrato.get(contrato.contrato_id, 0.0), 2)
         if abs(obtido - esperado) > max(1.0, esperado * 0.001):
-            violacoes.append({"codigo": "VAL-POOL-CUBO-SOMA", "contrato": contrato.contrato_id,
-                              "esperado": round(esperado, 2), "obtido": obtido})
+            violacoes.append(
+                {
+                    "codigo": "VAL-POOL-CUBO-SOMA",
+                    "contrato": contrato.contrato_id,
+                    "esperado": round(esperado, 2),
+                    "obtido": obtido,
+                }
+            )
     return violacoes
 
 

@@ -9,6 +9,7 @@ from .report_markdown_sections import (
     render_header,
     render_oportunidades,
     render_planejamento_table,
+    render_pool_economia_origem,
     render_resultado,
 )
 
@@ -32,6 +33,7 @@ def render_financial_report_markdown(relatorio: dict, canonical: object | None =
     lines += render_resultado(resultado)
     lines += render_planejamento_table(planejamento)
     lines += render_equilibrium_section(ponto_equilibrio, resultado)
+    lines += render_pool_economia_origem(canonical)
     lines += render_oportunidades(oportunidades)
     lines += render_compressao_cronograma(compressao)
     lines += render_insights_section(insights)

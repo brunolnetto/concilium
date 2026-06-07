@@ -50,11 +50,11 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
     """
     cat = {
         "mao_obra": 0.0,
-        "eq_aluguel": 0.0,   # aluguel + manutencao → BDI_servicos
-        "material": 0.0,     # consumivel + combustivel → BDI_material (ADR-090)
+        "eq_aluguel": 0.0,  # aluguel + manutencao → BDI_servicos
+        "material": 0.0,  # consumivel + combustivel → BDI_material (ADR-090)
         # Aliases legados (retrocompat)
-        "equipamentos": 0.0, # = eq_aluguel
-        "diesel": 0.0,       # = parcela de material.combustivel
+        "equipamentos": 0.0,  # = eq_aluguel
+        "diesel": 0.0,  # = parcela de material.combustivel
         # Mantido para granularidade de diagnóstico (não usado no BDI)
         "eq_combustivel": 0.0,
     }
@@ -63,20 +63,19 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
     part_by_item: dict[str, Any] = {}
     for contrato in canonical_in.contratos_recurso:
         for part in contrato.particao_por_item:
-            if (part.custo_inst_mo or part.custo_inst_eq
-                    or part.custo_inst_comb or part.custo_inst_mat):
+            if part.custo_inst_mo or part.custo_inst_eq or part.custo_inst_comb or part.custo_inst_mat:
                 part_by_item[part.item_id] = part
 
     contados: set[str] = set()
     for item_id, part in part_by_item.items():
-        _mo   = float(part.custo_inst_mo   or 0.0)
-        _eq   = float(part.custo_inst_eq   or 0.0)
+        _mo = float(part.custo_inst_mo or 0.0)
+        _eq = float(part.custo_inst_eq or 0.0)
         _comb = float(part.custo_inst_comb or 0.0)
-        _mat  = float(part.custo_inst_mat  or 0.0)
-        cat["mao_obra"]      += _mo
-        cat["eq_aluguel"]    += _eq
-        cat["material"]      += _mat + _comb  # ADR-090: combustivel funde em material
-        cat["eq_combustivel"] += _comb        # diagnóstico granular
+        _mat = float(part.custo_inst_mat or 0.0)
+        cat["mao_obra"] += _mo
+        cat["eq_aluguel"] += _eq
+        cat["material"] += _mat + _comb  # ADR-090: combustivel funde em material
+        cat["eq_combustivel"] += _comb  # diagnóstico granular
         contados.add(item_id)
 
     # 2. Demais itens: decompõe custo_total pelas frações recorrentes
@@ -93,13 +92,13 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         if base <= 0:
             cat["mao_obra"] += ct
             continue
-        _ct_mo   = ct * float(eq.custo_mao_obra_mensal or 0.0) / base
-        _ct_eq   = ct * float(eq.custo_equipamentos_mensal or 0.0) / base
+        _ct_mo = ct * float(eq.custo_mao_obra_mensal or 0.0) / base
+        _ct_eq = ct * float(eq.custo_equipamentos_mensal or 0.0) / base
         _ct_comb = ct * float(eq.custo_combustivel_total_mensal or 0.0) / base
-        _ct_mat  = ct * float(eq.custo_material_mensal or 0.0) / base
-        cat["mao_obra"]      += _ct_mo
-        cat["eq_aluguel"]    += _ct_eq
-        cat["material"]      += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
+        _ct_mat = ct * float(eq.custo_material_mensal or 0.0) / base
+        cat["mao_obra"] += _ct_mo
+        cat["eq_aluguel"] += _ct_eq
+        cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
         cat["eq_combustivel"] += _ct_comb
 
     # Aliases legados (retrocompat)
@@ -128,17 +127,17 @@ def _calc_venda_com_bdi(
     cat = _build_custo_categorial_bottom_up(canonical_in)
 
     # Direto: combina consumivel e combustivel em material (ambos BDI_material = 4%)
-    custo_material_total = cat.get("material", 0.0)   # inclui consumivel + combustivel
+    custo_material_total = cat.get("material", 0.0)  # inclui consumivel + combustivel
     venda_direto_eq = (
-        cat["mao_obra"]     * (1 + float(bdi_rates.get("mao_obra", 0.0)))
+        cat["mao_obra"] * (1 + float(bdi_rates.get("mao_obra", 0.0)))
         + cat["eq_aluguel"] * (1 + float(bdi_rates.get("equipamentos", 0.0)))
         + custo_material_total * (1 + float(bdi_rates.get("material", 0.0)))
     )
 
     # Indireto: BDI por sub-categoria (ADR-090 D5)
-    r_mo    = float(bdi_rates.get("mao_obra", 0.0))
-    r_eq    = float(bdi_rates.get("equipamentos", 0.0))
-    r_mat   = float(bdi_rates.get("material", 0.0))
+    r_mo = float(bdi_rates.get("mao_obra", 0.0))
+    r_eq = float(bdi_rates.get("equipamentos", 0.0))
+    r_mat = float(bdi_rates.get("material", 0.0))
     r_indir = (
         float(bdi_indireto_efetivo)
         if isinstance(bdi_indireto_efetivo, (int, float))
@@ -151,20 +150,17 @@ def _calc_venda_com_bdi(
         ct = float(ind.custo_total or 0.0)
         custo_indireto_total += ct
 
-        c_mo    = float(ind.custo_mao_obra or 0.0)
-        c_eq    = float(ind.custo_equipamentos or 0.0)
-        c_comb  = float(ind.custo_combustivel or 0.0)
+        c_mo = float(ind.custo_mao_obra or 0.0)
+        c_eq = float(ind.custo_equipamentos or 0.0)
+        c_comb = float(ind.custo_combustivel or 0.0)
         c_verba = float(ind.custo_verba or 0.0)
-        c_mob   = float(ind.custo_mobilizacao or 0.0)
-        c_sub   = c_mo + c_eq + c_comb + c_verba + c_mob
+        c_mob = float(ind.custo_mobilizacao or 0.0)
+        c_sub = c_mo + c_eq + c_comb + c_verba + c_mob
 
         if c_sub > 0:
             # Sub-custos disponíveis: aplica BDI por categoria
             venda_indireto += (
-                c_mo    * (1 + r_mo)
-                + c_eq  * (1 + r_eq)
-                + c_comb * (1 + r_mat)
-                + (c_verba + c_mob) * (1 + r_indir)
+                c_mo * (1 + r_mo) + c_eq * (1 + r_eq) + c_comb * (1 + r_mat) + (c_verba + c_mob) * (1 + r_indir)
             )
         else:
             # Fallback: taxa plana de indireto (quando skill-07 não calculou sub-custos)
@@ -309,7 +305,6 @@ def _build_resultado(
         ),
         custo=CustoTotal(
             direto_equipes=custo_direto,
-            direto_catalogo=venda_sem_bdi,
             # total agora é o custo operacional real (não o catálogo+indireto)
             total=custo_operacional_real,
             **indir_kwargs,
@@ -347,14 +342,14 @@ def _lesao_from_sched(sched: Any) -> dict:
     active_weeks = sum(1 for d in dist.values() if d.num_equipes > 0)
     if team_weeks == 0:
         return {}
-    soma_clima  = sum(getattr(d, "fator_clima",      1.0) * d.num_equipes for d in dist.values())
-    soma_cal    = sum(getattr(d, "fator_calendario",  1.0) * d.num_equipes for d in dist.values())
+    soma_clima = sum(getattr(d, "fator_clima", 1.0) * d.num_equipes for d in dist.values())
+    soma_cal = sum(getattr(d, "fator_calendario", 1.0) * d.num_equipes for d in dist.values())
     semanas_lesadas = sum(1 for d in dist.values() if getattr(d, "fator_clima", 1.0) < 0.90)
     return {
-        "team_weeks":   team_weeks,
+        "team_weeks": team_weeks,
         "active_weeks": active_weeks,
-        "fator_clima":  round(soma_clima / team_weeks, 4),
-        "fator_cal":    round(soma_cal   / team_weeks, 4),
+        "fator_clima": round(soma_clima / team_weeks, 4),
+        "fator_cal": round(soma_cal / team_weeks, 4),
         "semanas_lesadas_clima": semanas_lesadas,
     }
 
@@ -387,9 +382,7 @@ def _build_diagnostico_lesao(
 
     # Pool overhead
     if gap_pool > 1_000:
-        partes.append(
-            f"Overhead de pool: R$ {gap_pool:,.0f} (ociosidade do contrato compartilhado)."
-        )
+        partes.append(f"Overhead de pool: R$ {gap_pool:,.0f} (ociosidade do contrato compartilhado).")
 
     if not partes:
         return "Sem desvio significativo identificado."
@@ -436,11 +429,7 @@ def _build_pe_for_equipe(
     plan = (planejamento_por_item or {}).get(equipe.item_id)
     if plan is not None and plan.subtotal and plan.quantitativo and plan.quantitativo > 0:
         Q = float(plan.quantitativo)
-        venda_sem_bdi = float(
-            plan.subtotal.sem_bdi.total
-            if (plan.subtotal and plan.subtotal.sem_bdi)
-            else 0.0
-        )
+        venda_sem_bdi = float(plan.subtotal.sem_bdi.total if (plan.subtotal and plan.subtotal.sem_bdi) else 0.0)
         pu_catalogo_unitario = round(venda_sem_bdi / Q, 4) if Q > 0 else 0.0
 
         if venda_sem_bdi > 0 and custo_total_autonomo > 0:
@@ -451,9 +440,7 @@ def _build_pe_for_equipe(
         pu_aut_unit = custo_total_autonomo / Q if custo_total_autonomo > 0 else 0.0
         pu_calibrado_unitario = round(max(pu_catalogo_unitario, pu_aut_unit), 4)
         if pu_catalogo_unitario > 0:
-            ajuste_minimo_pct = round(
-                (pu_calibrado_unitario - pu_catalogo_unitario) / pu_catalogo_unitario * 100, 2
-            )
+            ajuste_minimo_pct = round((pu_calibrado_unitario - pu_catalogo_unitario) / pu_catalogo_unitario * 100, 2)
 
         # gap_praticabilidade é calculado após lesao ser resolvida (fator_clima_v necessário)
 
@@ -468,9 +455,9 @@ def _build_pe_for_equipe(
         if lesao and lesao.get("active_weeks", 0) > 0
         else round(permanencia_base / float(getattr(equipe, "permanencia_meses", 1.0) or 1.0), 2)
     )
-    semanas_ativas_v  = lesao.get("active_weeks", 0)
-    fator_clima_v     = lesao.get("fator_clima", 1.0)
-    fator_cal_v       = lesao.get("fator_cal", 1.0)
+    semanas_ativas_v = lesao.get("active_weeks", 0)
+    fator_clima_v = lesao.get("fator_clima", 1.0)
+    fator_cal_v = lesao.get("fator_cal", 1.0)
     semanas_lesadas_v = lesao.get("semanas_lesadas_clima", 0)
 
     # ADR-083 §4: gap_praticabilidade — custo excedente por η̄ < 1 (clima/terreno)
@@ -515,7 +502,9 @@ def _build_pe_for_equipe(
                 delta_margin=round(gap_escala_abs, 2),
                 delta_margin_pct=round(gap_escala_abs / _cv, 6) if _cv > 0 else 0.0,
                 viavel=n_equipes_ef > 1.05,
-                restricoes=[f"Sequencializar estende prazo +{(n_equipes_ef - 1.0) * 100:.0f}%"] if n_equipes_ef > 1.5 else [],
+                restricoes=[f"Sequencializar estende prazo +{(n_equipes_ef - 1.0) * 100:.0f}%"]
+                if n_equipes_ef > 1.5
+                else [],
             )
         )
     if gap_praticabilidade_abs > 0:
@@ -536,26 +525,18 @@ def _build_pe_for_equipe(
         _pool_restricoes: list[str] = []
         if _particao is not None:
             if _particao.overhead_ocioso > 0:
-                _pool_restricoes.append(
-                    f"Ociosidade de gap: R$ {_particao.overhead_ocioso:,.0f}"
-                )
+                _pool_restricoes.append(f"Ociosidade de gap: R$ {_particao.overhead_ocioso:,.0f}")
             if _particao.economia_mob > 0:
-                _pool_restricoes.append(
-                    f"Economia mob/demob: −R$ {_particao.economia_mob:,.0f}"
-                )
+                _pool_restricoes.append(f"Economia mob/demob: −R$ {_particao.economia_mob:,.0f}")
             _saldo = _particao.overhead_ocioso - _particao.economia_mob
             _pool_restricoes.append(
                 f"Saldo pool ({'+overhead' if _saldo > 0 else 'economia líquida'}): R$ {abs(_saldo):,.0f}"
             )
             # ADR-084 Fase 4: exibir predecessor_critico_id e overlap_semanas quando disponíveis
             if getattr(_particao, "predecessor_critico_id", None):
-                _pool_restricoes.append(
-                    f"Predecessor critico: {_particao.predecessor_critico_id}"
-                )
+                _pool_restricoes.append(f"Predecessor critico: {_particao.predecessor_critico_id}")
             if getattr(_particao, "overlap_semanas", 0.0) > 0:
-                _pool_restricoes.append(
-                    f"Sobreposicao: {_particao.overlap_semanas:.1f} semanas"
-                )
+                _pool_restricoes.append(f"Sobreposicao: {_particao.overlap_semanas:.1f} semanas")
         levers.append(
             LeverEquilibrio(
                 id="fechar_gap_pool",
@@ -653,8 +634,10 @@ def _validate_prod_vs_pu(pe: PontoEquilibrio, validacoes: list) -> None:
     residuo = fe_nec * clima
     if abs(residuo - 1.0) <= 0.10:
         return
-    sentido = "P_engine < P_catálogo (operacional mais barato)" if residuo < 1.0 else (
-        "P_engine > P_catálogo (operacional mais caro)"
+    sentido = (
+        "P_engine < P_catálogo (operacional mais barato)"
+        if residuo < 1.0
+        else ("P_engine > P_catálogo (operacional mais caro)")
     )
     validacoes.append(
         ValidacaoItem(
@@ -681,9 +664,7 @@ def _validate_frentes_necessarias(pe: PontoEquilibrio, validacoes: list) -> None
     status_val = "ERRO" if pe.frentes_equivalentes_necessarias > 1.5 else "AVISO"
     desvio_pct = (pe.frentes_equivalentes_necessarias - 1.0) * 100
     ajuste_info = f" PU calibrado: +{pe.ajuste_minimo_pct:.1f}%." if pe.ajuste_minimo_pct > 0 else ""
-    pool_info = (
-        f" Pool overhead: R$ {pe.gap_pool_abs:,.2f}." if pe.gap_pool_abs > 0 else ""
-    )
+    pool_info = f" Pool overhead: R$ {pe.gap_pool_abs:,.2f}." if pe.gap_pool_abs > 0 else ""
     validacoes.append(
         ValidacaoItem(
             codigo="VAL-FRENTES-NECESSARIAS-ALTA",
@@ -699,9 +680,7 @@ def _validate_frentes_necessarias(pe: PontoEquilibrio, validacoes: list) -> None
 
 def _validate_pe_particao(pe: PontoEquilibrio, validacoes: list) -> None:
     # Compat: custo_realizado foi substituído por custo_operacional_real no modelo canônico.
-    custo_realizado = float(
-        getattr(pe, "custo_realizado", 0.0) or getattr(pe, "custo_operacional_real", 0.0) or 0.0
-    )
+    custo_realizado = float(getattr(pe, "custo_realizado", 0.0) or getattr(pe, "custo_operacional_real", 0.0) or 0.0)
     if pe.frentes_equivalentes > 1.05 and custo_realizado > 0:
         delta_op = pe.custo_venda_cpu - pe.custo_operacional_real
         if delta_op >= 0:
@@ -802,7 +781,9 @@ def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> l
     pe_items = [
         pe
         for e in canonical_in.equipes_diretas
-        for pe in [_bpe_process_equipe(e, venda_por_item, validacoes, planejamento_por_item, sched_por_item, particao_por_item)]
+        for pe in [
+            _bpe_process_equipe(e, venda_por_item, validacoes, planejamento_por_item, sched_por_item, particao_por_item)
+        ]
         if pe is not None
     ]
     if pe_items:

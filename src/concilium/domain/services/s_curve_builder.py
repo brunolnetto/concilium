@@ -17,6 +17,7 @@ from typing import Any
 
 from concilium.domain.constants import SEMANAS_POR_MES
 from concilium.domain.models.analitica import AgregacaoSemanalEquipamentos, SCurve
+from concilium.domain.services.week_sequence import next_week
 
 
 def _scb_collect_semanas(sched_activities: list) -> tuple:
@@ -31,6 +32,20 @@ def _scb_collect_semanas(sched_activities: list) -> tuple:
     return semanas_sorted, semana_to_offset
 
 
+def _scb_extend_weeks_for_offsets(semanas_sorted: list[str], max_offset: int) -> list[str]:
+    """Extende série ISO para cobrir offsets indiretos fora da malha de atividades."""
+    if not semanas_sorted:
+        return semanas_sorted
+    if max_offset < len(semanas_sorted):
+        return semanas_sorted
+    out = list(semanas_sorted)
+    cur = out[-1]
+    while len(out) <= max_offset:
+        cur = next_week(cur)
+        out.append(cur)
+    return out
+
+
 def _scb_collect_direct_costs(sched_activities: list, equipe_lookup: dict) -> tuple:
     """Returns (custo_por_semana, equip_por_semana, n_equipes_por_semana) dicts."""
     from collections import defaultdict
@@ -42,7 +57,9 @@ def _scb_collect_direct_costs(sched_activities: list, equipe_lookup: dict) -> tu
         equipe = equipe_lookup.get(sa.activity_id)
         if not equipe:
             continue
-        custo_semanal_base = (equipe.custo_mao_obra_mensal + equipe.custo_equipamentos_mensal) / SEMANAS_POR_MES
+        custo_semanal_base = (
+            equipe.custo_mao_obra_mensal + equipe.custo_equipamentos_mensal + equipe.custo_material_mensal
+        ) / SEMANAS_POR_MES
         comb_semanal = equipe.custo_combustivel_total_mensal / SEMANAS_POR_MES
         for semana_iso, dist in sa.distribuicao_semanal.items():
             n = dist.num_equipes
@@ -58,6 +75,20 @@ def _scb_collect_direct_costs(sched_activities: list, equipe_lookup: dict) -> tu
                 if eq.equip_id:
                     equip_por_semana[semana_iso][eq.equip_id] += eq.num_unidades * n
     return custo_por_semana, equip_por_semana, n_equipes_por_semana
+
+
+def _scb_collect_direct_costs_pool(canonical_in: Any) -> dict[str, float]:
+    """Custos diretos instanciais por semana (prod+idle+off) a partir do cubo pool."""
+    from concilium.domain.services.cubo_pool_builder import CuboPoolInstancialBuilder
+
+    custo_por_semana: dict[str, float] = defaultdict(float)
+    try:
+        cubo_pool = CuboPoolInstancialBuilder().build(canonical_in)
+    except Exception:
+        return {}
+    for cell in getattr(cubo_pool, "celulas", ()):
+        custo_por_semana[cell.semana_iso] += float(cell.custo_total or 0.0)
+    return dict(custo_por_semana)
 
 
 def _scb_build_agregacoes(
@@ -122,11 +153,20 @@ class SCurveBuilder:
         if semanas_sorted is None:
             return self._empty(projeto_id)
 
+        # Fonte única para direto: agregação instancial do pool quando disponível.
         custo_por_semana, equip_por_semana, n_equipes_por_semana = _scb_collect_direct_costs(
             cronograma.scheduled_activities, equipe_lookup
         )
+        custo_por_semana_pool = _scb_collect_direct_costs_pool(canonical_in)
+        if custo_por_semana_pool:
+            custo_por_semana = defaultdict(float, custo_por_semana_pool)
+            semanas_sorted = sorted(set(semanas_sorted) | set(custo_por_semana_pool.keys()))
+            semana_to_offset = {s: i for i, s in enumerate(semanas_sorted)}
 
-        # Indirect costs — map offset → semana_iso
+        # Indirect costs — map offset → semana_iso; cobre cauda de offsets fora da malha de atividades.
+        max_ind_offset = max(indireto_semanal_lookup.keys(), default=-1)
+        semanas_sorted = _scb_extend_weeks_for_offsets(semanas_sorted, max_ind_offset)
+        semana_to_offset = {s: i for i, s in enumerate(semanas_sorted)}
         custo_indireto_por_semana: dict = defaultdict(float)
         for semana_iso in semanas_sorted:
             offset = semana_to_offset[semana_iso]

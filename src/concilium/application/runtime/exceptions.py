@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 class RuntimeError(Exception):
     """Erro de orquestracao do pipeline."""
 

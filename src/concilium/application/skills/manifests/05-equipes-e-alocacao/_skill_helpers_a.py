@@ -11,6 +11,9 @@ Objetivo: Reduzir fragmentação e garantir consistência atômica entre dimensi
 
 from __future__ import annotations
 
+from concilium.application.skills.manifests._05_equipes_custo_helpers import (
+    calcular_custo_instancia_composicional,
+)
 from concilium.domain.constants import (
     ENCARGOS_CLT,
     ENCARGOS_MENSALISTA,
@@ -30,14 +33,12 @@ from concilium.domain.models.canonical import (
     SegmentoAtividade,
     ValidacaoItem,
 )
-from concilium.application.skills.manifests._05_equipes_custo_helpers import (
-    calcular_custo_instancia_composicional,
-)
 from concilium.domain.services.week_sequence import enumerar_semanas
 
 try:
-    from interval_sets import Interval, IntervalSet
     from eule import euler as _euler
+    from interval_sets import Interval, IntervalSet
+
     _EULE_AVAILABLE = True
 except ImportError:
     _EULE_AVAILABLE = False
@@ -132,7 +133,7 @@ def _resolve_custo_unit_funcao(categoria: str, salario: float, atrib: dict, enc:
     # ADR-097 §D3: taxa horária all-in (convencional/planilha, e.g. AGIS-FN-*)
     # embute encargos (~80% estatutário implícito). Aplicar enc adicional = dupla contagem.
     nota = str(atrib.get("nota", "")).lower()
-    if "inclui encargos" in nota:   # substring sem acentos para robustez de encoding
+    if "inclui encargos" in nota:  # substring sem acentos para robustez de encoding
         return salario * (1 + he_pct)
     return salario * (1 + enc) * (1 + he_pct)
 
@@ -280,8 +281,8 @@ def _calcular_custo_equipamento(
             # ADR-088: sub-campos de aluguel | manutencao
             custo_locacao_mensal=_custo_locacao,
             custo_manutencao_mensal=_custo_manut,
-            custo_locacao_idle_mensal=_custo_locacao,   # aluguel integral em standby
-            custo_manutencao_idle_mensal=0.0,            # manutenção zero em standby
+            custo_locacao_idle_mensal=_custo_locacao,  # aluguel integral em standby
+            custo_manutencao_idle_mensal=0.0,  # manutenção zero em standby
         ),
         val_code,
     )
@@ -318,7 +319,13 @@ def _promote_materiais_from_cpu(comp: dict, cpu: dict) -> dict:
         insumo_id = it.get("insumo_id")
         if not insumo_id:
             continue
-        materiais.append({"insumo_id": insumo_id, "coeficiente": float(it.get("coeficiente") or 0.0), "fonte": "cpu.composicao_itens"})
+        materiais.append(
+            {
+                "insumo_id": insumo_id,
+                "coeficiente": float(it.get("coeficiente") or 0.0),
+                "fonte": "cpu.composicao_itens",
+            }
+        )
     return {**comp, "materiais": materiais} if materiais else comp
 
 
@@ -401,12 +408,14 @@ def _build_comb_validacao(equip_id: str, val_comb_code: str) -> ValidacaoItem:
     """Returns a ValidacaoItem for the combustivel validation code."""
     if val_comb_code == "VAL-EQUIP-COMB-03":
         return ValidacaoItem(
-            codigo=val_comb_code, status="AVISO",
+            codigo=val_comb_code,
+            status="AVISO",
             mensagem=f"Equipamento '{equip_id}': consumo_litros_hora não encontrado em nenhuma fonte; custo_combustivel_mensal=0",
         )
     if val_comb_code == "VAL-EQUIP-COMB-04":
         return ValidacaoItem(
-            codigo=val_comb_code, status="OK",
+            codigo=val_comb_code,
+            status="OK",
             mensagem=f"Equipamento '{equip_id}': consumo derivado de decomposicao_equip.custo_diesel_h",
         )
     return ValidacaoItem(codigo=val_comb_code, status="OK", mensagem=None)
@@ -465,7 +474,7 @@ def _processar_equipamentos_item(
             custo_comb_override=custo_comb_override,
         )
         equips_mod.append(eq_mod)
-        custo_eq += eq_mod.custo_mensal * num_un_raw   # float para custo preciso
+        custo_eq += eq_mod.custo_mensal * num_un_raw  # float para custo preciso
         custo_comb += eq_mod.custo_combustivel_mensal * num_un_raw
         validacoes.append(_build_comb_validacao(e["equip_id"], val_comb_code))
     return equips_mod, custo_eq, custo_comb, modo_est
@@ -493,7 +502,7 @@ def _calc_custo_material_item(
     comp: dict,
     cpu: dict,
     prod_lookup: dict,
-    ctx: "_RepoCtx",
+    ctx: _RepoCtx,
     horas_dia: float,
     dias_uteis: float,
 ) -> float:
@@ -507,7 +516,9 @@ def _calc_custo_material_item(
     producao_horaria = float((prod or {}).get("valor_horario", 0.0) or 0.0)
     if producao_horaria <= 0:
         return 0.0
-    return round(sum(_mat_fonte2_item(ci, ctx, producao_horaria, horas_mes) for ci in _getlist_d(cpu, "composicao_itens")), 2)
+    return round(
+        sum(_mat_fonte2_item(ci, ctx, producao_horaria, horas_mes) for ci in _getlist_d(cpu, "composicao_itens")), 2
+    )
 
 
 def _count_transitions(seq: list) -> tuple:
@@ -622,9 +633,7 @@ def _resolve_preco_diesel(inputs: dict, catalogo: dict, ctx: _RepoCtx) -> float:
     preco_diesel = inputs.get("preco_diesel", 6.20)
     for i in catalogo.get("insumos", []):
         if i["codigo"] == "DIESEL-S10":
-            return _resolve_preco(
-                ctx, "DIESEL-S10", float(i.get("preco_unitario", preco_diesel) or preco_diesel)
-            )
+            return _resolve_preco(ctx, "DIESEL-S10", float(i.get("preco_unitario", preco_diesel) or preco_diesel))
     return preco_diesel
 
 
@@ -712,12 +721,8 @@ def _build_dimensionamento(
                 custo_ocioso_equipamentos=custo_ocioso,
                 custo_mob_desmob=custo_mob_desmob,
                 # ADR-088: sub-campos de equipamento agregados da equipe
-                custo_locacao_mensal=round(
-                    sum(e.custo_locacao_mensal * e.num_unidades for e in equips_mod), 2
-                ),
-                custo_manutencao_mensal=round(
-                    sum(e.custo_manutencao_mensal * e.num_unidades for e in equips_mod), 2
-                ),
+                custo_locacao_mensal=round(sum(e.custo_locacao_mensal * e.num_unidades for e in equips_mod), 2),
+                custo_manutencao_mensal=round(sum(e.custo_manutencao_mensal * e.num_unidades for e in equips_mod), 2),
             )
         )
     if not equipes:
@@ -751,6 +756,7 @@ def _week_idx(semana: str) -> int:
     if "-W" in s:
         try:
             import datetime
+
             parts = s.split("-W")
             year, week = int(parts[0]), int(parts[1])
             monday = datetime.datetime.strptime(f"{year}-W{week:02d}-1", "%G-W%V-%u")
@@ -775,7 +781,9 @@ def _eq_comp_floats(eq) -> tuple:
     )
 
 
-def _accum_week_demand(tipo_week_demand: dict, tipo: str, active_weeks: list, dist: dict, required: int, total_required_peak: int) -> None:
+def _accum_week_demand(
+    tipo_week_demand: dict, tipo: str, active_weeks: list, dist: dict, required: int, total_required_peak: int
+) -> None:
     """Accumulates week demand entries into tipo_week_demand[tipo]."""
     week_demand = tipo_week_demand.setdefault(tipo, {})
     for w in active_weeks:
@@ -783,19 +791,41 @@ def _accum_week_demand(tipo_week_demand: dict, tipo: str, active_weeks: list, di
         week_demand[w] = week_demand.get(w, 0) + demand_w
 
 
-def _add_tipo_item_demand(tipo: str, iid: str, required: int, total_required_peak: int, active_weeks: list, eq, dist: dict, tipo_items: dict, tipo_week_demand: dict) -> None:
+def _add_tipo_item_demand(
+    tipo: str,
+    iid: str,
+    required: int,
+    total_required_peak: int,
+    active_weeks: list,
+    eq,
+    dist: dict,
+    tipo_items: dict,
+    tipo_week_demand: dict,
+) -> None:
     """Appends item entry and week demand for a single tipo."""
-    actual_mw = sum(max(0, round((getattr(dist[w], "num_equipes", 0) or 0) * required / total_required_peak)) for w in active_weeks)
+    actual_mw = sum(
+        max(0, round((getattr(dist[w], "num_equipes", 0) or 0) * required / total_required_peak)) for w in active_weeks
+    )
     if actual_mw == 0:
         actual_mw = required * len(active_weeks)
     comp_mo, comp_eq, comp_comb, comp_mat = _eq_comp_floats(eq)
-    tipo_items.setdefault(tipo, []).append({
-        "item_id": iid, "required": required, "active_weeks": active_weeks,
-        "custo_total_item": eq.custo_total, "machine_weeks": actual_mw,
-        "start_idx": _week_idx(active_weeks[0]), "end_idx": _week_idx(active_weeks[-1]) + 1,
-        "semana_inicio": active_weeks[0], "semana_fim": active_weeks[-1],
-        "comp_mo": comp_mo, "comp_eq": comp_eq, "comp_comb": comp_comb, "comp_mat": comp_mat,
-    })
+    tipo_items.setdefault(tipo, []).append(
+        {
+            "item_id": iid,
+            "required": required,
+            "active_weeks": active_weeks,
+            "custo_total_item": eq.custo_total,
+            "machine_weeks": actual_mw,
+            "start_idx": _week_idx(active_weeks[0]),
+            "end_idx": _week_idx(active_weeks[-1]) + 1,
+            "semana_inicio": active_weeks[0],
+            "semana_fim": active_weeks[-1],
+            "comp_mo": comp_mo,
+            "comp_eq": comp_eq,
+            "comp_comb": comp_comb,
+            "comp_mat": comp_mat,
+        }
+    )
     _accum_week_demand(tipo_week_demand, tipo, active_weeks, dist, required, total_required_peak)
 
 
@@ -805,15 +835,27 @@ def _get_active_weeks(sa) -> list:
     return sorted([w for w, d in dist.items() if (getattr(d, "num_equipes", 0) or 0) > 0], key=_week_idx)
 
 
-def _process_item_tipo_map(iid: str, tipo_map: dict, equipe_map: dict, pool: dict, sched_lookup: dict, tipo_items: dict, tipo_week_demand: dict, validacoes: list) -> None:
+def _process_item_tipo_map(
+    iid: str,
+    tipo_map: dict,
+    equipe_map: dict,
+    pool: dict,
+    sched_lookup: dict,
+    tipo_items: dict,
+    tipo_week_demand: dict,
+    validacoes: list,
+) -> None:
     """Processes one iid from item_tipo_map, appending to tipo_items/tipo_week_demand."""
     eq = equipe_map.get(iid)
     sa = sched_lookup.get(iid)
     if not eq or not sa:
-        validacoes.append(ValidacaoItem(
-            codigo="VAL-POOL-CONTRATO-01", status="INFO",
-            mensagem=(f"Item '{iid}' tem required_resources mas sem equipe ou schedule — mantendo custo autônomo."),
-        ))
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-POOL-CONTRATO-01",
+                status="INFO",
+                mensagem=(f"Item '{iid}' tem required_resources mas sem equipe ou schedule — mantendo custo autônomo."),
+            )
+        )
         return
     active_weeks = _get_active_weeks(sa)
     if not active_weeks:
@@ -823,7 +865,9 @@ def _process_item_tipo_map(iid: str, tipo_map: dict, equipe_map: dict, pool: dic
     for tipo, required in tipo_map.items():
         if tipo not in pool:
             continue
-        _add_tipo_item_demand(tipo, iid, required, total_required_peak, active_weeks, eq, dist, tipo_items, tipo_week_demand)
+        _add_tipo_item_demand(
+            tipo, iid, required, total_required_peak, active_weeks, eq, dist, tipo_items, tipo_week_demand
+        )
 
 
 def _collect_tipo_items_and_demands(
@@ -844,10 +888,10 @@ def _collect_tipo_items_and_demands(
 def _compute_custo_unit_fracs(mw_list: list) -> tuple:
     """Retorna (custo_unit_semanal, frac_mo, frac_eq, frac_comb, frac_mat) via média ponderada."""
     total_mw = sum(mw for _, mw, _ in mw_list)
-    custo_unit_semanal = sum(
-        (it["custo_total_item"] / it["machine_weeks"]) * mw
-        for _, mw, it in mw_list if it["machine_weeks"] > 0
-    ) / total_mw
+    custo_unit_semanal = (
+        sum((it["custo_total_item"] / it["machine_weeks"]) * mw for _, mw, it in mw_list if it["machine_weeks"] > 0)
+        / total_mw
+    )
     _acc = {"mo": 0.0, "eq": 0.0, "comb": 0.0, "mat": 0.0}
     for _, mw, it in mw_list:
         base_i = it["comp_mo"] + it["comp_eq"] + it["comp_comb"] + it["comp_mat"]
@@ -894,16 +938,29 @@ def _fill_atribuicao(atribuicao: dict, mw_list: list, custo_total_contrato: floa
 
 
 def _build_contrato_entry(
-    tipo: str, items: list, week_demand: dict, pool: dict,
-    mw_list: list, total_mw: float, custo_unit_semanal: float,
-    cus_mo: float, cus_eq: float, cus_comb: float, cus_mat: float,
-    cus_locacao: float, cus_manutencao: float,
-    tipo_costs: dict, resource_costs: dict,
-    atribuicao: dict, delta_max: int, todas_cadeias: list,
+    tipo: str,
+    items: list,
+    week_demand: dict,
+    pool: dict,
+    mw_list: list,
+    total_mw: float,
+    custo_unit_semanal: float,
+    cus_mo: float,
+    cus_eq: float,
+    cus_comb: float,
+    cus_mat: float,
+    cus_locacao: float,
+    cus_manutencao: float,
+    tipo_costs: dict,
+    resource_costs: dict,
+    atribuicao: dict,
+    delta_max: int,
+    todas_cadeias: list,
     equipe_map: dict,
-) -> "RecursoContrato":
+) -> RecursoContrato:
     """Constrói um RecursoContrato completo para o tipo dado."""
     import math as _math
+
     all_weeks_sorted = sorted(week_demand.keys(), key=_week_idx)
     semana_inicio = all_weeks_sorted[0]
     semana_fim = all_weeks_sorted[-1]
@@ -917,44 +974,74 @@ def _build_contrato_entry(
     c_idle = float(tipo_costs.get("custo_idle_semanal_unit", 0.0))
     gap_max = int(_math.ceil((c_mob + c_demob) / c_idle) - 1) if c_idle > 0 else 9999
     cadeias = _build_perpetuation_chains(
-        tipo_id=tipo, items=items,
-        custo_mob_unit=c_mob, custo_demob_unit=c_demob, custo_standby_unit=c_idle,
-        delta_max=delta_max, gap_max=gap_max,
+        tipo_id=tipo,
+        items=items,
+        custo_mob_unit=c_mob,
+        custo_demob_unit=c_demob,
+        custo_standby_unit=c_idle,
+        delta_max=delta_max,
+        gap_max=gap_max,
     )
     todas_cadeias.extend(cadeias)
     _fill_atribuicao(atribuicao, mw_list, custo_total_contrato, tipo)
     r_naive = sum(it["required"] for it in items)
-    custo_mob_desmob = round(len(cadeias) * (c_mob + c_demob) * quantidade_contratada, 2) if (c_mob + c_demob) > 0 else 0.0
+    custo_mob_desmob = (
+        round(len(cadeias) * (c_mob + c_demob) * quantidade_contratada, 2) if (c_mob + c_demob) > 0 else 0.0
+    )
     return RecursoContrato(
         contrato_id=f"contrato-{tipo.lower().replace('-', '_')}",
         tipo_id=tipo,
         quantidade_contratada=quantidade_contratada,
-        semana_inicio=semana_inicio, semana_fim=semana_fim, semanas_contrato=semanas_contrato,
+        semana_inicio=semana_inicio,
+        semana_fim=semana_fim,
+        semanas_contrato=semanas_contrato,
         custo_unit_semanal=round(custo_unit_semanal, 4),
         custo_total_contrato=round(custo_total_contrato, 2),
         items_cobertos=[iid for iid, _, _ in mw_list],
-        n_cadeias=len(cadeias), custo_mob_desmob_contrato=custo_mob_desmob,
+        n_cadeias=len(cadeias),
+        custo_mob_desmob_contrato=custo_mob_desmob,
         custo_standby_total=round(sum(c.custo_standby for c in cadeias), 2),
         r_naive=r_naive,
-        custo_mob_unit=c_mob, custo_demob_unit=c_demob, custo_idle_semanal_unit=c_idle,
+        custo_mob_unit=c_mob,
+        custo_demob_unit=c_demob,
+        custo_idle_semanal_unit=c_idle,
         unidade_faturamento=str(tipo_costs.get("unidade_faturamento", "hora_prod")),
         gap_max_economico=gap_max,
-        custo_unit_semanal_mo=cus_mo, custo_unit_semanal_eq=cus_eq,
-        custo_unit_semanal_comb=cus_comb, custo_unit_semanal_mat=cus_mat,
+        custo_unit_semanal_mo=cus_mo,
+        custo_unit_semanal_eq=cus_eq,
+        custo_unit_semanal_comb=cus_comb,
+        custo_unit_semanal_mat=cus_mat,
         rho_idle_eq=round(c_idle / cus_eq, 4) if cus_eq > 0 else 1.0,
-        custo_unit_semanal_locacao=cus_locacao, custo_unit_semanal_manutencao=cus_manutencao,
+        custo_unit_semanal_locacao=cus_locacao,
+        custo_unit_semanal_manutencao=cus_manutencao,
         particao_por_item=particionar_contrato(
             items_com_janela=[{**it, "T_start": float(it["start_idx"]), "T_end": float(it["end_idx"])} for it in items],
-            c_mob=c_mob, c_demob=c_demob, c_unit_semana=custo_unit_semanal,
+            c_mob=c_mob,
+            c_demob=c_demob,
+            c_unit_semana=custo_unit_semanal,
             quantidade_contratada=quantidade_contratada,
             T_contrato_start=float(_week_idx(semana_inicio)),
             T_contrato_end=float(_week_idx(semana_fim) + 1),
-            atribuicao=atribuicao, cadeias=cadeias,
+            atribuicao=atribuicao,
+            cadeias=cadeias,
         ),
     )
 
 
-def _build_tipo_contrato(tipo: str, items: list, week_demand: dict, pool: dict, mw_list: list, total_mw: int, tipo_costs: dict, resource_costs: dict, equipe_map: dict, atribuicao: dict, delta_max: int, todas_cadeias: list) -> "RecursoContrato":
+def _build_tipo_contrato(
+    tipo: str,
+    items: list,
+    week_demand: dict,
+    pool: dict,
+    mw_list: list,
+    total_mw: int,
+    tipo_costs: dict,
+    resource_costs: dict,
+    equipe_map: dict,
+    atribuicao: dict,
+    delta_max: int,
+    todas_cadeias: list,
+) -> RecursoContrato:
     """Builds one RecursoContrato entry from tipo/items data."""
     custo_unit_semanal, fmo, feq, fcomb, fmat = _compute_custo_unit_fracs(mw_list)
     cus_mo = round(custo_unit_semanal * fmo, 4)
@@ -963,9 +1050,25 @@ def _build_tipo_contrato(tipo: str, items: list, week_demand: dict, pool: dict, 
     cus_mat = round(custo_unit_semanal * fmat, 4)
     cus_locacao, cus_manutencao = _compute_fracs_locacao_manut(mw_list, equipe_map, cus_eq)
     return _build_contrato_entry(
-        tipo, items, week_demand, pool, mw_list, total_mw, custo_unit_semanal,
-        cus_mo, cus_eq, cus_comb, cus_mat, cus_locacao, cus_manutencao,
-        tipo_costs, resource_costs, atribuicao, delta_max, todas_cadeias, equipe_map,
+        tipo,
+        items,
+        week_demand,
+        pool,
+        mw_list,
+        total_mw,
+        custo_unit_semanal,
+        cus_mo,
+        cus_eq,
+        cus_comb,
+        cus_mat,
+        cus_locacao,
+        cus_manutencao,
+        tipo_costs,
+        resource_costs,
+        atribuicao,
+        delta_max,
+        todas_cadeias,
+        equipe_map,
     )
 
 
@@ -986,10 +1089,11 @@ def _setup_contratos_context(equipes: list, rcpsp_spec: dict) -> tuple:
     activities = rcpsp_spec.get("activities", [])
     if not pool and activities:
         from concilium.application.scheduling import inferir_pool_minimo_from_spec
+
         pool, _diag = inferir_pool_minimo_from_spec(rcpsp_spec)
         rcpsp_spec["resource_pool"] = dict(pool)
     item_tipo_map = _build_item_tipo_map(activities)
-    equipe_map: dict[str, "EquipeDireta"] = {eq.item_id: eq for eq in equipes}
+    equipe_map: dict[str, EquipeDireta] = {eq.item_id: eq for eq in equipes}
     delta_max = int(rcpsp_spec.get("delta_perpetuacao_semanas", 2))
     _raw = rcpsp_spec.get("resource_costs", {})
     resource_costs: dict = _raw if isinstance(_raw, dict) else {}
@@ -1028,7 +1132,9 @@ def _build_contratos_recurso(
     atribuicao   : {item_id: (custo_atribuido, tipo_id, fracao)} — por item coberto
     cadeias      : list[CadeiaPerpetuacao] — cadeias de perpetuação ADR-073
     """
-    pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs = _setup_contratos_context(equipes, rcpsp_spec)
+    pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs = _setup_contratos_context(
+        equipes, rcpsp_spec
+    )
     if not pool or not activities:
         return [], {}, []
 
@@ -1051,7 +1157,22 @@ def _build_contratos_recurso(
         tipo_costs = resource_costs.get(tipo, {})
         if not isinstance(tipo_costs, dict):
             tipo_costs = {}
-        contratos.append(_build_tipo_contrato(tipo, items, week_demand, pool, mw_list, total_mw, tipo_costs, resource_costs, equipe_map, atribuicao, delta_max, todas_cadeias))
+        contratos.append(
+            _build_tipo_contrato(
+                tipo,
+                items,
+                week_demand,
+                pool,
+                mw_list,
+                total_mw,
+                tipo_costs,
+                resource_costs,
+                equipe_map,
+                atribuicao,
+                delta_max,
+                todas_cadeias,
+            )
+        )
 
     return contratos, atribuicao, todas_cadeias
 
@@ -1231,7 +1352,9 @@ def _impute_mob_demob(cadeias, items_com_janela, phi: dict, c_mob: float, c_demo
     return mob_imputado, demob_imputado
 
 
-def _impute_gaps(diagram, items_com_janela, phi: dict, c_unit_semana: float, qt: int, T_contrato_start: float, T_contrato_end: float) -> tuple:
+def _impute_gaps(
+    diagram, items_com_janela, phi: dict, c_unit_semana: float, qt: int, T_contrato_start: float, T_contrato_end: float
+) -> tuple:
     """Pass 3: gap imputation to critical successor. Returns (custo_ocioso, uniao_produtiva)."""
     all_ivs = [iv for _, region in diagram.items() for iv in region]
     uniao_produtiva = IntervalSet(all_ivs) if all_ivs else IntervalSet([])
@@ -1338,30 +1461,66 @@ def particionar_contrato(
     custo_ocioso = _impute_gaps(diagram, items_com_janela, phi, c_unit_semana, qt, T_contrato_start, T_contrato_end)
 
     # 4. Montar CustoParticionadoItem
-    result = [_build_particionado_item(
-        it, it["item_id"], custo_excl, custo_comp, mob_imputado, demob_imputado,
-        custo_ocioso, atribuicao, predecessor_map, overlap_sem, c_mob, c_demob, c_unit_semana, qt
-    ) for it in items_com_janela]
+    result = [
+        _build_particionado_item(
+            it,
+            it["item_id"],
+            custo_excl,
+            custo_comp,
+            mob_imputado,
+            demob_imputado,
+            custo_ocioso,
+            atribuicao,
+            predecessor_map,
+            overlap_sem,
+            c_mob,
+            c_demob,
+            c_unit_semana,
+            qt,
+        )
+        for it in items_com_janela
+    ]
 
     return result
 
 
-def _build_particionado_item(it: dict, iid: str, custo_excl: dict, custo_comp: dict, mob_imputado: dict, demob_imputado: dict, custo_ocioso: dict, atribuicao: dict, predecessor_map: dict, overlap_sem: dict, c_mob: float, c_demob: float, c_unit_semana: float, qt: int) -> "CustoParticionadoItem":
+def _build_particionado_item(
+    it: dict,
+    iid: str,
+    custo_excl: dict,
+    custo_comp: dict,
+    mob_imputado: dict,
+    demob_imputado: dict,
+    custo_ocioso: dict,
+    atribuicao: dict,
+    predecessor_map: dict,
+    overlap_sem: dict,
+    c_mob: float,
+    c_demob: float,
+    c_unit_semana: float,
+    qt: int,
+) -> CustoParticionadoItem:
     """Builds one CustoParticionadoItem from partitioned cost dicts."""
     required_i = it.get("required", qt)
-    custo_autonomo = round((it["T_end"] - it["T_start"]) * c_unit_semana * required_i + (c_mob + c_demob) * required_i, 2)
+    custo_autonomo = round(
+        (it["T_end"] - it["T_start"]) * c_unit_semana * required_i + (c_mob + c_demob) * required_i, 2
+    )
     mob_standalone = round((c_mob + c_demob) * required_i, 2)
     economia_mob_i = round(max(0.0, mob_standalone - mob_imputado[iid] - demob_imputado[iid]), 2)
     custo_total = round(atribuicao.get(iid, (0.0, "", 0.0))[0], 2)
     oci = round(custo_ocioso[iid], 2)
     return CustoParticionadoItem(
-        item_id=iid, custo_produtivo=round(custo_excl[iid] + custo_comp[iid], 2),
+        item_id=iid,
+        custo_produtivo=round(custo_excl[iid] + custo_comp[iid], 2),
         custo_mob_imputado=round(mob_imputado[iid] + demob_imputado[iid], 2),
-        custo_ocioso_imputado=oci, custo_total_particionado=custo_total,
-        economia_mob=economia_mob_i, overhead_ocioso=oci,
+        custo_ocioso_imputado=oci,
+        custo_total_particionado=custo_total,
+        economia_mob=economia_mob_i,
+        overhead_ocioso=oci,
         custo_produtivo_exclusivo=round(custo_excl[iid], 2),
         custo_produtivo_compartilhado=round(custo_comp[iid], 2),
-        custo_demob_imputado=demob_imputado[iid], custo_total_autonomo=custo_autonomo,
+        custo_demob_imputado=demob_imputado[iid],
+        custo_total_autonomo=custo_autonomo,
         economia_vs_autonomo=round(custo_autonomo - custo_total, 2),
         predecessor_critico_id=predecessor_map.get(iid),
         overlap_semanas=round(overlap_sem[iid], 4),
@@ -1372,7 +1531,9 @@ def _compute_ocioso_para_item(iid: str, cadeia, item_by_id: dict, custo_unit_sem
     """Computes idle gap cost for iid as successor in cadeia."""
     if cadeia is None:
         return 0.0
-    chain_sorted = sorted([item_by_id[x] for x in cadeia.item_ids if x in item_by_id], key=lambda x: (x["start_idx"], x["end_idx"]))
+    chain_sorted = sorted(
+        [item_by_id[x] for x in cadeia.item_ids if x in item_by_id], key=lambda x: (x["start_idx"], x["end_idx"])
+    )
     total = 0.0
     for k, chain_it in enumerate(chain_sorted):
         if chain_it["item_id"] == iid and k > 0:
@@ -1492,17 +1653,28 @@ def _compress_to_segments(week_map: dict) -> list:
             cur_end = w
             count += 1
         else:
-            segs.append(SegmentoAtividade(activity_id=cur_act, semana_inicio=cur_start, semana_fim=cur_end, machine_weeks=count))
+            segs.append(
+                SegmentoAtividade(activity_id=cur_act, semana_inicio=cur_start, semana_fim=cur_end, machine_weeks=count)
+            )
             cur_act = act
             cur_start = w
             cur_end = w
             count = 1
-    segs.append(SegmentoAtividade(activity_id=cur_act, semana_inicio=cur_start, semana_fim=cur_end, machine_weeks=count))
+    segs.append(
+        SegmentoAtividade(activity_id=cur_act, semana_inicio=cur_start, semana_fim=cur_end, machine_weeks=count)
+    )
     return segs
 
 
-def _compute_adr085_gaps(aw: list, contract_start_idx: int, contract_end_idx: int,
-                          c_mo: float, c_idle_unit: float, c_mob_unit: float, c_demob_unit: float) -> tuple:
+def _compute_adr085_gaps(
+    aw: list,
+    contract_start_idx: int,
+    contract_end_idx: int,
+    c_mo: float,
+    c_idle_unit: float,
+    c_mob_unit: float,
+    c_demob_unit: float,
+) -> tuple:
     """Compute idle/off weeks and idle segments for ADR-085 per-instance lifecycle.
 
     Returns (idle_w, semanas_off, desmob_aplicada, idle_segs, sm_mob, sm_demob)
@@ -1522,7 +1694,14 @@ def _compute_adr085_gaps(aw: list, contract_start_idx: int, contract_end_idx: in
             idle_w += gap
             between = enumerar_semanas(aw[k - 1], aw[k])[1:-1]
             if between:
-                idle_segs.append(SegmentoAtividade(activity_id="__idle__", semana_inicio=between[0], semana_fim=between[-1], machine_weeks=len(between)))
+                idle_segs.append(
+                    SegmentoAtividade(
+                        activity_id="__idle__",
+                        semana_inicio=between[0],
+                        semana_fim=between[-1],
+                        machine_weeks=len(between),
+                    )
+                )
         else:
             off_internal += gap
     leading_off = max(0, mob_idx - contract_start_idx)
@@ -1532,12 +1711,23 @@ def _compute_adr085_gaps(aw: list, contract_start_idx: int, contract_end_idx: in
     return idle_w, semanas_off, desmob_aplicada, idle_segs
 
 
-def _compute_instancia_lifecycle(i: int, instance_week_map: dict, contrato,
-                                  contract_start_idx: int, contract_end_idx: int,
-                                  adr085_active: bool,
-                                  c_mo: float, c_eq: float, c_comb: float, c_mat: float,
-                                  c_idle_unit: float, c_mob_unit: float, c_demob_unit: float,
-                                  prod_w: int, mobilizacao_por_instancia: dict) -> tuple:
+def _compute_instancia_lifecycle(
+    i: int,
+    instance_week_map: dict,
+    contrato,
+    contract_start_idx: int,
+    contract_end_idx: int,
+    adr085_active: bool,
+    c_mo: float,
+    c_eq: float,
+    c_comb: float,
+    c_mat: float,
+    c_idle_unit: float,
+    c_mob_unit: float,
+    c_demob_unit: float,
+    prod_w: int,
+    mobilizacao_por_instancia: dict,
+) -> tuple:
     """Compute ADR-085 lifecycle fields for one slot. Returns lifecycle tuple."""
     sm_mob = sm_demob = ""
     semanas_off = 0
@@ -1545,15 +1735,34 @@ def _compute_instancia_lifecycle(i: int, instance_week_map: dict, contrato,
     desmob_aplicada = False
     idle_segs: list[SegmentoAtividade] = []
     if not (adr085_active and instance_week_map[i]):
-        return sm_mob, sm_demob, semanas_off, ca_mo, ca_eq, ca_comb, ca_mat, ci_mo, ci_eq, c_demob_i, desmob_aplicada, custo_inst_total, idle_segs
+        return (
+            sm_mob,
+            sm_demob,
+            semanas_off,
+            ca_mo,
+            ca_eq,
+            ca_comb,
+            ca_mat,
+            ci_mo,
+            ci_eq,
+            c_demob_i,
+            desmob_aplicada,
+            custo_inst_total,
+            idle_segs,
+        )
     aw = sorted(instance_week_map[i].keys(), key=_week_idx)
     idle_w, semanas_off, desmob_aplicada, idle_segs = _compute_adr085_gaps(
         aw, contract_start_idx, contract_end_idx, c_mo, c_idle_unit, c_mob_unit, c_demob_unit
     )
     cc = calcular_custo_instancia_composicional(
-        prod_weeks=prod_w, idle_weeks=idle_w,
-        c_mo=c_mo, c_eq=c_eq, c_comb=c_comb, c_mat=c_mat,
-        c_idle_eq=c_idle_unit, c_demob_efetivo=0.0,
+        prod_weeks=prod_w,
+        idle_weeks=idle_w,
+        c_mo=c_mo,
+        c_eq=c_eq,
+        c_comb=c_comb,
+        c_mat=c_mat,
+        c_idle_eq=c_idle_unit,
+        c_demob_efetivo=0.0,
     )
     ca_mo, ca_eq, ca_comb, ca_mat = cc["ativo_mo"], cc["ativo_eq"], cc["ativo_comb"], cc["ativo_mat"]
     ci_mo, ci_eq = cc["idle_mo"], cc["idle_eq"]
@@ -1561,11 +1770,26 @@ def _compute_instancia_lifecycle(i: int, instance_week_map: dict, contrato,
     sm_mob = aw[0]
     sm_demob = aw[-1] if desmob_aplicada else contrato.semana_fim
     mobilizacao_por_instancia[i] = sm_mob
-    return sm_mob, sm_demob, semanas_off, ca_mo, ca_eq, ca_comb, ca_mat, ci_mo, ci_eq, c_demob_i, desmob_aplicada, custo_inst_total, idle_segs
+    return (
+        sm_mob,
+        sm_demob,
+        semanas_off,
+        ca_mo,
+        ca_eq,
+        ca_comb,
+        ca_mat,
+        ci_mo,
+        ci_eq,
+        c_demob_i,
+        desmob_aplicada,
+        custo_inst_total,
+        idle_segs,
+    )
 
 
-def _compute_desmob_antecipada(ultima_atividade: str, c_idle_unit: float, custo_demob_unit: float,
-                                 contract_end_idx: int) -> tuple:
+def _compute_desmob_antecipada(
+    ultima_atividade: str, c_idle_unit: float, custo_demob_unit: float, contract_end_idx: int
+) -> tuple:
     """Returns (semanas_antecipacao, economia_desmob) for ADR-079B."""
     if not ultima_atividade or c_idle_unit <= 0 or custo_demob_unit <= 0:
         return 0, 0.0
@@ -1588,7 +1812,9 @@ def _build_demand_per_week(dist: dict, required: int, total_peak: int) -> dict:
     return demand_per_week
 
 
-def _item_demand_for_tipo(iid: str, tipo_id: str, tipo_map: dict, item_total_peak: dict, sched_lookup: dict) -> dict | None:
+def _item_demand_for_tipo(
+    iid: str, tipo_id: str, tipo_map: dict, item_total_peak: dict, sched_lookup: dict
+) -> dict | None:
     """Returns demand_per_week dict for iid×tipo_id, or None to skip."""
     if tipo_id not in tipo_map:
         return None
@@ -1602,7 +1828,9 @@ def _item_demand_for_tipo(iid: str, tipo_id: str, tipo_map: dict, item_total_pea
     return demand_per_week if demand_per_week else None
 
 
-def _collect_items_data_for_tipo(tipo_id: str, item_tipo_required: dict, item_total_peak: dict, sched_lookup: dict) -> list:
+def _collect_items_data_for_tipo(
+    tipo_id: str, item_tipo_required: dict, item_total_peak: dict, sched_lookup: dict
+) -> list:
     """Builds items_data list for a given tipo_id."""
     items_data = []
     for iid, tipo_map in item_tipo_required.items():
@@ -1613,16 +1841,31 @@ def _collect_items_data_for_tipo(tipo_id: str, item_tipo_required: dict, item_to
         if not demand_per_week:
             continue
         active_weeks_sorted = sorted(demand_per_week.keys(), key=_week_idx)
-        items_data.append({
-            "item_id": iid, "required": required, "demand_per_week": demand_per_week,
-            "active_weeks": active_weeks_sorted, "machine_weeks": sum(demand_per_week.values()),
-            "start_idx": _week_idx(active_weeks_sorted[0]),
-            "end_idx": _week_idx(active_weeks_sorted[-1]),
-        })
+        items_data.append(
+            {
+                "item_id": iid,
+                "required": required,
+                "demand_per_week": demand_per_week,
+                "active_weeks": active_weeks_sorted,
+                "machine_weeks": sum(demand_per_week.values()),
+                "start_idx": _week_idx(active_weeks_sorted[0]),
+                "end_idx": _week_idx(active_weeks_sorted[-1]),
+            }
+        )
     return items_data
 
 
-def _assign_week(week: str, week_activity_demand: dict, span_by_item: dict, n: int, instance_active: dict, instance_activities: dict, instance_last_active_week: dict, instance_week_map: dict, instance_standby: dict) -> None:
+def _assign_week(
+    week: str,
+    week_activity_demand: dict,
+    span_by_item: dict,
+    n: int,
+    instance_active: dict,
+    instance_activities: dict,
+    instance_last_active_week: dict,
+    instance_week_map: dict,
+    instance_standby: dict,
+) -> None:
     """Greedy-assigns one week's activities to instance slots, rest get standby."""
     activities_in_week = week_activity_demand.get(week, {})
     sorted_acts_w = sorted(activities_in_week.items(), key=lambda kv: -span_by_item.get(kv[0], 0))
@@ -1665,38 +1908,77 @@ def _assign_instances(items_data: list, n: int, semanas_contrato: int) -> tuple:
     week_demand, week_activity_demand = _build_week_demand_maps(items_data)
     all_weeks_sorted = sorted(week_demand.keys(), key=_week_idx)
     span_by_item = {it["item_id"]: it["end_idx"] - it["start_idx"] for it in items_data}
-    instance_active, instance_standby, instance_activities, instance_last_active_week, instance_week_map = _init_instance_slots(n)
+    instance_active, instance_standby, instance_activities, instance_last_active_week, instance_week_map = (
+        _init_instance_slots(n)
+    )
     for week in all_weeks_sorted:
-        _assign_week(week, week_activity_demand, span_by_item, n, instance_active, instance_activities, instance_last_active_week, instance_week_map, instance_standby)
+        _assign_week(
+            week,
+            week_activity_demand,
+            span_by_item,
+            n,
+            instance_active,
+            instance_activities,
+            instance_last_active_week,
+            instance_week_map,
+            instance_standby,
+        )
     zero_demand_weeks = max(0, semanas_contrato - len(all_weeks_sorted))
     for i in range(1, n + 1):
         instance_standby[i] += zero_demand_weeks
-    return instance_active, instance_standby, instance_activities, instance_last_active_week, instance_week_map, all_weeks_sorted
+    return (
+        instance_active,
+        instance_standby,
+        instance_activities,
+        instance_last_active_week,
+        instance_week_map,
+        all_weeks_sorted,
+    )
 
 
-def _emit_standby_validation(tipo_id: str, instancias_standby_alto: list, instance_active: dict, instance_standby: dict, n: int, taxa_geral: float, custo_standby_total: float, status_util: str, validacoes: list) -> None:
+def _emit_standby_validation(
+    tipo_id: str,
+    instancias_standby_alto: list,
+    instance_active: dict,
+    instance_standby: dict,
+    n: int,
+    taxa_geral: float,
+    custo_standby_total: float,
+    status_util: str,
+    validacoes: list,
+) -> None:
     """Emits VAL-SLOT-STANDBY-ALTO validation if there are high-standby instances."""
     if not instancias_standby_alto:
         return
     standby_detail = "; ".join(
-        f"{tipo_id}-{i:02d}: {instance_standby[i]}w idle" for i in range(1, n + 1)
+        f"{tipo_id}-{i:02d}: {instance_standby[i]}w idle"
+        for i in range(1, n + 1)
         if (instance_active[i] + instance_standby[i]) > 0
         and instance_standby[i] / (instance_active[i] + instance_standby[i]) * 100 > _STANDBY_THRESHOLD_PCT
     )
     val_status = "ERRO" if status_util == "CRITICO" else "AVISO"
-    validacoes.append(ValidacaoItem(
-        codigo="VAL-SLOT-STANDBY-ALTO", status=val_status,
-        mensagem=(
-            f"ADR-077: Contrato {tipo_id} — {len(instancias_standby_alto)} instância(s) "
-            f"com standby >{_STANDBY_THRESHOLD_PCT:.0f}%: {standby_detail}. "
-            f"Taxa global: {taxa_geral:.1f}%. Custo standby: R$ {custo_standby_total:,.2f}."
-        ),
-    ))
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-SLOT-STANDBY-ALTO",
+            status=val_status,
+            mensagem=(
+                f"ADR-077: Contrato {tipo_id} — {len(instancias_standby_alto)} instância(s) "
+                f"com standby >{_STANDBY_THRESHOLD_PCT:.0f}%: {standby_detail}. "
+                f"Taxa global: {taxa_geral:.1f}%. Custo standby: R$ {custo_standby_total:,.2f}."
+            ),
+        )
+    )
 
 
-def _build_resumo_e_validacoes(tipo_id: str, contrato, n: int, instance_active: dict,
-                                 instance_standby: dict, custo_standby_rate: float,
-                                 validacoes: list) -> "ResumoUtilizacaoContrato":
+def _build_resumo_e_validacoes(
+    tipo_id: str,
+    contrato,
+    n: int,
+    instance_active: dict,
+    instance_standby: dict,
+    custo_standby_rate: float,
+    validacoes: list,
+) -> ResumoUtilizacaoContrato:
     """Build ResumoUtilizacaoContrato and emit standby validations."""
     mw_disponiveis = n * contrato.semanas_contrato
     mw_usados = sum(instance_active.values())
@@ -1704,7 +1986,8 @@ def _build_resumo_e_validacoes(tipo_id: str, contrato, n: int, instance_active: 
     taxa_geral = round(mw_usados / mw_disponiveis * 100, 1) if mw_disponiveis > 0 else 100.0
     custo_standby_total = round(custo_standby_rate * mw_standby, 2)
     instancias_standby_alto = [
-        f"{tipo_id}-{i:02d}" for i in range(1, n + 1)
+        f"{tipo_id}-{i:02d}"
+        for i in range(1, n + 1)
         if (instance_active[i] + instance_standby[i]) > 0
         and instance_standby[i] / (instance_active[i] + instance_standby[i]) * 100 > _STANDBY_THRESHOLD_PCT
     ]
@@ -1715,17 +1998,54 @@ def _build_resumo_e_validacoes(tipo_id: str, contrato, n: int, instance_active: 
     else:
         status_util = "CRITICO"
     resumo = ResumoUtilizacaoContrato(
-        contrato_id=contrato.contrato_id, tipo_id=tipo_id, quantidade_contratada=n,
-        semanas_contrato=contrato.semanas_contrato, machine_weeks_disponiveis=mw_disponiveis,
-        machine_weeks_usados=mw_usados, machine_weeks_standby=mw_standby,
-        taxa_utilizacao_pct=taxa_geral, custo_standby_total=custo_standby_total,
-        instancias_standby_alto=instancias_standby_alto, status_utilizacao=status_util,
+        contrato_id=contrato.contrato_id,
+        tipo_id=tipo_id,
+        quantidade_contratada=n,
+        semanas_contrato=contrato.semanas_contrato,
+        machine_weeks_disponiveis=mw_disponiveis,
+        machine_weeks_usados=mw_usados,
+        machine_weeks_standby=mw_standby,
+        taxa_utilizacao_pct=taxa_geral,
+        custo_standby_total=custo_standby_total,
+        instancias_standby_alto=instancias_standby_alto,
+        status_utilizacao=status_util,
     )
-    _emit_standby_validation(tipo_id, instancias_standby_alto, instance_active, instance_standby, n, taxa_geral, custo_standby_total, status_util, validacoes)
+    _emit_standby_validation(
+        tipo_id,
+        instancias_standby_alto,
+        instance_active,
+        instance_standby,
+        n,
+        taxa_geral,
+        custo_standby_total,
+        status_util,
+        validacoes,
+    )
     return resumo
 
 
-def _build_instancia_slot(i: int, tipo_id: str, contrato, instance_active: dict, instance_standby: dict, instance_activities: dict, instance_last_active_week: dict, instance_week_map: dict, custo_standby_rate: float, c_idle_unit: float, adr085_active: bool, contract_start_idx: int, contract_end_idx: int, _c_mo: float, _c_eq: float, _c_comb: float, _c_mat: float, _c_mob_unit: float, _c_demob_unit: float, mobilizacao_por_instancia: dict) -> "InstanciaRecurso":
+def _build_instancia_slot(
+    i: int,
+    tipo_id: str,
+    contrato,
+    instance_active: dict,
+    instance_standby: dict,
+    instance_activities: dict,
+    instance_last_active_week: dict,
+    instance_week_map: dict,
+    custo_standby_rate: float,
+    c_idle_unit: float,
+    adr085_active: bool,
+    contract_start_idx: int,
+    contract_end_idx: int,
+    _c_mo: float,
+    _c_eq: float,
+    _c_comb: float,
+    _c_mat: float,
+    _c_mob_unit: float,
+    _c_demob_unit: float,
+    mobilizacao_por_instancia: dict,
+) -> InstanciaRecurso:
     """Builds one InstanciaRecurso for slot i."""
     s_ativas = instance_active[i]
     s_standby = instance_standby[i]
@@ -1733,37 +2053,85 @@ def _build_instancia_slot(i: int, tipo_id: str, contrato, instance_active: dict,
     taxa = round(s_ativas / total_w * 100, 1) if total_w > 0 else 100.0
     custo_sb = round(custo_standby_rate * s_standby, 2)
     ultima_atividade = instance_last_active_week[i]
-    semanas_antecipacao, economia_desmob = _compute_desmob_antecipada(ultima_atividade, c_idle_unit, contrato.custo_demob_unit, contract_end_idx)
-    sm_mob, sm_demob, semanas_off, ca_mo, ca_eq, ca_comb, ca_mat, ci_mo, ci_eq, c_demob_i, desmob_aplicada, custo_inst_total, _idle_segs = _compute_instancia_lifecycle(
-        i, instance_week_map, contrato, contract_start_idx, contract_end_idx,
-        adr085_active, _c_mo, _c_eq, _c_comb, _c_mat, c_idle_unit, _c_mob_unit, _c_demob_unit,
-        s_ativas, mobilizacao_por_instancia
+    semanas_antecipacao, economia_desmob = _compute_desmob_antecipada(
+        ultima_atividade, c_idle_unit, contrato.custo_demob_unit, contract_end_idx
+    )
+    (
+        sm_mob,
+        sm_demob,
+        semanas_off,
+        ca_mo,
+        ca_eq,
+        ca_comb,
+        ca_mat,
+        ci_mo,
+        ci_eq,
+        c_demob_i,
+        desmob_aplicada,
+        custo_inst_total,
+        _idle_segs,
+    ) = _compute_instancia_lifecycle(
+        i,
+        instance_week_map,
+        contrato,
+        contract_start_idx,
+        contract_end_idx,
+        adr085_active,
+        _c_mo,
+        _c_eq,
+        _c_comb,
+        _c_mat,
+        c_idle_unit,
+        _c_mob_unit,
+        _c_demob_unit,
+        s_ativas,
+        mobilizacao_por_instancia,
     )
     return InstanciaRecurso(
-        instancia_id=f"{tipo_id}-{i:02d}", contrato_id=contrato.contrato_id,
-        tipo_id=tipo_id, numero=i, semana_entrada=contrato.semana_inicio,
-        semana_saida=contrato.semana_fim, semanas_ativas=s_ativas, semanas_standby=s_standby,
-        taxa_utilizacao_pct=taxa, custo_standby=custo_sb,
+        instancia_id=f"{tipo_id}-{i:02d}",
+        contrato_id=contrato.contrato_id,
+        tipo_id=tipo_id,
+        numero=i,
+        semana_entrada=contrato.semana_inicio,
+        semana_saida=contrato.semana_fim,
+        semanas_ativas=s_ativas,
+        semanas_standby=s_standby,
+        taxa_utilizacao_pct=taxa,
+        custo_standby=custo_sb,
         atividades_cobertas=sorted(instance_activities[i]),
         semana_ultima_atividade=ultima_atividade,
         semanas_antecipacao_possivel=semanas_antecipacao,
         economia_desmobilizacao_antecipada=economia_desmob,
         desmob_antecipada_aplicada=desmob_aplicada,
         segmentos_atividade=_compress_to_segments(instance_week_map[i]),
-        semana_mobilizacao=sm_mob, semana_desmobilizacao=sm_demob, semanas_off=semanas_off,
-        custo_ativo_mo=ca_mo, custo_ativo_eq=ca_eq, custo_ativo_comb=ca_comb, custo_ativo_mat=ca_mat,
-        custo_idle_mo=ci_mo, custo_idle_eq=ci_eq, custo_demob_instancia=c_demob_i,
-        custo_instancia_total=custo_inst_total, segmentos_idle=_idle_segs,
+        semana_mobilizacao=sm_mob,
+        semana_desmobilizacao=sm_demob,
+        semanas_off=semanas_off,
+        custo_ativo_mo=ca_mo,
+        custo_ativo_eq=ca_eq,
+        custo_ativo_comb=ca_comb,
+        custo_ativo_mat=ca_mat,
+        custo_idle_mo=ci_mo,
+        custo_idle_eq=ci_eq,
+        custo_demob_instancia=c_demob_i,
+        custo_instancia_total=custo_inst_total,
+        segmentos_idle=_idle_segs,
     )
 
 
-def _build_composicao_entry(item: dict, tipo_id: str, contrato, n: int, instance_activities: dict) -> "ComposicaoEquipeAtividade":
+def _build_composicao_entry(
+    item: dict, tipo_id: str, contrato, n: int, instance_activities: dict
+) -> ComposicaoEquipeAtividade:
     """Builds ComposicaoEquipeAtividade for a single item."""
     iid = item["item_id"]
     inst_nums = sorted(i for i in range(1, n + 1) if iid in instance_activities[i])
     return ComposicaoEquipeAtividade(
-        activity_id=iid, tipo_id=tipo_id, contrato_id=contrato.contrato_id,
-        pool_size=n, n_instancias=len(inst_nums), required=item["required"],
+        activity_id=iid,
+        tipo_id=tipo_id,
+        contrato_id=contrato.contrato_id,
+        pool_size=n,
+        n_instancias=len(inst_nums),
+        required=item["required"],
         instancias_numeros=inst_nums,
         semana_inicio=item["active_weeks"][0] if item["active_weeks"] else "",
         semana_fim=item["active_weeks"][-1] if item["active_weeks"] else "",
@@ -1771,7 +2139,9 @@ def _build_composicao_entry(item: dict, tipo_id: str, contrato, n: int, instance
     )
 
 
-def _build_instancias_for_tipo(tipo_id: str, contrato, item_tipo_required: dict, item_total_peak: dict, sched_lookup: dict, validacoes: list) -> tuple:
+def _build_instancias_for_tipo(
+    tipo_id: str, contrato, item_tipo_required: dict, item_total_peak: dict, sched_lookup: dict, validacoes: list
+) -> tuple:
     """Builds instancias/composicoes/resumo for a single tipo_id contrato."""
     n = contrato.quantidade_contratada
     if n <= 0:
@@ -1780,7 +2150,14 @@ def _build_instancias_for_tipo(tipo_id: str, contrato, item_tipo_required: dict,
     if not items_data:
         return [], [], []
 
-    instance_active, instance_standby, instance_activities, instance_last_active_week, instance_week_map, _all_weeks_sorted = _assign_instances(items_data, n, contrato.semanas_contrato)
+    (
+        instance_active,
+        instance_standby,
+        instance_activities,
+        instance_last_active_week,
+        instance_week_map,
+        _all_weeks_sorted,
+    ) = _assign_instances(items_data, n, contrato.semanas_contrato)
     c_idle_unit = contrato.custo_idle_semanal_unit
     custo_standby_rate = c_idle_unit if c_idle_unit > 0 else contrato.custo_unit_semanal
     contract_end_idx = _week_idx(contrato.semana_fim)
@@ -1794,19 +2171,40 @@ def _build_instancias_for_tipo(tipo_id: str, contrato, item_tipo_required: dict,
     _c_demob_unit = contrato.custo_demob_unit
     mobilizacao_por_instancia: dict[int, str] = {}
 
-    instancias = [_build_instancia_slot(
-        i, tipo_id, contrato, instance_active, instance_standby, instance_activities,
-        instance_last_active_week, instance_week_map, custo_standby_rate, c_idle_unit,
-        adr085_active, contract_start_idx, contract_end_idx,
-        _c_mo, _c_eq, _c_comb, _c_mat, _c_mob_unit, _c_demob_unit, mobilizacao_por_instancia
-    ) for i in range(1, n + 1)]
+    instancias = [
+        _build_instancia_slot(
+            i,
+            tipo_id,
+            contrato,
+            instance_active,
+            instance_standby,
+            instance_activities,
+            instance_last_active_week,
+            instance_week_map,
+            custo_standby_rate,
+            c_idle_unit,
+            adr085_active,
+            contract_start_idx,
+            contract_end_idx,
+            _c_mo,
+            _c_eq,
+            _c_comb,
+            _c_mat,
+            _c_mob_unit,
+            _c_demob_unit,
+            mobilizacao_por_instancia,
+        )
+        for i in range(1, n + 1)
+    ]
 
     if mobilizacao_por_instancia:
         contrato.mobilizacao_por_instancia = dict(sorted(mobilizacao_por_instancia.items()))
 
     composicoes = [_build_composicao_entry(item, tipo_id, contrato, n, instance_activities) for item in items_data]
 
-    resumo = _build_resumo_e_validacoes(tipo_id, contrato, n, instance_active, instance_standby, custo_standby_rate, validacoes)
+    resumo = _build_resumo_e_validacoes(
+        tipo_id, contrato, n, instance_active, instance_standby, custo_standby_rate, validacoes
+    )
     return instancias, composicoes, [resumo]
 
 
@@ -1862,7 +2260,9 @@ def _build_instancias_recurso(
     all_resumos: list[ResumoUtilizacaoContrato] = []
 
     for tipo_id, contrato in contrato_map.items():
-        insts, comps, resumos = _build_instancias_for_tipo(tipo_id, contrato, item_tipo_required, item_total_peak, sched_lookup, validacoes)
+        insts, comps, resumos = _build_instancias_for_tipo(
+            tipo_id, contrato, item_tipo_required, item_total_peak, sched_lookup, validacoes
+        )
         all_instancias.extend(insts)
         all_composicoes.extend(comps)
         all_resumos.extend(resumos)
@@ -1875,7 +2275,16 @@ def _build_instancias_recurso(
 # ---------------------------------------------------------------------------
 
 
-def _scale_part_entry(part, escala: float, novo_total: float, tot_mo: float, tot_eq: float, tot_comb: float, tot_mat: float, eq_by_item: dict) -> None:
+def _scale_part_entry(
+    part,
+    escala: float,
+    novo_total: float,
+    tot_mo: float,
+    tot_eq: float,
+    tot_comb: float,
+    tot_mat: float,
+    eq_by_item: dict,
+) -> None:
     """Scales one CustoParticionadoItem in place for _reescalar_particao."""
     part.custo_produtivo = round(part.custo_produtivo * escala, 2)
     part.custo_mob_imputado = round(part.custo_mob_imputado * escala, 2)
@@ -1890,7 +2299,9 @@ def _scale_part_entry(part, escala: float, novo_total: float, tot_mo: float, tot
     part.custo_inst_eq = round(tot_eq * frac_item, 2)
     part.custo_inst_comb = round(tot_comb * frac_item, 2)
     part.custo_inst_mat = round(tot_mat * frac_item, 2)
-    part.custo_inst_mo = round(part.custo_total_particionado - part.custo_inst_eq - part.custo_inst_comb - part.custo_inst_mat, 2)
+    part.custo_inst_mo = round(
+        part.custo_total_particionado - part.custo_inst_eq - part.custo_inst_comb - part.custo_inst_mat, 2
+    )
     eq = eq_by_item.get(part.item_id)
     if eq is not None:
         eq.custo_total = part.custo_total_particionado
@@ -1913,10 +2324,21 @@ def _reescalar_particao(contrato, novo_total: float, insts_contrato: list, eq_by
     tot_mo, tot_eq, tot_comb, tot_mat = _sum_inst_categories(insts_contrato)
     for part in contrato.particao_por_item:
         _scale_part_entry(part, escala, novo_total, tot_mo, tot_eq, tot_comb, tot_mat, eq_by_item)
-    _max_dev = max((abs((p.custo_inst_mo + p.custo_inst_eq + p.custo_inst_comb + p.custo_inst_mat) - p.custo_total_particionado) for p in contrato.particao_por_item), default=0.0)
+    _max_dev = max(
+        (
+            abs((p.custo_inst_mo + p.custo_inst_eq + p.custo_inst_comb + p.custo_inst_mat) - p.custo_total_particionado)
+            for p in contrato.particao_por_item
+        ),
+        default=0.0,
+    )
     if _max_dev > 0.05:
-        validacoes.append(ValidacaoItem(codigo="VAL-INST-CAT-SOMA", status="ERRO",
-            mensagem=f"ADR-085: Contrato {contrato.tipo_id} — decomposição categorial não fecha (desvio máx R$ {_max_dev:.2f} > 0.05)."))
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-INST-CAT-SOMA",
+                status="ERRO",
+                mensagem=f"ADR-085: Contrato {contrato.tipo_id} — decomposição categorial não fecha (desvio máx R$ {_max_dev:.2f} > 0.05).",
+            )
+        )
 
 
 def _apply_instancial_to_contrato(contrato, instancias: list, eq_by_item: dict, validacoes: list) -> None:
@@ -1932,15 +2354,18 @@ def _apply_instancial_to_contrato(contrato, instancias: list, eq_by_item: dict, 
     reducao_pct = round((1.0 - novo_total / antigo_total) * 100, 1)
     n_mob_tardia = len(contrato.mobilizacao_por_instancia)
     n_desmob = sum(1 for inst in insts_contrato if inst.desmob_antecipada_aplicada)
-    validacoes.append(ValidacaoItem(
-        codigo="VAL-MOB-TARDIA-OK", status="OK",
-        mensagem=(
-            f"ADR-085: Contrato {contrato.tipo_id} — custo instancial composicional "
-            f"R$ {novo_total:,.2f} (era R$ {antigo_total:,.2f}, −{reducao_pct:.1f}%). "
-            f"{n_mob_tardia} instância(s) com mobilização tardia; "
-            f"{n_desmob} com desmobilização antecipada efetiva."
-        ),
-    ))
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-MOB-TARDIA-OK",
+            status="OK",
+            mensagem=(
+                f"ADR-085: Contrato {contrato.tipo_id} — custo instancial composicional "
+                f"R$ {novo_total:,.2f} (era R$ {antigo_total:,.2f}, −{reducao_pct:.1f}%). "
+                f"{n_mob_tardia} instância(s) com mobilização tardia; "
+                f"{n_desmob} com desmobilização antecipada efetiva."
+            ),
+        )
+    )
 
 
 def _aplicar_custo_instancial_adr085(
@@ -2048,4 +2473,3 @@ def _enrich_particao_overhead(
             overhead = round(unit_cost * total_idle_weeks, 2)
             part.custo_ocioso_imputado = overhead
             part.overhead_ocioso = overhead
-

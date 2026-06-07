@@ -30,6 +30,7 @@ sys.path.insert(0, str(_ROOT / "src"))
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _make_clients_env(clients: dict) -> str:
     return json.dumps(clients)
 
@@ -42,10 +43,12 @@ def _sha256_secret(secret: str) -> str:
 # Module-level fixtures para performance
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def rsa_keypair():
     """Gera chaves RSA uma única vez para toda a suite de testes."""
     from concilium.infrastructure.auth.jwt_config import _generate_ephemeral
+
     return _generate_ephemeral()
 
 
@@ -63,15 +66,14 @@ def clear_key_cache():
     """Limpa cache de chaves após cada teste para evitar state leaking."""
     yield
     from concilium.infrastructure.auth.jwt_config import load_key_pair
+
     load_key_pair.cache_clear()
 
 
 @pytest.fixture(scope="module")
 def clients_env():
     """Environment padrão com clientes para testes."""
-    clients = {
-        "eng-01": {"secret": "senha123", "roles": ["operator"]}
-    }
+    clients = {"eng-01": {"secret": "senha123", "roles": ["operator"]}}
     return _make_clients_env(clients)
 
 
@@ -79,9 +81,10 @@ def clients_env():
 def fastapi_client(mock_jwt_env, clients_env):
     """TestClient FastAPI compartilhado para performance."""
     from fastapi.testclient import TestClient
-    from concilium.presentation.api.app import create_app
+
     from concilium.infrastructure.auth.jwt_config import load_key_pair
-    
+    from concilium.presentation.api.app import create_app
+
     env = {**mock_jwt_env, "CONCILIUM__AUTH_CLIENTS": clients_env}
     with patch.dict(os.environ, env):
         load_key_pair.cache_clear()  # Force load with our keys
@@ -94,9 +97,10 @@ def fastapi_client(mock_jwt_env, clients_env):
 def fastapi_client_with_auth(mock_jwt_env, clients_env):
     """TestClient FastAPI com autenticação habilitada."""
     from fastapi.testclient import TestClient
-    from concilium.presentation.api.app import create_app
+
     from concilium.infrastructure.auth.jwt_config import load_key_pair
-    
+    from concilium.presentation.api.app import create_app
+
     env = {
         **mock_jwt_env,
         "CONCILIUM__AUTH_ENABLED": "1",
@@ -113,15 +117,18 @@ def fastapi_client_with_auth(mock_jwt_env, clients_env):
 # TestJwtConfig — Isolado para testar geração ephemeral
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.usefixtures("clear_key_cache")  # Usa fixture mas sem autouse
 class TestJwtConfig:
     """Testes de geração de chaves - isolados porque testam comportamento ephemeral."""
-    
+
     def test_generates_ephemeral_keys_when_no_env(self):
         clean_env = {k: v for k, v in os.environ.items() if "CONCILIUM__JWT" not in k}
         with patch.dict(os.environ, clean_env, clear=True):
             import warnings
+
             from concilium.infrastructure.auth.jwt_config import load_key_pair
+
             load_key_pair.cache_clear()
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -133,6 +140,7 @@ class TestJwtConfig:
     def test_reads_pem_from_env_vars(self, rsa_keypair):
         """Reutiliza keypair do módulo para performance."""
         from concilium.infrastructure.auth.jwt_config import load_key_pair
+
         env_override = {
             "CONCILIUM__JWT_PRIVATE_KEY_PEM": rsa_keypair.private_pem.decode(),
             "CONCILIUM__JWT_PUBLIC_KEY_PEM": rsa_keypair.public_pem.decode(),
@@ -148,9 +156,11 @@ class TestJwtConfig:
 # TestClientStore
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestClientStore:
     def test_valid_plaintext_secret(self):
         from concilium.infrastructure.auth.client_store import validate_client
+
         clients = {"agente": {"secret": "s3cr3t", "roles": ["viewer"]}}
         with patch.dict(os.environ, {"CONCILIUM__AUTH_CLIENTS": _make_clients_env(clients)}):
             roles = validate_client("agente", "s3cr3t")
@@ -158,6 +168,7 @@ class TestClientStore:
 
     def test_valid_hashed_secret(self):
         from concilium.infrastructure.auth.client_store import validate_client
+
         clients = {
             "ci": {
                 "secret_hash": _sha256_secret("runner-pass"),
@@ -170,6 +181,7 @@ class TestClientStore:
 
     def test_wrong_secret_returns_none(self):
         from concilium.infrastructure.auth.client_store import validate_client
+
         clients = {"agente": {"secret": "correct", "roles": ["viewer"]}}
         with patch.dict(os.environ, {"CONCILIUM__AUTH_CLIENTS": _make_clients_env(clients)}):
             result = validate_client("agente", "wrong")
@@ -177,12 +189,14 @@ class TestClientStore:
 
     def test_unknown_client_id_returns_none(self):
         from concilium.infrastructure.auth.client_store import validate_client
+
         with patch.dict(os.environ, {"CONCILIUM__AUTH_CLIENTS": "{}"}):
             result = validate_client("ghost", "any")
         assert result is None
 
     def test_empty_env_returns_none(self):
         from concilium.infrastructure.auth.client_store import validate_client
+
         clean = {k: v for k, v in os.environ.items() if k != "CONCILIUM__AUTH_CLIENTS"}
         with patch.dict(os.environ, clean, clear=True):
             result = validate_client("any", "any")
@@ -193,18 +207,19 @@ class TestClientStore:
 # TestTokenService — Usa chaves pré-geradas para performance
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestTokenService:
     """Testes de JWT token service - reutiliza chaves RSA."""
-    
+
     def test_round_trip(self, mock_jwt_env):
-        from concilium.infrastructure.auth.token_service import decode_token, issue_token
         from concilium.infrastructure.auth.jwt_config import load_key_pair
-        
+        from concilium.infrastructure.auth.token_service import decode_token, issue_token
+
         with patch.dict(os.environ, mock_jwt_env):
             load_key_pair.cache_clear()
             token = issue_token("eng-01", ["operator", "viewer"], ttl=timedelta(hours=1))
             claims = decode_token(token)
-        
+
         assert claims["sub"] == "eng-01"
         assert set(claims["roles"]) == {"operator", "viewer"}
         assert claims["iss"] == "concilium-auth"
@@ -212,9 +227,10 @@ class TestTokenService:
 
     def test_expired_token_raises(self, mock_jwt_env):
         import jwt as _jwt
-        from concilium.infrastructure.auth.token_service import decode_token, issue_token
+
         from concilium.infrastructure.auth.jwt_config import load_key_pair
-        
+        from concilium.infrastructure.auth.token_service import decode_token, issue_token
+
         with patch.dict(os.environ, mock_jwt_env):
             load_key_pair.cache_clear()
             token = issue_token("eng-01", ["viewer"], ttl=timedelta(seconds=-1))
@@ -223,9 +239,10 @@ class TestTokenService:
 
     def test_tampered_token_raises(self, mock_jwt_env):
         import jwt as _jwt
-        from concilium.infrastructure.auth.token_service import decode_token, issue_token
+
         from concilium.infrastructure.auth.jwt_config import load_key_pair
-        
+        from concilium.infrastructure.auth.token_service import decode_token, issue_token
+
         with patch.dict(os.environ, mock_jwt_env):
             load_key_pair.cache_clear()
             token = issue_token("eng-01", ["viewer"], ttl=timedelta(hours=1))
@@ -238,9 +255,10 @@ class TestTokenService:
 # TestTokenRoute — Usa FastAPI client compartilhado
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestTokenRoute:
     """Testes de /auth/token endpoint - reutiliza cliente FastAPI."""
-    
+
     def test_valid_credentials_returns_token(self, fastapi_client, clients_env):
         with patch.dict(os.environ, {"CONCILIUM__AUTH_CLIENTS": clients_env}):
             resp = fastapi_client.post("/auth/token", json={"client_id": "eng-01", "client_secret": "senha123"})
@@ -274,9 +292,10 @@ class TestTokenRoute:
 # TestJWTMiddleware — Usa FastAPI client com auth compartilhado
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestJWTMiddleware:
     """Testes de JWT middleware - reutiliza cliente FastAPI com auth."""
-    
+
     def test_health_bypasses_auth(self, fastapi_client_with_auth):
         client, env = fastapi_client_with_auth
         with patch.dict(os.environ, env):
@@ -307,9 +326,9 @@ class TestJWTMiddleware:
 
     def test_valid_token_passes_through(self, fastapi_client_with_auth, mock_jwt_env):
         client, env = fastapi_client_with_auth
-        from concilium.infrastructure.auth.token_service import issue_token
         from concilium.infrastructure.auth.jwt_config import load_key_pair
-        
+        from concilium.infrastructure.auth.token_service import issue_token
+
         with patch.dict(os.environ, {**env, **mock_jwt_env}):
             load_key_pair.cache_clear()
             token = issue_token("eng-01", ["viewer"], ttl=timedelta(hours=1))
@@ -321,21 +340,25 @@ class TestJWTMiddleware:
 # TestScopeGuard
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestScopeGuard:
     def test_no_op_when_auth_disabled(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope
+
         clean = {k: v for k, v in os.environ.items() if k != "CONCILIUM__AUTH_ENABLED"}
         with patch.dict(os.environ, clean, clear=True):
             check_scope("avancar_pipeline")  # deve passar sem erro
 
     def test_passes_with_correct_scope(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
+
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles(["operator"])
             check_scope("avancar_pipeline")  # operator tem project:run
 
     def test_raises_with_missing_scope(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
+
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles(["viewer"])
             with pytest.raises(PermissionError, match="project:run"):
@@ -343,12 +366,14 @@ class TestScopeGuard:
 
     def test_unmapped_tool_passes_regardless(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
+
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles([])  # sem nenhum role
             check_scope("ferramenta_nao_mapeada")  # deve passar
 
     def test_error_message_lists_missing_permission(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
+
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles([])
             with pytest.raises(PermissionError) as exc_info:
@@ -356,14 +381,18 @@ class TestScopeGuard:
             assert "project:run" in str(exc_info.value)
             assert "Permissão" in str(exc_info.value)
 
-    @pytest.mark.parametrize("tool,required_permission", [
-        ("listar_projetos", "project:read"),
-        ("auditar_plano", "artifacts:read"),
-        ("explorar_pool_recursos", "project:read"),
-        ("baixar_bundle_zip", "artifacts:download"),
-        ("criar_projeto_formulario", "project:create"),
-        ("avancar_pipeline", "project:run"),
-    ])
+    @pytest.mark.parametrize(
+        "tool,required_permission",
+        [
+            ("listar_projetos", "project:read"),
+            ("auditar_plano", "artifacts:read"),
+            ("explorar_pool_recursos", "project:read"),
+            ("baixar_bundle_zip", "artifacts:download"),
+            ("criar_projeto_formulario", "project:create"),
+            ("avancar_pipeline", "project:run"),
+        ],
+    )
     def test_tool_permission_map_completeness(self, tool, required_permission):
         from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+
         assert TOOL_PERMISSIONS.get(tool) == required_permission

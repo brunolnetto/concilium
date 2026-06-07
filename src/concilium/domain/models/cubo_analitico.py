@@ -50,10 +50,10 @@ TemporalGranularity = Literal["semana", "mes", "bimestre", "trimestre", "semestr
 
 # Propriedades válidas por categoria_insumo (ADR-087 §1.2)
 PROPRIEDADES_POR_CATEGORIA: dict[str, tuple[str, ...]] = {
-    "mao_obra":    ("salario_encargos",),
+    "mao_obra": ("salario_encargos",),
     "equipamento": ("aluguel", "combustivel", "manutencao"),
-    "material":    ("consumivel",),
-    "verba":       ("fixo",),
+    "material": ("consumivel",),
+    "verba": ("fixo",),
 }
 
 
@@ -106,12 +106,12 @@ class CelulaAnalitica:
     natureza: Literal["direto", "indireto"]
     atividade_id: str
     categoria_insumo: Literal["mao_obra", "equipamento", "material", "verba"]
-    propriedade: str           # aluguel | combustivel | manutencao | salario_encargos | consumivel | fixo
-    semana_iso: str            # "2026-W23"
-    componente_bdi: str        # ver COMPONENTES_BDI
+    propriedade: str  # aluguel | combustivel | manutencao | salario_encargos | consumivel | fixo
+    semana_iso: str  # "2026-W23"
+    componente_bdi: str  # ver COMPONENTES_BDI
     valor_rs: float
     valor_fisico: float = 0.0  # grandeza física (L para combustivel, etc.)
-    unidade_fisica: str = ""   # "L" | "h" | ""
+    unidade_fisica: str = ""  # "L" | "h" | ""
 
     # ── Backward compatibility properties ────────────────────────────────────
 
@@ -135,9 +135,7 @@ class CelulaAnalitica:
     @property
     def consumo_diesel_L(self) -> float:
         """Volume de combustível em litros (backward compat com ADR-069)."""
-        if (self.categoria_insumo == "material"
-                and self.propriedade == "combustivel"
-                and self.unidade_fisica == "L"):
+        if self.categoria_insumo == "material" and self.propriedade == "combustivel" and self.unidade_fisica == "L":
             return self.valor_fisico
         return 0.0
 
@@ -230,7 +228,9 @@ class CuboAnalitico:
         indireto = round(self.total_overhead + self.total_margem + self.total_tributos, 2)
         return {"direto": self.total_custo_direto, "indireto": indireto}
 
-    def resumo_por_natureza_temporal(self, granularidade: TemporalGranularity = "semana") -> dict[str, dict[str, float]]:
+    def resumo_por_natureza_temporal(
+        self, granularidade: TemporalGranularity = "semana"
+    ) -> dict[str, dict[str, float]]:
         return self._aggregate_natureza_temporal(granularidade)
 
     def margem_por_atividade(self) -> dict[str, float]:
@@ -319,11 +319,11 @@ class CuboAnalitico:
     ) -> CuboAnalitico:
         def match(c: CelulaAnalitica) -> bool:
             return (
-                (categoria is None or c.categoria == categoria)           # backward compat
+                (categoria is None or c.categoria == categoria)  # backward compat
                 and (atividade_id is None or c.atividade_id == atividade_id)
                 and (semana_iso is None or c.semana_iso == semana_iso)
                 and (componente_bdi is None or c.componente_bdi == componente_bdi)
-                and (natureza is None or c.natureza == natureza)          # ADR-087
+                and (natureza is None or c.natureza == natureza)  # ADR-087
                 and (categoria_insumo is None or c.categoria_insumo == categoria_insumo)
                 and (propriedade is None or c.propriedade == propriedade)
             )

@@ -17,7 +17,6 @@ from concilium.application.skills.manifests._05_equipes_custo_helpers import (
     calcular_custo_instancia_composicional,
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Novos campos de modelo
 # ─────────────────────────────────────────────────────────────────────────────
@@ -28,13 +27,25 @@ class TestNovosCamposModelo085:
         from concilium.domain.models.canonical import InstanciaRecurso
 
         inst = InstanciaRecurso(
-            instancia_id="X-01", contrato_id="c", tipo_id="X", numero=1,
-            semana_entrada="2026-W01", semana_saida="2026-W10",
+            instancia_id="X-01",
+            contrato_id="c",
+            tipo_id="X",
+            numero=1,
+            semana_entrada="2026-W01",
+            semana_saida="2026-W10",
         )
         for campo in (
-            "semana_mobilizacao", "semana_desmobilizacao", "semanas_off",
-            "custo_ativo_mo", "custo_ativo_eq", "custo_ativo_comb", "custo_ativo_mat",
-            "custo_idle_mo", "custo_idle_eq", "custo_demob_instancia", "custo_instancia_total",
+            "semana_mobilizacao",
+            "semana_desmobilizacao",
+            "semanas_off",
+            "custo_ativo_mo",
+            "custo_ativo_eq",
+            "custo_ativo_comb",
+            "custo_ativo_mat",
+            "custo_idle_mo",
+            "custo_idle_eq",
+            "custo_demob_instancia",
+            "custo_instancia_total",
         ):
             assert hasattr(inst, campo)
         assert inst.custo_instancia_total == 0.0
@@ -51,13 +62,21 @@ class TestNovosCamposModelo085:
         from concilium.domain.models.canonical import RecursoContrato
 
         rc = RecursoContrato(
-            contrato_id="c", tipo_id="X", quantidade_contratada=1,
-            semana_inicio="2026-W01", semana_fim="2026-W10", semanas_contrato=10,
-            custo_unit_semanal=1000.0, custo_total_contrato=10000.0,
+            contrato_id="c",
+            tipo_id="X",
+            quantidade_contratada=1,
+            semana_inicio="2026-W01",
+            semana_fim="2026-W10",
+            semanas_contrato=10,
+            custo_unit_semanal=1000.0,
+            custo_total_contrato=10000.0,
         )
         for campo in (
-            "custo_unit_semanal_mo", "custo_unit_semanal_eq",
-            "custo_unit_semanal_comb", "custo_unit_semanal_mat", "rho_idle_eq",
+            "custo_unit_semanal_mo",
+            "custo_unit_semanal_eq",
+            "custo_unit_semanal_comb",
+            "custo_unit_semanal_mat",
+            "rho_idle_eq",
         ):
             assert hasattr(rc, campo)
         assert rc.rho_idle_eq == 1.0
@@ -71,8 +90,12 @@ class TestNovosCamposModelo085:
 class TestHelperComposicional:
     def test_ativo_cobra_todos_componentes(self):
         cc = calcular_custo_instancia_composicional(
-            prod_weeks=10, idle_weeks=0,
-            c_mo=1000.0, c_eq=400.0, c_comb=200.0, c_mat=100.0,
+            prod_weeks=10,
+            idle_weeks=0,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
             c_idle_eq=80.0,
         )
         # 10 × (1000+400+200+100) = 17000
@@ -82,8 +105,12 @@ class TestHelperComposicional:
 
     def test_idle_mantem_mo_integral_e_reduz_eq(self):
         cc = calcular_custo_instancia_composicional(
-            prod_weeks=0, idle_weeks=5,
-            c_mo=1000.0, c_eq=400.0, c_comb=200.0, c_mat=100.0,
+            prod_weeks=0,
+            idle_weeks=5,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
             c_idle_eq=80.0,  # 20% de c_eq
         )
         # idle: MO integral (5×1000) + EQ reduzida (5×80); comb/mat zero
@@ -93,17 +120,26 @@ class TestHelperComposicional:
 
     def test_combustivel_e_material_zerados_no_idle(self):
         cc = calcular_custo_instancia_composicional(
-            prod_weeks=0, idle_weeks=8,
-            c_mo=0.0, c_eq=0.0, c_comb=500.0, c_mat=300.0,
+            prod_weeks=0,
+            idle_weeks=8,
+            c_mo=0.0,
+            c_eq=0.0,
+            c_comb=500.0,
+            c_mat=300.0,
             c_idle_eq=0.0,
         )
         assert cc["total"] == 0.0  # sem operação → comb/mat não incorrem
 
     def test_demob_efetivo_somado(self):
         cc = calcular_custo_instancia_composicional(
-            prod_weeks=6, idle_weeks=0,
-            c_mo=1000.0, c_eq=400.0, c_comb=0.0, c_mat=0.0,
-            c_idle_eq=80.0, c_demob_efetivo=2500.0,
+            prod_weeks=6,
+            idle_weeks=0,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=0.0,
+            c_mat=0.0,
+            c_idle_eq=80.0,
+            c_demob_efetivo=2500.0,
         )
         # 6×1400 + 2500 = 10900
         assert cc["total"] == pytest.approx(10900.0)
@@ -111,12 +147,22 @@ class TestHelperComposicional:
 
     def test_idle_mais_barato_que_ativo_quando_eq_reduzida(self):
         ativo = calcular_custo_instancia_composicional(
-            prod_weeks=1, idle_weeks=0,
-            c_mo=1000.0, c_eq=400.0, c_comb=200.0, c_mat=100.0, c_idle_eq=80.0,
+            prod_weeks=1,
+            idle_weeks=0,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
+            c_idle_eq=80.0,
         )
         idle = calcular_custo_instancia_composicional(
-            prod_weeks=0, idle_weeks=1,
-            c_mo=1000.0, c_eq=400.0, c_comb=200.0, c_mat=100.0, c_idle_eq=80.0,
+            prod_weeks=0,
+            idle_weeks=1,
+            c_mo=1000.0,
+            c_eq=400.0,
+            c_comb=200.0,
+            c_mat=100.0,
+            c_idle_eq=80.0,
         )
         assert idle["total"] < ativo["total"]
         # diferença = c_eq economizado em EQ + comb + mat = (400-80)+200+100 = 620
@@ -135,8 +181,14 @@ def _load_helpers_a():
 
     here = Path(__file__).resolve().parents[2]
     path = (
-        here / "src" / "concilium" / "application" / "skills" / "manifests"
-        / "05-equipes-e-alocacao" / "_skill_helpers_a.py"
+        here
+        / "src"
+        / "concilium"
+        / "application"
+        / "skills"
+        / "manifests"
+        / "05-equipes-e-alocacao"
+        / "_skill_helpers_a.py"
     )
     spec = importlib.util.spec_from_file_location("skill05_helpers_a_test", path)
     mod = importlib.util.module_from_spec(spec)
@@ -153,14 +205,22 @@ def _mk_sched(item_id, weeks):
 
     dist = {
         w: DistribuicaoSemanal(
-            num_equipes=1, qtd_executada=10.0, qtd_acumulada=10.0,
-            pct=1.0, eficiencia=1.0, fator_clima=1.0, fator_calendario=1.0,
+            num_equipes=1,
+            qtd_executada=10.0,
+            qtd_acumulada=10.0,
+            pct=1.0,
+            eficiencia=1.0,
+            fator_clima=1.0,
+            fator_calendario=1.0,
         )
         for w in weeks
     }
     return ScheduledActivityCanonical(
-        activity_id=item_id, start_week=0, end_week=len(weeks),
-        duration_weeks=len(weeks), distribuicao_semanal=dist,
+        activity_id=item_id,
+        start_week=0,
+        end_week=len(weeks),
+        duration_weeks=len(weeks),
+        distribuicao_semanal=dist,
     )
 
 
@@ -168,10 +228,15 @@ def _mk_equipe(item_id, mo, eq, comb, mat, custo_total):
     from concilium.domain.models.canonical import EquipeDireta
 
     return EquipeDireta(
-        equipe_id=f"eq-{item_id}", item_id=item_id, cpu_id="CPU-X",
-        custo_mao_obra_mensal=mo, custo_equipamentos_mensal=eq,
-        custo_combustivel_total_mensal=comb, custo_material_mensal=mat,
-        custo_fixo_mensal=mo + eq + mat, custo_total=custo_total,
+        equipe_id=f"eq-{item_id}",
+        item_id=item_id,
+        cpu_id="CPU-X",
+        custo_mao_obra_mensal=mo,
+        custo_equipamentos_mensal=eq,
+        custo_combustivel_total_mensal=comb,
+        custo_material_mensal=mat,
+        custo_fixo_mensal=mo + eq + mat,
+        custo_total=custo_total,
     )
 
 
@@ -192,9 +257,16 @@ class TestPipelineComposicional:
         ]
         sched_lookup = {"eap-A": _mk_sched("eap-A", weeks_a), "eap-B": _mk_sched("eap-B", weeks_b)}
         resource_costs = (
-            {"ESC": {"custo_mob_unit": remob[0], "custo_demob_unit": remob[1],
-                     "custo_idle_semanal_unit": 2000.0, "unidade_faturamento": "dia_cal"}}
-            if with_idle else {}
+            {
+                "ESC": {
+                    "custo_mob_unit": remob[0],
+                    "custo_demob_unit": remob[1],
+                    "custo_idle_semanal_unit": 2000.0,
+                    "unidade_faturamento": "dia_cal",
+                }
+            }
+            if with_idle
+            else {}
         )
         rcpsp_spec = {
             "resource_pool": {"ESC": 1},
@@ -205,16 +277,12 @@ class TestPipelineComposicional:
             "resource_costs": resource_costs,
         }
         validacoes = []
-        contratos, atribuicao, cadeias = mod._build_contratos_recurso(
-            equipes, rcpsp_spec, sched_lookup, validacoes
-        )
+        contratos, atribuicao, cadeias = mod._build_contratos_recurso(equipes, rcpsp_spec, sched_lookup, validacoes)
         for eq in equipes:
             if eq.item_id in atribuicao:
                 eq.custo_total_autonomo = eq.custo_total
                 eq.custo_total = atribuicao[eq.item_id][0]
-        instancias, _comp, _res = mod._build_instancias_recurso(
-            contratos, rcpsp_spec, sched_lookup, validacoes
-        )
+        instancias, _comp, _res = mod._build_instancias_recurso(contratos, rcpsp_spec, sched_lookup, validacoes)
         if instancias:
             mod._aplicar_custo_instancial_adr085(contratos, instancias, equipes, validacoes)
         return mod, contratos, equipes, instancias, validacoes
@@ -222,8 +290,7 @@ class TestPipelineComposicional:
     def test_taxas_por_componente_somam_unitaria(self):
         _mod, contratos, _eq, _inst, _val = self._run(with_idle=True)
         c = contratos[0]
-        soma = (c.custo_unit_semanal_mo + c.custo_unit_semanal_eq
-                + c.custo_unit_semanal_comb + c.custo_unit_semanal_mat)
+        soma = c.custo_unit_semanal_mo + c.custo_unit_semanal_eq + c.custo_unit_semanal_comb + c.custo_unit_semanal_mat
         assert soma == pytest.approx(c.custo_unit_semanal, rel=1e-3)
 
     def test_mobilizacao_tardia_preenchida(self):
@@ -249,8 +316,7 @@ class TestPipelineComposicional:
         _mod, contratos, _eq, _inst, _val = self._run(with_idle=True)
         for c in contratos:
             for part in c.particao_por_item:
-                soma = (part.custo_inst_mo + part.custo_inst_eq
-                        + part.custo_inst_comb + part.custo_inst_mat)
+                soma = part.custo_inst_mo + part.custo_inst_eq + part.custo_inst_comb + part.custo_inst_mat
                 assert soma == pytest.approx(part.custo_total_particionado, abs=0.05)
 
     def test_invariante_particao_soma_contrato(self):
@@ -296,7 +362,7 @@ class TestPipelineComposicional:
         inst = instancias[0]
         assert inst.custo_idle_mo > 0.0  # MO integral durante o gap curto (CLT)
         assert inst.custo_idle_eq > 0.0  # EQ a taxa reduzida durante o gap curto
-        assert inst.semanas_off == 0     # nada off interno: gap foi mantido idle
+        assert inst.semanas_off == 0  # nada off interno: gap foi mantido idle
 
     def test_gap_curto_mo_pesada_vira_off(self):
         """Gap curto mas MO pesada → liberar é mais barato que manter idle: OFF.

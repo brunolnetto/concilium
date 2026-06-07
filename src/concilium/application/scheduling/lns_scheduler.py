@@ -25,7 +25,6 @@ Note: SSGS is called with a Lagrangian-adjusted topological priority.
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -33,10 +32,10 @@ from concilium.application.scheduling.models import (
     Activity,
     ActivityDAG,
     ResourcePool,
+    ScheduledActivity,
     ScheduleError,
     ScheduleMetrics,
     ScheduleOutput,
-    ScheduledActivity,
 )
 from concilium.domain.models.optimization import ActivityPlan, RampProfile
 from concilium.domain.services.matching_oracle import MatchingOracle
@@ -111,9 +110,7 @@ class LnsScheduler:
 
         # λ_{ij,r}: penalty for concurrent pair (i, j, r).
         # ADR-079: pre-warm from initial_lambdas (RelatorioOportunidades) when available.
-        lambdas: dict[tuple[str, str, str], float] = (
-            dict(self.initial_lambdas) if self.initial_lambdas else {}
-        )
+        lambdas: dict[tuple[str, str, str], float] = dict(self.initial_lambdas) if self.initial_lambdas else {}
 
         best_output: ScheduleOutput | None = None
         best_C_total = float("inf")
@@ -121,7 +118,7 @@ class LnsScheduler:
         C_total_0: float | None = None
 
         for k in range(self.k_max):
-            step_k = self.step_0 * (self.step_decay ** k)
+            step_k = self.step_0 * (self.step_decay**k)
 
             # ── 1. Schedule with λ-weighted priority ─────────────────────
             priority_penalty = self._compute_priority_penalties(lambdas, topo)
@@ -154,17 +151,23 @@ class LnsScheduler:
 
             n_concurrent = len(sol.concurrent_pairs_lost)
 
-            self.iteration_log.append({
-                "k": k,
-                "C_total": C_total,
-                "C_mob": C_mob,
-                "C_op": C_op,
-                "n_concurrent": n_concurrent,
-            })
+            self.iteration_log.append(
+                {
+                    "k": k,
+                    "C_total": C_total,
+                    "C_mob": C_mob,
+                    "C_op": C_op,
+                    "n_concurrent": n_concurrent,
+                }
+            )
 
             _log.debug(
                 "LnsScheduler k=%d: C_total=%.1f, C_mob=%.1f, C_op=%.1f, n_conc=%d",
-                k, C_total, C_mob, C_op, n_concurrent,
+                k,
+                C_total,
+                C_mob,
+                C_op,
+                n_concurrent,
             )
 
             # Track best
@@ -219,8 +222,7 @@ class LnsScheduler:
             # ADR-081: threshold-based release
             pred_finish = max(
                 (
-                    scheduled[p].start_week
-                    + _math_lns.ceil(dag.get_threshold(p, aid) * act_map[p].duration_weeks)
+                    scheduled[p].start_week + _math_lns.ceil(dag.get_threshold(p, aid) * act_map[p].duration_weeks)
                     for p in preds
                     if p in scheduled
                 ),
@@ -260,16 +262,13 @@ class LnsScheduler:
         t = earliest
         while t + a.duration_weeks <= deadline:
             if all(
-                resource_usage.get(t + offset, {}).get(res, 0) + qty
-                <= pool.resources.get(res, 0)
+                resource_usage.get(t + offset, {}).get(res, 0) + qty <= pool.resources.get(res, 0)
                 for res, qty in a.required_resources.items()
                 for offset in range(a.duration_weeks)
             ):
                 return t
             t += 1
-        raise ScheduleError(
-            f"Activity '{a.activity_id}' cannot be scheduled within deadline {deadline}"
-        )
+        raise ScheduleError(f"Activity '{a.activity_id}' cannot be scheduled within deadline {deadline}")
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -312,8 +311,7 @@ def _compute_earliest_starts(
         preds = dag.predecessors(aid)
         if preds:
             es[aid] = max(
-                es.get(p, 0) + _math.ceil(dag.get_threshold(p, aid) * act_map[p].duration_weeks)
-                for p in preds
+                es.get(p, 0) + _math.ceil(dag.get_threshold(p, aid) * act_map[p].duration_weeks) for p in preds
             )
         else:
             es[aid] = 0

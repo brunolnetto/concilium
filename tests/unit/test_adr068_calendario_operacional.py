@@ -4,7 +4,12 @@ from datetime import UTC, datetime
 
 from concilium.application.runtime import Runtime
 from concilium.application.skills import run_cronograma, run_escopo_e_eap
-from concilium.domain.models.canonical import Cronograma, DistribuicaoSemanal, Praticabilidade, ScheduledActivityCanonical
+from concilium.domain.models.canonical import (
+    Cronograma,
+    DistribuicaoSemanal,
+    Praticabilidade,
+    ScheduledActivityCanonical,
+)
 from concilium.domain.services.backtracking_pe_builder import BacktrackingPEBuilder
 from concilium.domain.services.diagnostico_pe_builder import DiagnosticoPEBuilder
 from concilium.infrastructure.adapters.excel_adapter import ExcelRenderer
@@ -163,7 +168,12 @@ def test_f4_f5_diagnostico_e_backtracking_com_calendario():
         }
     )
 
-    from concilium.domain.models.canonical import EquipamentoEquipeDireta, EquipeDireta, FuncaoEquipeDireta, PontoEquilibrio
+    from concilium.domain.models.canonical import (
+        EquipamentoEquipeDireta,
+        EquipeDireta,
+        FuncaoEquipeDireta,
+        PontoEquilibrio,
+    )
 
     canonical = canonical.model_copy(
         update={

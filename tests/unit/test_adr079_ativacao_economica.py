@@ -25,10 +25,7 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
 
-_HELPERS_A = (
-    _ROOT
-    / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py"
-)
+_HELPERS_A = _ROOT / "src/concilium/application/skills/manifests/05-equipes-e-alocacao/_skill_helpers_a.py"
 _SELECTOR = _ROOT / "src/concilium/application/scheduling/selector.py"
 _LNS = _ROOT / "src/concilium/application/scheduling/lns_scheduler.py"
 
@@ -47,6 +44,7 @@ def _load_helpers_a() -> ModuleType:
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers de stub de schedule
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _make_sched_activity(item_id: str, weeks: list[str], num_equipes: int = 1):
     class _Dist:
@@ -68,6 +66,7 @@ def _weeks(start: int, end: int) -> list[str]:
 # ──────────────────────────────────────────────────────────────────────────────
 # A. custo_standby_idle
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestCustoIdleStandby:
     """Quando custo_idle_semanal_unit > 0, standby deve usar c_idle, não custo_unit_semanal."""
@@ -101,9 +100,7 @@ class TestCustoIdleStandby:
         sched_lookup = {"act-a": _make_sched_activity("act-a", _weeks(1, 4), num_equipes=2)}
 
         validacoes = []
-        instancias, _, resumos = mod._build_instancias_recurso(
-            [contrato], rcpsp_spec, sched_lookup, validacoes
-        )
+        instancias, _, resumos = mod._build_instancias_recurso([contrato], rcpsp_spec, sched_lookup, validacoes)
         return instancias, resumos
 
     def test_usa_custo_idle_quando_disponivel(self):
@@ -164,15 +161,14 @@ class TestCustoIdleStandby:
             "activities": [{"item_id": "act-b", "required_resources": {"T2": 1}}],
         }
         sched_lookup = {"act-b": _make_sched_activity("act-b", _weeks(1, 4), num_equipes=1)}
-        instancias, _, _ = mod._build_instancias_recurso(
-            [contrato], rcpsp_spec, sched_lookup, []
-        )
+        instancias, _, _ = mod._build_instancias_recurso([contrato], rcpsp_spec, sched_lookup, [])
         assert instancias[0].custo_standby == pytest.approx(0.0)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # B. Desmobilização Antecipada
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class TestDesmobilizacaoAntecipada:
     """Instâncias com trailing standby devem ter economia de desmobilização calculada."""
@@ -209,13 +205,9 @@ class TestDesmobilizacaoAntecipada:
             "resource_pool": {"T3": 1},
             "activities": [{"item_id": "act-c", "required_resources": {"T3": 1}}],
         }
-        sched_lookup = {
-            "act-c": _make_sched_activity("act-c", _weeks(1, act_weeks_end), num_equipes=1)
-        }
+        sched_lookup = {"act-c": _make_sched_activity("act-c", _weeks(1, act_weeks_end), num_equipes=1)}
         validacoes = []
-        instancias, _, _ = mod._build_instancias_recurso(
-            [contrato], rcpsp_spec, sched_lookup, validacoes
-        )
+        instancias, _, _ = mod._build_instancias_recurso([contrato], rcpsp_spec, sched_lookup, validacoes)
         return instancias[0]
 
     def test_semana_ultima_atividade_e_preenchida(self):
@@ -232,15 +224,13 @@ class TestDesmobilizacaoAntecipada:
     def test_economia_positiva_quando_vale_a_pena(self):
         """c_idle×trailing - c_demob > 0 → economia_desmob > 0."""
         # 4 × 2.000 = 8.000 > 5.000 (c_demob) → economia = 3.000
-        inst = self._run_trailing(act_weeks_end=4, contract_weeks=8,
-                                  custo_idle=2_000.0, custo_demob_unit=5_000.0)
+        inst = self._run_trailing(act_weeks_end=4, contract_weeks=8, custo_idle=2_000.0, custo_demob_unit=5_000.0)
         assert inst.economia_desmobilizacao_antecipada == pytest.approx(3_000.0)
 
     def test_economia_zero_quando_nao_vale_a_pena(self):
         """c_idle×trailing < c_demob → economia = 0 (não vale desmobilizar)."""
         # 4 × 1_000 = 4.000 < 10.000 (c_demob) → 0
-        inst = self._run_trailing(act_weeks_end=4, contract_weeks=8,
-                                  custo_idle=1_000.0, custo_demob_unit=10_000.0)
+        inst = self._run_trailing(act_weeks_end=4, contract_weeks=8, custo_idle=1_000.0, custo_demob_unit=10_000.0)
         assert inst.economia_desmobilizacao_antecipada == pytest.approx(0.0)
         assert inst.semanas_antecipacao_possivel == 0
 
@@ -252,8 +242,7 @@ class TestDesmobilizacaoAntecipada:
 
     def test_sem_custo_idle_nao_calcula_antecipacao(self):
         """c_idle = 0 → não há economia → antecipação = 0."""
-        inst = self._run_trailing(act_weeks_end=4, contract_weeks=8,
-                                  custo_idle=0.0, custo_demob_unit=5_000.0)
+        inst = self._run_trailing(act_weeks_end=4, contract_weeks=8, custo_idle=0.0, custo_demob_unit=5_000.0)
         assert inst.semanas_antecipacao_possivel == 0
         assert inst.economia_desmobilizacao_antecipada == pytest.approx(0.0)
 
@@ -267,6 +256,7 @@ class TestDesmobilizacaoAntecipada:
     def test_campos_existem_em_instancia_recurso(self):
         """InstanciaRecurso deve ter os três novos campos."""
         from concilium.domain.models.canonical import InstanciaRecurso
+
         inst = InstanciaRecurso(
             instancia_id="T3-01",
             contrato_id="c",
@@ -287,6 +277,7 @@ class TestDesmobilizacaoAntecipada:
 # C. G_r^viável — gap_max no chain builder
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestGrViavel:
     """_build_perpetuation_chains deve aceitar gap_max e quebrar cadeia quando gap > gap_max."""
 
@@ -294,16 +285,18 @@ class TestGrViavel:
         """Gera lista de items com start_idx/end_idx indicados."""
         result = []
         for i, (s, e) in enumerate(starts_ends):
-            result.append({
-                "item_id": f"act-{i+1}",
-                "required": required,
-                "active_weeks": _weeks(s, e),
-                "machine_weeks": (e - s + 1) * required,
-                "start_idx": s,
-                "end_idx": e + 1,  # exclusive
-                "semana_inicio": f"2026-W{s:02d}",
-                "semana_fim": f"2026-W{e:02d}",
-            })
+            result.append(
+                {
+                    "item_id": f"act-{i + 1}",
+                    "required": required,
+                    "active_weeks": _weeks(s, e),
+                    "machine_weeks": (e - s + 1) * required,
+                    "start_idx": s,
+                    "end_idx": e + 1,  # exclusive
+                    "semana_inicio": f"2026-W{s:02d}",
+                    "semana_fim": f"2026-W{e:02d}",
+                }
+            )
         return result
 
     def _chains(self, items, gap_max=9999, custo_mob=0.0, custo_demob=0.0, delta_max=2):
@@ -374,6 +367,7 @@ class TestGrViavel:
 # D. Matching Econômico
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestMatchingEconomico:
     """_build_contratos_recurso deve ler resource_costs e passar ao chain builder."""
 
@@ -382,6 +376,7 @@ class TestMatchingEconomico:
             def __init__(self, iid, c):
                 self.item_id = iid
                 self.custo_total = c
+
         return _Eq(item_id, custo_total)
 
     def test_custo_mob_desmob_contrato_calculado(self):
@@ -415,9 +410,7 @@ class TestMatchingEconomico:
             "act-1": _make_sched_activity("act-1", _weeks(1, 4), num_equipes=2),
             "act-2": _make_sched_activity("act-2", _weeks(6, 9), num_equipes=2),
         }
-        contratos, _, cadeias = mod._build_contratos_recurso(
-            equipes, rcpsp_spec, sched_lookup, []
-        )
+        contratos, _, cadeias = mod._build_contratos_recurso(equipes, rcpsp_spec, sched_lookup, [])
         assert len(contratos) == 1
         c = contratos[0]
         # 1 cadeia → 1 mob + 1 demob × pool=2 → (80k+40k) × 2 = 240k
@@ -538,6 +531,7 @@ class TestMatchingEconomico:
 # E. Inicialização λ₀
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class TestLambdaInicializacao:
     """LnsScheduler.initial_lambdas pré-aquece o dicionário de penalidades."""
 
@@ -580,6 +574,7 @@ class TestLambdaInicializacao:
     def test_explore_schedules_aceita_initial_lambdas(self):
         """explore_schedules deve aceitar parâmetro initial_lambdas."""
         import inspect
+
         from concilium.application.scheduling.selector import explore_schedules
 
         sig = inspect.signature(explore_schedules)
@@ -588,6 +583,7 @@ class TestLambdaInicializacao:
     def test_explore_schedules_initial_lambdas_default_none(self):
         """initial_lambdas deve ter default=None em explore_schedules."""
         import inspect
+
         from concilium.application.scheduling.selector import explore_schedules
 
         sig = inspect.signature(explore_schedules)

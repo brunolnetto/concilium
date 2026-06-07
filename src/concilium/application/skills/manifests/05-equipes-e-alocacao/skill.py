@@ -22,7 +22,6 @@ from concilium.domain.constants import (
 )
 from concilium.domain.models.canonical import (
     Alocacao,
-    CadeiaPerpetuacao,
     CanonicalModel,
     ConflitoPico,
     EquipamentoEquipeDireta,
@@ -787,14 +786,13 @@ def run_equipes_e_alocacao(
     composicao_equipes_atividade = []
     resumo_utilizacao_contratos = []
     if contratos_recurso and rcpsp_spec:
-        instancias_recurso, composicao_equipes_atividade, resumo_utilizacao_contratos = (
-            _build_instancias_recurso(contratos_recurso, rcpsp_spec, cron_lookup, validacoes)
+        instancias_recurso, composicao_equipes_atividade, resumo_utilizacao_contratos = _build_instancias_recurso(
+            contratos_recurso, rcpsp_spec, cron_lookup, validacoes
         )
         if resumo_utilizacao_contratos:
             n_ok = sum(1 for r in resumo_utilizacao_contratos if r.status_utilizacao == "OK")
             taxa_media = round(
-                sum(r.taxa_utilizacao_pct for r in resumo_utilizacao_contratos)
-                / len(resumo_utilizacao_contratos),
+                sum(r.taxa_utilizacao_pct for r in resumo_utilizacao_contratos) / len(resumo_utilizacao_contratos),
                 1,
             )
             validacoes.append(
@@ -818,9 +816,7 @@ def run_equipes_e_alocacao(
         # Executado por último: reescala atribuição/partição preservando a invariante
         # Σ custo_total_particionado == custo_total_contrato e atualiza eq.custo_total (N4).
         if instancias_recurso:
-            _aplicar_custo_instancial_adr085(
-                contratos_recurso, instancias_recurso, equipes, validacoes
-            )
+            _aplicar_custo_instancial_adr085(contratos_recurso, instancias_recurso, equipes, validacoes)
 
     # ADR-078: pré-processamento estrutural de compartilhamento
     relatorio_oportunidades = None

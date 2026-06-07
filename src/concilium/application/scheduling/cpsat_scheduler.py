@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 from ortools.sat.python import cp_model
@@ -34,10 +34,9 @@ from concilium.application.scheduling.models import (
     Activity,
     ActivityDAG,
     ResourcePool,
-    ScheduleError,
+    ScheduledActivity,
     ScheduleMetrics,
     ScheduleOutput,
-    ScheduledActivity,
 )
 from concilium.domain.models.optimization import RampProfile
 
@@ -154,7 +153,7 @@ class CpSatScheduler:
                 model.add(starts[succ_id] >= starts[pred_id] + lag)
 
         # ── extended precedences (SS, FF, FS+lag) ────────────────────────
-        for ep in (extended_precedences or []):
+        for ep in extended_precedences or []:
             pred_id, succ_id = ep.pred, ep.succ
             lag = ep.lag
             if ep.tipo == "FS":
@@ -258,9 +257,7 @@ class CpSatScheduler:
 
         # Resource utilisation avg
         total_capacity = sum(pool.resources.values()) * makespan
-        total_used = sum(
-            qty for week_usage in weekly.values() for qty in week_usage.values()
-        )
+        total_used = sum(qty for week_usage in weekly.values() for qty in week_usage.values())
         util_avg = total_used / total_capacity if total_capacity > 0 else 0.0
 
         # Leveling score: 1 - variance_ratio

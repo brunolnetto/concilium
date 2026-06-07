@@ -30,25 +30,30 @@ from concilium.infrastructure.settings import get_auth
 
 # ── Permissões granulares ─────────────────────────────────────────────────────
 
-PROJECT_READ       = "project:read"
-PROJECT_CREATE     = "project:create"
-PROJECT_RUN        = "project:run"
-PROJECT_APPROVE    = "project:approve"
-ARTIFACTS_READ     = "artifacts:read"
+PROJECT_READ = "project:read"
+PROJECT_CREATE = "project:create"
+PROJECT_RUN = "project:run"
+PROJECT_APPROVE = "project:approve"
+ARTIFACTS_READ = "artifacts:read"
 ARTIFACTS_DOWNLOAD = "artifacts:download"
-CATALOG_READ       = "catalog:read"
-CATALOG_WRITE      = "catalog:write"
-FINANCIALS_READ    = "financials:read"
-AUTH_MANAGE        = "auth:manage"
-SYSTEM_READ        = "system:read"
+CATALOG_READ = "catalog:read"
+CATALOG_WRITE = "catalog:write"
+FINANCIALS_READ = "financials:read"
+AUTH_MANAGE = "auth:manage"
+SYSTEM_READ = "system:read"
 
 # ── Mapeamento role → permissões ──────────────────────────────────────────────
 
 _VIEWER = frozenset({PROJECT_READ, ARTIFACTS_READ, CATALOG_READ})
 
-_OPERATOR = _VIEWER | frozenset({
-    PROJECT_CREATE, PROJECT_RUN, ARTIFACTS_DOWNLOAD, FINANCIALS_READ,
-})
+_OPERATOR = _VIEWER | frozenset(
+    {
+        PROJECT_CREATE,
+        PROJECT_RUN,
+        ARTIFACTS_DOWNLOAD,
+        FINANCIALS_READ,
+    }
+)
 
 _ENGINEER = _OPERATOR | frozenset({PROJECT_APPROVE, CATALOG_WRITE})
 
@@ -56,17 +61,22 @@ _ADMIN = _ENGINEER | frozenset({AUTH_MANAGE, SYSTEM_READ})
 
 _SERVICE_CI = frozenset({PROJECT_CREATE, PROJECT_RUN})
 
-_AUDITOR = frozenset({
-    PROJECT_READ, ARTIFACTS_READ, ARTIFACTS_DOWNLOAD, FINANCIALS_READ,
-})
+_AUDITOR = frozenset(
+    {
+        PROJECT_READ,
+        ARTIFACTS_READ,
+        ARTIFACTS_DOWNLOAD,
+        FINANCIALS_READ,
+    }
+)
 
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
-    "viewer":     _VIEWER,
-    "operator":   _OPERATOR,
-    "engineer":   _ENGINEER,
-    "admin":      _ADMIN,
+    "viewer": _VIEWER,
+    "operator": _OPERATOR,
+    "engineer": _ENGINEER,
+    "admin": _ADMIN,
     "service-ci": _SERVICE_CI,
-    "auditor":    _AUDITOR,
+    "auditor": _AUDITOR,
 }
 
 VALID_ROLES: frozenset[str] = frozenset(ROLE_PERMISSIONS.keys())
@@ -74,8 +84,8 @@ VALID_ROLES: frozenset[str] = frozenset(ROLE_PERMISSIONS.keys())
 # ── Mapeamento legado: scopes ADR-094 → roles ADR-099 ─────────────────────────
 
 LEGACY_SCOPE_TO_ROLE: dict[str, str] = {
-    "mcp:read":    "viewer",
-    "mcp:write":   "engineer",
+    "mcp:read": "viewer",
+    "mcp:write": "engineer",
     "pipeline:run": "operator",
 }
 
@@ -132,30 +142,30 @@ def _auth_enabled() -> bool:
 
 TOOL_PERMISSIONS: dict[str, str] = {
     # Leitura
-    "listar_projetos":          PROJECT_READ,
-    "consultar_status":         PROJECT_READ,
-    "listar_contextos":         CATALOG_READ,
-    "listar_cpus":              CATALOG_READ,
-    "buscar_cpu":               CATALOG_READ,
+    "listar_projetos": PROJECT_READ,
+    "consultar_status": PROJECT_READ,
+    "listar_contextos": CATALOG_READ,
+    "listar_cpus": CATALOG_READ,
+    "buscar_cpu": CATALOG_READ,
     "derivar_recursos_do_catalogo": CATALOG_READ,
     "listar_artefatos_projeto": ARTIFACTS_READ,
     # Dados financeiros
-    "consultar_viabilidade_prazo":  FINANCIALS_READ,
+    "consultar_viabilidade_prazo": FINANCIALS_READ,
     "identificar_gargalos_recurso": FINANCIALS_READ,
     # Download
-    "ler_artefato":             ARTIFACTS_DOWNLOAD,
-    "baixar_bundle_zip":        ARTIFACTS_DOWNLOAD,
-    "auditar_plano":            ARTIFACTS_READ,
-    "explorar_pool_recursos":   PROJECT_READ,
+    "ler_artefato": ARTIFACTS_DOWNLOAD,
+    "baixar_bundle_zip": ARTIFACTS_DOWNLOAD,
+    "auditar_plano": ARTIFACTS_READ,
+    "explorar_pool_recursos": PROJECT_READ,
     # Criação
     "criar_projeto_formulario": PROJECT_CREATE,
-    "iniciar_orcamento":        PROJECT_CREATE,
+    "iniciar_orcamento": PROJECT_CREATE,
     # Execução
-    "avancar_pipeline":         PROJECT_RUN,
-    "simular_impacto_replan":   PROJECT_RUN,
-    "aplicar_sugestao_replan":  PROJECT_RUN,
+    "avancar_pipeline": PROJECT_RUN,
+    "simular_impacto_replan": PROJECT_RUN,
+    "aplicar_sugestao_replan": PROJECT_RUN,
     # Aprovação
-    "aprovar_versao":           PROJECT_APPROVE,
+    "aprovar_versao": PROJECT_APPROVE,
 }
 
 
@@ -205,6 +215,7 @@ def permission(perm: str):
         @permission("project:run")
         def avancar_pipeline(...): ...
     """
+
     def decorator(fn: Any) -> Any:
         @wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -217,7 +228,9 @@ def permission(perm: str):
                         "Solicite ao admin o role adequado."
                     )
             return fn(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -231,6 +244,7 @@ def roles(*required_roles: str):
         @roles("engineer", "admin")
         def approve_version(request: Request, ...): ...
     """
+
     def decorator(fn: Any) -> Any:
         @wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -238,9 +252,10 @@ def roles(*required_roles: str):
                 token_roles = _get_roles_from_context(kwargs)
                 if not any(r in token_roles for r in required_roles):
                     raise PermissionError(
-                        f"Roles necessários: {list(required_roles)}. "
-                        f"Roles do token: {token_roles or ['(nenhum)']!r}."
+                        f"Roles necessários: {list(required_roles)}. Roles do token: {token_roles or ['(nenhum)']!r}."
                     )
             return fn(*args, **kwargs)
+
         return wrapper
+
     return decorator

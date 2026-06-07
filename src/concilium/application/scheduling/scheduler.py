@@ -43,10 +43,7 @@ def _compute_earliest_starts(act_map: dict, dag: ActivityDAG, topo_order: list) 
     for aid in topo_order:
         preds = dag.predecessors(aid)
         if preds:
-            earliest_start[aid] = max(
-                _pred_release(p, aid, earliest_start.get(p, 0), dag, act_map)
-                for p in preds
-            )
+            earliest_start[aid] = max(_pred_release(p, aid, earliest_start.get(p, 0), dag, act_map) for p in preds)
         else:
             earliest_start[aid] = 0
     return earliest_start
@@ -140,10 +137,7 @@ class SerialScheduler:
             preds = dag.predecessors(aid)
             # Todos os predecessores estão em scheduled (invariante da ready list)
             pred_finish = max(
-                (
-                    _pred_release(p, aid, scheduled[p].start_week - 1, dag, act_map)
-                    for p in preds
-                ),
+                (_pred_release(p, aid, scheduled[p].start_week - 1, dag, act_map) for p in preds),
                 default=0,
             )
             t = max(earliest_start[aid], pred_finish)
@@ -199,9 +193,10 @@ class SerialScheduler:
             if succs:
                 d_i = act_map[aid].duration_weeks
                 lf[aid] = min(
-                    lf.get(s, deadline_weeks) - act_map[s].duration_weeks  # LS[s]
-                    - math.ceil(dag.get_threshold(aid, s) * d_i)           # - ceil(θ × d_i)
-                    + d_i                                                   # + d_i → LF[i]
+                    lf.get(s, deadline_weeks)
+                    - act_map[s].duration_weeks  # LS[s]
+                    - math.ceil(dag.get_threshold(aid, s) * d_i)  # - ceil(θ × d_i)
+                    + d_i  # + d_i → LF[i]
                     for s in succs
                 )
                 lf[aid] = max(lf[aid], act_map[aid].duration_weeks)  # LF ≥ d_i

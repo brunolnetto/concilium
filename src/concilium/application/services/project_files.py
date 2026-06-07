@@ -31,7 +31,7 @@ DEFAULT_DELIVERABLES: dict = {
         # ── Artefatos em disco (outputs/) ─────────────────────────────────
         "resultado_xlsx": True,  # resultado_planejamento.xlsx — planilha principal
         "modelo_vivo_xlsx": False,  # modelo_vivo.xlsx — versão com fórmulas (pesada)
-        "relatorio_md": True,  # relatorio.md — relatório executivo em Markdown
+        "relatorio_md": False,  # relatorio.md — desabilitado (entrega oficial em PDF)
         "memoria_calculo": True,  # memorial_bdi.json — memorial de cálculo BDI (ADR-057)
         # ── Abas Excel analíticas (dentro do resultado_xlsx) ─────────────
         "aba_memorial_bdi": True,  # MEMORIAL.BDI — auditoria de cálculo BDI (ADR-057)

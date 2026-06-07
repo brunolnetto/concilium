@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+
 def _tools_root() -> Path:
     # src/concilium/infrastructure/catalog/mapping -> src -> RAIZ
     return Path(__file__).resolve().parents[5]

@@ -80,19 +80,18 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     benchmark.register(server)  # execução, empacotamento e download de benchmark
 
     # NEP-039: Register benchmark metadata tools
-    from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
     from concilium.infrastructure.settings import get_storage
+    from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
     storage = get_storage()
     benchmark_projects_root = storage.benchmark_projects_root or (storage.root / "benchmarks" / "projetos")
-    benchmark_store = FileSystemBenchmarkStore(
-        root=Path(benchmark_projects_root) / ".nep039"
-    )
+    benchmark_store = FileSystemBenchmarkStore(root=Path(benchmark_projects_root) / ".nep039")
     benchmark_nep039.register(server, benchmark_store)
 
     artifacts.register(server)  # ADR-093: listar/ler/baixar/bundle de artefatos
     _register_ui_resources(server)  # ADR-101: MCP Apps — recursos ui://
-    patch_fastmcp_server(server)    # ADR-095: OTEL tracing em todas as tools
-    _patch_mcp_with_auth(server)    # ADR-099: JWT middleware para transport HTTP
+    patch_fastmcp_server(server)  # ADR-095: OTEL tracing em todas as tools
+    _patch_mcp_with_auth(server)  # ADR-099: JWT middleware para transport HTTP
     return server
 
 
@@ -103,10 +102,10 @@ def _register_ui_resources(server: FastMCP) -> None:
     MCP Apps declaram _meta.ui.resourceUri apontando para esses URIs.
     """
     _apps = {
-        "ui://concilium/formulario-qqp":      "formulario-qqp/index.html",
+        "ui://concilium/formulario-qqp": "formulario-qqp/index.html",
         "ui://concilium/dashboard-resultado": "dashboard-resultado/index.html",
-        "ui://concilium/diagnostico-pe":      "diagnostico-pe/index.html",
-        "ui://concilium/artefatos":           "artefatos/index.html",
+        "ui://concilium/diagnostico-pe": "diagnostico-pe/index.html",
+        "ui://concilium/artefatos": "artefatos/index.html",
     }
 
     for uri, rel_path in _apps.items():
@@ -121,6 +120,7 @@ def _register_ui_resources(server: FastMCP) -> None:
             @server.resource(resource_uri, mime_type="text/html")
             def _handler() -> str:  # type: ignore[no-untyped-def]
                 return content
+
             return _handler
 
         _make_handler(html_content, uri)
@@ -142,7 +142,7 @@ def _patch_mcp_with_auth(server: FastMCP) -> None:
         return McpAuthMiddleware(_original_sse(*args, **kwargs))
 
     server.streamable_http_app = _http_with_auth  # type: ignore[method-assign]
-    server.sse_app = _sse_with_auth               # type: ignore[method-assign]
+    server.sse_app = _sse_with_auth  # type: ignore[method-assign]
 
 
 def main() -> None:
@@ -158,14 +158,12 @@ def main() -> None:
 
     config_root = _config_root()
     if not config_root.exists():
-        raise RuntimeError(
-            "Diretório de configuração não encontrado: "
-            f"{config_root}. Defina CONCILIUM__CONFIG_ROOT."
-        )
+        raise RuntimeError(f"Diretório de configuração não encontrado: {config_root}. Defina CONCILIUM__CONFIG_ROOT.")
     if not config_root.is_dir():
         raise RuntimeError(f"Configuração inválida: {config_root} não é diretório.")
 
     from concilium.infrastructure.settings import get_mcp, startup_check
+
     startup_check()
     mcp = get_mcp()
     transport = mcp.transport

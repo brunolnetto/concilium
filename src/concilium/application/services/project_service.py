@@ -25,7 +25,6 @@ from .project_files import DEFAULT_PROJECT_FILES, ProjectFiles
 from .project_repository import ProjectRepository
 from .service_support import build_summary
 
-
 logger = logging.getLogger(__name__)
 
 

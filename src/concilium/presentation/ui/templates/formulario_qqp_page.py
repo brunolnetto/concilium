@@ -67,7 +67,7 @@ def _buscar_cpus(termo: str) -> list[dict]:
     try:
         resp = api_call(
             "GET",
-            f"/api/catalogs/cpus",
+            "/api/catalogs/cpus",
             base_url=DEFAULT_BASE_URL,
             actor=DEFAULT_ACTOR,
             params={"q": termo, "limit": "10"},
@@ -193,7 +193,9 @@ def render_formulario_qqp_page() -> None:
         col_add, col_suggest = st.columns([1, 1])
         with col_add:
             if st.button("➕ Adicionar serviço", use_container_width=True):
-                servicos.append({"descricao": "", "quantidade": 1.0, "unidade": "m³", "cpu_id": "", "predecessores": []})
+                servicos.append(
+                    {"descricao": "", "quantidade": 1.0, "unidade": "m³", "cpu_id": "", "predecessores": []}
+                )
                 st.rerun()
         with col_suggest:
             if st.button("🔍 Sugerir CPUs automaticamente", use_container_width=True, type="primary"):
@@ -231,8 +233,7 @@ def render_formulario_qqp_page() -> None:
 
         if servicos_sem_cpu:
             st.warning(
-                "Os itens abaixo ainda não têm CPU. Preencha manualmente ou use "
-                "'Sugerir CPUs' na seção anterior."
+                "Os itens abaixo ainda não têm CPU. Preencha manualmente ou use 'Sugerir CPUs' na seção anterior."
             )
             for s in servicos_sem_cpu:
                 st.markdown(f"- **{s['descricao']}** ({s['quantidade']} {s['unidade']})")

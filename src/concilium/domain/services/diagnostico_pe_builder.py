@@ -40,6 +40,7 @@ def _compute_item_metrics(active: list) -> dict[str, float]:
     agregado; |eps_cross| > CROSS_TERM_THRESHOLD indica acoplamento material.
     """
     N_total = sum(d.num_equipes for d in active)
+
     # ADR-082: fator efetivo η_j = fator_total = η_s · η_p · η_w
     def _eta(d: Any) -> float:
         ft = getattr(d, "fator_total", None)
@@ -59,18 +60,14 @@ def _compute_item_metrics(active: list) -> dict[str, float]:
     p_medio = sum(_eta(d) for d in active) / T_weeks
     clima_medio = sum(float(getattr(d, "fator_clima", _eta(d))) for d in active) / T_weeks
     # η_s e η_p médios (NEP-035) — disponíveis quando campos foram populados
-    eta_s_medio = (
-        sum(float(getattr(d, "eta_s", 1.0)) for d in active) / T_weeks
-    )
-    eta_p_medio = (
-        sum(float(getattr(d, "eta_p", float(getattr(d, "fator_clima", 1.0)))) for d in active) / T_weeks
-    )
-    eta_w_medio = (
-        sum(float(getattr(d, "eta_w", float(d.eficiencia))) for d in active) / T_weeks
-    )
+    eta_s_medio = sum(float(getattr(d, "eta_s", 1.0)) for d in active) / T_weeks
+    eta_p_medio = sum(float(getattr(d, "eta_p", float(getattr(d, "fator_clima", 1.0)))) for d in active) / T_weeks
+    eta_w_medio = sum(float(getattr(d, "eta_w", float(d.eficiencia))) for d in active) / T_weeks
     calendario_medio = sum(float(getattr(d, "fator_calendario", 1.0)) for d in active) / T_weeks
     calendario_ponderado_n = (
-        sum(float(getattr(d, "fator_calendario", 1.0)) * _weight(d) for d in active) / Q_max_total if Q_max_total > 0 else 1.0
+        sum(float(getattr(d, "fator_calendario", 1.0)) * _weight(d) for d in active) / Q_max_total
+        if Q_max_total > 0
+        else 1.0
     )
     n_medio = N_total / T_weeks
     # Termo cruzado calculado a partir dos pesos de capacidade (Seção 5 do modelo)

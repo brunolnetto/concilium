@@ -26,8 +26,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .batch import BenchmarkBatchRunner
 from concilium.infrastructure.settings import get_storage
+
+from .batch import BenchmarkBatchRunner
 from .input_derivation import normalize_referencia_weeks
 from .report_builder import BenchmarkReportBuilder
 from .report_printer import BenchmarkReportPrinter

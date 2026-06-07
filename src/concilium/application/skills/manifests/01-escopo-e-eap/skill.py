@@ -20,7 +20,6 @@ from concilium.domain.models.canonical import (
     Coordenadas,
     EapItem,
     Meta,
-    PrecedenciaItem,
     Projeto,
     RegimeTrabalho,
     ValidacaoItem,
@@ -231,7 +230,9 @@ def _compute_longest_paths(
     return longest_path_to, start_offset_min
 
 
-def _build_activity_dag(nos: list, arestas_validas: list[tuple[str, str, str, int]], ordem_topologica: list) -> ActivityDag:
+def _build_activity_dag(
+    nos: list, arestas_validas: list[tuple[str, str, str, int]], ordem_topologica: list
+) -> ActivityDag:
     succ_map: dict = defaultdict(list)
     pred_map_typed: dict = defaultdict(list)  # {n: [(pred, tipo, lag), ...]}
     for a, b, tipo, lag in arestas_validas:

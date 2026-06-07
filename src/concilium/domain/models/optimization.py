@@ -27,7 +27,6 @@ from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # RampProfile (Pydantic frozen value object)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +62,7 @@ class RampProfile(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_consistency(self) -> "RampProfile":
+    def _validate_consistency(self) -> RampProfile:
         if self.K_max < self.n_0:
             raise ValueError(
                 f"K_max ({self.K_max}) must be >= n_0 ({self.n_0}): "
@@ -71,8 +70,7 @@ class RampProfile(BaseModel):
             )
         if self.r + self.d > self.n_i:
             raise ValueError(
-                f"r ({self.r}) + d ({self.d}) > n_i ({self.n_i}): "
-                "ramp-up + ramp-down phases exceed activity duration"
+                f"r ({self.r}) + d ({self.d}) > n_i ({self.n_i}): ramp-up + ramp-down phases exceed activity duration"
             )
         return self
 
@@ -88,7 +86,7 @@ class RampProfile(BaseModel):
         n_i: int,
         resources_per_team: dict[str, int],
         n_0: int = 1,
-    ) -> "RampProfile":
+    ) -> RampProfile:
         """Build a RampProfile, computing m and boundary values from parameters.
 
         Args:
@@ -102,14 +100,10 @@ class RampProfile(BaseModel):
         """
         if K_max < n_0:
             raise ValueError(
-                f"K_max ({K_max}) must be >= n_0 ({n_0}): "
-                "peak team count cannot be less than initial team count"
+                f"K_max ({K_max}) must be >= n_0 ({n_0}): peak team count cannot be less than initial team count"
             )
         if r + d > n_i:
-            raise ValueError(
-                f"r ({r}) + d ({d}) > n_i ({n_i}): "
-                "ramp-up + ramp-down phases exceed activity duration"
-            )
+            raise ValueError(f"r ({r}) + d ({d}) > n_i ({n_i}): ramp-up + ramp-down phases exceed activity duration")
 
         t_demob_start = n_i - d  # first ramp-down week index
         c_mob_eff = (K_max - n_0) / r if r > 0 else 0.0

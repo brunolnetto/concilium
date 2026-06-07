@@ -65,7 +65,10 @@ def render_markdown_pdf(
     """
     if _USE_REPORTLAB:
         from .pdf_renderer_rl import render_markdown_pdf as _rl_render
-        return _rl_render(md_text, title, image_provider)
+
+        pdf_rl = _rl_render(md_text, title, image_provider)
+        if pdf_rl:
+            return pdf_rl
 
     temp_paths: list[str] = []
     try:

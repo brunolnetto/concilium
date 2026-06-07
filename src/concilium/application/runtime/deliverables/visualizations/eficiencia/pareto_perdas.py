@@ -42,8 +42,13 @@ def plot_pareto_perdas(
     fig, ax = plt.subplots(figsize=(9, max(3, len(pareto_sorted) * 0.45)))
     bars = ax.barh(labels, values, color="#FB8C00", alpha=0.85, edgecolor="white")
     for bar, val in zip(bars, values, strict=True):
-        ax.text(bar.get_width() + max(values) * 0.01, bar.get_y() + bar.get_height() / 2,
-                f"{val:,.0f} {unidade}", va="center", fontsize=8)
+        ax.text(
+            bar.get_width() + max(values) * 0.01,
+            bar.get_y() + bar.get_height() / 2,
+            f"{val:,.0f} {unidade}",
+            va="center",
+            fontsize=8,
+        )
     ax.set_xlabel(f"Perda física total ({unidade})")
     ax.set_title(f"{title} (Top {len(pareto_sorted)})")
     ax.set_xlim(0, max(values) * 1.15 if values else 1)

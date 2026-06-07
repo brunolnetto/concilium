@@ -41,12 +41,7 @@ def calcular_custo_contrato_por_instancia(
     - ``custo_idle_semanal=0`` → standby cobrado a taxa plena (comportamento anterior)
     """
     rate_standby = custo_idle_semanal if custo_idle_semanal > 0 else custo_unit_semanal
-    return (
-        custo_unit_semanal * active_weeks
-        + rate_standby * standby_weeks
-        + custo_mob
-        + custo_demob
-    )
+    return custo_unit_semanal * active_weeks + rate_standby * standby_weeks + custo_mob + custo_demob
 
 
 def calcular_custo_instancia_composicional(
@@ -84,7 +79,7 @@ def calcular_custo_instancia_composicional(
     ativo_eq = c_eq * prod_weeks
     ativo_comb = c_comb * prod_weeks
     ativo_mat = c_mat * prod_weeks
-    idle_mo = c_mo * idle_weeks       # MO integral durante ociosidade (CLT)
+    idle_mo = c_mo * idle_weeks  # MO integral durante ociosidade (CLT)
     idle_eq = c_idle_eq * idle_weeks  # EQ à taxa de locação reduzida
     total = ativo_mo + ativo_eq + ativo_comb + ativo_mat + idle_mo + idle_eq + c_demob_efetivo
     return {

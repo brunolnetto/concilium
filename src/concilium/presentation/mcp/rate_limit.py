@@ -36,6 +36,7 @@ def mcp_rate_limit(calls: int = _PIPELINE_CALLS, period_s: int = _PIPELINE_PERIO
     Levanta RuntimeError com mensagem descritiva quando o limite é atingido —
     o FastMCP retorna essa mensagem ao agente LLM como texto de erro.
     """
+
     def decorator(tool_fn: Any) -> Any:
         @wraps(tool_fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -58,4 +59,5 @@ def mcp_rate_limit(calls: int = _PIPELINE_CALLS, period_s: int = _PIPELINE_PERIO
             return tool_fn(*args, **kwargs)
 
         return wrapper
+
     return decorator

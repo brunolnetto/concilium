@@ -56,10 +56,7 @@ def select_scheduling_algorithm(
         heuristics=[],
         timeout_seconds=0,
         leveling_pass=False,
-        rationale=(
-            f"n={num_activities} > {_CPSAT_MAX_ACTIVITIES} — LNS Lagrangian+SSGS "
-            "heuristic (ADR-075 Mode B)."
-        ),
+        rationale=(f"n={num_activities} > {_CPSAT_MAX_ACTIVITIES} — LNS Lagrangian+SSGS heuristic (ADR-075 Mode B)."),
     )
 
 

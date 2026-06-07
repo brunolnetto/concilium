@@ -1,8 +1,8 @@
 from .algorithm_comparison import (
+    DEFAULT_COMPARISON_ALGORITHMS,
     AlgorithmComparisonEntry,
     AlgorithmComparisonReport,
     AlgorithmComparisonRunner,
-    DEFAULT_COMPARISON_ALGORITHMS,
 )
 from .batch import BenchmarkBatchRunner
 from .facade import BenchmarkFacade

@@ -162,20 +162,20 @@ def _converter_rental_unit(
     rental_unit: str | None,
     producao_horaria: float = 1.0,
     horas_dia: float = 8.0,
-    horas_mes: float = 193.6
+    horas_mes: float = 193.6,
 ) -> float:
     """NEP-031 L1: Converte preco de aluguel para custo por hora produtiva.
-    
+
     Args:
         preco_original: Preco na unidade original (R$/hora, R$/dia ou R$/mes)
         rental_unit: Unidade de aluguel ("hora_produtiva", "dia_calendario", "mes", None)
         producao_horaria: Fator de producao horaria (eta_p, ex: 0.8 = 80% utilizacao)
         horas_dia: Horas de trabalho por dia calendario (default: 8h)
         horas_mes: Horas de trabalho por mes (default: 193.6h = 22 dias x 8.8h)
-    
+
     Returns:
         Custo por hora produtiva (R$/h_produtiva)
-    
+
     Conversoes:
         - hora_produtiva (None/default): preco ja esta em R$/h produtiva -> sem conversao
         - dia_calendario: (preco / horas_dia) / producao_horaria
@@ -185,17 +185,17 @@ def _converter_rental_unit(
     """
     if not rental_unit or rental_unit == "hora_produtiva":
         return preco_original
-    
+
     if rental_unit == "dia_calendario":
         # R$/dia -> R$/h_calendario -> R$/h_produtiva
         custo_hora_calendario = preco_original / horas_dia
         return custo_hora_calendario / producao_horaria if producao_horaria > 0 else custo_hora_calendario
-    
+
     if rental_unit == "mes":
         # R$/mes -> R$/h_calendario -> R$/h_produtiva
         custo_hora_calendario = preco_original / horas_mes
         return custo_hora_calendario / producao_horaria if producao_horaria > 0 else custo_hora_calendario
-    
+
     # Fallback: unidade desconhecida, retorna sem conversao
     return preco_original
 

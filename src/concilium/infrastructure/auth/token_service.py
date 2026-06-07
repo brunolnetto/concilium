@@ -17,8 +17,8 @@ _ISSUER = "concilium-auth"
 _ORG = "mendesloboconstrucao"
 _ALGORITHM = "RS256"
 
-TTL_INTERACTIVE = timedelta(hours=8)   # Claude Desktop, engenheiros, agentes LLM
-TTL_CI = timedelta(days=90)            # service accounts CI/calibração
+TTL_INTERACTIVE = timedelta(hours=8)  # Claude Desktop, engenheiros, agentes LLM
+TTL_CI = timedelta(days=90)  # service accounts CI/calibração
 
 
 def issue_token(

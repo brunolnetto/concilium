@@ -162,9 +162,7 @@ def _render_hot_overview_tab(base_url: str, actor: str, project: dict, project_i
 
 
 def _render_hot_control_panel_tab(base_url: str, actor: str, project: dict, project_id: str) -> None:
-    sub_catalog, sub_plan, sub_versions = st.tabs(
-        ["🔍 Catálogo", "📊 Planejamento", "🗂️ Versões"]
-    )
+    sub_catalog, sub_plan, sub_versions = st.tabs(["🔍 Catálogo", "📊 Planejamento", "🗂️ Versões"])
 
     with sub_catalog:
         _render_project_catalog_section(base_url, project_id, actor)

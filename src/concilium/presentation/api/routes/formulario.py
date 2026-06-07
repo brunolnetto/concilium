@@ -76,10 +76,7 @@ def sugerir_cpus(request: Request, response: Response, body: SugerirCpusRequest)
             }
             for it in result["mapeados"]
         ],
-        "nao_mapeados": [
-            {"descricao": it["descricao"], "item_id": it["item_id"]}
-            for it in result["nao_mapeados"]
-        ],
+        "nao_mapeados": [{"descricao": it["descricao"], "item_id": it["item_id"]} for it in result["nao_mapeados"]],
         "total": result["total"],
         "todos_mapeados": len(result["nao_mapeados"]) == 0,
     }

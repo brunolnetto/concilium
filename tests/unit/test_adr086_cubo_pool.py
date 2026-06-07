@@ -19,7 +19,7 @@ from concilium.application.services.cubo_pool_projection import (
     cubo_pool_projection_contract,
     resolve_cubo_pool_projection,
 )
-from concilium.domain.models.cubo_pool import CelulaPoolInstancial, CuboPoolInstancial
+from concilium.domain.models.cubo_pool import CelulaPoolInstancial
 from concilium.domain.services.cubo_pool_builder import (
     CuboPoolInstancialBuilder,
     validar_invariantes_cubo_pool,
@@ -38,19 +38,38 @@ def _load_helpers_a():
 
 def _mk_sched(item_id, weeks):
     from concilium.domain.models.canonical import DistribuicaoSemanal, ScheduledActivityCanonical
-    dist = {w: DistribuicaoSemanal(num_equipes=1, qtd_executada=10.0, qtd_acumulada=10.0,
-                                   pct=1.0, eficiencia=1.0, fator_clima=1.0, fator_calendario=1.0)
-            for w in weeks}
-    return ScheduledActivityCanonical(activity_id=item_id, start_week=0, end_week=len(weeks),
-                                      duration_weeks=len(weeks), distribuicao_semanal=dist)
+
+    dist = {
+        w: DistribuicaoSemanal(
+            num_equipes=1,
+            qtd_executada=10.0,
+            qtd_acumulada=10.0,
+            pct=1.0,
+            eficiencia=1.0,
+            fator_clima=1.0,
+            fator_calendario=1.0,
+        )
+        for w in weeks
+    }
+    return ScheduledActivityCanonical(
+        activity_id=item_id, start_week=0, end_week=len(weeks), duration_weeks=len(weeks), distribuicao_semanal=dist
+    )
 
 
 def _mk_equipe(item_id, mo, eq, comb, mat, custo_total):
     from concilium.domain.models.canonical import EquipeDireta
-    return EquipeDireta(equipe_id=f"eq-{item_id}", item_id=item_id, cpu_id="CPU-X",
-                        custo_mao_obra_mensal=mo, custo_equipamentos_mensal=eq,
-                        custo_combustivel_total_mensal=comb, custo_material_mensal=mat,
-                        custo_fixo_mensal=mo + eq + mat, custo_total=custo_total)
+
+    return EquipeDireta(
+        equipe_id=f"eq-{item_id}",
+        item_id=item_id,
+        cpu_id="CPU-X",
+        custo_mao_obra_mensal=mo,
+        custo_equipamentos_mensal=eq,
+        custo_combustivel_total_mensal=comb,
+        custo_material_mensal=mat,
+        custo_fixo_mensal=mo + eq + mat,
+        custo_total=custo_total,
+    )
 
 
 def _build_pool(weeks_b, mo=200.0, remob=(20000.0, 10000.0)):
@@ -58,15 +77,25 @@ def _build_pool(weeks_b, mo=200.0, remob=(20000.0, 10000.0)):
     mod = _load_helpers_a()
     weeks_a = [f"S{n:03d}" for n in range(1, 11)]
     base = mo + 3000.0 + 1500.0 + 500.0
-    equipes = [_mk_equipe("eap-A", mo, 3000.0, 1500.0, 500.0, base * 10),
-               _mk_equipe("eap-B", mo, 3000.0, 1500.0, 500.0, base * len(weeks_b))]
+    equipes = [
+        _mk_equipe("eap-A", mo, 3000.0, 1500.0, 500.0, base * 10),
+        _mk_equipe("eap-B", mo, 3000.0, 1500.0, 500.0, base * len(weeks_b)),
+    ]
     sched = {"eap-A": _mk_sched("eap-A", weeks_a), "eap-B": _mk_sched("eap-B", weeks_b)}
     rcpsp = {
         "resource_pool": {"ESC": 1},
-        "activities": [{"item_id": "eap-A", "required_resources": {"ESC": 1}},
-                       {"item_id": "eap-B", "required_resources": {"ESC": 1}}],
-        "resource_costs": {"ESC": {"custo_mob_unit": remob[0], "custo_demob_unit": remob[1],
-                                   "custo_idle_semanal_unit": 2000.0, "unidade_faturamento": "dia_cal"}},
+        "activities": [
+            {"item_id": "eap-A", "required_resources": {"ESC": 1}},
+            {"item_id": "eap-B", "required_resources": {"ESC": 1}},
+        ],
+        "resource_costs": {
+            "ESC": {
+                "custo_mob_unit": remob[0],
+                "custo_demob_unit": remob[1],
+                "custo_idle_semanal_unit": 2000.0,
+                "unidade_faturamento": "dia_cal",
+            }
+        },
     }
     val = []
     contratos, atrib, cadeias = mod._build_contratos_recurso(equipes, rcpsp, sched, val)
@@ -78,7 +107,8 @@ def _build_pool(weeks_b, mo=200.0, remob=(20000.0, 10000.0)):
     mod._aplicar_custo_instancial_adr085(contratos, instancias, equipes, val)
     canonical = SimpleNamespace(
         projeto=SimpleNamespace(nome="TEST-POOL"),
-        contratos_recurso=contratos, instancias_recurso=instancias,
+        contratos_recurso=contratos,
+        instancias_recurso=instancias,
         cadeias_perpetuacao=cadeias,
     )
     return canonical, contratos, instancias
@@ -88,9 +118,18 @@ def _build_pool(weeks_b, mo=200.0, remob=(20000.0, 10000.0)):
 
 
 def test_celula_custo_total_e_id():
-    c = CelulaPoolInstancial(contrato_id="c", tipo_id="ESC", instancia_numero=3,
-                             semana_iso="S005", estado="prod", atividade_id="a",
-                             custo_mo=100, custo_eq=40, custo_comb=20, custo_mat=10)
+    c = CelulaPoolInstancial(
+        contrato_id="c",
+        tipo_id="ESC",
+        instancia_numero=3,
+        semana_iso="S005",
+        estado="prod",
+        atividade_id="a",
+        custo_mo=100,
+        custo_eq=40,
+        custo_comb=20,
+        custo_mat=10,
+    )
     assert c.custo_total == 170.0
     assert c.instancia_id == "ESC-03"
 
@@ -121,9 +160,7 @@ def test_builder_h3_off_zero():
 
     MO pesada + remob barato → gap longo é liberado (off), não mantido idle.
     """
-    canonical, contratos, _ = _build_pool(
-        [f"S{n:03d}" for n in range(20, 26)], mo=8000.0, remob=(5000.0, 2500.0)
-    )
+    canonical, contratos, _ = _build_pool([f"S{n:03d}" for n in range(20, 26)], mo=8000.0, remob=(5000.0, 2500.0))
     cubo = CuboPoolInstancialBuilder().build(canonical)
     off = [c for c in cubo.celulas if c.estado == "off"]
     assert off, "esperava semanas off com gap longo e MO pesada"
@@ -146,15 +183,28 @@ def test_idle_mantem_mo_zera_comb():
 def test_contrato_lista_7_faces():
     contract = cubo_pool_projection_contract()
     assert set(contract["faces"]) == {
-        "utilizacao_temporal", "custo_estado_componente", "instancia_ciclo_vida",
-        "atividade_instancia", "causa_custo", "economia_pool", "cadeia_perpetuacao",
+        "utilizacao_temporal",
+        "custo_estado_componente",
+        "instancia_ciclo_vida",
+        "atividade_instancia",
+        "causa_custo",
+        "economia_pool",
+        "cadeia_perpetuacao",
     }
 
 
-@pytest.mark.parametrize("face", [
-    "utilizacao_temporal", "custo_estado_componente", "instancia_ciclo_vida",
-    "atividade_instancia", "causa_custo", "economia_pool", "cadeia_perpetuacao",
-])
+@pytest.mark.parametrize(
+    "face",
+    [
+        "utilizacao_temporal",
+        "custo_estado_componente",
+        "instancia_ciclo_vida",
+        "atividade_instancia",
+        "causa_custo",
+        "economia_pool",
+        "cadeia_perpetuacao",
+    ],
+)
 def test_face_retorna_contrato_projecao(face):
     canonical, _, _ = _build_pool([f"S{n:03d}" for n in range(13, 19)])
     proj = resolve_cubo_pool_projection(canonical, face=face, granularidade="mes")

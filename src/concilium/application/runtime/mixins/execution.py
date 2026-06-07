@@ -11,15 +11,15 @@ from concilium.application.skills import SKILLS
 from concilium.application.skills.base import SkillResult
 from concilium.infrastructure.storage.project import ProjectStore
 
-from ..exceptions import RuntimeDomainError, RuntimeTechnicalError
-from ..gates import _GATE_SKILLS
-from ..helpers.pipeline import _execute_skill
 from ..deliverables.side_effects import (
     _handle_skill_04_side_effects,
     _handle_skill_09_side_effects,
     _json_default,
     _persist_typed_artifacts,
 )
+from ..exceptions import RuntimeDomainError, RuntimeTechnicalError
+from ..gates import _GATE_SKILLS
+from ..helpers.pipeline import _execute_skill
 
 
 class ExecutionMixin:
@@ -69,6 +69,7 @@ class ExecutionMixin:
             )
             project.save_canonical(tainted, v, trace_id=trace_id, created_by=f"taint:{skill_id}")
         from ..exceptions import RuntimeError as _RE
+
         if isinstance(exc, _RE):
             raise
         raise RuntimeTechnicalError(f"Falha técnica ao executar skill '{skill_id}': {exc}") from exc
@@ -121,9 +122,7 @@ class ExecutionMixin:
             raise RuntimeDomainError("Nenhuma versão ativa. Execute 'concilium version new' primeiro.")
         missing_deps = self._resolve_missing_deps(contract, skill_id, project, v, _executed_ok)
         if missing_deps:
-            raise RuntimeDomainError(
-                f"Skill '{skill_id}' requer execução prévia bem-sucedida de: {missing_deps}"
-            )
+            raise RuntimeDomainError(f"Skill '{skill_id}' requer execução prévia bem-sucedida de: {missing_deps}")
 
         canonical_in = project.load_canonical(v)
         contexto = self.load_contexto(project.meta["contexto_id"])  # type: ignore[attr-defined]

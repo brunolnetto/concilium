@@ -250,7 +250,11 @@ def _process_mob_categoria(
         custo = round(custo * policy_scale[dv4_policy], 2)
         cat_obj = cat_obj.model_copy(update={"custo_fixo_total": custo})
     indir = Indireto(
-        categoria="MOB", descricao=descricao, mobilizacoes=mobs, permanencia_meses=float(prazo_meses), custo_total=custo,
+        categoria="MOB",
+        descricao=descricao,
+        mobilizacoes=mobs,
+        permanencia_meses=float(prazo_meses),
+        custo_total=custo,
         # ADR-090: MOB é overhead administrativo → BDI_indireto
         custo_mobilizacao=round(custo, 2),
     )
@@ -312,12 +316,13 @@ def _apply_dv4_scale_to_categoria(
     return custo, cat_obj
 
 
-def _sub_custos_indireto(cat_obj: "IndirectoCategoria", custo_total: float) -> dict[str, float]:
+def _sub_custos_indireto(cat_obj: IndirectoCategoria, custo_total: float) -> dict[str, float]:
     """ADR-090: calcula sub-custos por categoria_insumo para BDI diferenciado.
 
     Se os componentes de cat_obj têm custo explícito, usa-os diretamente.
     Senão, distribui custo_total pelas frações de custo_fixo_mensal de cada componente.
     """
+
     def _comp_custo(comp) -> float:
         if comp is None:
             return 0.0
@@ -325,31 +330,34 @@ def _sub_custos_indireto(cat_obj: "IndirectoCategoria", custo_total: float) -> d
             return float(comp.custo_total)
         return float(comp.custo_fixo_mensal or 0.0)
 
-    c_mo    = _comp_custo(cat_obj.mao_de_obra)
-    c_eq    = _comp_custo(cat_obj.equipamentos)
+    c_mo = _comp_custo(cat_obj.mao_de_obra)
+    c_eq = _comp_custo(cat_obj.equipamentos)
     c_verba = _comp_custo(cat_obj.verbas)
-    c_base  = c_mo + c_eq + c_verba
+    c_base = c_mo + c_eq + c_verba
 
     if c_base > 0 and custo_total > 0:
         scale = custo_total / c_base
         return {
-            "custo_mao_obra":     round(c_mo    * scale, 2),
-            "custo_equipamentos": round(c_eq    * scale, 2),
-            "custo_verba":        round(c_verba * scale, 2),
-            "custo_combustivel":  0.0,
-            "custo_mobilizacao":  0.0,
+            "custo_mao_obra": round(c_mo * scale, 2),
+            "custo_equipamentos": round(c_eq * scale, 2),
+            "custo_verba": round(c_verba * scale, 2),
+            "custo_combustivel": 0.0,
+            "custo_mobilizacao": 0.0,
         }
     # Fallback: sem dados de composição → tudo como verba (taxa mais conservadora)
     return {
-        "custo_mao_obra": 0.0, "custo_equipamentos": 0.0,
-        "custo_verba": round(custo_total, 2), "custo_combustivel": 0.0, "custo_mobilizacao": 0.0,
+        "custo_mao_obra": 0.0,
+        "custo_equipamentos": 0.0,
+        "custo_verba": round(custo_total, 2),
+        "custo_combustivel": 0.0,
+        "custo_mobilizacao": 0.0,
     }
 
 
 def _build_indireto_from_cat_obj(
     codigo: str,
     descricao: str,
-    cat_obj: "IndirectoCategoria",
+    cat_obj: IndirectoCategoria,
     custo: float,
     n_semanas: int,
     prazo_meses: float | None = None,

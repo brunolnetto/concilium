@@ -20,7 +20,7 @@ _SHARED_CONFIG: Path | None = None
 @pytest.fixture(scope="session")
 def _adr040_shared_config(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Copia config/ uma única vez por sessão (evita copytree 3×).
-    
+
     PERFORMANCE: Ignora arquivos grandes (referencias/, xlsx, zip, 7z) e usa
     dirs_exist_ok para evitar falhas em reruns. Leva ~1-2s na primeira execução.
     """
@@ -30,8 +30,7 @@ def _adr040_shared_config(tmp_path_factory: pytest.TempPathFactory) -> Path:
     cfg = tmp_path_factory.mktemp("adr040_config", numbered=False)
     # Ignora pastas e arquivos pesados que não são necessários para testes unitários
     IGNORE = shutil.ignore_patterns(
-        "referencias", "*.7z", "*.xlsx", "*.zip", 
-        "*.pdf", "catalogos/mendeslobo", "__pycache__"
+        "referencias", "*.7z", "*.xlsx", "*.zip", "*.pdf", "catalogos/mendeslobo", "__pycache__"
     )
     shutil.copytree(src_config, cfg / "config", ignore=IGNORE, dirs_exist_ok=True)
     return cfg / "config"

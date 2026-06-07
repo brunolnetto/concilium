@@ -9,6 +9,7 @@ from .helpers.insumos import dedup_insumos, ingest_insumos, load_insumos_subdir
 from .helpers.serialization import json_default
 from .reports.executive_summary import render_resumo_executivo
 from .reports.financial_report_markdown import render_financial_report_markdown
+from .reports.financial_report_pdf import render_financial_report_pdf
 from .reports.memorial_bdi_markdown import render_memorial_bdi_markdown
 from .reports.pdf_renderer import render_markdown_pdf
 from .visualizations.png_bundle import build_visualization_png_files
@@ -100,7 +101,9 @@ def _load_output_image_bytes(project: object, v: str, file_name: str) -> bytes |
         return None
 
 
-def _save_relatorio_files(result: object, project: object, v: str, gerar_md: bool, gerar_pdf: bool, gerar_pngs: bool = True) -> None:
+def _save_relatorio_files(
+    result: object, project: object, v: str, gerar_md: bool, gerar_pdf: bool, gerar_pngs: bool = True
+) -> None:
     relatorio = getattr(result, "relatorio", None)
     if not relatorio or not (gerar_md or gerar_pdf):
         return
@@ -113,7 +116,9 @@ def _save_relatorio_files(result: object, project: object, v: str, gerar_md: boo
             except Exception:
                 canonical = None
         md_content = render_financial_report_markdown(rel_dict, canonical=canonical)
-        png_files = _save_relatorio_graficos_files(rel_dict, canonical, project, v, gerar_md, gerar_pdf, gerar_pngs=gerar_pngs)
+        png_files = _save_relatorio_graficos_files(
+            rel_dict, canonical, project, v, gerar_md, gerar_pdf, gerar_pngs=gerar_pngs
+        )
         md_content = _append_png_gallery(md_content, png_files)
         if gerar_md:
             project.save_output_file(md_content.encode("utf-8"), v, "relatorio.md")  # type: ignore[union-attr]
@@ -125,11 +130,8 @@ def _save_relatorio_files(result: object, project: object, v: str, gerar_md: boo
                 pass
         if gerar_pdf:
             proj_nome = (rel_dict.get("meta") or {}).get("projeto", "Relatório")
-            pdf_bytes = render_markdown_pdf(
-                md_content,
-                proj_nome,
-                image_provider=lambda file_name: _load_output_image_bytes(project, v, file_name),
-            )
+            provider = lambda file_name: _load_output_image_bytes(project, v, file_name)
+            pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
             if pdf_bytes:
                 project.save_output_file(pdf_bytes, v, "relatorio.pdf")  # type: ignore[union-attr]
     except Exception:
@@ -137,14 +139,13 @@ def _save_relatorio_files(result: object, project: object, v: str, gerar_md: boo
 
 
 def _handle_skill_09_side_effects(result: object, project: object, v: str, outputs_cfg: dict) -> None:
-    gerar_md = outputs_cfg.get("relatorio_md", True)
-    gerar_rpdf = outputs_cfg.get("relatorio_pdf", True)
-    gerar_mem_md = outputs_cfg.get(
-        "memorial_bdi_md", outputs_cfg.get("memorial_bdi", outputs_cfg.get("memoria_calculo", True))
-    )
+    # Entrega oficial: somente PDFs para memorial e relatório final.
+    gerar_md = False
+    gerar_rpdf = True
+    gerar_mem_md = False
     gerar_mem_pdf = outputs_cfg.get("memorial_bdi_pdf", outputs_cfg.get("memorial_bdi", True))
     gerar_xlsx = outputs_cfg.get("resultado_xlsx", outputs_cfg.get("cronograma_xlsx", True))
-    gerar_pngs = outputs_cfg.get("graficos_png", True)   # False desabilita PNGs pesados (analytic cube)
+    gerar_pngs = outputs_cfg.get("graficos_png", True)  # False desabilita PNGs pesados (analytic cube)
     gerar_modelo_vivo = outputs_cfg.get("modelo_vivo_xlsx", False)
 
     relatorio = getattr(result, "relatorio", None)

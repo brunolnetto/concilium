@@ -10,11 +10,9 @@ import pytest
 
 from concilium.domain.models.optimization import (
     ActivityPlan,
-    PerpetuationSolution,
     RampProfile,
 )
 from concilium.domain.services.matching_oracle import MatchingOracle
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

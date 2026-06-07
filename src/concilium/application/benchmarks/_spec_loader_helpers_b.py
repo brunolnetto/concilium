@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
+
+
 def _lfd_to_bdi_comp(
     raw: dict,
     flat_rate,

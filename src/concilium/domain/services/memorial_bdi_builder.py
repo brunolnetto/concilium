@@ -9,10 +9,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from concilium.domain.constants import (
-    BDI_CSSL,
-    BDI_IR,
-)
 from concilium.domain.models.bdi import (
     DEFAULT_BDI_TABELA,
     ComponentesBdi,
@@ -67,13 +63,11 @@ def _ba_get_pu_components(pu: object) -> tuple:
 
 
 def _mb_resolve_custo_direto(resultado: Any) -> float:
-    """Retorna custo direto autoritativo do resultado consolidado."""
+    """Retorna custo direto operacional instancial (única fonte de verdade)."""
     if not resultado or not getattr(resultado, "custo", None):
         return 0.0
     custo = resultado.custo
-    direto_equipes = float(getattr(custo, "direto_equipes", 0.0) or 0.0)
-    direto_catalogo = float(getattr(custo, "direto_catalogo", 0.0) or 0.0)
-    return direto_catalogo if direto_catalogo > 0 else direto_equipes
+    return float(getattr(custo, "direto_equipes", 0.0) or 0.0)
 
 
 class MemorialBDIBuilder:

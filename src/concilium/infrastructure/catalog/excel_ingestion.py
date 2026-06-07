@@ -5,8 +5,8 @@ Lê planilhas de referência (Source of Truth humana), aplica validações de do
 """
 
 import json
-from io import BytesIO
 from datetime import date
+from io import BytesIO
 
 from openpyxl import load_workbook
 

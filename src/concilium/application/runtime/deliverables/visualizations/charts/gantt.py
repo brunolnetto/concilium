@@ -40,7 +40,11 @@ def build_gantt(cronograma: dict) -> bytes | None:
                 start_num + duration_days / 2,
                 idx * 1.2 + 0.45,
                 (name[:38] + "...") if len(name) > 38 else name,
-                ha="center", va="center", fontsize=7, color="white", fontweight="bold",
+                ha="center",
+                va="center",
+                fontsize=7,
+                color="white",
+                fontweight="bold",
             )
         ax.set_yticks([i * 1.2 + 0.45 for i in range(len(sorted_tasks))])
         ax.set_yticklabels(

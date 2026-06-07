@@ -10,7 +10,6 @@ import pytest
 
 from concilium.domain.models.optimization import ActivityPlan, PerpetuationSolution, RampProfile
 
-
 # ── RampProfile.build() ───────────────────────────────────────────────────────
 
 
@@ -50,9 +49,9 @@ class TestRampProfileBuild:
         """r=2, d=2, n_i=7: ramp-up, plateau, ramp-down."""
         rp = RampProfile.build("A", K_max=4, r=2, d=2, n_i=7, resources_per_team={"E": 1}, n_0=1)
         assert len(rp.m) == 7
-        assert rp.m[0] == 1               # first week: n_0
-        assert rp.m[2] == 4               # plateau (t=r=2 is first plateau week... wait t=2 is ramp-up end)
-        assert rp.m[-1] < rp.m[2]        # ramp-down brings it below K_max
+        assert rp.m[0] == 1  # first week: n_0
+        assert rp.m[2] == 4  # plateau (t=r=2 is first plateau week... wait t=2 is ramp-up end)
+        assert rp.m[-1] < rp.m[2]  # ramp-down brings it below K_max
         assert rp.boundary_demand == {"E": 1}
         assert rp.boundary_supply["E"] >= 0
 

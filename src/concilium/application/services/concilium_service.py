@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
@@ -641,12 +640,21 @@ class ConciliumService:
         canonical, resolved_version = self._load_canonical_for_version(project_id, version)
         if canonical is None:
             return {
-                "version": resolved_version, "face": face, "rows": [], "narrativa": [],
-                "filtros_aplicados": {}, "invariantes_ok": True, "invariantes_violacoes": [],
+                "version": resolved_version,
+                "face": face,
+                "rows": [],
+                "narrativa": [],
+                "filtros_aplicados": {},
+                "invariantes_ok": True,
+                "invariantes_violacoes": [],
             }
         proj = resolve_cubo_pool_projection(
-            canonical, face=face, granularidade=granularidade, top_n=top_n,
-            atividade_id=atividade_id, instancia_id=instancia_id,
+            canonical,
+            face=face,
+            granularidade=granularidade,
+            top_n=top_n,
+            atividade_id=atividade_id,
+            instancia_id=instancia_id,
         )
         proj["version"] = resolved_version
         return proj

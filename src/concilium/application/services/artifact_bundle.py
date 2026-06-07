@@ -183,9 +183,7 @@ def read_text(store: Any, version: str | None, filename: str) -> dict[str, Any]:
     if resolved is None:
         raise FileNotFoundError("Projeto não possui versão ativa.")
     if not is_text_artifact(filename):
-        raise ValueError(
-            f"'{filename}' não é textual. Use baixar_artefato_binario para binários."
-        )
+        raise ValueError(f"'{filename}' não é textual. Use baixar_artefato_binario para binários.")
     hit = _find_file(store, resolved, filename)
     if hit is None:
         raise FileNotFoundError(f"Artefato '{filename}' não encontrado na versão '{resolved}'.")
@@ -262,9 +260,7 @@ def _build_manifesto(projeto_nome: str, version: str, incluidos: list[dict[str, 
     for it in incluidos:
         kb = it["tamanho_bytes"] / 1024
         arq = f"graficos/{it['nome']}" if it["nome"].lower().endswith(".png") else it["nome"]
-        linhas.append(
-            f"| {arq} | {it['audiencia']} | {kb:.1f} KB | {it['descricao']} |"
-        )
+        linhas.append(f"| {arq} | {it['audiencia']} | {kb:.1f} KB | {it['descricao']} |")
     linhas.append("")
     return "\n".join(linhas)
 
@@ -290,8 +286,7 @@ def build_bundle(
     incluidos = [
         it
         for it in listagem
-        if (it["kind"] == "outputs" or (filtro and it["nome"] in set(filtro)))
-        and _matches_filtro(it, filtro)
+        if (it["kind"] == "outputs" or (filtro and it["nome"] in set(filtro))) and _matches_filtro(it, filtro)
     ]
 
     safe_nome = "".join(c if c.isalnum() or c in "-_" else "_" for c in projeto_nome)[:40] or "projeto"
@@ -308,9 +303,7 @@ def build_bundle(
             src = base_dir / it["kind"] / it["nome"]
             if not src.exists():
                 continue
-            subpath = (
-                f"graficos/{it['nome']}" if it["nome"].lower().endswith(".png") else it["nome"]
-            )
+            subpath = f"graficos/{it['nome']}" if it["nome"].lower().endswith(".png") else it["nome"]
             zf.write(src, f"{root_folder}/{subpath}")
             nomes_no_zip.append(subpath)
 

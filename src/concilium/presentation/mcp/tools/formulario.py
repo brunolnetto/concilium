@@ -28,8 +28,8 @@ from concilium.presentation.mcp._context import (
 )
 from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _suggest_cpu(descricao: str) -> tuple[str | None, int]:
     """Retorna (cpu_id, score) para a descrição.
@@ -46,6 +46,7 @@ def _suggest_cpu(descricao: str) -> tuple[str | None, int]:
     # ── 1. Keyword rules (explícito) ─────────────────────────────────────────
     try:
         from concilium.infrastructure.catalog.mapping.cpu_mapper import _load_mapping_keywords
+
         keywords_map = _load_mapping_keywords()
         if keywords_map:
             for cpu_id, keywords in keywords_map.items():
@@ -59,8 +60,10 @@ def _suggest_cpu(descricao: str) -> tuple[str | None, int]:
 
     # ── 2. Fallback: sobreposição de palavras com descrições do catálogo ─────
     try:
-        from concilium.presentation.mcp._context import _config_root
         import json as _json
+
+        from concilium.presentation.mcp._context import _config_root
+
         cpus_dir = _config_root() / "catalogos"
         # Busca o primeiro diretório de catálogo disponível
         catalog_cpus = None
@@ -215,25 +218,27 @@ def register(server: FastMCP) -> None:
         # ── Itens sem mapeamento → devolver para agente corrigir ──────────────
 
         if nao_mapeados:
-            return _wrap_response({
-                "status": "pendente_mapeamento",
-                "total_servicos": len(servicos),
-                "mapeados": mapeados_preview,
-                "nao_mapeados": [
-                    {
-                        "item_id": it["item_id"],
-                        "descricao": it["descricao"],
-                        "quantidade": it["quantitativo"],
-                        "unidade": it["unidade"],
-                    }
-                    for it in nao_mapeados
-                ],
-                "instrucoes": (
-                    "Use buscar_cpu(termo) para encontrar o cpu_id correto para cada "
-                    "item não mapeado. Em seguida, chame criar_projeto_formulario "
-                    "novamente incluindo 'cpu_id' em cada serviço não mapeado."
-                ),
-            })
+            return _wrap_response(
+                {
+                    "status": "pendente_mapeamento",
+                    "total_servicos": len(servicos),
+                    "mapeados": mapeados_preview,
+                    "nao_mapeados": [
+                        {
+                            "item_id": it["item_id"],
+                            "descricao": it["descricao"],
+                            "quantidade": it["quantitativo"],
+                            "unidade": it["unidade"],
+                        }
+                        for it in nao_mapeados
+                    ],
+                    "instrucoes": (
+                        "Use buscar_cpu(termo) para encontrar o cpu_id correto para cada "
+                        "item não mapeado. Em seguida, chame criar_projeto_formulario "
+                        "novamente incluindo 'cpu_id' em cada serviço não mapeado."
+                    ),
+                }
+            )
 
         # ── Todos mapeados → criar projeto ────────────────────────────────────
 
@@ -247,10 +252,7 @@ def register(server: FastMCP) -> None:
         v = store.new_version()
 
         # Remove campo interno _score antes de passar para a skill
-        eap_clean = [
-            {k: val for k, val in it.items() if k != "_score"}
-            for it in eap_mapeados
-        ]
+        eap_clean = [{k: val for k, val in it.items() if k != "_score"} for it in eap_mapeados]
 
         inputs_escopo = {
             "nome": nome,
@@ -269,34 +271,40 @@ def register(server: FastMCP) -> None:
             coord = _lifecycle_coordinator()
             r = coord.avancar_projeto("01-escopo-e-eap", store, v, inputs=inputs_escopo)
         except Exception as e:
-            return _wrap_response({
-                "project_id": store.root.name,
-                "version": v,
-                "erro": str(e),
-            })
+            return _wrap_response(
+                {
+                    "project_id": store.root.name,
+                    "version": v,
+                    "erro": str(e),
+                }
+            )
 
         if r.has_errors:
             erros = [v.mensagem for v in r.validacoes if v.status == "ERRO"]
-            return _wrap_response({
+            return _wrap_response(
+                {
+                    "project_id": store.root.name,
+                    "version": v,
+                    "status": "erro_escopo",
+                    "erros": erros,
+                    "dica": "Verifique se os cpu_ids são válidos para o contexto escolhido.",
+                }
+            )
+
+        return _wrap_response(
+            {
+                "status": "criado",
                 "project_id": store.root.name,
                 "version": v,
-                "status": "erro_escopo",
-                "erros": erros,
-                "dica": "Verifique se os cpu_ids são válidos para o contexto escolhido.",
-            })
-
-        return _wrap_response({
-            "status": "criado",
-            "project_id": store.root.name,
-            "version": v,
-            "eap_preview": mapeados_preview,
-            "total_itens": len(eap_mapeados),
-            "proxima_skill_sugerida": "02-produtividade-climatica",
-            "nota": (
-                "Projeto criado com escopo EAP. "
-                "Use avancar_pipeline para calcular praticabilidade climática e prosseguir."
-            ),
-        })
+                "eap_preview": mapeados_preview,
+                "total_itens": len(eap_mapeados),
+                "proxima_skill_sugerida": "02-produtividade-climatica",
+                "nota": (
+                    "Projeto criado com escopo EAP. "
+                    "Use avancar_pipeline para calcular praticabilidade climática e prosseguir."
+                ),
+            }
+        )
 
     # ADR-101: declarar _meta.ui para MCP Apps (Fase 1)
     try:

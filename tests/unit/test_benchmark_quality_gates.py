@@ -44,7 +44,7 @@ class TestBenchmarkQualityGates:
         fake_projection = _fake_projection(
             ferramenta={
                 "custo_direto": 120.0,
-                "custo_direto_catalogo": 95.0,
+                "custo_direto_pu_q": 95.0,  # venda.total_sem_bdi (PUxQ) - for gate vs reference
                 "custo_indireto": 22.0,
                 "custo_total": 142.0,
                 "preco_venda": 150.0,
@@ -93,7 +93,7 @@ class TestBenchmarkQualityGates:
         fake_projection = _fake_projection(
             ferramenta={
                 "custo_direto": 100.0,
-                "custo_direto_catalogo": 100.0,
+                "custo_direto_pu_q": 100.0,  # venda.total_sem_bdi (PUxQ)
                 "custo_indireto": 20.0,
                 "custo_total": 120.0,
                 "preco_venda": 130.0,

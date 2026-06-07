@@ -257,7 +257,7 @@ def _compute_preco_cat_from_production(
     if not producao:
         return None
 
-    valor_horario = float((producao.get("valor_horario") or 0.0))
+    valor_horario = float(producao.get("valor_horario") or 0.0)
     if valor_horario <= 0:
         validacoes.append(
             ValidacaoItem(
@@ -358,10 +358,6 @@ def _validate_encargos_separacao(
                     ),
                 )
             )
-
-
-
-
 
 
 def _apply_sem_bdi_override(item_id: str, item_override: Any, preco_cat: dict, validacoes: list) -> None:
@@ -481,9 +477,14 @@ def _process_eap_item(
 
     # Fonte 1: bottom-up da composição da equipe (produção + insumos SICRO/SINAPI)
     preco_cat = _compute_preco_cat_from_production(
-        cpu, prod_lookup, insumo_lookup,
-        preco_diesel, alpha_clt, alpha_mensalista,
-        validacoes, catalog_session=catalog_session,
+        cpu,
+        prod_lookup,
+        insumo_lookup,
+        preco_diesel,
+        alpha_clt,
+        alpha_mensalista,
+        validacoes,
+        catalog_session=catalog_session,
     )
 
     if preco_cat is not None:
@@ -500,7 +501,15 @@ def _process_eap_item(
 
         cpu_model = CPU.model_validate(cpu)
         preco_cat, equip_sem_decomp_item = _compute_preco_cat_from_cpu(
-            cpu_model, insumo_lookup, repo, jurisdicao_id, overrides, data_base, cpu.get("codigo"), erros_insumo, validacoes
+            cpu_model,
+            insumo_lookup,
+            repo,
+            jurisdicao_id,
+            overrides,
+            data_base,
+            cpu.get("codigo"),
+            erros_insumo,
+            validacoes,
         )
         validacoes.append(
             ValidacaoItem(

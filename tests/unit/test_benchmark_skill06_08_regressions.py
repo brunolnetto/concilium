@@ -106,9 +106,7 @@ def test_skill06_nep029_sbdi_primary_and_adr038_blocked():
     assert "VAL-PLAN-SBDI-MISSING" in codigos  # aviso: sbdi ausente
 
     # ADR-038 override bloqueado → VAL-PLAN-ADR038-BLOCKED emitido, custo não muda
-    res_adr038 = run_precificacao_unitaria(
-        canonical, {"apply_adr038_compensation": True}, catalogo, {}
-    )
+    res_adr038 = run_precificacao_unitaria(canonical, {"apply_adr038_compensation": True}, catalogo, {})
     assert res_adr038.canonical.planejamento[0].subtotal.sem_bdi.total == pytest.approx(1000.0)
     codigos_adr = {v.codigo for v in res_adr038.validacoes}
     assert "VAL-PLAN-ADR038-BLOCKED" in codigos_adr
@@ -131,9 +129,7 @@ def test_skill06_nep029_sbdi_primary_and_adr038_blocked():
         ],
     }
     res_sbdi_normal = run_precificacao_unitaria(canonical, {}, catalogo_com_sbdi, {})
-    res_sbdi_bench = run_precificacao_unitaria(
-        canonical, {"benchmark_mode": True}, catalogo_com_sbdi, {}
-    )
+    res_sbdi_bench = run_precificacao_unitaria(canonical, {"benchmark_mode": True}, catalogo_com_sbdi, {})
     total_normal = res_sbdi_normal.canonical.planejamento[0].subtotal.sem_bdi.total
     total_bench = res_sbdi_bench.canonical.planejamento[0].subtotal.sem_bdi.total
     assert total_normal == pytest.approx(1000.0)  # 100 × sbdi.total(10)

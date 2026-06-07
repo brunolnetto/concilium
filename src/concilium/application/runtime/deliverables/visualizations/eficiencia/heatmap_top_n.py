@@ -52,10 +52,7 @@ def plot_heatmap_top_n(
         return None
 
     # Monta a matrix Top-N × semanas
-    matrix = [
-        [(field.get(iid) or {}).get(sem, float("nan")) for sem in semanas_ativas]
-        for iid in top_ids
-    ]
+    matrix = [[(field.get(iid) or {}).get(sem, float("nan")) for sem in semanas_ativas] for iid in top_ids]
 
     fig, ax = plt.subplots(figsize=(max(6, len(semanas_ativas) * 0.25), max(3, len(top_ids) * 0.45)))
     cmap = plt.cm.RdYlGn  # vermelho (ineficiente) → verde (eficiente)
@@ -66,7 +63,9 @@ def plot_heatmap_top_n(
     ax.set_xticks(range(0, len(semanas_ativas), max(1, len(semanas_ativas) // 8)))
     ax.set_xticklabels(
         [semanas_ativas[i] for i in range(0, len(semanas_ativas), max(1, len(semanas_ativas) // 8))],
-        rotation=45, ha="right", fontsize=7
+        rotation=45,
+        ha="right",
+        fontsize=7,
     )
     plt.colorbar(im, ax=ax, label=f"η_{fator} (0=ineficiente, 1=pleno)")
     _title = title or f"Campo η_{fator} — Top {len(top_ids)} atividades por perda"

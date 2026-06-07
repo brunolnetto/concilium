@@ -15,24 +15,24 @@ from concilium.infrastructure.storage.project import ProjectStore
 
 # Re-exports para compatibilidade retroativa
 from .contracts import SkillExecutionContract
-from .exceptions import RuntimeDomainError, RuntimeError, RuntimeTechnicalError  # noqa: F401
-from .gates import _GATE_SKILLS
-from .mixins.catalog import CatalogMixin
-from .mixins.config import ConfigMixin
-from .mixins.execution import ExecutionMixin
-from .mixins.inputs import InputsMixin
-from .helpers.pipeline import (
-    _format_records,
-    _on_after_skill,
-    _print_skill_start,
-    _resolve_state,
-    _parse_executed_skills,
-)
 from .deliverables.reports.financial_report_markdown import render_financial_report_markdown
 from .deliverables.reports.memorial_bdi_markdown import render_memorial_bdi_markdown as _memorial_bdi_to_md
 from .deliverables.reports.pdf_renderer import render_markdown_pdf as _md_to_pdf_bytes
 from .deliverables.reports.report_markdown_sections import render_planejamento_table
 from .deliverables.side_effects import _json_default  # noqa: F401
+from .exceptions import RuntimeDomainError, RuntimeError, RuntimeTechnicalError  # noqa: F401
+from .gates import _GATE_SKILLS
+from .helpers.pipeline import (
+    _format_records,
+    _on_after_skill,
+    _parse_executed_skills,
+    _print_skill_start,
+    _resolve_state,
+)
+from .mixins.catalog import CatalogMixin
+from .mixins.config import ConfigMixin
+from .mixins.execution import ExecutionMixin
+from .mixins.inputs import InputsMixin
 
 
 def _md_planejamento(plan: list[dict[str, Any]]) -> list[str]:
@@ -147,9 +147,7 @@ class Runtime(ConfigMixin, CatalogMixin, InputsMixin, ExecutionMixin):
 
         return _format_records(records)
 
-    def _providers_factory(
-        self, store: Any, version: str, skill_id: str, state: Any, extra_inputs: dict
-    ) -> dict:
+    def _providers_factory(self, store: Any, version: str, skill_id: str, state: Any, extra_inputs: dict) -> dict:
         contexto = self.load_contexto(store.meta["contexto_id"])
         perfil = self.load_perfil(contexto.perfil_id)
         catalogo = self._load_resolved_catalogo(contexto.catalogo_id, contexto.jurisdicao_id, store)

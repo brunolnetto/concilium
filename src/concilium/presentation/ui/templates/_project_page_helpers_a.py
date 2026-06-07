@@ -169,7 +169,7 @@ def _cpu_has_composition(cpu_data: dict) -> bool:
         return False
     equipe = cpu_data.get("equipe") or {}
     composicao = cpu_data.get("composicao_itens") or cpu_data.get("composicao_completa") or []
-    return bool((equipe.get("funcoes") or equipe.get("equipamentos") or composicao))
+    return bool(equipe.get("funcoes") or equipe.get("equipamentos") or composicao)
 
 
 def _fetch_cpu_details(project_id: str, cpu_id: str, base_url: str, actor: str) -> dict:

@@ -18,10 +18,10 @@ PRÓXIMAS OTIMIZAÇÕES (se necessário):
 - **pytest-xdist**: Paralelizar testes em múltiplos workers
   Uso: `pytest -n auto tests/integration/`
   Ganho esperado: 2-4× mais rápido em máquina com 4+ cores
-  
+
 - **pytest-split**: Dividir testes em grupos balanceados para CI
   Uso: `pytest --splits 4 --group 1`
-  
+
 - **Hardlinks ao invés de copytree**: Para projetos > 100MB
   Requer implementação de helper copy_project_with_hardlinks()
 """
@@ -51,7 +51,11 @@ def pytest_configure(config):
 def pytest_fixture_setup(fixturedef, request):
     """Hook para monitorar performance de fixtures lentas."""
     # Monitora fixtures session/class-scoped, ou function-scoped que tenham "pipeline" no nome
-    if fixturedef.scope in ("session", "class") or "pipeline" in fixturedef.argname or "analitico" in fixturedef.argname:
+    if (
+        fixturedef.scope in ("session", "class")
+        or "pipeline" in fixturedef.argname
+        or "analitico" in fixturedef.argname
+    ):
         fixturedef._start_time = time.time()
 
 
@@ -70,17 +74,17 @@ if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 import os
+import shutil
 from pathlib import Path
 from typing import Any
-import shutil
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 os.environ.setdefault("CONCILIUM__PDF_RENDERER", "fpdf2")
 
-from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, OpenMeteoClient
 from concilium.application.runtime import Runtime
+from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, OpenMeteoClient
 from concilium.infrastructure.storage.project import ProjectStore
 
 
@@ -217,15 +221,13 @@ def inputs_escopo_terraplenagem() -> dict[str, Any]:
 
 
 @pytest.fixture(scope="session")
-def _session_pipeline_sk03(
-    tmp_path_factory, runtime, inputs_escopo_terraplenagem, mock_openmeteo_aracoiaba
-):
+def _session_pipeline_sk03(tmp_path_factory, runtime, inputs_escopo_terraplenagem, mock_openmeteo_aracoiaba):
     """Executa skills 01→03 UMA VEZ por sessão de teste. Retorna proj.root.
 
     Base compartilhada por _session_pipeline_sk09 e _session_edge_case_sk09;
     evita duplicar as 3 skills iniciais (idênticas entre os dois pipelines
     de contexto 'test').
-    
+
     PERFORMANCE: Skills 01-03 (especialmente 03-catalogo) são as mais lentas (~70s).
     Compartilhar este base é crítico para performance de toda a suite.
     """
@@ -235,15 +237,15 @@ def _session_pipeline_sk03(
 
     # Desabilitar PDF em testes: render_markdown_pdf é o maior gargalo de skill-09 (~20-25s)
     # Testes que validam conteúdo de Excel/Markdown ainda funcionam normalmente.
-    import json as _json
+
     _deliverables = {
         "outputs": {
-            "relatorio_md":     True,
-            "relatorio_pdf":    False,   # PDF lento — não testado aqui
-            "memorial_bdi_md":  True,
-            "memorial_bdi_pdf": False,   # PDF lento — não testado aqui
-            "resultado_xlsx":   True,
-            "graficos_png":     False,  # analytic cube PNGs: ~60s — não testados aqui
+            "relatorio_md": True,
+            "relatorio_pdf": False,  # PDF lento — não testado aqui
+            "memorial_bdi_md": True,
+            "memorial_bdi_pdf": False,  # PDF lento — não testado aqui
+            "resultado_xlsx": True,
+            "graficos_png": False,  # analytic cube PNGs: ~60s — não testados aqui
         }
     }
     proj.write_json("deliverables_config.json", _deliverables)
@@ -254,7 +256,7 @@ def _session_pipeline_sk03(
         return_value=mock_openmeteo_aracoiaba,
     ):
         runtime.run_skill("02-produtividade-climatica", proj, inputs={"ano_referencia": 2024})
-    
+
     # Skill 03 é o maior gargalo (~50-60s) - carrega catálogo completo
     runtime.run_skill("03-catalogo-de-recursos", proj, inputs={})
     return proj.root
@@ -268,7 +270,7 @@ def _session_pipeline_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     eliminar a segunda execução redundante do pipeline completo.
     Todos os consumidores são read-only; testes que modificam o projeto
     recebem uma cópia isolada via shutil.copytree.
-    
+
     PERFORMANCE: ~10-15s para skills 04-09. Base sk03 já tem catálogo carregado.
     """
     _start = time.time()
@@ -280,15 +282,27 @@ def _session_pipeline_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
         "num_equipes_por_item": {
             "eap-01": {f"2026-W{w:02d}": 1 for w in range(23, 31)},
             "eap-02": {f"2026-W{w:02d}": 1 for w in range(27, 37)},
-            "eap-03": {f"2026-W{w:02d}" : 1 for w in range(35, 41)},
+            "eap-03": {f"2026-W{w:02d}": 1 for w in range(35, 41)},
         }
     }
-    _t = time.time(); runtime.run_skill("04-cronograma", proj, inputs=cron_inputs); print(f"\n[PERF] sk09/04-cronograma: {time.time()-_t:.2f}s")
-    _t = time.time(); runtime.run_skill("05-equipes-e-alocacao", proj, inputs={}); print(f"[PERF] sk09/05-equipes: {time.time()-_t:.2f}s")
-    _t = time.time(); runtime.run_skill("06-precificacao-unitaria", proj, inputs={}); print(f"[PERF] sk09/06-precificacao: {time.time()-_t:.2f}s")
-    _t = time.time(); runtime.run_skill("07-custos-indiretos", proj, inputs={}); print(f"[PERF] sk09/07-indiretos: {time.time()-_t:.2f}s")
-    _t = time.time(); runtime.run_skill("08-consolidacao-financeira", proj, inputs={}); print(f"[PERF] sk09/08-financeira: {time.time()-_t:.2f}s")
-    _t = time.time(); r = runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={}); print(f"[PERF] sk09/09-relatorio: {time.time()-_t:.2f}s")
+    _t = time.time()
+    runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
+    print(f"\n[PERF] sk09/04-cronograma: {time.time() - _t:.2f}s")
+    _t = time.time()
+    runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
+    print(f"[PERF] sk09/05-equipes: {time.time() - _t:.2f}s")
+    _t = time.time()
+    runtime.run_skill("06-precificacao-unitaria", proj, inputs={})
+    print(f"[PERF] sk09/06-precificacao: {time.time() - _t:.2f}s")
+    _t = time.time()
+    runtime.run_skill("07-custos-indiretos", proj, inputs={})
+    print(f"[PERF] sk09/07-indiretos: {time.time() - _t:.2f}s")
+    _t = time.time()
+    runtime.run_skill("08-consolidacao-financeira", proj, inputs={})
+    print(f"[PERF] sk09/08-financeira: {time.time() - _t:.2f}s")
+    _t = time.time()
+    r = runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
+    print(f"[PERF] sk09/09-relatorio: {time.time() - _t:.2f}s")
     print(f"[PERF] Pipeline sk09 completo: {time.time() - _start:.2f}s")
     return proj, r
 
@@ -301,7 +315,7 @@ def _session_edge_case_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     O cronograma mínimo (apenas eap-01 por uma semana) propositalmente diverge do
     pipeline principal (_session_pipeline_sk09) para cobrir o cenário de stress.
     Reutiliza _session_pipeline_sk03 para evitar duplicar skills 01→03.
-    
+
     PERFORMANCE: ~5-8s (edge case é mais rápido por ter menos dados).
     """
     _start = time.time()
@@ -321,14 +335,12 @@ def _session_edge_case_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
 
 
 @pytest.fixture(scope="session")
-def _session_pipeline_mendeslobo_sk09(
-    tmp_path_factory, runtime, inputs_escopo_terraplenagem, mock_openmeteo_aracoiaba
-):
+def _session_pipeline_mendeslobo_sk09(tmp_path_factory, runtime, inputs_escopo_terraplenagem, mock_openmeteo_aracoiaba):
     """Executa pipeline 01→09 com contexto mendeslobo UMA VEZ por sessão.
 
     Promovida de module-scoped para session-scoped; garante que mesmo que o
     módulo seja dividido no futuro, o pipeline não será executado mais de uma vez.
-    
+
     PERFORMANCE: ~70-80s total (skill 03 sozinha leva ~50-60s por catálogo mendeslobo maior).
     OTIMIZAÇÃO FUTURA: Compartilhar base sk03 entre contextos diferentes seria complexo
     devido a diferenças nos catálogos por perfil.
@@ -340,15 +352,25 @@ def _session_pipeline_mendeslobo_sk09(
     projetos_root = tmp_path_factory.mktemp("session_mendeslobo_sk09")
     proj = ProjectStore.init(projetos_root, "session-mendeslobo-sk09-test", "test")
     proj.new_version()
-    import json as _json
-    proj.write_json("deliverables_config.json", {
-        "outputs": {"relatorio_md": True, "relatorio_pdf": False, "memorial_bdi_md": True, "memorial_bdi_pdf": False, "resultado_xlsx": True, "graficos_png": False}
-    })
+
+    proj.write_json(
+        "deliverables_config.json",
+        {
+            "outputs": {
+                "relatorio_md": True,
+                "relatorio_pdf": False,
+                "memorial_bdi_md": True,
+                "memorial_bdi_pdf": False,
+                "resultado_xlsx": True,
+                "graficos_png": False,
+            }
+        },
+    )
 
     _t0 = time.time()
     runtime.run_skill("01-escopo-e-eap", proj, inputs=inputs_agis)
     print(f"\n[PERF] Skill 01: {time.time() - _t0:.2f}s")
-    
+
     _t0 = time.time()
     with patch(
         "concilium.infrastructure.clients.openmeteo.OpenMeteoClient",
@@ -356,11 +378,11 @@ def _session_pipeline_mendeslobo_sk09(
     ):
         runtime.run_skill("02-produtividade-climatica", proj, inputs={"ano_referencia": 2024})
     print(f"[PERF] Skill 02: {time.time() - _t0:.2f}s")
-    
+
     _t0 = time.time()
     runtime.run_skill("03-catalogo-de-recursos", proj, inputs={})
     print(f"[PERF] Skill 03 (GARGALO catálogo mendeslobo): {time.time() - _t0:.2f}s")
-    
+
     cron_inputs = {
         "num_equipes_por_item": {
             "eap-01": {f"2026-W{w:02d}": 1 for w in range(23, 31)},

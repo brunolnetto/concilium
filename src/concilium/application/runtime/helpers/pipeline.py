@@ -18,6 +18,7 @@ def _parse_executed_skills(log_path: Any) -> set:
             continue
         try:
             import json as _json
+
             entry = _json.loads(line)
             if entry.get("status") in ("OK", "ERRO") and "skill" in entry:
                 executed.add(entry["skill"])
@@ -29,6 +30,7 @@ def _parse_executed_skills(log_path: Any) -> set:
 def _execute_skill(skill_fn, kwargs, skill_id, execution_id, ts_inicio, plano_store):
     """Run skill_fn; on exception logs and re-raises appropriately."""
     from ..exceptions import RuntimeError as _RuntimeError
+
     try:
         return skill_fn(**kwargs)
     except Exception as exc:

@@ -80,9 +80,7 @@ def _peak_demand(scheduled: Any, resources: Iterable[str]) -> dict[str, int]:
     return peak
 
 
-def _makespan_with(
-    activities: list[Activity], dag: ActivityDAG, pool: dict[str, int], horizon: int
-) -> int:
+def _makespan_with(activities: list[Activity], dag: ActivityDAG, pool: dict[str, int], horizon: int) -> int:
     """Makespan ao agendar com o pool dado. Retorna ``horizon+1`` se inviável."""
     try:
         sched = SerialScheduler(priority_rule=_PRIORITY_RULE).schedule(
@@ -202,9 +200,7 @@ def inferir_pool_minimo(
     return pool, diagnostico
 
 
-def _activities_from_spec(
-    spec: dict[str, Any], derived_req: dict[str, dict[str, int]] | None = None
-) -> list[Activity]:
+def _activities_from_spec(spec: dict[str, Any], derived_req: dict[str, dict[str, int]] | None = None) -> list[Activity]:
     """Constrói ``Activity`` a partir de ``rcpsp_spec['activities']`` (dimensão de pool).
 
     ADR-091 Fase 1: quando uma atividade não traz ``required_resources`` explícito,
@@ -269,9 +265,7 @@ def tipo_recurso_de_equip(equip_id: str, equip_tipo_map: dict[str, str] | None =
     return f"EQUIP-{equip_id}"
 
 
-def validar_equipamentos_mapeaveis(
-    equipes: list[Any], equip_tipo_map: dict[str, str] | None
-) -> list[str]:
+def validar_equipamentos_mapeaveis(equipes: list[Any], equip_tipo_map: dict[str, str] | None) -> list[str]:
     """Retorna os ``equip_id`` sem mapeamento explícito no catálogo (DoD Fase 1).
 
     Lista vazia ⇒ toda EquipeDireta tem todos equipamentos mapeáveis. Quando

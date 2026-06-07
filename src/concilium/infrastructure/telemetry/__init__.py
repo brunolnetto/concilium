@@ -24,6 +24,7 @@ from concilium.infrastructure.settings import get_telemetry
 _OTEL_AVAILABLE = False
 try:
     import opentelemetry  # noqa: F401
+
     _OTEL_AVAILABLE = True
 except ImportError:
     pass
@@ -70,9 +71,11 @@ def _setup_tracing() -> None:
     otlp_endpoint = telemetry.otlp_endpoint
     if otlp_endpoint:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
         provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{otlp_endpoint}/v1/traces")))
     elif _otel_console():
         from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+
         provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
     trace.set_tracer_provider(provider)
@@ -80,6 +83,7 @@ def _setup_tracing() -> None:
 
 def _otel_console() -> bool:
     from concilium.infrastructure.settings import get_telemetry
+
     return get_telemetry().otel_console
 
 
@@ -96,9 +100,11 @@ def _setup_metrics() -> None:
     if otlp_endpoint:
         from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
         readers.append(PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{otlp_endpoint}/v1/metrics")))
     elif _otel_console():
         from opentelemetry.sdk.metrics.export import ConsoleMetricExporter, PeriodicExportingMetricReader
+
         readers.append(PeriodicExportingMetricReader(ConsoleMetricExporter()))
 
     metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=readers))
@@ -112,6 +118,7 @@ def get_tracer() -> Any:
     if not _OTEL_AVAILABLE:
         return _NoOpTracer()
     from opentelemetry import trace
+
     return trace.get_tracer("concilium")
 
 
@@ -120,6 +127,7 @@ def get_meter() -> Any:
     if not _OTEL_AVAILABLE:
         return _NoOpMeter()
     from opentelemetry import metrics
+
     return metrics.get_meter("concilium")
 
 
@@ -143,6 +151,7 @@ def set_current_span_attrs(attrs: dict[str, Any]) -> None:
         return
     try:
         from opentelemetry import trace
+
         span = trace.get_current_span()
         for k, v in attrs.items():
             span.set_attribute(k, v)
@@ -261,7 +270,9 @@ class _NoOpSpan:
     def set_attribute(self, *a: Any, **kw: Any) -> None: ...
     def set_status(self, *a: Any, **kw: Any) -> None: ...
     def record_exception(self, *a: Any, **kw: Any) -> None: ...
-    def __enter__(self) -> "_NoOpSpan": return self
+    def __enter__(self) -> _NoOpSpan:
+        return self
+
     def __exit__(self, *a: Any) -> None: ...
 
 
@@ -271,10 +282,10 @@ class _NoOpTracer:
 
 
 class _NoOpMeter:
-    def create_histogram(self, *a: Any, **kw: Any) -> "_NoOpInstrument":
+    def create_histogram(self, *a: Any, **kw: Any) -> _NoOpInstrument:
         return _NoOpInstrument()
 
-    def create_counter(self, *a: Any, **kw: Any) -> "_NoOpInstrument":
+    def create_counter(self, *a: Any, **kw: Any) -> _NoOpInstrument:
         return _NoOpInstrument()
 
 

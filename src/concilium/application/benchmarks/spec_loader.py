@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -116,7 +115,7 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
 
     # 4. cronograma: itens v2 → atividades v1 (+ quantitativo da eap, necessário para escala)
     atividades = []
-    for item in (spec.get("cronograma") or []):
+    for item in spec.get("cronograma") or []:
         item_id = item["item_id"]
         eap_item = eap_by_id.get(item_id, {})
         atividades.append(
@@ -131,7 +130,7 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
 
     # 5. planejamento: flat v2 → subtotal aninhado v1
     planejamento_detalhado = []
-    for item in (spec.get("planejamento") or []):
+    for item in spec.get("planejamento") or []:
         item_id = item["item_id"]
         eap_item = eap_by_id.get(item_id, {})
         planejamento_detalhado.append(
@@ -155,7 +154,7 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     #    driver "projeto" → custo_fixo_total          (custo único, ex: mobilização)
     indiretos_detalhamento: dict[str, Any] = {}
     equipes_indiretas: list[dict[str, Any]] = []
-    for ind in (spec.get("indiretos") or []):
+    for ind in spec.get("indiretos") or []:
         cat = ind["categoria"]
         driver = ind.get("driver", "mensal")
         if driver == "projeto":

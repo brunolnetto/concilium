@@ -15,10 +15,9 @@ import math
 
 import pytest
 
-from concilium.application.scheduling.models import Activity, ActivityDAG, ResourcePool, ScheduledActivity
+from concilium.application.scheduling.models import Activity, ActivityDAG, ResourcePool
 from concilium.application.scheduling.scheduler import SerialScheduler, _compute_earliest_starts
 from concilium.domain.models.canonical import ArestaActivityDag, PrecedenciaItem
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # A. Modelo PrecedenciaItem e ArestaActivityDag
@@ -266,7 +265,9 @@ class TestDerivacaoDAGdaEAP:
         from concilium.domain.models.canonical import EapItem, PrecedenciaItem
 
         return [
-            EapItem(item_id="eap-1_0", ordem=1, cpu_id="CPU-1", descricao="Desmatamento", unidade="m2", quantitativo=1000),
+            EapItem(
+                item_id="eap-1_0", ordem=1, cpu_id="CPU-1", descricao="Desmatamento", unidade="m2", quantitativo=1000
+            ),
             EapItem(
                 item_id="eap-1_1",
                 ordem=2,

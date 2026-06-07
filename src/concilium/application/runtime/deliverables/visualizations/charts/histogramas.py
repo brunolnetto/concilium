@@ -35,7 +35,11 @@ def _build_hist(
                 raw_label = clean_series_label(sname)
                 display_label = raw_label if len(raw_label) <= 22 else raw_label[:21] + "\u2026"
                 ax.bar(
-                    x, svals, bottom=baseline, alpha=0.85, width=0.8,
+                    x,
+                    svals,
+                    bottom=baseline,
+                    alpha=0.85,
+                    width=0.8,
                     label=display_label,
                     color=HIST_COLORS[sidx % len(HIST_COLORS)],
                 )

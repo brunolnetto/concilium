@@ -22,7 +22,7 @@ Transições válidas:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from statemachine import State, StateMachine
@@ -65,7 +65,7 @@ class PipelineJobStateMachine(StateMachine):
 
     def on_iniciar(self) -> None:
         """Hook executado ao iniciar execução."""
-        self.job_data["iniciado_em"] = datetime.now(timezone.utc).isoformat()
+        self.job_data["iniciado_em"] = datetime.now(UTC).isoformat()
         self.job_data["progresso"] = "Iniciando execução..."
         self.job_data["progresso_percentual"] = 0.0
 
@@ -75,7 +75,7 @@ class PipelineJobStateMachine(StateMachine):
         Args:
             resultado: Dicionário com resultado da skill
         """
-        self.job_data["finalizado_em"] = datetime.now(timezone.utc).isoformat()
+        self.job_data["finalizado_em"] = datetime.now(UTC).isoformat()
         self.job_data["resultado"] = resultado
         self.job_data["progresso"] = "Concluído"
         self.job_data["progresso_percentual"] = 1.0
@@ -86,7 +86,7 @@ class PipelineJobStateMachine(StateMachine):
         Args:
             erro: Mensagem de erro
         """
-        self.job_data["finalizado_em"] = datetime.now(timezone.utc).isoformat()
+        self.job_data["finalizado_em"] = datetime.now(UTC).isoformat()
         self.job_data["erro"] = erro
 
     def on_cancelar(self, motivo: str = "Cancelado pelo usuário") -> None:
@@ -95,7 +95,7 @@ class PipelineJobStateMachine(StateMachine):
         Args:
             motivo: Motivo do cancelamento
         """
-        self.job_data["finalizado_em"] = datetime.now(timezone.utc).isoformat()
+        self.job_data["finalizado_em"] = datetime.now(UTC).isoformat()
         self.job_data["erro"] = motivo
 
     @property

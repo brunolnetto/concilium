@@ -7,8 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..exceptions import RuntimeDomainError
 from ..deliverables.helpers.insumos import dedup_insumos, ingest_insumos, load_insumos_subdir
+from ..exceptions import RuntimeDomainError
 
 
 class CatalogMixin:
@@ -27,6 +27,7 @@ class CatalogMixin:
         """
         try:
             from concilium.infrastructure.catalog.query_engine import CatalogSession, is_available
+
             if not is_available():
                 return None
             if not hasattr(self, "_catalog_session_cache"):

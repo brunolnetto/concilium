@@ -25,9 +25,7 @@ def _equipe(item_id, equipamentos, num_equipes_base=1):
     return SimpleNamespace(
         item_id=item_id,
         num_equipes_base=num_equipes_base,
-        equipamentos=[
-            SimpleNamespace(equip_id=eid, num_unidades=n) for eid, n in equipamentos
-        ],
+        equipamentos=[SimpleNamespace(equip_id=eid, num_unidades=n) for eid, n in equipamentos],
     )
 
 
@@ -65,14 +63,10 @@ class TestObjetivos:
     def test_balanceado_respeita_prazo_maximo(self):
         acts, dag = _two_parallel_dag()
         # prazo apertado (3sem) força paralelismo → pool=4
-        pool_rapido, _ = inferir_pool_minimo(
-            acts, dag, {"objetivo": "balanceado", "prazo_maximo_semanas": 3}
-        )
+        pool_rapido, _ = inferir_pool_minimo(acts, dag, {"objetivo": "balanceado", "prazo_maximo_semanas": 3})
         assert pool_rapido["EQ"] == 4
         # prazo folgado (6sem) permite serial → pool=2 (mais barato)
-        pool_barato, _ = inferir_pool_minimo(
-            acts, dag, {"objetivo": "balanceado", "prazo_maximo_semanas": 6}
-        )
+        pool_barato, _ = inferir_pool_minimo(acts, dag, {"objetivo": "balanceado", "prazo_maximo_semanas": 6})
         assert pool_barato["EQ"] == 2
 
     def test_balanceado_sem_prazo_recai_em_peak(self):
@@ -177,9 +171,7 @@ class TestFase1DerivacaoEquipTipo:
     def test_validar_equipamentos_mapeaveis(self):
         equipes = [_equipe("eap-1", [("ESC-3CAT", 1), ("CAMINHAO", 2)])]
         # mapa completo → sem faltantes
-        assert validar_equipamentos_mapeaveis(
-            equipes, {"ESC-3CAT": "A", "CAMINHAO": "B"}
-        ) == []
+        assert validar_equipamentos_mapeaveis(equipes, {"ESC-3CAT": "A", "CAMINHAO": "B"}) == []
         # mapa incompleto → reporta faltante
         assert validar_equipamentos_mapeaveis(equipes, {"ESC-3CAT": "A"}) == ["CAMINHAO"]
         # mapa None → validação desligada

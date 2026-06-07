@@ -11,6 +11,12 @@ Optional (require ortools / pulp — imported lazily inside explore_schedules):
     from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler
 """
 
+from .compression_analysis import (
+    CompressionResult,
+    KScaleResult,
+    compute_compression_sensitivities,
+    format_compression_table,
+)
 from .models import (
     Activity,
     ActivityDAG,
@@ -31,12 +37,6 @@ from .pool_inference import (
 from .scheduler import SerialScheduler
 from .selector import compare_all_algorithms, explore_schedules, select_scheduling_algorithm
 from .validator import ScheduleValidator
-from .compression_analysis import (
-    CompressionResult,
-    KScaleResult,
-    compute_compression_sensitivities,
-    format_compression_table,
-)
 
 __all__ = [
     "Activity",

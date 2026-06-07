@@ -173,10 +173,7 @@ def _delta_c_pot(
     Returns:
         float R$ — economia potencial descontada por η
     """
-    soma_ov_custo = sum(
-        ov_vector.get(tipo, 0) * mob_demob_costs.get(tipo, 0.0)
-        for tipo in ov_vector
-    )
+    soma_ov_custo = sum(ov_vector.get(tipo, 0) * mob_demob_costs.get(tipo, 0.0) for tipo in ov_vector)
     return soma_ov_custo * max(0.0, eta)
 
 
@@ -239,8 +236,7 @@ def _build_pre_processamento_compartilhamento(
                 codigo="VAL-PRE-PROCESSAMENTO-SKIP",
                 status="AVISO",
                 mensagem=(
-                    "ADR-078: resource_costs ausente no rcpsp_spec — "
-                    "pré-processamento de compartilhamento ignorado."
+                    "ADR-078: resource_costs ausente no rcpsp_spec — pré-processamento de compartilhamento ignorado."
                 ),
             )
         )
@@ -269,12 +265,8 @@ def _build_pre_processamento_compartilhamento(
             costs = resource_costs[tipo_id]
             contrato.custo_mob_unit = float(costs.get("custo_mob_unit", 0.0))
             contrato.custo_demob_unit = float(costs.get("custo_demob_unit", 0.0))
-            contrato.custo_idle_semanal_unit = float(
-                costs.get("custo_idle_semanal_unit", 0.0)
-            )
-            contrato.unidade_faturamento = str(
-                costs.get("unidade_faturamento", "hora_prod")
-            )
+            contrato.custo_idle_semanal_unit = float(costs.get("custo_idle_semanal_unit", 0.0))
+            contrato.unidade_faturamento = str(costs.get("unidade_faturamento", "hora_prod"))
             contrato.gap_max_economico = gap_max_por_tipo[tipo_id]
 
     # ── 3. Construir lookup de requisitos por atividade ───────────────────────
@@ -300,11 +292,7 @@ def _build_pre_processamento_compartilhamento(
         gap_max = gap_max_por_tipo[tipo_id]
 
         # Atividades que usam este tipo
-        atividades_tipo = [
-            (iid, reqs[tipo_id])
-            for iid, reqs in activity_resources.items()
-            if tipo_id in reqs
-        ]
+        atividades_tipo = [(iid, reqs[tipo_id]) for iid, reqs in activity_resources.items() if tipo_id in reqs]
 
         if len(atividades_tipo) < 2:
             continue
@@ -326,7 +314,7 @@ def _build_pre_processamento_compartilhamento(
 
         # Enumerar todos os pares (a, b) — determinar ordem temporal depois
         for idx_a, (id_a, q_a) in enumerate(atividades_tipo):
-            for id_b, q_b in atividades_tipo[idx_a + 1:]:
+            for id_b, q_b in atividades_tipo[idx_a + 1 :]:
                 end_a = _end_idx(id_a)
                 start_b = _start_idx(id_b)
                 end_b = _end_idx(id_b)
@@ -406,8 +394,7 @@ def _build_pre_processamento_compartilhamento(
 
     if tem_inviavel:
         inviáveis_desc = [
-            f"{o.atividade_i}→{o.atividade_j} "
-            f"({o.tipo_id}, gap={o.gap_semanas}w > max={o.gap_max_semanas}w)"
+            f"{o.atividade_i}→{o.atividade_j} ({o.tipo_id}, gap={o.gap_semanas}w > max={o.gap_max_semanas}w)"
             for o in oportunidades
             if not o.economicamente_viavel
         ]

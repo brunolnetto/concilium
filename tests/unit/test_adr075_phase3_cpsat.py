@@ -7,8 +7,6 @@ Written before implementation (red phase).
 
 from __future__ import annotations
 
-import pytest
-
 from concilium.application.scheduling.cpsat_scheduler import (
     CpSatScheduler,
     ExtendedPrecedence,
@@ -20,7 +18,6 @@ from concilium.application.scheduling.models import (
     ScheduleOutput,
 )
 from concilium.domain.models.optimization import RampProfile
-
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

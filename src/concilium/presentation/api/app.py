@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from concilium.infrastructure.telemetry import setup_telemetry
+
 from .config import resolve_api_bind
 from .middleware import JWTAuthMiddleware
 from .rate_limit import limiter, rate_limit_exceeded_handler
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
 
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
         FastAPIInstrumentor.instrument_app(app)
     except ImportError:
         pass
@@ -73,6 +75,7 @@ def create_app() -> FastAPI:
     # ADR-098: Rate limiting — ordem de middleware: SlowAPI (outer) → JWT (inner)
     from slowapi.errors import RateLimitExceeded
     from slowapi.middleware import SlowAPIMiddleware
+
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
     app.add_middleware(JWTAuthMiddleware)
@@ -102,6 +105,7 @@ def main() -> None:
     import uvicorn
 
     from concilium.infrastructure.settings import get_api, startup_check
+
     startup_check()
 
     host, port = resolve_api_bind()

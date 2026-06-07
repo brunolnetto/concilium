@@ -28,7 +28,7 @@ Concurrent pairs:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ortools.graph.python import min_cost_flow
 
@@ -73,19 +73,13 @@ class MatchingOracle:
         mob_events: dict[str, int] = {}
         concurrent_lost: list[tuple[str, str, str]] = []
 
-        resource_ids = {
-            res
-            for rp in profiles.values()
-            for res in rp.resources_per_team
-        }
+        resource_ids = {res for rp in profiles.values() for res in rp.resources_per_team}
 
         for res in resource_ids:
             if res not in self.mob_costs:
                 continue
             c_mob, c_demob = self.mob_costs[res]
-            edges_r, cost_r, events_r, conc_r = self._solve_resource(
-                res, plans, profiles, c_mob, c_demob
-            )
+            edges_r, cost_r, events_r, conc_r = self._solve_resource(res, plans, profiles, c_mob, c_demob)
             all_edges.extend(edges_r)
             total_cost_scaled += cost_r
             mob_events[res] = events_r
@@ -184,26 +178,20 @@ class MatchingOracle:
         # Arcs: supply_i → W (dismissal)
         arc_dismiss: dict[str, int] = {}
         for aid_i, qty_s in supply.items():
-            arc_idx = smcf.add_arc_with_capacity_and_unit_cost(
-                node_supply_idx[aid_i], node_W, qty_s, c_demob_int
-            )
+            arc_idx = smcf.add_arc_with_capacity_and_unit_cost(node_supply_idx[aid_i], node_W, qty_s, c_demob_int)
             arc_dismiss[aid_i] = arc_idx
 
         # Arcs: W → demand_j (fresh hire)
         arc_hire: dict[str, int] = {}
         for aid_j, qty_d in demand.items():
-            arc_idx = smcf.add_arc_with_capacity_and_unit_cost(
-                node_W, node_demand_idx[aid_j], qty_d, c_mob_int
-            )
+            arc_idx = smcf.add_arc_with_capacity_and_unit_cost(node_W, node_demand_idx[aid_j], qty_d, c_mob_int)
             arc_hire[aid_j] = arc_idx
 
         # Arcs: supply_i → demand_j (perpetuate, cost=0)
         arc_perp: dict[tuple[str, str], int] = {}
         for aid_i, aid_j in eligible:
             cap = min(supply[aid_i], demand[aid_j])
-            arc_idx = smcf.add_arc_with_capacity_and_unit_cost(
-                node_supply_idx[aid_i], node_demand_idx[aid_j], cap, 0
-            )
+            arc_idx = smcf.add_arc_with_capacity_and_unit_cost(node_supply_idx[aid_i], node_demand_idx[aid_j], cap, 0)
             arc_perp[(aid_i, aid_j)] = arc_idx
 
         # Solve
@@ -211,7 +199,8 @@ class MatchingOracle:
         if status != smcf.OPTIMAL:
             _log.warning(
                 "MatchingOracle: min-cost flow not OPTIMAL for resource %s (status=%s)",
-                res, status,
+                res,
+                status,
             )
             naive_cost = sum_demand * c_mob_int + sum_supply * c_demob_int
             return [], naive_cost, sum_demand, concurrent_lost

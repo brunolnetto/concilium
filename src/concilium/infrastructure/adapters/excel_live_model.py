@@ -1176,8 +1176,8 @@ class LiveModelRenderer:
 
         rows_def = [
             (4, "DIRETO", None, None),
-            (5, "  s/BDI (catálogo)", f"=ORÇAMENTO!I{orc_total}", _lm_sv("direto_catalogo", custo)),
-            (6, "  c/BDI (catálogo)", f"=ORÇAMENTO!J{orc_total}", _lm_sv("total_com_bdi", venda)),
+            (5, "  s/BDI (equipes)", f"=ORÇAMENTO!I{orc_total}", _lm_sv("direto_equipes", custo)),
+            (6, "  c/BDI", f"=ORÇAMENTO!J{orc_total}", _lm_sv("total_com_bdi", venda)),
             (7, "  Custo equipes (running)", f"='CUSTOS DIR.'!I{cd_total}", None),
             (9, "INDIRETO", None, None),
             (10, "  s/BDI", f"=INDIRETOS!D{ind_total}", None),
@@ -1247,7 +1247,7 @@ class LiveModelRenderer:
                 return 0.0
 
         items = [
-            ("Custo Direto — Catálogo (s/BDI)", _sv("direto_catalogo", custo), "Σ(qtd × P.U.s/BDI)"),
+            ("Custo Direto (equipes)", _sv("direto_equipes", custo), "Σ(fixo_mensal × permanência instancial)"),
             ("Custo Direto — Equipes (running cost)", _sv("direto_equipes", custo), "Σ(fixo_mensal × permanência)"),
             ("Custo Indireto", _sv("total", None) or sum(i.custo_total for i in self.indiretos), "Σ por categoria"),
             ("Custo Total (catálogo + indireto)", _sv("total", custo), "direto_cat + indireto"),

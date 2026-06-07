@@ -74,11 +74,7 @@ class BenchmarkRunner:
             "resumo_executivo.md",  # ADR-093 D5
         }
         for fname in store.list_output_files(v):
-            if (
-                fname.endswith(".png")
-                or fname.startswith("resultado_planejamento")
-                or fname in keep_names
-            ):
+            if fname.endswith(".png") or fname.startswith("resultado_planejamento") or fname in keep_names:
                 data = store.load_output_file(v, fname)
                 if data is not None:
                     try:
@@ -97,9 +93,9 @@ class BenchmarkRunner:
         return benchmarks_root / "data" / spec.slug / "artifacts" / "outputs"
 
     def _find_or_create(self, nome: str, benchmark_id: str, contexto_id: str, reset: bool):
-        from concilium.infrastructure.storage.project import ProjectStore
+
         from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
-        from pathlib import Path as PathlibPath
+        from concilium.infrastructure.storage.project import ProjectStore
 
         # Load benchmark metadata if available
         benchmark_versao = None

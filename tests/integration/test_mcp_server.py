@@ -57,6 +57,7 @@ def server_with_config(tmp_path_factory):
     (ping, list, erros de projeto inexistente) — sem risco de estado cruzado.
     """
     import os
+
     from concilium.infrastructure.settings import _reset_all
 
     config_root = str(Path(__file__).parents[2] / "config")

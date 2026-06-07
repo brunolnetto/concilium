@@ -26,8 +26,8 @@ from concilium.application.scheduling import (
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     AtividadeIntervalo,
-    CanonicalModel,
     CalendarioOperacionalSemanal,
+    CanonicalModel,
     Cronograma,
     DistribuicaoSemanal,
     ScheduleCandidateCanonical,
@@ -119,7 +119,7 @@ def _custo_hora_equipe(
             # Se o insumo indica que encargos já estão incluídos (convenção AGIS-FN-*),
             # não aplicar taxa_encargos adicionalmente.
             nota = str((ins.get("atributos_especificos") or {}).get("nota", "")).lower()
-            ja_com_encargos = "inclui encargos" in nota   # substring sem acentos
+            ja_com_encargos = "inclui encargos" in nota  # substring sem acentos
             encargos = 0.0 if ja_com_encargos else taxa_encargos
             custo_hora += n * pu * (1.0 + encargos)
         else:
@@ -144,11 +144,7 @@ def _custo_hora_equipe(
 
         # Combustível — consumo em L/h pode vir do registro de producao (dois nomes:
         # consumo_litros_hora_estimado ou consumo_litros_hora) ou do insumo de equip.
-        consumo = float(
-            equip.get("consumo_litros_hora_estimado") or
-            equip.get("consumo_litros_hora") or
-            0
-        )
+        consumo = float(equip.get("consumo_litros_hora_estimado") or equip.get("consumo_litros_hora") or 0)
         if consumo == 0 and ins:
             consumo = float((ins.get("atributos_especificos") or {}).get("consumo_litros_hora", 0) or 0)
         if consumo > 0 and diesel_ins:
@@ -204,7 +200,10 @@ def _enrich_producao_canonico(
         # — zero dependência de lookup de insumos, identidade exata P_canonico = C.
         custo_hora_ref = prod.get("custo_hora_total_referencia")
         custo_hora = _custo_hora_equipe(
-            composicao, insumos_lookup, horas_mes, taxa_encargos,
+            composicao,
+            insumos_lookup,
+            horas_mes,
+            taxa_encargos,
             custo_hora_referencia=custo_hora_ref,
         )
         if custo_hora <= 0:
@@ -954,8 +953,13 @@ def _emm_process_item(
         fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
         fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
         cell = _build_dist_cell(
-            producao_semanal_base, num_eq, n_max, fator_clima, fator_calendario,
-            item.quantitativo, qtd_acumulada,
+            producao_semanal_base,
+            num_eq,
+            n_max,
+            fator_clima,
+            fator_calendario,
+            item.quantitativo,
+            qtd_acumulada,
         )
         qtd_acumulada = cell.qtd_acumulada
         distribuicao[semana_key] = cell
@@ -1218,13 +1222,16 @@ def _convert_schedule_to_distribuicao(
         # NEP-035: pré-cômputo de n_max (pico de alocação da atividade) para η_s = n_j/n_max.
         # Dupla passagem: 1ª leve sobre offsets para determinar o pico; 2ª constrói as células.
         ramp = getattr(sa, "ramp_profile", None)
-        n_max = max(
-            (
-                _infer_teams_from_resources(sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp)
-                for off in range(sa.duration_weeks)
-            ),
-            default=1,
-        ) or 1
+        n_max = (
+            max(
+                (
+                    _infer_teams_from_resources(sa.assigned_resources, cpu, off, sa.duration_weeks, ramp_profile=ramp)
+                    for off in range(sa.duration_weeks)
+                ),
+                default=1,
+            )
+            or 1
+        )
         distribuicao = {}
         qtd_acumulada = 0.0
 
@@ -1237,14 +1244,22 @@ def _convert_schedule_to_distribuicao(
             )
 
             inferred_num_equipes = _infer_teams_from_resources(
-                sa.assigned_resources, cpu, week_offset, sa.duration_weeks,
+                sa.assigned_resources,
+                cpu,
+                week_offset,
+                sa.duration_weeks,
                 ramp_profile=ramp,
             )
             fator_clima = _lookup_eficiencia(semana_key, prat_semanal, prat_mensal)
             fator_calendario = fator_calendario_semanal.get(semana_key, 1.0)
             cell = _build_dist_cell(
-                producao_semanal_base, inferred_num_equipes, n_max, fator_clima, fator_calendario,
-                item.quantitativo, qtd_acumulada,
+                producao_semanal_base,
+                inferred_num_equipes,
+                n_max,
+                fator_clima,
+                fator_calendario,
+                item.quantitativo,
+                qtd_acumulada,
             )
             qtd_acumulada = cell.qtd_acumulada
             distribuicao[semana_key] = cell
@@ -1816,7 +1831,9 @@ def run_cronograma(
     taxa_encargos = float(inputs.get("taxa_encargos_mo", 1.0))  # default 100% encargos
     _enrich_producao_canonico(cpu_lookup, producao_lookup, insumos_lookup, horas_mes, taxa_encargos, validacoes)
     prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
-    calendario_config = inputs.get("calendario_operacional") if isinstance(inputs.get("calendario_operacional"), dict) else {}
+    calendario_config = (
+        inputs.get("calendario_operacional") if isinstance(inputs.get("calendario_operacional"), dict) else {}
+    )
     fator_calendario_semanal, calendario_operacional = _build_fator_calendario_semanal(
         semanas_obra,
         canonical_in.projeto.data_inicio,

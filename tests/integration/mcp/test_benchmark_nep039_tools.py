@@ -1,4 +1,5 @@
 """Testes de integração para MCP Tools de Benchmark (NEP-039)."""
+
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -164,9 +165,7 @@ class TestBenchmarkToolsEditar:
         benchmark_store.save_metadata(meta)
 
         # Edita → gera v2
-        meta_v2 = benchmark_store.create_new_version(
-            "AGIS_2025_Q1", patch={"tags": ["v2"]}
-        )
+        meta_v2 = benchmark_store.create_new_version("AGIS_2025_Q1", patch={"tags": ["v2"]})
 
         # Verifica v2
         assert meta_v2.versao == 2

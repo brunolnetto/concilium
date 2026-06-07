@@ -118,14 +118,22 @@ def register(server: FastMCP) -> None:
             return {"erro": "Sem pool de recursos neste plano (rcpsp_spec ausente em skill-05)."}
 
         proj = resolve_cubo_pool_projection(
-            canonical, face=face, granularidade=granularidade,
-            atividade_id=atividade_id, instancia_id=instancia_id,
+            canonical,
+            face=face,
+            granularidade=granularidade,
+            atividade_id=atividade_id,
+            instancia_id=instancia_id,
         )
-        return _wrap_response({
-            "project_id": project_id, "escopo_id": eid, "plano_id": pid,
-            "face": proj["face"], "natureza": proj["natureza"],
-            "narrativa": proj["narrativa"],
-            "rows": proj["rows"],
-            "totais": proj["totais"],
-            "invariantes_ok": proj["invariantes_ok"],
-        })
+        return _wrap_response(
+            {
+                "project_id": project_id,
+                "escopo_id": eid,
+                "plano_id": pid,
+                "face": proj["face"],
+                "natureza": proj["natureza"],
+                "narrativa": proj["narrativa"],
+                "rows": proj["rows"],
+                "totais": proj["totais"],
+                "invariantes_ok": proj["invariantes_ok"],
+            }
+        )

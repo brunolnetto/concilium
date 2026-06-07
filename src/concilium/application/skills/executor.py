@@ -175,9 +175,11 @@ def _get_skill_span(skill_id: str) -> Any:
     """Retorna context manager OTEL span para a skill, ou nullcontext se OTEL indisponível."""
     try:
         from concilium.infrastructure.telemetry import skill_span
+
         return skill_span(skill_id)
     except Exception:
         from contextlib import nullcontext
+
         return nullcontext(None)
 
 
@@ -185,13 +187,11 @@ def _emit_skill_telemetry(skill_id: str, status: str, duration_ms: int) -> None:
     """Emite métrica de duração e define atributos no span ativo (best-effort)."""
     try:
         from concilium.infrastructure.telemetry import record_skill_duration, set_current_span_attrs
+
         record_skill_duration(skill_id, status, duration_ms)
         set_current_span_attrs({"skill.status": status, "skill.duration_ms": duration_ms})
     except Exception:
         pass
-
-
-
 
 
 class SkillExecutor:
@@ -220,7 +220,7 @@ class SkillExecutor:
         skills: dict[str, Callable],
         manifest_meta: dict[str, dict],
         on_before_skill: Callable[[str], None] | None = None,
-        on_after_skill: Callable[[str, Any, Any, "ExecutionRecord"], None] | None = None,
+        on_after_skill: Callable[[str, Any, Any, ExecutionRecord], None] | None = None,
     ) -> None:
         self._skills = skills
         self._meta = manifest_meta
@@ -254,7 +254,7 @@ class SkillExecutor:
         skill_inputs: dict,
         providers_factory: object,
         resolve_state_fn: object,
-    ) -> tuple["ExecutionRecord", object, bool]:
+    ) -> tuple[ExecutionRecord, object, bool]:
         """Executes a single skill node; returns (record, new_state, gate_failed)."""
         if self._on_before_skill:
             self._on_before_skill(node)

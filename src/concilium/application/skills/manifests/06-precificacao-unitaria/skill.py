@@ -195,6 +195,7 @@ def run_precificacao_unitaria(
 
     # NEP-032: parâmetros para precificação bottom-up (diesel + encargos)
     from concilium.domain.constants import ENCARGOS_CLT, ENCARGOS_MENSALISTA, PRECO_DIESEL_REFERENCIA
+
     preco_diesel = float(inputs.get("preco_diesel", PRECO_DIESEL_REFERENCIA))
     for _ins in catalogo.get("insumos", []):
         if _ins.get("codigo") in ("MA-DIESEL-S10", "DIESEL-S10"):
@@ -208,15 +209,15 @@ def run_precificacao_unitaria(
     benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
     # NEP-029 D3: ADR-038 removido — compensação produzia cancelamento algébrico da quantidade.
     # Implementação depreciada; tentativa de ativação gera erro de validação.
-    if inputs.get('apply_adr038_compensation') is not None:
+    if inputs.get("apply_adr038_compensation") is not None:
         validacoes.append(
             ValidacaoItem(
-                codigo='VAL-PLAN-ADR038-BLOCKED',
-                status='ERRO',
+                codigo="VAL-PLAN-ADR038-BLOCKED",
+                status="ERRO",
                 mensagem=(
-                    'apply_adr038_compensation foi depreciado (NEP-029 D3). '
-                    'ADR-038 produzia cancelamento algébrico: (custo_equipe/Q) × Q = custo_equipe (independente de Q). '
-                    'Use precificação bottom-up canônica via pu_calculator.'
+                    "apply_adr038_compensation foi depreciado (NEP-029 D3). "
+                    "ADR-038 produzia cancelamento algébrico: (custo_equipe/Q) × Q = custo_equipe (independente de Q). "
+                    "Use precificação bottom-up canônica via pu_calculator."
                 ),
             )
         )

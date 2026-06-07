@@ -90,7 +90,7 @@ def _bet_build_indiretos(indiretos: list) -> tuple[float, dict]:
 
 
 def _bet_extract_resultado(resultado: dict) -> tuple[dict, object]:
-    """Formata consolidacao (06) e extrai direto_catalogo."""
+    """Formata consolidacao (06) e extrai direto PUxQ."""
     venda = resultado.get("venda") or {}
     custo = resultado.get("custo") or {}
     consolidacao = {
@@ -102,12 +102,11 @@ def _bet_extract_resultado(resultado: dict) -> tuple[dict, object]:
         },
         "custo": {
             "total": custo.get("total"),
-            "direto_catalogo": custo.get("direto_catalogo"),
             "direto_equipes": custo.get("direto_equipes"),
         },
         "margem_pct": resultado.get("margem_pct"),
     }
-    return consolidacao, custo.get("direto_catalogo")
+    return consolidacao
 
 
 def _build_etapas_from_canonical(canonical: dict[str, Any]) -> dict[str, Any]:
@@ -117,7 +116,7 @@ def _build_etapas_from_canonical(canonical: dict[str, Any]) -> dict[str, Any]:
     resultado = canonical.get("resultado") or {}
     custo_direto_total = _bet_sum_equipes_custo(equipes)
     total_indireto, por_categoria = _bet_build_indiretos(indiretos)
-    res_formatted, direto_catalogo = _bet_extract_resultado(resultado)
+    res_formatted = _bet_extract_resultado(resultado)
     return {
         "03_equipes_e_alocacao": {
             "agregados": {"custo_direto_total_equipes": round(custo_direto_total, 2)},
@@ -130,7 +129,6 @@ def _build_etapas_from_canonical(canonical: dict[str, Any]) -> dict[str, Any]:
         },
         "05_indiretos": {"total_sem_bdi": round(total_indireto, 2), "por_categoria": por_categoria},
         "06_consolidacao": {"resultado": res_formatted},
-        "03_equipes_e_alocacao_catalogo": {"custo_direto_catalogo": direto_catalogo},
     }
 
 

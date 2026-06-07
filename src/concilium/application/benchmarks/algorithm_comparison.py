@@ -33,7 +33,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Result types
 # ─────────────────────────────────────────────────────────────────────────────
@@ -71,17 +70,13 @@ class AlgorithmComparisonReport:
     @property
     def best_by_quality(self) -> AlgorithmComparisonEntry | None:
         """Return the feasible entry with the highest quality_score."""
-        feasible = [
-            e for e in self.entries if e.is_feasible and e.quality_score is not None
-        ]
+        feasible = [e for e in self.entries if e.is_feasible and e.quality_score is not None]
         return max(feasible, key=lambda e: e.quality_score, default=None)  # type: ignore[arg-type]
 
     @property
     def best_by_makespan(self) -> AlgorithmComparisonEntry | None:
         """Return the feasible entry with the shortest makespan."""
-        feasible = [
-            e for e in self.entries if e.is_feasible and e.makespan_weeks is not None
-        ]
+        feasible = [e for e in self.entries if e.is_feasible and e.makespan_weeks is not None]
         return min(feasible, key=lambda e: e.makespan_weeks, default=None)  # type: ignore[arg-type]
 
     # ── reporting ──────────────────────────────────────────────────────────
@@ -104,14 +99,7 @@ class AlgorithmComparisonReport:
         for e in self.entries:
             if e.error:
                 status = f"ERROR: {e.error[:40]}"
-                row = (
-                    f"{e.algorithm:<{col_w}}"
-                    f"{'—':>{col_w}}"
-                    f"{'—':>{col_w}}"
-                    f"{'—':>{col_w}}"
-                    f"{'—':>{col_w}}"
-                    f"  {status}"
-                )
+                row = f"{e.algorithm:<{col_w}}{'—':>{col_w}}{'—':>{col_w}}{'—':>{col_w}}{'—':>{col_w}}  {status}"
             else:
                 marker = " ◀ best" if e is best else ""
                 relaxed = " (relaxed)" if e.was_relaxed else ""
@@ -278,15 +266,13 @@ class AlgorithmComparisonRunner:
 
     def _derive_inference_pack(self, ref_data: dict[str, Any] | None) -> Any:
         mod = importlib.import_module("concilium.application.benchmarks.inference")
-        svc_cls = getattr(mod, "BenchmarkInferenceService")
+        svc_cls = mod.BenchmarkInferenceService
         return svc_cls.derive(ref_data)
 
-    def _prepare_inputs(
-        self, spec: Any, ref: dict[str, Any] | None, inference_pack: Any
-    ) -> dict[str, dict]:
+    def _prepare_inputs(self, spec: Any, ref: dict[str, Any] | None, inference_pack: Any) -> dict[str, dict]:
         """Mirror BenchmarkRunner._prepare_inputs — builds skill_inputs from spec."""
         mod = importlib.import_module("concilium.application.benchmarks.inference")
-        svc_cls = getattr(mod, "BenchmarkInferenceService")
+        svc_cls = mod.BenchmarkInferenceService
 
         skill_inputs: dict[str, dict] = {}
         if spec.inputs_escopo:
@@ -305,9 +291,7 @@ class AlgorithmComparisonRunner:
         return skill_inputs
 
     @staticmethod
-    def _extract_entry(
-        algo: str, version: str, canonical: Any | None
-    ) -> AlgorithmComparisonEntry:
+    def _extract_entry(algo: str, version: str, canonical: Any | None) -> AlgorithmComparisonEntry:
         entry = AlgorithmComparisonEntry(algorithm=algo, version=version)
 
         if canonical is None:
@@ -334,9 +318,7 @@ class AlgorithmComparisonRunner:
         # custo_mob_desmob_contrato = n_cadeias × (mob + demob) × pool_size
         contratos = getattr(canonical, "contratos_recurso", None) or []
         if contratos:
-            mob_total = sum(
-                getattr(c, "custo_mob_desmob_contrato", 0.0) for c in contratos
-            )
+            mob_total = sum(getattr(c, "custo_mob_desmob_contrato", 0.0) for c in contratos)
             if mob_total > 0:
                 entry.mob_cost = mob_total
 

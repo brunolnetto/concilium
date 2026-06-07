@@ -142,7 +142,9 @@ def _rbf_try_tax_scenario(
         tabela_cbs_ibs = resolver_bdi_cbs_ibs(DEFAULT_BDI_TABELA, scenario)
         rates = {
             "mao_obra": float(tabela_cbs_ibs.mao_obra.bdi_total),
-            "equipamentos": float(tabela_cbs_ibs.material.bdi_total),  # Fixed: equipment = capital good, uses material BDI (4%)
+            "equipamentos": float(
+                tabela_cbs_ibs.material.bdi_total
+            ),  # Fixed: equipment = capital good, uses material BDI (4%)
             "material": float(tabela_cbs_ibs.material.bdi_total),
             "diesel": float(tabela_cbs_ibs.diesel.bdi_total),
             "indireto": float(tabela_cbs_ibs.indireto.bdi_total),

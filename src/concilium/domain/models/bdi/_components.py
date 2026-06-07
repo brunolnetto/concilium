@@ -7,12 +7,9 @@ from datetime import date
 from pydantic import BaseModel, ConfigDict, Field
 
 from concilium.domain.constants import (
-    BDI_COFINS,
     BDI_CSSL,
     BDI_IR,
     BDI_ISS,
-    BDI_PIS,
-    BDI_TRIBUTOS_MATERIAL,
 )
 
 from ._base import CategoriaBdi
@@ -160,10 +157,10 @@ DEFAULT_BDI_TABELA = TabelaBdi(
         cr=0.000,
         l=0.090,
         cofins=0.000,  # isenção COFINS — obras de infraestrutura
-        iss=BDI_ISS,   # 5,00%
-        pis=0.000,     # isenção PIS — obras de infraestrutura
-        cssl=BDI_CSSL, # 1,99%
-        ir=BDI_IR,     # 2,74%
+        iss=BDI_ISS,  # 5,00%
+        pis=0.000,  # isenção PIS — obras de infraestrutura
+        cssl=BDI_CSSL,  # 1,99%
+        ir=BDI_IR,  # 2,74%
     ),
     material=ComponentesBdi(
         # Fornecimento de material: apenas lucro, sem tributos sobre prestação de serviço
@@ -171,7 +168,7 @@ DEFAULT_BDI_TABELA = TabelaBdi(
         df=0.000,
         r=0.000,
         cr=0.000,
-        l=0.040,   # L=4%
+        l=0.040,  # L=4%
         cofins=0.000,
         iss=0.000,
         pis=0.000,
@@ -197,7 +194,7 @@ DEFAULT_BDI_TABELA = TabelaBdi(
         df=0.015,
         r=0.010,
         cr=0.000,
-        l=0.050,   # L=5% (planilha AGIS)
+        l=0.050,  # L=5% (planilha AGIS)
         cofins=0.000,
         iss=BDI_ISS,
         pis=0.000,
@@ -211,7 +208,7 @@ DEFAULT_BDI_TABELA = TabelaBdi(
         df=0.000,
         r=0.000,
         cr=0.000,
-        l=0.040,   # L=4% — idêntico ao material
+        l=0.040,  # L=4% — idêntico ao material
         cofins=0.000,
         iss=0.000,
         pis=0.000,

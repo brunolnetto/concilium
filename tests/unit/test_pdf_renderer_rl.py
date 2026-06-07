@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import pytest
 
-
 # Verificar se reportlab esta disponivel no ambiente; pular suite se nao estiver.
 reportlab = pytest.importorskip("reportlab", reason="reportlab nao instalado")
 
@@ -15,7 +14,6 @@ reportlab = pytest.importorskip("reportlab", reason="reportlab nao instalado")
 from concilium.application.runtime.deliverables.reports.pdf_renderer_rl import (  # noqa: E402
     render_markdown_pdf,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -113,7 +111,6 @@ class TestBlocoDeCodigo:
 
 class TestImagens:
     def test_imagem_com_provider(self):
-        import io
         import struct
         import zlib
 
@@ -123,7 +120,7 @@ class TestImagens:
             ihdr_data = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
             ihdr_crc = zlib.crc32(b"IHDR" + ihdr_data) & 0xFFFFFFFF
             ihdr = struct.pack(">I", 13) + b"IHDR" + ihdr_data + struct.pack(">I", ihdr_crc)
-            idat_data = zlib.compress(b"\x00\xFF\xFF\xFF")
+            idat_data = zlib.compress(b"\x00\xff\xff\xff")
             idat_crc = zlib.crc32(b"IDAT" + idat_data) & 0xFFFFFFFF
             idat = struct.pack(">I", len(idat_data)) + b"IDAT" + idat_data + struct.pack(">I", idat_crc)
             iend_crc = zlib.crc32(b"IEND") & 0xFFFFFFFF

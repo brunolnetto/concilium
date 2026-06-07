@@ -40,14 +40,11 @@ class Activity:
         if self.duration_weeks < 1:
             raise ValueError(f"duration_weeks must be >= 1, got {self.duration_weeks}")
         if self.window_weeks is not None and self.window_weeks < self.duration_weeks:
-            raise ValueError(
-                f"window_weeks ({self.window_weeks}) must be >= duration_weeks ({self.duration_weeks})"
-            )
+            raise ValueError(f"window_weeks ({self.window_weeks}) must be >= duration_weeks ({self.duration_weeks})")
         if self.ramp_profile is not None:
             if len(self.ramp_profile) != self.duration_weeks:
                 raise ValueError(
-                    f"ramp_profile length ({len(self.ramp_profile)}) must equal "
-                    f"duration_weeks ({self.duration_weeks})"
+                    f"ramp_profile length ({len(self.ramp_profile)}) must equal duration_weeks ({self.duration_weeks})"
                 )
 
 

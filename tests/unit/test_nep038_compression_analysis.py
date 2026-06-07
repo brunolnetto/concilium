@@ -11,18 +11,18 @@ Cobre:
 Os testes usam CP-SAT real (não mock) para garantir que a análise
 de makespan reflete o comportamento do solver de produção.
 """
+
 from __future__ import annotations
 
-import math
 import pytest
 
 from concilium.application.scheduling import (
     Activity,
     ActivityDAG,
     ResourcePool,
-    ScheduleOutput,
-    ScheduleMetrics,
     ScheduledActivity,
+    ScheduleMetrics,
+    ScheduleOutput,
 )
 from concilium.application.scheduling.compression_analysis import (
     CompressionResult,
@@ -36,8 +36,8 @@ from concilium.application.scheduling.compression_analysis import (
     format_compression_table,
 )
 
-
 # ── Fixtures comuns ───────────────────────────────────────────────────────────
+
 
 def _make_metrics(makespan: int = 10) -> ScheduleMetrics:
     return ScheduleMetrics(
@@ -54,18 +54,24 @@ def _make_sched_out(acts_data: list[tuple[str, int, int, dict]], makespan: int) 
     """Cria ScheduleOutput sintético: (activity_id, start, duration, assigned_resources)."""
     sas = [
         ScheduledActivity(
-            activity_id=aid, start_week=start, end_week=start + dur,
-            duration_weeks=dur, assigned_resources=ar,
+            activity_id=aid,
+            start_week=start,
+            end_week=start + dur,
+            duration_weeks=dur,
+            assigned_resources=ar,
         )
         for aid, start, dur, ar in acts_data
     ]
     return ScheduleOutput(
-        scheduled_activities=sas, makespan=makespan, feasible=True,
+        scheduled_activities=sas,
+        makespan=makespan,
+        feasible=True,
         metrics=_make_metrics(makespan),
     )
 
 
 # ── Testes unitários: helpers internos ────────────────────────────────────────
+
 
 class TestCpmForwardBackward:
     """CPM sem restrição de recursos — ES e float."""
@@ -73,7 +79,7 @@ class TestCpmForwardBackward:
     def test_single_activity(self):
         """Atividade única: ES=0, float=0."""
         acts = [Activity("A", "A", duration_weeks=5, required_resources={"R": 1})]
-        dag  = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
         es, tf = _cpm_forward_backward(dag, makespan=5)
         assert es["A"] == 0
         assert tf["A"] == pytest.approx(0.0)
@@ -84,7 +90,7 @@ class TestCpmForwardBackward:
             Activity("A", "A", duration_weeks=3, required_resources={"R": 1}),
             Activity("B", "B", duration_weeks=5, required_resources={"R": 1}),
         ]
-        dag  = ActivityDAG(activities=acts, precedence=[("A", "B")], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[("A", "B")], thresholds={})
         es, tf = _cpm_forward_backward(dag, makespan=8)
         assert es["A"] == 0
         assert es["B"] == 3
@@ -106,7 +112,7 @@ class TestCpmForwardBackward:
         es, tf = _cpm_forward_backward(dag, makespan=8)
         assert es["A"] == 0
         assert es["B"] == 0
-        assert es["C"] == 5          # aguarda B terminar
+        assert es["C"] == 5  # aguarda B terminar
         assert tf["B"] == pytest.approx(0.0)  # crítica
         assert tf["A"] == pytest.approx(3.0)  # float = 5 - 2 = 3
 
@@ -114,7 +120,7 @@ class TestCpmForwardBackward:
         """Threshold θ=0.5: sucessor pode começar após 50% do predecessor."""
         acts = [
             Activity("A", "A", duration_weeks=10, required_resources={"R": 1}),
-            Activity("B", "B", duration_weeks=5,  required_resources={"R": 1}),
+            Activity("B", "B", duration_weeks=5, required_resources={"R": 1}),
         ]
         dag = ActivityDAG(
             activities=acts,
@@ -132,7 +138,7 @@ class TestRcpspBackward:
     def test_activity_on_critical_path(self):
         """Atividade que termina exatamente no makespan → float=0."""
         acts = [Activity("A", "A", duration_weeks=5, required_resources={"R": 1})]
-        dag  = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
         sched = _make_sched_out([("A", 0, 5, {"R": 1})], makespan=5)
         tf = _rcpsp_backward(sched, dag)
         assert tf["A"] == pytest.approx(0.0)
@@ -140,7 +146,7 @@ class TestRcpspBackward:
     def test_activity_with_float(self):
         """Atividade que termina 3 semanas antes do makespan → float=3."""
         acts = [Activity("A", "A", duration_weeks=5, required_resources={"R": 1})]
-        dag  = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
         sched = _make_sched_out([("A", 0, 5, {"R": 1})], makespan=8)
         tf = _rcpsp_backward(sched, dag)
         assert tf["A"] == pytest.approx(3.0)
@@ -152,27 +158,27 @@ class TestBuildScaledActivities:
     def test_k2_halves_duration_doubles_resources(self):
         acts = [
             Activity("A", "A", duration_weeks=10, required_resources={"R": 2}),
-            Activity("B", "B", duration_weeks=5,  required_resources={"R": 1}),
+            Activity("B", "B", duration_weeks=5, required_resources={"R": 1}),
         ]
         dag = ActivityDAG(activities=acts, precedence=[("A", "B")], thresholds={})
         scaled = _build_scaled_activities(dag, "A", k=2)
         a_new = next(a for a in scaled if a.activity_id == "A")
         b_new = next(a for a in scaled if a.activity_id == "B")
-        assert a_new.duration_weeks == 5          # ⌈10/2⌉
+        assert a_new.duration_weeks == 5  # ⌈10/2⌉
         assert a_new.required_resources["R"] == 4  # 2 × 2
-        assert b_new.duration_weeks == 5           # inalterado
+        assert b_new.duration_weeks == 5  # inalterado
         assert b_new.required_resources["R"] == 1  # inalterado
 
     def test_k3_odd_duration_ceiling(self):
         acts = [Activity("A", "A", duration_weeks=7, required_resources={"R": 1})]
-        dag  = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
         scaled = _build_scaled_activities(dag, "A", k=3)
         a_new = next(a for a in scaled if a.activity_id == "A")
         assert a_new.duration_weeks == 3  # ⌈7/3⌉
 
     def test_k1_no_change(self):
         acts = [Activity("A", "A", duration_weeks=10, required_resources={"R": 2})]
-        dag  = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
         scaled = _build_scaled_activities(dag, "A", k=1)
         a_new = next(a for a in scaled if a.activity_id == "A")
         assert a_new.duration_weeks == 10
@@ -185,13 +191,13 @@ class TestPoolForActivities:
     def test_pool_increases_when_scaled(self):
         acts = [Activity("A", "A", duration_weeks=5, required_resources={"R": 4})]
         base_pool = ResourcePool(resources={"R": 2})
-        pool_new  = _pool_for_activities(acts, base_pool)
+        pool_new = _pool_for_activities(acts, base_pool)
         assert pool_new.resources["R"] == 4
 
     def test_pool_unchanged_when_below_base(self):
         acts = [Activity("A", "A", duration_weeks=5, required_resources={"R": 1})]
         base_pool = ResourcePool(resources={"R": 3})
-        pool_new  = _pool_for_activities(acts, base_pool)
+        pool_new = _pool_for_activities(acts, base_pool)
         assert pool_new.resources["R"] == 3
 
 
@@ -216,9 +222,7 @@ class TestClassify:
 
 # ── Testes de integração com CP-SAT ──────────────────────────────────────────
 
-pytestmark_cpsat = pytest.mark.skipif(
-    False, reason="requer ortools instalado"
-)
+pytestmark_cpsat = pytest.mark.skipif(False, reason="requer ortools instalado")
 
 
 def _contratos_dummy(tipo: str, mob: float = 10_000, demob: float = 5_000, idle: float = 1_000) -> dict:
@@ -230,11 +234,11 @@ class TestComputeCompressionSensitivities:
 
     def test_single_cp_activity_gamma_is_one(self):
         """Atividade única no CP: γ = 1 (1 semana de duração → 1 semana de makespan)."""
-        acts  = [Activity("A", "A", duration_weeks=10, required_resources={"R": 1})]
-        dag   = ActivityDAG(activities=acts, precedence=[], thresholds={})
-        pool  = ResourcePool(resources={"R": 1})
+        acts = [Activity("A", "A", duration_weeks=10, required_resources={"R": 1})]
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        pool = ResourcePool(resources={"R": 1})
         sched = _make_sched_out([("A", 0, 10, {"R": 1})], makespan=10)
-        ct    = _contratos_dummy("R")
+        ct = _contratos_dummy("R")
 
         results = compute_compression_sensitivities(
             sched_output=sched,
@@ -265,9 +269,9 @@ class TestComputeCompressionSensitivities:
         """
         acts = [
             Activity("A", "A", duration_weeks=10, required_resources={"R": 1}),
-            Activity("B", "B", duration_weeks=5,  required_resources={"S": 1}),
+            Activity("B", "B", duration_weeks=5, required_resources={"S": 1}),
         ]
-        dag  = ActivityDAG(activities=acts, precedence=[("A", "B")], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[("A", "B")], thresholds={})
         pool = ResourcePool(resources={"R": 1, "S": 1})
         sched = _make_sched_out(
             [("A", 0, 10, {"R": 1}), ("B", 10, 5, {"S": 1})],
@@ -276,8 +280,12 @@ class TestComputeCompressionSensitivities:
         ct = {**_contratos_dummy("R"), **_contratos_dummy("S")}
 
         results = compute_compression_sensitivities(
-            sched_output=sched, dag=dag, pool=pool,
-            contratos=ct, custo_semana=500_000.0, k_values=(2,),
+            sched_output=sched,
+            dag=dag,
+            pool=pool,
+            contratos=ct,
+            custo_semana=500_000.0,
+            k_values=(2,),
         )
 
         res_a = next(r for r in results if r.activity_id == "A")
@@ -297,16 +305,16 @@ class TestComputeCompressionSensitivities:
         Comprimir A não muda o makespan → γ_A = 0, classe=Livre.
         """
         acts = [
-            Activity("A", "A", duration_weeks=3,  required_resources={"R": 1}),
+            Activity("A", "A", duration_weeks=3, required_resources={"R": 1}),
             Activity("B", "B", duration_weeks=10, required_resources={"S": 1}),
-            Activity("C", "C", duration_weeks=2,  required_resources={"T": 1}),
+            Activity("C", "C", duration_weeks=2, required_resources={"T": 1}),
         ]
         dag = ActivityDAG(
             activities=acts,
             precedence=[("A", "C"), ("B", "C")],
             thresholds={},
         )
-        pool  = ResourcePool(resources={"R": 1, "S": 1, "T": 1})
+        pool = ResourcePool(resources={"R": 1, "S": 1, "T": 1})
         sched = _make_sched_out(
             [("A", 0, 3, {"R": 1}), ("B", 0, 10, {"S": 1}), ("C", 10, 2, {"T": 1})],
             makespan=12,
@@ -314,8 +322,12 @@ class TestComputeCompressionSensitivities:
         ct = {**_contratos_dummy("R"), **_contratos_dummy("S"), **_contratos_dummy("T")}
 
         results = compute_compression_sensitivities(
-            sched_output=sched, dag=dag, pool=pool,
-            contratos=ct, custo_semana=500_000.0, k_values=(2,),
+            sched_output=sched,
+            dag=dag,
+            pool=pool,
+            contratos=ct,
+            custo_semana=500_000.0,
+            k_values=(2,),
         )
 
         res_a = next(r for r in results if r.activity_id == "A")
@@ -338,7 +350,7 @@ class TestComputeCompressionSensitivities:
             Activity("A", "A", duration_weeks=6, required_resources={"R": 1}),
             Activity("B", "B", duration_weeks=6, required_resources={"R": 1}),
         ]
-        dag  = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
         pool = ResourcePool(resources={"R": 1})
         # CP-SAT agenda serialmente: A=0-6, B=6-12
         sched = _make_sched_out(
@@ -348,8 +360,12 @@ class TestComputeCompressionSensitivities:
         ct = _contratos_dummy("R")
 
         results = compute_compression_sensitivities(
-            sched_output=sched, dag=dag, pool=pool,
-            contratos=ct, custo_semana=1_000_000.0, k_values=(2,),
+            sched_output=sched,
+            dag=dag,
+            pool=pool,
+            contratos=ct,
+            custo_semana=1_000_000.0,
+            k_values=(2,),
         )
 
         res_a = next(r for r in results if r.activity_id == "A")
@@ -360,42 +376,46 @@ class TestComputeCompressionSensitivities:
 
     def test_roi_formula(self):
         """ROI = poupanca / cost_extra onde poupanca = delta_ms × custo_semana."""
-        acts  = [Activity("A", "A", duration_weeks=10, required_resources={"M": 2})]
-        dag   = ActivityDAG(activities=acts, precedence=[], thresholds={})
-        pool  = ResourcePool(resources={"M": 2})
+        acts = [Activity("A", "A", duration_weeks=10, required_resources={"M": 2})]
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        pool = ResourcePool(resources={"M": 2})
         sched = _make_sched_out([("A", 0, 10, {"M": 2})], makespan=10)
 
         C_SEMANA = 1_000_000.0
-        MOB   = 50_000.0
+        MOB = 50_000.0
         DEMOB = 25_000.0
-        IDLE  = 5_000.0
+        IDLE = 5_000.0
 
         ct = {"M": {"custo_mob_unit": MOB, "custo_demob_unit": DEMOB, "custo_idle_semanal_unit": IDLE}}
 
         results = compute_compression_sensitivities(
-            sched_output=sched, dag=dag, pool=pool,
-            contratos=ct, custo_semana=C_SEMANA,
-            k_values=(2,), idle_fraction=0.20,
+            sched_output=sched,
+            dag=dag,
+            pool=pool,
+            contratos=ct,
+            custo_semana=C_SEMANA,
+            k_values=(2,),
+            idle_fraction=0.20,
         )
 
-        r  = results[0]
+        r = results[0]
         kr = r.by_k[2]
         # d_new = 5, delta_ms = 5
         # cost_extra = (2-1) * 2 * (50k + 25k + 5k×5×0.20) = 2 × (75k + 5k) = 160k
         expected_cost = 1 * 2 * (MOB + DEMOB + IDLE * 5 * 0.20)
         expected_poup = kr.delta_makespan * C_SEMANA
         assert kr.cost_extra == pytest.approx(expected_cost, rel=0.01)
-        assert kr.poupanca   == pytest.approx(expected_poup, rel=0.01)
-        assert kr.roi        == pytest.approx(expected_poup / expected_cost, rel=0.01)
+        assert kr.poupanca == pytest.approx(expected_poup, rel=0.01)
+        assert kr.roi == pytest.approx(expected_poup / expected_cost, rel=0.01)
 
     def test_sorted_by_best_roi(self):
         """Resultados ordenados por best_roi decrescente."""
         acts = [
             Activity("A", "A", duration_weeks=10, required_resources={"R": 1}),
-            Activity("B", "B", duration_weeks=5,  required_resources={"S": 1}),
+            Activity("B", "B", duration_weeks=5, required_resources={"S": 1}),
         ]
-        dag   = ActivityDAG(activities=acts, precedence=[("A", "B")], thresholds={})
-        pool  = ResourcePool(resources={"R": 1, "S": 1})
+        dag = ActivityDAG(activities=acts, precedence=[("A", "B")], thresholds={})
+        pool = ResourcePool(resources={"R": 1, "S": 1})
         sched = _make_sched_out(
             [("A", 0, 10, {"R": 1}), ("B", 10, 5, {"S": 1})],
             makespan=15,
@@ -403,8 +423,12 @@ class TestComputeCompressionSensitivities:
         ct = {**_contratos_dummy("R"), **_contratos_dummy("S")}
 
         results = compute_compression_sensitivities(
-            sched_output=sched, dag=dag, pool=pool,
-            contratos=ct, custo_semana=1_000_000.0, k_values=(2,),
+            sched_output=sched,
+            dag=dag,
+            pool=pool,
+            contratos=ct,
+            custo_semana=1_000_000.0,
+            k_values=(2,),
         )
 
         rois = [r.best_roi for r in results]
@@ -415,15 +439,18 @@ class TestFormatCompressionTable:
     """Smoke test para format_compression_table."""
 
     def test_returns_string(self):
-        acts  = [Activity("A", "A", duration_weeks=5, required_resources={"R": 1})]
-        dag   = ActivityDAG(activities=acts, precedence=[], thresholds={})
-        pool  = ResourcePool(resources={"R": 1})
+        acts = [Activity("A", "A", duration_weeks=5, required_resources={"R": 1})]
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        pool = ResourcePool(resources={"R": 1})
         sched = _make_sched_out([("A", 0, 5, {"R": 1})], makespan=5)
 
         results = compute_compression_sensitivities(
-            sched_output=sched, dag=dag, pool=pool,
+            sched_output=sched,
+            dag=dag,
+            pool=pool,
             contratos=_contratos_dummy("R"),
-            custo_semana=100_000.0, k_values=(2,),
+            custo_semana=100_000.0,
+            k_values=(2,),
         )
         table = format_compression_table(results)
         assert isinstance(table, str)
@@ -434,21 +461,45 @@ class TestKScaleResultProperties:
     """Propriedades de KScaleResult."""
 
     def test_viable_true_when_roi_gt_1_and_positive_delta(self):
-        kr = KScaleResult(k=2, duration_new=5, makespan_new=50, delta_makespan=5,
-                          delta_duration=5, gamma=1.0, cost_extra=1_000,
-                          poupanca=5_000_000, roi=5000.0)
+        kr = KScaleResult(
+            k=2,
+            duration_new=5,
+            makespan_new=50,
+            delta_makespan=5,
+            delta_duration=5,
+            gamma=1.0,
+            cost_extra=1_000,
+            poupanca=5_000_000,
+            roi=5000.0,
+        )
         assert kr.viable is True
 
     def test_viable_false_when_roi_lt_1(self):
-        kr = KScaleResult(k=2, duration_new=5, makespan_new=50, delta_makespan=5,
-                          delta_duration=5, gamma=1.0, cost_extra=10_000_000,
-                          poupanca=100, roi=0.00001)
+        kr = KScaleResult(
+            k=2,
+            duration_new=5,
+            makespan_new=50,
+            delta_makespan=5,
+            delta_duration=5,
+            gamma=1.0,
+            cost_extra=10_000_000,
+            poupanca=100,
+            roi=0.00001,
+        )
         assert kr.viable is False
 
     def test_viable_false_when_delta_zero(self):
-        kr = KScaleResult(k=2, duration_new=5, makespan_new=55, delta_makespan=0,
-                          delta_duration=5, gamma=0.0, cost_extra=50_000,
-                          poupanca=0, roi=0.0)
+        kr = KScaleResult(
+            k=2,
+            duration_new=5,
+            makespan_new=55,
+            delta_makespan=0,
+            delta_duration=5,
+            gamma=0.0,
+            cost_extra=50_000,
+            poupanca=0,
+            roi=0.0,
+        )
         assert kr.viable is False
 
 
@@ -457,9 +508,15 @@ class TestCompressionResultProperties:
 
     def _make_result(self) -> CompressionResult:
         return CompressionResult(
-            activity_id="A", tipo_recurso_bottleneck="R", n_base=2,
-            duration_base=10, start_base=0, makespan_base=55,
-            float_rcpsp=3.0, float_cpm=5.0, resource_delay=0.0,
+            activity_id="A",
+            tipo_recurso_bottleneck="R",
+            n_base=2,
+            duration_base=10,
+            start_base=0,
+            makespan_base=55,
+            float_rcpsp=3.0,
+            float_cpm=5.0,
+            resource_delay=0.0,
             criticality_class="GW",
             by_k={
                 2: KScaleResult(2, 5, 50, 5, 5, 1.0, 80_000, 7_000_000, 87.5),
@@ -481,9 +538,15 @@ class TestCompressionResultProperties:
 
     def test_best_k_none_when_no_viable(self):
         r = CompressionResult(
-            activity_id="A", tipo_recurso_bottleneck="R", n_base=1,
-            duration_base=5, start_base=0, makespan_base=55,
-            float_rcpsp=10.0, float_cpm=10.0, resource_delay=0.0,
+            activity_id="A",
+            tipo_recurso_bottleneck="R",
+            n_base=1,
+            duration_base=5,
+            start_base=0,
+            makespan_base=55,
+            float_rcpsp=10.0,
+            float_cpm=10.0,
+            resource_delay=0.0,
             criticality_class="Livre",
             by_k={
                 2: KScaleResult(2, 3, 55, 0, 2, 0.0, 10_000, 0, 0.0),

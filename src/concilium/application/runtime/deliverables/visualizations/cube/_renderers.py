@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from ..chart_markdown_support import weekly_to_monthly_labels
-from ._common import COLORS, SERIE_LABEL_MAP, apply_monthly_ticks, col_label, get_column_id, is_weekly_labels
+from ._common import COLORS, SERIE_LABEL_MAP, apply_monthly_ticks, col_label, get_column_id
 
 
 def render_stacked_bar(
@@ -48,9 +48,7 @@ def render_stacked_bar(
         return None
     value_maps: dict[str, dict[str, float]] = defaultdict(dict)
     for row in rows:
-        value_maps[str(row.get(series_key, ""))][str(row.get(x_key, ""))] = float(
-            row.get(value_key, 0.0) or 0.0
-        )
+        value_maps[str(row.get(series_key, ""))][str(row.get(x_key, ""))] = float(row.get(value_key, 0.0) or 0.0)
     x = list(range(len(labels)))
     fig_w = max(8, len(labels) * 0.8 + 2)
     if show_normalized:
@@ -63,8 +61,7 @@ def render_stacked_bar(
     for idx, series_name in enumerate(series_names):
         values = [value_maps[series_name].get(lbl, 0.0) / scale for lbl in labels]
         lbl_display = SERIE_LABEL_MAP.get(series_name, series_name.replace("_", " "))
-        ax.bar(x, values, bottom=baseline, alpha=0.85, label=lbl_display,
-               color=COLORS[idx % len(COLORS)], width=0.7)
+        ax.bar(x, values, bottom=baseline, alpha=0.85, label=lbl_display, color=COLORS[idx % len(COLORS)], width=0.7)
         baseline = [base + value for base, value in zip(baseline, values)]
     ax.set_title(title, fontsize=13, fontweight="bold")
     ax.set_ylabel("R$ (Mi)" if use_millions else "Valor", fontsize=9)
@@ -86,8 +83,7 @@ def render_stacked_bar(
                 (value_maps[series_name].get(lbl, 0.0) / totals[i] * 100.0) if totals[i] else 0.0
                 for i, lbl in enumerate(labels)
             ]
-            ax_norm.bar(x, values_pct, bottom=baseline_pct, alpha=0.85,
-                        color=COLORS[idx % len(COLORS)], width=0.7)
+            ax_norm.bar(x, values_pct, bottom=baseline_pct, alpha=0.85, color=COLORS[idx % len(COLORS)], width=0.7)
             baseline_pct = [b + v for b, v in zip(baseline_pct, values_pct)]
         ax_norm.set_ylim(0, 105)
         ax_norm.set_ylabel("Participacao (%)", fontsize=9)
@@ -105,8 +101,11 @@ def render_stacked_bar(
         note_ax = ax_norm if ax_norm is not None else ax
         note_ax.annotate(
             sigla_note,
-            xy=(0.5, -0.28), xycoords="axes fraction",
-            ha="center", va="top", fontsize=7,
+            xy=(0.5, -0.28),
+            xycoords="axes fraction",
+            ha="center",
+            va="top",
+            fontsize=7,
             bbox=dict(boxstyle="round,pad=0.3", facecolor="#f9f9f9", alpha=0.9, edgecolor="#cccccc"),
         )
         fig.subplots_adjust(bottom=0.22)
@@ -134,9 +133,7 @@ def render_stacked_area(
     scale = 1e6 if use_millions else 1.0
     value_map: dict[str, dict[str, float]] = defaultdict(dict)
     for row in rows:
-        value_map[str(row.get(series_key, ""))][str(row.get(x_key, ""))] = float(
-            row.get(value_key, 0) or 0
-        )
+        value_map[str(row.get(series_key, ""))][str(row.get(x_key, ""))] = float(row.get(value_key, 0) or 0)
     x = list(range(len(labels)))
     totals = [sum(value_map[s].get(lbl, 0.0) for s in all_series) for lbl in labels]
     fig, (ax, ax_norm) = plt.subplots(2, 1, figsize=(12, 10))
@@ -197,9 +194,7 @@ def render_stacked_area_100pct(
         return None
     value_map: dict[str, dict[str, float]] = defaultdict(dict)
     for row in rows:
-        value_map[str(row.get(series_key, ""))][str(row.get(x_key, ""))] = float(
-            row.get(value_key, 0) or 0
-        )
+        value_map[str(row.get(series_key, ""))][str(row.get(x_key, ""))] = float(row.get(value_key, 0) or 0)
     x = list(range(len(labels)))
     totals = [sum(value_map[s].get(lbl, 0.0) for s in all_series) for lbl in labels]
     fig, ax = plt.subplots(figsize=(12, 5))
@@ -258,8 +253,15 @@ def render_line_bar(
             )
         for idx, (series_name, value_map) in enumerate(sorted(grouped.items())):
             points = [value_map.get(label, 0.0) for label in labels]
-            ax.plot(list(range(len(labels))), points, linewidth=2, marker="o", markersize=4,
-                    label=series_name, color=COLORS[idx % len(COLORS)])
+            ax.plot(
+                list(range(len(labels))),
+                points,
+                linewidth=2,
+                marker="o",
+                markersize=4,
+                label=series_name,
+                color=COLORS[idx % len(COLORS)],
+            )
         ax.legend(fontsize=8)
     else:
         points = [

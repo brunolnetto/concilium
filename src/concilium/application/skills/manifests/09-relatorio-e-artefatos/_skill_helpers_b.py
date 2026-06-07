@@ -13,7 +13,6 @@ Estrutura Excel gerada:
 """
 
 import math
-from typing import Any
 
 from concilium.domain.models.canonical import CanonicalModel
 
@@ -29,7 +28,7 @@ def _getfloat(obj, attr: str) -> float:
 
 
 def _add_part_cost(particao: dict, contrato) -> None:
-    for part in (getattr(contrato, "particao_por_item", None) or []):
+    for part in getattr(contrato, "particao_por_item", None) or []:
         item_id = _getstr(part, "item_id")
         if not item_id:
             continue
@@ -38,17 +37,13 @@ def _add_part_cost(particao: dict, contrato) -> None:
 
 def _build_particao_by_item(canonical_in: CanonicalModel) -> dict[str, float]:
     particao: dict[str, float] = {}
-    for contrato in (canonical_in.contratos_recurso or []):
+    for contrato in canonical_in.contratos_recurso or []:
         _add_part_cost(particao, contrato)
     return particao
 
 
 def _build_equipe_by_item(canonical_in: CanonicalModel) -> dict:
-    return {
-        str(eq.item_id): eq
-        for eq in (canonical_in.equipes_diretas or [])
-        if getattr(eq, "item_id", None)
-    }
+    return {str(eq.item_id): eq for eq in (canonical_in.equipes_diretas or []) if getattr(eq, "item_id", None)}
 
 
 def _build_sched_by_item(canonical_in: CanonicalModel) -> dict:
@@ -56,7 +51,7 @@ def _build_sched_by_item(canonical_in: CanonicalModel) -> dict:
     if not cronograma:
         return {}
     sched: dict = {}
-    for sa in (getattr(cronograma, "scheduled_activities", None) or []):
+    for sa in getattr(cronograma, "scheduled_activities", None) or []:
         aid = _getstr(sa, "activity_id")
         if aid:
             sched[aid] = sa
@@ -91,7 +86,9 @@ def _apply_pesos_to_result(result: dict, pesos_semana: dict, custo_item: float, 
         result[ym] += custo_item * (peso / soma_pesos)
 
 
-def _distribute_item_cost(result: dict, item_id: str, eq, particao_by_item: dict, sched_by_item: dict, project_months: list) -> None:
+def _distribute_item_cost(
+    result: dict, item_id: str, eq, particao_by_item: dict, sched_by_item: dict, project_months: list
+) -> None:
     custo_item = _resolve_item_cost(particao_by_item, item_id, eq)
     if custo_item <= 0.0:
         return

@@ -5,7 +5,6 @@ ADR-103: Jobs na Camada de Aplicação
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,11 +20,11 @@ class JobDTO(BaseModel):
     escopo_id: str | None = Field(None, description="ID do escopo")
     plano_id: str | None = Field(None, description="ID do plano")
     inputs: dict[str, Any] = Field(default_factory=dict, description="Inputs da skill")
-    
+
     disparado_em: str = Field(..., description="Timestamp ISO 8601 de disparo")
     iniciado_em: str | None = Field(None, description="Timestamp ISO 8601 de início")
     finalizado_em: str | None = Field(None, description="Timestamp ISO 8601 de finalização")
-    
+
     resultado: dict[str, Any] | None = Field(None, description="Resultado da skill quando CONCLUIDO")
     erro: str | None = Field(None, description="Mensagem de erro quando ERRO")
     progresso: str | None = Field(None, description="Mensagem textual de progresso")

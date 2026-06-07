@@ -31,9 +31,7 @@ def register(server: FastMCP) -> None:
         return _wrap_response(ab.list_artifacts(store, versao))
 
     @server.tool()
-    def ler_artefato_texto(
-        project_id: str, nome_arquivo: str, versao: str | None = None
-    ) -> dict[str, Any]:
+    def ler_artefato_texto(project_id: str, nome_arquivo: str, versao: str | None = None) -> dict[str, Any]:
         """Retorna o conteúdo de um artefato textual (md, json, csv, txt) como string.
 
         Para binários (PNG, XLSX, PDF) use ``baixar_artefato_binario``.
@@ -45,9 +43,7 @@ def register(server: FastMCP) -> None:
             return _wrap_response({"erro": str(e), "nome": nome_arquivo})
 
     @server.tool()
-    def baixar_artefato_binario(
-        project_id: str, nome_arquivo: str, versao: str | None = None
-    ) -> dict[str, Any]:
+    def baixar_artefato_binario(project_id: str, nome_arquivo: str, versao: str | None = None) -> dict[str, Any]:
         """Retorna um artefato binário (PNG, XLSX, PDF) como base64.
 
         Arquivos abaixo de 10 MB vêm inline em ``conteudo_base64``; acima disso,

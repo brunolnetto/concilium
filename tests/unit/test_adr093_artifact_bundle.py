@@ -238,19 +238,24 @@ class TestBlobStorageTransport:
         from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
         class _Min(BlobStoragePort):
-            def ler_blob(self, path): return b""
-            def gravar_blob(self, path, content): pass
-            def listar_blobs(self, prefix): return []
-            def blob_existe(self, path): return False
+            def ler_blob(self, path):
+                return b""
+
+            def gravar_blob(self, path, content):
+                pass
+
+            def listar_blobs(self, prefix):
+                return []
+
+            def blob_existe(self, path):
+                return False
 
         assert _Min().gerar_url_temporaria("x") is None
 
     def test_read_binary_respeita_transport_injetado(self, store):
         from concilium.application.services.artifact_transport import LocalBase64Transport
 
-        res = ab.read_binary_b64(
-            store, None, "gantt_cronograma.png", transport=LocalBase64Transport(max_mb=10.0)
-        )
+        res = ab.read_binary_b64(store, None, "gantt_cronograma.png", transport=LocalBase64Transport(max_mb=10.0))
         assert res["encoding"] == "base64"
 
 

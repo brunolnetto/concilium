@@ -1,4 +1,5 @@
 """BenchmarkDiffService — Comparação estruturada de execuções de benchmark."""
+
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -41,9 +42,7 @@ class BenchmarkDiffResult:
 class BenchmarkDiffService:
     """Serviço para comparar execuções de benchmark e gerar diffs estruturados."""
 
-    def compare(
-        self, exec_1: BenchmarkExecution, exec_2: BenchmarkExecution
-    ) -> BenchmarkDiffResult:
+    def compare(self, exec_1: BenchmarkExecution, exec_2: BenchmarkExecution) -> BenchmarkDiffResult:
         """Compara duas execuções e retorna diff estruturado.
 
         Args:
@@ -54,9 +53,7 @@ class BenchmarkDiffService:
             BenchmarkDiffResult com deltas estruturados.
         """
         if exec_1.benchmark_id != exec_2.benchmark_id:
-            raise ValueError(
-                f"Execuções de benchmarks diferentes: {exec_1.benchmark_id} vs {exec_2.benchmark_id}"
-            )
+            raise ValueError(f"Execuções de benchmarks diferentes: {exec_1.benchmark_id} vs {exec_2.benchmark_id}")
 
         # Extrai deltas da discrepancia_sumario se disponível
         discrepancia = exec_2.discrepancia_sumario or {}
@@ -67,9 +64,7 @@ class BenchmarkDiffService:
         itens_impactados = discrepancia.get("itens_impactados", 0)
 
         # Gera interpretação
-        interpretacao = self._gerar_interpretacao(
-            delta_custo, delta_cronograma, delta_margem
-        )
+        interpretacao = self._gerar_interpretacao(delta_custo, delta_cronograma, delta_margem)
 
         return BenchmarkDiffResult(
             execution_1_id=exec_1.execution_id,
@@ -86,9 +81,7 @@ class BenchmarkDiffService:
         )
 
     @staticmethod
-    def _gerar_interpretacao(
-        delta_custo: float, delta_cronograma: int, delta_margem: float
-    ) -> str:
+    def _gerar_interpretacao(delta_custo: float, delta_cronograma: int, delta_margem: float) -> str:
         """Gera interpretação textual dos deltas."""
         signals = []
 

@@ -51,7 +51,8 @@ class McpAuthMiddleware:
             except Exception as exc:
                 if _auth_enabled():
                     await _send_json_response(
-                        send, 401,
+                        send,
+                        401,
                         {"detail": f"Token MCP inválido: {exc}"},
                         headers=[(b"www-authenticate", b"Bearer")],
                     )
@@ -59,7 +60,8 @@ class McpAuthMiddleware:
                 # AUTH_ENABLED=0 → ignorar erros de token (modo dev)
         elif _auth_enabled():
             await _send_json_response(
-                send, 401,
+                send,
+                401,
                 {"detail": "Authorization: Bearer <token> ausente."},
                 headers=[(b"www-authenticate", b"Bearer")],
             )
@@ -70,6 +72,7 @@ class McpAuthMiddleware:
         finally:
             if token_var is not None:
                 from concilium.infrastructure.auth.permission_guard import _current_roles
+
                 _current_roles.reset(token_var)
 
 
@@ -94,13 +97,17 @@ async def _send_json_response(
         (b"content-length", str(len(encoded)).encode()),
         *(headers or []),
     ]
-    await send({
-        "type": "http.response.start",
-        "status": status,
-        "headers": resp_headers,
-    })
-    await send({
-        "type": "http.response.body",
-        "body": encoded,
-        "more_body": False,
-    })
+    await send(
+        {
+            "type": "http.response.start",
+            "status": status,
+            "headers": resp_headers,
+        }
+    )
+    await send(
+        {
+            "type": "http.response.body",
+            "body": encoded,
+            "more_body": False,
+        }
+    )

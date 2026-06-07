@@ -45,8 +45,14 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
             ax_saldo.axhline(0, color="black", linewidth=0.8, linestyle="--", alpha=0.5)
             be_zero_idx = next((i for i, v in enumerate(saldo_acum) if v >= 0), None)
             if be_zero_idx is not None:
-                ax_saldo.axvline(be_zero_idx, color="#27ae60", linewidth=1.5,
-                                 linestyle="--", alpha=0.8, label=f"Break-even: {labels[be_zero_idx]}")
+                ax_saldo.axvline(
+                    be_zero_idx,
+                    color="#27ae60",
+                    linewidth=1.5,
+                    linestyle="--",
+                    alpha=0.8,
+                    label=f"Break-even: {labels[be_zero_idx]}",
+                )
                 ax_saldo.legend(fontsize=8)
             ax_saldo.set_title("Saldo Acumulado (Receita Acum. - Despesa Acum.)", fontsize=11, fontweight="bold")
             ax_saldo.set_ylabel("R$ (Mi)", fontsize=9)
@@ -57,23 +63,34 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
                 (i for i, (r, d) in enumerate(zip(receita_acum, despesa_acum)) if r >= d),
                 None,
             )
-            ax2.plot(x2, receita_acum, color="#1a3a5c", linewidth=2, marker="o",
-                     markersize=3, label="Receita Acum.")
-            ax2.plot(x2, despesa_acum, color="#c05c18", linewidth=2, marker="s",
-                     markersize=3, label="Despesa Acum.")
-            ax2.fill_between(x2, receita_acum, despesa_acum,
-                             where=[r < d for r, d in zip(receita_acum, despesa_acum)],
-                             color="#c05c18", alpha=0.12, label="Exposicao")
-            ax2.fill_between(x2, receita_acum, despesa_acum,
-                             where=[r >= d for r, d in zip(receita_acum, despesa_acum)],
-                             color="#1a3a5c", alpha=0.12, label="Superavit Acum.")
+            ax2.plot(x2, receita_acum, color="#1a3a5c", linewidth=2, marker="o", markersize=3, label="Receita Acum.")
+            ax2.plot(x2, despesa_acum, color="#c05c18", linewidth=2, marker="s", markersize=3, label="Despesa Acum.")
+            ax2.fill_between(
+                x2,
+                receita_acum,
+                despesa_acum,
+                where=[r < d for r, d in zip(receita_acum, despesa_acum)],
+                color="#c05c18",
+                alpha=0.12,
+                label="Exposicao",
+            )
+            ax2.fill_between(
+                x2,
+                receita_acum,
+                despesa_acum,
+                where=[r >= d for r, d in zip(receita_acum, despesa_acum)],
+                color="#1a3a5c",
+                alpha=0.12,
+                label="Superavit Acum.",
+            )
             if be_idx is not None:
                 ax2.axvline(be_idx, color="#27ae60", linewidth=1.5, linestyle="--", alpha=0.8)
                 ax2.annotate(
                     f"Break-even: {labels[be_idx]}",
                     xy=(be_idx, receita_acum[be_idx]),
                     xytext=(be_idx + 0.5, receita_acum[be_idx]),
-                    fontsize=7, color="#27ae60",
+                    fontsize=7,
+                    color="#27ae60",
                     arrowprops=dict(arrowstyle="->", color="#27ae60", lw=0.8),
                 )
             ax2.axhline(0, color="black", linewidth=0.8, linestyle="--", alpha=0.5)

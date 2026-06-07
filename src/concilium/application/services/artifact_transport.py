@@ -25,9 +25,7 @@ _MB = 1024 * 1024
 class ArtifactTransport(Protocol):
     """Porta de entrega de um blob de artefato."""
 
-    def deliver(
-        self, *, nome: str, data: bytes, mime: str, source_path: Path | None = None
-    ) -> dict[str, Any]:
+    def deliver(self, *, nome: str, data: bytes, mime: str, source_path: Path | None = None) -> dict[str, Any]:
         """Entrega ``data`` e devolve os campos de transporte (encoding + payload)."""
         ...
 
@@ -38,9 +36,7 @@ class LocalBase64Transport:
     def __init__(self, max_mb: float = 10.0) -> None:
         self.max_mb = max_mb
 
-    def deliver(
-        self, *, nome: str, data: bytes, mime: str, source_path: Path | None = None
-    ) -> dict[str, Any]:
+    def deliver(self, *, nome: str, data: bytes, mime: str, source_path: Path | None = None) -> dict[str, Any]:
         size = len(data)
         size_mb = round(size / _MB, 3)
         if size <= self.max_mb * _MB:
@@ -85,9 +81,7 @@ class BlobStorageTransport:
         self.prefixo = prefixo.strip("/")
         self.ttl_segundos = ttl_segundos
 
-    def deliver(
-        self, *, nome: str, data: bytes, mime: str, source_path: Path | None = None
-    ) -> dict[str, Any]:
+    def deliver(self, *, nome: str, data: bytes, mime: str, source_path: Path | None = None) -> dict[str, Any]:
         size_mb = round(len(data) / _MB, 3)
         key = f"{self.prefixo}/{nome}" if self.prefixo else nome
         try:

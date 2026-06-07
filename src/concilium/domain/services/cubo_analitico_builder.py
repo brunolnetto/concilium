@@ -20,7 +20,6 @@ Seleção de caminho (pool vs. autônomo — ADR-086):
 
 from __future__ import annotations
 
-import io
 from datetime import UTC, datetime
 from typing import Any
 
@@ -34,35 +33,37 @@ from concilium.domain.models.cubo_analitico import CelulaAnalitica, CuboAnalitic
 # Diesel = insumo físico consumido = mesma natureza econômica de areia/brita.
 _PROP_BDI_MAP: list[tuple[str, str, str, str, str]] = [
     # campo_equipe_direta           cat_insumo      propriedade          cat_bdi    unidade
-    ("custo_mao_obra_mensal",         "mao_obra",    "salario_encargos", "mao_obra", ""),
-    ("custo_equipamentos_mensal",     "equipamento", "aluguel",          "servicos", ""),
-    ("custo_combustivel_total_mensal","material",    "combustivel",      "material", "L"),
-    ("custo_material_mensal",         "material",    "consumivel",       "material", ""),
+    ("custo_mao_obra_mensal", "mao_obra", "salario_encargos", "mao_obra", ""),
+    ("custo_equipamentos_mensal", "equipamento", "aluguel", "servicos", ""),
+    ("custo_combustivel_total_mensal", "material", "combustivel", "material", "L"),
+    ("custo_material_mensal", "material", "consumivel", "material", ""),
 ]
 
 # Mapeamento pool → hierarquia dimensional (ADR-090)
 _POOL_TO_PROP: dict[str, tuple[str, str, str]] = {
-    "mo":   ("mao_obra",    "salario_encargos", ""),
-    "eq":   ("equipamento", "aluguel",          ""),
-    "comb": ("material",    "combustivel",      "L"),  # ADR-090: combustivel = material
-    "mat":  ("material",    "consumivel",       ""),
+    "mo": ("mao_obra", "salario_encargos", ""),
+    "eq": ("equipamento", "aluguel", ""),
+    "comb": ("material", "combustivel", "L"),  # ADR-090: combustivel = material
+    "mat": ("material", "consumivel", ""),
 }
 
 
 def _cab_compute_diesel_consumo(equipe: object, horas_semana: float) -> float:
     """L/semana a 100% eficiência — grandeza física do ativo (não custo)."""
     consumo_L_hora_base = sum(
-        (eq.consumo_litros_hora or 0.0) * eq.num_unidades
-        for eq in equipe.equipamentos
-        if eq.consumo_litros_hora
+        (eq.consumo_litros_hora or 0.0) * eq.num_unidades for eq in equipe.equipamentos if eq.consumo_litros_hora
     )
     return consumo_L_hora_base * horas_semana
 
 
 def _cab_campo_custo(
-    cat_insumo: str, propriedade: str, custo_mensal: float,
-    fator_semanal: float, eficiencia: float,
-    consumo_L_100pct: float, n_equipes: int,
+    cat_insumo: str,
+    propriedade: str,
+    custo_mensal: float,
+    fator_semanal: float,
+    eficiencia: float,
+    consumo_L_100pct: float,
+    n_equipes: int,
 ) -> tuple[float, float]:
     """Returns (custo_semana_base, valor_fisico) para a propriedade."""
     if propriedade == "combustivel":
@@ -93,8 +94,13 @@ def _cab_collect_celulas_semana(
         if custo_mensal <= 0:
             continue
         custo_semana_base, valor_fisico = _cab_campo_custo(
-            cat_insumo, propriedade, custo_mensal, fator_semanal, eficiencia,
-            consumo_L_semana_100pct, n_equipes,
+            cat_insumo,
+            propriedade,
+            custo_mensal,
+            fator_semanal,
+            eficiencia,
+            consumo_L_semana_100pct,
+            n_equipes,
         )
         bdi_key = (cat_insumo, propriedade)
         pv_semana = custo_semana_base * (1.0 + bdi.get(bdi_key, 0.0))
@@ -153,18 +159,18 @@ class CuboAnaliticoBuilder:
         # ADR-090: combustivel usa BDI_material (= 4%), mesma taxa de insumos físicos.
         # Equipment (aluguel/manutencao) segue perfil de serviços para decomposição completa.
         self._bdi: dict[tuple[str, str], float] = {
-            ("mao_obra",    "salario_encargos"): self._tabela.mao_obra.bdi_total,
-            ("equipamento", "aluguel"):          self._tabela.servicos.bdi_total,
-            ("equipamento", "manutencao"):       self._tabela.servicos.bdi_total,
-            ("material",    "consumivel"):       self._tabela.material.bdi_total,
-            ("material",    "combustivel"):      self._tabela.material.bdi_total,  # ADR-090
+            ("mao_obra", "salario_encargos"): self._tabela.mao_obra.bdi_total,
+            ("equipamento", "aluguel"): self._tabela.servicos.bdi_total,
+            ("equipamento", "manutencao"): self._tabela.servicos.bdi_total,
+            ("material", "consumivel"): self._tabela.material.bdi_total,
+            ("material", "combustivel"): self._tabela.material.bdi_total,  # ADR-090
         }
         self._decomp: dict[tuple[str, str], dict[str, float]] = {
-            ("mao_obra",    "salario_encargos"): self._tabela.mao_obra.decomposicao_no_preco(),
-            ("equipamento", "aluguel"):          self._tabela.servicos.decomposicao_no_preco(),
-            ("equipamento", "manutencao"):       self._tabela.servicos.decomposicao_no_preco(),
-            ("material",    "consumivel"):       self._tabela.material.decomposicao_no_preco(),
-            ("material",    "combustivel"):      self._tabela.material.decomposicao_no_preco(),  # ADR-090
+            ("mao_obra", "salario_encargos"): self._tabela.mao_obra.decomposicao_no_preco(),
+            ("equipamento", "aluguel"): self._tabela.servicos.decomposicao_no_preco(),
+            ("equipamento", "manutencao"): self._tabela.servicos.decomposicao_no_preco(),
+            ("material", "consumivel"): self._tabela.material.decomposicao_no_preco(),
+            ("material", "combustivel"): self._tabela.material.decomposicao_no_preco(),  # ADR-090
         }
 
     def build(self, canonical_in: Any) -> CuboAnalitico:
@@ -265,8 +271,14 @@ class CuboAnaliticoBuilder:
             for semana_iso, dist in sa.distribuicao_semanal.items():
                 celulas.extend(
                     _cab_collect_celulas_semana(
-                        equipe, atividade_id, semana_iso, dist,
-                        consumo_L_semana_100pct, self._bdi, self._decomp, self._min,
+                        equipe,
+                        atividade_id,
+                        semana_iso,
+                        dist,
+                        consumo_L_semana_100pct,
+                        self._bdi,
+                        self._decomp,
+                        self._min,
                     )
                 )
 

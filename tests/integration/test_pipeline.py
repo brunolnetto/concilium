@@ -15,18 +15,17 @@ import pytest
 from concilium.application.runtime import Runtime
 from concilium.infrastructure.storage.project import ProjectStore
 
-
 # ── Fixtures para TestPipelineAnalitico ───────────────────────────────────────
 
 
 @pytest.fixture(scope="class")
 def projeto_analitico(tmp_path_factory, _session_pipeline_sk09):
     """Class-scoped: cópia isolada do projeto pós-09 ÚNICA por classe de teste.
-    
+
     Mudança de function → class scope reduz copytree de ~6-7× para 1× por classe.
     Testes em TestPipelineAnalitico são read-heavy e independentes, então
     compartilhar o mesmo projeto entre testes é seguro.
-    
+
     PERFORMANCE: ~3-5s copytree × 1 ao invés de × 7 testes = economia de ~20-28s.
     """
     proj_base, _ = _session_pipeline_sk09
@@ -317,16 +316,6 @@ def _carregar_amostra_canonical(path: Path):
 class TestPipelineAnalitico:
     """Testa dispatch via Runtime para skills 07-12, persistência de artefatos e log."""
 
-    def test_07_persiste_relatorio_agis_json(self, _session_pipeline_sk09):
-        proj, r = _session_pipeline_sk09
-        assert not r.has_errors
-
-        v = proj.current_version()
-        output_path = proj.version_path(v) / "outputs" / "relatorio.md"
-        assert output_path.exists(), "relatorio.md não foi persistido"
-        relatorio_text = output_path.read_text(encoding="utf-8", errors="replace")
-        assert len(relatorio_text) > 0, "relatorio.md está vazio"
-
     def test_08_criticality_popula_canonical(self, runtime, projeto_analitico):
         r = runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
         assert not r.has_errors
@@ -397,7 +386,7 @@ class TestPipelineAnalitico:
 
     def test_pipeline_07_a_11_gera_12_invocacoes_no_log(self, tmp_path, runtime, _session_pipeline_sk09):
         """Pipeline completo: 01-09 (base) + 10-12 (este teste) ≥ 8 entradas no log.
-        
+
         PERFORMANCE: Usa shutil.copytree do projeto base. Poderia usar hardlinks
         mas a complexidade não vale para um único teste.
         """

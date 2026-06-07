@@ -29,10 +29,14 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
         mo_map = {str(lbl): float(v) for lbl, v in zip(mo_labels, mo_values)} if mo_labels else {}
         mo_aligned = [mo_map.get(p, 0.0) for p in periods]
         mo_by_funcao = mo_data.get("by_funcao", {}) if isinstance(mo_data, dict) else {}
-        funcoes_unicas = [
-            float(sum(1 for serie in mo_by_funcao.values() if idx < len(serie) and float(serie[idx] or 0.0) > 0.0))
-            for idx in range(len(periods))
-        ] if isinstance(mo_by_funcao, dict) and mo_by_funcao else [0.0] * len(periods)
+        funcoes_unicas = (
+            [
+                float(sum(1 for serie in mo_by_funcao.values() if idx < len(serie) and float(serie[idx] or 0.0) > 0.0))
+                for idx in range(len(periods))
+            ]
+            if isinstance(mo_by_funcao, dict) and mo_by_funcao
+            else [0.0] * len(periods)
+        )
         has_mo = any(v > 0 for v in mo_aligned)
 
         n_panels = 3 if has_mo else 2

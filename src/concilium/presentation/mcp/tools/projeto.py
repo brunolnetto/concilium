@@ -401,9 +401,7 @@ def register(server: FastMCP) -> None:
 
     # ADR-101: _meta.ui para MCP Apps (Fase 1)
     _ui_metas = {
-        "consultar_status": {
-            "ui": {"resourceUri": "ui://concilium/dashboard-resultado", "permissions": []}
-        },
+        "consultar_status": {"ui": {"resourceUri": "ui://concilium/dashboard-resultado", "permissions": []}},
     }
     for tool_name, meta in _ui_metas.items():
         try:

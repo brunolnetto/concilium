@@ -43,7 +43,7 @@ class S3BlobStorage(BlobStoragePort):
         self._session = self._build_session()
 
     @classmethod
-    def from_env(cls) -> "S3BlobStorage":
+    def from_env(cls) -> S3BlobStorage:
         s3 = get_storage().s3
         bucket = s3.bucket.strip()
         if not bucket:
@@ -67,8 +67,7 @@ class S3BlobStorage(BlobStoragePort):
             import aioboto3
         except ImportError as exc:
             raise ImportError(
-                "O pacote 'aioboto3' é necessário para o backend S3. "
-                "Instale com: pip install 'concilium[s3]'"
+                "O pacote 'aioboto3' é necessário para o backend S3. Instale com: pip install 'concilium[s3]'"
             ) from exc
         return aioboto3.Session()
 

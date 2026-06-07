@@ -16,9 +16,7 @@ def _bfc_custo_indireto(custo: object) -> float:
 
 
 def _bfc_custo_direto_total(custo: object, custo_indireto: float) -> tuple[float | None, float | None]:
-    direto_catalogo = getattr(custo, "direto_catalogo", None)
-    direto_equipes = getattr(custo, "direto_equipes", None)
-    custo_direto = direto_catalogo if direto_catalogo is not None else direto_equipes
+    custo_direto = getattr(custo, "direto_equipes", None)
     if custo_direto is not None and custo_indireto is not None:
         return custo_direto, round(custo_direto + custo_indireto, 2)
     return custo_direto, getattr(custo, "total", None)
@@ -69,7 +67,7 @@ def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], flo
     ferramenta = {
         "custo_direto": custo_direto,
         "custo_direto_equipes": getattr(custo, "direto_equipes", None),
-        "custo_direto_catalogo": getattr(custo, "direto_catalogo", None),
+        "custo_direto_pu_q": getattr(venda, "total_sem_bdi", None) if venda else None,
         "custo_indireto": custo_indireto,
         "custo_total": custo_total,
         "preco_venda": preco_venda,
@@ -94,9 +92,7 @@ def _build_breakdown_indireto(custo: Any, custo_indireto: float | None) -> dict[
     }
 
 
-def _build_breakdown_direto_catalogo(
-    cat_totals: dict[str, float], custo_direto: Any, eq_total: float
-) -> dict[str, Any]:
+def _build_breakdown_direto_pu_q(cat_totals: dict[str, float], custo_direto: Any, eq_total: float) -> dict[str, Any]:
     cat_total = cat_totals["total"]
     total_from_components = (
         cat_totals["mao_obra"] + cat_totals["equipamentos"] + cat_totals["diesel"] + cat_totals["materiais"]
@@ -104,13 +100,13 @@ def _build_breakdown_direto_catalogo(
     computed_catalog_total = cat_total if cat_total > 0 else total_from_components
     primary_total = float(custo_direto) if custo_direto is not None else computed_catalog_total
     return {
-        "base": "catalogo",
+        "base": "pu_q",
         "mao_obra_total": round(cat_totals["mao_obra"], 2),
         "equipamentos_total": round(cat_totals["equipamentos"], 2),
         "diesel_total": round(cat_totals["diesel"], 2),
         "materiais_total": round(cat_totals["materiais"], 2),
         "direto_total": round(primary_total, 2),
-        "direto_total_catalogo": round(computed_catalog_total, 2),
+        "direto_total_pu_q": round(computed_catalog_total, 2),
         "direto_total_equipes": round(eq_total, 2),
     }
 
@@ -228,7 +224,7 @@ class BenchmarkProjection:
         eq_totals = _accumulate_equipes(equipes_diretas) if equipes_diretas else {}
         eq_total = eq_totals.get("total", 0.0)
         if has_catalog:
-            self.ferramenta_breakdown_direto = _build_breakdown_direto_catalogo(cat_totals, custo_direto, eq_total)
+            self.ferramenta_breakdown_direto = _build_breakdown_direto_pu_q(cat_totals, custo_direto, eq_total)
         elif equipes_diretas:
             self.ferramenta_breakdown_direto = _build_breakdown_direto_equipes(eq_totals)
 

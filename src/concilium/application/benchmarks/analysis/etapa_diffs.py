@@ -228,7 +228,9 @@ def _to_float(val: Any, keys: tuple[str, ...] = ()) -> float:
     return 0.0
 
 
-def _normalize_resultado_pairs(canonical_result: dict | None, ref_result: dict | None) -> list[tuple[str, float, float]]:
+def _normalize_resultado_pairs(
+    canonical_result: dict | None, ref_result: dict | None
+) -> list[tuple[str, float, float]]:
     """Normaliza campos de resultado em formatos antigo/novo para comparação numérica."""
     canonical_result = canonical_result or {}
     ref_result = ref_result or {}

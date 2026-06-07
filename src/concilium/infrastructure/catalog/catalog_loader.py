@@ -157,6 +157,7 @@ def _load_local_json(
     # ── Fast path: DuckDB (ADR-100) ──────────────────────────────────────────
     try:
         from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine
+
         engine = CatalogQueryEngine(cat_dir)
         if engine.is_ready():
             return (
@@ -167,6 +168,7 @@ def _load_local_json(
             )
     except Exception as _exc:
         import logging as _log
+
         _log.getLogger(__name__).debug("DuckDB path falhou, usando JSON puro: %s", _exc)
 
     # ── Fallback: JSON puro (comportamento original) ─────────────────────────
@@ -175,6 +177,8 @@ def _load_local_json(
     produtividades = _llj_load_produtividades(cat_dir)
     funcoes = _llj_load_funcoes(cat_dir)
     return cpus, insumos, produtividades, funcoes
+
+
 def _lsp_load_cpus(storage, base: str) -> list:
     cpus: list = []
     cpus_blobs = storage.listar_blobs(f"{base}/cpus")

@@ -24,7 +24,9 @@ router = APIRouter(tags=["configuration"])
 # ── Perfis ────────────────────────────────────────────────────────────────────
 
 
-@router.get("/api/perfis", summary="List financial profiles with version history", response_model=ConfigEntityListResponse)
+@router.get(
+    "/api/perfis", summary="List financial profiles with version history", response_model=ConfigEntityListResponse
+)
 def list_perfis(service: ConciliumService = Depends(get_concilium_service)) -> dict[str, Any]:
     """List all perfis (financial parameters: BDI, margin targets) — ADR-062."""
     return {"items": service.list_perfis()}
@@ -198,7 +200,9 @@ def compare_tema_versions(
 # ── Jurisdições (ADR-066) ─────────────────────────────────────────────────────
 
 
-@router.get("/api/jurisdicoes", summary="List jurisdictions with overlay history", response_model=ConfigEntityListResponse)
+@router.get(
+    "/api/jurisdicoes", summary="List jurisdictions with overlay history", response_model=ConfigEntityListResponse
+)
 def list_jurisdicoes(service: ConciliumService = Depends(get_concilium_service)) -> dict[str, Any]:
     """List all jurisdictions with their overlay versions (ADR-066)."""
     return {"items": service.list_jurisdicoes()}
@@ -242,7 +246,11 @@ def create_jurisdicao_version(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.get("/api/jurisdicoes/compare", summary="Compare two jurisdiction overlay versions", response_model=ConfigCompareResponse)
+@router.get(
+    "/api/jurisdicoes/compare",
+    summary="Compare two jurisdiction overlay versions",
+    response_model=ConfigCompareResponse,
+)
 def compare_jurisdicao_versions(
     id: str,
     vA: str,

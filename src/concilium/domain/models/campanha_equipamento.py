@@ -54,7 +54,7 @@ class RegimePermanencia:
             tipo_id=tipo_id,
             custo_mob=round(custo_mensal_ativo * 0.20, 2),
             custo_demob=round(custo_mensal_ativo * 0.15, 2),
-            custo_standby_semanal=round(custo_semanal * 1.0, 2)  # NEP-031 L2,
+            custo_standby_semanal=round(custo_semanal * 1.0, 2),  # NEP-031 L2,
         )
 
 
