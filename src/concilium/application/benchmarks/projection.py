@@ -141,13 +141,31 @@ def _accumulate_planejamento(planejamento: list) -> tuple[bool, dict[str, float]
 
 
 def _accumulate_equipes(equipes_diretas: list) -> dict[str, float]:
+    """Acumula custos por categoria a partir de custo_inst_* quando disponível.
+
+    Dois paths:
+    1. Estágio 4 (com pool contracts): usa custo_inst_* (decomposição oficial — ADR-104)
+    2. Estágio 1/3 (sem pool): fallback heurístico — menos preciso mas funciona
+    """
     totals = {"mao_obra": 0.0, "equipamentos": 0.0, "diesel": 0.0, "materiais": 0.0, "total": 0.0}
+
     for equipe in equipes_diretas:
-        fator = equipe.custo_total / equipe.custo_fixo_mensal if equipe.custo_fixo_mensal > 0 else 0
-        totals["mao_obra"] += equipe.custo_mao_obra_mensal * fator
-        totals["equipamentos"] += equipe.custo_equipamentos_mensal * fator
-        totals["diesel"] += equipe.custo_combustivel_total_mensal * fator
-        totals["materiais"] += getattr(equipe, "custo_material_mensal", 0.0) * fator
+        # PATH 1: Se tem decomposição instancial (Estágio 4), usar dados oficiais (ADR-104)
+        if equipe.custo_inst_mo is not None:
+            totals["mao_obra"] += equipe.custo_inst_mo
+            totals["equipamentos"] += equipe.custo_inst_eq
+            totals["diesel"] += equipe.custo_inst_comb
+            totals["materiais"] += equipe.custo_inst_mat
+            # custo_inst_mob_demob já está em custo_total, não somar separado
+        # PATH 2: Sem decomposição, fallback (Estágio 1/3, sem pool contracts)
+        else:
+            if equipe.custo_fixo_mensal > 0:
+                fator = equipe.custo_total / equipe.custo_fixo_mensal
+                totals["mao_obra"] += equipe.custo_mao_obra_mensal * fator
+                totals["equipamentos"] += equipe.custo_equipamentos_mensal * fator
+                totals["diesel"] += equipe.custo_combustivel_total_mensal * fator
+                totals["materiais"] += getattr(equipe, "custo_material_mensal", 0.0) * fator
+
     totals["total"] = sum(equipe.custo_total for equipe in equipes_diretas)
     return totals
 
