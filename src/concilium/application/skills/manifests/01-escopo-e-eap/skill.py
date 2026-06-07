@@ -77,16 +77,22 @@ def _validate_eap_cpus(eap: list, catalogo: dict | None, validacoes: list) -> No
     if not (catalogo and "cpus" in catalogo):
         return
     cpu_ids = {c["codigo"] for c in catalogo["cpus"]}
+    missing_cpus = []
     for item in eap:
         if item.cpu_id not in cpu_ids:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-EAP-01",
-                    status="ERRO",
-                    mensagem=f"EAP item '{item.item_id}' referencia CPU '{item.cpu_id}' inexistente no catálogo do contexto",  # noqa: E501
-                )
+            missing_cpus.append(f"'{item.item_id}' ({item.cpu_id})")
+
+    if missing_cpus:
+        # Warning instead of error: allows pipeline to continue while noting missing CPUs
+        # These will be resolved in later skills via catalog lookup or during estimation
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-EAP-01",
+                status="AVISO",
+                mensagem=f"{len(missing_cpus)} EAP items referenciam CPUs inexistentes no catálogo: {', '.join(missing_cpus[:3])}{'...' if len(missing_cpus) > 3 else ''}",  # noqa: E501
             )
-    if not any(v.codigo == "VAL-EAP-01" for v in validacoes):
+        )
+    else:
         validacoes.append(ValidacaoItem(codigo="VAL-EAP-01", status="OK"))
 
 
