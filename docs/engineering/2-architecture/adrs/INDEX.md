@@ -210,6 +210,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 |---|---|---|---|
 | [100](ADR-100-catalog-query-engine-duckdb.md) | Catalog Query Engine: DuckDB para Performance e Escalabilidade | ✅ Implementado | ADR-012, ADR-017, ADR-066 |
 | [101](ADR-101-mcp-apps-interface-interativa.md) | MCP Apps — Interface Interativa de Relatórios e Formulários no Chat | 🔄 Parcialmente Implementado (Fases 1-2 ✅) | ADR-092, ADR-093, ADR-096, ADR-099 |
+| [104](adr-104-centralizacao-calculo-custos-equipedireta.md) | Centralização de Cálculos de Custo em EquipeDireta — Single Source of Truth para Decomposição Instancial | 🔴 Proposto | ADR-085, ADR-071, NEP-040 |
 
 **Legenda:** ✅ Implementado · 🔄 Parcialmente Implementado · 🔴 Proposto/Aceito · ⬜ Supersedido
 

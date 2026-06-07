@@ -37,3 +37,4 @@
 | [NEP-037](nep-037-encargos-sociais-do-custo-direto-para-bdi.md) | Migração dos Encargos Sociais do Custo Direto para a Camada BDI | Em Andamento   | 🔴 Crítico   | ? |
 | [NEP-038](nep-038-criticidade-rcpsp-compressao-cronograma.md) | Criticidade RCPSP e Teoria de Compressão de Cronograma | Proposta   | 🟡 Alta   | ? |
 | [NEP-039](nep-039-ciclo-de-vida-benchmark-projeto.md) | Ciclo de vida benchmark-projeto e governança de reutilização | Proposta   | 🟠 Alto   | ? |
+| [NEP-040](nep-040-implementacao-decomposicao-instancial-custos.md) | Implementação de Decomposição Instancial para Custos — Enriquecimento de EquipeDireta com custo_inst_* | Proposta   | 🔴 Crítico   | 1.5h |
