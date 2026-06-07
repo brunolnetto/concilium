@@ -1,0 +1,50 @@
+ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA 																				% TOTAL PROJETO
+				PREÇO UNITÁRIO				VALOR DE BDI					 R$ SUB TOTAL UNIT S/ BDI 	 R$ SUB TOTAL PROJETO S/ BDI 				 R$ SUB TOTAL UNIT C/ BDI 	R$ SUB TOTAL PROJETO C/ BDI				 R$  TOTAL PROJETO 	
+				 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O/EQP 	 BDI 	 SERVIÇOS 	 MATERIAL 	 DIESEL/EQUIP 	 M.O 	 SER/MAT/M.O/COMB/EQUIP 	 SERVIÇOS 	 MATERIAL 	 DIESEL/EQUIP 	 M.O 	 MATERIAL/M.O/EQUIP 	 SERVIÇOS 	MATERIAL	 DIESEL/EQUIP 	 M.O 		
+																								
+																								
+1	SUPRESSAO VEGETAL													 438.603,71 	 -   	 891.730,75 	 1.487.165,20 	 44,14 	 538.868,53 	 -   	 1.095.580,43 	 1.827.131,21 	 3.461.580,16 	100,0%
+1.1	Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA	M2	 383.592,55 	 0,45 		 0,89 	 1,56 	 LIM 	 0,10 	 -   	 0,20 	 0,36 	 2,90 	 171.020,77 	 -   	 339.655,77 	 600.212,44 	 3,56 	 210.116,12 	 -   	 417.301,09 	 737.421,02 	 1.364.838,23 	39,4%
+1.2	Supressão vegetal, destocamento e limpeza de árvores, arbustos, vegetação rasteira e entulhos com remoção para área de depósito - DMT até 350m	M2	 2.036.512,35 	 0,10 		 0,22 	 0,32 	 LIM 	 0,02 	 -   	 0,05 	 0,07 	 0,64 	 201.770,08 	 -   	 454.153,38 	 654.206,81 	 0,79 	 247.894,73 	 -   	 557.972,86 	 803.758,51 	 1.609.626,09 	46,5%
+1.3	Corte com destocamento de árvores com Ø > 30cm e remoção para a área de depósito - DMT até 1000m	UNIDADE	 12.240,20 	 5,38 		 8,00 	 19,01 	 LIM 	 1,23 	 -   	 1,83 	 4,35 	 32,39 	 65.812,86 	 -   	 97.921,60 	 232.745,95 	 39,80 	 80.857,68 	 -   	 120.306,48 	 285.951,68 	 487.115,84 	14,1%
+																								
+2	SERVIÇOS COMPLEMENTARES							 -   						 1.373.412,94 	 2.470.757,07 	 503.774,26 	 1.760.062,42 	 57.037,49 	 1.687.375,17 	 3.035.572,20 	 618.937,07 	 2.162.412,73 	 7.504.297,17 	201,9%
+2.1	Fornecimento e Instalação de Mata burro (padrão VALEC)	UNIDADE	 36,00 	 7.000,00 	 11.000,00 			 LIM 	 1.600,20 	 2.514,60 	 -   	 -   	 18.000,00 	 252.000,00 	 396.000,00 	 -   	 -   	 22.114,80 	 309.607,21 	 486.525,61 	 -   	 -   	 796.132,82 	10,6%
+2.2	Fornecimento e Instalação de Porteira de Madeira (padrão VALEC)	UNIDADE	 12,00 	 4.976,00 	 1.224,00 			 LIM 	 1.137,51 	 279,81 	 -   	 -   	 6.200,00 	 59.712,00 	 14.688,00 	 -   	 -   	 7.617,32 	 73.362,16 	 18.045,68 	 -   	 -   	 91.407,84 	2,6%
+2.3	Fornecimento e Instalação de Porteira Metálica (padrão VALEC)	UNIDADE	 24,00 	 3.309,60 	 3.309,60 			 LIM 	 756,57 	 756,57 	 -   	 -   	 6.619,20 	 79.430,40 	 79.430,40 	 -   	 -   	 8.132,35 	 97.588,19 	 97.588,19 	 -   	 -   	 195.176,38 	5,6%
+2.4	Remoção de mata burro	UNIDADE	 10,00 	 6.000,00 				 LIM 	 1.371,60 	 -   	 -   	 -   	 6.000,00 	 60.000,00 	 -   	 -   	 -   	 7.371,60 	 73.716,00 	 -   	 -   	 -   	 73.716,00 	2,1%
+2.5	Remoção de porteira	UNIDADE	 10,00 	 6.000,00 				 LIM 	 1.371,60 	 -   	 -   	 -   	 6.000,00 	 60.000,00 	 -   	 -   	 -   	 7.371,60 	 73.716,00 	 -   	 -   	 -   	 73.716,00 	2,1%
+3	CERCAS/TAPUMES																							
+3.1	Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria	M	 45.102,63 	 9,51 	 39,13 	 8,23 	 26,15 	 LIM 	 2,17 	 8,94 	 1,88 	 5,98 	 83,01 	 428.728,48 	 1.764.831,85 	 371.270,64 	 1.179.271,78 	 101,99 	 526.735,82 	 2.168.272,45 	 456.143,12 	 1.448.853,33 	 4.600.004,72 	132,9%
+3.2	Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos alagáveis	M	 575,00 	 9,51 	 40,52 	 8,23 	 23,52 	 LIM 	 2,17 	 9,26 	 1,88 	 5,38 	 81,77 	 5.465,73 	 23.301,12 	 4.729,48 	 13.521,25 	 100,46 	 6.715,20 	 28.627,76 	 5.810,63 	 16.612,21 	 57.765,80 	1,7%
+3.3	Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria	M	 14.755,90 	 9,51 	 11,53 	 5,48 	 17,88 	 LIM 	 2,17 	 2,63 	 1,25 	 4,09 	 44,40 	 140.263,98 	 170.076,50 	 80.913,24 	 263.864,91 	 54,55 	 172.328,33 	 208.956,00 	 99.410,01 	 324.184,44 	 804.878,78 	23,3%
+3.4	Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria	M	 700,00 	 9,51 	 15,58 	 5,48 	 18,27 	 LIM 	 2,17 	 3,56 	 1,25 	 4,18 	 48,83 	 6.653,93 	 10.903,20 	 3.838,42 	 12.788,66 	 60,00 	 8.175,02 	 13.395,67 	 4.715,88 	 15.712,15 	 41.998,73 	1,2%
+3.5	Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas	M	 1.000,00 	 9,51 	 11,53 	 5,49 	 18,27 	 LIM 	 2,17 	 2,63 	 1,25 	 4,18 	 44,79 	 9.505,62 	 11.526,00 	 5.487,79 	 18.269,52 	 55,03 	 11.678,61 	 14.160,84 	 6.742,30 	 22.445,93 	 55.027,68 	1,6%
+3.6	Remoção de cerca de mourão de madeira	M	 24.394,30 	 9,51 			 6,52 	 LIM 	 2,17 	 -   	 -   	 1,49 	 16,02 	 231.882,95 	 -   	 -   	 159.033,64 	 19,69 	 284.891,40 	 -   	 -   	 195.388,74 	 480.280,14 	13,9%
+																								
+4	LEVANTAMENTOS TOPOGRÁFICOS																							
+4.1	Implantação do eixo	KM	 18,49 	 1.075,44 			 2.204,28 	 LIM 	 245,85 	 -   	 -   	 503,90 	 3.279,72 	 19.884,92 	 -   	 -   	 40.757,17 	 4.029,47 	 24.430,61 	 -   	 -   	 50.074,26 	 74.504,88 	2,2%
+								 LIM 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+5	ABERTURA DE ACESSO																							0,0%
+5.1	Abertura de acesso para implantação de cerca	M	 18.490,00 	 1,08 		 2,03 	 3,92 	 LIM 	 0,25 	 -   	 0,46 	 0,90 	 7,03 	 19.884,92 	 -   	 37.534,70 	 72.555,48 	 8,64 	 24.430,61 	 -   	 46.115,13 	 89.141,67 	 159.687,41 	2,1%
+								 LIM 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+	INDIRETOS													 -   	 -   	 -   	 5.887.204,57 	 6.705.122,67 	 -   	 -   	 -   	 6.705.122,67 	 6.705.122,67 	
+	Mobilização de pessoal e equipamentos	VB	 1,00 				 4.438.240,49 	 IND 	 -   	 -   	 -   	 616.611,36 	 4.438.240,49 	 -   	 -   	 -   	 4.438.240,49 	 5.054.851,85 	 -   	 -   	 -   	 5.054.851,85 	 5.054.851,85 	67,4%
+	Desmobilização de pessoal e equipamentos e canteiros 	VB	 1,00 				 -   	 IND 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+	Administração Local	VB	 1,00 				 -   	 IND 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+	Instalação de Canteiro	VB	 1,00 				 364.770,00 	 IND 	 -   	 -   	 -   	 50.678,04 	 364.770,00 	 -   	 -   	 -   	 364.770,00 	 415.448,04 	 -   	 -   	 -   	 415.448,04 	 415.448,04 	5,5%
+	Manutenção e Operação de canteiros	VB	 1,00 				 1.084.194,08 	 IND 	 -   	 -   	 -   	 150.628,70 	 1.084.194,08 	 -   	 -   	 -   	 1.084.194,08 	 1.234.822,78 	 -   	 -   	 -   	 1.234.822,78 	 1.234.822,78 	16,5%
+								 IND 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+														 1.812.016,65 	 2.470.757,07 	 1.395.505,02 	 9.134.432,20 	 6.762.204,30 	 2.226.243,70 	 3.035.572,20 	 1.714.517,50 	 10.694.666,61 	 17.671.000,00 	
+																								
+																								
+B D I	APLICAÇÃO	SIGLA	 M.O 	 SERVIÇO 	 EQUIP 	 MATERIAL 																		
+	Limpeza e Desmatamento	LIM	22,86%	22,86%	22,86%	22,86%																		
+	Terraplenagem	TER	22,86%	22,86%	22,86%	22,86%																		
+	Drenagem Pluvial	DRN	22,86%	22,86%	22,86%	22,86%																		
+	Sistema de Água	SAA	22,86%	22,86%	22,86%	22,86%																		
+	Sistema de Esgoto	SES	22,86%	22,86%	22,86%	22,86%																		
+	Pavimentação	PAV	22,86%	22,86%	22,86%	22,86%																		
+	Despesas Indiretas	IND	13,89%	13,89%	13,89%	13,89%																		
+	Serviços terceirizados	EMP	22,86%	22,86%	22,86%	22,86%																		
+	Obra Civil	CIV	22,86%	22,86%	22,86%	22,86%																		

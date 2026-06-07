@@ -1,0 +1,236 @@
+ADM:
+
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 166.706,80					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 478.350,86			EQUIPAMENTOS		R$ 176.053,35					4,30						 2.056.908,69 	
+						VERBAS		R$ 135.590,71												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$8.000,00 			 -   			J	 1.920,00 				 -   		 9.920,00 	
+P0006			AUXILIAR ADMINISTRATIVO	P0006	1	 R$1.674,20 		D	 418,55 			J	 2.655,00 				 1.276,58 		 6.024,33 	
+P0003			ALMOXARIFE	P0003	1	 R$2.305,60 		D	 576,40 			J	 1.920,00 				 1.758,02 		 6.560,02 	
+P0027	PJ		GERENTE DE CONTRATO	P0027	1	 R$30.000,00 			 -   			J	 1.920,00 				 -   		 31.920,00 	
+P0075	PJ		TÉCNICO DE PLANEJAMENTO	P0075	1	 R$14.000,00 			 -   			J	 1.920,00 				 -   		 15.920,00 	
+P0018	PJ		ENCARREGADO GERAL	P0018	1	 R$15.000,00 			 -   			J	 1.920,00 				 -   		 16.920,00 	
+P0087			CONTROLADOR	P0087	1	 R$3.300,00 		D	 825,00 			J	 2.655,00 				 2.516,25 		 9.296,25 	
+P0034			MOTORISTA DE CAMINHÃO COMBOIO	P0034	1	 R$3.657,94 		D	 914,49 			J	 2.655,00 				 2.789,18 		 10.016,60 	
+P0001			AJUDANTE	P0001		 R$2.110,68 		D	 527,67 			J	 2.655,00 				 -   		 -   	
+P0093	PJ		PREFEITO DE ALOJAMENTO	P0093	1	 R$4.000,00 			 -   			J	 1.920,00 				 -   		 5.920,00 	
+P0063			AUXILIAR DE SERVIÇOS GERAIS	P0063	1	 R$1.674,20 		D	 418,55 			J	 2.655,00 				 1.276,58 		 6.024,33 	
+P0072			APONTADOR	P0072	2	 R$2.305,60 		D	 576,40 			J	 2.655,00 				 1.758,02 		 7.295,02 	
+P0036			MOTORISTA DE ÔNIBUS	P0036	1	 R$2.813,18 		D	 703,30 			J	 2.655,00 				 2.145,05 		 8.316,52 	
+P0045			Operador de Pá Carregadeira	P0045	0,87	 R$2.305,60 		D	 576,40 			J	 2.655,00 				 1.758,02 		 7.295,02 	
+P0032			Motorista de Caminhão Basculante	P0032	2,60	 R$2.305,60 		D	 576,40 			J	 2.655,00 				 1.758,02 		 7.295,02 	
+																	 -   			
+		TOTAL			16,4652	 99.025,69 		 7.006,42 				 39.305,11 					 21.369,58 		 166.706,80 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0023			Ônibus com capacidade para 52 passageiros 	E0023	1	 28.000,00 			km		 3.600,00 			S1	 9,00 			 2.800,00 	 30.800,00 	 30.800,00 
+E0008			Caminhão comboio	E0008	1	 25.000,00 			km		 3.600,00 			S1	 4,00 			 6.300,00 	 31.300,00 	 31.300,00 
+E0039			Veículo leve	E0039	1	 4.000,00 			km		 4.800,00 			G	 9,00 			 3.680,00 	 7.680,00 	 7.680,00 
+E0024			Pá carregadeira 12t	E0024	0,87	 20.900,00 			km		 3.600,00 			S1	 16,00 			 1.575,00 	 22.475,00 	 19.470,09 
+E0004			Caminhão basculante 14 m³ - rochas	E0004	2,60	 25.000,00 			km		 3.600,00 			S1	 3,00 			 8.400,00 	 33.400,00 	 86.803,26 
+																				
+			TOTAL		6,4652	 140.078,17 												 35.975,18 		 176.053,35 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ALOJAMENTO			UNID.		 5,00 			 4.500,00 					 22.500,00 					
+2		ENERGIA ELÉTRICA - ALOJAMENTO			UNID.		 5,00 			 1.200,00 					 6.000,00 					
+3		ÁGUA - ALOJAMENTO			UNID.		 5,00 			 200,00 					 1.000,00 					
+4		VIGILÂNCIA ARMADA			VB		 1,00 			 25.000,00 					 25.000,00 					
+5		ÁGUA MINERAL 			L		 300,00 			 2,00 					 600,00 					
+6		MATERIAL DE EXPEDIENTE			VB		 4,00 			 200,00 					 800,00 					
+7		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+8		STARLINK			VB		 1,00 			 600,00 					 600,00 					
+9		VISITA GERÊNCIA			VB		 2,00 			 3.000,00 					 6.000,00 					
+10		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 5,00 			 200,00 					 1.000,00 					
+18		GERADOR - GASOLINA			UNID.					 1.987,20 					 -   					
+															 63.800,00 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕES PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 8.000,00 					 8.000,00 					
+2		COMPUTADOR			VB		 3,00 			 4.500,00 					 13.500,00 					
+3		ESTRUTURA DE VIVENCIA (TENDA 6x6/MESAS E CADEIRAS)			UNID.		 1,00 			 8.740,00 					 8.740,00 					
+4		BEBEDOURO 40l			VB		 1,00 			 2.260,00 					 2.260,00 					
+5		FERRAMENTAS			VB		 1,00 			 5.000,00 					 5.000,00 					
+6		EPIS			UNID.		 1,00 			 122.975,53 					 122.975,53 					
+7		EXAMES/TREINAMENTOS			VB		 1,00 			 99.072,51 					 99.072,51 					
+8		IMPRESSORA			VB		 1,00 			 1.800,00 					 1.800,00 					
+9		MOBILIA DE ESCRITORIO			VB		 3,00 			 1.200,00 					 3.600,00 					
+10		PLACA DE OBRA			M2		 1,00 			 900,00 					 900,00 					
+11		GERADOR BETONEIRA 15KVA			VB		 1,00 			 7.800,00 					 7.800,00 					
+12		MOBILIA ALOJAMENTO			VB		 5,00 			 3.500,00 					 17.500,00 					
+															 67.708,85 					
+																				
+MATERIAL DE DESGASTE																				
+ITEM		DESCRIÇÃO			UNID.		QUANT	TEMPO		PREÇO UNITÁRIO					VALOR					
+		EQUIPE 1 - REBAIXO 			VB		 2,00 	 1,83 		 1.200,00 					 4.400,00 					
+		EQUIPE 2 - COMPACTAÇÃO			VB		 6,00 	 1,83 		 1.200,00 					 13.152,00 					
+		EQUIPE 3 - BIDIM E GEOGRELHA			VB		 -   	 1,77 		 1.200,00 					 -   					
+		EQUIPE 4 - SUB BASE 			VB		 -   	 3,65 		 1.200,00 					 -   					
+															 4.081,86 					
+
+TOP:
+
+EQUIPE:			TOPOGRAFIA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 40.135,02					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 48.315,02			EQUIPAMENTOS		R$ 7.680,00					4,30						 207.754,59 	
+						VERBAS		R$ 500,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0057	PJ		Topógrafo	P0057	1	 R$17.000,00 			 -   			j	 1.920,00 				 -   		 18.920,00 	
+P0010			Auxiliar de topografia	P0010	1	 R$2.305,60 		D	 576,40 			j	 2.655,00 				 1.758,02 		 7.295,02 	
+P0058	PJ		Sala técnica	P0058	1	 R$12.000,00 			 -   			j	 1.920,00 				 -   		 13.920,00 	
+									 -   				 -   				 -   		 -   	
+		TOTAL			3	 31.305,60 		 576,40 				 6.495,00 					 1.758,02 		 40.135,02 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0039			Veículo leve	E0039	1	 4.000,00 			km		 4.800,00 			G	 9,00 			 3.680,00 	 7.680,00 	 7.680,00 
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 3.680,00 		 7.680,00 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ESTACAS			VB		 1,00 			 500,00 					 500,00 					
+																				
+															 -   					
+															 500,00 					
+
+LAB:
+
+EQUIPE:			LABORATORIO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 19.944,33					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 37.624,33			EQUIPAMENTOS		R$ 7.680,00					4,00						 150.497,31 	
+						VERBAS		R$ 10.000,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0030	PJ		Laboratorista	P0030	1	 R$12.000,00 			 -   			J	 1.920,00 				 -   		 13.920,00 	
+P0009			Auxiliar de laboratório	P0009	1	 R$1.674,20 		D	 418,55 			J	 2.655,00 				 1.276,58 		 6.024,33 	
+									 -   				 -   				 -   		 -   	
+									 -   				 -   				 -   		 -   	
+		TOTAL			2	 13.674,20 		 418,55 				 4.575,00 					 1.276,58 		 19.944,33 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0039			Veículo leve	E0039	1	 4.000,00 			km		 4.800,00 			G	 9,00 			 3.680,00 	 7.680,00 	 7.680,00 
+																		  	 -   	
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 3.680,00 		 7.680,00 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		EQUIPAMENTOS			VB		 1,00 			 10.000,00 					 10.000,00 					
+															 -   					
+															 -   					
+															 -   					
+															 -   					
+															 -   					
+															 10.000,00 					
+
+QSMS:
+
+EQUIPE:			QSMS																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 8.920,00					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 9.070,00			EQUIPAMENTOS		R$ 0,00					4,30						 39.001,00 	
+						VERBAS		R$ 150,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0056	PJ		Técnico de Segurança	P0056	1	 R$7.000,00 			 -   			J	 1.920,00 				 -   		 8.920,00 	 1PARA DOCUMENTAÇÃO 
+																				
+		TOTAL			1	 7.000,00 		 -   				 1.920,00 					 -   		 8.920,00 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0040			Veículo picape 4 x 4	E0040		 10.000,00 			KM		 4.800,00 			G	 9,00 			 3.680,00 	 13.680,00 	 -   
+																		  	 -   	
+			TOTAL		0	 -   												 -   		 -   
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		SINALIZAÇÃO			MÊS		 1,00 			 150,00 					 150,00 					
+															 150,00 					
+
+MOB:
+
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																											
+																																																														
+															EQUIPAMENTOS							R$ 104.000,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																															
+															MÃO DE OBRA							R$ 110.333,18									R$ 610.947,68																															
+															VERBAS							R$ 396.614,50																																								
+																																																														
+																																																														
+EQUIPAMENTOS																																																														
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES										
+																																																														
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 10,00 							 São Paulo 					 São Vicente 					 400,00 						 13,00 						 52.000,00 																
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 10,00 							 São Vicente 					 São Paulo 					 400,00 						 13,00 						 52.000,00 																
+3		MOB CONTEINER													VB		 -   																							 950,00 						 -   																
+4		DESMOB CONTEINER													VB		 -   																							 950,00 						 -   																
+																																																														
+																																																														
+																																														 104.000,00 																
+																																																														
+MÃO DE OBRA																																																														
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																								
+																																																														
+Equipe											46			 São Paulo 						 São Vicente 						 1.200,00 						55.166,59																														
+Equipe											46			 São Vicente 						 São Paulo 						1.200,00						55.166,59						  																								
+																																 110.333,18 																														
+																																																														
+VERBAS																																																														
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES																
+		INTEGRAÇÃO EQUIPE DIRETA																							VB									 121.189,53 						 -   																						
+		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB									 362.400,00 						 -   																						
+																																								 -   																						
+																																																														
+DESPESAS COM VIAGEM																																																														
+							CUSTO UNITÁRIO		MOB			mês 1		mês 2		mês 3		mês 4		mês 5		mês 6		mês 7		mês 8		mês 9		mês 10		mês 11		mês 12		mês 13		mês 14		mês 15		mês 16		mês 17		mês 18		mês 19		mês 20		mês 21		mês 22		mês 23		mês 24		CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 2.500,00 		x					x				x																																										 7.500,00 		
+ENCARREGADO (60 dias)						1	 4.000,00 		x					x				x																																										 12.000,00 		
+GERENTE DE CONTRATO (30 dias) 						1	 2.500,00 		x			x		x		x		x																																										 12.500,00 		
+EQUIPE DIRETA						28	 1.500,00 							x				x																																										 84.000,00 		
+EQUIPE INDIRETA						18,4652	 2.000,00 							x				x																																										 73.860,80 		
+																																																												 189.860,80 		
+																																																														
+ALIMENTAÇÃO/ SEGURO DE VIDA/CESTA BASICA																																																														
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																																						
+EQUIPE 1 - REBAIXO 						 2,00 			 2.655,00 									1,83						 9.735,00 																																						
+EQUIPE 2 - COMPACTAÇÃO						 14,00 			 2.655,00 									1,83						 67.897,20 																																						
+EQUIPE 3 - BIDIM E GEOGRELHA						 11,00 			 2.655,00 									1,77						 51.595,50 																																						
+EQUIPE 4 - SUB BASE 						 8,00 			 2.655,00 									3,65						 77.526,00 																																						
+																																																														
+																																																												 206.753,70 		

@@ -1,0 +1,1293 @@
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Limpeza de Camada vegetal						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de Esteiras			 1,00 	 1,00 	 -   	 215,00 	 215,00 	 215,00 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 215,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de Trator de Esteiras						 1,00 	 26,61 	 26,61 	
+	Ajudante						 1,00 	 13,22 	 13,22 	
+										
+									 -   	
+								TOTAL	 39,83 	
+										
+	PRODUÇÃO DA EQUIPE (C)			487,53	m²			CUSTO HORÁRIO TOTAL (A+B)     	 254,83 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de Esteiras				Diesel S10	L	 6,15 	 24,00 	 147,60 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 147,60 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 0,83 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								0,83	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								0,83	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Carga e  transporte						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 85,00 	 85,00 	 85,00 	
+	Caminhão basculante 14 m³			 2,00 	 1,00 	 -   	 90,00 	 90,00 	 180,00 	
+										
+										
+										
+									 -   	
+									 -   	
+								TOTAL	 265,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Motorista de Caminhão Basculante						 2,00 	 17,97 	 35,94 	
+									 -   	
+								TOTAL	 57,89 	
+										
+	PRODUÇÃO DA EQUIPE (C)			71,50	m³			CUSTO HORÁRIO TOTAL (A+B)     	 322,89 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 98,40 	
+	Caminhão basculante 14 m³				Diesel S10	L	 6,15 	 4,00 	 49,20 	
+						L			 -   	
+						L			 -   	
+									 -   	
+									 -   	
+								TOTAL	 147,60 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 6,58 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Transporte de material de limpeza				 -   	 1,00 	 1,00 	 1,00 	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								6,58	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								6,58	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Carga e  transporte						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	TRATOR DE ESTEIRAS			 1,00 	 1,00 	 -   	 215,00 	 215,00 	 215,00 	
+	Rolo compactador pé de carneiro			 2,00 	 1,00 	 -   	 77,50 	 77,50 	 155,00 	
+					 1,00 	 -   		 -   	 -   	
+					 1,00 	 -   		 -   	 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 370,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de rolo compactador						 2,00 	 17,97 	 35,94 	
+	Operador de trator de esteiras						 1,00 	 26,61 	 26,61 	
+	Ajudante						 1,00 	 13,22 	 13,22 	
+										
+									 -   	
+								TOTAL	 75,77 	
+										
+	PRODUÇÃO DA EQUIPE (C)			135,80	m³			CUSTO HORÁRIO TOTAL (A+B)     	 445,77 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	TRATOR DE ESTEIRAS				Diesel S10	L	 6,15 	 24,00 	 147,60 	
+									 -   	
+									 -   	
+								TOTAL	 147,60 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 4,37 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								4,37	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								4,37	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Escavação, carga, transporte e descarga de material de 1ª categoria						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 185,00 	 185,00 	 185,00 	
+	Caminhão basculante 14 m³			 3,00 	 1,00 	 -   	 90,00 	 90,00 	 270,00 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 455,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de Escavadeira						 1,00 	 32,45 	 32,45 	
+	Gredista						 1,00 	 19,13 	 19,13 	
+	Ajudante						 1,00 	 13,22 	 13,22 	
+	Motorista de Caminhão Basculante						 3,00 	 17,97 	 53,91 	
+									 -   	
+								TOTAL	 118,71 	
+										
+	PRODUÇÃO DA EQUIPE (C)			122,31	m³			CUSTO HORÁRIO TOTAL (A+B)     	 573,71 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,15 	 22,00 	 135,30 	
+	Caminhão basculante 14 m³				Diesel S10	L	 6,15 	 4,00 	 73,80 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 209,10 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 6,40 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Transporte de material 					 1,00 	 1,00 	 1,00 	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								6,40	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								6,40	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Escavação, carga e transporte de material de 1ª categoria - 400<DMT<600 m - caminho  de serviço em leito natural - com escavadeira e caminhão basculante de 14 m³						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 185,00 	 185,00 	 185,00 	
+	Caminhão basculante 14 m³			 4,00 	 1,00 	 -   	 90,00 	 90,00 	 360,00 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 545,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de Escavadeira						 1,00 	 32,45 	 32,45 	
+	Gredista						 1,00 	 19,13 	 19,13 	
+	Ajudante						 1,00 	 13,22 	 13,22 	
+	Apontador							 17,97 	 -   	
+	Motorista de Caminhão Basculante						 4,00 	 17,97 	 71,87 	
+									 -   	
+								TOTAL	 136,68 	
+										
+	PRODUÇÃO DA EQUIPE (C)			113,00	m3			CUSTO HORÁRIO TOTAL (A+B)     	 681,68 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,15 	 22,00 	 135,30 	
+	Caminhão basculante 14 m³				Diesel S10	L	 6,15 	 4,00 	 98,40 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 233,70 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 8,10 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Transporte de material 				 -   	 1,00 	 1,00 	 1,00 	 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								8,10	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								8,10	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Escavação mecânica com retroescavadeira em material de 1° categoria - material importado da jazida						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 85,00 	 85,00 	 85,00 	
+	Caminhão basculante 14 m³				 1,00 	 -   	 90,00 	 90,00 	 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 85,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de Retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Ajudante						 1,00 	 13,22 	 13,22 	
+									 -   	
+								TOTAL	 35,18 	
+										
+	PRODUÇÃO DA EQUIPE (C)			61,92	m3			CUSTO HORÁRIO TOTAL (A+B)     	 120,18 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 98,40 	
+	Caminhão basculante 14 m³				Diesel S10	L	 6,15 	 4,00 	 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 98,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 3,53 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Cascalho					 1,30 	 1,00 	 13,00 	 16,90 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 16,90 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								20,43	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								20,43	
+										
+										
+										
+										
+	0,358311777					CUSTO UNITÁRIO				
+	0,405735522					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Regularização e Compactação de subleito						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 200,00 	 200,00 	 200,00 	
+	Trator de pneus			 1,00 	 1,00 	 -   	 75,00 	 75,00 	 75,00 	
+	Rolo compactador pé de carneiro			 2,00 	 1,00 	 -   	 77,50 	 77,50 	 155,00 	
+	Caminhão Pipa 10.000 l 				 1,00 	 -   	 110,00 	 110,00 	 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 430,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 34,68 	 34,68 	
+	Operador de trator de pneu						 1,00 	 17,97 	 17,97 	
+	Operador de rolo compactador						 2,00 	 17,97 	 35,94 	
+	Motorista de caminhão pipa						 -   	 17,97 	 -   	
+	Ajudante						 2,00 	 13,22 	 26,44 	
+	Gredista						 1,00 	 19,13 	 19,13 	
+										
+									 -   	
+								TOTAL	 134,17 	
+										
+	PRODUÇÃO DA EQUIPE (C)			259,44	m²			CUSTO HORÁRIO TOTAL (A+B)     	 564,17 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,15 	 34,00 	 209,10 	
+	Trator de pneus				Diesel S10	L	 6,15 	 14,00 	 86,10 	
+	Rolo compactador pé de carneiro				Diesel S10	L	 6,15 	 16,00 	 196,80 	
+	Caminhão Pipa 10.000 l 				Diesel S10	L	 6,15 	 4,00 	 -   	
+									 -   	
+									 -   	
+								TOTAL	 492,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 4,07 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								4,07	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								4,07	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Compactação de aterro 						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 200,00 	 200,00 	 200,00 	
+	Trator de pneus			 1,00 	 1,00 	 -   	 75,00 	 75,00 	 75,00 	
+	Rolo compactador pé de carneiro			 2,00 	 1,00 	 -   	 77,50 	 77,50 	 155,00 	
+	Caminhão Pipa 10.000 l 				 1,00 	 -   	 110,00 	 110,00 	 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 430,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 34,68 	 34,68 	
+	Operador de trator de pneu						 1,00 	 17,97 	 17,97 	
+	Operador de rolo compactador						 2,00 	 17,97 	 35,94 	
+	Motorista de caminhão pipa						 -   	 17,97 	 -   	
+	Ajudante						 2,00 	 13,22 	 26,44 	
+	Gredista						 1,00 	 19,13 	 19,13 	
+										
+									 -   	
+								TOTAL	 134,17 	
+										
+	PRODUÇÃO DA EQUIPE (C)			120,78	m³			CUSTO HORÁRIO TOTAL (A+B)     	 564,17 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,15 	 34,00 	 209,10 	
+	Trator de pneus				Diesel S10	L	 6,15 	 14,00 	 86,10 	
+	Rolo compactador pé de carneiro				Diesel S10	L	 6,15 	 16,00 	 196,80 	
+	Caminhão Pipa 10.000 l 				Diesel S10	L	 6,15 	 4,00 	 -   	
+									 -   	
+									 -   	
+								TOTAL	 492,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 8,74 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								8,74	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								8,74	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Passagem em nivel entre ramal ferroviario e rodovia, conforme padrões DNIT 						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+									 -   	
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+										
+									 -   	
+								TOTAL	 -   	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,00	m			CUSTO HORÁRIO TOTAL (A+B)     	 -   	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 -   	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavação e trasnporte Jazida (Incluso material)			m3	 13,65 	 1,00 	 18,84 	 1,00 	 257,18 	
+	Compactação Aterro 			m3	 13,65 	 1,00 	 4,67 	 1,00 	 63,76 	
+	Base			m3	 0,91 	 1,00 	 33,11 	 1,00 	 30,13 	
+	Piso em concreto (FCK 30 MPA)			m2	 3,50 	 1,00 	 488,79 	 1,00 	 1.710,77 	
+								TOTAL	 2.061,84 	
+										
+	CUSTO DIRETO TOTAL: R$								2.061,84	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								2.061,84	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	janeiro, 1900	CONCRETAGEM DE PISO 						m2	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 -   	 34,68 	 -   	
+	Pedreiro						 2,00 	 17,97 	 35,94 	
+	Ajudante						 4,00 	 13,22 	 52,89 	
+	Carpinteiro						 1,00 	 17,97 	 17,97 	
+	Apontador							 17,97 	 -   	
+										
+									 -   	
+								TOTAL	 106,79 	
+										
+	PRODUÇÃO DA EQUIPE (C)			2,50	m2			CUSTO HORÁRIO TOTAL (A+B)     	 106,79 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 42,72 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Concreto fck 30 mpa 					 0,53 	 m3 	 670,00 	 351,75 	
+	Forma					 0,20 	 m2 	 35,00 	 6,83 	
+	Tela reforçada para concreto Gerdau Q92 4,2 mm - 15x15 cm - 2,45 x 6,00 m					 0,25 	 und 	 350,00 	 87,50 	
+									 -   	
+								TOTAL	 446,08 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								488,79	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								488,79	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Tubo de concreto PA2 comercial para drenagem - D = 0,40 m - fornecimento e instalação, incluso escavação, reaterro e bota fora do material execedente						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador pequeno			 1,00 	 0,50 	 0,50 	 45,00 	 45,00 	 45,00 	
+	Sapo compactador			 2,00 	 1,00 	 -   	 5,75 	 5,75 	 11,50 	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 85,00 	 85,00 	 85,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 141,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de rolo compactador						 1,00 	 17,97 	 17,97 	
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Montador de drenagem						 1,00 	 20,31 	 20,31 	
+	Pedreiro						 2,00 	 17,97 	 35,94 	
+	Ajudante						 6,00 	 13,22 	 79,33 	
+										
+									 -   	
+								TOTAL	 175,50 	
+										
+	PRODUÇÃO DA EQUIPE (C)			8,91	m			CUSTO HORÁRIO TOTAL (A+B)     	 317,00 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Rolo compactador pequeno				Diesel S10	L	 6,15 	 10,00 	 30,75 	
+	Sapo compactador				Gasolina	L	 5,82 	 3,00 	 34,92 	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 98,40 	
+										
+									 -   	
+									 -   	
+								TOTAL	 164,07 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 54,01 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	TUBO DE CONCRETO ARMADO PA2 D400 MF					 1,10 	 m 	R$ 130,22	 143,25 	
+	Cimento CPII					 0,06 	 sc 	R$ 35,00	 2,10 	
+	Lastro de brita					 -   	 m³ 	R$ 102,20	 -   	
+								TOTAL	 145,35 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								199,36	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								199,36	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Tubo de concreto PA2 comercial para drenagem - D = 0,60 m - fornecimento, instalação, incluso escavação, reaterro e bota fora do material execedente						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador pequeno			 1,00 	 0,50 	 0,50 	 45,00 	 45,00 	 45,00 	
+	Sapo compactador			 2,00 	 1,00 	 -   	 5,75 	 5,75 	 11,50 	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 85,00 	 85,00 	 85,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 141,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de rolo compactador						 1,00 	 17,97 	 17,97 	
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Montador de drenagem						 1,00 	 20,31 	 20,31 	
+	Pedreiro						 2,00 	 17,97 	 35,94 	
+	Ajudante						 6,00 	 13,22 	 79,33 	
+										
+									 -   	
+								TOTAL	 175,50 	
+										
+	PRODUÇÃO DA EQUIPE (C)			6,25	m			CUSTO HORÁRIO TOTAL (A+B)     	 317,00 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Rolo compactador pequeno				Diesel S10	L	 6,15 	 10,00 	 30,75 	
+	Sapo compactador				Gasolina	L	 5,82 	 3,00 	 34,92 	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 98,40 	
+										
+									 -   	
+									 -   	
+								TOTAL	 164,07 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 76,97 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	TUBO DE CONCRETO ARMADO PA2 D600 MF					 1,10 	 m 	R$ 279,74	 307,72 	
+	Cimento CPII					 0,12 	 sc 	R$ 35,00	 4,20 	
+								TOTAL	 311,92 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								388,89	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								388,89	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Tubo corrugado PEAD, parede dupla, interna lisa, JEI, DN/DI 600 mm, para saneamento (drenagem/esgoto) - incluindo escavação, reaterro e bota-fora com DMT 500 m						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador pequeno			 0,50 	 0,50 	 0,50 	 45,00 	 45,00 	 22,50 	
+	Sapo compactador			 2,00 	 1,00 	 -   	 5,75 	 5,75 	 11,50 	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 85,00 	 85,00 	 85,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 119,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de rolo compactador						 0,50 	 17,97 	 8,98 	
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Montador de drenagem						 1,00 	 20,31 	 20,31 	
+	Pedreiro						 2,00 	 17,97 	 35,94 	
+	Ajudante						 6,00 	 13,22 	 79,33 	
+										
+									 -   	
+								TOTAL	 166,52 	
+										
+	PRODUÇÃO DA EQUIPE (C)			3,30	m			CUSTO HORÁRIO TOTAL (A+B)     	 285,52 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Rolo compactador pequeno				Diesel S10	L	 6,15 	 10,00 	 15,38 	
+	Sapo compactador				Gasolina	L	 5,82 	 3,00 	 34,92 	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 98,40 	
+										
+									 -   	
+									 -   	
+								TOTAL	 148,70 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 131,41 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo corrugado PEAD, parede dupla, interna lisa, JEI, DN/DI 600 mm					 1,05 	 m 	 405,00 	 425,25 	
+	Cimento CPII					 0,12 	 sc 	R$ 35,00	 4,20 	
+								TOTAL	 429,45 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								560,86	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								560,86	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Calha/Canaleta de concreto simples, tipo meia cana, diametro de 60 cm, para água pluvial.						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 0,50 	 0,50 	 85,00 	 85,00 	 85,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 85,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Pedreiro						 1,00 	 17,97 	 17,97 	
+	Ajudante						 2,00 	 13,22 	 26,44 	
+	Carpinteiro						 1,00 	 17,97 	 17,97 	
+										
+									 -   	
+								TOTAL	 84,34 	
+										
+	PRODUÇÃO DA EQUIPE (C)			16,07	m			CUSTO HORÁRIO TOTAL (A+B)     	 169,34 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 49,20 	
+	Sapo compactador				Gasolina	L	 5,82 	 3,00 	 -   	
+									 -   	
+									 -   	
+								TOTAL	 49,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 13,60 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Forma 						 m2 	R$ 35,00	 -   	
+	Concreto FCK 20					 0,01 	 m3 	R$ 630,00	 7,84 	
+	Comporta						 und 	R$ 1.500,00	 -   	
+	Tubo meia cana DN 600 MM					 1,00 	 und 	R$ 230,00	 230,00 	
+									 -   	
+									 -   	
+								TOTAL	 237,84 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								251,44	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								251,44	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Canaleta retangular de concreto armado, com 0,60m de largura e altura variável de 0,20 a 0,40m, inclusive escavação e reaterro.						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 0,50 	 0,50 	 85,00 	 85,00 	 85,00 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 85,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Pedreiro						 1,00 	 17,97 	 17,97 	
+	Ajudante						 2,00 	 13,22 	 26,44 	
+	Carpinteiro						 1,00 	 17,97 	 17,97 	
+										
+									 -   	
+								TOTAL	 84,34 	
+										
+	PRODUÇÃO DA EQUIPE (C)			4,00	m			CUSTO HORÁRIO TOTAL (A+B)     	 169,34 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 49,20 	
+	Sapo compactador				Gasolina	L	 5,82 	 3,00 	 -   	
+									 -   	
+									 -   	
+								TOTAL	 49,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 54,63 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Forma 					 2,60 	 M2 	R$ 35,00	 91,00 	
+	Concreto FCK 20 mpa					 0,18 	 M3 	R$ 630,00	 116,21 	
+	Aço					 11,07 	 KG 	R$ 11,50	 127,28 	
+	Guilhotina					 0,00 	 und 	R$ 22.000,00	 54,15 	
+										
+										
+										
+								TOTAL	 388,64 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								443,28	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								443,28	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Caixa de Ligação e Passagem - CLP 02 - Ø 600mm, sem dispositivo interno de queda						unid	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 0,50 	 0,50 	 85,00 	 85,00 	 85,00 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 85,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Pedreiro						 1,00 	 17,97 	 17,97 	
+	Ajudante						 2,00 	 13,22 	 26,44 	
+	Carpinteiro						 1,00 	 17,97 	 17,97 	
+										
+									 -   	
+								TOTAL	 84,34 	
+										
+	PRODUÇÃO DA EQUIPE (C)			0,24	unid			CUSTO HORÁRIO TOTAL (A+B)     	 169,34 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 49,20 	
+	Sapo Compactador				Gasolina	L	 5,82 	 3,00 	 -   	
+									 -   	
+									 -   	
+								TOTAL	 49,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 899,12 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Latro de concreto - base					 0,20 	 m3 	R$ 630,00	 126,00 	
+	Concreto fck 20 mpa					 0,59 	 m3 	R$ 630,00	 369,49 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+										
+										
+								TOTAL	 495,49 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								1.394,62	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								1.394,62	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	janeiro, 1900	Junta dilatação elástica para concreto (FUGENBAND) O-12, ATE 5 MCA						M	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira				 1,00 	 -   	 85,00 	 85,00 	 -   	
+	Sapo compactador				 1,00 	 -   	 5,75 	 5,75 	 -   	
+										
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 -   	 21,96 	 -   	
+	Armador							 17,97 	 -   	
+	Pedreiro						 1,00 	 17,97 	 17,97 	
+	Ajudante						 1,00 	 13,22 	 13,22 	
+	Carpinteiro							 17,97 	 -   	
+										
+									 -   	
+								TOTAL	 31,19 	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,00	M			CUSTO HORÁRIO TOTAL (A+B)     	 31,19 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 -   	
+	Sapo compactador				Gasolina	L	 5,82 	 3,00 	 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 31,19 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	FUNGEBANDPARA JUNTA DE DILATAÇÃO 0-12, ATÉ 5MCA					 1,05 	 M 	R$ 185,00	 194,25 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 194,25 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								225,44	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								225,44	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	janeiro, 1900	Dissipador de Energia DED 01 - Aplicável a Descidas DAR						und	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 0,50 	 0,50 	 85,00 	 85,00 	 85,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 85,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 1,00 	 21,96 	 21,96 	
+	Pedreiro						 1,00 	 17,97 	 17,97 	
+	Ajudante						 2,00 	 13,22 	 26,44 	
+										
+									 -   	
+								TOTAL	 66,37 	
+										
+	PRODUÇÃO DA EQUIPE (C)			0,24	und			CUSTO HORÁRIO TOTAL (A+B)     	 151,37 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,15 	 16,00 	 49,20 	
+	Sapo compactador				Gasolina	L	 5,82 	 3,00 	 -   	
+									 -   	
+									 -   	
+								TOTAL	 49,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 822,33 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Forma					 3,84 	 M2 	R$ 35,00	 134,27 	
+	Pedra de mão					 5,56 	 M3 	R$ 186,00	 1.033,27 	
+	Concreto fck 15 mpa					 2,26 	 M3 	R$ 610,00	 1.376,65 	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+										
+								TOTAL	 2.544,19 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								3.366,52	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								3.366,52	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Base de solo estabilizado com mistura						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 200,00 	 200,00 	 200,00 	
+	Trator de pneus			 1,00 	 1,00 	 -   	 75,00 	 75,00 	 75,00 	
+	Rolo compactador pé de carneiro			 2,00 	 1,00 	 -   	 77,50 	 77,50 	 155,00 	
+	Caminhão Pipa 10.000 l 			 2,00 	 1,00 	 -   	 110,00 	 110,00 	 220,00 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 650,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 34,68 	 34,68 	
+	Operador de trator de pneu						 1,00 	 17,97 	 17,97 	
+	Operador de rolo compactador						 2,00 	 17,97 	 35,94 	
+	Motorista de caminhão pipa						 2,00 	 17,97 	 35,94 	
+	Ajudante						 2,00 	 13,22 	 26,44 	
+	Gredista						 1,00 	 19,13 	 19,13 	
+										
+									 -   	
+								TOTAL	 170,10 	
+										
+	PRODUÇÃO DA EQUIPE (C)			55,00	m³			CUSTO HORÁRIO TOTAL (A+B)     	 820,10 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,15 	 34,00 	 209,10 	
+	Trator de pneus				Diesel S10	L	 6,15 	 14,00 	 86,10 	
+	Rolo compactador pé de carneiro				Diesel S10	L	 6,15 	 16,00 	 196,80 	
+	Caminhão Pipa 10.000 l 				Diesel S10	L	 6,15 	 4,00 	 49,20 	
+									 -   	
+									 -   	
+								TOTAL	 541,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 24,75 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Aquisição de Cascalho					 1,30 	 m³ 	 13,00 	 16,90 	
+									 -   	
+								TOTAL	 16,90 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Transporte de Cascalho				 1,30 	 1,00 	 1,00 	 1,00 	 1,30 	
+								TOTAL	 1,30 	
+										
+	CUSTO DIRETO TOTAL: R$								42,95	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								42,95	
+										
+										
+										
+										
+	TERMINAL SHG 					CUSTO UNITÁRIO				
+	SANTA HELENA (GO)					ESPECIFICAÇÃO				
+										
+										
+									

@@ -1,0 +1,538 @@
+										
+	OBRA:	ROSH	COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	0	junho, 2026	Rebaixo Terreno natural - 40 cm						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 180,80 	 180,80 	 180,80 	
+										
+								TOTAL	 180,80 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 35,99 	 35,99 	
+	Ajudante							 15,20 	 -   	
+								TOTAL	 35,99 	
+										
+	PRODUÇÃO DA EQUIPE (C)			157,25	M3			CUSTO HORÁRIO TOTAL (A+B)     	 216,79 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira hidráulica sobre esteira 22T				Diesel S10	L	 7,00 	 22,00 	 154,00 	
+										
+								TOTAL	 154,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 2,36 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								2,36	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								2,36	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	0	junho, 2026	Regularização e compactação do terreno natural						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+E0015	Motoniveladora 140K			 1,00 	 1,00 	 -   	 219,80 	 219,80 	 219,80 	
+E0002	Rolo compactador pé de carneiro 10T			 2,00 	 1,00 	 -   	 110,00 	 110,00 	 220,00 	
+	Trator de pneus com grade			 2,00 	 1,00 	 -   	 136,00 	 136,00 	 272,00 	
+	Caminhão Pipa 18.000 l			 1,00 	 1,00 	 -   	 120,00 	 120,00 	 120,00 	
+								TOTAL	 831,80 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Motoniveladora						 1,00 	 35,99 	 35,99 	
+	Operador de Rolo Compactador						 2,00 	 21,59 	 43,18 	
+	Operador de Trator de Pneu						 2,00 	 21,59 	 43,18 	
+	Ajudante						 1,00 	 15,20 	 15,20 	
+	Motorista de Caminhão Pipa						 1,00 	 21,59 	 21,59 	
+								TOTAL	 159,14 	
+										
+	PRODUÇÃO DA EQUIPE (C)			157,25	M3			CUSTO HORÁRIO TOTAL (A+B)     	 990,94 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 7,00 	 22,00 	 154,00 	
+	Rolo compactador pé de carneiro 10T				Diesel S10	L	 7,00 	 16,00 	 224,00 	
+	Trator de pneus com grade				Diesel S10	L	 7,00 	 18,00 	 252,00 	
+	Caminhão Pipa 18.000 l				Diesel S10	L	 7,00 	 7,00 	 49,00 	
+								TOTAL	 679,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 10,62 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								10,62	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								10,62	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	0	junho, 2026	Lançamento da manta geotêxtil						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+E0015	Escavadeira hidráulica sobre esteira 38T			 -   	 1,00 	 -   	 261,40 	 261,40 	 -   	
+E0002	Caminhão basculante 14 m³			 -   	 1,00 	 -   	 127,50 	 127,50 	 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Ajudante						 6,00 	 15,20 	 91,22 	
+								TOTAL	 91,22 	
+										
+	PRODUÇÃO DA EQUIPE (C)			327,50	M3			CUSTO HORÁRIO TOTAL (A+B)     	 91,22 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20T				225	L	 -   	 251,00 	 -   	
+	Escavadeira hidráulica sobre esteira 38T				Diesel S10	L	 7,00 	 26,00 	 -   	
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 0,28 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								0,28	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								0,28	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	0	junho, 2026	Lançamento da geogrelha						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20T			 -   	 1,00 	 -   	 26,00 	 26,00 	 -   	
+E0015	Escavadeira hidráulica sobre esteira 38T			 -   	 1,00 	 -   	 261,40 	 261,40 	 -   	
+E0002	Caminhão basculante 14 m³			 -   	 1,00 	 -   	 127,50 	 127,50 	 -   	
+										
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Ajudante						 6,00 	 15,20 	 91,22 	
+	Operador de escavadeira						 -   	 35,99 	 -   	
+	Ajudante						 -   	 15,20 	 -   	
+	Motorista de caminhão basculante						 -   	 21,59 	 -   	
+	Encarregado de frente							 34,09 	 -   	
+								TOTAL	 91,22 	
+										
+	PRODUÇÃO DA EQUIPE (C)			327,50	M3			CUSTO HORÁRIO TOTAL (A+B)     	 91,22 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20T				225	L	 -   	 251,00 	 -   	
+	Escavadeira hidráulica sobre esteira 38T				Diesel S10	L	 7,00 	 26,00 	 -   	
+	Caminhão basculante 14 m³				Diesel S10	L	 7,00 	 2,50 	 -   	
+										
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 0,28 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								0,28	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								0,28	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	0	junho, 2026	CAMADA 4 — PROTEÇÃO MECÂNICA COM AREIA (5 cm) — sobre geogrelha						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	MOTONIVELADORA 140K			 1,00 	 1,00 	 -   	 33,80 	 33,80 	 33,80 	
+E0004	CAMINHÃO PIPA 18.000 L			 1,00 	 1,00 	 -   	 120,00 	 120,00 	 120,00 	
+	Pá carregadeira 12t									
+										
+								TOTAL	 153,80 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Motoniveladora						 1,00 	 35,99 	 35,99 	
+								TOTAL	 35,99 	
+										
+	PRODUÇÃO DA EQUIPE (C)			20,00	M3			CUSTO HORÁRIO TOTAL (A+B)     	 189,79 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	MOTONIVELADORA 140K				Diesel S10	L	 7,00 	 22,00 	 154,00 	
+	CAMINHÃO PIPA 18.000 L				Diesel S10	L	 7,00 	 7,00 	 49,00 	
+										
+								TOTAL	 203,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 19,64 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	PERFURAÇÃO  E DETONAÇÃO EM ROCHA					 -   	 M3 	 39,56 	 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								19,64	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								19,64	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	0	junho, 2026	CAMADA 5 — SUB BASE EM RACHÃO (25 cm)						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+E0016	Rolo compactador liso			 1,00 	 1,00 	 -   	 90,00 	 90,00 	 90,00 	
+	Trator de esteiras 20T			 1,00 	 1,00 		 251,00 	 251,00 	 251,00 	
+E0002	CAMINHÃO PIPA 18.000 L			 1,00 	 1,00 	 -   	 120,00 	 120,00 	 120,00 	
+										
+								TOTAL	 461,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	OPERADOR DE ROLO COMPACTADOR						 1,00 	 21,59 	 21,59 	
+	Operador de Trator de Esteiras						 1,00 	 26,35 	 26,35 	
+								TOTAL	 47,94 	
+										
+	PRODUÇÃO DA EQUIPE (C)			82,03	M3			CUSTO HORÁRIO TOTAL (A+B)     	 508,94 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Rolo compactador liso				Diesel S10	L	 7,00 	 16,00 	 112,00 	
+	CAMINHÃO PIPA 18.000 L				Diesel S10	L	 7,00 	 7,00 	 49,00 	
+	Trator de esteiras 20T				Diesel S10	L	 7,00 	 26,00 	 182,00 	
+	Pá carregadeira 12t				Diesel S10	L	 7,00 	 16,00 	 -   	
+								TOTAL	 343,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 10,39 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	PERFURAÇÃO  E DETONAÇÃO EM ROCHA					 -   	 M3 	 39,56 	 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								10,39	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								10,39	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	CAMADA 6 — TRAVAMENTO DO RACHÃO EM BICA CORRIDA (12 cm)						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador pé de carneiro 10t			 2,00 	 1,00 	 -   	 110,00 	 110,00 	 220,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 136,00 	 136,00 	 136,00 	
+	Motoniveladora 140k			 1,00 	 1,00 	 -   	 219,80 	 219,80 	 219,80 	
+	Caminhão pipa 18.000 l			 1,00 	 1,00 	 -   	 120,00 	 120,00 	 120,00 	
+										
+								TOTAL	 695,80 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Rolo compactador						 2,00 	 21,59 	 43,18 	
+	Operador de trator de pneu						 1,00 	 21,59 	 21,59 	
+	Operador de motoniveladora						 1,00 	 35,99 	 35,99 	
+	Motorista de caminhão pipa						 1,00 	 21,59 	 21,59 	
+	Ajudante						 2,00 	 15,20 	 30,41 	
+									 -   	
+								TOTAL	 152,75 	
+										
+	PRODUÇÃO DA EQUIPE (C)			146,07	m3			CUSTO HORÁRIO TOTAL (A+B)     	 848,55 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 7,00 	 16,00 	 224,00 	
+	Trator de pneus com grade				Diesel S10	L	 7,00 	 18,00 	 126,00 	
+	Motoniveladora 140k				Diesel S10	L	 7,00 	 22,00 	 154,00 	
+	Caminhão pipa 18.000 l				Diesel S10	L	 7,00 	 7,00 	 49,00 	
+										
+								TOTAL	 553,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 9,60 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								9,60	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								9,60	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+		DATA BASE	SERVIÇO						UNIDADE	
+		junho, 2026	CAMADA 7 — BGTC — BASE GRANULAR TRATADA COM CIMENTO (40 cm)						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	CAMINHÃO PIPA 18.000 L			 1,00 	 1,00 	 -   	 120,00 	 120,00 	 120,00 	
+	Rolo compactador liso			 2,00 	 1,00 	 -   	 90,00 	 90,00 	 180,00 	
+	MOTONIVELADORA 140K			 1,00 	 1,00 	 -   	 219,80 	 219,80 	 219,80 	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 251,00 	 251,00 	 251,00 	
+									 -   	
+								TOTAL	 770,80 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Trator de Esteiras						 2,00 	 26,35 	 52,69 	
+	Operador de Motoniveladora						 1,00 	 35,99 	 35,99 	
+	Operador de Trator de Esteiras						 1,00 	 26,35 	 26,35 	
+	Gredista						 1,00 	 21,59 	 21,59 	
+								TOTAL	 136,62 	
+										
+	PRODUÇÃO DA EQUIPE (C)			138,00	m3			CUSTO HORÁRIO TOTAL (A+B)     	 907,42 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	CAMINHÃO PIPA 18.000 L				Diesel S10	L	 7,00 	 7,00 	 49,00 	
+	Rolo compactador liso				Diesel S10	L	 7,00 	 16,00 	 224,00 	
+	MOTONIVELADORA 140K				Diesel S10	L	 7,00 	 22,00 	 154,00 	
+	Trator de esteiras 20T				Diesel S10	L	 7,00 	 26,00 	 182,00 	
+								TOTAL	 609,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 10,99 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								10,99	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								10,99	
+										
+										
+										
+										
+	PATIO INTERTRAVADO - ROSH					CUSTO UNITÁRIO				
+	SÃO VICENTE SP					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+		DATA BASE	SERVIÇO						UNIDADE	
+		junho, 2026	CAMADA 8 — BASE EM PÓ DE PEDRA PARA ASSENTAMENTO  (4 cm)						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	MOTONIVELADORA 140K			 1,00 	 3,00 	-2,00 	 219,80 	 219,80 	 219,80 	
+								TOTAL	 219,80 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Motoniveladora						 2,00 	 35,99 	 71,98 	
+										
+								TOTAL	 71,98 	
+										
+	PRODUÇÃO DA EQUIPE (C)			34,01	m3			CUSTO HORÁRIO TOTAL (A+B)     	 291,78 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 7,00 	 22,00 	 462,00 	
+										
+								TOTAL	 462,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 22,16 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								22,16	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								22,16	
+										
+										
+										
+										
+	PATIO INTERTRAVADO - ROSH					CUSTO UNITÁRIO				
+	SÃO VICENTE SP					ESPECIFICAÇÃO				
+										
+										
+										

@@ -1,0 +1,73 @@
+ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA 																			
+				PREÇO UNITÁRIO				VALOR DE BDI					 R$ SUB TOTAL UNIT S/ BDI 	 R$ SUB TOTAL PROJETO S/ BDI 				 R$ SUB TOTAL UNIT C/ BDI 	R$ SUB TOTAL PROJETO C/ BDI				 R$  TOTAL PROJETO 
+				 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 BDI 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 SER/MAT/M.O/COMB/EQUIP 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 MATERIAL/M.O/EQUIP 	 SERVIÇOS 	MATERIAL	 DIESEL 	 M.O 	
+																							
+2	SUPRESSÃO VEGETAL													 -   	 -   	 -   	 133.033,32 		 -   	 -   	 -   	 224.703,28 	 224.703,28 
+2.1	Corte de Arvore Isolada, com destocamento com Ø > 45cm	un	 30,00 				 480,26 	 LIM 	 -   	 -   	 -   	 330,93 	 480,26 	 -   	 -   	 -   	 14.407,69 	 811,19 	 -   	 -   	 -   	 24.335,67 	 24.335,67 
+2.2	Corte de Arvore Isolada, com destocamento com Ø < 45cm	un	 30,00 				 194,79 	 LIM 	 -   	 -   	 -   	 134,23 	 194,79 	 -   	 -   	 -   	 5.843,85 	 329,02 	 -   	 -   	 -   	 9.870,70 	 9.870,70 
+2.3	Supressão vegetal com destocamento de vegetação com Ø =< 45cm 	m²	 40.000,00 				 2,79 	 LIM 	 -   	 -   	 -   	 1,92 	 2,79 	 -   	 -   	 -   	 111.594,34 	 4,71 	 -   	 -   	 -   	 188.491,24 	 188.491,24 
+2.4	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 0 até 500 m	m³	 1,00 				 7,72 	 LIM 	 -   	 -   	 -   	 5,32 	 7,72 	 -   	 -   	 -   	 7,72 	 13,04 	 -   	 -   	 -   	 13,04 	 13,04 
+2.5	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 501 até 1000 m	m³	 1,00 				 8,83 	 LIM 	 -   	 -   	 -   	 6,08 	 8,83 	 -   	 -   	 -   	 8,83 	 14,91 	 -   	 -   	 -   	 14,91 	 14,91 
+2.6	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 1001 até 1500 m 	m³	 1,00 				 9,19 	 LIM 	 -   	 -   	 -   	 6,34 	 9,19 	 -   	 -   	 -   	 9,19 	 15,53 	 -   	 -   	 -   	 15,53 	 15,53 
+2.7	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 1501 até 2000 m	m³	 50,00 				 9,65 	 LIM 	 -   	 -   	 -   	 6,65 	 9,65 	 -   	 -   	 -   	 482,67 	 16,31 	 -   	 -   	 -   	 815,27 	 815,27 
+2.8	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 2001 até 2500 m	m³	 1,00 				 10,30 	 LIM 	 -   	 -   	 -   	 7,10 	 10,30 	 -   	 -   	 -   	 10,30 	 17,39 	 -   	 -   	 -   	 17,39 	 17,39 
+2.9	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 2501 até 3000 m	m³	 1,00 				 10,30 	 LIM 	 -   	 -   	 -   	 7,10 	 10,30 	 -   	 -   	 -   	 10,30 	 17,39 	 -   	 -   	 -   	 17,39 	 17,39 
+2.10	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 3001 até 3500 m	m³	 1,00 				 12,59 	 LIM 	 -   	 -   	 -   	 8,67 	 12,59 	 -   	 -   	 -   	 12,59 	 21,26 	 -   	 -   	 -   	 21,26 	 21,26 
+2.11	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 3501 até 4000 m	m³	 50,00 				 12,59 	 LIM 	 -   	 -   	 -   	 8,67 	 12,59 	 -   	 -   	 -   	 629,34 	 21,26 	 -   	 -   	 -   	 1.063,01 	 1.063,01 
+2.12	Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 4501 até 5000 m	m³	 1,00 				 16,50 	 LIM 	 -   	 -   	 -   	 11,37 	 16,50 	 -   	 -   	 -   	 16,50 	 27,87 	 -   	 -   	 -   	 27,87 	 27,87 
+3	LIMPEZA DA ÁREA													 -   	 -   	 -   	 64.473,75 		 -   	 -   	 -   	 108.901,01 	 108.901,01 
+3.1	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 0 até 500 m	m³	 1,00 				 7,54 	 TER 	 -   	 -   	 -   	 5,20 	 7,54 	 -   	 -   	 -   	 7,54 	 12,74 	 -   	 -   	 -   	 12,74 	 12,74 
+3.2	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 501 até 1000 m	m³	 1,00 				 8,70 	 TER 	 -   	 -   	 -   	 6,00 	 8,70 	 -   	 -   	 -   	 8,70 	 14,70 	 -   	 -   	 -   	 14,70 	 14,70 
+3.3	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 1001 até 1500 m	m³	 1,00 				 9,13 	 TER 	 -   	 -   	 -   	 6,29 	 9,13 	 -   	 -   	 -   	 9,13 	 15,42 	 -   	 -   	 -   	 15,42 	 15,42 
+3.4	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 1501 até 2000 m	m³	 3.000,00 				 9,60 	 TER 	 -   	 -   	 -   	 6,61 	 9,60 	 -   	 -   	 -   	 28.787,55 	 16,21 	 -   	 -   	 -   	 48.624,33 	 48.624,33 
+3.5	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 2001 até 2500 m	m³	 1,00 				 10,70 	 TER 	 -   	 -   	 -   	 7,37 	 10,70 	 -   	 -   	 -   	 10,70 	 18,07 	 -   	 -   	 -   	 18,07 	 18,07 
+3.6	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 2501 até 3000 m	m³	 1,00 				 11,25 	 TER 	 -   	 -   	 -   	 7,75 	 11,25 	 -   	 -   	 -   	 11,25 	 19,00 	 -   	 -   	 -   	 19,00 	 19,00 
+3.7	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 3001 até 3500 m	m³	 3.000,00 				 11,87 	 TER 	 -   	 -   	 -   	 8,18 	 11,87 	 -   	 -   	 -   	 35.595,55 	 20,04 	 -   	 -   	 -   	 60.123,55 	 60.123,55 
+3.8	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 3501 até 4000 m	m³	 1,00 				 14,45 	 TER 	 -   	 -   	 -   	 9,95 	 14,45 	 -   	 -   	 -   	 14,45 	 24,40 	 -   	 -   	 -   	 24,40 	 24,40 
+3.9	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 4001 até 4500 m	m³	 1,00 				 14,45 	 TER 	 -   	 -   	 -   	 9,95 	 14,45 	 -   	 -   	 -   	 14,45 	 24,40 	 -   	 -   	 -   	 24,40 	 24,40 
+3.10	Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 4501 até 5000 m	m³	 1,00 			 -   	 14,45 	 TER 	 -   	 -   	 -   	 9,95 	 14,45 	 -   	 -   	 -   	 14,45 	 24,40 	 -   	 -   	 -   	 24,40 	 24,40 
+4	ESCAVAÇÃO, CARGA, TRANSPORTE E ESPALHAMENTO													 -   	 -   	 -   	 1.430.364,41 		 -   	 -   	 -   	 2.415.993,08 	 2.415.993,08 
+4.1	Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 0 até 500m	m³	 32.000,00 				 8,24 	 TER 	 -   	 -   	 -   	 5,68 	 8,24 	 -   	 -   	 -   	 263.566,67 	 13,91 	 -   	 -   	 -   	 445.183,93 	 445.183,93 
+4.2	Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 501 até 1000m	m³	 32.000,00 				 8,54 	 TER 	 -   	 -   	 -   	 5,89 	 8,54 	 -   	 -   	 -   	 273.423,19 	 14,43 	 -   	 -   	 -   	 461.832,34 	 461.832,34 
+4.3	Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1001 até 1500m	m³	 32.000,00 				 8,92 	 TER 	 -   	 -   	 -   	 6,15 	 8,92 	 -   	 -   	 -   	 285.486,33 	 15,07 	 -   	 -   	 -   	 482.207,89 	 482.207,89 
+4.4	Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1501 até 2000m	m³	 32.000,00 				 9,29 	 TER 	 -   	 -   	 -   	 6,40 	 9,29 	 -   	 -   	 -   	 297.164,78 	 15,69 	 -   	 -   	 -   	 501.933,67 	 501.933,67 
+4.5	Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 2001 até 2500m	m³	 32.000,00 				 9,71 	 TER 	 -   	 -   	 -   	 6,69 	 9,71 	 -   	 -   	 -   	 310.637,24 	 16,40 	 -   	 -   	 -   	 524.689,67 	 524.689,67 
+4.6	Escavação, Carga, Transporte e Espalhamento -  material de 1° categoria - DMT 2501 até 3000m	m³	 1,00 				 10,31 	 TER 	 -   	 -   	 -   	 7,10 	 10,31 	 -   	 -   	 -   	 10,31 	 17,41 	 -   	 -   	 -   	 17,41 	 17,41 
+4.7	Escavação, Carga, Transporte e Espalhamento - material de 2° categoria - DMT 0 até 500m	m³	 1,00 				 10,13 	 TER 	 -   	 -   	 -   	 6,98 	 10,13 	 -   	 -   	 -   	 10,13 	 17,12 	 -   	 -   	 -   	 17,12 	 17,12 
+4.8	Escavação, Carga, Transporte e Espalhamento -  material de 2° categoria -DMT 501 até 1000m	m³	 1,00 				 11,03 	 TER 	 -   	 -   	 -   	 7,60 	 11,03 	 -   	 -   	 -   	 11,03 	 18,63 	 -   	 -   	 -   	 18,63 	 18,63 
+4.9	Escavação, Carga, Transporte e Espalhamento -  material de 2° categoria -DMT 1001 até 1500m	m³	 1,00 				 12,13 	 TER 	 -   	 -   	 -   	 8,36 	 12,13 	 -   	 -   	 -   	 12,13 	 20,49 	 -   	 -   	 -   	 20,49 	 20,49 
+4.10	Escavação, Carga, Transporte e Espalhamento -  material de 2° categoria - DMT 1501 até 2000m	m³	 1,00 				 12,90 	 TER 	 -   	 -   	 -   	 8,89 	 12,90 	 -   	 -   	 -   	 12,90 	 21,79 	 -   	 -   	 -   	 21,79 	 21,79 
+4.11	Escavação, Carga, Transporte e Espalhamento -  material de 2° categoria - DMT 2001 até 2500m	m³	 1,00 				 14,04 	 TER 	 -   	 -   	 -   	 9,68 	 14,04 	 -   	 -   	 -   	 14,04 	 23,72 	 -   	 -   	 -   	 23,72 	 23,72 
+4.12	Escavação, Carga, Transporte e Espalhamento -  material de 2° categoria - DMT 2501 até 3000m	m³	 1,00 				 15,65 	 TER 	 -   	 -   	 -   	 10,78 	 15,65 	 -   	 -   	 -   	 15,65 	 26,43 	 -   	 -   	 -   	 26,43 	 26,43 
+																							
+														 -   	 -   	 -   	 1.876,36 		 -   	 -   	 -   	 3.169,31 	 3.169,31 
+5.1	Caminhão Traçado 6x4 (Basculante) 14m³	H	 1,00 				 172,98 	 TER 	 -   	 -   	 -   	 119,20 	 172,98 	 -   	 -   	 -   	 172,98 	 292,18 	 -   	 -   	 -   	 292,18 	 292,18 
+5.2	Escavadeira Hidraulica - PC220 ou similar	H	 1,00 				 175,00 	 TER 	 -   	 -   	 -   	 120,59 	 175,00 	 -   	 -   	 -   	 175,00 	 295,59 	 -   	 -   	 -   	 295,59 	 295,59 
+5.3	Escavadeira Hidraulica - PC350 ou similar	H	 1,00 				 242,54 	 TER 	 -   	 -   	 -   	 167,13 	 242,54 	 -   	 -   	 -   	 242,54 	 409,67 	 -   	 -   	 -   	 409,67 	 409,67 
+5.4	Rolo Compactador, tipo: Pé de Carneiro - 20T SANY SSR200C ou  similar	H	 1,00 				 145,00 	 TER 	 -   	 -   	 -   	 99,92 	 145,00 	 -   	 -   	 -   	 145,00 	 244,92 	 -   	 -   	 -   	 244,92 	 244,92 
+5.5	Rolo Compactador, tipo: Liso - 20T SANY SSR200C ou similar	H	 1,00 				 159,49 	 TER 	 -   	 -   	 -   	 109,90 	 159,49 	 -   	 -   	 -   	 159,49 	 269,39 	 -   	 -   	 -   	 269,39 	 269,39 
+5.6	Pá Carregadeira - John Deere 724K ou similar	H	 1,00 				 192,58 	 TER 	 -   	 -   	 -   	 132,70 	 192,58 	 -   	 -   	 -   	 192,58 	 325,28 	 -   	 -   	 -   	 325,28 	 325,28 
+5.7	Motoniveladora - CAT 140 ou similar	H	 1,00 				 225,00 	 TER 	 -   	 -   	 -   	 155,04 	 225,00 	 -   	 -   	 -   	 225,00 	 380,04 	 -   	 -   	 -   	 380,04 	 380,04 
+5.8	Trator de Esteiras - CAT D6 ou similar	H	 1,00 				 225,00 	 TER 	 -   	 -   	 -   	 155,04 	 225,00 	 -   	 -   	 -   	 225,00 	 380,04 	 -   	 -   	 -   	 380,04 	 380,04 
+5.9	Caminhão Pipa Traçado 6x4, tanque: 20.000l - Mercedes Benz AXOR 3131 ou similar	H	 1,00 				 188,77 	 TER 	 -   	 -   	 -   	 130,08 	 188,77 	 -   	 -   	 -   	 188,77 	 318,85 	 -   	 -   	 -   	 318,85 	 318,85 
+5.10	Caminhão Comboio (lubrificação) - 5.000 litros	H	 1,00 				 150,00 	 TER 	 -   	 -   	 -   	 103,36 	 150,00 	 -   	 -   	 -   	 150,00 	 253,36 	 -   	 -   	 -   	 253,36 	 253,36 
+																							
+1	INDIRETOS													 -   	 -   	 -   	 2.351.090,36 		 -   	 -   	 -   	 3.290.671,73 	 3.290.671,73 
+1.1	 Mobilização de pessoal e equipamentos	vb	 1,00 				 1.704.945,91 	 IND 	 -   	 -   	 -   	 681.358,51 	 1.704.945,91 	 -   	 -   		 1.704.945,91 	 2.386.304,41 	 -   	 -   		 2.386.304,41 	 2.386.304,41 
+1.2	 Mobilização Canteiro de Obras	vb	 1,00 				 340.339,77 	 IND 	 -   	 -   	 -   	 136.012,17 	 340.339,77 	 -   	 -   	 -   	 340.339,77 	 476.351,94 	 -   	 -   	 -   	 476.351,94 	 476.351,94 
+1.3	 Desmobilização Canteiro de Obras	vb	 1,00 				 138.618,02 	 IND 	 -   	 -   	 -   	 55.396,81 	 138.618,02 	 -   	 -   	 -   	 138.618,02 	 194.014,83 	 -   	 -   	 -   	 194.014,83 	 194.014,83 
+1.4	 Desmobilização de pessoal e equipamentos	vb	 1,00 				 167.186,67 	 IND 	 -   	 -   	 -   	 66.813,88 	 167.186,67 	 -   	 -   	 -   	 167.186,67 	 234.000,55 	 -   	 -   	 -   	 234.000,55 	 234.000,55 
+																							
+														 -   	 -   	 -   	 3.978.961,83 		 -   	 -   	 -   	 6.043.438,41 	 6.043.438,41 
+																							
+																							
+B D I	APLICAÇÃO	SIGLA	 M.O 	 SERVIÇO 	 DIESEL 	 MATERIAL 																	
+	Limpeza e Desmatamento	LIM	40,80%	40,80%	0,00%	40,80%																	
+	Terraplenagem	TER	40,80%	40,80%	0,00%	40,80%																	
+	Drenagem Pluvial	DRN	40,80%	40,80%	0,00%	40,80%																	
+	Sistema de Água	SAA	40,80%	40,80%	0,00%	40,80%																	
+	Sistema de Esgoto	SES	40,80%	40,80%	0,00%	40,80%																	
+	Pavimentação	PAV	40,80%	40,80%	0,00%	40,80%																	
+	Despesas Indiretas	IND	28,55%	28,55%	28,55%	28,55%																	
+	Serviços terceirizados	EMP	40,80%	40,80%	0,00%	40,80%																	
+	Obra Civil	CIV	40,80%	40,80%	0,00%	40,80%																	

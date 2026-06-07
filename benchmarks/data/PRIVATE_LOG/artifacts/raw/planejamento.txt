@@ -1,0 +1,37 @@
+ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA 																				% TOTAL PROJETO
+				PREÇO UNITÁRIO				VALOR DE BDI					 R$ SUB TOTAL UNIT S/ BDI 	 R$ SUB TOTAL PROJETO S/ BDI 				 R$ SUB TOTAL UNIT C/ BDI 	R$ SUB TOTAL PROJETO C/ BDI				 R$  TOTAL PROJETO 	
+				 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O/EQP 	 BDI 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O/EQP 		 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O/EQP 		 SERVIÇOS 	MATERIAL	 DIESEL 	 M.O/EQP 		
+																								
+1	SERVIÇOS DE TERRAPLENAGEM													 1.920.000,00 	 407.194,00 	 10.363.073,85 	 2.186.382,08 		 2.651.392,66 	 423.481,76 	 10.777.596,80 	 3.019.248,64 	 16.871.719,86 	100,0%
+1.1	Limpeza mecanizada de camada vegetal (20cm), incluso carga, transporte a um dt maximo de 1km e espalhamento	 m2 	 487.243,38 			 1,21 	 0,22 	 TER 	 -   	 -   	 0,05 	 0,08 	 1,43 	 -   	 -   	 590.829,25 	 105.910,90 	 1,56 	 -   	 -   	 614.462,42 	 146.255,93 	 760.718,35 	4,5%
+1.2	Supressão de árvores isoladas	 un  	 80,00 			 19,61 	 42,69 	 TER 	 -   	 -   	 0,78 	 16,26 	 62,30 	 -   	 -   	 1.568,64 	 3.415,05 	 79,34 	 -   	 -   	 1.631,39 	 4.715,95 	 6.347,34 	0,0%
+1.9	Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha dupla 150mm	 m 	 1.720,00 		 154,90 	 11,67 	 20,91 	 TER 	 -   	 6,20 	 0,47 	 7,97 	 187,49 	 -   	 266.428,00 	 20.075,84 	 35.973,34 	 202,12 	 -   	 277.085,12 	 20.878,87 	 49.676,80 	 347.640,79 	2,1%
+1.10	Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha simples 150mm	 m 	 1.740,00 		 80,90 	 7,78 	 13,64 	 TER 	 -   	 3,24 	 0,31 	 5,20 	 102,32 	 -   	 140.766,00 	 13.539,52 	 23.734,29 	 111,07 	 -   	 146.396,64 	 14.081,10 	 32.775,48 	 193.253,22 	1,1%
+1.3	Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km	m3	 614.502,27 			 4,96 	 0,62 	 TER 	 -   	 -   	 0,20 	 0,24 	 5,58 	 -   	 -   	 3.047.823,42 	 383.621,08 	 6,02 	 -   	 -   	 3.169.736,36 	 529.755,27 	 3.699.491,62 	21,9%
+1.5	Aterro Compactado a 100% PN	 m3 	 662.994,21 			 8,19 	 1,17 	 TER 	 -   	 -   	 0,33 	 0,45 	 9,36 	 -   	 -   	 5.430.702,89 	 775.341,78 	 10,13 	 -   	 -   	 5.647.931,00 	 1.070.695,58 	 6.718.626,58 	39,8%
+1.4	Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA)	m3	 114.791,36 			 5,76 	 0,77 	 TER 	 -   	 -   	 0,23 	 0,29 	 6,54 	 -   	 -   	 661.679,27 	 88.869,51 	 7,06 	 -   	 -   	 688.146,44 	 122.722,90 	 810.869,34 	4,8%
+1.8	Escavação de solo mole, incluso tranporte em ate 1km, e espalhamento	 m3 	 25.000,00 			 9,92 	 1,19 	 TER 	 -   	 -   	 0,40 	 0,45 	 11,11 	 -   	 -   	 247.970,83 	 29.660,88 	 11,95 	 -   	 -   	 257.889,67 	 40.959,71 	 298.849,37 	1,8%
+1.11	Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA) - substituição do solo mole	 m3 	 25.000,00 			 5,76 	 0,77 	 TER 	 -   	 -   	 0,23 	 0,29 	 6,54 	 -   	 -   	 144.104,76 	 19.354,57 	 7,06 	 -   	 -   	 149.868,95 	 26.727,38 	 176.596,33 	1,0%
+1.12	Aterro Compactado a 100% PN	 m3 	 25.000,00 			 8,19 	 1,17 	 TER 	 -   	 -   	 0,33 	 0,45 	 9,36 	 -   	 -   	 204.779,42 	 29.236,37 	 10,13 	 -   	 -   	 212.970,60 	 40.373,49 	 253.344,09 	1,5%
+1.6	Desmonte de rocha com escavadeira e rompedor hidráulico	 m3 	 12.000,00 	R$ 160,00	 -   		 30,13 	 TER 	 60,95 	 -   	 -   	 11,48 	 190,13 	 1.920.000,00 	 -   	 -   	 361.527,07 	 262,55 	 2.651.392,66 	 -   	 -   	 499.244,91 	 3.150.637,57 	18,7%
+1.7	Tranporte de material de britagem, DMT 1KM e espalhamento	 m3 	 18.000,00 				 18,32 	 TER 	 -   	 -   	 -   	 6,98 	 18,32 	 -   	 -   	 -   	 329.737,23 	 25,30 	 -   	 -   	 -   	 455.345,24 	 455.345,24 	2,7%
+4	INDIRETOS													 -   	 -   	 271.418,30 	 6.611.458,05 		 -   	 -   	 357.773,82 	 8.714.985,75 	 9.072.759,57 	35,0%
+4.1	Administração	vb	 1,00 			 271.418,30 	 4.130.286,70 	 IND 	 -   	 -   	 86.355,52 	 1.314.108,39 	 4.401.705,00 	 -   	 -   	 271.418,30 	 4.130.286,70 	 5.802.168,91 	 -   	 -   	 357.773,82 	 5.444.395,08 	 5.802.168,91 	-
+4.2	Topografia	vb	 1,00 				 333.991,52 	 IND 	 -   	 -   	 -   	 106.264,06 	 333.991,52 	 -   	 -   	 -   	 333.991,52 	 440.255,58 	 -   	 -   	 -   	 440.255,58 	 440.255,58 	-
+4.3	Laboratório	vb	 1,00 				 170.841,18 	 IND 	 -   	 -   	 -   	 54.355,51 	 170.841,18 	 -   	 -   	 -   	 170.841,18 	 225.196,69 	 -   	 -   	 -   	 225.196,69 	 225.196,69 	-
+4.4	QSMS	vb	 1,00 				 154.850,33 	 IND 	 -   	 -   	 -   	 49.267,80 	 154.850,33 	 -   	 -   	 -   	 154.850,33 	 204.118,13 	 -   	 -   	 -   	 204.118,13 	 204.118,13 	-
+4.5	Mob/Desmobilização	vb	 1,00 				 1.821.488,32 	 IND 	 -   	 -   	 -   	 579.531,94 	 1.821.488,32 	 -   	 -   	 -   	 1.821.488,32 	 2.401.020,26 	 -   	 -   	 -   	 2.401.020,26 	 2.401.020,26 	-
+								 IND 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	-
+														 1.920.000,00 	 407.194,00 	 10.634.492,15 	 8.797.840,13 	 -   	 2.651.392,66 	 423.481,76 	 11.135.370,62 	 11.734.234,39 	 25.944.479,43 	
+																								
+																								
+B D I	APLICAÇÃO	SIGLA	 M.O 	 SERVIÇO 	 DIESEL 	 MATERIAL 																	 6.949.104,75 	
+	Limpeza e Desmatamento	LIM	38,09%	38,09%	4,00%	4,00%																		
+	Terraplenagem	TER	38,09%	38,09%	4,00%	4,00%																	9%	
+	Drenagem Pluvial	DRN	38,09%	38,09%	4,00%	4,00%																		
+	Sistema de Água	SAA	38,09%	38,09%	4,00%	4,00%																		
+	Sistema de Esgoto	SES	38,09%	38,09%	4,00%	4,00%																		
+	Pavimentação	PAV	38,09%	38,09%	4,00%	4,00%																		
+	Despesas Indiretas	IND	31,82%	31,82%	31,82%	31,82%																		
+	Serviços terceirizados	EMP	38,09%	38,09%	4,00%	4,00%																		
+	Obra Civil	CIV	38,09%	38,09%	4,00%	4,00%																		

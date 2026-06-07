@@ -1,0 +1,98 @@
+EQUIPE:			EQUIPE 1 - SUPRESSÃO VEGETAL																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 34.496,26					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 200.886,82			EQUIPAMENTOS		R$ 156.390,56					1,00						 200.886,82 	
+						VERBAS		R$ 10.000,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO/CESTA BÁSICA/SEGURO DE VIDA					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	1	 R$3.813,80 		D	 953,45 								 2.908,02 		 7.675,27 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	3	 R$2.853,00 		D	 713,25 								 2.175,41 		 5.741,66 	
+P0045			OPERADOR DE PÁ CARREGADEIRA	P0045	1	 R$2.805,60 		D	 701,40 								 2.139,27 		 5.646,27 	
+P0001			AJUDANTE	P0001	1	 R$1.962,60 		D	 490,65 								 1.496,48 		 3.949,73 	
+		TOTAL			6	 17.141,00 		 4.285,25 				 -   					 13.070,01 		 34.496,26 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0022			PÁ CARREGADEIRA	E0022	1	 38.516,67 			h		 200,00 			S1	 16,00 			 -   	 38.516,67 	 38.516,67 
+E0033			TRATOR DE ESTEIRAS 20T	E0033	1	 42.873,89 			h		 200,00 			S1	 26,00 			 -   	 42.873,89 	 42.873,89 
+E0002			Caminhão basculante 14 m³	E0002	3	 25.000,00 			KM		 3.300,00 			S1	 2,50 			 -   	 25.000,00 	 75.000,00 
+			TOTAL		5	 156.390,56 												 -   		 156.390,56 
+						 156.390,56 												 -   		
+																				
+VERBAS FIXAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+		MATERIAL DE DESGASTE			VB		 5,00 			 2.000,00 					 10.000,00 					
+															 -   					
+															 10.000,00 					
+																				
+															 					
+																				
+EQUIPE:			EQUIPE 2 - LIMPEZA DA ÁREA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 34.496,26					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 190.886,82			EQUIPAMENTOS		R$ 156.390,56					1,00						 190.886,82 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO/CESTA BÁSICA/SEGURO DE VIDA					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	1	 R$3.813,80 		D	 953,45 								 2.908,02 		 7.675,27 	
+P0045			OPERADOR DE PÁ CARREGADEIRA	P0045	1	 R$2.805,60 		D	 701,40 								 2.139,27 		 5.646,27 	
+P0001			AJUDANTE	P0001	1	 R$1.962,60 		D	 490,65 								 1.496,48 		 3.949,73 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	3	 R$2.853,00 		D	 713,25 								 2.175,41 		 5.741,66 	
+		TOTAL			6	 17.141,00 		 4.285,25 									 13.070,01 		 34.496,26 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0033			TRATOR DE ESTEIRAS 20T	E0033	1	 42.873,89 			H		 200,00 			s1	 26,00 			 -   	 42.873,89 	 42.873,89 
+E0022			PÁ CARREGADEIRA	E0022	1	 38.516,67 			H		 200,00 			s1	 16,00 			 -   	 38.516,67 	 38.516,67 
+E0002			Caminhão basculante 14 m³	E0002	3	 25.000,00 			KM		 3.300,00 			s1	 2,50 			 -   	 25.000,00 	 75.000,00 
+			TOTAL		5	 156.390,56 												 -   		 156.390,56 
+						 156.390,56 												 -   		
+																				
+																				
+EQUIPE:			EQUIPE 3 - ESCAVAÇÃO, CARGA, TRANSPORTE E ESPALHAMENTO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 76.107,09					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 325.647,65			EQUIPAMENTOS		R$ 202.873,89					5,00						 1.628.238,23 	
+						VERBAS		R$ 46.666,67												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO/CESTA BÁSICA/SEGURO DE VIDA					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	1	 R$3.813,80 		D	 953,45 			J	 1.020,00 				 2.908,02 		 8.695,27 	
+P0040			OPERADOR DE ESCAVADEIRA	P0040	1	 R$3.843,40 		D	 960,85 			J	 1.020,00 				 2.930,59 		 8.754,84 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	5	 R$2.853,00 		D	 713,25 			J	 1.020,00 				 2.175,41 		 6.761,66 	
+P0046			OPERADOR DE ROLO COMPACTADOR	P0046		 R$2.305,60 		D	 576,40 			J	 1.020,00 				 -   		 -   	
+P0044			OPERADOR DE RETRO ESCAVADEIRA	P0044		 R$2.813,80 		D	 703,45 			J	 1.020,00 				 -   		 -   	
+P0040			OPERADOR DE ESCAVADEIRA	P0040		 R$3.843,40 		D	 960,85 			J	 1.020,00 				 -   		 -   	
+P0001			AJUDANTE	P0001	5	 R$1.962,60 		D	 490,65 			J	 1.020,00 				 1.496,48 		 4.969,73 	
+		TOTAL			12	 31.735,20 		 7.933,80 									 24.198,09 		 76.107,09 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0033			TRATOR DE ESTEIRAS 20T	E0033	1	 42.873,89 			h		 200,00 			S1	 26,00 			 -   	 42.873,89 	 42.873,89 
+E0002			Caminhão basculante 14 m³	E0002	5	 25.000,00 			h		 3.300,00 			S1	 2,50 			 -   	 25.000,00 	 125.000,00 
+E0026			Rolo compactador pé de carneiro 10T	E0026		 29.000,00 			h		 200,00 			S1	 16,00 			 -   	 29.000,00 	 -   
+E0012			ESCAVADEIRA HIDRÁULICA SOBRE ESTEIRA 22T	E0012	1	 35.000,00 			h		 200,00 			S1	 22,00 			 -   	 35.000,00 	 35.000,00 
+			TOTAL		7	 202.873,89 												 -   		 202.873,89 
+						 1.014.369,44 												 -   		
+																				
+																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		MATERIAL DE DESGASTE			 1,00 		 7,00 			 4.000,00 					 28.000,00 					
+2		GPS PARA TRATOR			 1,00 		 1,00 			 18.666,67 					 18.666,67 				GPS ALTA PRECISÃO LEICA	
+3															 -   					
+4															 -   					
+															 46.666,67 					

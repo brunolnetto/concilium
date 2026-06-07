@@ -1,0 +1,14 @@
+BDI - MÃO DE OBRA				BDI - MATERIAIS				BDI - SERVIÇOS				BDI - INDIRETOS				BDI - DIESEL		
+SIGLA	ITEM	PORCENTAGEM		SIGLA	ITEM			SIGLA	ITEM	PORCENTAGEM		SIGLA	ITEM	PORCENTAGEM		SIGLA	ITEM	2
+AC	Administração Central	5,00%		AC	Administração Central	5,00%		AC	Administração Central	5,00%		AC	Administração Central	5,00%		AC	Administração Central	
+DF	Despesas Financeiras	0,00%		DF	Despesas Financeiras	0,00%		DF	Despesas Financeiras	0,00%		DF	Despesas Financeiras	0,00%		DF	Despesas Financeiras	
+R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	
+L	Lucro	15,00%		L	Lucro	15,00%		L	Lucro	15,00%		L	Lucro	5,00%		L	Lucro	
+	COFINS	3,00%			COFINS	3,00%			COFINS	3,00%			COFINS	3,00%			COFINS	
+	ISS	5,00%			ISS	5,00%			ISS	5,00%			ISS	5,00%			ISS	
+	PIS	0,65%			PIS	0,65%			PIS	0,65%			PIS	0,65%			PIS	
+	CSSL	1,99%			CSSL	1,99%			CSSL	1,99%			CSSL	1,99%			CSSL	
+	IR	2,74%			IR	2,74%			IR	2,74%			IR	2,74%			IR	
+T	Tributos (soma)	13,38%		T	Tributos (soma)	13,38%		T	Tributos (soma)	13,38%		T	Tributos (soma)	13,38%		T	Tributos (soma)	
+																		
+TT	Total do BDI	40,80%		TT	Total do BDI	40,80%		TT	Total do BDI	40,80%		TT	Total do BDI	28,55%		TT	Total do BDI	0,00%

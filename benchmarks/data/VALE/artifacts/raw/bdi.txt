@@ -1,0 +1,14 @@
+BDI - MÃO DE OBRA				BDI - MATERIAIS				BDI - SERVIÇOS				BDI - INDIRETOS				BDI - EQUIPAMENTOS		
+SIGLA	ITEM	PORCENTAGEM		SIGLA	ITEM	PORCENTAGEM		SIGLA	ITEM	PORCENTAGEM		SIGLA	ITEM	PORCENTAGEM		SIGLA	ITEM	2
+AC	Administração Central	2,00%		AC	Administração Central	2,00%		AC	Administração Central	2,00%		AC	Administração Central	2,00%		AC	Administração Central	2,00%
+DF	Despesas Financeiras	1,50%		DF	Despesas Financeiras	1,50%		DF	Despesas Financeiras	1,50%		DF	Despesas Financeiras	1,50%		DF	Despesas Financeiras	1,50%
+R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	1,00%		R	Garantia / Risco / Seguro	1,00%
+L	Lucro	7,87%		L	Lucro	7,87%		L	Lucro	7,87%		L	Lucro	0,00%		L	Lucro	7,87%
+	COFINS	0,00%			COFINS	0,00%			COFINS	0,00%			COFINS	0,00%			COFINS	0,00%
+	ISS	5,00%			ISS	5,00%			ISS	5,00%			ISS	5,00%			ISS	5,00%
+	PIS	0,00%			PIS	0,00%			PIS	0,00%			PIS	0,00%			PIS	0,00%
+	CSSL	1,99%			CSSL	1,99%			CSSL	1,99%			CSSL	1,99%			CSSL	1,99%
+	IR	1,20%			IR	1,20%			IR	1,20%			IR	1,20%			IR	1,20%
+T	Tributos (soma)	8,19%		T	Tributos (soma)	8,19%		T	Tributos (soma)	8,19%		T	Tributos (soma)	8,19%		T	Tributos (soma)	8,19%
+																		
+TT	Total do BDI	22,86%		TT	Total do BDI	22,86%		TT	Total do BDI	22,86%		TT	Total do BDI	13,89%		TT	Total do BDI	22,86%

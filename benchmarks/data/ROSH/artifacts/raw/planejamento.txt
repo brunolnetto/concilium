@@ -1,0 +1,44 @@
+ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA 																				% TOTAL PROJETO
+				PREÇO UNITÁRIO				VALOR DE BDI					 R$ SUB TOTAL UNIT S/ BDI 	 R$ SUB TOTAL PROJETO S/ BDI 				 R$ SUB TOTAL UNIT C/ BDI 	R$ SUB TOTAL PROJETO C/ BDI				 R$  TOTAL PROJETO 	
+				 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 BDI 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 SER/MAT/M.O/COMB/EQUIP 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 MATERIAL/M.O/EQUIP 	 SERVIÇOS 	MATERIAL	 DIESEL 	 M.O 		
+																								
+1	CAMADA 1 — RECOMPACTAÇÃO DO TERRENO ORIGINAL (40 cm)													 -   	 -   	 1.125.055,69 	 1.612.543,92 	 113,02 	 -   	 -   	 734.600,96 	 1.144.338,41 	 1.878.939,37 	25,4%
+1.1	Rebaixo Terreno natural - 40 cm	m²	 110.000,00 			 0,98 	 1,38 	 TER 	 -   	 -   	 0,26 	 0,49 	 2,36 	 -   	 -   	 107.726,55 	 151.648,34 	 3,10 	 -   	 -   	 135.808,58 	 205.410,53 	 341.219,11 	4,6%
+1.2	Regularização e compactação do terreno natural	m²	 110.000,00 			 4,32 	 6,30 	 TER 	 -   	 -   	 1,13 	 2,23 	 10,62 	 -   	 -   	 474.976,15 	 693.181,88 	 13,98 	 -   	 -   	 598.792,38 	 938.927,88 	 1.537.720,25 	20,8%
+1.3	Execução das guias 	m	 1.392,98 					 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+2	CAMADA 2 — MANTA SEPARADORA EM GEOTÊXTIL (manta separadora)																					 43.574,31 	 43.574,31 	0,59%
+2.1	Lançamento da manta geotêxtil	m²	 115.500,00 				 0,28 	 TER 	 -   	 -   	 -   	 0,10 	 0,28 	 -   	 -   	 -   	 32.169,59 	 0,38 	 -   	 -   	 -   	 43.574,31 	 43.574,31 	0,59%
+3	CAMADA 3 — GEOGRELHA (reforço de base)																					 43.574,31 	 43.574,31 	0,59%
+3.1	Lançamento da geogrelha	m²	 115.500,00 				 0,28 	 TER 	 -   	 -   	 -   	 0,10 	 0,28 	 -   	 -   	 -   	 32.169,59 	 0,38 	 -   	 -   	 -   	 43.574,31 	 43.574,31 	0,59%
+4	CAMADA 4 — PROTEÇÃO MECÂNICA COM AREIA (5 cm) — sobre geogrelha																				 91.490,61 	 91.903,13 	 183.393,74 	2,48%
+4.1	Lançamento e espalhamento de areia 	m³	 7.150,00 			 10,15 	 9,49 	 TER 	 -   	 -   	 2,65 	 3,36 	 19,64 	 -   	 -   	 72.572,50 	 67.849,28 	 25,65 	 -   	 -   	 91.490,61 	 91.903,13 	 183.393,74 	2,48%
+5	CAMADA 5 — SUB BASE EM RACHÃO (25 cm)																				 152.211,64 	 242.659,70 	 394.871,34 	5,35%
+5.1	Espalhamento e compactação de rachão	m³	 28.875,00 			 4,18 	 6,20 	 TER 	 -   	 -   	 1,09 	 2,20 	 10,39 	 -   	 -   	 120.737,84 	 179.148,27 	 13,68 	 -   	 -   	 152.211,64 	 242.659,70 	 394.871,34 	5,35%
+6	CAMADA 6 — TRAVAMENTO DO RACHÃO EM BICA CORRIDA (12 cm)																				 85.050,31 	 140.219,45 	 225.269,77 	3,05%
+6.1	Espalhamento e Compactação de  bica corrida	m³	 17.820,00 			 3,79 	 5,81 	 TER 	 -   	 -   	 0,99 	 2,06 	 9,60 	 -   	 -   	 67.463,90 	 103.519,76 	 12,64 	 -   	 -   	 85.050,31 	 140.219,45 	 225.269,77 	3,05%
+7	CAMADA 7 — BGTC — BASE GRANULAR TRATADA COM CIMENTO (40 cm)																				 257.030,49 	 411.486,78 	 668.517,27 	9,05%
+7.1	Espalhamento e compactação de BGTC	m³	 46.200,00 			 4,41 	 6,58 	 TER 	 -   	 -   	 1,15 	 2,33 	 10,99 	 -   	 -   	 203.882,61 	 303.788,17 	 14,47 	 -   	 -   	 257.030,49 	 411.486,78 	 668.517,27 	9,05%
+8	CAMADA 8 — BASE EM PÓ DE PEDRA PARA ASSENTAMENTO  (4 cm)																				 97.949,88 	 66.464,95 	 164.414,83 	2,23%
+8.1	Lançamento e espalhamento de pó de pedra	m³	 5.720,00 			 13,58 	 8,58 	 TER 	 -   	 -   	 3,54 	 3,04 	 22,16 	 -   	 -   	 77.696,14 	 49.069,05 	 28,74 	 -   	 -   	 97.949,88 	 66.464,95 	 164.414,83 	2,23%
+9	CAMADA 9 — PISO INTERTRAVADO DE CONCRETO (bloco retangular 10×20 cm | esp. 10 cm)																				 -   	 -   	 -   	0,00%
+9.1	Instação de piso intertravado	m²	 110.000,00 					 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,00%
+9.2	Rejuntamento do piso intertravado	m²	 110.000,00 					 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,00%
+10	INDIRETOS													 -   	 -   	 757.029,42 	 2.308.079,85 		 -   	 -   	 954.370,96 	 2.826.611,76 	 3.780.982,71 	51,21%
+	ADM	VB	 1,00 			 757.029,42 	 1.299.879,27 	 IND 	 -   	 -   	 197.341,54 	 292.030,14 	 2.056.908,69 	 -   	 -   	 757.029,42 	 1.299.879,27 	 2.546.280,37 	 -   	 -   	 954.370,96 	 1.591.909,41 	 2.546.280,37 	34,49%
+	TOPOGRAFIA	VB	 1,00 				 207.754,59 	 IND 	 -   	 -   	 -   	 46.674,03 	 207.754,59 	 -   	 -   	 -   	 207.754,59 	 254.428,61 	 -   	 -   	 -   	 254.428,61 	 254.428,61 	3,45%
+	LABORATORIO	VB	 1,00 				 150.497,31 	 IND 	 -   	 -   	 -   	 33.810,64 	 150.497,31 	 -   	 -   	 -   	 150.497,31 	 184.307,95 	 -   	 -   	 -   	 184.307,95 	 184.307,95 	2,50%
+	QSMS	VB	 1,00 				 39.001,00 	 IND 	 -   	 -   	 -   	 8.761,94 	 39.001,00 	 -   	 -   	 -   	 39.001,00 	 47.762,94 	 -   	 -   	 -   	 47.762,94 	 47.762,94 	0,65%
+	MOB/DESMOB	VB	 1,00 				 610.947,68 	 IND 	 -   	 -   	 -   	 137.255,16 	 610.947,68 	 -   	 -   	 -   	 610.947,68 	 748.202,84 	 -   	 -   	 -   	 748.202,84 	 748.202,84 	10,13%
+														 -   	 -   	 1.882.085,11 	 3.920.623,77 		 -   	 -   	 2.372.704,85 	 5.010.832,80 	 7.383.537,65 	100,0%
+																								
+																								
+B D I	APLICAÇÃO	SIGLA	 M.O 	 SERVIÇO 	 DIESEL 	 MATERIAL 																		
+	Limpeza e Desmatamento	LIM	35,45%	35,45%	26,07%	5,00%																		
+	Terraplenagem	TER	35,45%	35,45%	26,07%	5,00%																		
+	Drenagem Pluvial	DRN	35,45%	35,45%	26,07%	5,00%																		
+	Sistema de Água	SAA	35,45%	35,45%	26,07%	5,00%																		
+	Sistema de Esgoto	SES	35,45%	35,45%	26,07%	5,00%																		
+	Pavimentação	PAV	35,45%	35,45%	26,07%	5,00%																		
+	Despesas Indiretas	IND	22,47%	22,47%	26,07%	5,00%																		
+	Serviços terceirizados	EMP	35,45%	35,45%	26,07%	5,00%																		
+	Obra Civil	CIV	35,45%	35,45%	26,07%	5,00%																		

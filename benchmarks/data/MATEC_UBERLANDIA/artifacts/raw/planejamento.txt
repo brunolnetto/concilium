@@ -1,0 +1,27 @@
+ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA 																% TOTAL PROJETO
+				PREÇO UNITÁRIO				VALOR DE BDI					 R$ SUB TOTAL UNIT S/ BDI 	 R$ SUB TOTAL PROJETO S/ BDI 				 R$ SUB TOTAL UNIT C/ BDI 	 R$  TOTAL PROJETO 	
+				 SERVIÇOS 	 MATERIAL 	 DIESEL/EQUIP 	 M.O 	 BDI 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 SER/MAT/M.O/COMB/EQUIP 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 MATERIAL/M.O/EQUIP 		
+																				
+																				
+																				
+2	UBERLÂNDIA													 -   	 -   	 909.880,45 	 710.458,97 		 2.000.116,38 	
+2.2	Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km	m3	 69.952,84 			 8,49 	 1,64 	 TER 	 -   	 -   	 0,42 	 0,77 	 10,13 	 -   	 -   	 593.785,42 	 114.799,68 	 11,33 	 792.289,56 	39,6%
+2.3	Aterro	m3	 41.045,38 			 7,70 	 14,51 	 TER 	 -   	 -   	 0,39 	 6,83 	 22,21 	 -   	 -   	 316.095,03 	 595.659,29 	 29,43 	 1.207.826,82 	60,4%
+	INDIRETOS													 -   	 -   	 1.052.374,29 	 7.539.714,10 	 11.688.302,72 	 11.688.302,72 	85,4%
+	Administração 	VB	 1,00 			 1.052.374,29 	 4.258.201,06 	 IND 	 -   	 -   	 52.618,71 	 1.718.930,17 	 5.310.575,34 	 -   	 -   	 1.052.374,29 	 4.258.201,06 	 7.082.124,23 	 7.082.124,23 	60,6%
+	Topografia	VB	 1,00 				 270.852,52 	 IND 	 -   	 -   	 -   	 109.336,45 	 270.852,52 	 -   	 -   	 -   	 270.852,52 	 380.188,97 	 380.188,97 	3,3%
+	Laboratório	VB	 1,00 				 252.852,52 	 IND 	 -   	 -   	 -   	 102.070,29 	 252.852,52 	 -   	 -   	 -   	 252.852,52 	 354.922,82 	 354.922,82 	3,0%
+	QSMS	VB	 1,00 				 487.680,00 	 IND 	 -   	 -   	 -   	 196.864,32 	 487.680,00 	 -   	 -   	 -   	 487.680,00 	 684.544,32 	 684.544,32 	5,9%
+	Mobilização/Desmobilização de pessoas e equipamentos	VB	 1,00 				 2.270.128,00 	 IND 	 -   	 -   	 -   	 916.394,38 	 2.270.128,00 	 -   	 -   	 -   	 2.270.128,00 	 3.186.522,38 	 3.186.522,38 	27,3%
+								 IND 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+														 -   	 -   	 1.962.254,74 	 8.250.173,07 	 11.688.302,72 	 13.688.419,10 	
+																				
+																				
+B D I	APLICAÇÃO	SIGLA	 M.O 	 SERVIÇO 	 DIESEL/EQP 	 MATERIAL 														
+	Limpeza e Desmatamento	LIM	47,05%	47,05%	5,00%	5,00%														
+	Terraplenagem	TER	47,05%	47,05%	5,00%	5,00%													 1.520.935,46 	
+	Drenagem Pluvial	DRN	47,05%	47,05%	5,00%	5,00%													 4.562.806,37 	
+	Sistema de Água	SAA	47,05%	47,05%	5,00%	5,00%														
+	Sistema de Esgoto	SES	47,05%	47,05%	5,00%	5,00%													 6.562.922,74 	
+	Pavimentação	PAV	47,05%	47,05%	5,00%	5,00%														
+	Despesas Indiretas	IND	40,37%	40,37%	5,00%	5,00%														

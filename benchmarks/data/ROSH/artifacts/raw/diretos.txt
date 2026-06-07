@@ -1,0 +1,142 @@
+EQUIPE:			EQUIPE 1 - REBAIXO 																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 15.469,69					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 141.069,69			EQUIPAMENTOS		R$ 125.600,00					1,83						 258.627,76 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0040			OPERADOR DE ESCAVADEIRA	P0040	2	 R$3.843,40 		D	 960,85 								 2.930,59 		 7.734,84 	
+P0001			AJUDANTE	P0001		 R$1.623,60 			 -   								 -   		 -   	
+																				
+P0065	PJ		ENCARREGADO DE FRENTE	P0065		 R$7.500,00 			 -   								 -   		 -   	
+		TOTAL			2	 7.686,80 		 1.921,70 				 -   					 5.861,19 		 15.469,69 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+																				
+E0014			Escavadeira hidráulica sobre esteira 22T	E0014	2	 32.000,00 			h		 200,00 			S1	 22,00 			 30.800,00 	 62.800,00 	 125.600,00 
+E0002			CAMINHÃO BASCULANTE 14 M³	E0002		 22.000,00 			KM		 2.402,62 			S1	 2,50 			 6.727,35 	 28.727,35 	 -   
+																				
+																				
+			TOTAL		2	 64.000,00 												 61.600,00 		 125.600,00 
+																				
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+															 -   					
+															 -   					
+															 -   					
+															 -   					
+																				
+																				
+																				
+																				
+EQUIPE:			EQUIPE 2 - COMPACTAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 69.777,40					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 636.697,40			EQUIPAMENTOS		R$ 566.920,00					1,83						 1.163.033,92 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0043			Operador de Motoniveladora	P0043	2	 R$3.843,40 		D	 960,85 								 2.930,59 		 7.734,84 	
+P0046			Operador de Rolo Compactador	P0046	4	 R$2.305,60 		D	 576,40 								 1.758,02 		 4.640,02 	
+P0049			Operador de Trator de Pneu	P0049	4	 R$2.305,60 		D	 576,40 								 1.758,02 		 4.640,02 	
+P0033			Motorista de Caminhão Pipa	P0033	2	 R$2.305,60 		D	 576,40 								 1.758,02 		 4.640,02 	
+P0001			Ajudante	P0001	1	 R$1.623,60 		D	 405,90 								 1.238,00 		 3.267,50 	
+P0029			Gredista	P0029	1	 R$2.305,60 		D	 576,40 								 1.758,02 		 4.640,02 	
+		TOTAL			14	 34.672,00 		 8.668,00 				#VALUE!					 26.437,40 		 69.777,40 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0021			Motoniveladora 140K	E0021	2	 37.200,00 			h		 200,00 			S1	 22,00 			 29.260,00 	 66.460,00 	 132.920,00 
+E0028			Rolo compactador pé de carneiro 10T	E0028	4	 22.000,00 			h		 200,00 			S1	 16,00 			 22.400,00 	 44.400,00 	 177.600,00 
+E0034			Trator de pneus com grade	E0034	4	 22.000,00 			h		 200,00 			S1	 18,00 			 25.200,00 	 47.200,00 	 188.800,00 
+E0013			Caminhão Pipa 18.000 l	E0013	2	 24.000,00 			H		 200,00 			S1	 7,00 			 9.800,00 	 33.800,00 	 67.600,00 
+			TOTAL		12	 298.400,00 												 268.520,00 		 566.920,00 
+																				
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+															 -   					
+															 -   					
+															 -   					
+															 -   					
+																				
+																				
+EQUIPE:			EQUIPE 3 - BIDIM E GEOGRELHA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 35.942,45					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 35.942,45			EQUIPAMENTOS		R$ 0,00					1,77						 63.498,32 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0001			Ajudante	P0001	11	 R$1.623,60 		D	 405,90 								 1.238,00 		 3.267,50 	
+		TOTAL			11	 17.859,60 		 4.464,90 									 13.617,95 		 35.942,45 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0021			MOTONIVELADORA 140K	E0021		 37.200,00 			h		 200,00 			s1	 22,00 			 30.800,00 	 68.000,00 	 -   
+E0034			TRATOR DE PNEUS COM GRADE	E0034		 22.000,00 			h		 200,00 			s1	 18,00 			 25.200,00 	 47.200,00 	 -   
+E0013			CAMINHÃO PIPA 18.000 L	E0013		 24.000,00 			h		 200,00 			s1	 7,00 			 9.800,00 	 33.800,00 	 -   
+E0028			ROLO COMPACTADOR PÉ DE CARNEIRO 10T	E0028		 22.000,00 			h		 200,00 			S1	 16,00 			 22.400,00 	 44.400,00 	 -   
+																				
+			TOTAL		0	 -   												 -   		 -   
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+															 -   					
+															 -   					
+															 -   					
+															 -   					
+																				
+																				
+EQUIPE:			EQUIPE 4 - SUB BASE 																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 38.492,69					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 302.492,69			EQUIPAMENTOS		R$ 264.000,00					3,65						 1.104.098,30 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0001			Ajudante	P0001	2	 R$1.623,60 		D	 405,90 								 1.238,00 		 3.267,50 	
+P0048			Operador de Trator de Esteiras	P0048	1	 R$2.813,80 		D	 703,45 								 2.145,52 		 5.662,77 	
+P0033			MOTORISTA DE CAMINHÃO PIPA	P0033	1	 R$2.305,60 		D	 576,40 								 1.758,02 		 4.640,02 	
+P0046			OPERADOR DE ROLO COMPACTADOR	P0046	2	 R$2.305,60 		D	 576,40 								 1.758,02 		 4.640,02 	
+P0029			GREDISTA	P0029	1	 R$2.305,60 		D	 576,40 								 1.758,02 		 4.640,02 	
+P0043			Operador de Motoniveladora	P0043	1	 R$3.843,40 		D	 960,85 								 2.930,59 		 7.734,84 	
+		TOTAL			8	 19.126,80 		 4.781,70 									 14.584,19 		 38.492,69 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0021			MOTONIVELADORA 140K	E0021	1	 37.200,00 			h		 200,00 			s1	 22,00 			 30.800,00 	 68.000,00 	 68.000,00 
+E0013			CAMINHÃO PIPA 18.000 L	E0013	1	 24.000,00 			h		 200,00 			s1	 7,00 			 9.800,00 	 33.800,00 	 33.800,00 
+E0027			Rolo compactador liso	E0027	2	 18.000,00 			h		 200,00 			S1	 16,00 			 22.400,00 	 40.400,00 	 80.800,00 
+E0024			Pá carregadeira 12t	E0024	0	 20.900,00 			h		 200,00 			s1	 16,00 			 22.400,00 	 43.300,00 	 -   
+E0035			Trator de esteiras 20T	E0035	1	 45.000,00 			h		 200,00 			s1	 26,00 			 36.400,00 	 81.400,00 	 81.400,00 
+			TOTAL		5	 142.200,00 												 121.800,00 		 264.000,00 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+															 -   					
+															 -   					
+															 -   					
+															 -   					

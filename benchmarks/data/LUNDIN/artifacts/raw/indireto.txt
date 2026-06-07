@@ -1,0 +1,215 @@
+ADM:
+
+EQUIPE:			SUPRESSÃO DE FRAGMENTOS E TOP SOIL, E CORTE DE ÁRVORES																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 68.655,73					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 234.931,46			EQUIPAMENTOS		R$ 165.650,00					28,77						 6.758.194,92 	
+						VERBAS		R$ 625,72												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	1	 R$4.620,00 		D	 1.155,00 								 3.522,75 		 9.297,75 	
+																				
+P0040			OPERADOR DE ESCAVADEIRA	P0040	1	 R$3.731,64 		D	 932,91 								 2.845,38 		 7.509,93 	
+P0062			OPERADOR DE MOTOSSERRA	P0062	2	 R$2.956,17 		D	 739,04 								 2.254,08 		 5.949,29 	
+P0001			AJUDANTE	P0001	3	 R$1.680,00 		D	 420,00 								 1.281,00 		 3.381,00 	
+P0062			OPERADOR DE MOTOSSERRA	P0062	1	 R$2.956,17 		D	 739,04 								 2.254,08 		 5.949,29 	 CORTE  
+P0001			AJUDANTE	P0001	1	 R$1.680,00 		D	 420,00 								 1.281,00 		 3.381,00 	 CORTE 
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	3	 R$3.391,50 		D	 847,88 								 2.586,02 		 6.825,39 	
+																				
+		TOTAL			12	 34.114,65 		 8.528,66 									 26.012,42 		 68.655,73 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0012			ESCAVADEIRA HIDRÁULICA SOBRE ESTEIRA 22T	E0012	1	 35.000,00 			h		 200,00 			s1	 -   			 -   	 35.000,00 	 35.000,00 
+E0032			TRATOR DE ESTEIRAS 20t	E0032	1	 45.000,00 			h		 200,00 			s1	 -   			 -   	 45.000,00 	 45.000,00 
+E0015			MOTOSSERRA A GASOLINA	E0015	3				h		 200,00 			g	 2,50 			 2.550,00 	 2.550,00 	 7.650,00 
+E0004			CAMINHÃO BASCULANTE, TRAÇADO 4X4, CARGA DE 25T	E0004	3	 26.000,00 			h		 200,00 			S1	 -   			 -   	 26.000,00 	 78.000,00 
+																				
+			TOTAL		8	 158.000,00 												 7.650,00 		 165.650,00 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+		MOTOSSERRA MS 462			UNID.		 3,00 			 6.000,00 					 18.000,00 				AQUISIÇÃO	
+															 -   					
+															 625,72 					
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA/EPIS/EXAMES/TREINAMENTOS																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 28,77 		 12,00 			 1.865,00 					 643.798,00 					
+2		EPI/EXAMES/TREINAMENTOS					 1,00 			 106.268,91 					 106.268,91 					
+3		MATERIAL DE DESGASTE			 28,77 		 2,00 			 3.500,00 					 201.366,67 					
+4		MATERIAL DE DESGASTE			 28,77 		 3,00 			 1.400,00 					 120.820,00 				MOTOSSERRA	
+																				
+																				
+EQUIPE:			LIMPEZA DA ÁREA - EQUIPE ADICIONAL ANO 2																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 40.664,86					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 198.664,86			EQUIPAMENTOS		R$ 158.000,00					11,57						 2.297.890,18 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	1	 R$4.620,00 		D	 1.155,00 								 3.522,75 		 9.297,75 	
+P0040			OPERADOR DE ESCAVADEIRA	P0040	1	 R$3.731,64 		D	 932,91 								 2.845,38 		 7.509,93 	
+P0001			AJUDANTE	P0001	1	 R$1.680,00 		D	 420,00 								 1.281,00 		 3.381,00 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	3	 R$3.391,50 		D	 847,88 								 2.586,02 		 6.825,39 	
+																				
+		TOTAL			6	 20.206,14 		 5.051,54 									 15.407,18 		 40.664,86 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0032			TRATOR DE ESTEIRAS 20t	E0032	1	 45.000,00 			h		 200,00 			s1	 -   			 -   	 45.000,00 	 45.000,00 
+E0004			CAMINHÃO BASCULANTE, TRAÇADO 4X4, CARGA DE 25T	E0004	3	 26.000,00 			h		 200,00 			S1	 -   			 -   	 26.000,00 	 78.000,00 
+E0012			ESCAVADEIRA HIDRÁULICA SOBRE ESTEIRA 22T	E0012	1	 35.000,00 			h		 200,00 			S1	 -   			 -   	 35.000,00 	 35.000,00 
+																				
+			TOTAL		5	 158.000,00 												 -   		 158.000,00 
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA/EPIS/EXAMES/TREINAMENTOS																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+5		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 11,57 		 6,00 			 1.865,00 					 129.431,00 					
+6		EPI/EXAMES/TREINAMENTOS					 1,00 			 52.234,45 					 52.234,45 					
+3		MATERIAL DE DESGASTE			 11,57 		 2,00 			 3.500,00 					 80.966,67 					
+																				
+																				
+																				
+EQUIPE:			Serviços de organização da pilha de madeira, medição e romaneio																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 16.905,00					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 66.905,00			EQUIPAMENTOS		R$ 50.000,00					30,00						 2.007.150,00 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0045			OPERADOR DE PÁ CARREGADEIRA	P0045	1	 R$3.360,00 		D	 840,00 								 2.562,00 		 6.762,00 	
+P0001			AJUDANTE	P0001	3	 R$1.680,00 		D	 420,00 								 1.281,00 		 3.381,00 	
+																				
+		TOTAL			4	 8.400,00 		 2.100,00 									 6.405,00 		 16.905,00 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+			PÁ CARREGADEIRA COM MANDIBULA		1	 50.000,00 			h		 200,00 			s1	 -   			 -   	 50.000,00 	 50.000,00 
+																				
+			TOTAL		1	 50.000,00 												 -   		 50.000,00 
+																				
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA/EPIS/EXAMES/TREINAMENTOS																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 30,00 		 4,00 			 1.865,00 					 223.800,00 					
+		EPI/EXAMES/TREINAMENTOS					 1,00 			 34.822,97 					 34.822,97 					
+		MATERIAL DE DESGASTE			 30,00 		 1,00 			 3.500,00 					 105.000,00 				ROMANEIO	
+																				
+TOP:
+
+EQUIPE:			TOPOGRAFIA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 19.555,05					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 29.461,72			EQUIPAMENTOS		R$ 9.906,67					30,00						 883.851,46 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0057	PJ		Topógrafo	P0057	1	 R$12.000,00 			 -   			j	 1.200,00 				 -   		 13.200,00 	
+P0010			Auxiliar de topografia	P0010	1	 R$2.231,08 		D	 557,77 			j	 1.865,00 				 1.701,20 		 6.355,05 	
+									 -   				 -   				 -   		 -   	
+		TOTAL			2	 14.231,08 		 557,77 				 3.065,00 					 1.701,20 		 19.555,05 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+0			Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW		1	 9.000,00 			km		 4.000,00 			G	 6,00 			 906,67 	 9.906,67 	 9.906,67 
+																		  	 -   	
+																		  	 -   	
+			TOTAL		1	 9.000,00 												 906,67 		 9.906,67 
+
+QSMS:
+
+EQUIPE:			TOPOGRAFIA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 19.555,05					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 29.461,72			EQUIPAMENTOS		R$ 9.906,67					30,00						 883.851,46 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0057	PJ		Topógrafo	P0057	1	 R$12.000,00 			 -   			j	 1.200,00 				 -   		 13.200,00 	
+P0010			Auxiliar de topografia	P0010	1	 R$2.231,08 		D	 557,77 			j	 1.865,00 				 1.701,20 		 6.355,05 	
+									 -   				 -   				 -   		 -   	
+		TOTAL			2	 14.231,08 		 557,77 				 3.065,00 					 1.701,20 		 19.555,05 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+0			Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW		1	 9.000,00 			km		 4.000,00 			G	 6,00 			 906,67 	 9.906,67 	 9.906,67 
+																		  	 -   	
+																		  	 -   	
+			TOTAL		1	 9.000,00 												 906,67 		 9.906,67 
+
+MOB:
+
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																											
+																																																														
+															EQUIPAMENTOS							R$ 135.000,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																															
+															MÃO DE OBRA							R$ 98.400,00									R$ 1.471.255,59																															
+															VERBAS							R$ 1.237.855,59																																								
+																																																														
+																																																														
+EQUIPAMENTOS																																																														
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES										
+																																																														
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 3,00 							 GOIANIA 					 ALTO HORIZONTE 					 700,00 						 10,00 						 21.000,00 																
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 3,00 							 ALTO HORIZONTE 					 GOIANIA 					 700,00 						 10,00 						 21.000,00 																
+3		MOB PA COM MANDIBULA													VB		 1,00 							 BELEM 					 ALTO HORIZONTE 					 3.400,00 						 10,00 						 34.000,00 																
+4		DESMOB PA COM MAND													VB		 1,00 							 ALTO HORIZONTE 					 BELEM 					 3.400,00 						 10,00 						 34.000,00 																
+5		MOB BANHEIRO QUIMICO													VB		 8,00 																							 600,00 						 4.800,00 																
+6		DESMOB BANHEIRO QUIMICO													VB		 8,00 																							 600,00 						 4.800,00 																
+7		MOBILIZAÇÃO DE GERADOR													VB		 1,00 							 GOIANIA 					 ALTO HORIZONTE 					 700,00 						 11,00 						 7.700,00 																
+8		DESMOBILIZAÇÃO DE GERADOR													VB		 1,00 							 ALTO HORIZONTE 					 GOIANIA 					 700,00 						 11,00 						 7.700,00 																
+																																														 135.000,00 																
+																																																														
+MÃO DE OBRA																																																														
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																								
+																																																														
+Equipe											41			 GOIANIA 						 ALTO HORIZONTE 						 1.200,00 						49.200,00																														
+Equipe											41			 ALTO HORIZONTE 						 GOIANIA 						1.200,00						49.200,00						  																								
+																																 98.400,00 																														
+																																																														
+VERBAS																																																														
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES																
+1		INTEGRAÇÃO EQUIPE DIRETA																							VB			 1,00 						 126.225,59 						 126.225,59 																						
+2		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB			 1,00 						 366.000,00 						 366.000,00 																						
+3		ALIMENTAÇÃO, PLANO DE SAUDE E CESTA BÁSICA INTEGRAÇÃO																							VB			 1,00 						 41.030,00 						 41.030,00 																						
+																																								 533.255,59 																						
+																																																														
+DESPESAS COM VIAGEM																																																														
+							CUSTO UNITÁRIO		MOB			MÊS 2			MÊS 3			MÊS 4			MÊS 5			MÊS 6			MÊS 7			MÊS 8			MÊS 9			MÊS 10			MÊS 11			MÊS 12			MÊS 13			MÊS 14			MÊS 15									CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 1.200,00 								X									x									X									X									X									 6.000,00 		
+ENCARREGADO (60 dias)						1	 1.800,00 								X									X									X									X									X									 9.000,00 		
+GERENTE DE CONTRATO (30 dias) E FLORESTAL						1	 2.500,00 								X			X			X			X			X			X			X			X			X			X			X			X			X									 32.500,00 		
+EQUIPE DIRETA (60 dias)						22	 1.200,00 								X									x									X									X									X									 132.000,00 		
+EQUIPE INDIRETA (30 dias)						16	 1.800,00 											x						x						x						x						X						X												 172.800,00 		
+ 704.600,00 																																																														

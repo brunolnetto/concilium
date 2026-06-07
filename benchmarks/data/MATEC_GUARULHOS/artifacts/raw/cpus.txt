@@ -1,0 +1,400 @@
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	fevereiro, 2026	Limpeza da camada vegetal até 30cm - incluso bota fora						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 220,00 	 220,00 	 220,00 	
+										
+										
+									 -   	
+								TOTAL	 220,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Trator de Esteiras						 1,00 	 46,82 	 46,82 	
+	Ajudante						 1,00 	 15,73 	 15,73 	
+								TOTAL	 62,55 	
+										
+	PRODUÇÃO DA EQUIPE (C)			800,00	m2			CUSTO HORÁRIO TOTAL (A+B)     	 282,55 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20T				Diesel S10	L	 6,54 	 26,00 	 170,04 	
+										
+								TOTAL	 170,04 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 0,57 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								0,57	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								0,57	
+										
+										
+										
+										
+	HSI MATEC GUARULHOS					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	fevereiro, 2026	Carga e transporte de material de limpeza - DMT 1.000 m						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Caminhão basculante 16 m³			 3,00 	 1,00 	 -   	 159,50 	 159,50 	 478,50 	
+	Pá carregadeira			 1,00 	 1,00 	 -   	 150,00 	 150,00 	 150,00 	
+										
+										
+										
+									 -   	
+								TOTAL	 628,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão basculante						 3,00 	 23,69 	 71,07 	
+	Operador de pá carregadeira						 1,00 	 19,06 	 19,06 	
+										
+								TOTAL	 90,13 	
+										
+	PRODUÇÃO DA EQUIPE (C)			262,00	M3			CUSTO HORÁRIO TOTAL (A+B)     	 718,63 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Caminhão basculante 16 m³				Diesel S10	L	 6,54 	 2,50 	 49,05 	
+	Pá carregadeira				Diesel S10	L	 6,54 	 16,00 	 104,64 	
+										
+										
+										
+										
+								TOTAL	 153,69 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 3,33 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								3,33	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								3,33	
+										
+										
+										
+										
+	HSI MATEC GUARULHOS					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	fevereiro, 2026	Escavação, carga e transporte de material de 1ª categoria						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 35T			 1,00 	 1,00 	 -   	 225,00 	 225,00 	 225,00 	
+	Caminhão basculante 16 m³			 3,00 	 1,00 		 159,50 	 159,50 	 478,50 	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 		 175,00 	 175,00 	 175,00 	
+									 -   	
+									 -   	
+								TOTAL	 878,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão basculante						 3,00 	 23,69 	 71,07 	
+	Operador de Escavadeira						 2,00 	 46,82 	 93,64 	
+	Ajudante						 1,00 	 15,73 	 15,73 	
+										
+									 -   	
+								TOTAL	 180,44 	
+										
+	PRODUÇÃO DA EQUIPE (C)			194,30	m³			CUSTO HORÁRIO TOTAL (A+B)     	 1.058,94 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 35T				Diesel S10	L	 6,54 	 35,00 	 228,90 	
+	Caminhão basculante 16 m³				Diesel S10	L	 6,54 	 2,50 	 49,05 	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,54 	 22,00 	 143,88 	
+									 -   	
+									 -   	
+								TOTAL	 421,83 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 7,62 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								7,62	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								7,62	
+										
+										
+										
+										
+	HSI MATEC GUARULHOS					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+		DATA BASE	SERVIÇO						UNIDADE	
+		fevereiro, 2026	Compactação de aterros a 100% 						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 225,00 	 225,00 	 225,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Rolo compactador pé de carneiro 10T			 2,00 	 1,00 	 -   	 90,00 	 90,00 	 180,00 	
+	Caminhão Pipa 15.000 l 			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 220,00 	 220,00 	 220,00 	
+									 -   	
+									 -   	
+								TOTAL	 985,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 60,86 	 60,86 	
+	Operador de trator de pneu						 1,00 	 24,35 	 24,35 	
+	Operador de rolo compactador						 2,00 	 23,41 	 46,82 	
+	Motorista de caminhão pipa						 2,00 	 30,24 	 60,49 	
+	Operador de trator de esteiras						 1,00 	 46,82 	 46,82 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Gredista						 1,00 	 23,69 	 23,69 	
+										
+									 -   	
+								TOTAL	 294,49 	
+										
+	PRODUÇÃO DA EQUIPE (C)			189,29	m³			CUSTO HORÁRIO TOTAL (A+B)     	 1.279,49 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,54 	 34,00 	 222,36 	
+	Trator de pneus com grade				Diesel S10	L	 6,54 	 18,00 	 117,72 	
+	Rolo compactador pé de carneiro 10T				Diesel S10	L	 6,54 	 16,00 	 209,28 	
+	Caminhão Pipa 15.000 l 				Diesel S10	L	 6,54 	 4,00 	 52,32 	
+	Trator de esteiras 20T				Diesel S10	L	 6,54 	 26,00 	 170,04 	
+									 -   	
+								TOTAL	 771,72 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 10,84 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								10,84	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								10,84	
+										
+										
+										
+										
+	HSI MATEC GUARULHOS					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	fevereiro, 2026	Espalhamento de material						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	TRATOR DE ESTEIRAS 20T			 1,00 	 1,00 	 -   	 220,00 	 220,00 	 220,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 220,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de trator de esteiras						 1,00 	 46,82 	 46,82 	
+	Ajudante						 1,00 	 15,73 	 15,73 	
+										
+									 -   	
+								TOTAL	 62,55 	
+										
+	PRODUÇÃO DA EQUIPE (C)			52,92	m³			CUSTO HORÁRIO TOTAL (A+B)     	 282,55 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	TRATOR DE ESTEIRAS 20T				Diesel S10	L	 6,54 	 26,00 	 170,04 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 170,04 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 8,55 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								8,55	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								8,55	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	fevereiro, 2026	Escavação de turfas e solos orgânicos						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 35T			 1,00 	 1,00 	 -   	 225,00 	 225,00 	 225,00 	
+	Caminhão basculante 16 m³			 1,00 	 1,00 		 159,50 	 159,50 	 159,50 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 384,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão basculante						 1,00 	 23,69 	 23,69 	
+	Operador de Escavadeira						 1,00 	 46,82 	 46,82 	
+	Ajudante						 1,00 	 15,73 	 15,73 	
+										
+									 -   	
+								TOTAL	 86,24 	
+										
+	PRODUÇÃO DA EQUIPE (C)			57,60	m³			CUSTO HORÁRIO TOTAL (A+B)     	 470,74 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 35T				Diesel S10	L	 6,54 	 35,00 	 228,90 	
+	Caminhão basculante 16 m³				Diesel S10	L	 6,54 	 2,50 	 16,35 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 245,25 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 12,43 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								12,43	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								12,43	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										

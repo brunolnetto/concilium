@@ -1,0 +1,194 @@
+ADM:
+
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 176.524,88					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 523.655,61			EQUIPAMENTOS		R$ 103.743,83					6,60						 3.456.127,03 	
+						VERBAS		R$ 243.386,90												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$8.000,00 			 -   			J	 1.920,00 				 -   		 9.920,00 	
+P0006			AUXILIAR ADMINISTRATIVO	P0006	1	 R$3.800,00 		D	 950,00 			J	 2.140,00 				 2.897,50 		 9.787,50 	
+P0018	PJ		ENCARREGADO GERAL	P0018	1	 R$15.000,00 			 -   			J	 1.920,00 				 -   		 16.920,00 	
+P0065	PJ		ENCARREGADO DE FRENTE	P0065		 R$5.000,00 			 -   			j	 1.920,00 				 -   		 -   	
+P0072			APONTADOR	P0072	5	 R$2.395,08 		D	 598,77 			J	 2.140,00 				 1.826,25 		 6.960,10 	
+P0027	PJ		GERENTE DE CONTRATO	P0027	1	 R$25.000,00 			 -   			J	 1.920,00 				 -   		 26.920,00 	
+P0075	PJ		TÉCNICO DE PLANEJAMENTO	P0075	1	 R$10.000,00 			 -   			J	 1.920,00 				 -   		 11.920,00 	
+P0024	PJ		ENGENHEIRO CIVIL	P0024		 R$15.000,00 			 -   			J	 1.920,00 				 -   		 -   	
+P0063			AUXILIAR DE SERVIÇOS GERAIS	P0063	2	 R$2.300,00 		D	 575,00 			J	 2.140,00 				 1.753,75 		 6.768,75 	
+P0073			MECÂNICO	P0073	1	 R$7.000,00 		D	 1.750,00 			J	 2.140,00 				 5.337,50 		 16.227,50 	
+P0034			MOTORISTA DE CAMINHÃO COMBOIO	P0034	1	 R$4.882,80 		D	 1.220,70 			J	 2.140,00 				 3.723,14 		 11.966,64 	 PERICULOSIDADE 
+P0033			MOTORISTA DE CAMINHÃO PIPA	P0033	1	 R$3.187,80 		D	 796,95 			J	 2.140,00 				 2.430,70 		 8.555,45 	
+P0036			MOTORISTA DE ÔNIBUS	P0036	1	 R$3.187,80 		D	 796,95 			J	 2.140,00 				 2.430,70 		 8.555,45 	
+P0001			AJUDANTE	P0001	1	 R$2.620,80 		D	 655,20 			J	 2.140,00 				 1.998,36 		 7.414,36 	 COMBOIO 
+		TOTAL			17	 99.254,60 		 10.313,65 				 35.500,00 					 31.456,63 		 176.524,88 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0020			Ônibus com capacidade para 52 passageiros 	E0020	1	 28.000,00 			km		 3.600,00 			S1	 9,00 			 2.613,60 	 30.613,60 	 30.613,60 
+E0036			Veículo leve 	E0036	4	 4.000,00 			km		 2.400,00 			S1	 9,00 			 1.742,40 	 5.742,40 	 22.969,60 
+E0007			Caminhão comboio	E0007	1	 24.000,00 			km		 2.400,00 			S1	 4,00 			 3.920,40 	 27.920,40 	 27.920,40 
+E0010			Caminhão Pipa 10.000 l 	E0010	1	 20.000,00 			km		 2.400,00 			S1	 7,00 			 2.240,23 	 22.240,23 	 22.240,23 
+			TOTAL		7	 88.000,00 												 15.743,83 		 103.743,83 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		CONTEINER 6X2,4X2,6 PARA BANHEIRO			VB		 2,00 			 1.800,00 					 3.600,00 				6WC,01MIC,01LAV 	
+2		CONTEINER VESTIÁRIO			VB		 2,00 			 1.000,00 					 2.000,00 					
+3		BANHEIRO QUÍMICO (higienização, deslocamento, descarte)			VB		 8,00 			 1.800,00 					 14.400,00 					
+4		LAVATÓRIO			VB		 4,00 			 650,00 					 2.600,00 					
+5		ALUGUEL DE CONTEINER ADM			UNID.		 4,00 			 3.500,00 					 14.000,00 				ADM/ENG/TOP/LAB	
+6		ALOJAMENTO			UNID.		 14,00 			 5.000,00 					 70.000,00 					
+7		ENERGIA ELÉTRICA - ALOJAMENTO			UNID.		 14,00 			 1.200,00 					 16.800,00 					
+8		ÁGUA - ALOJAMENTO			UNID.		 14,00 			 800,00 					 11.200,00 					
+9		VIGILÂNCIA ARMADA			VB		 1,00 			 15.000,00 					 15.000,00 					
+10		BEBEDOURO			VB		 1,00 			 1.250,00 					 1.250,00 					
+11		ÁGUA MINERAL 			L		 9.432,00 			 1,00 					 9.432,00 					
+12		MATERIAL DE LIMPEZA			VB		 1,00 			 900,00 					 900,00 					
+13		MATERIAL DE EXPEDIENTE			VB		 1,00 			 300,00 					 300,00 					
+14		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+15		LOCAÇÃO DE IMPRESSORA			VB		 1,00 			 900,00 					 900,00 					
+16		VISITA GERÊNCIA			VB		 2,00 			 3.000,00 					 6.000,00 					
+17		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 25,00 			 150,00 					 3.750,00 					
+18		RADIO DE COMUNICAÇÃO VEICULAR			UNID.		 66,00 			 250,00 					 16.500,00 					
+		GERADOR - DIESEL			UNID.					 9.408,96 					 -   					
+19		MANUTENÇAO DA CAIXA DÁGUA E DEDETIZAÇÃO			VB		 1,00 			 1.800,00 					 1.800,00 					
+20		GELO			vb		 1,00 			 3.500,00 					 3.500,00 					
+		GERADOR 50KVA			UNID.					 6.000,00 					 -   					
+															 194.232,00 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕS PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 25.000,00 					 25.000,00 				ENERGIA/BRITA/MADEIRA/TELHA/CIMENTO/FOSSA/CASTELO DÁGUA 5000l	
+2		SEGURO GARANTIA			VB		 1,00 			 20.000,00 					 20.000,00 					
+3		ESTRUTURA DE VIVENCIA (TENDAS 5X5, CADEIRAS E MESAS)			VB		 1,00 			 9.464,00 					 9.464,00 					
+4		COMPUTADOR			UNID.		 6,00 			 4.000,00 					 24.000,00 					
+5		FERRAMENTAS			VB		 1,00 			 15.000,00 					 15.000,00 					
+6		EPI/EXAMES/TREINAMENTOS			VB		 1,00 			 171.958,33 					 171.958,33 					
+7		PISO DE CONCRETO, MADEIRA, TELHA, TELA MOSQUETEIRO - REFEITORIO			UNID.		 1,00 			 11.000,00 					 11.000,00 					
+8		CLIMATIZADOR			UNID.		 1,00 			 3.000,00 					 3.000,00 					
+9		MOBILIA DE ESCRITORIO			VB		 1,00 			 5.000,00 					 5.000,00 					
+10		MOBILIA ALOJAMENTO			VB		 1,00 			 40.000,00 					 40.000,00 					
+															 49.154,90 					
+
+TOP:
+
+EQUIPE:			TOPOGRAFIA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 30.976,12					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 36.718,52			EQUIPAMENTOS		R$ 5.742,40					6,60						 242.342,21 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0057	PJ		Topógrafo	P0057	1	 R$14.000,00 			 -   			j	 1.920,00 				 -   		 15.920,00 	
+P0010			Auxiliar de topografia	P0010	2	 R$2.677,30 		D	 669,32 			j	 2.140,00 				 2.041,44 		 7.528,06 	
+									 -   				 -   				 -   		 -   	
+		TOTAL			3	 19.354,59 		 1.338,65 				 6.200,00 					 4.082,88 		 30.976,12 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0036			Veículo leve 	E0036	1	 4.000,00 			km		 2.400,00 			S1	 9,00 			 1.742,40 	 5.742,40 	 5.742,40 
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 1.742,40 		 5.742,40 
+
+LAB:
+
+EQUIPE:			LABORATORIO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 28.976,12					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 34.718,52			EQUIPAMENTOS		R$ 5.742,40					6,60						 229.142,21 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0030	PJ		Laboratorista	P0030	1	 R$12.000,00 			 -   			J	 1.920,00 				 -   		 13.920,00 	
+P0009			Auxiliar de laboratório	P0009	2	 R$2.677,30 		D	 669,32 			J	 2.140,00 				 2.041,44 		 7.528,06 	
+									 -   				 -   				 -   		 -   	
+									 -   				 -   				 -   		 -   	
+									 -   				 -   				 -   		 -   	
+		TOTAL			3	 17.354,59 		 1.338,65 				 6.200,00 					 4.082,88 		 28.976,12 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0036			Veículo leve 	E0036	1	 4.000,00 			km		 2.400,00 			s1	 9,00 			 1.742,40 	 5.742,40 	 5.742,40 
+																		  	 -   	
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 1.742,40 		 5.742,40 
+
+QSMS:
+
+EQUIPE:			QSMS																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 24.340,00					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 32.582,40			EQUIPAMENTOS		R$ 5.742,40					6,60						 215.043,84 	
+						VERBAS		R$ 2.500,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0056	PJ		Técnico de Segurança	P0056	1	 R$8.500,00 			 -   			J	 1.920,00 				 -   		 10.420,00 	
+P0025	PJ		Engenheiro de Segurança	P0025	1	 R$12.000,00 			 -   			J	 1.920,00 				 -   		 13.920,00 	 GERENTE DE QSMS 
+		TOTAL			2	 20.500,00 		 -   				 3.840,00 					 -   		 24.340,00 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0036			Veículo leve 	E0036	1	 4.000,00 			KM		 2.400,00 			s1	 9,00 			 1.742,40 	 5.742,40 	 5.742,40 
+																		  	 -   	 -   
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 1.742,40 		 5.742,40 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		MATERIAL DE SINALIZAÇÃO			MÊS		 1,00 			 2.500,00 					 2.500,00 					
+															 -   					
+															 2.500,00 					
+
+MOB:
+
+EQUIPE:			QSMS																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 24.340,00					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 32.582,40			EQUIPAMENTOS		R$ 5.742,40					6,60						 215.043,84 	
+						VERBAS		R$ 2.500,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0056	PJ		Técnico de Segurança	P0056	1	 R$8.500,00 			 -   			J	 1.920,00 				 -   		 10.420,00 	
+P0025	PJ		Engenheiro de Segurança	P0025	1	 R$12.000,00 			 -   			J	 1.920,00 				 -   		 13.920,00 	 GERENTE DE QSMS 
+		TOTAL			2	 20.500,00 		 -   				 3.840,00 					 -   		 24.340,00 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0036			Veículo leve 	E0036	1	 4.000,00 			KM		 2.400,00 			s1	 9,00 			 1.742,40 	 5.742,40 	 5.742,40 
+																		  	 -   	 -   
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 1.742,40 		 5.742,40 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		MATERIAL DE SINALIZAÇÃO			MÊS		 1,00 			 2.500,00 					 2.500,00 					
+															 -   					
+															 2.500,00 					
+
+
