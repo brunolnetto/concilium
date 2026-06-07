@@ -280,36 +280,75 @@ class ProjectStore:
         path = self.root / v / "intermediate" / filename
         return path.read_bytes() if path.exists() else None
 
+    @staticmethod
+    def _get_output_subdir(filename: str) -> str:
+        """Determina o subdiretório baseado na extensão do arquivo.
+
+        returns: "visualizations" para imagens, "reports" para PDFs/XLSXs
+        """
+        ext = Path(filename).suffix.lower()
+        if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"):
+            return "visualizations"
+        if ext in (".pdf", ".xlsx", ".xls", ".csv"):
+            return "reports"
+        return "reports"  # fallback
+
     def save_output_file(self, data: bytes, version: str | None = None, filename: str = "resultado.xlsx") -> Path:
-        """Salva arquivo binário em {version}/outputs/{filename}. Retorna o Path."""
+        """Salva arquivo binário em {version}/outputs/{subdir}/{filename}.
+
+        Imagens (PNG, JPG, etc) → outputs/visualizations/
+        PDFs e planilhas → outputs/reports/
+        """
         v = version or self.current_version()
         if v is None:
             raise ValueError("Nenhuma versão ativa para persistir")
-        outputs_dir = self.root / v / "outputs"
+
+        subdir = self._get_output_subdir(filename)
+        outputs_dir = self.root / v / "outputs" / subdir
         outputs_dir.mkdir(parents=True, exist_ok=True)
         output_path = outputs_dir / filename
         output_path.write_bytes(data)
         return output_path
 
     def load_output_file(self, version: str | None = None, filename: str = "resultado.xlsx") -> bytes | None:
-        """Carrega arquivo binário de {version}/outputs/{filename}. Retorna None se inexistente."""
+        """Carrega arquivo binário de {version}/outputs/{subdir}/{filename}.
+
+        Procura em outputs/visualizations ou outputs/reports conforme extensão.
+        Retorna None se inexistente.
+        """
         v = version or self.current_version()
         if v is None:
             return None
-        output_path = self.root / v / "outputs" / filename
-        if not output_path.exists():
-            return None
-        return output_path.read_bytes()
+
+        subdir = self._get_output_subdir(filename)
+        output_path = self.root / v / "outputs" / subdir / filename
+        if output_path.exists():
+            return output_path.read_bytes()
+
+        # Fallback: tentar no outro diretório (para compatibilidade)
+        fallback_subdir = "reports" if subdir == "visualizations" else "visualizations"
+        fallback_path = self.root / v / "outputs" / fallback_subdir / filename
+        if fallback_path.exists():
+            return fallback_path.read_bytes()
+
+        return None
 
     def list_output_files(self, version: str | None = None) -> list[str]:
-        """Lista nomes de arquivos em {version}/outputs/."""
+        """Lista nomes de arquivos em {version}/outputs/, recursivamente em subdiretórios."""
         v = version or self.current_version()
         if v is None:
             return []
         outputs_dir = self.root / v / "outputs"
         if not outputs_dir.exists():
             return []
-        return sorted([f.name for f in outputs_dir.iterdir() if f.is_file()])
+
+        files = []
+        for subdir_path in outputs_dir.iterdir():
+            if subdir_path.is_dir():
+                for f in subdir_path.iterdir():
+                    if f.is_file():
+                        files.append(f.name)
+        return sorted(files)
 
     def resolve_cpu(self, cpu_id: str) -> dict | None:
         """Resolve CPU pelo id: override → catálogo base (individual + agregado) → snapshot."""
