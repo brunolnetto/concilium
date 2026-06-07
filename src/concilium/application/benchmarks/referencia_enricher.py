@@ -45,6 +45,20 @@ def enrich_referencia_with_eap(
     if "meta" not in referencia:
         referencia["meta"] = {}
 
+    # Provide sensible defaults for required fields
+    if not referencia["meta"].get("data_inicio"):
+        referencia["meta"]["data_inicio"] = "2026-01-01"
+    if not referencia["meta"].get("data_termino"):
+        referencia["meta"]["data_termino"] = "2027-12-31"
+    if not referencia["meta"].get("projeto"):
+        referencia["meta"]["projeto"] = cronograma_path.parent.parent.parent.name
+    if not referencia["meta"].get("localizacao"):
+        referencia["meta"]["localizacao"] = "Brasil"
+    if not referencia["meta"].get("regime_trabalho"):
+        referencia["meta"]["regime_trabalho"] = {"horas_dia": 8, "dias_semana": 6}
+    if not referencia["meta"].get("mode"):
+        referencia["meta"]["mode"] = "benchmark_config"
+
     # Merge project metadata
     if project_meta:
         referencia["meta"].update(project_meta)
@@ -61,48 +75,22 @@ def enrich_referencia_with_eap(
         print(f"Warning: No EAP items extracted from {cronograma_path}")
         return referencia
 
-    # Build section headers from extracted items
-    sections: dict[str, Any] = {}
-
-    for item in eap_items:
-        section_id = item["item_id"].split(".")[0]
-        if section_id not in sections:
-            sections[section_id] = {
-                "item_id": section_id,
-                "ordem": int(section_id),
-                "cpu_id": f"CPU-SECTION-{section_id}",
-                "descricao": f"Seção {section_id}",
-                "unidade": "",
-                "quantitativo": 0.0,
-                "predecessores": [] if section_id == "1" else [{
-                    "item_id": str(int(section_id) - 1),
-                    "tipo": "FS",
-                    "lag": 0,
-                    "completion_threshold_pct": 1.0
-                }],
-            }
-
-    # Build complete EAP with sections and items
-    eap = list(sections.values())
-    eap.sort(key=lambda x: x["ordem"])
-
-    # Insert items after their section headers
+    # Build complete EAP with just leaf items (no section headers)
+    # Section headers would have quantitativo=0 which violates EapItem constraints
     final_eap = []
+    ordem = 1
+
     for item in eap_items:
-        section_id = item["item_id"].split(".")[0]
-
-        # Add section header if not yet added
-        section = next((s for s in eap if s["item_id"] == section_id), None)
-        if section and section not in final_eap:
-            final_eap.append(section)
-
         # Ensure CPU is set (use inference if needed)
         if item["cpu_id"] == "CPU-UNKNOWN":
-            section_num = int(section_id)
+            section_id = item["item_id"].split(".")[0]
             item_num = int(item["item_id"].split(".")[1])
             item["cpu_id"] = _infer_cpu_from_section(section_id, item_num)
 
+        # Update ordem to be sequential
+        item["ordem"] = ordem
         final_eap.append(item)
+        ordem += 1
 
     # Build cronograma in spec format (list of items with scheduling data)
     cronograma = [

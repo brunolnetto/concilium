@@ -4,5 +4,275 @@
     "custo_direto_sem_bdi": 2752766.68,
     "custo_indireto": 3290671.73,
     "total_projeto": 6043438.41
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "MARA_ROSA",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "2.1",
+        "ordem": 1,
+        "cpu_id": "CPU-SUPP-001",
+        "descricao": "Corte de Arvore Isolada, com destocamento com Ø > 45cm",
+        "unidade": "un",
+        "quantitativo": 30.0,
+        "predecessores": [
+          {
+            "item_id": "2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 0.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.2",
+        "ordem": 2,
+        "cpu_id": "CPU-SUPP-002",
+        "descricao": "Corte de Arvore Isolada, com destocamento com Ø < 45cm",
+        "unidade": "un",
+        "quantitativo": 30.0,
+        "predecessores": [
+          {
+            "item_id": "2.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.3",
+        "ordem": 3,
+        "cpu_id": "CPU-SUPP-003",
+        "descricao": "Supressão vegetal com destocamento de vegetação com Ø =< 45cm",
+        "unidade": "m²",
+        "quantitativo": 40000.0,
+        "predecessores": [
+          {
+            "item_id": "2.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.4",
+        "ordem": 4,
+        "cpu_id": "CPU-SUPP-004",
+        "descricao": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 0 até 500 m",
+        "unidade": "m³",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "2.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.5",
+        "ordem": 5,
+        "cpu_id": "CPU-SUPP-005",
+        "descricao": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 501 até 1000 m",
+        "unidade": "m³",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "2.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "3.1",
+        "ordem": 6,
+        "cpu_id": "CPU-LIMP-001",
+        "descricao": "Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 0 até 500 m",
+        "unidade": "m³",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 0.0
+          }
+        ]
+      },
+      {
+        "item_id": "3.2",
+        "ordem": 7,
+        "cpu_id": "CPU-LIMP-002",
+        "descricao": "Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 501 até 1000 m",
+        "unidade": "m³",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "3.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.1",
+        "ordem": 8,
+        "cpu_id": "CPU-ESCA-001",
+        "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 0 até 500m",
+        "unidade": "m³",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 0.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.2",
+        "ordem": 9,
+        "cpu_id": "CPU-ESCA-002",
+        "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 501 até 1000m",
+        "unidade": "m³",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.3",
+        "ordem": 10,
+        "cpu_id": "CPU-ESCA-003",
+        "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1001 até 1500m",
+        "unidade": "m³",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.4",
+        "ordem": 11,
+        "cpu_id": "CPU-ESCA-004",
+        "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1501 até 2000m",
+        "unidade": "m³",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.5",
+        "ordem": 12,
+        "cpu_id": "CPU-ESCA-005",
+        "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 2001 até 2500m",
+        "unidade": "m³",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "2.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ],
+    "rcpsp_spec": {}
   }
 }

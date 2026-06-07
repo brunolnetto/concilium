@@ -4,5 +4,65 @@
     "custo_direto_sem_bdi": 2000116.38,
     "custo_indireto": 11688302.72,
     "total_projeto": 13688419.100000001
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "MATEC_UBERLANDIA",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "2.2",
+        "ordem": 1,
+        "cpu_id": "CPU-SUPP-002",
+        "descricao": "Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km",
+        "unidade": "m3",
+        "quantitativo": 69952.84,
+        "predecessores": [
+          {
+            "item_id": "2.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.3",
+        "ordem": 2,
+        "cpu_id": "CPU-SUPP-003",
+        "descricao": "Aterro",
+        "unidade": "m3",
+        "quantitativo": 41045.38,
+        "predecessores": [
+          {
+            "item_id": "2.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "2.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ],
+    "rcpsp_spec": {}
   }
 }

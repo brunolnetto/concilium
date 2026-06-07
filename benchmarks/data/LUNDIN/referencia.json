@@ -4,5 +4,86 @@
     "custo_direto_sem_bdi": 18089932.53,
     "custo_indireto": 19379395.95,
     "total_projeto": 37469328.48
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "LUNDIN",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "1.1",
+        "ordem": 1,
+        "cpu_id": "CPU-MOB-001",
+        "descricao": "Supressão vegetal de fragmentos",
+        "unidade": "M2",
+        "quantitativo": 1400000.0,
+        "predecessores": [
+          {
+            "item_id": "1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 0.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.5",
+        "ordem": 2,
+        "cpu_id": "CPU-MOB-005",
+        "descricao": "Remoção e transporte da camada orgânica (topsoil)",
+        "unidade": "M2",
+        "quantitativo": 1400000.0,
+        "predecessores": [
+          {
+            "item_id": "1.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.3",
+        "ordem": 3,
+        "cpu_id": "CPU-MOB-003",
+        "descricao": "Execução de limpeza de áreas",
+        "unidade": "M2",
+        "quantitativo": 2530000.0,
+        "predecessores": [
+          {
+            "item_id": "1.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "1.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ],
+    "rcpsp_spec": {}
   }
 }

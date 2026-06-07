@@ -4,5 +4,317 @@
     "custo_direto_sem_bdi": 3602554.94,
     "custo_indireto": 3780982.71,
     "total_projeto": 7383537.65
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "ROSH",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "1.1",
+        "ordem": 1,
+        "cpu_id": "CPU-MOB-001",
+        "descricao": "Rebaixo Terreno natural - 40 cm",
+        "unidade": "m²",
+        "quantitativo": 110000.0,
+        "predecessores": [
+          {
+            "item_id": "1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 0.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.2",
+        "ordem": 2,
+        "cpu_id": "CPU-MOB-002",
+        "descricao": "Regularização e compactação do terreno natural",
+        "unidade": "m²",
+        "quantitativo": 110000.0,
+        "predecessores": [
+          {
+            "item_id": "1.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.3",
+        "ordem": 3,
+        "cpu_id": "CPU-MOB-003",
+        "descricao": "Execução das guias",
+        "unidade": "m",
+        "quantitativo": 1392.98,
+        "predecessores": [
+          {
+            "item_id": "1.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.5",
+        "ordem": 4,
+        "cpu_id": "CPU-MOB-005",
+        "descricao": "Lançamento da manta geotêxtil",
+        "unidade": "m²",
+        "quantitativo": 115500.0,
+        "predecessores": [
+          {
+            "item_id": "1.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.10",
+        "ordem": 5,
+        "cpu_id": "CPU-MOB-010",
+        "descricao": "Lançamento da geogrelha",
+        "unidade": "m²",
+        "quantitativo": 115500.0,
+        "predecessores": [
+          {
+            "item_id": "1.9",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.14",
+        "ordem": 6,
+        "cpu_id": "CPU-MOB-014",
+        "descricao": "Lançamento e espalhamento de areia",
+        "unidade": "m³",
+        "quantitativo": 7150.0,
+        "predecessores": [
+          {
+            "item_id": "1.13",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.17",
+        "ordem": 7,
+        "cpu_id": "CPU-MOB-017",
+        "descricao": "Espalhamento e compactação de rachão",
+        "unidade": "m³",
+        "quantitativo": 28875.0,
+        "predecessores": [
+          {
+            "item_id": "1.16",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.21",
+        "ordem": 8,
+        "cpu_id": "CPU-MOB-021",
+        "descricao": "Espalhamento e Compactação de  bica corrida",
+        "unidade": "m³",
+        "quantitativo": 17820.0,
+        "predecessores": [
+          {
+            "item_id": "1.20",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.25",
+        "ordem": 9,
+        "cpu_id": "CPU-MOB-025",
+        "descricao": "Espalhamento e compactação de BGTC",
+        "unidade": "m³",
+        "quantitativo": 46200.0,
+        "predecessores": [
+          {
+            "item_id": "1.24",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.29",
+        "ordem": 10,
+        "cpu_id": "CPU-MOB-029",
+        "descricao": "Lançamento e espalhamento de pó de pedra",
+        "unidade": "m³",
+        "quantitativo": 5720.0,
+        "predecessores": [
+          {
+            "item_id": "1.28",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.33",
+        "ordem": 11,
+        "cpu_id": "CPU-MOB-033",
+        "descricao": "Instação de piso intertravado",
+        "unidade": "m²",
+        "quantitativo": 110000.0,
+        "predecessores": [
+          {
+            "item_id": "1.32",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "1.34",
+        "ordem": 12,
+        "cpu_id": "CPU-MOB-034",
+        "descricao": "Rejuntamento do piso intertravado",
+        "unidade": "m²",
+        "quantitativo": 110000.0,
+        "predecessores": [
+          {
+            "item_id": "1.33",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.1",
+        "ordem": 13,
+        "cpu_id": "CPU-SUPP-001",
+        "descricao": "Lançamento da manta geotêxtil",
+        "unidade": "m²",
+        "quantitativo": 115500.0,
+        "predecessores": [
+          {
+            "item_id": "2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 0.0
+          }
+        ]
+      },
+      {
+        "item_id": "3.1",
+        "ordem": 14,
+        "cpu_id": "CPU-LIMP-001",
+        "descricao": "Lançamento da geogrelha",
+        "unidade": "m²",
+        "quantitativo": 115500.0,
+        "predecessores": [
+          {
+            "item_id": "3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 0.0
+          }
+        ]
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "1.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.10",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.14",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.17",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.21",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.25",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.29",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.33",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.34",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ],
+    "rcpsp_spec": {}
   }
 }
