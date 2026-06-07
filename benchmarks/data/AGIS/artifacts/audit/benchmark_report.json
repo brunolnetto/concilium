@@ -4,27 +4,21 @@
   "versao": "v1",
   "skills_log": [
     {
-      "skill": "01-escopo-e-eap",
-      "status": "OK",
-      "duration_ms": 16402,
-      "avisos": []
-    },
-    {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 1930,
+      "duration_ms": 7905,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 1171,
+      "duration_ms": 227,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 1961,
+      "duration_ms": 1254,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -77,7 +71,7 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "ERRO",
-      "duration_ms": 606,
+      "duration_ms": 486,
       "avisos": [
         "ADR-077: Contrato ESC-1CAT — 1 instância(s) com standby >35%: ESC-1CAT-02: 23w idle. Taxa global: 64.1%. Custo standby: R$ 138,000.00.",
         "ADR-077: Contrato ESC-3CAT — 3 instância(s) com standby >35%: ESC-3CAT-04: 21w idle; ESC-3CAT-05: 21w idle; ESC-3CAT-06: 21w idle. Taxa global: 79.4%. Custo standby: R$ 756,000.00."
@@ -99,13 +93,13 @@
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 238,
+      "duration_ms": 222,
       "avisos": []
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 338,
+      "duration_ms": 151,
       "avisos": [
         "Razão indireto/direto 102.0% fora da faixa [10.0%, 50.0%]"
       ]
@@ -113,13 +107,13 @@
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 224,
+      "duration_ms": 140,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 474,
+      "duration_ms": 1580,
       "avisos": [
         "Margem operacional 16.49% | status=VERMELHO | preço R$ 46,182,103 (operacional) vs R$ 81,098,987 (catálogo)",
         "Item 'eap-1_0': divergência de produtividade -53.6% não explicada por clima (fe_nec=0.48 × clima=0.96 = 0.46). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=0.877 vs calibrado=0.877).",
@@ -136,13 +130,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 220,
+      "duration_ms": 451,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 7226,
+      "duration_ms": 9230,
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -150,25 +144,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 376,
+      "duration_ms": 181,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 422,
+      "duration_ms": 199,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 273,
+      "duration_ms": 111,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 301,
+      "duration_ms": 80,
       "avisos": []
     }
   ],

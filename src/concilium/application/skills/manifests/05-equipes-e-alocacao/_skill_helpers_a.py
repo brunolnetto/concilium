@@ -2458,12 +2458,13 @@ def _enrich_equipes_com_decomposicao_instancial(
             )
 
             # Validar invariante (detecção precoce de bugs)
+            # ADR-085: custo_total_particionado = custo_inst_mo + eq + comb + mat
+            # (mob_demob já está incluído em custo_inst_mo como resíduo)
             soma = (
                 eq.custo_inst_mo
                 + eq.custo_inst_eq
                 + eq.custo_inst_comb
                 + eq.custo_inst_mat
-                + eq.custo_inst_mob_demob
             )
             desvio = abs(soma - eq.custo_total)
 
