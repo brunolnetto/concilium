@@ -104,6 +104,30 @@ def _norm_ref_parse_atividade_duration(atividade: dict[str, Any], weeks: list[st
 
 def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> list[dict[str, Any]]:
     atividades = out.get("atividades") if isinstance(out.get("atividades"), list) else []
+
+    # If no atividades but EAP exists, build from EAP (skill-01 will create detailed activities later)
+    if not atividades:
+        eap = out.get("eap") if isinstance(out.get("eap"), list) else []
+        activities: list[dict[str, Any]] = []
+        for item in eap:
+            if not isinstance(item, dict):
+                continue
+            item_id = item.get("item_id")
+            if not item_id:
+                continue
+            # Build minimal activity from EAP item
+            # Duration defaults to 1 week, will be refined by skill-04
+            activities.append(
+                {
+                    "item_id": str(item_id),
+                    "descricao": str(item.get("descricao") or item_id),
+                    "duration_weeks": 1,  # Default; skill-04 will compute actual
+                    "required_resources": {},
+                }
+            )
+        return activities
+
+    # Otherwise build from explicit atividades
     activities: list[dict[str, Any]] = []
     for atividade in atividades:  # type: ignore[union-attr]
         if not isinstance(atividade, dict):
