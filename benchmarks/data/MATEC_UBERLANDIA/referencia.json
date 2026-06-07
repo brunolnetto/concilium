@@ -25,7 +25,8 @@
         "descricao": "Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km",
         "unidade": "m3",
         "quantitativo": 69952.84,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.3",
@@ -41,7 +42,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       }
     ],
     "cronograma": [

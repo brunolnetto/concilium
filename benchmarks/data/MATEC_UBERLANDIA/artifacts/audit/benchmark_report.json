@@ -6,7 +6,7 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 2099,
+      "duration_ms": 8371,
       "avisos": [
         "2 EAP items referenciam CPUs inexistentes no catálogo: '2.2' (CPU-SUPP-002), '2.3' (CPU-SUPP-003)"
       ]
@@ -14,19 +14,19 @@
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 210,
+      "duration_ms": 243,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 61,
+      "duration_ms": 59,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 68,
+      "duration_ms": 79,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -78,13 +78,13 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 59,
+      "duration_ms": 70,
       "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "ERRO",
-      "duration_ms": 55,
+      "duration_ms": 61,
       "avisos": [],
       "erros": [
         "CPUs não encontradas: CPU-SUPP-002, CPU-SUPP-003"

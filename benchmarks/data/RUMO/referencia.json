@@ -25,7 +25,8 @@
         "descricao": "Limpeza mecanizada da camada vegetal (espessura média de 30 cm) - volume geométrico",
         "unidade": "m2",
         "quantitativo": 52000.0,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "1.3",
@@ -41,7 +42,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.1",
@@ -57,7 +59,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.2",
@@ -73,7 +76,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.3",
@@ -89,7 +93,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.1",
@@ -105,7 +110,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.3",
@@ -121,7 +127,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.1",
@@ -137,7 +144,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.2",
@@ -153,7 +161,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.3",
@@ -169,7 +178,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.4",
@@ -185,7 +195,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.5",
@@ -201,7 +212,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.6",
@@ -217,7 +229,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.7",
@@ -233,7 +246,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.8",
@@ -249,7 +263,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.1",
@@ -265,7 +280,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.2",
@@ -281,7 +297,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.3",
@@ -297,7 +314,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.4",
@@ -313,7 +331,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.5",
@@ -329,7 +348,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.6",
@@ -345,7 +365,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.7",
@@ -361,7 +382,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.8",
@@ -377,7 +399,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "7.1",
@@ -386,7 +409,8 @@
         "descricao": "Hidrossemeadura para cobertura de taludes",
         "unidade": "m2",
         "quantitativo": 85475.66,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       }
     ],
     "cronograma": [

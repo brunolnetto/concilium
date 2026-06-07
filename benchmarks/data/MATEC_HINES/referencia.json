@@ -25,7 +25,8 @@
         "descricao": "Supressão Vegetal",
         "unidade": "m2",
         "quantitativo": 298422.0,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "1.1",
@@ -34,7 +35,8 @@
         "descricao": "Remoção Superficial (20cm - Top Soil) - Excluso supressão vegetal",
         "unidade": "m2",
         "quantitativo": 245000.0,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "1.2",
@@ -50,7 +52,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "1.3",
@@ -66,7 +69,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       }
     ],
     "cronograma": [

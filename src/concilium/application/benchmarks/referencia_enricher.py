@@ -160,6 +160,14 @@ def enrich_referencia_with_eap(
             item_num = int(item["item_id"].split(".")[1])
             item["cpu_id"] = _infer_cpu_from_section(section_id, item_num)
 
+        # Store productivity data from cronograma if available
+        if "cpu_meta" not in item:
+            item["cpu_meta"] = {}
+        if "producao_horaria" not in item.get("cpu_meta", {}):
+            # Extract from EAP item if available
+            if "producao_horaria" in item and item["producao_horaria"] > 0:
+                item["cpu_meta"]["producao_horaria"] = item["producao_horaria"]
+
         # Update ordem to be sequential
         item["ordem"] = ordem
         final_eap.append(item)

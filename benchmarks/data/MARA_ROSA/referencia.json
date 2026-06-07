@@ -25,7 +25,8 @@
         "descricao": "Corte de Arvore Isolada, com destocamento com Ø > 45cm",
         "unidade": "un",
         "quantitativo": 30.0,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.2",
@@ -41,7 +42,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.3",
@@ -57,7 +59,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.4",
@@ -73,7 +76,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "2.5",
@@ -89,7 +93,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.1",
@@ -105,7 +110,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.2",
@@ -121,7 +127,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.1",
@@ -137,7 +144,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.2",
@@ -153,7 +161,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.3",
@@ -169,7 +178,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.4",
@@ -185,7 +195,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.5",
@@ -201,7 +212,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       }
     ],
     "cronograma": [

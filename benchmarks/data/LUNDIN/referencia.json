@@ -25,7 +25,8 @@
         "descricao": "Supressão vegetal de fragmentos",
         "unidade": "M2",
         "quantitativo": 1400000.0,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "1.5",

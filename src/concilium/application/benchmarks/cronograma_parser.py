@@ -27,6 +27,7 @@ class CronogramaItem:
     unidade: str
     quantitativo: float
     producao_diaria: float = 0.0
+    producao_horaria: float = 0.0  # Productivity per team member per hour
 
 
 def _parse_valor(s: str) -> float:
@@ -264,6 +265,10 @@ class CronogramaParser:
                 quantitativo_str = parts[3].strip() if len(parts) > 3 else "0"
                 quantitativo = _parse_valor(quantitativo_str)
 
+                # Produção horária is in column 4 (5th column)
+                producao_horaria_str = parts[4].strip() if len(parts) > 4 else "0"
+                producao_horaria = _parse_valor(producao_horaria_str)
+
                 # Produção diária is in column 5 (6th column)
                 producao_str = parts[5].strip() if len(parts) > 5 else "0"
                 producao_diaria = _parse_valor(producao_str)
@@ -275,6 +280,7 @@ class CronogramaParser:
                         unidade=unidade,
                         quantitativo=quantitativo,
                         producao_diaria=producao_diaria,
+                        producao_horaria=producao_horaria,
                     ))
 
         # Deduplicate items by item_id (keep first occurrence)

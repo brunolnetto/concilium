@@ -25,7 +25,8 @@
         "descricao": "Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA",
         "unidade": "M2",
         "quantitativo": 383592.55,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "1.2",
@@ -41,7 +42,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.1",
@@ -50,7 +52,8 @@
         "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria",
         "unidade": "M",
         "quantitativo": 45102.63,
-        "predecessores": []
+        "predecessores": [],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.2",
@@ -66,7 +69,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.3",
@@ -82,7 +86,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.4",
@@ -98,7 +103,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.5",
@@ -114,7 +120,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "3.6",
@@ -130,7 +137,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "5.1",
@@ -146,7 +154,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       },
       {
         "item_id": "4.1",
@@ -162,7 +171,8 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "cpu_meta": {}
       }
     ],
     "cronograma": [
