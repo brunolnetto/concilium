@@ -140,21 +140,112 @@ def enrich_referencia_with_eap(
     return referencia
 
 
+def _extract_eap_from_cpus_txt(cpus_path: Path) -> list[dict[str, Any]]:
+    """Extract EAP structure from cpus.txt when cronograma is unavailable.
+
+    Parses itemized CPU descriptions to build basic EAP with hierarchical structure.
+    """
+    eap_items = []
+    ordem = 1
+
+    try:
+        with open(cpus_path, encoding="utf-8") as f:
+            lines = f.readlines()
+
+        seen_ids: set[str] = set()
+        for line_no, line in enumerate(lines):
+            line = line.strip()
+
+            # Look for item_id pattern: single or double digit followed by optional decimal
+            # Format: "CÓDIGO" in column 1, item_id in next columns
+            parts = [p.strip() for p in line.split("\t") if p.strip()]
+
+            if not parts:
+                continue
+
+            # Check if first part looks like an item_id (e.g., "2.1", "3", "1.2")
+            potential_id = parts[0]
+            if not (potential_id[0].isdigit()):
+                continue
+
+            # Try to parse as item_id
+            try:
+                # Validate format: either "N" or "N.M"
+                id_parts = potential_id.split(".")
+                if len(id_parts) > 2:
+                    continue
+                for part in id_parts:
+                    int(part)  # Validate each part is numeric
+
+                item_id = potential_id
+
+                # Skip section headers (single digit items without subitems seen yet)
+                # For now, include all items - they'll be filtered later if needed
+                if item_id in seen_ids:
+                    continue
+                seen_ids.add(item_id)
+
+                # Description is typically the next non-empty part after CODE/DATE/UNIT headers
+                descricao = ""
+                if len(parts) > 1:
+                    # Skip date-like patterns and look for actual description
+                    for part in parts[1:]:
+                        if not any(c in part for c in "0123456789/,-"):  # Skip dates
+                            descricao = part
+                            break
+
+                # If still no description, use generic one
+                if not descricao:
+                    descricao = f"Item {item_id}"
+
+                # Create basic EAP item with reasonable defaults
+                eap_item = {
+                    "item_id": item_id,
+                    "ordem": ordem,
+                    "cpu_id": "CPU-UNKNOWN",  # Will be mapped later
+                    "descricao": descricao,
+                    "unidade": "un",  # Generic default
+                    "quantitativo": 1.0,  # Minimal default
+                    "predecessores": [],
+                }
+
+                # Infer predecessores based on hierarchy
+                if "." in item_id:
+                    item_num = int(item_id.split(".")[1])
+                    if item_num > 1:
+                        prev_id = f"{item_id.split('.')[0]}.{item_num - 1}"
+                        if prev_id in seen_ids:
+                            eap_item["predecessores"].append({
+                                "item_id": prev_id,
+                                "tipo": "FS",
+                                "lag": 0,
+                                "completion_threshold_pct": 1.0,
+                            })
+
+                eap_items.append(eap_item)
+                ordem += 1
+
+            except (ValueError, IndexError):
+                continue
+
+    except Exception as e:
+        print(f"Warning: Failed to parse {cpus_path}: {e}")
+
+    return eap_items
+
+
 def enrich_benchmark_referencia(benchmark_dir: Path) -> bool:
-    """Enrich a benchmark's referencia.json with EAP from cronograma.txt.
+    """Enrich a benchmark's referencia.json with EAP from cronograma.txt or cpus.txt.
 
     Args:
         benchmark_dir: Path to benchmark directory (e.g., benchmarks/data/MARA_ROSA)
 
     Returns:
-        True if successful, False if cronograma.txt not found or parse failed
+        True if successful, False if no EAP source found
     """
     referencia_path = benchmark_dir / "referencia.json"
     cronograma_path = benchmark_dir / "artifacts" / "raw" / "cronograma.txt"
-
-    if not cronograma_path.exists():
-        print(f"❌ cronograma.txt not found: {cronograma_path}")
-        return False
+    cpus_path = benchmark_dir / "artifacts" / "raw" / "cpus.txt"
 
     if not referencia_path.exists():
         print(f"❌ referencia.json not found: {referencia_path}")
@@ -163,15 +254,58 @@ def enrich_benchmark_referencia(benchmark_dir: Path) -> bool:
     # Load existing referencia
     referencia = json.loads(referencia_path.read_text(encoding="utf-8"))
 
-    # Enrich with EAP
-    try:
-        referencia = enrich_referencia_with_eap(referencia, cronograma_path)
-        referencia_path.write_text(
-            json.dumps(referencia, indent=2, ensure_ascii=False),
-            encoding="utf-8"
-        )
-        print(f"✓ Enriched {benchmark_dir.name} with {len(referencia['spec']['eap'])} EAP items")
-        return True
-    except Exception as e:
-        print(f"❌ Error enriching {benchmark_dir.name}: {e}")
-        return False
+    # Try cronograma.txt first (primary source)
+    if cronograma_path.exists() and cronograma_path.stat().st_size > 0:
+        try:
+            referencia = enrich_referencia_with_eap(referencia, cronograma_path)
+            referencia_path.write_text(
+                json.dumps(referencia, indent=2, ensure_ascii=False),
+                encoding="utf-8"
+            )
+            print(f"✓ Enriched {benchmark_dir.name} with {len(referencia['spec']['eap'])} EAP items (cronograma)")
+            return True
+        except Exception as e:
+            print(f"⚠ cronograma.txt parsing failed: {e}")
+
+    # Fallback to cpus.txt if cronograma unavailable
+    if cpus_path.exists():
+        try:
+            eap_items = _extract_eap_from_cpus_txt(cpus_path)
+            if eap_items:
+                # Ensure meta exists
+                if "meta" not in referencia:
+                    referencia["meta"] = {}
+                if not referencia["meta"].get("data_inicio"):
+                    referencia["meta"]["data_inicio"] = "2026-01-01"
+                if not referencia["meta"].get("data_termino"):
+                    referencia["meta"]["data_termino"] = "2027-12-31"
+                if not referencia["meta"].get("projeto"):
+                    referencia["meta"]["projeto"] = benchmark_dir.name
+                if not referencia["meta"].get("localizacao"):
+                    referencia["meta"]["localizacao"] = "Brasil"
+                if not referencia["meta"].get("regime_trabalho"):
+                    referencia["meta"]["regime_trabalho"] = {"horas_dia": 8, "dias_semana": 6}
+
+                # Build spec with EAP
+                if "spec" not in referencia:
+                    referencia["spec"] = {}
+
+                referencia["spec"]["eap"] = eap_items
+                referencia["spec"]["cronograma"] = [
+                    {"item_id": item["item_id"], "producao_diaria": 0.0, "semanas": {}}
+                    for item in eap_items
+                ]
+                referencia["spec"]["rcpsp_spec"] = {}
+
+                referencia_path.write_text(
+                    json.dumps(referencia, indent=2, ensure_ascii=False),
+                    encoding="utf-8"
+                )
+                print(f"✓ Enriched {benchmark_dir.name} with {len(eap_items)} EAP items (cpus.txt)")
+                return True
+
+        except Exception as e:
+            print(f"⚠ cpus.txt extraction failed: {e}")
+
+    print(f"❌ No EAP source found (cronograma.txt or cpus.txt): {benchmark_dir.name}")
+    return False
