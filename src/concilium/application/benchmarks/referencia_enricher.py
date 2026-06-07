@@ -29,6 +29,53 @@ def _infer_cpu_from_section(section_id: str, item_num: int) -> str:
     return f"CPU-{section_name}-{item_num:03d}"
 
 
+def _enrich_eap_with_produtividade(
+    eap_items: list[dict],
+    produtividade_path: Path
+) -> None:
+    """Enrich EAP items with productivity data from produtividade.txt.
+
+    Updates CPU to include productivity information when available.
+    """
+    if not produtividade_path.exists():
+        return
+
+    produtividade_map = {}
+    try:
+        with open(produtividade_path, encoding="utf-8") as f:
+            lines = f.readlines()
+
+        for line in lines[4:]:  # Skip header rows
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = [p.strip() for p in line.split('\t')]
+            if len(parts) < 4:
+                continue
+
+            item_id = parts[0]
+            if not item_id or not item_id[0].isdigit():
+                continue
+
+            try:
+                prod_str = parts[3].replace('.', '').replace(',', '.')
+                produtividade_map[item_id] = float(prod_str)
+            except (ValueError, IndexError):
+                pass
+    except Exception:
+        pass
+
+    # Enrich items with productivity info
+    for item in eap_items:
+        if item.get("item_id") in produtividade_map:
+            prod = produtividade_map[item["item_id"]]
+            # Store productivity in CPU metadata for later use by skill-04
+            if "cpu_meta" not in item:
+                item["cpu_meta"] = {}
+            item["cpu_meta"]["producao_horaria"] = prod
+
+
 def enrich_referencia_with_eap(
     referencia: dict[str, Any],
     cronograma_path: Path,
@@ -79,6 +126,10 @@ def enrich_referencia_with_eap(
     if not eap_items:
         print(f"Warning: No EAP items extracted from {cronograma_path}")
         return referencia
+
+    # Enrich EAP items with productivity data if available
+    produtividade_path = cronograma_path.parent / "produtividade.txt"
+    _enrich_eap_with_produtividade(eap_items, produtividade_path)
 
     # Load CPU mapper for semantic matching
     try:

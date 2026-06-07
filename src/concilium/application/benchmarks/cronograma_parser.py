@@ -44,6 +44,47 @@ def _parse_valor(s: str) -> float:
         return 0.0
 
 
+def _load_produtividade_map(produtividade_path: Path) -> dict[str, float]:
+    """Load productivity values from produtividade.txt.
+
+    Format: TSV with columns: ITEM, SERVIÇO, UNID, PRODUÇÃO HORARIA / EQUIPE
+    Returns dict mapping item_id -> producao_horaria
+    """
+    produtividade = {}
+
+    if not produtividade_path.exists():
+        return produtividade
+
+    try:
+        with open(produtividade_path, encoding="utf-8") as f:
+            lines = f.readlines()
+
+        for line_no, line in enumerate(lines[4:], start=4):  # Skip header
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = [p.strip() for p in line.split('\t')]
+            if len(parts) < 4:
+                continue
+
+            item_id = parts[0]
+            if not item_id or not item_id[0].isdigit():
+                continue
+
+            # Produção horária is 4th column (index 3)
+            try:
+                prod_str = parts[3].replace('.', '').replace(',', '.')
+                produtividade[item_id] = float(prod_str)
+            except (ValueError, IndexError):
+                pass
+
+    except Exception:
+        pass
+
+    return produtividade
+
+
 def _find_cpu_for_item(descricao: str, cpus_map: dict[str, str]) -> str | None:
     """Infer CPU from item description using cpus_map.
 

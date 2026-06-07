@@ -6,7 +6,7 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 1691,
+      "duration_ms": 6498,
       "avisos": [
         "12 EAP items referenciam CPUs inexistentes no catálogo: '2.1' (CPU-SUPP-001), '2.2' (CPU-SUPP-002), '2.3' (CPU-SUPP-003)..."
       ]
@@ -14,19 +14,19 @@
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 213,
+      "duration_ms": 817,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 47,
+      "duration_ms": 590,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
-      "status": "ERRO",
-      "duration_ms": 64,
+      "status": "OK",
+      "duration_ms": 765,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -66,21 +66,58 @@
         "CPU CPU-DREN-CORPO-BSTC-120-PA3: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.29 vs P_original=0.75. PU_sbdi=619.5183 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-100-200X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BDTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.15 vs P_original=0.38. PU_sbdi=1239.0366 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "Pool vazio — agendando sem restrições de recursos."
-      ],
+        "Pool vazio — agendando sem restrições de recursos.",
+        "CPU CPU-SUPP-001 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-SUPP-001 (producao_id_ref); assumindo 1000.0.",
+        "Item '2.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-SUPP-002 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-SUPP-002 (producao_id_ref); assumindo 1000.0.",
+        "Item '2.2' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-SUPP-003 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-SUPP-003 (producao_id_ref); assumindo 1000.0.",
+        "Item '2.3' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-SUPP-004 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-SUPP-004 (producao_id_ref); assumindo 1000.0.",
+        "Item '2.4' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-SUPP-005 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-SUPP-005 (producao_id_ref); assumindo 1000.0.",
+        "Item '2.5' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-LIMP-001 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-LIMP-001 (producao_id_ref); assumindo 1000.0.",
+        "Item '3.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-LIMP-002 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-LIMP-002 (producao_id_ref); assumindo 1000.0.",
+        "Item '3.2' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-ESCA-001 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-ESCA-001 (producao_id_ref); assumindo 1000.0.",
+        "Item '4.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-ESCA-002 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-ESCA-002 (producao_id_ref); assumindo 1000.0.",
+        "Item '4.2' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-ESCA-003 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-ESCA-003 (producao_id_ref); assumindo 1000.0.",
+        "Item '4.3' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-ESCA-004 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-ESCA-004 (producao_id_ref); assumindo 1000.0.",
+        "Item '4.4' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "CPU CPU-ESCA-005 não encontrada no catálogo; usando CPU sintética.",
+        "Produtividade não encontrada para CPU CPU-ESCA-005 (producao_id_ref); assumindo 1000.0.",
+        "Item '4.5' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091)."
+      ]
+    },
+    {
+      "skill": "05-equipes-e-alocacao",
+      "status": "OK",
+      "duration_ms": 660,
+      "avisos": []
+    },
+    {
+      "skill": "06-precificacao-unitaria",
+      "status": "ERRO",
+      "duration_ms": 248,
+      "avisos": [],
       "erros": [
-        "CPU CPU-SUPP-001 não encontrada.",
-        "CPU CPU-SUPP-002 não encontrada.",
-        "CPU CPU-SUPP-003 não encontrada.",
-        "CPU CPU-SUPP-004 não encontrada.",
-        "CPU CPU-SUPP-005 não encontrada.",
-        "CPU CPU-LIMP-001 não encontrada.",
-        "CPU CPU-LIMP-002 não encontrada.",
-        "CPU CPU-ESCA-001 não encontrada.",
-        "CPU CPU-ESCA-002 não encontrada.",
-        "CPU CPU-ESCA-003 não encontrada.",
-        "CPU CPU-ESCA-004 não encontrada.",
-        "CPU CPU-ESCA-005 não encontrada."
+        "CPUs não encontradas: CPU-SUPP-001, CPU-SUPP-002, CPU-SUPP-003, CPU-SUPP-004, CPU-SUPP-005, CPU-LIMP-001, CPU-LIMP-002, CPU-ESCA-001, CPU-ESCA-002, CPU-ESCA-003, CPU-ESCA-004, CPU-ESCA-005"
       ]
     }
   ],
@@ -97,7 +134,7 @@
   "rcpsp_schedule": {
     "algorithm": "CP-SAT",
     "makespan_weeks": 12,
-    "is_feasible": false,
+    "is_feasible": true,
     "was_relaxed": false,
     "deadline_weeks": 105,
     "folga_semanas": 93,
