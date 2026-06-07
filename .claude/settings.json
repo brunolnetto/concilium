@@ -13,7 +13,23 @@
       "PowerShell(wsl bash -lc \"cd /home/pingu/github/agente_engenheiro_senior/concilium && \\(test -d .venv && source .venv/bin/activate; python3 -m ruff check src/concilium/domain/services/eficiencia_field_builder.py 2>&1\\)\")",
       "PowerShell(wsl bash -lc \"cd /home/pingu/github/agente_engenheiro_senior/concilium && \\(test -d .venv && source .venv/bin/activate; python3 -m ruff check src/concilium/domain/services/eficiencia_field_builder.py src/concilium/application/runtime/deliverables/visualizations/eficiencia/ 2>&1 | tail -3\\)\")",
       "PowerShell(wsl bash -lc \"cd /home/pingu/github/agente_engenheiro_senior/concilium && \\(test -d .venv && source .venv/bin/activate; python3 -m ruff check src/concilium/application/runtime/deliverables/visualizations/eficiencia/ 2>&1\\)\")",
-      "PowerShell(wsl bash -lc \"cd /home/pingu/github/agente_engenheiro_senior/concilium && \\(test -d .venv && source .venv/bin/activate; python3 -m ruff check src/concilium/domain/services/eficiencia_field_builder.py src/concilium/application/runtime/deliverables/visualizations/eficiencia/ 2>&1 | tail -2; echo '=== validate AGIS ==='; cp /tmp/_nep035_validate.py ./_nep035_validate.py; python3 ./_nep035_validate.py 2>&1 | tail -25; rm -f ./_nep035_validate.py\\)\")"
+      "PowerShell(wsl bash -lc \"cd /home/pingu/github/agente_engenheiro_senior/concilium && \\(test -d .venv && source .venv/bin/activate; python3 -m ruff check src/concilium/domain/services/eficiencia_field_builder.py src/concilium/application/runtime/deliverables/visualizations/eficiencia/ 2>&1 | tail -2; echo '=== validate AGIS ==='; cp /tmp/_nep035_validate.py ./_nep035_validate.py; python3 ./_nep035_validate.py 2>&1 | tail -25; rm -f ./_nep035_validate.py\\)\")",
+      "Bash(python3 -m py_compile /home/pingu/github/agente-gerente-de-engenharia/src/concilium/infrastructure/storage/project.py)",
+      "Bash(python3)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat\\(storage\\): organize outputs into visualizations/ and reports/ subdirectories *)",
+      "Bash(python3 -m py_compile /home/pingu/github/agente-gerente-de-engenharia/src/concilium/infrastructure/storage/storage_project_repository.py)",
+      "Bash(git commit -m 'feat\\(storage\\): organize outputs in StorageProjectHandle with subdir support *)",
+      "Bash(python3 -m py_compile /home/pingu/github/agente-gerente-de-engenharia/src/concilium/infrastructure/storage/escopo_store.py)",
+      "Bash(git commit -m 'feat\\(storage\\): organize PlanoStore outputs with subdir support *)",
+      "Bash(python3 -m pytest tests/unit/test_adr026_relatorios_analiticos.py -xvs)",
+      "Bash(git push *)",
+      "Bash(python3 -m py_compile /home/pingu/github/agente-gerente-de-engenharia/src/concilium/application/benchmarks/runner.py)",
+      "Bash(python3 -m py_compile /home/pingu/github/agente-gerente-de-engenharia/src/concilium/application/benchmarks/output_packager.py)",
+      "Bash(git commit -m 'feat\\(benchmarks\\): organize outputs into visualizations/ and reports/ subdirectories *)",
+      "Bash(concilium benchmark *)",
+      "Bash(python3 -m py_compile /home/pingu/github/agente-gerente-de-engenharia/src/concilium/application/skills/manifests/08-consolidacao-financeira/skill.py)",
+      "Bash(git commit -m 'fix\\(consolidacao\\): use venda_catalogo_plus instead of venda_plus for consolidated result *)"
     ]
   }
 }

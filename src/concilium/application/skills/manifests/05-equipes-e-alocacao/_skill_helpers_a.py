@@ -697,8 +697,28 @@ def _build_dimensionamento(
         custo_total, ativos, custo_comb_efetivo, fixo_mensal, team_weeks, custo_ocioso = _calc_custo_cron(
             cron, custo_mo, custo_eq, custo_comb
         )
-        permanencia_efetiva = round(team_weeks / SEMANAS_POR_MES, 4)
-        custo_total_final = round(custo_total + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
+        # ADR-091: Dividir permanência pelo número de equipes paralelas alocadas para evitar duplicação de custos
+        # assigned_resources é propagado por skill-04 em modo AUTO; em MANUAL_ALLOCATION fica vazio.
+        # Para ambos os casos, inferimos o número de equipes paralelas do cronograma: max(num_equipes) na distribuição semanal
+        assigned_resources = getattr(cron, 'assigned_resources', None) or {}
+        num_equipes_paralelas = sum(assigned_resources.values()) if assigned_resources else 1
+
+        # Se assigned_resources está vazio, deduzir do cronograma (MANUAL_ALLOCATION case)
+        if not num_equipes_paralelas or num_equipes_paralelas == 1:
+            dist_semanal = getattr(cron, 'distribuicao_semanal', {}) or {}
+            if dist_semanal and isinstance(dist_semanal, dict):
+                values_list = list(dist_semanal.values())
+                max_num_eq = max((getattr(d, 'num_equipes', 0) for d in values_list), default=1)
+                if max_num_eq > 1:
+                    num_equipes_paralelas = max_num_eq
+
+        team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
+        permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
+        # Recalcular custo_total com team_weeks ajustado: custo_total original usa team_weeks inflacionado
+        # Fórmula original: custo_total = (fixo_sem_comb + comb_nominal*eff) * team_weeks
+        # Ajustar: custo_total_ajustado = custo_total / num_equipes_paralelas (para casos com múltiplas equipes)
+        custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
+        custo_total_final = round(custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
         fixo_mensal_total = round(fixo_mensal + custo_mat, 2)
         equipes.append(
             EquipeDireta(
@@ -706,7 +726,7 @@ def _build_dimensionamento(
                 item_id=item.item_id,
                 cpu_id=item.cpu_id,
                 nome=f"Equipe {cpu['descricao'][:30]}",
-                num_equipes_base=1,
+                num_equipes_base=num_equipes_paralelas,
                 funcoes=funcoes_mod,
                 equipamentos=equips_mod,
                 custo_mao_obra_mensal=round(custo_mo, 2),
