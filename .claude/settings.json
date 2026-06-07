@@ -45,7 +45,8 @@
       "Bash(git commit -m 'fix\\(adr-104\\): corrigir invariante de decomposição — mob_demob já incluído *)",
       "Bash(cat /home/pingu/.local/bin/concilium | head -20)",
       "Read(//home/pingu/.local/bin/**)",
-      "Bash(python3 -m json.tool)"
+      "Bash(python3 -m json.tool)",
+      "Bash(git commit -m 'feat: adicionar análise inteligente com LLM para reconciliação *)"
     ]
   }
 }

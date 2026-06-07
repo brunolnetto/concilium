@@ -84,17 +84,68 @@ def reconciliar(
         else:
             analise = None
 
-        # Gerar relatório
+        # Gerar relatório básico
         if analise:
             relatorio = gerar_relatorio_reconciliacao(analise)
             typer.echo(relatorio)
 
-            # Salvar relatório
-            output_dir = (benchmark_dir / "artifacts" / "outputs").resolve()
-            output_dir.mkdir(parents=True, exist_ok=True)
-            relatorio_path = output_dir / "reconciliacao_planejamento.txt"
-            relatorio_path.write_text(relatorio, encoding="utf-8")
-            typer.echo(f"\n✅ Relatório salvo em: {relatorio_path}")
+            # Executar análise LLM
+            typer.echo("\n🤖 Executando análise com LLM para interpretação de disparidades...\n")
+
+            from concilium.application.benchmarks.analise_llm_reconciliacao import (
+                AnalisadorLLMReconciliacao,
+                gerar_relatorio_llm,
+            )
+
+            try:
+                import os
+
+                # Converter dados para dicts simples para envio ao LLM
+                dados_plan_simples = {}
+                for item_id, custo in analise.planejamento.items():
+                    dados_plan_simples[item_id] = {
+                        "descricao": custo.descricao,
+                        "total_sem_bdi": custo.total_sem_bdi,
+                        "total_com_bdi": custo.total_com_bdi,
+                    }
+
+                # Análise LLM (com suporte a variável de ambiente)
+                api_key = os.getenv("ANTHROPIC_API_KEY")
+                if not api_key:
+                    raise ValueError(
+                        "ANTHROPIC_API_KEY não configurada. "
+                        "Configure via: export ANTHROPIC_API_KEY=sk-..."
+                    )
+
+                analisador = AnalisadorLLMReconciliacao(api_key=api_key)
+                analise_llm = analisador.analisar(
+                    dados_planejamento=dados_plan_simples,
+                    dados_canonical=analise.canonical_direto,
+                    disparidades=analise.disparidades,
+                )
+
+                relatorio_llm = gerar_relatorio_llm(analise_llm)
+                typer.echo(relatorio_llm)
+
+                # Salvar relatórios
+                output_dir = (benchmark_dir / "artifacts" / "outputs").resolve()
+                output_dir.mkdir(parents=True, exist_ok=True)
+
+                relatorio_path = output_dir / "reconciliacao_planejamento.txt"
+                relatorio_path.write_text(relatorio, encoding="utf-8")
+
+                relatorio_llm_path = output_dir / "reconciliacao_analise_llm.txt"
+                relatorio_llm_path.write_text(relatorio_llm, encoding="utf-8")
+
+                typer.echo(
+                    f"\n✅ Relatórios salvos em:\n"
+                    f"   - {relatorio_path}\n"
+                    f"   - {relatorio_llm_path}"
+                )
+            except Exception as e:
+                typer.echo(f"\n⚠️  Erro na análise LLM (continuando com relatório básico): {e}", err=True)
+                # Continuar mesmo sem análise LLM
+
         else:
             typer.echo("❌ Análise falhou")
             raise typer.Exit(1)
