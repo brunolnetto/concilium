@@ -6,25 +6,41 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 2504,
+=======
+      "duration_ms": 8566,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 190,
+=======
+      "duration_ms": 969,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 137,
+=======
+      "duration_ms": 264,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 271,
+=======
+      "duration_ms": 480,
+>>>>>>> Stashed changes
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -77,7 +93,11 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 161,
+=======
+      "duration_ms": 324,
+>>>>>>> Stashed changes
       "avisos": [
         "ADR-077: Contrato ESC-1CAT — 1 instância(s) com standby >35%: ESC-1CAT-02: 23w idle. Taxa global: 64.1%. Custo standby: R$ 138,000.00.",
         "ADR-077: Contrato ESC-3CAT — 3 instância(s) com standby >35%: ESC-3CAT-04: 21w idle; ESC-3CAT-05: 21w idle; ESC-3CAT-06: 21w idle. Taxa global: 79.4%. Custo standby: R$ 756,000.00."
@@ -86,28 +106,48 @@
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 68,
       "avisos": [
         "Item 'eap-1_9': preço de venda (6.8713) abaixo do custo da equipe (9.5808). Margem=-39.43%. Revisar dimensionamento ou repassar ao cliente.",
         "Item 'eap-1_10': preço de venda (16.7922) abaixo do custo da equipe (18.1868). Margem=-8.30%. Revisar dimensionamento ou repassar ao cliente."
       ]
+=======
+      "duration_ms": 201,
+      "avisos": []
+>>>>>>> Stashed changes
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 55,
       "avisos": []
+=======
+      "duration_ms": 111,
+      "avisos": [
+        "Razão indireto/direto 102.0% fora da faixa [10.0%, 50.0%]"
+      ]
+>>>>>>> Stashed changes
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 57,
+=======
+      "duration_ms": 243,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 224,
+=======
+      "duration_ms": 766,
+>>>>>>> Stashed changes
       "avisos": [
         "Item 'eap-1_3': divergência de produtividade -16.0% não explicada por clima (fe_nec=1.03 × clima=0.81 = 0.84). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=10.094 vs calibrado=10.417).",
         "Item 'eap-1_7': divergência de produtividade -11.4% não explicada por clima (fe_nec=1.01 × clima=0.87 = 0.89). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=9.131 vs calibrado=9.266).",
@@ -120,13 +160,21 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 64,
+=======
+      "duration_ms": 207,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 2281,
+=======
+      "duration_ms": 5059,
+>>>>>>> Stashed changes
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -134,25 +182,41 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 44,
+=======
+      "duration_ms": 132,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 45,
+=======
+      "duration_ms": 208,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 42,
+=======
+      "duration_ms": 145,
+>>>>>>> Stashed changes
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
+<<<<<<< Updated upstream
       "duration_ms": 44,
+=======
+      "duration_ms": 109,
+>>>>>>> Stashed changes
       "avisos": []
     }
   ],
