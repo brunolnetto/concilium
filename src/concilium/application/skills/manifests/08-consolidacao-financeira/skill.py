@@ -90,7 +90,7 @@ def run_consolidacao_financeira(
     recon = ResultadoReconciliado(
         itens_aquisicao=[],
         delta_custo_total=0.0,
-        venda_total_com_bdi=venda_plus,
+        venda_total_com_bdi=venda_catalogo_plus,
         custo_total_reconciliado=custo_total,
         margem_reconciliada_pct=margem,
         status_margem_reconciliado=status_margem,
