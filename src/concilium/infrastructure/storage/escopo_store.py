@@ -44,6 +44,19 @@ class PlanoStore:
         self.root = root
         self.escopo_store = escopo_store
 
+    @staticmethod
+    def _get_output_subdir(filename: str) -> str:
+        """Determina o subdiretório baseado na extensão do arquivo.
+
+        returns: "visualizations" para imagens, "reports" para PDFs/XLSXs
+        """
+        ext = Path(filename).suffix.lower()
+        if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"):
+            return "visualizations"
+        if ext in (".pdf", ".xlsx", ".xls", ".csv"):
+            return "reports"
+        return "reports"  # fallback
+
     # ── Metadados do plano ──────────────────────────────────────────────
 
     @property
@@ -145,21 +158,50 @@ class PlanoStore:
     # ── Outputs ────────────────────────────────────────────────────────
 
     def save_output_file(self, data: bytes, filename: str = "resultado.xlsx") -> Path:
-        outputs = self.root / "outputs"
+        """Salva arquivo em outputs/{subdir}/{filename}.
+
+        Imagens → outputs/visualizations/
+        PDFs e planilhas → outputs/reports/
+        """
+        subdir = self._get_output_subdir(filename)
+        outputs = self.root / "outputs" / subdir
         outputs.mkdir(parents=True, exist_ok=True)
         p = outputs / filename
         p.write_bytes(data)
         return p
 
     def load_output_file(self, filename: str = "resultado.xlsx") -> bytes | None:
-        p = self.root / "outputs" / filename
-        return p.read_bytes() if p.exists() else None
+        """Carrega arquivo de outputs/{subdir}/{filename}.
+
+        Procura em visualizations ou reports conforme extensão.
+        Retorna None se inexistente.
+        """
+        subdir = self._get_output_subdir(filename)
+        p = self.root / "outputs" / subdir / filename
+        if p.exists():
+            return p.read_bytes()
+
+        # Fallback: tentar no outro diretório (compatibilidade)
+        fallback_subdir = "reports" if subdir == "visualizations" else "visualizations"
+        fallback_path = self.root / "outputs" / fallback_subdir / filename
+        if fallback_path.exists():
+            return fallback_path.read_bytes()
+
+        return None
 
     def list_output_files(self) -> list[str]:
+        """Lista nomes de arquivos em outputs/, recursivamente em subdiretórios."""
         d = self.root / "outputs"
         if not d.exists():
             return []
-        return sorted(f.name for f in d.iterdir() if f.is_file())
+
+        files = []
+        for subdir_path in d.iterdir():
+            if subdir_path.is_dir():
+                for f in subdir_path.iterdir():
+                    if f.is_file():
+                        files.append(f.name)
+        return sorted(files)
 
     # ── Ciclo de vida ─────────────────────────────────────────────────
 
