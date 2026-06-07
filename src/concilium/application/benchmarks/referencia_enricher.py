@@ -2,6 +2,8 @@
 
 Takes existing referencia.json with just cost data and enriches it with
 full project specification including EAP items, CPUs, predecessores, etc.
+
+Uses semantic CPU mapping to match cronograma items to actual catalog CPUs.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .cronograma_parser import CronogramaParser
+from .cpu_mapper import CpuMapper
 
 
 def _infer_cpu_from_section(section_id: str, item_num: int) -> str:
@@ -29,7 +32,8 @@ def _infer_cpu_from_section(section_id: str, item_num: int) -> str:
 def enrich_referencia_with_eap(
     referencia: dict[str, Any],
     cronograma_path: Path,
-    project_meta: dict[str, Any] | None = None
+    project_meta: dict[str, Any] | None = None,
+    contexto_id: str = "mendeslobo"
 ) -> dict[str, Any]:
     """Enrich referencia with EAP structure from cronograma.txt.
 
@@ -37,6 +41,7 @@ def enrich_referencia_with_eap(
         referencia: Existing referencia dict (may have minimal spec)
         cronograma_path: Path to cronograma.txt file
         project_meta: Optional project metadata to override/merge
+        contexto_id: Catalog context for semantic CPU mapping (default: mendeslobo)
 
     Returns:
         Enriched referencia dict with complete spec.eap and spec.cronograma
@@ -75,14 +80,31 @@ def enrich_referencia_with_eap(
         print(f"Warning: No EAP items extracted from {cronograma_path}")
         return referencia
 
+    # Load CPU mapper for semantic matching
+    try:
+        cpu_mapper = CpuMapper(contexto_id)
+    except Exception as e:
+        print(f"Warning: CPU mapper initialization failed: {e}")
+        cpu_mapper = None
+
     # Build complete EAP with just leaf items (no section headers)
     # Section headers would have quantitativo=0 which violates EapItem constraints
     final_eap = []
     ordem = 1
 
     for item in eap_items:
-        # Ensure CPU is set (use inference if needed)
-        if item["cpu_id"] == "CPU-UNKNOWN":
+        # Try to map to actual catalog CPU using semantic search
+        if cpu_mapper and item["cpu_id"] == "CPU-UNKNOWN":
+            mapped_cpu = cpu_mapper.map_item_to_cpu(item["item_id"], item["descricao"])
+            if mapped_cpu:
+                item["cpu_id"] = mapped_cpu
+            else:
+                # Fallback to section-based inference
+                section_id = item["item_id"].split(".")[0]
+                item_num = int(item["item_id"].split(".")[1])
+                item["cpu_id"] = _infer_cpu_from_section(section_id, item_num)
+        elif not cpu_mapper:
+            # No mapper available, use fallback inference
             section_id = item["item_id"].split(".")[0]
             item_num = int(item["item_id"].split(".")[1])
             item["cpu_id"] = _infer_cpu_from_section(section_id, item_num)
@@ -91,6 +113,13 @@ def enrich_referencia_with_eap(
         item["ordem"] = ordem
         final_eap.append(item)
         ordem += 1
+
+    # Log mapping statistics if mapper was used
+    if cpu_mapper:
+        stats = cpu_mapper.get_mapping_stats()
+        if stats["total_items_processed"] > 0:
+            print(f"CPU mapping: {stats['successfully_mapped']}/{stats['total_items_processed']} items mapped "
+                  f"({stats['success_rate']:.1f}% success rate)")
 
     # Build cronograma in spec format (list of items with scheduling data)
     cronograma = [

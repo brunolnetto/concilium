@@ -73,30 +73,50 @@ def _infer_predecessores(
 
     Rules:
     1. Items within same section (e.g., 2.1, 2.2, 2.3) depend on previous item
-    2. First item of section depends on section header (e.g., 2.1 depends on 2)
-    3. First item overall (section header) has no dependencies
+    2. First item of section depends on previous section's last item
+    3. Very first item (1.1) has no dependencies
+
+    Section headers are not included as predecessors since they're excluded from EAP.
 
     Returns list of predecessor dicts with keys: item_id, tipo, lag, completion_threshold_pct
     """
     parts = item_id.split(".")
 
-    # Section header (e.g., "2") - no predecessors
+    # Section header (e.g., "2") - no predecessors (but shouldn't be included in EAP anyway)
     if len(parts) == 1:
         return []
 
-    section = parts[0]
+    section = int(parts[0])
     item_num = int(parts[1]) if len(parts) > 1 else 1
 
     predecessores = []
 
-    # If first item in section, depend on section header
+    # If first item in section, depend on last item of previous section (if exists)
     if item_num == 1:
-        predecessores.append({
-            "item_id": section,
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.0  # Can start when section starts
-        })
+        if section > 1:
+            # Previous section exists - find its last item
+            # Look for items in previous section to infer the last one
+            prev_section_str = str(section - 1)
+            last_prev_item = None
+            max_prev_num = 0
+            for i in items:
+                if i.item_id.startswith(prev_section_str + "."):
+                    try:
+                        prev_num = int(i.item_id.split(".")[1])
+                        if prev_num > max_prev_num:
+                            max_prev_num = prev_num
+                            last_prev_item = i.item_id
+                    except (ValueError, IndexError):
+                        pass
+
+            if last_prev_item:
+                predecessores.append({
+                    "item_id": last_prev_item,
+                    "tipo": "FS",
+                    "lag": 0,
+                    "completion_threshold_pct": 1.0  # Must finish before this can start
+                })
+        # else: section == 1, first item overall, no predecessors
     else:
         # Depend on previous item in same section
         prev_item_id = f"{section}.{item_num - 1}"
