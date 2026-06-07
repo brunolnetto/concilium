@@ -78,7 +78,11 @@ class BenchmarkRunner:
                 data = store.load_output_file(v, fname)
                 if data is not None:
                     try:
-                        (artifacts_dir / fname).write_bytes(data)
+                        # Organiza em subpastas: visualizations/ para imagens, reports/ para PDFs/XLSXs
+                        subdir = self._get_output_subdir(fname)
+                        subdir_path = artifacts_dir / subdir
+                        subdir_path.mkdir(parents=True, exist_ok=True)
+                        (subdir_path / fname).write_bytes(data)
                         saved.append(fname)
                     except PermissionError:
                         print(f"  [WARN] {fname} em uso — artefato ignorado")
@@ -87,6 +91,21 @@ class BenchmarkRunner:
         for f in saved:
             print(f"  [SAVE]   {f}")
         return report
+
+    @staticmethod
+    def _get_output_subdir(filename: str) -> str:
+        """Determina o subdiretório baseado na extensão do arquivo.
+
+        returns: "visualizations" para imagens, "reports" para PDFs/XLSXs
+        """
+        from pathlib import Path
+
+        ext = Path(filename).suffix.lower()
+        if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"):
+            return "visualizations"
+        if ext in (".pdf", ".xlsx", ".xls", ".csv"):
+            return "reports"
+        return "reports"  # fallback
 
     def _artifact_output_dir(self, spec: ProjectSpec) -> Path:
         benchmarks_root = self.projects_root.parent

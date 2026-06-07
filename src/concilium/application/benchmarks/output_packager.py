@@ -39,7 +39,17 @@ def _find_benchmark_dir(slug: str, config_root: Path | None = None) -> Path | No
 
 
 def _cf_collect_graficos(bench_dir: Path, collected: list) -> None:
-    """Coleta PNGs e SVGs de outputs/."""
+    """Coleta PNGs e SVGs de outputs/ (recursivamente em visualizations/)."""
+    # Tenta novo layout: outputs/visualizations/
+    viz_dir = bench_dir / "artifacts" / "outputs" / "visualizations"
+    if viz_dir.exists():
+        for f in sorted(viz_dir.glob("*.png")):
+            collected.append((f, f"graficos/{f.name}"))
+        for f in sorted(viz_dir.glob("*.svg")):
+            collected.append((f, f"graficos/{f.name}"))
+        return
+
+    # Fallback para layout legado
     outputs_dir = bench_dir / "outputs"
     if not outputs_dir.exists():
         return
@@ -50,7 +60,16 @@ def _cf_collect_graficos(bench_dir: Path, collected: list) -> None:
 
 
 def _cf_collect_relatorios(bench_dir: Path, collected: list) -> None:
-    """Coleta arquivos de relatorio de artifacts/outputs/."""
+    """Coleta arquivos de relatorio de artifacts/outputs/ (recursivamente em reports/)."""
+    # Tenta novo layout: outputs/reports/
+    reports_dir = bench_dir / "artifacts" / "outputs" / "reports"
+    if reports_dir.exists():
+        for ext in ("*.md", "*.json", "*.xlsx", "*.csv", "*.pdf"):
+            for f in sorted(reports_dir.glob(ext)):
+                collected.append((f, f"relatorio/{f.name}"))
+        return
+
+    # Fallback para layout legado
     art_out = bench_dir / "artifacts" / "outputs"
     if not art_out.exists():
         return
