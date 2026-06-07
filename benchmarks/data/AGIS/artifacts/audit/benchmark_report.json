@@ -4,21 +4,27 @@
   "versao": "v1",
   "skills_log": [
     {
+      "skill": "01-escopo-e-eap",
+      "status": "OK",
+      "duration_ms": 14624,
+      "avisos": []
+    },
+    {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 7905,
+      "duration_ms": 1924,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 227,
+      "duration_ms": 535,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 1254,
+      "duration_ms": 1913,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -70,36 +76,23 @@
     },
     {
       "skill": "05-equipes-e-alocacao",
-      "status": "ERRO",
-      "duration_ms": 486,
+      "status": "OK",
+      "duration_ms": 690,
       "avisos": [
         "ADR-077: Contrato ESC-1CAT — 1 instância(s) com standby >35%: ESC-1CAT-02: 23w idle. Taxa global: 64.1%. Custo standby: R$ 138,000.00.",
         "ADR-077: Contrato ESC-3CAT — 3 instância(s) com standby >35%: ESC-3CAT-04: 21w idle; ESC-3CAT-05: 21w idle; ESC-3CAT-06: 21w idle. Taxa global: 79.4%. Custo standby: R$ 756,000.00."
-      ],
-      "erros": [
-        "Item eap-1_0: soma decomposição (R$ 1,096,896.94) ≠ custo_total (R$ 1,016,896.94). Desvio: R$ 80000.00",
-        "Item eap-1_1: soma decomposição (R$ 950,121.47) ≠ custo_total (R$ 898,871.47). Desvio: R$ 51250.00",
-        "Item eap-1_2: soma decomposição (R$ 2,837,758.19) ≠ custo_total (R$ 2,786,508.19). Desvio: R$ 51250.00",
-        "Item eap-1_3: soma decomposição (R$ 676,564.46) ≠ custo_total (R$ 556,564.46). Desvio: R$ 120000.00",
-        "Item eap-1_4: soma decomposição (R$ 3,220,857.06) ≠ custo_total (R$ 3,100,857.06). Desvio: R$ 120000.00",
-        "Item eap-1_5: soma decomposição (R$ 1,683,702.43) ≠ custo_total (R$ 1,422,681.75). Desvio: R$ 261020.68",
-        "Item eap-1_6: soma decomposição (R$ 3,485,768.53) ≠ custo_total (R$ 3,224,747.85). Desvio: R$ 261020.68",
-        "Item eap-1_9: soma decomposição (R$ 3,296,080.19) ≠ custo_total (R$ 3,035,059.51). Desvio: R$ 261020.68",
-        "Item eap-1_7: soma decomposição (R$ 3,085,367.63) ≠ custo_total (R$ 2,966,674.78). Desvio: R$ 118692.85",
-        "Item eap-1_8: soma decomposição (R$ 182,263.75) ≠ custo_total (R$ 63,570.90). Desvio: R$ 118692.85",
-        "Item eap-1_10: soma decomposição (R$ 245,834.66) ≠ custo_total (R$ 127,141.81). Desvio: R$ 118692.85"
       ]
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 222,
+      "duration_ms": 201,
       "avisos": []
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 151,
+      "duration_ms": 251,
       "avisos": [
         "Razão indireto/direto 102.0% fora da faixa [10.0%, 50.0%]"
       ]
@@ -107,13 +100,13 @@
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 140,
+      "duration_ms": 504,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 1580,
+      "duration_ms": 1587,
       "avisos": [
         "Margem operacional 16.49% | status=VERMELHO | preço R$ 46,182,103 (operacional) vs R$ 81,098,987 (catálogo)",
         "Item 'eap-1_0': divergência de produtividade -53.6% não explicada por clima (fe_nec=0.48 × clima=0.96 = 0.46). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=0.877 vs calibrado=0.877).",
@@ -130,13 +123,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 451,
+      "duration_ms": 295,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 9230,
+      "duration_ms": 5892,
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -144,25 +137,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 181,
+      "duration_ms": 122,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 199,
+      "duration_ms": 173,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 111,
+      "duration_ms": 364,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 80,
+      "duration_ms": 166,
       "avisos": []
     }
   ],
@@ -409,7 +402,7 @@
       "status_acao": "NAO_APLICAVEL"
     }
   ],
-  "status_final": "INVIAVEL",
+  "status_final": "APROVADO_COM_RESSALVAS",
   "rcpsp_schedule": {
     "algorithm": "CP-SAT",
     "makespan_weeks": 55,

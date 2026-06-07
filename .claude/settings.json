@@ -42,7 +42,10 @@
       "Bash(python3 -m pytest tests/integration/test_cost_decomposition_adr104.py -v)",
       "Bash(git commit -m 'test: criar fixture agis_benchmark para testes de integração ADR-104 *)",
       "Bash(python3 -m pytest tests/unit/test_adr030_cpu_team_composition.py::TestSkill03Material::test_custo_material_calculado_corretamente -xvs)",
-      "Bash(git commit -m 'fix\\(adr-104\\): corrigir invariante de decomposição — mob_demob já incluído *)"
+      "Bash(git commit -m 'fix\\(adr-104\\): corrigir invariante de decomposição — mob_demob já incluído *)",
+      "Bash(cat /home/pingu/.local/bin/concilium | head -20)",
+      "Read(//home/pingu/.local/bin/**)",
+      "Bash(python3 -m json.tool)"
     ]
   }
 }
