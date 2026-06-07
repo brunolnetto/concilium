@@ -31,6 +31,19 @@ class StorageProjectHandle:
         """Resolve caminho absoluto dentro do projeto no storage."""
         return f"{self._project_id}/{relative.lstrip('/')}"
 
+    @staticmethod
+    def _get_output_subdir(filename: str) -> str:
+        """Determina o subdiretório baseado na extensão do arquivo.
+
+        returns: "visualizations" para imagens, "reports" para PDFs/XLSXs
+        """
+        ext = Path(filename).suffix.lower()
+        if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"):
+            return "visualizations"
+        if ext in (".pdf", ".xlsx", ".xls", ".csv"):
+            return "reports"
+        return "reports"  # fallback
+
     @property
     def meta(self) -> dict[str, Any]:
         return self.read_json(self._META_FILE, {})
@@ -168,14 +181,24 @@ class StorageProjectHandle:
         v = version or self.current_version()
         if not v:
             return None
-        return self.read_bytes(f"{v}/outputs/{filename}")
+
+        subdir = self._get_output_subdir(filename)
+        data = self.read_bytes(f"{v}/outputs/{subdir}/{filename}")
+        if data is not None:
+            return data
+
+        # Fallback: tentar no outro diretório (compatibilidade)
+        fallback_subdir = "reports" if subdir == "visualizations" else "visualizations"
+        return self.read_bytes(f"{v}/outputs/{fallback_subdir}/{filename}")
 
     def save_output_file(self, data: bytes, version: str | None = None, filename: str = "resultado.xlsx") -> Path:
         v = version or self.current_version()
         if not v:
             raise RuntimeError("Nenhuma versão ativa.")
-        self._storage.gravar_blob(self._path(f"{v}/outputs/{filename}"), data)
-        return Path(self._project_id) / v / "outputs" / filename
+
+        subdir = self._get_output_subdir(filename)
+        self._storage.gravar_blob(self._path(f"{v}/outputs/{subdir}/{filename}"), data)
+        return Path(self._project_id) / v / "outputs" / subdir / filename
 
     # ── CPU overrides ─────────────────────────────────────────────────────
 
