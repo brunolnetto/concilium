@@ -712,6 +712,15 @@ def _build_dimensionamento(
                 if max_num_eq > 1:
                     num_equipes_paralelas = max_num_eq
 
+        # CRÍTICO: team_weeks já vem do cronograma SOMANDO o num_equipes para cada semana
+        # Então se há 3 equipes × 32 semanas, vem como 96 weeks
+        # Precisamos dividir por num_equipes para obter a permanência de UMA equipe
+
+        # DEBUG MARKER: Se num_equipes_paralelas > 1, esperamos ver permanencia reduzida
+        if num_equipes_paralelas > 1:
+            # Registro para DEBUG: salvamos em variável para poder debugar depois
+            _debug_marker_adr091 = f"APPLIED_to_{item.item_id}_div_by_{num_equipes_paralelas}"
+
         team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
         permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
         # Recalcular custo_total com team_weeks ajustado: custo_total original usa team_weeks inflacionado
