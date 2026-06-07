@@ -104,7 +104,7 @@ class BenchmarkBatchRunner:
             specs.append(load_spec_from_dict(ref_data, ref_path))
         return specs
 
-    def run_all(self, *, reset: bool = True) -> list[dict[str, Any]]:
+    def run_all(self, *, reset: bool = True, quiet: bool = False) -> list[dict[str, Any]]:
         runner = BenchmarkRunner(
             config_root=self.config_root,
             projects_root=self.projects_root,
@@ -112,12 +112,24 @@ class BenchmarkBatchRunner:
             report_printer=BenchmarkReportPrinter(),
         )
 
+        specs = self.discover_specs()
         reports: list[dict[str, Any]] = []
-        for spec in self.discover_specs():
-            print(f"\n{'=' * 60}")
-            print(f"  EXECUTANDO BENCHMARK: {spec.slug}")
-            print(f"{'=' * 60}")
-            reports.append(runner.run(spec, reset=reset))
+
+        for idx, spec in enumerate(specs, 1):
+            if not quiet:
+                print(f"\n{'=' * 60}")
+                print(f"  EXECUTANDO BENCHMARK: {spec.slug}")
+                print(f"{'=' * 60}")
+            else:
+                print(f"[{idx}/{len(specs)}] {spec.slug}...", end=" ", flush=True)
+
+            report = runner.run(spec, reset=reset)
+            reports.append(report)
+
+            if quiet:
+                status = _resolve_status(report)
+                print(f"{status}")
+
         return reports
 
     def build_summary(self, reports: list[dict[str, Any]]) -> list[dict[str, str]]:
