@@ -41,14 +41,7 @@
         "descricao": "Remoção Superficial (20cm - Top Soil) - Excluso supressão vegetal",
         "unidade": "m2",
         "quantitativo": 245000.0,
-        "predecessores": [
-          {
-            "item_id": "1",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.0
-          }
-        ]
+        "predecessores": []
       },
       {
         "item_id": "1.2",

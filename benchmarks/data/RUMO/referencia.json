@@ -5,6 +5,512 @@
     "custo_indireto": 4123507.52,
     "total_projeto": 4905849.68
   },
-  "meta": {},
-  "spec": {}
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "RUMO",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "1.1",
+        "ordem": 1,
+        "cpu_id": "CPU-MOB-001",
+        "descricao": "Limpeza mecanizada da camada vegetal (espessura média de 30 cm) - volume geométrico",
+        "unidade": "m2",
+        "quantitativo": 52000.0,
+        "predecessores": []
+      },
+      {
+        "item_id": "1.3",
+        "ordem": 2,
+        "cpu_id": "CPU-MOB-003",
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
+        "unidade": "m3",
+        "quantitativo": 15600.0,
+        "predecessores": [
+          {
+            "item_id": "1.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.1",
+        "ordem": 3,
+        "cpu_id": "CPU-SUPP-001",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - dmt de 400 a 600 m - caminho de serviço em leito natural - com carregadeira e caminhão basculante de 14 m³ - volume geométrico",
+        "unidade": "m3",
+        "quantitativo": 1194.65,
+        "predecessores": [
+          {
+            "item_id": "1.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.2",
+        "ordem": 4,
+        "cpu_id": "CPU-SUPP-002",
+        "descricao": "Escavação, carga e transporte de material de 1° cat. - dmt: 4700m (importação solo de jazida interna ao TBR070)",
+        "unidade": "m3",
+        "quantitativo": 51353.78,
+        "predecessores": [
+          {
+            "item_id": "2.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "2.3",
+        "ordem": 5,
+        "cpu_id": "CPU-SUPP-003",
+        "descricao": "Compactação de aterros a 100% do proctor intermediário (camada final) - volume homogeneizado (vol. geométrico x 1,25)",
+        "unidade": "m3",
+        "quantitativo": 40421.87,
+        "predecessores": [
+          {
+            "item_id": "2.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "3.1",
+        "ordem": 6,
+        "cpu_id": "CPU-LIMP-001",
+        "descricao": "Demolição mecânica de pavimento",
+        "unidade": "m3",
+        "quantitativo": 4200.0,
+        "predecessores": [
+          {
+            "item_id": "2.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "3.3",
+        "ordem": 7,
+        "cpu_id": "CPU-LIMP-003",
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
+        "unidade": "m3",
+        "quantitativo": 6300.0,
+        "predecessores": [
+          {
+            "item_id": "3.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.1",
+        "ordem": 8,
+        "cpu_id": "CPU-ESCA-001",
+        "descricao": "Regularização do subleito",
+        "unidade": "m2",
+        "quantitativo": 37509.04,
+        "predecessores": [
+          {
+            "item_id": "3.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.2",
+        "ordem": 9,
+        "cpu_id": "CPU-ESCA-002",
+        "descricao": "Reforço de subleito com solo de jazida selecionada - volume geométrico",
+        "unidade": "m3",
+        "quantitativo": 22505.42,
+        "predecessores": [
+          {
+            "item_id": "4.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.3",
+        "ordem": 10,
+        "cpu_id": "CPU-ESCA-003",
+        "descricao": "Sub-base estabilizada granulometricamente com mistura solo brita (70% - 30%) na pista com material de jazida e brita comercial - volume geométrico",
+        "unidade": "m3",
+        "quantitativo": 5626.36,
+        "predecessores": [
+          {
+            "item_id": "4.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.4",
+        "ordem": 11,
+        "cpu_id": "CPU-ESCA-004",
+        "descricao": "Base ou sub-base de brita graduada executada com vibroacabadora - brita comercial",
+        "unidade": "m3",
+        "quantitativo": 5501.33,
+        "predecessores": [
+          {
+            "item_id": "4.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.5",
+        "ordem": 12,
+        "cpu_id": "CPU-ESCA-005",
+        "descricao": "Imprimação com asfalto diluído",
+        "unidade": "m2",
+        "quantitativo": 35842.04,
+        "predecessores": [
+          {
+            "item_id": "4.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.6",
+        "ordem": 13,
+        "cpu_id": "CPU-ESCA-006",
+        "descricao": "Pintura de ligação (RR1C)",
+        "unidade": "m2",
+        "quantitativo": 71684.08,
+        "predecessores": [
+          {
+            "item_id": "4.5",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.7",
+        "ordem": 14,
+        "cpu_id": "CPU-ESCA-007",
+        "descricao": "Binder - camada de ligação (FAIXA B)",
+        "unidade": "t",
+        "quantitativo": 5851.41,
+        "predecessores": [
+          {
+            "item_id": "4.6",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "4.8",
+        "ordem": 15,
+        "cpu_id": "CPU-ESCA-008",
+        "descricao": "Cbuq - concreto betuminoso usinado a quente",
+        "unidade": "t",
+        "quantitativo": 5401.3,
+        "predecessores": [
+          {
+            "item_id": "4.7",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.1",
+        "ordem": 16,
+        "cpu_id": "CPU-EQUIP-001",
+        "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø600mm - areia e brita comerciais (incluso fornecimento e execução)",
+        "unidade": "m",
+        "quantitativo": 60.0,
+        "predecessores": [
+          {
+            "item_id": "4.8",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.2",
+        "ordem": 17,
+        "cpu_id": "CPU-EQUIP-002",
+        "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø1000mm - areia e brita comerciais (incluso fornecimento e execução)",
+        "unidade": "m",
+        "quantitativo": 20.0,
+        "predecessores": [
+          {
+            "item_id": "5.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.3",
+        "ordem": 18,
+        "cpu_id": "CPU-EQUIP-003",
+        "descricao": "Boca de BSTC D = 0,60 m - esconsidade 0° - areia e brita comerciais - alas retas",
+        "unidade": "und",
+        "quantitativo": 6.0,
+        "predecessores": [
+          {
+            "item_id": "5.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.4",
+        "ordem": 19,
+        "cpu_id": "CPU-EQUIP-004",
+        "descricao": "Boca de BSTC D = 1,00 m - esconsidade 0° - areia e brita comerciais - alas retas",
+        "unidade": "und",
+        "quantitativo": 2.0,
+        "predecessores": [
+          {
+            "item_id": "5.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.5",
+        "ordem": 20,
+        "cpu_id": "CPU-EQUIP-005",
+        "descricao": "Escavação mecanizada de cavas ou valas de solo local - volume geométrico",
+        "unidade": "m³",
+        "quantitativo": 1732.48,
+        "predecessores": [
+          {
+            "item_id": "5.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.6",
+        "ordem": 21,
+        "cpu_id": "CPU-EQUIP-006",
+        "descricao": "Regularização de valas com apiloamento do fundo",
+        "unidade": "m²",
+        "quantitativo": 2977.1,
+        "predecessores": [
+          {
+            "item_id": "5.5",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.7",
+        "ordem": 22,
+        "cpu_id": "CPU-EQUIP-007",
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
+        "unidade": "m³",
+        "quantitativo": 1732.48,
+        "predecessores": [
+          {
+            "item_id": "5.6",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "5.8",
+        "ordem": 23,
+        "cpu_id": "CPU-EQUIP-008",
+        "descricao": "Hidrossemeadura para cobertura de taludes",
+        "unidade": "m²",
+        "quantitativo": 2977.1,
+        "predecessores": [
+          {
+            "item_id": "5.7",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ]
+      },
+      {
+        "item_id": "7.1",
+        "ordem": 24,
+        "cpu_id": "CPU-SEC7-001",
+        "descricao": "Hidrossemeadura para cobertura de taludes",
+        "unidade": "m2",
+        "quantitativo": 85475.66,
+        "predecessores": []
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "1.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.6",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.7",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.8",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.6",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.7",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.8",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "7.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ],
+    "rcpsp_spec": {}
+  }
 }

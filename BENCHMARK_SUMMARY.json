@@ -1,0 +1,104 @@
+{
+  "meta": {
+    "timestamp": "2026-06-07T21:05:51.427879+00:00",
+    "total": 12
+  },
+  "summary": [
+    {
+      "Projeto": "AGIS",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "CTC",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "LUNDIN",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "MARA_ROSA",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "MATEC_GUARULHOS",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "MATEC_HINES",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "MATEC_UBERLANDIA",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "ODFJELL",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "PRIVATE_LOG",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "ROSH",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "RUMO",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    },
+    {
+      "Projeto": "VALE",
+      "Status": "INVIAVEL/AVISO",
+      "Delta Direto %": "N/A",
+      "Delta Indireto %": "N/A",
+      "Delta Total %": "N/A",
+      "Delta Venda %": "N/A"
+    }
+  ]
+}

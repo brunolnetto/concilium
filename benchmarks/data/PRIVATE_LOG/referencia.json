@@ -25,14 +25,7 @@
         "descricao": "Limpeza mecanizada de camada vegetal (20cm), incluso carga, transporte a um dt maximo de 1km e espalhamento",
         "unidade": "m2",
         "quantitativo": 487243.38,
-        "predecessores": [
-          {
-            "item_id": "1",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.0
-          }
-        ]
+        "predecessores": []
       },
       {
         "item_id": "1.2",

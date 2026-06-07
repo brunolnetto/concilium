@@ -4,5 +4,36 @@
     "custo_direto_sem_bdi": 19399136.88,
     "custo_indireto": 9300630.35,
     "total_projeto": 28699767.23
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "MATEC_GUARULHOS",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    }
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "0",
+        "ordem": 1,
+        "cpu_id": "CPU-UNKNOWN",
+        "descricao": "ESPECIFICAÇÃO",
+        "unidade": "un",
+        "quantitativo": 1.0,
+        "predecessores": []
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "0",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ],
+    "rcpsp_spec": {}
   }
 }

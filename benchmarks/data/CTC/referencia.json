@@ -25,14 +25,7 @@
         "descricao": "REMOÇÃO DO SOLO VEGETAL, E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA",
         "unidade": "m2",
         "quantitativo": 330133.0,
-        "predecessores": [
-          {
-            "item_id": "1",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.0
-          }
-        ]
+        "predecessores": []
       },
       {
         "item_id": "1.2",
@@ -121,14 +114,7 @@
         "descricao": "REMOÇÃO DO SOLO VEGETAL, E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA",
         "unidade": "M3",
         "quantitativo": 79231.92,
-        "predecessores": [
-          {
-            "item_id": "1",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.0
-          }
-        ]
+        "predecessores": []
       }
     ],
     "cronograma": [

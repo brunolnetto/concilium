@@ -4,5 +4,36 @@
     "custo_direto_sem_bdi": 3324281.23,
     "custo_indireto": 2975675.94,
     "total_projeto": 6299957.17
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "ODFJELL",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    }
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "0",
+        "ordem": 1,
+        "cpu_id": "CPU-UNKNOWN",
+        "descricao": "CUSTO UNITÁRIO",
+        "unidade": "un",
+        "quantitativo": 1.0,
+        "predecessores": []
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "0",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ],
+    "rcpsp_spec": {}
   }
 }

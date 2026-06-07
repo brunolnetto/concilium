@@ -25,14 +25,7 @@
         "descricao": "Corte de Arvore Isolada, com destocamento com Ø > 45cm",
         "unidade": "un",
         "quantitativo": 30.0,
-        "predecessores": [
-          {
-            "item_id": "2",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.0
-          }
-        ]
+        "predecessores": []
       },
       {
         "item_id": "2.2",
@@ -107,10 +100,10 @@
         "quantitativo": 1.0,
         "predecessores": [
           {
-            "item_id": "3",
+            "item_id": "2.5",
             "tipo": "FS",
             "lag": 0,
-            "completion_threshold_pct": 0.0
+            "completion_threshold_pct": 1.0
           }
         ]
       },
@@ -139,10 +132,10 @@
         "quantitativo": 32000.0,
         "predecessores": [
           {
-            "item_id": "4",
+            "item_id": "3.2",
             "tipo": "FS",
             "lag": 0,
-            "completion_threshold_pct": 0.0
+            "completion_threshold_pct": 1.0
           }
         ]
       },

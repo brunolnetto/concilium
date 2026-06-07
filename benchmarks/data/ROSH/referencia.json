@@ -25,14 +25,7 @@
         "descricao": "Rebaixo Terreno natural - 40 cm",
         "unidade": "m²",
         "quantitativo": 110000.0,
-        "predecessores": [
-          {
-            "item_id": "1",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.0
-          }
-        ]
+        "predecessores": []
       },
       {
         "item_id": "1.2",
@@ -219,10 +212,10 @@
         "quantitativo": 115500.0,
         "predecessores": [
           {
-            "item_id": "2",
+            "item_id": "1.34",
             "tipo": "FS",
             "lag": 0,
-            "completion_threshold_pct": 0.0
+            "completion_threshold_pct": 1.0
           }
         ]
       },
@@ -235,10 +228,10 @@
         "quantitativo": 115500.0,
         "predecessores": [
           {
-            "item_id": "3",
+            "item_id": "2.1",
             "tipo": "FS",
             "lag": 0,
-            "completion_threshold_pct": 0.0
+            "completion_threshold_pct": 1.0
           }
         ]
       }
