@@ -6,25 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 8054,
+      "duration_ms": 16402,
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 1400,
+      "duration_ms": 1930,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 770,
+      "duration_ms": 1171,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 1288,
+      "duration_ms": 1961,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -77,7 +77,7 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "ERRO",
-      "duration_ms": 978,
+      "duration_ms": 606,
       "avisos": [
         "ADR-077: Contrato ESC-1CAT — 1 instância(s) com standby >35%: ESC-1CAT-02: 23w idle. Taxa global: 64.1%. Custo standby: R$ 138,000.00.",
         "ADR-077: Contrato ESC-3CAT — 3 instância(s) com standby >35%: ESC-3CAT-04: 21w idle; ESC-3CAT-05: 21w idle; ESC-3CAT-06: 21w idle. Taxa global: 79.4%. Custo standby: R$ 756,000.00."
@@ -99,13 +99,13 @@
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 380,
+      "duration_ms": 238,
       "avisos": []
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 485,
+      "duration_ms": 338,
       "avisos": [
         "Razão indireto/direto 102.0% fora da faixa [10.0%, 50.0%]"
       ]
@@ -113,15 +113,15 @@
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 582,
+      "duration_ms": 224,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 1639,
+      "duration_ms": 474,
       "avisos": [
-        "Margem operacional 52.18% | status=VERMELHO | preço R$ 46,182,103 (operacional) vs R$ 81,098,987 (catálogo)",
+        "Margem operacional 16.49% | status=VERMELHO | preço R$ 46,182,103 (operacional) vs R$ 81,098,987 (catálogo)",
         "Item 'eap-1_0': divergência de produtividade -53.6% não explicada por clima (fe_nec=0.48 × clima=0.96 = 0.46). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=0.877 vs calibrado=0.877).",
         "Item 'eap-1_2': divergência de produtividade -12.9% não explicada por clima (fe_nec=1.00 × clima=0.87 = 0.87). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=8.461 vs calibrado=8.463).",
         "Item 'eap-1_3': divergência de produtividade -59.8% não explicada por clima (fe_nec=0.49 × clima=0.81 = 0.40). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=10.094 vs calibrado=10.094).",
@@ -136,13 +136,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 207,
+      "duration_ms": 220,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 12055,
+      "duration_ms": 7226,
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -150,25 +150,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 111,
+      "duration_ms": 376,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 96,
+      "duration_ms": 422,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 99,
+      "duration_ms": 273,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 217,
+      "duration_ms": 301,
       "avisos": []
     }
   ],
@@ -181,16 +181,16 @@
       "preco_venda": 76961261.88
     },
     "ferramenta": {
-      "custo_direto": 19199574.72,
-      "custo_direto_equipes": 19199574.72,
+      "custo_direto": 48138895.74,
+      "custo_direto_equipes": 48138895.74,
       "custo_direto_pu_q": 46843791.49,
       "custo_indireto": 19584539.27,
-      "custo_total": 38784113.99,
+      "custo_total": 67723435.01,
       "preco_venda": 81098986.57,
       "preco_venda_plus_eq": 46182103.11,
       "preco_venda_catalogo": 81098986.57,
       "preco_venda_operacional": 81098986.57,
-      "bdi_lucro_impostos": 1.0910362059814065
+      "bdi_lucro_impostos": 0.19750255665597827
     },
     "ferramenta_breakdown_direto": {
       "base": "pu_q",
@@ -198,9 +198,9 @@
       "equipamentos_total": 27931069.01,
       "diesel_total": 11054150.18,
       "materiais_total": 0.0,
-      "direto_total": 19199574.72,
+      "direto_total": 48138895.74,
       "direto_total_pu_q": 46843791.49,
-      "direto_total_equipes": 19199574.72
+      "direto_total_equipes": 48138895.74
     },
     "ferramenta_breakdown_indireto": {
       "adm": 13766750.4,
@@ -212,13 +212,13 @@
     },
     "actionable_insights": {
       "criticidade": "2 A, 3 B, 3 C",
-      "sensibilidade": "2 alavancas corretivas, 0 oportunidades",
+      "sensibilidade": "1 alavancas corretivas, 0 oportunidades",
       "intervencao": "Recomendacao Principal: Repair (AMARELO/VERMELHO->VERDE)"
     },
     "deltas": {
       "custo_direto": {
-        "absoluto": -27667758.63,
-        "percentual": -59.03
+        "absoluto": 1271562.39,
+        "percentual": 2.71
       },
       "custo_indireto": {
         "absoluto": -0.1,
@@ -236,9 +236,9 @@
     "composicao_final": {
       "custo_direto": {
         "referencia": 46867333.35,
-        "ferramenta": 19199574.72,
-        "delta_absoluto": -27667758.63,
-        "delta_percentual": -59.03
+        "ferramenta": 48138895.74,
+        "delta_absoluto": 1271562.39,
+        "delta_percentual": 2.71
       },
       "custo_indireto": {
         "referencia": 19584539.37,
@@ -248,9 +248,9 @@
       },
       "custo_total": {
         "referencia": 66451872.72,
-        "ferramenta": 38784113.99,
-        "delta_absoluto": -27667758.73,
-        "delta_percentual": -41.64
+        "ferramenta": 67723435.01,
+        "delta_absoluto": 1271562.29,
+        "delta_percentual": 1.91
       },
       "preco_venda": {
         "referencia": 76961261.88,
@@ -272,9 +272,9 @@
         "equipamentos_total": 27931069.01,
         "diesel_total": 11054150.18,
         "materiais_total": 0.0,
-        "direto_total": 19199574.72,
+        "direto_total": 48138895.74,
         "direto_total_pu_q": 46843791.49,
-        "direto_total_equipes": 19199574.72
+        "direto_total_equipes": 48138895.74
       },
       "indireto": {
         "adm": 13766750.4,
@@ -287,24 +287,24 @@
     }
   },
   "quality_gates": {
-    "decision": "BLOQUEADO",
-    "worst_severity": "S3",
-    "critical_metric_over_10pct": true,
+    "decision": "APROVADO_COM_RESSALVAS",
+    "worst_severity": "S1",
+    "critical_metric_over_10pct": false,
     "items": [
       {
         "metric": "custo_direto",
         "fase": "06-consolidacao",
         "valor_referencia": 46867333.35,
-        "valor_calculado": 19199574.72,
-        "delta_absoluto": -27667758.63,
-        "delta_percentual": -59.03,
-        "classe": "CRITICO",
-        "severidade": "S3",
+        "valor_calculado": 48138895.74,
+        "delta_absoluto": 1271562.39,
+        "delta_percentual": 2.71,
+        "classe": "IDEAL",
+        "severidade": "S0",
         "causa_categoria": "DERIVACAO_PIPELINE",
-        "acao_recomendada": "Bloquear pipeline e revalidar baseline de referencia",
-        "owner": "engenharia-benchmarks",
+        "acao_recomendada": "Sem acao corretiva obrigatoria",
+        "owner": "benchmark-auditoria",
         "sla_horas": 0,
-        "status_acao": "ABERTA"
+        "status_acao": "NAO_APLICAVEL"
       },
       {
         "metric": "custo_indireto",
@@ -358,16 +358,16 @@
       "metric": "custo_direto",
       "fase": "06-consolidacao",
       "valor_referencia": 46867333.35,
-      "valor_calculado": 19199574.72,
-      "delta_absoluto": -27667758.63,
-      "delta_percentual": -59.03,
-      "classe": "CRITICO",
-      "severidade": "S3",
+      "valor_calculado": 48138895.74,
+      "delta_absoluto": 1271562.39,
+      "delta_percentual": 2.71,
+      "classe": "IDEAL",
+      "severidade": "S0",
       "causa_categoria": "DERIVACAO_PIPELINE",
-      "acao_recomendada": "Bloquear pipeline e revalidar baseline de referencia",
-      "owner": "engenharia-benchmarks",
+      "acao_recomendada": "Sem acao corretiva obrigatoria",
+      "owner": "benchmark-auditoria",
       "sla_horas": 0,
-      "status_acao": "ABERTA"
+      "status_acao": "NAO_APLICAVEL"
     },
     {
       "metric": "custo_indireto",

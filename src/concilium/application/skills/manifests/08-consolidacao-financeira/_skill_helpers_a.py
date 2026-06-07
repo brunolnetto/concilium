@@ -218,7 +218,10 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     """Returns (venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto)."""
     venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento)
     venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento)
-    custo_direto_equipe = sum(e.custo_total for e in canonical_in.equipes_diretas)
+    # ADR-091: Multiplicar custo_total por num_equipes_base (equipes paralelas alocadas)
+    # Após ADR-091, cada EquipeDireta tem custo_total = custo_uma_equipe e
+    # num_equipes_base = quantas equipes paralelas representa
+    custo_direto_equipe = sum(e.custo_total * max(1, getattr(e, "num_equipes_base", 1) or 1) for e in canonical_in.equipes_diretas)
     custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
     return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto_equipe + custo_materiais
 
