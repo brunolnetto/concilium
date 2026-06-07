@@ -29,7 +29,13 @@
       "Bash(git commit -m 'feat\\(benchmarks\\): organize outputs into visualizations/ and reports/ subdirectories *)",
       "Bash(concilium benchmark *)",
       "Bash(python3 -m py_compile /home/pingu/github/agente-gerente-de-engenharia/src/concilium/application/skills/manifests/08-consolidacao-financeira/skill.py)",
-      "Bash(git commit -m 'fix\\(consolidacao\\): use venda_catalogo_plus instead of venda_plus for consolidated result *)"
+      "Bash(git commit -m 'fix\\(consolidacao\\): use venda_catalogo_plus instead of venda_plus for consolidated result *)",
+      "Bash(grep -E '\\\\.\\(txt|xlsm\\)$')",
+      "Bash(git checkout *)",
+      "Bash(git reset *)",
+      "Bash(git commit -m ' *)",
+      "Bash(gh pr create --title 'feat\\(benchmark-data\\): adicionar dados curados de planejamento' --body ' *)",
+      "Bash(git commit -m 'fix\\(skill-05\\): adicionar importação faltante de _enrich_equipes_com_decomposicao_instancial *)"
     ]
   }
 }
