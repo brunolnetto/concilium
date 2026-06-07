@@ -101,7 +101,7 @@ r = CodebaseStatsReporter( \
     coverage_file='$(COV_DIR)/coverage.json', \
     report_file=rep if rep_ok else None, \
     radon_root='src', fs_root='src', tree_root='src'); \
-p = r.save_report('$(COV_DIR)/report.md', include_tree=False); \
+p = r.save_report('$(COV_DIR)/report.md', include_tree=False, blame_limit=0); \
 print(f'  Codebase stats → {p}')"
 
 # ── File sizes / Disk usage ───────────────────────────────────────────────────
