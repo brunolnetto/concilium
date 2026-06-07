@@ -166,23 +166,40 @@ def _build_dag_from_precedencias(
     arestas_validas: list[tuple[str, str, str, int]] = []
 
     # Fonte 1: EapItem.predecessores tipados
+    # Build map from item_id to first activity_id (assume one activity per EAP item for scheduling)
+    item_to_first_activity: dict[str, str] = {}
+    for activity_id in nos:
+        # activity_id format: "1.1-atv-1", "1.2-atv-1", etc.
+        # Extract item_id by removing "-atv-N" suffix
+        parts = activity_id.rsplit("-atv-", 1)
+        if len(parts) == 2:
+            item_id = parts[0]
+            if item_id not in item_to_first_activity:
+                item_to_first_activity[item_id] = activity_id
+
     eap_by_id = {item.item_id: item for item in eap}
     for item in eap:
-        suc_id = item.item_id
-        if suc_id not in nos_set:
-            continue
+        item_id = item.item_id
+        if item_id not in item_to_first_activity:
+            continue  # No activities for this item
+
+        suc_activity = item_to_first_activity[item_id]
+
         for prec in item.predecessores_tipados():
-            pred_id = prec.item_id
-            if pred_id in nos_set:
-                arestas_validas.append((pred_id, suc_id, prec.tipo, prec.lag))
-            else:
+            pred_item_id = prec.item_id
+            pred_activity = item_to_first_activity.get(pred_item_id)
+
+            if not pred_activity:
                 validacoes.append(
                     ValidacaoItem(
                         codigo="VAL-DAG-01",
                         status="ERRO",
-                        mensagem=f"Precedência inválida: {pred_id} -> {suc_id} (item não encontrado na EAP)",
+                        mensagem=f"Precedência inválida: {pred_item_id} -> {item_id} (item não encontrado na EAP)",
                     )
                 )
+            else:
+                # Create single edge from predecessor activity to successor activity
+                arestas_validas.append((pred_activity, suc_activity, prec.tipo, prec.lag))
 
     # Fonte 2: precedencias_raw (legado — apenas FS sem lag)
     for p in precedencias_raw:
