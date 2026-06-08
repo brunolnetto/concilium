@@ -3,7 +3,10 @@
     "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
     "data_inicio": "2026-06-01",
     "data_termino": "2027-06-27",
-    "localizacao": "Ceara, Brasil",
+    "localizacao": {
+      "tipo": "endereco_descritivo",
+      "valor": "Ceara, Brasil"
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -14,19 +17,13 @@
     "eap": [
       {
         "item_id": "eap-1_0",
-        "ordem": 1,
         "cpu_id": "CPU-TERRA-ATI-003",
-        "descricao": "Desmatamento e limpeza de area vegetada",
-        "unidade": "m2",
         "quantitativo": 2400000.0,
         "predecessores": []
       },
       {
         "item_id": "eap-1_1",
-        "ordem": 2,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
-        "descricao": "Esc/carg/transp 1aCat DMT<=2000m",
-        "unidade": "m3",
         "quantitativo": 107463.1053,
         "predecessores": [
           {
@@ -39,10 +36,7 @@
       },
       {
         "item_id": "eap-1_2",
-        "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000",
-        "descricao": "Esc/carg/transp 1aCat DMT<=3000m",
-        "unidade": "m3",
         "quantitativo": 336915.0947,
         "predecessores": [
           {
@@ -55,10 +49,7 @@
       },
       {
         "item_id": "eap-1_3",
-        "ordem": 4,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
-        "descricao": "Esc/carg/transp 2aCat DMT<=2000m",
-        "unidade": "m3",
         "quantitativo": 105311.3323,
         "predecessores": [
           {
@@ -71,10 +62,7 @@
       },
       {
         "item_id": "eap-1_4",
-        "ordem": 5,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT3000",
-        "descricao": "Esc/carg/transp 2aCat DMT<=3000m",
-        "unidade": "m3",
         "quantitativo": 585945.7677,
         "predecessores": [
           {
@@ -87,10 +75,7 @@
       },
       {
         "item_id": "eap-1_5",
-        "ordem": 6,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000",
-        "descricao": "Esc/carg/transp 3aCat DMT<=2000m",
-        "unidade": "m3",
         "quantitativo": 304634.4556,
         "predecessores": [
           {
@@ -103,10 +88,7 @@
       },
       {
         "item_id": "eap-1_6",
-        "ordem": 7,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Esc/carg/transp 3aCat DMT<=3000m",
-        "unidade": "m3",
         "quantitativo": 676519.0444,
         "predecessores": [
           {
@@ -119,10 +101,7 @@
       },
       {
         "item_id": "eap-1_7",
-        "ordem": 8,
         "cpu_id": "CPU-TERRA-COMPAC-PN",
-        "descricao": "Compactacao aterros 100% Proctor Normal",
-        "unidade": "m3",
         "quantitativo": 1135635.3,
         "predecessores": [
           {
@@ -135,10 +114,7 @@
       },
       {
         "item_id": "eap-1_8",
-        "ordem": 9,
         "cpu_id": "CPU-TERRA-COMPAC-PI",
-        "descricao": "Compactacao aterros 100% Proctor Intermediario",
-        "unidade": "m3",
         "quantitativo": 29411.0,
         "predecessores": [
           {
@@ -157,10 +133,7 @@
       },
       {
         "item_id": "eap-1_9",
-        "ordem": 10,
         "cpu_id": "CPU-TERRA-CORPO-ATERRO-3CAT",
-        "descricao": "Construcao corpo aterro material 3a categoria",
-        "unidade": "m3",
         "quantitativo": 981153.5,
         "predecessores": [
           {
@@ -173,10 +146,7 @@
       },
       {
         "item_id": "eap-1_10",
-        "ordem": 11,
         "cpu_id": "CPU-TERRA-COMPAC-FINAL-ROCHA",
-        "descricao": "Compactacao camada final aterro sobre rocha",
-        "unidade": "m3",
         "quantitativo": 24721.17,
         "predecessores": [
           {
@@ -191,7 +161,6 @@
     "cronograma": [
       {
         "item_id": "eap-1_0",
-        "producao_diaria": 6000.0,
         "semanas": {
           "2026-W23": {
             "num_equipes": 1
@@ -242,7 +211,6 @@
       },
       {
         "item_id": "eap-1_1",
-        "producao_diaria": 1912.32,
         "semanas": {
           "2026-W28": {
             "num_equipes": 1
@@ -281,7 +249,6 @@
       },
       {
         "item_id": "eap-1_2",
-        "producao_diaria": 1912.32,
         "semanas": {
           "2026-W28": {
             "num_equipes": 1
@@ -422,7 +389,6 @@
       },
       {
         "item_id": "eap-1_3",
-        "producao_diaria": 1325.92,
         "semanas": {
           "2026-W25": {
             "num_equipes": 1
@@ -455,7 +421,6 @@
       },
       {
         "item_id": "eap-1_4",
-        "producao_diaria": 1325.92,
         "semanas": {
           "2026-W25": {
             "num_equipes": 1
@@ -614,7 +579,6 @@
       },
       {
         "item_id": "eap-1_5",
-        "producao_diaria": 1159.36,
         "semanas": {
           "2026-W25": {
             "num_equipes": 1
@@ -674,7 +638,6 @@
       },
       {
         "item_id": "eap-1_6",
-        "producao_diaria": 1159.36,
         "semanas": {
           "2026-W25": {
             "num_equipes": 1
@@ -791,7 +754,6 @@
       },
       {
         "item_id": "eap-1_7",
-        "producao_diaria": 1537.84,
         "semanas": {
           "2026-W28": {
             "num_equipes": 2
@@ -950,7 +912,6 @@
       },
       {
         "item_id": "eap-1_8",
-        "producao_diaria": 1196.08,
         "semanas": {
           "2027-W23": {
             "num_equipes": 1
@@ -965,7 +926,6 @@
       },
       {
         "item_id": "eap-1_9",
-        "producao_diaria": 1920.0,
         "semanas": {
           "2026-W25": {
             "num_equipes": 2
@@ -1127,7 +1087,6 @@
       },
       {
         "item_id": "eap-1_10",
-        "producao_diaria": 800.0,
         "semanas": {
           "2027-W18": {
             "num_equipes": 1
@@ -1151,7 +1110,6 @@
       }
     ],
     "bdi": {
-      "bdi_lucro_impostos": 0.29974983,
       "mao_obra": {
         "ac": 0.05,
         "df": 0.015,
@@ -1492,278 +1450,7 @@
         "driver": "projeto",
         "mao_obra": []
       }
-    ],
-    "cenarios": [
-      {
-        "id": "M0_BASE_MANUAL",
-        "description": "Baseline MANUAL — cronograma real do engenheiro de referência; sem restrições de pool RCPSP",
-        "modo": "MANUAL",
-        "overrides": {}
-      },
-      {
-        "id": "A0_BASE_AUTO",
-        "description": "Baseline AUTO — RCPSP otimizado (ESC-3CAT=6, ESC-2CAT=2, ESC-1CAT=1, deadline=56w); pools reduzidos ADR-076 para eliminar ociosidade ~R$33M",
-        "modo": "AUTO",
-        "overrides": {}
-      },
-      {
-        "id": "A1_ESC3_8",
-        "description": "ESC-3CAT abaixo do pico simultâneo (8 < 4+4+2=10) — deve gerar cronograma inviável e makespan > deadline",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ESC-3CAT": 8
-            }
-          }
-        }
-      },
-      {
-        "id": "A2_ESC3_12",
-        "description": "ESC-3CAT com folga de 20% (12) — impacto de recursos extras em makespan comparado ao baseline",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ESC-3CAT": 12
-            }
-          }
-        }
-      },
-      {
-        "id": "A3_ESC3_14",
-        "description": "ESC-3CAT com folga de 40% (14) — limite superior de escavação 3aCat para calibração de teto",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ESC-3CAT": 14
-            }
-          }
-        }
-      },
-      {
-        "id": "A4_ATERRO_6",
-        "description": "ATERRO aumentado de 5 para 6 — elimina serialização forçada de eap-1_7(3)+eap-1_8(2)+eap-1_10(1)=6",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ATERRO": 6
-            }
-          }
-        }
-      },
-      {
-        "id": "A5_ESC2_6",
-        "description": "ESC-2CAT aumentado de 4 para 6 — folga de 50% acima do pico (eap-1_3+eap-1_4=4)",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ESC-2CAT": 6
-            }
-          }
-        }
-      },
-      {
-        "id": "A6_ESC1_4",
-        "description": "ESC-1CAT duplicado (2→4) — menor impacto esperado, eap-1_1 e eap-1_2 não são caminho crítico",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ESC-1CAT": 4
-            }
-          }
-        }
-      },
-      {
-        "id": "A7_DEADLINE_52",
-        "description": "Prazo comprimido de 56 para 52 semanas — verifica se o scheduler mantém viabilidade sob pressão",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "deadline_weeks": 52
-          }
-        }
-      },
-      {
-        "id": "A8_DEADLINE_60",
-        "description": "Prazo estendido de 56 para 60 semanas — verifica se o scheduler encontra soluções de maior qualidade com mais margem",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "deadline_weeks": 60
-          }
-        }
-      },
-      {
-        "id": "A9_ESC3_10_ATERRO_6",
-        "description": "Combinação dual: ESC-3CAT mínimo viável (10) + ATERRO sem serialização (6)",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ESC-3CAT": 10,
-              "ATERRO": 6
-            }
-          }
-        }
-      },
-      {
-        "id": "A10_ESC3_12_ATERRO_6_ESC2_6",
-        "description": "Tripla expansão: ESC-3CAT=12 + ATERRO=6 + ESC-2CAT=6 — mobilização máxima combinada para escavação e compactação",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "ESC-2CAT": 6,
-              "ESC-3CAT": 12,
-              "ATERRO": 6
-            }
-          }
-        }
-      },
-      {
-        "id": "A11_FULL_RELAX",
-        "description": "Relaxamento total (2× todos os pools) — limite teórico mínimo de makespan; referência superior do espaço de plano",
-        "modo": "AUTO",
-        "overrides": {
-          "rcpsp_spec": {
-            "resource_pool": {
-              "DESMAT": 12,
-              "ESC-1CAT": 4,
-              "ESC-2CAT": 8,
-              "ESC-3CAT": 20,
-              "ATERRO": 10
-            }
-          }
-        }
-      }
-    ],
-    "rcpsp_spec": {
-      "deadline_weeks": 56,
-      "activities": [
-        {
-          "item_id": "eap-1_0",
-          "duration_weeks": 35,
-          "required_resources": {
-            "DESMAT": 2
-          }
-        },
-        {
-          "item_id": "eap-1_1",
-          "duration_weeks": 45,
-          "required_resources": {
-            "ESC-1CAT": 1
-          }
-        },
-        {
-          "item_id": "eap-1_2",
-          "duration_weeks": 56,
-          "required_resources": {
-            "ESC-1CAT": 1
-          }
-        },
-        {
-          "item_id": "eap-1_3",
-          "duration_weeks": 51,
-          "required_resources": {
-            "ESC-2CAT": 2
-          }
-        },
-        {
-          "item_id": "eap-1_4",
-          "duration_weeks": 51,
-          "required_resources": {
-            "ESC-2CAT": 2
-          }
-        },
-        {
-          "item_id": "eap-1_5",
-          "duration_weeks": 49,
-          "required_resources": {
-            "ESC-3CAT": 3
-          }
-        },
-        {
-          "item_id": "eap-1_6",
-          "duration_weeks": 49,
-          "required_resources": {
-            "ESC-3CAT": 3
-          }
-        },
-        {
-          "item_id": "eap-1_7",
-          "duration_weeks": 51,
-          "required_resources": {
-            "ATERRO": 4
-          }
-        },
-        {
-          "item_id": "eap-1_8",
-          "duration_weeks": 3,
-          "required_resources": {
-            "ATERRO": 1
-          }
-        },
-        {
-          "item_id": "eap-1_9",
-          "duration_weeks": 56,
-          "required_resources": {
-            "ESC-3CAT": 3
-          }
-        },
-        {
-          "item_id": "eap-1_10",
-          "duration_weeks": 6,
-          "required_resources": {
-            "ATERRO": 1
-          }
-        }
-      ],
-      "resource_pool": {
-        "DESMAT": 2,
-        "ESC-1CAT": 2,
-        "ESC-2CAT": 2,
-        "ESC-3CAT": 6,
-        "ATERRO": 5
-      },
-      "precedence": [],
-      "resource_costs": {
-        "DESMAT": {
-          "custo_mob_unit": 20000.0,
-          "custo_demob_unit": 10000.0,
-          "custo_idle_semanal_unit": 3000.0,
-          "unidade_faturamento": "dia_cal"
-        },
-        "ESC-1CAT": {
-          "custo_mob_unit": 40000.0,
-          "custo_demob_unit": 20000.0,
-          "custo_idle_semanal_unit": 6000.0,
-          "unidade_faturamento": "dia_cal"
-        },
-        "ESC-2CAT": {
-          "custo_mob_unit": 60000.0,
-          "custo_demob_unit": 30000.0,
-          "custo_idle_semanal_unit": 9000.0,
-          "unidade_faturamento": "dia_cal"
-        },
-        "ESC-3CAT": {
-          "custo_mob_unit": 80000.0,
-          "custo_demob_unit": 40000.0,
-          "custo_idle_semanal_unit": 12000.0,
-          "unidade_faturamento": "dia_cal"
-        },
-        "ATERRO": {
-          "custo_mob_unit": 50000.0,
-          "custo_demob_unit": 25000.0,
-          "custo_idle_semanal_unit": 7500.0,
-          "unidade_faturamento": "dia_cal"
-        }
-      }
-    }
+    ]
   },
   "resultado": {
     "benchmark_confronto_referencia": {
@@ -1773,5 +1460,7 @@
       "preco_venda": 76961261.88
     },
     "bdi_lucro_impostos": 0.29974983
-  }
+  },
+  "_schema_version": "v3",
+  "_schema_upgraded_from": "v2"
 }
