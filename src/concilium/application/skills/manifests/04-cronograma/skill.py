@@ -635,7 +635,7 @@ def _compute_productive_weeks(
     if not cpu:
         return None
     P = _resolve_productivity(cpu, producao_lookup, validacoes)
-    if P <= 0:
+    if not P or P <= 0:
         return None
     regime = canonical_in.projeto.regime_trabalho
     prod_per_week = P * regime.horas_dia * regime.dias_semana * n_resources
@@ -1681,7 +1681,7 @@ def _determine_mode_and_distribuicao(
     """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed)."""
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
-        mode = "AUTO_SCHEDULE"
+        mode = "AUTO_SCHEDULE (rcpsp_spec)"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO (rcpsp_spec)."))
         # ADR-072: pass lookups for productive-duration derivation
         schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
