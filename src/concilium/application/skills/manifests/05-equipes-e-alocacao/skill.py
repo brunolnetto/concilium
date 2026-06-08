@@ -96,6 +96,31 @@ def run_equipes_e_alocacao(
 
     equipes = _build_dimensionamento(canonical_in, inputs, catalogo, ctx, validacoes)
 
+    # ADR-107: Reconciliar custo_total com planejamento (fonte de verdade)
+    # Se spec.planejamento[item_id] existe, use seu custo_sem_bdi como custo_total
+    planejamento_map = {}
+    if hasattr(canonical_in, 'planejamento') and canonical_in.planejamento:
+        planejamento_map = {p.item_id: p for p in canonical_in.planejamento}
+
+    for eq in equipes:
+        if eq.item_id in planejamento_map:
+            plan = planejamento_map[eq.item_id]
+            custo_ref = float(getattr(plan, 'custo_sem_bdi', None) or 0.0)
+            if custo_ref > 0 and abs(custo_ref - eq.custo_total) > 1.0:
+                desvio = abs(custo_ref - eq.custo_total)
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-PLANEJAMENTO-OVERRIDE",
+                        status="AVISO",
+                        mensagem=(
+                            f"Item {eq.item_id}: custo_total ajustado "
+                            f"(recalc R$ {eq.custo_total:,.2f} → planejamento R$ {custo_ref:,.2f}, "
+                            f"desvio R$ {desvio:,.2f})"
+                        ),
+                    )
+                )
+                eq.custo_total = round(custo_ref, 2)
+
     # ADR-104 Checkpoint 1: Estágio 1 — custo_inst_* deve estar None (sem pool contracts ainda)
     for eq in equipes:
         if eq.custo_inst_mo is not None:

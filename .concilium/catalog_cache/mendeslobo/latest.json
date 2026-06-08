@@ -1,9 +1,9 @@
 {
   "meta": {
-    "snapshot_id": "8898c7f0-60d2-43be-99bc-d7df68c45e76",
+    "snapshot_id": "acdafef0-e9b8-4151-92dc-fb42aeeb9935",
     "catalog_name": "mendeslobo",
     "version_hash": "19430c98e6e635d038004f5d04076ac8063a0c99ac746147e214d817dca9f94f",
-    "created_at": "2026-06-07T23:24:45.099110Z",
+    "created_at": "2026-06-08T00:25:57.156004Z",
     "source_url": null,
     "source_tab": null,
     "created_by": "catalog_loader:local_json",

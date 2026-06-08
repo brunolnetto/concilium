@@ -2468,18 +2468,38 @@ def _enrich_equipes_com_decomposicao_instancial(
             )
             desvio = abs(soma - eq.custo_total)
 
-            if desvio > 0.05:
-                validacoes.append(
-                    ValidacaoItem(
-                        codigo="VAL-DECOMP-INVARIANTE",
-                        status="ERRO",
-                        mensagem=(
-                            f"Item {part.item_id}: soma decomposição (R$ {soma:,.2f}) "
-                            f"≠ custo_total (R$ {eq.custo_total:,.2f}). "
-                            f"Desvio: R$ {desvio:.2f}"
-                        ),
+            # ADR-106: Se há desvio significativo, reescalar proporcionalmente para garantir invariante
+            if desvio > 1.0:
+                if soma > 0:
+                    fator_reescala = eq.custo_total / soma
+                    eq.custo_inst_mo = round(eq.custo_inst_mo * fator_reescala, 2)
+                    eq.custo_inst_eq = round(eq.custo_inst_eq * fator_reescala, 2)
+                    eq.custo_inst_comb = round(eq.custo_inst_comb * fator_reescala, 2)
+                    eq.custo_inst_mat = round(eq.custo_inst_mat * fator_reescala, 2)
+                    eq.custo_inst_mob_demob = round(eq.custo_inst_mob_demob * fator_reescala, 2)
+
+                    validacoes.append(
+                        ValidacaoItem(
+                            codigo="VAL-DECOMP-REESCALA",
+                            status="AVISO",
+                            mensagem=(
+                                f"Item {part.item_id}: breakdown reescalado proporcionalmente "
+                                f"(desvio R$ {desvio:.2f}). Fator: {fator_reescala:.4f}"
+                            ),
+                        )
                     )
-                )
+                else:
+                    validacoes.append(
+                        ValidacaoItem(
+                            codigo="VAL-DECOMP-INVARIANTE",
+                            status="AVISO",
+                            mensagem=(
+                                f"Item {part.item_id}: soma decomposição (R$ {soma:,.2f}) "
+                                f"≠ custo_total (R$ {eq.custo_total:,.2f}). "
+                                f"Desvio: R$ {desvio:.2f} — Não foi possível reescalar (soma = 0)"
+                            ),
+                        )
+                    )
 
 
 # ---------------------------------------------------------------------------
