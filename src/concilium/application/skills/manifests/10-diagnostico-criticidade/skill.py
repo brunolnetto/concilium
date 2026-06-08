@@ -202,14 +202,26 @@ def run_diagnostico_criticidade(
 ) -> SkillResult:
     validacoes: list[ValidacaoItem] = []
 
+    # ADR-XXX: Graceful degradation for minimalista benchmarks
+    # If equipes_diretas is empty or has zero cost, it means pool-based costing
+    # (from rcpsp_spec) was not used. Costs may come from skill-06/08 via PUxQ.
+    # Proceed with cronograma analysis only, returning AVISO instead of ERRO.
     custo_total_obra = sum(eq.custo_total for eq in (canonical_in.equipes_diretas or []))
-    if canonical_in.equipes_diretas and custo_total_obra == 0:
-        validacoes.append(ValidacaoItem(codigo="VAL-CC-01", status="ERRO", mensagem="Custo total da obra é zero."))
-        return SkillResult(canonical_in, validacoes)
+    equipes_disponivel = canonical_in.equipes_diretas and len(canonical_in.equipes_diretas) > 0
 
-    if not canonical_in.cronograma or not canonical_in.equipes_diretas:
+    if equipes_disponivel and custo_total_obra == 0:
         validacoes.append(
-            ValidacaoItem(codigo="VAL-DIAG-PRE", status="ERRO", mensagem="Cronograma e Equipes necessários.")
+            ValidacaoItem(
+                codigo="VAL-CC-01",
+                status="AVISO",
+                mensagem="Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)"
+            )
+        )
+        equipes_disponivel = False  # Degrade gracefully
+
+    if not canonical_in.cronograma:
+        validacoes.append(
+            ValidacaoItem(codigo="VAL-DIAG-PRE", status="ERRO", mensagem="Cronograma necessário.")
         )
         return SkillResult(canonical_in, validacoes)
 
@@ -220,16 +232,23 @@ def run_diagnostico_criticidade(
     if not timings:
         validacoes.append(ValidacaoItem(codigo="VAL-DIAG-01", status="AVISO", mensagem="Sem execução no cronograma"))
 
-    custo_total_obra = sum(eq.custo_total for eq in (canonical_in.equipes_diretas or []))
-    atvs_crit_recurso = _build_atvs_crit_recurso(canonical_in.alocacoes)
-
-    raw = _build_raw_list(canonical_in.equipes_diretas, timings, proj_dur, custo_total_obra, atvs_crit_recurso)
-    rankings = _compute_rankings(raw)
-    profiles = _build_profiles(raw, *rankings)
-
-    report = CostCriticalityResult(
-        atividades=profiles, n_pareto_frontier=len(profiles), n_atividades=len(profiles), criterio_primario="custo"
-    )
+    # ADR-XXX: Build cost criticality only if equipes data is available
+    # Otherwise skip detailed resource analysis (cost comes from skill-06/08 via PUxQ)
+    report = None
+    if equipes_disponivel:
+        custo_total_obra = sum(eq.custo_total for eq in (canonical_in.equipes_diretas or []))
+        atvs_crit_recurso = _build_atvs_crit_recurso(canonical_in.alocacoes)
+        raw = _build_raw_list(canonical_in.equipes_diretas, timings, proj_dur, custo_total_obra, atvs_crit_recurso)
+        rankings = _compute_rankings(raw)
+        profiles = _build_profiles(raw, *rankings)
+        report = CostCriticalityResult(
+            atividades=profiles, n_pareto_frontier=len(profiles), n_atividades=len(profiles), criterio_primario="custo"
+        )
+    else:
+        # Graceful degradation: empty criticality report when equipes unavailable
+        report = CostCriticalityResult(
+            atividades=[], n_pareto_frontier=0, n_atividades=0, criterio_primario="custo"
+        )
 
     novo = canonical_in.model_copy(
         update={
