@@ -1,0 +1,343 @@
+{
+  "meta": {
+    "gerado_em": "2026-06-08T13:45:30.681799+00:00",
+    "framework": "concilium",
+    "adapter": "relatorio_validacao_v1",
+    "nota": "Relatório de validação na ausência do template .xlsm original."
+  },
+  "resumo": {
+    "projeto": "MATEC_UBERLANDIA",
+    "tipo_obra": "terraplenagem",
+    "localizacao": "Brasil",
+    "periodo": "2026-01-01 -> 2027-12-31",
+    "status": "RASCUNHO"
+  },
+  "PLANEJAMENTO": [
+    {
+      "item_id": "2.2",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km",
+      "unidade": "m3",
+      "quantitativo": 69952.84,
+      "subtotal_sem_bdi_mo": 104353.06,
+      "subtotal_sem_bdi_eq": 339630.41,
+      "subtotal_sem_bdi_diesel": 91733.36,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 535716.83,
+      "subtotal_com_bdi": 646004.51,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "2.3",
+      "cpu_id": "CPU-TERRA-COMPACT-ATERRO-100PN",
+      "descricao": "Aterro",
+      "unidade": "m3",
+      "quantitativo": 41045.38,
+      "subtotal_sem_bdi_mo": 61193.9,
+      "subtotal_sem_bdi_eq": 140921.39,
+      "subtotal_sem_bdi_diesel": 48867.73,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 250983.02,
+      "subtotal_com_bdi": 302540.49,
+      "pu_total_sem_bdi": 6.1148,
+      "pu_total_com_bdi": 7.3709
+    }
+  ],
+  "EQUIPE": [
+    {
+      "equipe_id": "eq-2.2",
+      "item_id": "2.2",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 0.77883,
+      "status_pe": "OK",
+      "custo_venda_cpu": 646004.51
+    },
+    {
+      "equipe_id": "eq-2.3",
+      "item_id": "2.3",
+      "cpu_id": "CPU-TERRA-COMPACT-ATERRO-100PN",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 0.15782,
+      "status_pe": "OK",
+      "custo_venda_cpu": 302540.49
+    }
+  ],
+  "analise_composicional": [
+    {
+      "item_id": "2.2",
+      "custo_venda_cpu": 646004.51,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 646004.51,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "2.3",
+      "custo_venda_cpu": 302540.49,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 302540.49,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 92856.05,
+      "custo_equipamentos": 130820.8,
+      "custo_materiais": 0.0,
+      "custo_diesel": 37625.14
+    }
+  ],
+  "INDIRETOS": [
+    {
+      "categoria": "ADM",
+      "descricao": "Administracao de obra",
+      "permanencia_meses": 24.0,
+      "custo_total": 2550286.08
+    },
+    {
+      "categoria": "TOP",
+      "descricao": "Topografia",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "LAB",
+      "descricao": "Laboratorio de solos e materiais",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "QSMS",
+      "descricao": "Qualidade, Saude, Seguranca e Meio Ambiente",
+      "permanencia_meses": 24.0,
+      "custo_total": 522009.84
+    },
+    {
+      "categoria": "MOB",
+      "descricao": "Mobilizacao e desmobilizacao",
+      "permanencia_meses": 24.0,
+      "custo_total": 7385838.49
+    }
+  ],
+  "RESULTADO": {
+    "preco_venda_total": 14042683.56,
+    "custo_total": 11244834.26,
+    "custo_direto": 786699.85,
+    "custo_direto_equipes": 786699.85,
+    "custo_direto_fonte": "operacional_equipes",
+    "benchmark_guard_aplicado": false,
+    "custo_indireto": 10458134.41,
+    "razao_indireto_direto": 13.293677900154679,
+    "resultado_bruto": 2797849.3000000007,
+    "margem_pct": 0.1992389337868125,
+    "status_margem": "VERMELHO",
+    "referencia": null
+  },
+  "GRAFICOS": {
+    "equipamentos": {
+      "labels": [],
+      "values": []
+    },
+    "mao_obra": {
+      "labels": [],
+      "values": []
+    },
+    "cronograma": {
+      "tasks": [
+        {
+          "item_id": "2.2",
+          "name": "Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km",
+          "start": "2025-12-29",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": []
+        },
+        {
+          "item_id": "2.3",
+          "name": "Aterro",
+          "start": "2026-01-05",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "2.2",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        }
+      ]
+    },
+    "financeiro": {
+      "labels": [
+        "Dez/25",
+        "Jan/26"
+      ],
+      "receita": [
+        7021341.0,
+        7021342.5600000005
+      ],
+      "despesa": [
+        8921986.45,
+        1536147.96
+      ],
+      "saldo": [
+        -1900645.4499999993,
+        5485194.600000001
+      ],
+      "exposicao": [
+        1900645.4499999993,
+        -3584549.1500000004
+      ]
+    },
+    "painel_equilibrio": {
+      "delta_total": 324080.04,
+      "soma_levers": 0,
+      "break_even_alcancavel": true,
+      "levers": [],
+      "combinacoes_break_even": [],
+      "frentes_nec_media": 0.0
+    }
+  },
+  "ponto_equilibrio": [
+    {
+      "item_id": "2.2",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 646004.51,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.199239,
+      "receita_atribuida": 9563739.11,
+      "custo_direto_atribuido": 535780.22,
+      "custo_indireto_atribuido": 7122489.7,
+      "resultado_total_atribuido": 1905469.18,
+      "gap_operacional": 646004.51,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "2.3",
+      "custo_fixo_equipe": 261301.99,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 302540.49,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.199239,
+      "receita_atribuida": 4478944.45,
+      "custo_direto_atribuido": 250919.63,
+      "custo_indireto_atribuido": 3335644.71,
+      "resultado_total_atribuido": 892380.12,
+      "gap_operacional": 302540.49,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    }
+  ],
+  "ACTIONABLE_INSIGHTS": {
+    "criticidade": {
+      "projeto_id": "c68c5f11-a8e2-43b1-908b-5fb80bafe5c8",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:38:18.310350Z",
+      "itens": [],
+      "total_atividades": 0,
+      "total_A_mais": 0,
+      "total_A": 0,
+      "total_B": 0,
+      "total_C": 0,
+      "custo_A_mais_pct": 0.0,
+      "notas_engenheiro": null
+    },
+    "sensibilidade": {
+      "projeto_id": "c68c5f11-a8e2-43b1-908b-5fb80bafe5c8",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:38:18.310350Z",
+      "status_margem": "VERMELHO",
+      "margem_entrada": 0.0,
+      "margem_alvo_min": 0.0,
+      "repair_viavel": false,
+      "passos_repair": [
+        {
+          "lever_tipo": "REDUCE_DURATION",
+          "lever_checkpoint": "",
+          "delta_margem": 0.0,
+          "custo_aplicacao": null,
+          "ratio_beneficio": 0.0,
+          "confianca": "MEDIA",
+          "atividades_afetadas": []
+        }
+      ],
+      "oportunidades": [],
+      "margem_pos_repair": null,
+      "exposicao_por_cpu": []
+    },
+    "intervencao": {
+      "projeto_id": "c68c5f11-a8e2-43b1-908b-5fb80bafe5c8",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:38:18.310350Z",
+      "status_entrada": "VERMELHO",
+      "eixos_intervencao": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.199239,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        },
+        {
+          "nome": "Oportunidade REDUCE_DURATION",
+          "margem_estimada": 0.079869,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "ALTO",
+          "levers_combinados": [
+            "REDUCE_DURATION"
+          ]
+        }
+      ],
+      "fronteira_pareto": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.199239,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        }
+      ],
+      "recomendacao_primaria": {
+        "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+        "margem_estimada": 0.199239,
+        "prazo_delta_dias": null,
+        "confianca": "MEDIA",
+        "risco": "MEDIO",
+        "levers_combinados": []
+      }
+    }
+  },
+  "validacoes_pipeline": [],
+  "resumo_utilizacao_contratos": [],
+  "instancias_recurso": [],
+  "decomposicao_pool": null,
+  "relatorio_oportunidades": null,
+  "COMPRESSAO_CRONOGRAMA": null
+}

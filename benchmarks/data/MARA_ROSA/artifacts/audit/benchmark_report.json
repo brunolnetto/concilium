@@ -4,27 +4,21 @@
   "versao": "v1",
   "skills_log": [
     {
-      "skill": "01-escopo-e-eap",
-      "status": "OK",
-      "duration_ms": 1790,
-      "avisos": []
-    },
-    {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 142,
+      "duration_ms": 2106,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 55,
+      "duration_ms": 104,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 74,
+      "duration_ms": 142,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -64,7 +58,6 @@
         "CPU CPU-DREN-CORPO-BSTC-120-PA3: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.29 vs P_original=0.75. PU_sbdi=619.5183 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-100-200X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BDTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.15 vs P_original=0.38. PU_sbdi=1239.0366 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "Pool vazio — agendando sem restrições de recursos.",
         "Item '2.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item '2.2' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item '2.3' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
@@ -82,13 +75,13 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 66,
+      "duration_ms": 135,
       "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 58,
+      "duration_ms": 59,
       "avisos": [
         "Item '2.1': custo_total=0.00 ou Q=30.0 inválido — cobertura não calculada.",
         "Item '2.2': custo_total=0.00 ou Q=30.0 inválido — cobertura não calculada.",
@@ -107,13 +100,13 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 59,
+      "duration_ms": 61,
       "avisos": []
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 54,
+      "duration_ms": 53,
       "avisos": [
         "Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)",
         "Sem execução no cronograma"
@@ -122,22 +115,22 @@
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 58,
+      "duration_ms": 71,
       "avisos": [
-        "Margem operacional 20.61% | status=VERMELHO | preço R$ 6,760,371 (operacional) vs R$ 1,716,279,246 (catálogo)",
+        "Margem operacional 20.61% | status=VERMELHO | preço R$ 3,686,464 (operacional) vs R$ 1,713,205,340 (catálogo)",
         "Família 'CPU' com itens originalmente em ERRO (2.1, 2.2, 2.4, 2.5, 3.1, 3.2, 4.1, 4.2, 4.3, 4.4, 4.5) mas saldo agregado positivo (Δfam = R$ 1,705,728,520.42). Criticidade rebaixada para AVISO."
       ]
     },
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 67,
+      "duration_ms": 25,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 1193,
+      "duration_ms": 1191,
       "avisos": [
         "Relatório de criticidade presente, mas sem atividades classificadas.",
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
@@ -146,25 +139,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 34,
+      "duration_ms": 27,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 158,
+      "duration_ms": 130,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 40,
+      "duration_ms": 27,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 47,
+      "duration_ms": 28,
       "avisos": []
     }
   ],
@@ -174,13 +167,13 @@
       "custo_direto": 1357251218.48,
       "custo_direto_equipes": 1357251218.48,
       "custo_direto_pu_q": 1357251218.48,
-      "custo_indireto": 5388000.0,
-      "custo_total": 1362639218.48,
-      "preco_venda": 1716279246.03,
-      "preco_venda_plus_eq": 6760370.66,
-      "preco_venda_catalogo": 1716279246.03,
-      "preco_venda_operacional": 1716279246.03,
-      "bdi_lucro_impostos": 0.25952579578949675
+      "custo_indireto": 2944335.71,
+      "custo_total": 1360195554.19,
+      "preco_venda": 1713205339.73,
+      "preco_venda_plus_eq": 3686464.36,
+      "preco_venda_catalogo": 1713205339.73,
+      "preco_venda_operacional": 1713205339.73,
+      "bdi_lucro_impostos": 0.25952870118754223
     },
     "ferramenta_breakdown_direto": {
       "base": "pu_q",
@@ -193,12 +186,12 @@
       "direto_total_equipes": 0.0
     },
     "ferramenta_breakdown_indireto": {
-      "adm": 384000.0,
+      "adm": 717996.0,
       "top": 0.0,
-      "lab": 120000.0,
-      "qsms": 0.0,
-      "mob": 4884000.0,
-      "total": 5388000.0
+      "lab": 0.0,
+      "qsms": 146964.24,
+      "mob": 2079375.47,
+      "total": 2944335.71
     },
     "actionable_insights": {
       "criticidade": "0 A, 0 B, 0 C",
@@ -217,12 +210,12 @@
         "direto_total_equipes": 0.0
       },
       "indireto": {
-        "adm": 384000.0,
+        "adm": 717996.0,
         "top": 0.0,
-        "lab": 120000.0,
-        "qsms": 0.0,
-        "mob": 4884000.0,
-        "total": 5388000.0
+        "lab": 0.0,
+        "qsms": 146964.24,
+        "mob": 2079375.47,
+        "total": 2944335.71
       }
     }
   },

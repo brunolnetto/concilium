@@ -4,21 +4,15 @@
   "versao": "v1",
   "skills_log": [
     {
-      "skill": "01-escopo-e-eap",
-      "status": "OK",
-      "duration_ms": 1555,
-      "avisos": []
-    },
-    {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 135,
+      "duration_ms": 1418,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 53,
+      "duration_ms": 41,
       "avisos": []
     },
     {
@@ -64,7 +58,6 @@
         "CPU CPU-DREN-CORPO-BSTC-120-PA3: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.29 vs P_original=0.75. PU_sbdi=619.5183 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-100-200X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BDTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.15 vs P_original=0.38. PU_sbdi=1239.0366 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "Pool vazio — agendando sem restrições de recursos.",
         "Item '1.0' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item '1.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item '1.2' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
@@ -74,13 +67,13 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 62,
+      "duration_ms": 52,
       "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 64,
+      "duration_ms": 48,
       "avisos": [
         "Item '1.0': custo_total=0.00 ou Q=298422.0 inválido — cobertura não calculada.",
         "Item '1.1': custo_total=0.00 ou Q=245000.0 inválido — cobertura não calculada.",
@@ -91,13 +84,13 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 68,
+      "duration_ms": 50,
       "avisos": []
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 67,
+      "duration_ms": 50,
       "avisos": [
         "Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)",
         "Sem execução no cronograma"
@@ -106,21 +99,21 @@
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 64,
+      "duration_ms": 53,
       "avisos": [
-        "Margem operacional 17.09% | status=VERMELHO | preço R$ 1,796,231 (operacional) vs R$ 152,323,949 (catálogo)"
+        "Margem operacional 17.20% | status=VERMELHO | preço R$ 7,944,653 (operacional) vs R$ 158,472,371 (catálogo)"
       ]
     },
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 74,
+      "duration_ms": 61,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 766,
+      "duration_ms": 561,
       "avisos": [
         "Relatório de criticidade presente, mas sem atividades classificadas.",
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
@@ -129,25 +122,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 57,
+      "duration_ms": 31,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 55,
+      "duration_ms": 31,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 53,
+      "duration_ms": 176,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 251,
+      "duration_ms": 43,
       "avisos": []
     }
   ],
@@ -157,13 +150,13 @@
       "custo_direto": 124865855.94,
       "custo_direto_equipes": 124865855.94,
       "custo_direto_pu_q": 124865855.94,
-      "custo_indireto": 1423200.0,
-      "custo_total": 126289055.94,
-      "preco_venda": 152323949.03,
-      "preco_venda_plus_eq": 1796230.93,
-      "preco_venda_catalogo": 152323949.03,
-      "preco_venda_operacional": 152323949.03,
-      "bdi_lucro_impostos": 0.20615320065714315
+      "custo_indireto": 6345301.12,
+      "custo_total": 131211157.06,
+      "preco_venda": 158472371.4,
+      "preco_venda_plus_eq": 7944653.3,
+      "preco_venda_catalogo": 158472371.4,
+      "preco_venda_operacional": 158472371.4,
+      "bdi_lucro_impostos": 0.2077659777631109
     },
     "ferramenta_breakdown_direto": {
       "base": "pu_q",
@@ -176,12 +169,12 @@
       "direto_total_equipes": 0.0
     },
     "ferramenta_breakdown_indireto": {
-      "adm": 384000.0,
+      "adm": 1547344.08,
       "top": 0.0,
-      "lab": 240000.0,
-      "qsms": 0.0,
-      "mob": 799200.0,
-      "total": 1423200.0
+      "lab": 0.0,
+      "qsms": 316720.8,
+      "mob": 4481236.24,
+      "total": 6345301.12
     },
     "actionable_insights": {
       "criticidade": "0 A, 0 B, 0 C",
@@ -200,12 +193,12 @@
         "direto_total_equipes": 0.0
       },
       "indireto": {
-        "adm": 384000.0,
+        "adm": 1547344.08,
         "top": 0.0,
-        "lab": 240000.0,
-        "qsms": 0.0,
-        "mob": 799200.0,
-        "total": 1423200.0
+        "lab": 0.0,
+        "qsms": 316720.8,
+        "mob": 4481236.24,
+        "total": 6345301.12
       }
     }
   },

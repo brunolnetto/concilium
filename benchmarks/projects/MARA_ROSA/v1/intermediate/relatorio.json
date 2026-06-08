@@ -1,0 +1,1106 @@
+{
+  "meta": {
+    "gerado_em": "2026-06-08T13:45:05.919347+00:00",
+    "framework": "concilium",
+    "adapter": "relatorio_validacao_v1",
+    "nota": "Relatório de validação na ausência do template .xlsm original."
+  },
+  "resumo": {
+    "projeto": "MARA_ROSA",
+    "tipo_obra": "terraplenagem",
+    "localizacao": "Brasil",
+    "periodo": "2026-01-01 -> 2027-12-31",
+    "status": "RASCUNHO"
+  },
+  "PLANEJAMENTO": [
+    {
+      "item_id": "2.1",
+      "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+      "descricao": "Corte de Arvore Isolada, com destocamento com Ø > 45cm",
+      "unidade": "un",
+      "quantitativo": 30.0,
+      "subtotal_sem_bdi_mo": 67.6,
+      "subtotal_sem_bdi_eq": 67.68,
+      "subtotal_sem_bdi_diesel": 38.57,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 173.85,
+      "subtotal_com_bdi": 210.66,
+      "pu_total_sem_bdi": 5.7948,
+      "pu_total_com_bdi": 7.0221
+    },
+    {
+      "item_id": "2.2",
+      "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+      "descricao": "Corte de Arvore Isolada, com destocamento com Ø < 45cm",
+      "unidade": "un",
+      "quantitativo": 30.0,
+      "subtotal_sem_bdi_mo": 67.6,
+      "subtotal_sem_bdi_eq": 67.68,
+      "subtotal_sem_bdi_diesel": 38.57,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 173.85,
+      "subtotal_com_bdi": 210.66,
+      "pu_total_sem_bdi": 5.7948,
+      "pu_total_com_bdi": 7.0221
+    },
+    {
+      "item_id": "2.3",
+      "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+      "descricao": "Supressão vegetal com destocamento de vegetação com Ø =< 45cm",
+      "unidade": "m²",
+      "quantitativo": 40000.0,
+      "subtotal_sem_bdi_mo": 922475874.64,
+      "subtotal_sem_bdi_eq": 319874559.0,
+      "subtotal_sem_bdi_diesel": 113675085.4,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 1356025519.04,
+      "subtotal_com_bdi": 1708040839.93,
+      "pu_total_sem_bdi": 33900.638,
+      "pu_total_com_bdi": 42701.021
+    },
+    {
+      "item_id": "2.4",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 0 até 500 m",
+      "unidade": "m³",
+      "quantitativo": 1.0,
+      "subtotal_sem_bdi_mo": 1.49,
+      "subtotal_sem_bdi_eq": 4.86,
+      "subtotal_sem_bdi_diesel": 1.31,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 7.66,
+      "subtotal_com_bdi": 9.23,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "2.5",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 501 até 1000 m",
+      "unidade": "m³",
+      "quantitativo": 1.0,
+      "subtotal_sem_bdi_mo": 1.49,
+      "subtotal_sem_bdi_eq": 4.86,
+      "subtotal_sem_bdi_diesel": 1.31,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 7.66,
+      "subtotal_com_bdi": 9.23,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "3.1",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 0 até 500 m",
+      "unidade": "m³",
+      "quantitativo": 1.0,
+      "subtotal_sem_bdi_mo": 1.49,
+      "subtotal_sem_bdi_eq": 4.86,
+      "subtotal_sem_bdi_diesel": 1.31,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 7.66,
+      "subtotal_com_bdi": 9.23,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "3.2",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 501 até 1000 m",
+      "unidade": "m³",
+      "quantitativo": 1.0,
+      "subtotal_sem_bdi_mo": 1.49,
+      "subtotal_sem_bdi_eq": 4.86,
+      "subtotal_sem_bdi_diesel": 1.31,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 7.66,
+      "subtotal_com_bdi": 9.23,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "4.1",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 0 até 500m",
+      "unidade": "m³",
+      "quantitativo": 32000.0,
+      "subtotal_sem_bdi_mo": 47736.42,
+      "subtotal_sem_bdi_eq": 155364.29,
+      "subtotal_sem_bdi_diesel": 41963.52,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 245064.22,
+      "subtotal_com_bdi": 295515.44,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "4.2",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 501 até 1000m",
+      "unidade": "m³",
+      "quantitativo": 32000.0,
+      "subtotal_sem_bdi_mo": 47736.42,
+      "subtotal_sem_bdi_eq": 155364.29,
+      "subtotal_sem_bdi_diesel": 41963.52,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 245064.22,
+      "subtotal_com_bdi": 295515.44,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "4.3",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1001 até 1500m",
+      "unidade": "m³",
+      "quantitativo": 32000.0,
+      "subtotal_sem_bdi_mo": 47736.42,
+      "subtotal_sem_bdi_eq": 155364.29,
+      "subtotal_sem_bdi_diesel": 41963.52,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 245064.22,
+      "subtotal_com_bdi": 295515.44,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "4.4",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1501 até 2000m",
+      "unidade": "m³",
+      "quantitativo": 32000.0,
+      "subtotal_sem_bdi_mo": 47736.42,
+      "subtotal_sem_bdi_eq": 155364.29,
+      "subtotal_sem_bdi_diesel": 41963.52,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 245064.22,
+      "subtotal_com_bdi": 295515.44,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    },
+    {
+      "item_id": "4.5",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 2001 até 2500m",
+      "unidade": "m³",
+      "quantitativo": 32000.0,
+      "subtotal_sem_bdi_mo": 47736.42,
+      "subtotal_sem_bdi_eq": 155364.29,
+      "subtotal_sem_bdi_diesel": 41963.52,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 245064.22,
+      "subtotal_com_bdi": 295515.44,
+      "pu_total_sem_bdi": 7.6583,
+      "pu_total_com_bdi": 9.2349
+    }
+  ],
+  "EQUIPE": [
+    {
+      "equipe_id": "eq-2.1",
+      "item_id": "2.1",
+      "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.9989,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 210.66
+    },
+    {
+      "equipe_id": "eq-2.2",
+      "item_id": "2.2",
+      "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.9989,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 210.66
+    },
+    {
+      "equipe_id": "eq-2.3",
+      "item_id": "2.3",
+      "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 12171.81419,
+      "status_pe": "OK",
+      "custo_venda_cpu": 1708040839.93
+    },
+    {
+      "equipe_id": "eq-2.4",
+      "item_id": "2.4",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.99997,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 9.23
+    },
+    {
+      "equipe_id": "eq-2.5",
+      "item_id": "2.5",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.99997,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 9.23
+    },
+    {
+      "equipe_id": "eq-3.1",
+      "item_id": "3.1",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.99997,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 9.23
+    },
+    {
+      "equipe_id": "eq-3.2",
+      "item_id": "3.2",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.99997,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 9.23
+    },
+    {
+      "equipe_id": "eq-4.1",
+      "item_id": "4.1",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.18627,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 295515.44
+    },
+    {
+      "equipe_id": "eq-4.2",
+      "item_id": "4.2",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.18627,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 295515.44
+    },
+    {
+      "equipe_id": "eq-4.3",
+      "item_id": "4.3",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.18627,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 295515.44
+    },
+    {
+      "equipe_id": "eq-4.4",
+      "item_id": "4.4",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.18627,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 295515.44
+    },
+    {
+      "equipe_id": "eq-4.5",
+      "item_id": "4.5",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.18627,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 295515.44
+    }
+  ],
+  "analise_composicional": [
+    {
+      "item_id": "2.1",
+      "custo_venda_cpu": 210.66,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 210.66,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 81512.42,
+      "custo_equipamentos": 74199.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 35074.28
+    },
+    {
+      "item_id": "2.2",
+      "custo_venda_cpu": 210.66,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 210.66,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 81512.42,
+      "custo_equipamentos": 74199.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 35074.28
+    },
+    {
+      "item_id": "2.3",
+      "custo_venda_cpu": 1708040839.93,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 1708040839.93,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 99640.41,
+      "custo_equipamentos": 31416.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 9259.61
+    },
+    {
+      "item_id": "2.4",
+      "custo_venda_cpu": 9.23,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 9.23,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "2.5",
+      "custo_venda_cpu": 9.23,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 9.23,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "3.1",
+      "custo_venda_cpu": 9.23,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 9.23,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "3.2",
+      "custo_venda_cpu": 9.23,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 9.23,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "4.1",
+      "custo_venda_cpu": 295515.44,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 295515.44,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "4.2",
+      "custo_venda_cpu": 295515.44,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 295515.44,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "4.3",
+      "custo_venda_cpu": 295515.44,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 295515.44,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "4.4",
+      "custo_venda_cpu": 295515.44,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 295515.44,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    },
+    {
+      "item_id": "4.5",
+      "custo_venda_cpu": 295515.44,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 295515.44,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 76096.9,
+      "custo_equipamentos": 231584.94,
+      "custo_materiais": 0.0,
+      "custo_diesel": 55481.13
+    }
+  ],
+  "INDIRETOS": [
+    {
+      "categoria": "ADM",
+      "descricao": "Administracao de obra",
+      "permanencia_meses": 24.0,
+      "custo_total": 717996.0
+    },
+    {
+      "categoria": "TOP",
+      "descricao": "Topografia",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "LAB",
+      "descricao": "Laboratorio de solos e materiais",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "QSMS",
+      "descricao": "Qualidade, Saude, Seguranca e Meio Ambiente",
+      "permanencia_meses": 24.0,
+      "custo_total": 146964.24
+    },
+    {
+      "categoria": "MOB",
+      "descricao": "Mobilizacao e desmobilizacao",
+      "permanencia_meses": 24.0,
+      "custo_total": 2079375.47
+    }
+  ],
+  "RESULTADO": {
+    "preco_venda_total": 1713205339.73,
+    "custo_total": 1360195554.19,
+    "custo_direto": 1357251218.48,
+    "custo_direto_equipes": 1357251218.48,
+    "custo_direto_fonte": "operacional_equipes",
+    "benchmark_guard_aplicado": false,
+    "custo_indireto": 2944335.71,
+    "razao_indireto_direto": 0.002169337311995485,
+    "resultado_bruto": 353009785.53999996,
+    "margem_pct": 0.20605223282553745,
+    "status_margem": "VERMELHO",
+    "referencia": null
+  },
+  "GRAFICOS": {
+    "equipamentos": {
+      "labels": [],
+      "values": []
+    },
+    "mao_obra": {
+      "labels": [],
+      "values": []
+    },
+    "cronograma": {
+      "tasks": [
+        {
+          "item_id": "2.1",
+          "name": "Corte de Arvore Isolada, com destocamento com Ø > 45cm",
+          "start": "2025-12-29",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": []
+        },
+        {
+          "item_id": "2.2",
+          "name": "Corte de Arvore Isolada, com destocamento com Ø < 45cm",
+          "start": "2026-01-05",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "2.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "2.3",
+          "name": "Supressão vegetal com destocamento de vegetação com Ø =< 45cm",
+          "start": "2026-01-12",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "2.2",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "2.4",
+          "name": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 0 até 500 m",
+          "start": "2026-01-19",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "2.3",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "2.5",
+          "name": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 501 até 1000 m",
+          "start": "2026-01-26",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "2.4",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "3.1",
+          "name": "Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 0 até 500 m",
+          "start": "2026-02-02",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "2.5",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "3.2",
+          "name": "Escavação, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a área de depósito - DMT 501 até 1000 m",
+          "start": "2026-02-09",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "4.1",
+          "name": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 0 até 500m",
+          "start": "2026-02-16",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.2",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "4.2",
+          "name": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 501 até 1000m",
+          "start": "2026-02-23",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "4.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "4.3",
+          "name": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1001 até 1500m",
+          "start": "2026-03-02",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "4.2",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "4.4",
+          "name": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 1501 até 2000m",
+          "start": "2026-03-09",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "4.3",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "4.5",
+          "name": "Escavação, Carga, Transporte e Espalhamento - material de 1° categoria - DMT 2001 até 2500m",
+          "start": "2026-03-16",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "4.4",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        }
+      ]
+    },
+    "financeiro": {
+      "labels": [
+        "Dez/25",
+        "Jan/26",
+        "Fev/26",
+        "Mar/26"
+      ],
+      "receita": [
+        428301334.0,
+        428301334.0,
+        428301334.0,
+        428301337.73
+      ],
+      "despesa": [
+        2295615.53,
+        216240.06,
+        216240.06,
+        216240.06
+      ],
+      "saldo": [
+        426005718.47,
+        428085093.94,
+        428085093.94,
+        428085097.67
+      ],
+      "exposicao": [
+        -426005718.47,
+        -854090812.41,
+        -1282175906.35,
+        -1710261004.02
+      ]
+    },
+    "painel_equilibrio": {
+      "delta_total": 1705728520.42,
+      "soma_levers": 2172003.49,
+      "break_even_alcancavel": true,
+      "levers": [
+        {
+          "id": "revisao_bdi_minima",
+          "tipo": "preco",
+          "descricao": "BDI: revisao minima de preco para cobrir ineficiencia",
+          "restricoes": [
+            "Lever de precificacao — fora do alcance do planejador"
+          ],
+          "delta_margin_total": 2172003.49,
+          "item_count": 11,
+          "break_even_solo": false,
+          "participa_combo": false
+        }
+      ],
+      "combinacoes_break_even": [],
+      "frentes_nec_media": 0.0
+    }
+  },
+  "ponto_equilibrio": [
+    {
+      "item_id": "2.1",
+      "custo_fixo_equipe": 190786.1,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 210.66,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 211.11,
+      "custo_direto_atribuido": 167.25,
+      "custo_indireto_atribuido": 0.36,
+      "resultado_total_atribuido": 43.5,
+      "gap_operacional": 210.66,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "2.2",
+      "custo_fixo_equipe": 190786.1,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 210.66,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 211.11,
+      "custo_direto_atribuido": 167.25,
+      "custo_indireto_atribuido": 0.36,
+      "resultado_total_atribuido": 43.5,
+      "gap_operacional": 210.66,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "2.3",
+      "custo_fixo_equipe": 140316.02,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 1708040839.93,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 1711724117.0,
+      "custo_direto_atribuido": 1356077750.65,
+      "custo_indireto_atribuido": 2941790.06,
+      "resultado_total_atribuido": 352704576.29,
+      "gap_operacional": 1708040839.93,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "2.4",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 9.23,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 9.25,
+      "custo_direto_atribuido": 7.33,
+      "custo_indireto_atribuido": 0.02,
+      "resultado_total_atribuido": 1.91,
+      "gap_operacional": 9.23,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "2.5",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 9.23,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 9.25,
+      "custo_direto_atribuido": 7.33,
+      "custo_indireto_atribuido": 0.02,
+      "resultado_total_atribuido": 1.91,
+      "gap_operacional": 9.23,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.1",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 9.23,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 9.25,
+      "custo_direto_atribuido": 7.33,
+      "custo_indireto_atribuido": 0.02,
+      "resultado_total_atribuido": 1.91,
+      "gap_operacional": 9.23,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.2",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 9.23,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 9.25,
+      "custo_direto_atribuido": 7.33,
+      "custo_indireto_atribuido": 0.02,
+      "resultado_total_atribuido": 1.91,
+      "gap_operacional": 9.23,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "4.1",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 295515.44,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 296152.7,
+      "custo_direto_atribuido": 234620.8,
+      "custo_indireto_atribuido": 508.97,
+      "resultado_total_atribuido": 61022.92,
+      "gap_operacional": 295515.44,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "4.2",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 295515.44,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 296152.7,
+      "custo_direto_atribuido": 234620.8,
+      "custo_indireto_atribuido": 508.97,
+      "resultado_total_atribuido": 61022.92,
+      "gap_operacional": 295515.44,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "4.3",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 295515.44,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 296152.7,
+      "custo_direto_atribuido": 234620.8,
+      "custo_indireto_atribuido": 508.97,
+      "resultado_total_atribuido": 61022.92,
+      "gap_operacional": 295515.44,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "4.4",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 295515.44,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 296152.7,
+      "custo_direto_atribuido": 234620.8,
+      "custo_indireto_atribuido": 508.97,
+      "resultado_total_atribuido": 61022.92,
+      "gap_operacional": 295515.44,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "4.5",
+      "custo_fixo_equipe": 363162.97,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 295515.44,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206052,
+      "receita_atribuida": 296152.7,
+      "custo_direto_atribuido": 234620.8,
+      "custo_indireto_atribuido": 508.97,
+      "resultado_total_atribuido": 61022.92,
+      "gap_operacional": 295515.44,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    }
+  ],
+  "ACTIONABLE_INSIGHTS": {
+    "criticidade": {
+      "projeto_id": "721707c9-edd8-43dd-86bc-80c32a4cb601",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:37:46.855967Z",
+      "itens": [],
+      "total_atividades": 0,
+      "total_A_mais": 0,
+      "total_A": 0,
+      "total_B": 0,
+      "total_C": 0,
+      "custo_A_mais_pct": 0.0,
+      "notas_engenheiro": null
+    },
+    "sensibilidade": {
+      "projeto_id": "721707c9-edd8-43dd-86bc-80c32a4cb601",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:37:46.855967Z",
+      "status_margem": "VERMELHO",
+      "margem_entrada": 0.0,
+      "margem_alvo_min": 0.0,
+      "repair_viavel": false,
+      "passos_repair": [
+        {
+          "lever_tipo": "REVIEW_BDI",
+          "lever_checkpoint": "",
+          "delta_margem": 0.0,
+          "custo_aplicacao": null,
+          "ratio_beneficio": 0.0,
+          "confianca": "BAIXA",
+          "atividades_afetadas": []
+        }
+      ],
+      "oportunidades": [],
+      "margem_pos_repair": null,
+      "exposicao_por_cpu": []
+    },
+    "intervencao": {
+      "projeto_id": "721707c9-edd8-43dd-86bc-80c32a4cb601",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:37:46.855967Z",
+      "status_entrada": "VERMELHO",
+      "eixos_intervencao": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.206052,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        },
+        {
+          "nome": "Oportunidade RECALIBRAR_PU",
+          "margem_estimada": 0.589183,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": [
+            "RECALIBRAR_PU"
+          ]
+        }
+      ],
+      "fronteira_pareto": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.206052,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        }
+      ],
+      "recomendacao_primaria": {
+        "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+        "margem_estimada": 0.206052,
+        "prazo_delta_dias": null,
+        "confianca": "MEDIA",
+        "risco": "MEDIO",
+        "levers_combinados": []
+      }
+    }
+  },
+  "validacoes_pipeline": [],
+  "resumo_utilizacao_contratos": [],
+  "instancias_recurso": [],
+  "decomposicao_pool": null,
+  "relatorio_oportunidades": null,
+  "COMPRESSAO_CRONOGRAMA": null
+}

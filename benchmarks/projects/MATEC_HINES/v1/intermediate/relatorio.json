@@ -1,0 +1,485 @@
+{
+  "meta": {
+    "gerado_em": "2026-06-08T13:45:23.204806+00:00",
+    "framework": "concilium",
+    "adapter": "relatorio_validacao_v1",
+    "nota": "Relatório de validação na ausência do template .xlsm original."
+  },
+  "resumo": {
+    "projeto": "MATEC_HINES",
+    "tipo_obra": "terraplenagem",
+    "localizacao": "Brasil",
+    "periodo": "2026-01-01 -> 2027-12-31",
+    "status": "RASCUNHO"
+  },
+  "PLANEJAMENTO": [
+    {
+      "item_id": "1.0",
+      "cpu_id": "CPU-TERRA-ATI-001",
+      "descricao": "Supressão Vegetal",
+      "unidade": "m2",
+      "quantitativo": 298422.0,
+      "subtotal_sem_bdi_mo": 5657806.57,
+      "subtotal_sem_bdi_eq": 3581064.0,
+      "subtotal_sem_bdi_diesel": 1390646.52,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 10629517.09,
+      "subtotal_com_bdi": 13175439.99,
+      "pu_total_sem_bdi": 35.6191,
+      "pu_total_com_bdi": 44.1504
+    },
+    {
+      "item_id": "1.1",
+      "cpu_id": "CPU-TERRA-ATI-001",
+      "descricao": "Remoção Superficial (20cm - Top Soil) - Excluso supressão vegetal",
+      "unidade": "m2",
+      "quantitativo": 245000.0,
+      "subtotal_sem_bdi_mo": 4644974.6,
+      "subtotal_sem_bdi_eq": 2940000.0,
+      "subtotal_sem_bdi_diesel": 1141700.0,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 8726674.6,
+      "subtotal_com_bdi": 10816839.24,
+      "pu_total_sem_bdi": 35.6191,
+      "pu_total_com_bdi": 44.1504
+    },
+    {
+      "item_id": "1.2",
+      "cpu_id": "CPU-DIVER-ATI-009",
+      "descricao": "Corte e transporte interno",
+      "unidade": "m3",
+      "quantitativo": 1250000.0,
+      "subtotal_sem_bdi_mo": 21406061.25,
+      "subtotal_sem_bdi_eq": 57431111.25,
+      "subtotal_sem_bdi_diesel": 21358333.75,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 100195506.25,
+      "subtotal_com_bdi": 120205962.71,
+      "pu_total_sem_bdi": 80.1564,
+      "pu_total_com_bdi": 96.1648
+    },
+    {
+      "item_id": "1.3",
+      "cpu_id": "CPU-TERRA-ATI-017",
+      "descricao": "Aterro compactado / 98% e 100% P.N nas útimas 5 camadas",
+      "unidade": "m3",
+      "quantitativo": 1000000.0,
+      "subtotal_sem_bdi_mo": 1020634.0,
+      "subtotal_sem_bdi_eq": 2956921.0,
+      "subtotal_sem_bdi_diesel": 1336603.0,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 5314158.0,
+      "subtotal_com_bdi": 6329476.16,
+      "pu_total_sem_bdi": 5.3142,
+      "pu_total_com_bdi": 6.3295
+    }
+  ],
+  "EQUIPE": [
+    {
+      "equipe_id": "eq-1.0",
+      "item_id": "1.0",
+      "cpu_id": "CPU-TERRA-ATI-001",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 259.28414,
+      "status_pe": "OK",
+      "custo_venda_cpu": 13175439.99
+    },
+    {
+      "equipe_id": "eq-1.1",
+      "item_id": "1.1",
+      "cpu_id": "CPU-TERRA-ATI-001",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 212.68939,
+      "status_pe": "OK",
+      "custo_venda_cpu": 10816839.24
+    },
+    {
+      "equipe_id": "eq-1.2",
+      "item_id": "1.2",
+      "cpu_id": "CPU-DIVER-ATI-009",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 753.87263,
+      "status_pe": "OK",
+      "custo_venda_cpu": 120205962.71
+    },
+    {
+      "equipe_id": "eq-1.3",
+      "item_id": "1.3",
+      "cpu_id": "CPU-TERRA-ATI-017",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 29.73112,
+      "status_pe": "OK",
+      "custo_venda_cpu": 6329476.16
+    }
+  ],
+  "analise_composicional": [
+    {
+      "item_id": "1.0",
+      "custo_venda_cpu": 13175439.99,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 13175439.99,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 29677.73,
+      "custo_equipamentos": 15840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 5101.72
+    },
+    {
+      "item_id": "1.1",
+      "custo_venda_cpu": 10816839.24,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 10816839.24,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 29677.73,
+      "custo_equipamentos": 15840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 5101.72
+    },
+    {
+      "item_id": "1.2",
+      "custo_venda_cpu": 120205962.71,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 120205962.71,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 40209.75,
+      "custo_equipamentos": 90970.88,
+      "custo_materiais": 0.0,
+      "custo_diesel": 28059.43
+    },
+    {
+      "item_id": "1.3",
+      "custo_venda_cpu": 6329476.16,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 6329476.16,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 60962.07,
+      "custo_equipamentos": 105462.72,
+      "custo_materiais": 0.0,
+      "custo_diesel": 39538.28
+    }
+  ],
+  "INDIRETOS": [
+    {
+      "categoria": "ADM",
+      "descricao": "Administracao de obra",
+      "permanencia_meses": 24.0,
+      "custo_total": 1547344.08
+    },
+    {
+      "categoria": "TOP",
+      "descricao": "Topografia",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "LAB",
+      "descricao": "Laboratorio de solos e materiais",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "QSMS",
+      "descricao": "Qualidade, Saude, Seguranca e Meio Ambiente",
+      "permanencia_meses": 24.0,
+      "custo_total": 316720.8
+    },
+    {
+      "categoria": "MOB",
+      "descricao": "Mobilizacao e desmobilizacao",
+      "permanencia_meses": 24.0,
+      "custo_total": 4481236.24
+    }
+  ],
+  "RESULTADO": {
+    "preco_venda_total": 158472371.4,
+    "custo_total": 131211157.06,
+    "custo_direto": 124865855.94,
+    "custo_direto_equipes": 124865855.94,
+    "custo_direto_fonte": "operacional_equipes",
+    "benchmark_guard_aplicado": false,
+    "custo_indireto": 6345301.12,
+    "razao_indireto_direto": 0.050816943288716304,
+    "resultado_bruto": 27261214.340000004,
+    "margem_pct": 0.17202502934211789,
+    "status_margem": "VERMELHO",
+    "referencia": null
+  },
+  "GRAFICOS": {
+    "equipamentos": {
+      "labels": [],
+      "values": []
+    },
+    "mao_obra": {
+      "labels": [],
+      "values": []
+    },
+    "cronograma": {
+      "tasks": [
+        {
+          "item_id": "1.0",
+          "name": "Supressão Vegetal",
+          "start": "2025-12-29",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": []
+        },
+        {
+          "item_id": "1.1",
+          "name": "Remoção Superficial (20cm - Top Soil) - Excluso supressão vegetal",
+          "start": "2025-12-29",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": []
+        },
+        {
+          "item_id": "1.2",
+          "name": "Corte e transporte interno",
+          "start": "2026-01-05",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.3",
+          "name": "Aterro compactado / 98% e 100% P.N nas útimas 5 camadas",
+          "start": "2026-01-12",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.2",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        }
+      ]
+    },
+    "financeiro": {
+      "labels": [
+        "Dez/25",
+        "Jan/26"
+      ],
+      "receita": [
+        79236185.0,
+        79236186.4
+      ],
+      "despesa": [
+        5413268.680000001,
+        932032.4400000001
+      ],
+      "saldo": [
+        73822916.32,
+        78304153.96000001
+      ],
+      "exposicao": [
+        -73822916.32,
+        -152127070.28
+      ]
+    },
+    "painel_equilibrio": {
+      "delta_total": 150061276.07,
+      "soma_levers": 0,
+      "break_even_alcancavel": true,
+      "levers": [],
+      "combinacoes_break_even": [],
+      "frentes_nec_media": 0.0
+    }
+  },
+  "ponto_equilibrio": [
+    {
+      "item_id": "1.0",
+      "custo_fixo_equipe": 50619.45,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 13175439.99,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.172025,
+      "receita_atribuida": 13870822.24,
+      "custo_direto_atribuido": 10929300.02,
+      "custo_indireto_atribuido": 555393.62,
+      "resultado_total_atribuido": 2386128.6,
+      "gap_operacional": 13175439.99,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.1",
+      "custo_fixo_equipe": 50619.45,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 10816839.24,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.172025,
+      "receita_atribuida": 11387737.67,
+      "custo_direto_atribuido": 8972791.9,
+      "custo_indireto_atribuido": 455969.86,
+      "resultado_total_atribuido": 1958975.91,
+      "gap_operacional": 10816839.24,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.2",
+      "custo_fixo_equipe": 159240.06,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 120205962.71,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.172025,
+      "receita_atribuida": 126550273.98,
+      "custo_direto_atribuido": 99713332.62,
+      "custo_indireto_atribuido": 5067126.77,
+      "resultado_total_atribuido": 21769814.59,
+      "gap_operacional": 120205962.71,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.3",
+      "custo_fixo_equipe": 205963.07,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 6329476.16,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.172025,
+      "receita_atribuida": 6663537.52,
+      "custo_direto_atribuido": 5250431.4,
+      "custo_indireto_atribuido": 266810.87,
+      "resultado_total_atribuido": 1146295.24,
+      "gap_operacional": 6329476.16,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    }
+  ],
+  "ACTIONABLE_INSIGHTS": {
+    "criticidade": {
+      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:38:10.863829Z",
+      "itens": [],
+      "total_atividades": 0,
+      "total_A_mais": 0,
+      "total_A": 0,
+      "total_B": 0,
+      "total_C": 0,
+      "custo_A_mais_pct": 0.0,
+      "notas_engenheiro": null
+    },
+    "sensibilidade": {
+      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:38:10.863829Z",
+      "status_margem": "VERMELHO",
+      "margem_entrada": 0.0,
+      "margem_alvo_min": 0.0,
+      "repair_viavel": false,
+      "passos_repair": [
+        {
+          "lever_tipo": "REVIEW_BDI",
+          "lever_checkpoint": "",
+          "delta_margem": 0.0,
+          "custo_aplicacao": null,
+          "ratio_beneficio": 0.0,
+          "confianca": "BAIXA",
+          "atividades_afetadas": []
+        }
+      ],
+      "oportunidades": [],
+      "margem_pos_repair": null,
+      "exposicao_por_cpu": []
+    },
+    "intervencao": {
+      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "versao": "1",
+      "gerado_em": "2026-06-08T13:38:10.863829Z",
+      "status_entrada": "VERMELHO",
+      "eixos_intervencao": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.172025,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        },
+        {
+          "nome": "Oportunidade REDUCE_DURATION",
+          "margem_estimada": 0.079869,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "ALTO",
+          "levers_combinados": [
+            "REDUCE_DURATION"
+          ]
+        }
+      ],
+      "fronteira_pareto": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.172025,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        }
+      ],
+      "recomendacao_primaria": {
+        "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+        "margem_estimada": 0.172025,
+        "prazo_delta_dias": null,
+        "confianca": "MEDIA",
+        "risco": "MEDIO",
+        "levers_combinados": []
+      }
+    }
+  },
+  "validacoes_pipeline": [],
+  "resumo_utilizacao_contratos": [],
+  "instancias_recurso": [],
+  "decomposicao_pool": null,
+  "relatorio_oportunidades": null,
+  "COMPRESSAO_CRONOGRAMA": null
+}
