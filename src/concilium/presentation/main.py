@@ -143,7 +143,7 @@ def _load_project() -> None:
 
 
 def _load_benchmark() -> None:
-    from concilium.presentation.cli import commands_benchmark, commands_schedule
+    from concilium.presentation.cli import commands_benchmark, commands_reconciliacao, commands_schedule
 
     benchmark_app.command("run")(commands_benchmark.run_benchmarks)
     benchmark_app.command("analyze")(commands_benchmark.analyze)
@@ -155,6 +155,7 @@ def _load_benchmark() -> None:
     benchmark_app.command("plan-space")(commands_benchmark.plan_space)
     benchmark_app.command("pack")(commands_benchmark.pack_benchmark)
     benchmark_app.command("compare")(commands_benchmark.compare_algorithms)
+    benchmark_app.command("reconciliar")(commands_reconciliacao.reconciliar)
     benchmark_app.add_typer(commands_schedule.app, name="schedule")
 
 

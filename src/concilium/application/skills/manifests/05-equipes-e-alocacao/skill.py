@@ -43,6 +43,7 @@ try:
         _build_contratos_recurso,
         _build_dimensionamento,
         _build_instancias_recurso,
+        _enrich_equipes_com_decomposicao_instancial,
         _enrich_particao_overhead,
         particionar_contrato,
     )
@@ -72,6 +73,7 @@ except ImportError:
     _build_contratos_recurso = _mod_a._build_contratos_recurso
     _build_instancias_recurso = _mod_a._build_instancias_recurso
     _aplicar_custo_instancial_adr085 = _mod_a._aplicar_custo_instancial_adr085
+    _enrich_equipes_com_decomposicao_instancial = _mod_a._enrich_equipes_com_decomposicao_instancial
     _enrich_particao_overhead = _mod_a._enrich_particao_overhead
     particionar_contrato = _mod_a.particionar_contrato
     _build_alocacoes_pool = _mod_b._build_alocacoes_pool
