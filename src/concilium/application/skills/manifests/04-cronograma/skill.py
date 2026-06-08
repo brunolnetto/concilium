@@ -23,6 +23,7 @@ from concilium.application.scheduling import (
     explore_schedules,
     select_scheduling_algorithm,
 )
+from concilium.application.scheduling.mob_scheduling import infer_mob_windows
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
     AtividadeIntervalo,
@@ -1927,17 +1928,52 @@ def run_cronograma(
         canonical_in, cronograma_out, scheduled_activities_out, validacoes
     )
 
-    updated_canonical = canonical_in.model_copy(
-        update={
-            "cronograma": cronograma_out,
-            "intervalos_atividade": intervalos,
-            "fator_calendario_semanal": fator_calendario_semanal,
-            "calendario_operacional": calendario_operacional,
-            "constraint_violations": pool_violations if pool_violations else canonical_in.constraint_violations,
-            "curvas_forca": wmp_curves if wmp_curves else canonical_in.curvas_forca,
-            "analise_campanhas": analise_campanhas,
+    # ADR-105: Inferir janelas de mobilização automaticamente
+    mob_schedule = None
+    try:
+        meta_dict = {
+            "data_inicio": canonical_in.projeto.data_inicio.isoformat(),
+            "data_termino": canonical_in.projeto.data_termino.isoformat(),
         }
-    )
+        eap_list = [
+            {
+                "item_id": item.item_id,
+                "predecessores": [
+                    {"item_id": p.item_id} for p in item.predecessores
+                ] if item.predecessores else []
+            }
+            for item in canonical_in.eap
+        ]
+        mob_schedule = infer_mob_windows(meta_dict, eap_list)
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-MOB-SCHEDULE-OK",
+                status="OK",
+                mensagem="Janelas de mobilização inferidas com sucesso (ADR-105).",
+            )
+        )
+    except Exception as e:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-MOB-SCHEDULE-ERRO",
+                status="AVISO",
+                mensagem=f"Falha ao inferir janelas de mobilização: {str(e)}",
+            )
+        )
+
+    update_dict = {
+        "cronograma": cronograma_out,
+        "intervalos_atividade": intervalos,
+        "fator_calendario_semanal": fator_calendario_semanal,
+        "calendario_operacional": calendario_operacional,
+        "constraint_violations": pool_violations if pool_violations else canonical_in.constraint_violations,
+        "curvas_forca": wmp_curves if wmp_curves else canonical_in.curvas_forca,
+        "analise_campanhas": analise_campanhas,
+    }
+    if mob_schedule:
+        update_dict["mob_schedule"] = mob_schedule
+
+    updated_canonical = canonical_in.model_copy(update=update_dict)
 
     validacoes.append(
         ValidacaoItem(

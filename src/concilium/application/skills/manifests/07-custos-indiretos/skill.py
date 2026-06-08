@@ -132,6 +132,9 @@ def run_custos_indiretos(
     dv4_policy = _extract_dv4_policy(inputs)
     policy_scale = {"lean": 0.85, "standard": 1.0, "robust": 1.15}
 
+    # ADR-105: Tentar obter mob_schedule do canônico (inferido por Skill-04)
+    mob_schedule = getattr(canonical_in, "mob_schedule", None)
+
     indiretos_out: list[Indireto] = []
     indiretos_semanal_out: list[IndiretoSemanal] = []
 
@@ -149,6 +152,7 @@ def run_custos_indiretos(
                 n_semanas,
                 dv4_policy,
                 policy_scale,
+                mob_schedule=mob_schedule,
             )
             indiretos_out.append(indir)
             indiretos_semanal_out.extend(semanal)

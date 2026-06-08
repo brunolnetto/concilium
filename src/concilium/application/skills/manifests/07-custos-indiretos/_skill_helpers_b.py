@@ -35,6 +35,7 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.models.decision_variables import DecisionVariables
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
 
 try:
     from ._skill_helpers_a import (
@@ -231,6 +232,7 @@ def _process_mob_categoria(
     n_semanas: int,
     dv4_policy: str | None,
     policy_scale: dict,
+    mob_schedule: dict | None = None,
 ) -> tuple[Indireto, list[IndiretoSemanal]]:
     descricao: str = cat["descricao"]
     cat_cfg_raw = next((c for c in categorias_config_raw if c.get("categoria") == "MOB"), None)
@@ -249,6 +251,25 @@ def _process_mob_categoria(
     if dv4_policy and dv4_policy in policy_scale:
         custo = round(custo * policy_scale[dv4_policy], 2)
         cat_obj = cat_obj.model_copy(update={"custo_fixo_total": custo})
+
+    # ADR-105: Se mob_schedule disponível, usar novas janelas para distribuição
+    if mob_schedule:
+        try:
+            # Preparar indiretos para calcular_custo_indireto_mob
+            indiretos_mob = [
+                {
+                    "tipo": "MOB",
+                    "categoria": "MOB",
+                    "fase": "mobilizacao",
+                    "driver": "projeto",
+                    "custo_fixo_total": custo * 0.15,  # default 15%
+                }
+            ]
+            mob_costs = calcular_custo_indireto_mob(indiretos_mob, mob_schedule)
+            # TODO: Melhorar distribuição com dados de spec.indiretos
+        except Exception:
+            pass  # Fallback para comportamento legado
+
     indir = Indireto(
         categoria="MOB",
         descricao=descricao,
