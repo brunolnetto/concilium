@@ -105,7 +105,10 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
             ax_saldo.set_visible(False)
             ax2.set_visible(False)
         fig.suptitle("Analise Financeira", fontsize=13, fontweight="bold")
-        fig.tight_layout()
+        try:
+            fig.tight_layout()
+        except UserWarning:
+            pass
         return fig_to_bytes(fig)
     except Exception:
         plt.close("all")

@@ -6,19 +6,19 @@
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 1254,
+      "duration_ms": 3197,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 44,
+      "duration_ms": 69,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 53,
+      "duration_ms": 77,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -71,13 +71,13 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 73,
+      "duration_ms": 72,
       "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 61,
+      "duration_ms": 70,
       "avisos": [
         "Item '3.4': preço de venda (6.3525) abaixo do custo da equipe (15.299). Margem=-140.83%. Revisar dimensionamento ou repassar ao cliente.",
         "Item '3.5': preço de venda (6.3525) abaixo do custo da equipe (10.7664). Margem=-69.48%. Revisar dimensionamento ou repassar ao cliente."
@@ -86,7 +86,7 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 58,
+      "duration_ms": 100,
       "avisos": [
         "Razão indireto/direto 2180.5% fora da faixa [10.0%, 50.0%]"
       ]
@@ -94,13 +94,13 @@
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 52,
+      "duration_ms": 104,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "ERRO",
-      "duration_ms": 64,
+      "duration_ms": 99,
       "avisos": [
         "Margem operacional 20.61% | status=VERMELHO | preço R$ 7,827,994 (operacional) vs R$ 16,415,254,582 (catálogo)",
         "Item '1.2': divergência de produtividade -98.7% não explicada por clima (fe_nec=0.02 × clima=0.79 = 0.01). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=0.877 vs calibrado=0.877).",
@@ -122,13 +122,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 62,
+      "duration_ms": 92,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 1022,
+      "duration_ms": 1802,
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -136,25 +136,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 35,
+      "duration_ms": 39,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 36,
+      "duration_ms": 39,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 34,
+      "duration_ms": 41,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 34,
+      "duration_ms": 48,
       "avisos": []
     }
   ],

@@ -1801,13 +1801,6 @@ def _build_scheduled_activities(
                     item_id = activity_id
                 duration_lookup[item_id] = duration
 
-    # Log: show if duration_lookup was populated
-    import sys
-    if duration_lookup:
-        print(f"DEBUG: duration_lookup populated with {len(duration_lookup)} items", file=sys.stderr)
-    else:
-        print(f"DEBUG: duration_lookup is EMPTY (schedule_selected={schedule_selected is not None})", file=sys.stderr)
-
     for item in canonical_in.eap:  # type: ignore[union-attr]
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
         semanas_com_producao = [s for s, d in distribuicao_semanal.items() if d.qtd_executada > 0]

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "gerado_em": "2026-06-08T18:36:50.492385+00:00",
+    "gerado_em": "2026-06-08T18:46:32.160603+00:00",
     "framework": "concilium",
     "adapter": "relatorio_validacao_v1",
     "nota": "Relatório de validação na ausência do template .xlsm original."
@@ -493,7 +493,7 @@
     "criticidade": {
       "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "versao": "1",
-      "gerado_em": "2026-06-08T18:09:26.972109Z",
+      "gerado_em": "2026-06-08T18:36:59.580377Z",
       "itens": [],
       "total_atividades": 0,
       "total_A_mais": 0,
@@ -506,7 +506,7 @@
     "sensibilidade": {
       "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "versao": "1",
-      "gerado_em": "2026-06-08T18:09:26.972109Z",
+      "gerado_em": "2026-06-08T18:36:59.580377Z",
       "status_margem": "VERMELHO",
       "margem_entrada": 0.0,
       "margem_alvo_min": 0.0,
@@ -529,7 +529,7 @@
     "intervencao": {
       "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "versao": "1",
-      "gerado_em": "2026-06-08T18:09:26.972109Z",
+      "gerado_em": "2026-06-08T18:36:59.580377Z",
       "status_entrada": "VERMELHO",
       "eixos_intervencao": [
         {
