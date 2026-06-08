@@ -43,6 +43,7 @@ try:
         _build_contratos_recurso,
         _build_dimensionamento,
         _build_instancias_recurso,
+        _enrich_equipes_com_decomposicao_instancial,
         _enrich_particao_overhead,
         particionar_contrato,
     )
@@ -72,6 +73,7 @@ except ImportError:
     _build_contratos_recurso = _mod_a._build_contratos_recurso
     _build_instancias_recurso = _mod_a._build_instancias_recurso
     _aplicar_custo_instancial_adr085 = _mod_a._aplicar_custo_instancial_adr085
+    _enrich_equipes_com_decomposicao_instancial = _mod_a._enrich_equipes_com_decomposicao_instancial
     _enrich_particao_overhead = _mod_a._enrich_particao_overhead
     particionar_contrato = _mod_a.particionar_contrato
     _build_alocacoes_pool = _mod_b._build_alocacoes_pool
@@ -93,6 +95,18 @@ def run_equipes_e_alocacao(
     ctx = _RepoCtx(repo, jurisdicao_id, overrides, data_base)
 
     equipes = _build_dimensionamento(canonical_in, inputs, catalogo, ctx, validacoes)
+
+    # ADR-104 Checkpoint 1: Estágio 1 — custo_inst_* deve estar None (sem pool contracts ainda)
+    for eq in equipes:
+        if eq.custo_inst_mo is not None:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-ESTAG1-INST-NONE",
+                    status="ERRO",
+                    mensagem=f"Item {eq.item_id}: custo_inst_* deve estar None no Estágio 1",
+                )
+            )
+
     sched_acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     cron_lookup = {sa.activity_id: sa for sa in sched_acts}
 
@@ -139,6 +153,18 @@ def run_equipes_e_alocacao(
                     )
                 )
 
+            # ADR-104 Checkpoint 2: Estágio 3 — custo_total atualizado, mas custo_inst_* ainda None
+            for eq in equipes:
+                if eq.item_id in atribuicao:
+                    if eq.custo_inst_mo is not None:
+                        validacoes.append(
+                            ValidacaoItem(
+                                codigo="VAL-ESTAG3-INST-NONE",
+                                status="AVISO",
+                                mensagem=f"Item {eq.item_id}: custo_inst_* preenchido antes de ADR-085?",
+                            )
+                        )
+
     # ADR-077: mapa instancial de utilização — executado quando há pool contracts
     instancias_recurso = []
     composicao_equipes_atividade = []
@@ -175,6 +201,19 @@ def run_equipes_e_alocacao(
         # Σ custo_total_particionado == custo_total_contrato e atualiza eq.custo_total (N4).
         if instancias_recurso:
             _aplicar_custo_instancial_adr085(contratos_recurso, instancias_recurso, equipes, validacoes)
+            _enrich_equipes_com_decomposicao_instancial(equipes, contratos_recurso, validacoes)
+
+            # ADR-104 Checkpoint 3: Estágio 4 — custo_inst_* deve estar preenchido para items em contratos
+            items_em_contratos = {item_id for c in contratos_recurso for item_id in c.items_cobertos}
+            for eq in equipes:
+                if eq.item_id in items_em_contratos and eq.custo_inst_mo is None:
+                    validacoes.append(
+                        ValidacaoItem(
+                            codigo="VAL-ESTAG4-INST-MISSING",
+                            status="ERRO",
+                            mensagem=f"Item {eq.item_id}: custo_inst_* deve estar preenchido no Estágio 4",
+                        )
+                    )
 
     # ADR-078: pré-processamento estrutural de compartilhamento
     relatorio_oportunidades = None

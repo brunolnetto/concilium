@@ -2423,6 +2423,66 @@ def _aplicar_custo_instancial_adr085(
 
 
 # ---------------------------------------------------------------------------
+# ADR-104: Enriquecimento de EquipeDireta com decomposição instancial
+# ---------------------------------------------------------------------------
+
+
+def _enrich_equipes_com_decomposicao_instancial(
+    equipes: list[EquipeDireta],
+    contratos: list[RecursoContrato],
+    validacoes: list[ValidacaoItem],
+) -> None:
+    """Enriquece equipes com decomposição de custos instanciais após ADR-085.
+
+    Copia custo_inst_* de contratos[].particao_por_item[] para equipes[].
+    Valida invariante: custo_total == soma(custo_inst_*) com tolerância R$ 0.05.
+
+    Mutação in-place de `equipes`. Apenas items em contratos receberão decomposição.
+    """
+    eq_by_id = {eq.item_id: eq for eq in equipes}
+
+    for contrato in contratos:
+        for part in contrato.particao_por_item:
+            eq = eq_by_id.get(part.item_id)
+            if eq is None:
+                continue
+
+            # Copiar decomposição de CustoParticionadoItem
+            eq.custo_inst_mo = part.custo_inst_mo
+            eq.custo_inst_eq = part.custo_inst_eq
+            eq.custo_inst_comb = part.custo_inst_comb
+            eq.custo_inst_mat = part.custo_inst_mat
+            eq.custo_inst_mob_demob = round(
+                part.custo_mob_imputado + part.custo_demob_imputado,
+                2,
+            )
+
+            # Validar invariante (detecção precoce de bugs)
+            # ADR-085: custo_total_particionado = custo_inst_mo + eq + comb + mat
+            # (mob_demob já está incluído em custo_inst_mo como resíduo)
+            soma = (
+                eq.custo_inst_mo
+                + eq.custo_inst_eq
+                + eq.custo_inst_comb
+                + eq.custo_inst_mat
+            )
+            desvio = abs(soma - eq.custo_total)
+
+            if desvio > 0.05:
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-DECOMP-INVARIANTE",
+                        status="ERRO",
+                        mensagem=(
+                            f"Item {part.item_id}: soma decomposição (R$ {soma:,.2f}) "
+                            f"≠ custo_total (R$ {eq.custo_total:,.2f}). "
+                            f"Desvio: R$ {desvio:.2f}"
+                        ),
+                    )
+                )
+
+
+# ---------------------------------------------------------------------------
 # ADR-083: Enriquecimento de overhead_ocioso via segmentos instanciais reais
 # ---------------------------------------------------------------------------
 

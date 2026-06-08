@@ -6,25 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 2504,
+      "duration_ms": 14624,
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 190,
+      "duration_ms": 1924,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 137,
+      "duration_ms": 535,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 271,
+      "duration_ms": 1913,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -77,7 +77,7 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 161,
+      "duration_ms": 690,
       "avisos": [
         "ADR-077: Contrato ESC-1CAT — 1 instância(s) com standby >35%: ESC-1CAT-02: 23w idle. Taxa global: 64.1%. Custo standby: R$ 138,000.00.",
         "ADR-077: Contrato ESC-3CAT — 3 instância(s) com standby >35%: ESC-3CAT-04: 21w idle; ESC-3CAT-05: 21w idle; ESC-3CAT-06: 21w idle. Taxa global: 79.4%. Custo standby: R$ 756,000.00."
@@ -86,47 +86,50 @@
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 68,
-      "avisos": [
-        "Item 'eap-1_9': preço de venda (6.8713) abaixo do custo da equipe (9.5808). Margem=-39.43%. Revisar dimensionamento ou repassar ao cliente.",
-        "Item 'eap-1_10': preço de venda (16.7922) abaixo do custo da equipe (18.1868). Margem=-8.30%. Revisar dimensionamento ou repassar ao cliente."
-      ]
+      "duration_ms": 201,
+      "avisos": []
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 55,
-      "avisos": []
+      "duration_ms": 251,
+      "avisos": [
+        "Razão indireto/direto 102.0% fora da faixa [10.0%, 50.0%]"
+      ]
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 57,
+      "duration_ms": 504,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 224,
+      "duration_ms": 1587,
       "avisos": [
-        "Item 'eap-1_3': divergência de produtividade -16.0% não explicada por clima (fe_nec=1.03 × clima=0.81 = 0.84). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=10.094 vs calibrado=10.417).",
-        "Item 'eap-1_7': divergência de produtividade -11.4% não explicada por clima (fe_nec=1.01 × clima=0.87 = 0.89). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=9.131 vs calibrado=9.266).",
-        "Item 'eap-1_8': divergência de produtividade -44.1% não explicada por clima (fe_nec=0.64 × clima=0.87 = 0.56). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=11.939 vs calibrado=11.939).",
-        "Item 'eap-1_9': ~1.63 frentes equivalentes. Delta operacional: R$ -2,658,440.79.",
-        "Item 'eap-1_9': divergência de produtividade -14.5% não explicada por clima (fe_nec=1.00 × clima=0.86 = 0.86). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=5.873 vs calibrado=5.873).",
-        "Item 'eap-1_10': ~1.14 frentes equivalentes. Delta operacional: R$ -34,474.96."
+        "Margem operacional 16.49% | status=VERMELHO | preço R$ 46,182,103 (operacional) vs R$ 81,098,987 (catálogo)",
+        "Item 'eap-1_0': divergência de produtividade -53.6% não explicada por clima (fe_nec=0.48 × clima=0.96 = 0.46). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=0.877 vs calibrado=0.877).",
+        "Item 'eap-1_2': divergência de produtividade -12.9% não explicada por clima (fe_nec=1.00 × clima=0.87 = 0.87). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=8.461 vs calibrado=8.463).",
+        "Item 'eap-1_3': divergência de produtividade -59.8% não explicada por clima (fe_nec=0.49 × clima=0.81 = 0.40). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=10.094 vs calibrado=10.094).",
+        "Item 'eap-1_4': divergência de produtividade -54.3% não explicada por clima (fe_nec=0.50 × clima=0.92 = 0.46). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=10.757 vs calibrado=10.757).",
+        "Item 'eap-1_5': divergência de produtividade -67.2% não explicada por clima (fe_nec=0.33 × clima=1.00 = 0.33). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=14.871 vs calibrado=14.871).",
+        "Item 'eap-1_6': divergência de produtividade -68.1% não explicada por clima (fe_nec=0.34 × clima=0.95 = 0.32). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
+        "Item 'eap-1_7': divergência de produtividade -78.6% não explicada por clima (fe_nec=0.25 × clima=0.87 = 0.21). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=9.131 vs calibrado=9.131).",
+        "Item 'eap-1_8': divergência de produtividade -45.9% não explicada por clima (fe_nec=0.62 × clima=0.87 = 0.54). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=11.939 vs calibrado=11.939).",
+        "Item 'eap-1_9': divergência de produtividade -72.4% não explicada por clima (fe_nec=0.32 × clima=0.86 = 0.28). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=5.873 vs calibrado=5.873)."
       ]
     },
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 64,
+      "duration_ms": 295,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 2281,
+      "duration_ms": 5892,
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -134,25 +137,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 44,
+      "duration_ms": 122,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 45,
+      "duration_ms": 173,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 42,
+      "duration_ms": 364,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 44,
+      "duration_ms": 166,
       "avisos": []
     }
   ],
@@ -165,16 +168,16 @@
       "preco_venda": 76961261.88
     },
     "ferramenta": {
-      "custo_direto": 48544217.78,
-      "custo_direto_equipes": 48544217.78,
+      "custo_direto": 48138895.74,
+      "custo_direto_equipes": 48138895.74,
       "custo_direto_pu_q": 46843791.49,
       "custo_indireto": 19584539.27,
-      "custo_total": 68128757.05,
+      "custo_total": 67723435.01,
       "preco_venda": 81098986.57,
-      "preco_venda_plus_eq": 78013218.73,
+      "preco_venda_plus_eq": 46182103.11,
       "preco_venda_catalogo": 81098986.57,
       "preco_venda_operacional": 81098986.57,
-      "bdi_lucro_impostos": 0.19037819096686426
+      "bdi_lucro_impostos": 0.19750255665597827
     },
     "ferramenta_breakdown_direto": {
       "base": "pu_q",
@@ -182,9 +185,9 @@
       "equipamentos_total": 27931069.01,
       "diesel_total": 11054150.18,
       "materiais_total": 0.0,
-      "direto_total": 48544217.78,
+      "direto_total": 48138895.74,
       "direto_total_pu_q": 46843791.49,
-      "direto_total_equipes": 48544217.78
+      "direto_total_equipes": 48138895.74
     },
     "ferramenta_breakdown_indireto": {
       "adm": 13766750.4,
@@ -201,8 +204,8 @@
     },
     "deltas": {
       "custo_direto": {
-        "absoluto": 1676884.43,
-        "percentual": 3.58
+        "absoluto": 1271562.39,
+        "percentual": 2.71
       },
       "custo_indireto": {
         "absoluto": -0.1,
@@ -220,9 +223,9 @@
     "composicao_final": {
       "custo_direto": {
         "referencia": 46867333.35,
-        "ferramenta": 48544217.78,
-        "delta_absoluto": 1676884.43,
-        "delta_percentual": 3.58
+        "ferramenta": 48138895.74,
+        "delta_absoluto": 1271562.39,
+        "delta_percentual": 2.71
       },
       "custo_indireto": {
         "referencia": 19584539.37,
@@ -232,9 +235,9 @@
       },
       "custo_total": {
         "referencia": 66451872.72,
-        "ferramenta": 68128757.05,
-        "delta_absoluto": 1676884.33,
-        "delta_percentual": 2.52
+        "ferramenta": 67723435.01,
+        "delta_absoluto": 1271562.29,
+        "delta_percentual": 1.91
       },
       "preco_venda": {
         "referencia": 76961261.88,
@@ -256,9 +259,9 @@
         "equipamentos_total": 27931069.01,
         "diesel_total": 11054150.18,
         "materiais_total": 0.0,
-        "direto_total": 48544217.78,
+        "direto_total": 48138895.74,
         "direto_total_pu_q": 46843791.49,
-        "direto_total_equipes": 48544217.78
+        "direto_total_equipes": 48138895.74
       },
       "indireto": {
         "adm": 13766750.4,
@@ -279,9 +282,9 @@
         "metric": "custo_direto",
         "fase": "06-consolidacao",
         "valor_referencia": 46867333.35,
-        "valor_calculado": 48544217.78,
-        "delta_absoluto": 1676884.43,
-        "delta_percentual": 3.58,
+        "valor_calculado": 48138895.74,
+        "delta_absoluto": 1271562.39,
+        "delta_percentual": 2.71,
         "classe": "IDEAL",
         "severidade": "S0",
         "causa_categoria": "DERIVACAO_PIPELINE",
@@ -342,9 +345,9 @@
       "metric": "custo_direto",
       "fase": "06-consolidacao",
       "valor_referencia": 46867333.35,
-      "valor_calculado": 48544217.78,
-      "delta_absoluto": 1676884.43,
-      "delta_percentual": 3.58,
+      "valor_calculado": 48138895.74,
+      "delta_absoluto": 1271562.39,
+      "delta_percentual": 2.71,
       "classe": "IDEAL",
       "severidade": "S0",
       "causa_categoria": "DERIVACAO_PIPELINE",

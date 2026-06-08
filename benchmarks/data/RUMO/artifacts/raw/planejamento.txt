@@ -1,0 +1,97 @@
+ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA 																				% TOTAL PROJETO
+				PREÇO UNITÁRIO				VALOR DE BDI					 R$ SUB TOTAL UNIT S/ BDI 	 R$ SUB TOTAL PROJETO S/ BDI 				 R$ SUB TOTAL UNIT C/ BDI 	R$ SUB TOTAL PROJETO C/ BDI				 R$  TOTAL PROJETO 	
+				 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 BDI 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 SER/MAT/M.O/COMB/EQUIP 	 SERVIÇOS 	 MATERIAL 	 DIESEL 	 M.O 	 MATERIAL/M.O/EQUIP 	 SERVIÇOS 	MATERIAL	 DIESEL 	 M.O 		
+																								
+																								
+1	LIMPEZA													 384.494,65 	 -   	 260.490,44 	 680.514,50 		 485.842,94 	 -   	 307.885,34 	 859.890,15 	 1.653.618,43 	12,0%
+1.1	Limpeza mecanizada da camada vegetal (espessura média de 30 cm) - volume geométrico	m2	 52.000,00 	 0,14 		 0,43 	 0,61 	 TER 	 0,04 	 -   	 0,08 	 0,16 	 1,18 	 7.238,00 	 -   	 22.390,59 	 31.714,29 	 1,46 	 9.145,85 	 -   	 26.464,44 	 40.073,81 	 75.684,10 	4,6%
+1.2	Transporte de solo excedente com caminhão basculante de 14 m3 (peso específico de transporte de 1,8 g/cm3) - dmt de até 3,0 km (interno à planta)	m3	 15.600,00 			 0,33 	 3,00 	 TER 	 -   	 -   	 0,06 	 0,79 	 3,33 	 -   	 -   	 5.225,08 	 46.799,72 	 4,19 	 -   	 -   	 6.175,75 	 59.135,58 	 65.311,33 	3,9%
+1.3	Regularização de bota-fora com espalhamento e compactação	m3	 15.600,00 	 0,13 		 1,18 	 1,68 	 TER 	 0,03 	 -   	 0,21 	 0,44 	 2,99 	 2.043,05 	 -   	 18.371,59 	 26.219,56 	 3,68 	 2.581,58 	 -   	 21.714,21 	 33.130,72 	 57.426,51 	3,5%
+								 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+2	TERRAPLANAGEM																							
+2.1	Escavação, carga e transporte de material de 1ª categoria - dmt de 400 a 600 m - caminho de serviço em leito natural - com carregadeira e caminhão basculante de 14 m³ - volume geométrico	m3	 1.194,65 	 0,60 		 1,46 	 6,00 	 TER 	 0,16 	 -   	 0,27 	 1,58 	 8,07 	 722,31 	 -   	 1.745,93 	 7.173,85 	 10,08 	 912,71 	 -   	 2.063,59 	 9.064,80 	 12.041,10 	0,7%
+2.2	Escavação, carga e transporte de material de 1° cat. - dmt: 4700m (importação solo de jazida interna ao TBR070)	m3	 51.353,78 	 0,60 		 1,64 	 6,76 	 TER 	 0,16 	 -   	 0,30 	 1,78 	 9,00 	 31.049,69 	 -   	 84.432,84 	 346.925,92 	 11,24 	 39.234,02 	 -   	 99.794,96 	 438.371,54 	 577.400,52 	34,9%
+2.3	Compactação de aterros a 100% do proctor intermediário (camada final) - volume homogeneizado (vol. geométrico x 1,25)	m3	 40.421,87 	 0,62 		 2,68 	 4,29 	 TER 	 0,16 	 -   	 0,49 	 1,13 	 7,58 	 25.066,74 	 -   	 108.218,33 	 173.280,27 	 9,36 	 31.674,04 	 -   	 127.908,10 	 218.954,92 	 378.537,06 	22,9%
+								 TER 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+3	DEMOLIÇÃO DE PAVIMENTO EXISTENTE (bota fora interno ao site TBR070)																							
+3.1	Demolição mecânica de pavimento	m3	 4.200,00 	 74,93 				 TER 	 19,75 	 -   	 -   	 -   	 74,93 	 314.722,80 	 -   	 -   	 -   	 94,69 	 397.680,05 	 -   	 -   	 -   	 397.680,05 	24,0%
+3.2	Carregamento e transporte de material de demolição para bota fora interno ao TBR070 em basculante de 14m³ - DMT até 4 km	m3	 4.200,00 	 0,74 		 3,61 	 9,84 	 TER 	 0,19 	 -   	 0,66 	 2,59 	 14,19 	 3.102,00 	 -   	 15.159,89 	 41.341,77 	 17,64 	 3.919,65 	 -   	 17.918,15 	 52.238,98 	 74.076,78 	4,5%
+3.3	Regularização de bota-fora com espalhamento e compactação	m3	 4.200,00 	 0,13 		 1,18 	 1,68 	 TER 	 0,03 	 -   	 0,21 	 0,44 	 2,99 	 550,05 	 -   	 4.946,20 	 7.059,11 	 3,68 	 695,04 	 -   	 5.846,13 	 8.919,81 	 15.460,98 	0,9%
+																								
+4	PAVIMENTAÇÃO													 3.946.362,62 	 4.560.039,98 	 186.155,30 	 298.073,73 		 5.178.558,57 	 5.163.018,27 	 220.025,30 	 376.642,47 	 10.938.244,61 	53,0%
+4.1	Regularização do subleito	m2	 37.509,04 	 0,62 		 1,61 	 2,57 	 PAV 	 0,16 	 -   	 0,29 	 0,68 	 4,80 	 23.260,42 	 -   	 60.252,02 	 96.476,14 	 5,93 	 29.391,59 	 -   	 71.214,57 	 121.906,12 	 222.512,28 	1,1%
+4.2	Reforço de subleito com solo de jazida selecionada - volume geométrico	m3	 22.505,42 	 0,62 	 1,09 	 2,19 	 3,51 	 PAV 	 0,16 	 0,29 	 0,40 	 0,92 	 7,41 	 13.956,25 	 24.575,18 	 49.297,11 	 78.935,02 	 9,18 	 17.634,95 	 31.052,91 	 58.266,47 	 99.741,37 	 206.695,70 	1,0%
+4.3	Sub-base estabilizada granulometricamente com mistura solo brita (70% - 30%) na pista com material de jazida e brita comercial - volume geométrico	m3	 5.626,36 	 0,62 	 49,38 	 6,88 	 11,02 	 PAV 	 0,16 	 13,02 	 1,25 	 2,91 	 67,91 	 3.489,06 	 277.828,46 	 38.733,44 	 62.020,38 	 85,24 	 4.408,74 	 351.060,79 	 45.780,79 	 78.368,22 	 479.618,54 	2,3%
+4.4	Base ou sub-base de brita graduada executada com vibroacabadora - brita comercial	m3	 5.501,33 	 0,62 	 224,00 	 6,88 	 11,02 	 PAV 	 0,16 	 59,04 	 1,25 	 2,91 	 242,53 	 3.411,53 	 1.232.297,92 	 37.872,73 	 60.642,19 	 305,89 	 4.310,77 	 1.557.117,22 	 44.763,48 	 76.626,76 	 1.682.818,23 	8,1%
+4.5	Imprimação com asfalto diluído	m2	 35.842,04 	 0,54 	 3,28 			 PAV 	 0,14 	 0,87 	 -   	 -   	 3,82 	 19.263,74 	 117.676,59 	 -   	 -   	 4,83 	 24.341,44 	 148.694,76 	 -   	 -   	 173.036,20 	0,8%
+4.6	Pintura de ligação (RR1C)	m2	 71.684,08 	 0,45 	R$ 1,44			 PAV 	 0,12 	 0,38 	 -   	 -   	 1,89 	 32.257,84 	 103.225,08 	 -   	 -   	 2,39 	 40.760,62 	 130.434,00 	 -   	 -   	 171.194,62 	0,8%
+4.7	Binder - camada de ligação (FAIXA B)	m3	 2.438,09 	 818,92 	 598,14 			 EMP 	 256,80 	 29,91 	 -   	 -   	 1.417,06 	 1.996.602,03 	 1.458.307,11 	 -   	 -   	 1.703,77 	 2.622.713,05 	 1.531.222,47 	 -   	 -   	 4.153.935,51 	20,1%
+4.8	Cbuq - concreto betuminoso usinado a quente	m3	 2.250,54 	 818,92 	 598,14 			 EMP 	 256,80 	 29,91 	 -   	 -   	 1.417,06 	 1.843.017,26 	 1.346.129,64 	 -   	 -   	 1.703,77 	 2.420.965,89 	 1.413.436,12 	 -   	 -   	 3.834.402,01 	18,6%
+4.9	Fresagem de pavimento esp=10cm (Para encaixes novas alças)	m3	 60,00 	 185,08 				 PAV 	 48,78 	 -   	 -   	 -   	 185,08 	 11.104,50 	 -   	 -   	 -   	 233,86 	 14.031,52 	 -   	 -   	 -   	 14.031,52 	0,1%
+																								
+5	DRENAGEM PLUVIAL													 733.047,09 	 2.210.930,92 	 52.167,91 	 122.415,89 		 926.269,72 	 2.793.706,42 	 61.659,60 	 154.683,29 	 3.936.319,03 	2,0%
+	Tubulação																							
+5.1	Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø600mm - areia e brita comerciais (incluso fornecimento e execução)	m	 60,00 	 141,00 	 253,99 	 109,34 	 196,59 	 DRN 	 37,17 	 66,95 	 19,89 	 51,82 	 700,92 	 8.460,00 	 15.239,28 	 6.560,55 	 11.795,42 	 876,75 	 10.689,96 	 19.256,18 	 7.754,21 	 14.904,55 	 52.604,90 	1,3%
+5.2	Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø1000mm - areia e brita comerciais (incluso fornecimento e execução)	m	 20,00 	 141,00 	 532,35 	 152,66 	 274,47 	 DRN 	 37,17 	 140,32 	 27,78 	 72,35 	 1.100,47 	 2.820,00 	 10.647,01 	 3.053,14 	 5.489,33 	 1.378,08 	 3.563,32 	 13.453,44 	 3.608,64 	 6.936,26 	 27.561,66 	0,7%
+5.3	Boca de BSTC D = 0,60 m - esconsidade 0° - areia e brita comerciais - alas retas	und	 6,00 		 1.262,44 		 1.862,95 	 DRN 	 -   	 332,76 	 -   	 491,05 	 3.125,39 	 -   	 7.574,64 	 -   	 11.177,68 	 3.949,20 	 -   	 9.571,23 	 -   	 14.123,98 	 23.695,21 	0,6%
+5.4	Boca de BSTC D = 1,00 m - esconsidade 0° - areia e brita comerciais - alas retas	und	 2,00 		 3.271,68 		 1.862,95 	 DRN 	 -   	 862,38 	 -   	 491,05 	 5.134,63 	 -   	 6.543,36 	 -   	 3.725,89 	 6.488,05 	 -   	 8.268,11 	 -   	 4.707,99 	 12.976,11 	0,3%
+	Canal em grama 01 - B = 2,80; H= 0,50m - Comprimento = 912,25m																							
+5.5	Escavação mecanizada de cavas ou valas de solo local - volume geométrico	m³	 1.445,00 	 8,82 		 4,07 	 5,95 	 DRN 	 2,33 	 -   	 0,74 	 1,57 	 18,84 	 12.747,84 	 -   	 5.876,35 	 8.601,42 	 23,48 	 16.108,02 	 -   	 6.945,52 	 10.868,66 	 33.922,20 	0,9%
+5.6	Regularização de valas com apiloamento do fundo	m²	 2.408,34 	 8,82 		 11,24 	 25,87 	 DRN 	 2,33 	 -   	 2,05 	 6,82 	 45,93 	 21.246,40 	 -   	 27.074,49 	 62.291,95 	 57,12 	 26.846,70 	 -   	 32.000,55 	 78.711,37 	 137.558,62 	3,5%
+5.7	Regularização de bota-fora com espalhamento e compactação	m³	 1.445,00 	 0,13 		 1,18 	 1,68 	 DRN 	 0,03 	 -   	 0,21 	 0,44 	 2,99 	 189,24 	 -   	 1.701,73 	 2.428,68 	 3,68 	 239,13 	 -   	 2.011,35 	 3.068,85 	 5.319,33 	0,1%
+5.8	Hidrossemeadura para cobertura de taludes	m²	 2.408,34 	 5,64 	 5,28 			 DRN 	 1,49 	 1,39 	 -   	 -   	 10,92 	 13.583,04 	 12.716,04 	 -   	 -   	 13,80 	 17.163,37 	 16.067,83 	 -   	 -   	 33.231,20 	0,8%
+5.9	Manutenção de cobertura de gramíneas por hidrossemeadura	m²	 2.408,34 	 0,05 	 1,77 			 DRN 	 0,01 	 0,47 	 -   	 -   	 1,82 	 120,42 	 4.262,76 	 -   	 -   	 2,30 	 152,16 	 5.386,38 	 -   	 -   	 5.538,53 	0,1%
+	Canal em grama 02 - B = 0,80; H= 0,50m - Comprimento = 51,58m																							
+5.10	Escavação mecanizada de cavas ou valas de solo local - volume geométrico	m³	 18,57 	 8,82 		 4,07 	 5,95 	 DRN 	 2,33 	 -   	 0,74 	 1,57 	 18,84 	 163,81 	 -   	 75,51 	 110,53 	 23,48 	 206,99 	 -   	 89,25 	 139,67 	 435,91 	0,0%
+5.11	Regularização de valas com apiloamento do fundo	m²	 30,95 	 8,82 		 11,24 	 25,87 	 DRN 	 2,33 	 -   	 2,05 	 6,82 	 45,93 	 273,02 	 -   	 347,92 	 800,47 	 57,12 	 344,99 	 -   	 411,22 	 1.011,47 	 1.767,68 	0,0%
+5.12	Regularização de bota-fora com espalhamento e compactação	m³	 18,57 	 0,13 		 1,18 	 1,68 	 DRN 	 0,03 	 -   	 0,21 	 0,44 	 2,99 	 2,43 	 -   	 21,87 	 31,21 	 3,68 	 3,07 	 -   	 25,85 	 39,44 	 68,36 	0,0%
+5.13	Hidrossemeadura para cobertura de taludes	m²	 30,95 	 5,64 	 5,28 			 DRN 	 1,49 	 1,39 	 -   	 -   	 10,92 	 174,55 	 163,41 	 -   	 -   	 13,80 	 220,56 	 206,48 	 -   	 -   	 427,03 	0,0%
+5.14	manutenção de cobertura de gramíneas por hidrossemeadura	m²	 30,95 	 0,05 	 1,77 			 DRN 	 0,01 	 0,47 	 -   	 -   	 1,82 	 1,55 	 54,78 	 -   	 -   	 2,30 	 1,96 	 69,22 	 -   	 -   	 71,17 	0,0%
+	Canal em grama 03 - B = 3,20; H= 0,50m - Comprimento = 224,09m																							
+5.15	Escavação mecanizada de cavas ou valas de solo local - volume geométrico	m³	 268,91 	 8,82 		 4,07 	 5,95 	 DRN 	 2,33 	 -   	 0,74 	 1,57 	 18,84 	 2.372,31 	 -   	 1.093,56 	 1.600,68 	 23,48 	 2.997,62 	 -   	 1.292,53 	 2.022,60 	 6.312,75 	0,2%
+5.16	Eegularização de valas com apiloamento do fundo	m²	 537,82 	 8,82 		 11,24 	 25,87 	 DRN 	 2,33 	 -   	 2,05 	 6,82 	 45,93 	 4.744,62 	 -   	 6.046,11 	 13.910,66 	 57,12 	 5.995,24 	 -   	 7.146,17 	 17.577,35 	 30.718,76 	0,8%
+5.17	Eegularização de bota-fora com espalhamento e compactação	m³	 268,91 	 0,13 		 1,18 	 1,68 	 DRN 	 0,03 	 -   	 0,21 	 0,44 	 2,99 	 35,22 	 -   	 316,68 	 451,96 	 3,68 	 44,50 	 -   	 374,30 	 571,10 	 989,90 	0,0%
+5.18	Hidrossemeadura para cobertura de taludes	m²	 537,82 	 5,64 	 5,28 			 DRN 	 1,49 	 1,39 	 -   	 -   	 10,92 	 3.033,28 	 2.839,67 	 -   	 -   	 13,80 	 3.832,82 	 3.588,17 	 -   	 -   	 7.420,99 	0,2%
+5.19	manutenção de cobertura de gramíneas por hidrossemeadura	m²	 537,82 	 0,05 	 1,77 			 DRN 	 0,01 	 0,47 	 -   	 -   	 1,82 	 26,89 	 951,93 	 -   	 -   	 2,30 	 33,98 	 1.202,85 	 -   	 -   	 1.236,83 	0,0%
+																								
+6	SINALIZAÇÃO E DISPOSITIVOS DE SEGURANÇA																							
+6.1	Tacha refletiva em plástico injetado - monodirecional tipo II - com um pino - fornecimento e colocação	und	 718,00 	 8,81 	 20,41 			 SAA 	 2,32 	 5,38 	 -   	 -   	 29,22 	 6.325,58 	 14.654,38 	 -   	 -   	 36,92 	 7.992,93 	 18.517,10 	 -   	 -   	 26.510,03 	0,7%
+6.2	Tacha refletiva em plástico injetado - bidirecional tipo III - com um pino - fornecimento e colocação	und	 1.495,00 	 8,81 	 29,96 			 SAA 	 2,32 	 7,90 	 -   	 -   	 38,77 	 13.170,95 	 44.790,20 	 -   	 -   	 48,99 	 16.642,66 	 56.596,37 	 -   	 -   	 73.239,03 	1,9%
+6.3	Tachão refletivo em plástico injetado - bidirecional - fornecimento e colocação	und	 220,00 	 16,03 	 71,28 			 SAA 	 4,23 	 18,79 	 -   	 -   	 87,31 	 3.526,60 	 15.681,60 	 -   	 -   	 110,32 	 4.456,17 	 19.815,09 	 -   	 -   	 24.271,26 	0,6%
+6.4	Pintura de setas e zebrados com termoplástico por extrusão - espessura de 3,0 mm	m2	 339,96 	 18,25 	 83,00 			 SAA 	 4,81 	 21,88 	 -   	 -   	 101,25 	 6.204,27 	 28.216,68 	 -   	 -   	 127,94 	 7.839,64 	 35.654,27 	 -   	 -   	 43.493,91 	1,1%
+6.5	Pintura de faixa com tinta acrílica - espessura de 0,6 mm	m2	 1.476,64 	 25,00 	 51,96 			 SAA 	 6,59 	 13,70 	 -   	 -   	 76,96 	 36.916,00 	 76.723,06 	 -   	 -   	 97,24 	 46.646,63 	 96.946,36 	 -   	 -   	 143.592,99 	3,6%
+6.6	Placa em alumínio composto, espessura de 3,0 mm, modulada, aérea - película retrorrefletiva tipo III + III - fornecimento e implantação	m2	 37,45 	 113,09 	 606,00 			 SAA 	 29,81 	 159,73 	 -   	 -   	 719,09 	 4.235,22 	 22.694,70 	 -   	 -   	 908,63 	 5.351,58 	 28.676,76 	 -   	 -   	 34.028,33 	0,9%
+6.7	Placa em aço - película III + III - fornecimento e implantação	m2	 27,39 	 55,95 	 568,12 			 SAA 	 14,75 	 149,75 	 -   	 -   	 624,07 	 1.532,47 	 15.560,81 	 -   	 -   	 788,57 	 1.936,41 	 19.662,45 	 -   	 -   	 21.598,87 	0,5%
+6.8	Suporte polimérico ecológico maciço colapsível quadrado de 8 cm para placa de sinalização - fornecimento e implantação	und	 63,00 	 28,94 	 1.035,76 			 SAA 	 7,63 	 273,01 	 -   	 -   	 1.064,70 	 1.823,22 	 65.252,88 	 -   	 -   	 1.345,34 	 2.303,80 	 82.452,78 	 -   	 -   	 84.756,57 	2,2%
+6.9	Defensa semimaleável simples - fornecimento e implatação	m	 608,00 	 7,03 	 371,00 			 SAA 	 1,85 	 97,79 	 -   	 -   	 378,03 	 4.274,24 	 225.568,00 	 -   	 -   	 477,67 	 5.400,88 	 285.025,08 	 -   	 -   	 290.425,96 	7,4%
+6.10	Terminal absorvedor de energia de não abertura com nível de contenção TL3 para defensa metálica fornecimento e implantação	und	 4,00 	 466,30 	 63.425,43 			 SAA 	 122,91 	 16.718,20 	 -   	 -   	 63.891,73 	 1.865,20 	 253.701,72 	 -   	 -   	 80.732,84 	 2.356,84 	 320.574,52 	 -   	 -   	 322.931,37 	8,2%
+6.11	Ancoragem de defensa semimaleável simples - fornecimento e implantação	m	 96,00 	 63,50 	 370,00 			 SAA 	 16,74 	 97,53 	 -   	 -   	 433,50 	 6.096,00 	 35.520,00 	 -   	 -   	 547,77 	 7.702,83 	 44.882,66 	 -   	 -   	 52.585,49 	1,3%
+								 SAA 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+7	PAISAGISMO																							
+7.1	Hidrossemeadura para cobertura de taludes	m2	 85.475,66 	R$ 5,64	 5,28 			 SAA 	 1,49 	 1,39 	 -   	 -   	 10,92 	 482.082,72 	 451.311,48 	 -   	 -   	 13,80 	 609.154,08 	 570.271,91 	 -   	 -   	 1.179.425,99 	30,0%
+																								
+8	ILUMINAÇÃO																							
+8.1	Material e mdo 	vb	 1,00 	 95.000,00 	 900.262,53 			 SAA 	 25.040,89 	 237.298,66 	 -   	 -   	 995.262,53 	 95.000,00 	 900.262,53 	 -   	 -   	 1.257.602,08 	 120.040,89 	 1.137.561,19 	 -   	 -   	 1.257.602,08 	31,9%
+								 SAA 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+																								
+																								
+	INDIRETOS													 45.000,00 	 -   	 -   	 3.341.476,12 		 54.793,78 	 -   	 -   	 4.068.713,74 	 4.123.507,52 	100,0%
+	Administração 	VB	 1,00 	 45.000,00 			 2.188.122,35 	 IND 	 9.793,78 	 -   	 -   	 476.222,13 	 2.233.122,35 	 45.000,00 	 -   	 -   	 2.188.122,35 	 2.719.138,27 	 54.793,78 	 -   	 -   	 2.664.344,48 	 2.719.138,27 	65,9%
+	Topografia	VB	 1,00 				 75.615,56 	 IND 	 -   	 -   	 -   	 16.456,94 	 75.615,56 	 -   	 -   	 -   	 75.615,56 	 92.072,50 	 -   	 -   	 -   	 92.072,50 	 92.072,50 	2,2%
+	Laboratório	VB	 1,00 				 70.615,56 	 IND 	 -   	 -   	 -   	 15.368,74 	 70.615,56 	 -   	 -   	 -   	 70.615,56 	 85.984,31 	 -   	 -   	 -   	 85.984,31 	 85.984,31 	2,1%
+	QSMS	VB	 1,00 				 187.486,11 	 IND 	 -   	 -   	 -   	 40.804,41 	 187.486,11 	 -   	 -   	 -   	 187.486,11 	 228.290,52 	 -   	 -   	 -   	 228.290,52 	 228.290,52 	5,5%
+	Mobilização/Desmobilização de pessoas e equipamentos	VB	 1,00 				 819.636,54 	 IND 	 -   	 -   	 -   	 178.385,39 	 819.636,54 	 -   	 -   	 -   	 819.636,54 	 998.021,93 	 -   	 -   	 -   	 998.021,93 	 998.021,93 	24,2%
+								 IND 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
+														 5.108.904,36 	 6.770.970,89 	 498.813,65 	 4.442.480,24 		 6.645.465,01 	 7.956.724,69 	 589.570,24 	 5.459.929,65 	 20.651.689,59 	
+																 90.756,59 							 4.905.849,68 	
+																								
+B D I	APLICAÇÃO	SIGLA	 M.O 	 SERVIÇO 	 DIESEL 	 MATERIAL 																		
+	Limpeza e Desmatamento	LIM	26,36%	26,36%	18,19%	26,36%																		
+	Terraplenagem	TER	26,36%	26,36%	18,19%	26,36%																		
+	Drenagem Pluvial	DRN	26,36%	26,36%	18,19%	26,36%																		
+	Sistema de Água	SAA	26,36%	26,36%	18,19%	26,36%						 224.762,54 												
+	Sistema de Esgoto	SES	26,36%	26,36%	18,19%	26,36%																		
+	Pavimentação	PAV	26,36%	26,36%	18,19%	26,36%																		
+	Despesas Indiretas	IND	21,76%	21,76%	21,76%	21,76%																		
+	Serviços terceirizados	EMP	26,36%	31,36%	18,19%	5,00%																		
+	Obra Civil	CIV	26,36%	26,36%	18,19%	26,36%																		

@@ -422,6 +422,15 @@ class EquipeDireta(BaseModel):
     contrato_tipo_id: str = ""  # tipo_id do RecursoContrato atribuído; "" = sem pool
     fracao_atribuicao: float = 0.0  # fração do custo_contrato atribuída a este item
 
+    # ADR-104: Decomposição Instancial de Custos (Estágio 4 — preenchido após ADR-085)
+    # Invariante: se custo_inst_mo is not None, então
+    #   abs(custo_inst_mo + custo_inst_eq + custo_inst_comb + custo_inst_mat + custo_inst_mob_demob - custo_total) < 0.05
+    custo_inst_mo: float | None = None  # Mão de obra instancial (Estágio 4). None = Estágio 1/3
+    custo_inst_eq: float | None = None  # Equipamentos instancial (Estágio 4). None = Estágio 1/3
+    custo_inst_comb: float | None = None  # Combustível/diesel instancial (Estágio 4). None = Estágio 1/3
+    custo_inst_mat: float | None = None  # Materiais instancial (Estágio 4). None = Estágio 1/3
+    custo_inst_mob_demob: float | None = None  # Mob + Demob instancial (Estágio 4). None = Estágio 1/3
+
 
 class CustomTeamComposition(BaseModel):
     """ADR-006: Composição de equipe customizada (fora do padrão do CPU).
