@@ -52,6 +52,22 @@ def _iso_week_key(d: date) -> str:
     return f"{iso.year}-W{iso.week:02d}"
 
 
+def _week_offset(semana_key: str, semanas_obra: list[str], data_inicio: date) -> int:
+    """Offset (0-based) de uma chave ISO-week relativo a data_inicio.
+
+    Usa o índice em semanas_obra quando presente; caso a semana exceda o prazo
+    nominal (cronograma com makespan > deadline), calcula via aritmética de data
+    a partir da segunda-feira da semana ISO. Tolerante a overflow.
+    """
+    try:
+        return semanas_obra.index(semana_key)
+    except ValueError:
+        year_str, week_str = semana_key.split("-W", 1)
+        monday = date.fromisocalendar(int(year_str), int(week_str), 1)
+        inicio_monday = data_inicio - timedelta(days=data_inicio.weekday())
+        return max(0, (monday - inicio_monday).days // 7)
+
+
 def _semanas_entre(inicio: date, fim: date) -> list[str]:
     """Lista de chaves 'AAAA-Www' das semanas ISO que cobrem o intervalo [inicio, fim]."""
     semanas: list[str] = []
@@ -645,6 +661,97 @@ def _compute_productive_weeks(
     return max(1, math.ceil(Q / prod_per_week))
 
 
+def _enrich_spec_resources_from_catalog(
+    spec: dict,
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict,
+    producao_lookup: dict,
+    deadline_weeks: int,
+    validacoes: list,
+) -> None:
+    """Constrói required_resources + resource_pool + duração a partir do catálogo.
+
+    Modelo (pool renovável fungível): a composicao_padrao_equipe da PRODUÇÃO
+    (CPU.producao_id_ref → producao) é a receita de UMA frente. Cada equip_id e
+    funcao_id é um tipo de recurso renovável; a atividade consome
+    ``composição × n_frentes`` enquanto ativa e libera ao terminar.
+
+    Dimensionamento de frentes para caber no prazo (ADR-072 + ADR-091):
+        dur_1frente = ceil(Q / (P × horas_semana))
+        n_frentes   = max(1, ceil(dur_1frente / deadline_weeks))
+        duration    = ceil(dur_1frente / n_frentes)
+        required_r  = ceil(qtd_composição × n_frentes) por tipo
+
+    Só atua quando a spec não traz required_resources/resource_pool explícitos
+    (preserva specs explícitas). Grava de volta em ``spec`` para que
+    _extract_activities_from_spec e _extract_pool_from_spec consumam.
+    """
+    activities = spec.get("activities") or []
+    if not activities:
+        return
+    # Não sobrescreve spec explícita
+    if spec.get("resource_pool") or any(a.get("required_resources") for a in activities):
+        return
+
+    regime = canonical_in.projeto.regime_trabalho
+    horas_semana = regime.horas_dia * regime.dias_semana
+    if horas_semana <= 0 or deadline_weeks <= 0:
+        return
+
+    eap_by_id = {item.item_id: item for item in (canonical_in.eap or [])}
+    enriquecidas = 0
+
+    for a in activities:
+        item = eap_by_id.get(a.get("item_id"))
+        if item is None:
+            continue
+        Q = float(getattr(item, "quantitativo", 0) or 0)
+        cpu = cpu_lookup.get(getattr(item, "cpu_id", "") or "")
+        if not cpu or Q <= 0:
+            continue
+        prod = producao_lookup.get(cpu.get("producao_id_ref") or "")
+        if not prod:
+            continue
+        P = float(prod.get("valor_horario") or 0)
+        comp = prod.get("composicao_padrao_equipe") or {}
+        if P <= 0 or not comp:
+            continue
+
+        dur_1frente = max(1, math.ceil(Q / (P * horas_semana)))
+        n_frentes = max(1, math.ceil(dur_1frente / deadline_weeks))
+        duration = max(1, math.ceil(dur_1frente / n_frentes))
+
+        # Granularidade do pool: UMA equipe-tipo por CPU. Equipes da mesma CPU são
+        # fungíveis (compartilham o pool). A composicao_padrao_equipe (funções +
+        # equipamentos) alimenta o breakdown de custo da equipe (skill-05), não
+        # dimensões separadas de pool — evita double-counting do custo do item por
+        # tipo de recurso. required_resources = nº de frentes paralelas.
+        if not (comp.get("equipamentos") or comp.get("funcoes")):
+            continue
+        tipo = f"EQUIPE-{item.cpu_id}"
+        rr = {tipo: n_frentes}
+
+        a["required_resources"] = rr
+        a["duration_weeks"] = duration
+        a["n_frentes"] = n_frentes
+        a["_catalog_resources"] = True
+        enriquecidas += 1
+
+    if enriquecidas:
+        # resource_pool deixado para inferir_pool_minimo_from_spec (pico concorrente,
+        # não soma) via _extract_pool_from_spec — evita super-provisionar contratos.
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-CATALOGO-RES",
+                status="OK",
+                mensagem=(
+                    f"rcpsp_spec enriquecido do catálogo: {enriquecidas} atividades "
+                    f"com required_resources (composicao_padrao_equipe)."
+                ),
+            )
+        )
+
+
 def _extract_activities_from_spec(
     spec: dict,
     canonical_in: CanonicalModel | None = None,
@@ -668,7 +775,11 @@ def _extract_activities_from_spec(
     for a in spec["activities"]:
         window_w = int(a["duration_weeks"])
         productive_w = window_w  # fallback: sem alteração
-        if use_productive:
+        if a.get("_catalog_resources"):
+            # Duração já dimensionada por _enrich_spec_resources_from_catalog
+            # (productive com n_frentes). Usar direto — sem recompute.
+            productive_w = window_w
+        elif use_productive:
             n_res = max(1, sum(a.get("required_resources", {}).values()))
             computed = _compute_productive_weeks(
                 a["item_id"],
@@ -1132,6 +1243,17 @@ def _rasfc_extract_inputs(
         pool_config_in = inputs.get("pool_config")
         if isinstance(pool_config_in, dict) and "pool_config" not in rcpsp_spec:
             rcpsp_spec["pool_config"] = pool_config_in
+        # Construir required_resources + resource_pool + duração do catálogo
+        # (composicao_padrao_equipe). Pré-requisito para o pool não degenerar.
+        if cpu_lookup and producao_lookup:
+            _deadline = int(
+                inputs.get("deadline_weeks")
+                or rcpsp_spec.get("deadline_weeks")
+                or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
+            )
+            _enrich_spec_resources_from_catalog(
+                rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, _deadline, validacoes
+            )
         # ADR-072: pass lookups so productive duration is computed
         activities = _extract_activities_from_spec(rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, validacoes)
         if not activities:
@@ -1806,8 +1928,9 @@ def _build_scheduled_activities(
     for item in canonical_in.eap:  # type: ignore[union-attr]
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
         semanas_com_producao = [s for s, d in distribuicao_semanal.items() if d.qtd_executada > 0]
-        start_week = semanas_obra.index(semanas_com_producao[0]) if semanas_com_producao else 0
-        end_week = semanas_obra.index(semanas_com_producao[-1]) if semanas_com_producao else 0
+        _di = canonical_in.projeto.data_inicio  # type: ignore[union-attr]
+        start_week = _week_offset(semanas_com_producao[0], semanas_obra, _di) if semanas_com_producao else 0
+        end_week = _week_offset(semanas_com_producao[-1], semanas_obra, _di) if semanas_com_producao else 0
         data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)  # type: ignore[union-attr]
         data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)  # type: ignore[union-attr]
 

@@ -1001,6 +1001,15 @@ def _build_contrato_entry(
     c_mob = float(tipo_costs.get("custo_mob_unit", 0.0))
     c_demob = float(tipo_costs.get("custo_demob_unit", 0.0))
     c_idle = float(tipo_costs.get("custo_idle_semanal_unit", 0.0))
+    # ADR-085: quando resource_costs não fornece a taxa ociosa (ex: rcpsp_spec
+    # construído do catálogo), deriva do custo fixo da própria composição: locação
+    # (aluguel de equipamento) + mão de obra (equipe na folha) continuam quando o
+    # recurso está mobilizado mas parado; combustível e manutenção (uso) cessam.
+    # Sem isso, adr085_active=False e o custo é cobrado cheio por todo o contrato.
+    if c_idle <= 0.0:
+        _c_idle_fallback = round(cus_mo + cus_locacao, 4)
+        if _c_idle_fallback > 0.0:
+            c_idle = _c_idle_fallback
     gap_max = int(_math.ceil((c_mob + c_demob) / c_idle) - 1) if c_idle > 0 else 9999
     cadeias = _build_perpetuation_chains(
         tipo_id=tipo,
