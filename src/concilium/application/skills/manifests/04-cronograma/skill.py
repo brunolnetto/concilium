@@ -1242,6 +1242,13 @@ def _run_auto_schedule_fallback_chain(
     """
     extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
     if extracted is None:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-SCHED-EXTRACT-FAIL",
+                status="ERRO",
+                mensagem="Falha ao extrair inputs de cronograma (atividades, DAG, pool ou deadline inválidos)."
+            )
+        )
         return [], None
     activities, dag, pool, deadline_weeks = extracted
 
@@ -1776,6 +1783,16 @@ def _build_scheduled_activities(
                 assigned_lookup[sa.activity_id] = dict(ar)
 
     scheduled_activities_out = []
+
+    # ADR-072: Preservar duração original do scheduler em vez de recalcular
+    # Constrói mapa de activity_id → ScheduledActivityCanonical do schedule_selected
+    duration_lookup = {}
+    if schedule_selected is not None:
+        for sa in getattr(schedule_selected, "scheduled_activities", []):
+            activity_id = getattr(sa, "activity_id", None)
+            if activity_id:
+                duration_lookup[activity_id] = getattr(sa, "duration_weeks", 1)
+
     for item in canonical_in.eap:  # type: ignore[union-attr]
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
         semanas_com_producao = [s for s, d in distribuicao_semanal.items() if d.qtd_executada > 0]
@@ -1783,12 +1800,21 @@ def _build_scheduled_activities(
         end_week = semanas_obra.index(semanas_com_producao[-1]) if semanas_com_producao else 0
         data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)  # type: ignore[union-attr]
         data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)  # type: ignore[union-attr]
+
+        # ADR-072: Use original duration from scheduler if available
+        duration_from_scheduler = duration_lookup.get(item.item_id, None)
+        if duration_from_scheduler is not None:
+            duration_weeks = duration_from_scheduler
+        else:
+            # Fallback: calculate from scheduled weeks if no scheduler duration
+            duration_weeks = max(1, end_week - start_week + 1)
+
         scheduled_activities_out.append(
             ScheduledActivityCanonical(
                 activity_id=item.item_id,
                 start_week=start_week,
                 end_week=end_week,
-                duration_weeks=max(1, end_week - start_week + 1),
+                duration_weeks=duration_weeks,
                 data_inicio=data_inicio,
                 data_fim=data_fim,
                 distribuicao_semanal=distribuicao_semanal,
