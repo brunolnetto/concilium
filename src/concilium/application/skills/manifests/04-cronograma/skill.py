@@ -416,29 +416,53 @@ def _weeks_between(start: date, end: date) -> int:
     return max(1, ((end - start).days // 7) + 1)
 
 
-def _extract_activities(canonical: CanonicalModel) -> list[Activity]:
-    """Extrai atividades do canônico (atividades ou EAP)."""
+def _extract_activities(
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict | None = None,
+    producao_lookup: dict | None = None,
+    validacoes: list | None = None,
+) -> list[Activity]:
+    """Extrai atividades do canônico (atividades ou EAP).
+
+    Calcula duração produtiva de cada atividade baseada em ADR-072:
+      duration_weeks = ceil(quantitativo / (produtividade × horas_dia × dias_semana × n_equipes))
+
+    Se cpu_lookup/producao_lookup não fornecidos, usa duration_weeks=1 como default.
+    """
     activities: list[Activity] = []
-    if canonical.atividades:
-        for act in canonical.atividades:
+    if canonical_in.atividades:
+        for act in canonical_in.atividades:
             activities.append(
                 Activity(
                     activity_id=act.atividade_id,
                     description=act.descricao,
-                    duration_weeks=1,
+                    duration_weeks=1,  # TODO: calcular duração produtiva de atividades diretas
                     required_resources={},
                 )
             )
         return activities
 
     # Fallback to EAP: must use activity_id format "item_id-atv-1" to match DAG edges
-    for item in canonical.eap:
+    # ADR-072 Direção A: calcular duração produtiva se catálogos disponíveis
+    validacoes = validacoes or []
+    for item in canonical_in.eap:
         activity_id = f"{item.item_id}-atv-1"
+
+        # Calcular duração produtiva se catálogos disponíveis
+        duration_weeks = 1  # default
+        if cpu_lookup and producao_lookup:
+            # Usar 1 equipe como default se não especificado
+            computed = _compute_productive_weeks(
+                item.item_id, 1, canonical_in, cpu_lookup, producao_lookup, validacoes
+            )
+            if computed:
+                duration_weeks = computed
+
         activities.append(
             Activity(
                 activity_id=activity_id,
-                description=item.descricao,
-                duration_weeks=1,
+                description=item.descricao or f"Item {item.item_id}",
+                duration_weeks=duration_weeks,
                 required_resources={},
             )
         )
@@ -1106,7 +1130,7 @@ def _rasfc_extract_inputs(
         # ADR-081: passa eap_items para derivar precedência com thresholds
         dag = _extract_dag_from_spec(rcpsp_spec, activities, eap_items=canonical_in.eap or [])
     else:
-        activities = _extract_activities(canonical_in)
+        activities = _extract_activities(canonical_in, cpu_lookup, producao_lookup, validacoes)
         if not activities:
             validacoes.append(ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="Sem atividades."))
             return None
