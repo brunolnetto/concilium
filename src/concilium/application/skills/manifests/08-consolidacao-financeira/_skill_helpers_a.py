@@ -184,7 +184,8 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
     out: list[AtividadeCustoCompleto] = []
     acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     for act in acts:
-        nome = eap_by_id.get(act.activity_id).descricao if eap_by_id.get(act.activity_id) else act.activity_id
+        eap_item = eap_by_id.get(act.activity_id)
+        nome = (eap_item.descricao or act.activity_id) if eap_item else act.activity_id
         out.append(
             AtividadeCustoCompleto(
                 atividade_id=act.activity_id,
@@ -200,7 +201,8 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
         for eq in canonical_in.equipes_diretas:
             if not eq.item_id:
                 continue
-            nome = eap_by_id.get(eq.item_id).descricao if eap_by_id.get(eq.item_id) else eq.item_id
+            eap_item = eap_by_id.get(eq.item_id)
+            nome = (eap_item.descricao or eq.item_id) if eap_item else eq.item_id
             out.append(
                 AtividadeCustoCompleto(
                     atividade_id=eq.item_id,
