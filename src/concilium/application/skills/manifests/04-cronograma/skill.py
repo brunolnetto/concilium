@@ -452,9 +452,7 @@ def _extract_activities(
         duration_weeks = 1  # default
         if cpu_lookup and producao_lookup:
             # Usar 1 equipe como default se não especificado
-            computed = _compute_productive_weeks(
-                item.item_id, 1, canonical_in, cpu_lookup, producao_lookup, validacoes
-            )
+            computed = _compute_productive_weeks(item.item_id, 1, canonical_in, cpu_lookup, producao_lookup, validacoes)
             if computed:
                 duration_weeks = computed
 
@@ -469,15 +467,43 @@ def _extract_activities(
     return activities
 
 
-def _extract_dag(canonical: CanonicalModel, activity_ids: list[str]) -> ActivityDAG:
-    """Extrai DAG do canônico ou infere sequência linear."""
-    if canonical.activity_dag and canonical.activity_dag.arestas:
-        precedence = [(edge.de, edge.para) for edge in canonical.activity_dag.arestas]
-    else:
-        precedence = [(activity_ids[i], activity_ids[i + 1]) for i in range(len(activity_ids) - 1)]
+def _extract_dag(
+    canonical: CanonicalModel,
+    activity_ids: list[str],
+    activities: list[Activity] | None = None,
+) -> ActivityDAG:
+    """Extrai DAG do canônico ou infere sequência linear.
 
-    acts = _extract_activities(canonical)
-    return ActivityDAG(activities=acts, precedence=precedence)
+    Se activities for None, extrai do canônico (legacy path).
+    Caso contrário, usa as activities fornecidas (com duração produtiva já calculada).
+
+    ADR-081: Extrai completion_threshold_pct da EAP (predecessores).
+    """
+    # ── Extrair arestas e thresholds ──────────────────────────────────────────
+    edge_thresholds: dict[tuple[str, str], float] = {}
+
+    if canonical.eap:
+        for item in canonical.eap:
+            for pred in item.predecessores_tipados():
+                # pred.item_id referencia outro item da EAP
+                # mas o activity_id é "item_id-atv-1"
+                key = (f"{pred.item_id}-atv-1", f"{item.item_id}-atv-1")
+                edge_thresholds[key] = float(pred.completion_threshold_pct)
+
+    # Se não há predecessores na EAP, inferir sequência linear
+    if not edge_thresholds:
+        if canonical.activity_dag and canonical.activity_dag.arestas:
+            for edge in canonical.activity_dag.arestas:
+                edge_thresholds[(edge.de, edge.para)] = 1.0
+        else:
+            for i in range(len(activity_ids) - 1):
+                edge_thresholds[(activity_ids[i], activity_ids[i + 1])] = 1.0
+
+    precedence = list(edge_thresholds.keys())
+
+    # ADR-072: Use pre-computed activities if provided, otherwise extract from canonical
+    acts = activities if activities is not None else _extract_activities(canonical)
+    return ActivityDAG(activities=acts, precedence=precedence, thresholds=edge_thresholds)
 
 
 def _extract_pool(canonical: CanonicalModel) -> ResourcePool:
@@ -1134,7 +1160,8 @@ def _rasfc_extract_inputs(
         if not activities:
             validacoes.append(ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="Sem atividades."))
             return None
-        dag = _extract_dag(canonical_in, [a.activity_id for a in activities])
+        # ADR-072: pass pre-computed activities to preserve duration_weeks calculation
+        dag = _extract_dag(canonical_in, [a.activity_id for a in activities], activities=activities)
         pool = _extract_pool(canonical_in)
 
     if not pool.resources:
@@ -1967,9 +1994,7 @@ def run_cronograma(
         eap_list = [
             {
                 "item_id": item.item_id,
-                "predecessores": [
-                    {"item_id": p.item_id} for p in item.predecessores
-                ] if item.predecessores else []
+                "predecessores": [{"item_id": p.item_id} for p in item.predecessores] if item.predecessores else [],
             }
             for item in canonical_in.eap
         ]
