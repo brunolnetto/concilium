@@ -1,0 +1,947 @@
+{
+  "meta": {
+    "gerado_em": "2026-06-08T14:12:02.094900+00:00",
+    "framework": "concilium",
+    "adapter": "relatorio_validacao_v1",
+    "nota": "Relatório de validação na ausência do template .xlsm original."
+  },
+  "resumo": {
+    "projeto": "VALE",
+    "tipo_obra": "terraplenagem",
+    "localizacao": "Brasil",
+    "periodo": "2026-01-01 -> 2027-12-31",
+    "status": "RASCUNHO"
+  },
+  "PLANEJAMENTO": [
+    {
+      "item_id": "1.1",
+      "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+      "descricao": "Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA",
+      "unidade": "M2",
+      "quantitativo": 383592.55,
+      "subtotal_sem_bdi_mo": 8846371826.67,
+      "subtotal_sem_bdi_eq": 3067537444.17,
+      "subtotal_sem_bdi_diesel": 1090122897.0,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 13004032167.84,
+      "subtotal_com_bdi": 16379793532.32,
+      "pu_total_sem_bdi": 33900.638,
+      "pu_total_com_bdi": 42701.021
+    },
+    {
+      "item_id": "1.2",
+      "cpu_id": "CPU-TERRA-ATI-003",
+      "descricao": "Supressão vegetal, destocamento e limpeza de árvores, arbustos, vegetação rasteira e entulhos com remoção para área de depósito - DMT até 350m",
+      "unidade": "M2",
+      "quantitativo": 2036512.35,
+      "subtotal_sem_bdi_mo": 392780.1,
+      "subtotal_sem_bdi_eq": 789979.43,
+      "subtotal_sem_bdi_diesel": 602585.68,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 1785345.21,
+      "subtotal_com_bdi": 2102421.66,
+      "pu_total_sem_bdi": 0.8767,
+      "pu_total_com_bdi": 1.0324
+    },
+    {
+      "item_id": "3.1",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
+      "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria",
+      "unidade": "M",
+      "quantitativo": 45102.63,
+      "subtotal_sem_bdi_mo": 113335.6,
+      "subtotal_sem_bdi_eq": 588894.53,
+      "subtotal_sem_bdi_diesel": 119755.47,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 821985.6,
+      "subtotal_com_bdi": 991379.69,
+      "pu_total_sem_bdi": 18.2248,
+      "pu_total_com_bdi": 21.9805
+    },
+    {
+      "item_id": "3.2",
+      "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+      "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos alagáveis",
+      "unidade": "M",
+      "quantitativo": 575.0,
+      "subtotal_sem_bdi_mo": 13260590.7,
+      "subtotal_sem_bdi_eq": 4598196.79,
+      "subtotal_sem_bdi_diesel": 1634079.35,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 19492866.84,
+      "subtotal_com_bdi": 24553087.07,
+      "pu_total_sem_bdi": 33900.638,
+      "pu_total_com_bdi": 42701.021
+    },
+    {
+      "item_id": "3.3",
+      "cpu_id": "CPU-DIVER-ATI-065",
+      "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+      "unidade": "M",
+      "quantitativo": 14755.9,
+      "subtotal_sem_bdi_mo": 62220.17,
+      "subtotal_sem_bdi_eq": 8656.8,
+      "subtotal_sem_bdi_diesel": 2200.4,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 73077.37,
+      "subtotal_com_bdi": 93736.18,
+      "pu_total_sem_bdi": 4.9524,
+      "pu_total_com_bdi": 6.3525
+    },
+    {
+      "item_id": "3.4",
+      "cpu_id": "CPU-DIVER-ATI-065",
+      "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+      "unidade": "M",
+      "quantitativo": 700.0,
+      "subtotal_sem_bdi_mo": 2951.64,
+      "subtotal_sem_bdi_eq": 410.67,
+      "subtotal_sem_bdi_diesel": 104.38,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 3466.69,
+      "subtotal_com_bdi": 4446.72,
+      "pu_total_sem_bdi": 4.9524,
+      "pu_total_com_bdi": 6.3525
+    },
+    {
+      "item_id": "3.5",
+      "cpu_id": "CPU-DIVER-ATI-065",
+      "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas",
+      "unidade": "M",
+      "quantitativo": 1000.0,
+      "subtotal_sem_bdi_mo": 4216.63,
+      "subtotal_sem_bdi_eq": 586.67,
+      "subtotal_sem_bdi_diesel": 149.12,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 4952.42,
+      "subtotal_com_bdi": 6352.45,
+      "pu_total_sem_bdi": 4.9524,
+      "pu_total_com_bdi": 6.3525
+    },
+    {
+      "item_id": "3.6",
+      "cpu_id": "CPU-DIVER-ATI-067",
+      "descricao": "Remoção de cerca de mourão de madeira",
+      "unidade": "M",
+      "quantitativo": 24394.3,
+      "subtotal_sem_bdi_mo": 48154.57,
+      "subtotal_sem_bdi_eq": 12521.57,
+      "subtotal_sem_bdi_diesel": 3182.75,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 63858.89,
+      "subtotal_com_bdi": 81198.13,
+      "pu_total_sem_bdi": 2.6178,
+      "pu_total_com_bdi": 3.3286
+    },
+    {
+      "item_id": "5.1",
+      "cpu_id": "CPU-DIVER-ATI-067",
+      "descricao": "Abertura de acesso para implantação de cerca",
+      "unidade": "M",
+      "quantitativo": 18490.0,
+      "subtotal_sem_bdi_mo": 36499.43,
+      "subtotal_sem_bdi_eq": 9490.9,
+      "subtotal_sem_bdi_diesel": 2412.41,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 48402.73,
+      "subtotal_com_bdi": 61545.25,
+      "pu_total_sem_bdi": 2.6178,
+      "pu_total_com_bdi": 3.3286
+    },
+    {
+      "item_id": "4.1",
+      "cpu_id": "CPU-DIVER-ATI-070",
+      "descricao": "Implantação do eixo",
+      "unidade": "KM",
+      "quantitativo": 18.49,
+      "subtotal_sem_bdi_mo": 25475.83,
+      "subtotal_sem_bdi_eq": 11378.46,
+      "subtotal_sem_bdi_diesel": 7953.54,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 44807.84,
+      "subtotal_com_bdi": 55286.38,
+      "pu_total_sem_bdi": 2423.3551,
+      "pu_total_com_bdi": 2990.0695
+    }
+  ],
+  "EQUIPE": [
+    {
+      "equipe_id": "eq-1.1",
+      "item_id": "1.1",
+      "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 116734.02094,
+      "status_pe": "OK",
+      "custo_venda_cpu": 16379793532.32
+    },
+    {
+      "equipe_id": "eq-1.2",
+      "item_id": "1.2",
+      "cpu_id": "CPU-TERRA-ATI-003",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 15.16631,
+      "status_pe": "OK",
+      "custo_venda_cpu": 2102421.66
+    },
+    {
+      "equipe_id": "eq-3.1",
+      "item_id": "3.1",
+      "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 0.873,
+      "status_pe": "OK",
+      "custo_venda_cpu": 991379.69
+    },
+    {
+      "equipe_id": "eq-3.2",
+      "item_id": "3.2",
+      "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 173.9842,
+      "status_pe": "OK",
+      "custo_venda_cpu": 24553087.07
+    },
+    {
+      "equipe_id": "eq-3.3",
+      "item_id": "3.3",
+      "cpu_id": "CPU-DIVER-ATI-065",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 0.98958,
+      "status_pe": "OK",
+      "custo_venda_cpu": 93736.18
+    },
+    {
+      "equipe_id": "eq-3.4",
+      "item_id": "3.4",
+      "cpu_id": "CPU-DIVER-ATI-065",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.90562,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 4446.72
+    },
+    {
+      "equipe_id": "eq-3.5",
+      "item_id": "3.5",
+      "cpu_id": "CPU-DIVER-ATI-065",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.86517,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 6352.45
+    },
+    {
+      "equipe_id": "eq-3.6",
+      "item_id": "3.6",
+      "cpu_id": "CPU-DIVER-ATI-067",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 1.90684,
+      "status_pe": "OK",
+      "custo_venda_cpu": 81198.13
+    },
+    {
+      "equipe_id": "eq-5.1",
+      "item_id": "5.1",
+      "cpu_id": "CPU-DIVER-ATI-067",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 1.20328,
+      "status_pe": "OK",
+      "custo_venda_cpu": 61545.25
+    },
+    {
+      "equipe_id": "eq-4.1",
+      "item_id": "4.1",
+      "cpu_id": "CPU-DIVER-ATI-070",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.07863,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 55286.38
+    }
+  ],
+  "analise_composicional": [
+    {
+      "item_id": "1.1",
+      "custo_venda_cpu": 16379793532.32,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 16379793532.32,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 99640.41,
+      "custo_equipamentos": 31416.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 9259.61
+    },
+    {
+      "item_id": "1.2",
+      "custo_venda_cpu": 2102421.66,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 2102421.66,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 31314.14,
+      "custo_equipamentos": 58891.06,
+      "custo_materiais": 0.0,
+      "custo_diesel": 39844.38
+    },
+    {
+      "item_id": "3.1",
+      "custo_venda_cpu": 991379.69,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 991379.69,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 78589.5,
+      "custo_equipamentos": 381836.61,
+      "custo_materiais": 0.0,
+      "custo_diesel": 68873.18
+    },
+    {
+      "item_id": "3.2",
+      "custo_venda_cpu": 24553087.07,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 24553087.07,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 99640.41,
+      "custo_equipamentos": 31416.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 9259.61
+    },
+    {
+      "item_id": "3.3",
+      "custo_venda_cpu": 93736.18,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 93736.18,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 41253.31,
+      "custo_equipamentos": 4840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 1020.34
+    },
+    {
+      "item_id": "3.4",
+      "custo_venda_cpu": 4446.72,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 4446.72,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 41253.31,
+      "custo_equipamentos": 4840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 1020.34
+    },
+    {
+      "item_id": "3.5",
+      "custo_venda_cpu": 6352.45,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 6352.45,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 41253.31,
+      "custo_equipamentos": 4840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 1020.34
+    },
+    {
+      "item_id": "3.6",
+      "custo_venda_cpu": 81198.13,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 81198.13,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 22073.1,
+      "custo_equipamentos": 4840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 1020.34
+    },
+    {
+      "item_id": "5.1",
+      "custo_venda_cpu": 61545.25,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 61545.25,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 22073.1,
+      "custo_equipamentos": 4840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 1020.34
+    },
+    {
+      "item_id": "4.1",
+      "custo_venda_cpu": 55286.38,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 55286.38,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 29420.64,
+      "custo_equipamentos": 19360.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 11223.77
+    }
+  ],
+  "INDIRETOS": [
+    {
+      "categoria": "ADM",
+      "descricao": "Administracao de obra",
+      "permanencia_meses": 24.0,
+      "custo_total": 1462999.44
+    },
+    {
+      "categoria": "TOP",
+      "descricao": "Topografia",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "LAB",
+      "descricao": "Laboratorio de solos e materiais",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "QSMS",
+      "descricao": "Qualidade, Saude, Seguranca e Meio Ambiente",
+      "permanencia_meses": 24.0,
+      "custo_total": 299456.64
+    },
+    {
+      "categoria": "MOB",
+      "descricao": "Mobilizacao e desmobilizacao",
+      "permanencia_meses": 24.0,
+      "custo_total": 4236967.02
+    }
+  ],
+  "RESULTADO": {
+    "preco_venda_total": 16415254581.54,
+    "custo_total": 13032370354.53,
+    "custo_direto": 13026370931.43,
+    "custo_direto_equipes": 13026370931.43,
+    "custo_direto_fonte": "operacional_equipes",
+    "benchmark_guard_aplicado": false,
+    "custo_indireto": 5999423.1,
+    "razao_indireto_direto": 0.0004605598237283881,
+    "resultado_bruto": 3382884227.01,
+    "margem_pct": 0.20608174001847457,
+    "status_margem": "VERMELHO",
+    "referencia": null
+  },
+  "GRAFICOS": {
+    "equipamentos": {
+      "labels": [],
+      "values": []
+    },
+    "mao_obra": {
+      "labels": [],
+      "values": []
+    },
+    "cronograma": {
+      "tasks": [
+        {
+          "item_id": "1.1",
+          "name": "Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA",
+          "start": "2025-12-29",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": []
+        },
+        {
+          "item_id": "1.2",
+          "name": "Supressão vegetal, destocamento e limpeza de árvores, arbustos, vegetação rasteira e entulhos com remoção para área de depósito - DMT até 350m",
+          "start": "2026-02-16",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "3.1",
+          "name": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria",
+          "start": "2025-12-29",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": []
+        },
+        {
+          "item_id": "3.2",
+          "name": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos alagáveis",
+          "start": "2026-01-05",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "3.3",
+          "name": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+          "start": "2026-01-12",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.2",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "3.4",
+          "name": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+          "start": "2026-01-19",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.3",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "3.5",
+          "name": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas",
+          "start": "2026-01-26",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.4",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "3.6",
+          "name": "Remoção de cerca de mourão de madeira",
+          "start": "2026-02-02",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.5",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "5.1",
+          "name": "Abertura de acesso para implantação de cerca",
+          "start": "2026-02-16",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "4.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "4.1",
+          "name": "Implantação do eixo",
+          "start": "2026-02-09",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "3.6",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        }
+      ]
+    },
+    "financeiro": {
+      "labels": [
+        "Dez/25",
+        "Jan/26",
+        "Fev/26"
+      ],
+      "receita": [
+        5471751527.0,
+        5471751527.0,
+        5471751527.540001
+      ],
+      "despesa": [
+        4824452.38,
+        587485.36,
+        587485.36
+      ],
+      "saldo": [
+        5466927074.62,
+        5471164041.64,
+        5471164042.180001
+      ],
+      "exposicao": [
+        -5466927074.62,
+        -10938091116.26,
+        -16409255158.44
+      ]
+    },
+    "painel_equilibrio": {
+      "delta_total": 16406545792.7,
+      "soma_levers": 88146.16,
+      "break_even_alcancavel": true,
+      "levers": [
+        {
+          "id": "revisao_bdi_minima",
+          "tipo": "preco",
+          "descricao": "BDI: revisao minima de preco para cobrir ineficiencia",
+          "restricoes": [
+            "Lever de precificacao — fora do alcance do planejador"
+          ],
+          "delta_margin_total": 88146.16,
+          "item_count": 3,
+          "break_even_solo": false,
+          "participa_combo": false
+        }
+      ],
+      "combinacoes_break_even": [],
+      "frentes_nec_media": 0.0
+    }
+  },
+  "ponto_equilibrio": [
+    {
+      "item_id": "1.1",
+      "custo_fixo_equipe": 140316.02,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 16379793532.32,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 16387292332.53,
+      "custo_direto_atribuido": 13004181410.95,
+      "custo_indireto_atribuido": 5989203.5,
+      "resultado_total_atribuido": 3377121718.08,
+      "gap_operacional": 16379793532.32,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.2",
+      "custo_fixo_equipe": 130049.58,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 2102421.66,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 2103384.17,
+      "custo_direto_atribuido": 1669146.35,
+      "custo_indireto_atribuido": 768.74,
+      "resultado_total_atribuido": 433469.07,
+      "gap_operacional": 2102421.66,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.1",
+      "custo_fixo_equipe": 529299.29,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 991379.69,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 991833.55,
+      "custo_direto_atribuido": 787072.27,
+      "custo_indireto_atribuido": 362.49,
+      "resultado_total_atribuido": 204398.78,
+      "gap_operacional": 991379.69,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.2",
+      "custo_fixo_equipe": 140316.02,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 24553087.07,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 24564327.67,
+      "custo_direto_atribuido": 19493090.55,
+      "custo_indireto_atribuido": 8977.73,
+      "resultado_total_atribuido": 5062259.39,
+      "gap_operacional": 24553087.07,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.3",
+      "custo_fixo_equipe": 47113.65,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 93736.18,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 93779.09,
+      "custo_direto_atribuido": 74418.66,
+      "custo_indireto_atribuido": 34.27,
+      "resultado_total_atribuido": 19326.16,
+      "gap_operacional": 93736.18,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.4",
+      "custo_fixo_equipe": 47113.65,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 4446.72,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 4448.76,
+      "custo_direto_atribuido": 3530.32,
+      "custo_indireto_atribuido": 1.63,
+      "resultado_total_atribuido": 916.81,
+      "gap_operacional": 4446.72,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.5",
+      "custo_fixo_equipe": 47113.65,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 6352.45,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 6355.36,
+      "custo_direto_atribuido": 5043.31,
+      "custo_indireto_atribuido": 2.32,
+      "resultado_total_atribuido": 1309.72,
+      "gap_operacional": 6352.45,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "3.6",
+      "custo_fixo_equipe": 27933.44,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 81198.13,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 81235.3,
+      "custo_direto_atribuido": 64464.5,
+      "custo_indireto_atribuido": 29.69,
+      "resultado_total_atribuido": 16741.11,
+      "gap_operacional": 81198.13,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "5.1",
+      "custo_fixo_equipe": 27933.44,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 61545.25,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 61573.43,
+      "custo_direto_atribuido": 48861.76,
+      "custo_indireto_atribuido": 22.5,
+      "resultado_total_atribuido": 12689.16,
+      "gap_operacional": 61545.25,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "4.1",
+      "custo_fixo_equipe": 60004.41,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 55286.38,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.206082,
+      "receita_atribuida": 55311.69,
+      "custo_direto_atribuido": 43892.75,
+      "custo_indireto_atribuido": 20.22,
+      "resultado_total_atribuido": 11398.73,
+      "gap_operacional": 55286.38,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    }
+  ],
+  "ACTIONABLE_INSIGHTS": {
+    "criticidade": {
+      "projeto_id": "b2f4bddd-f89c-49f4-81b2-c94d9b8f8503",
+      "versao": "1",
+      "gerado_em": "2026-06-08T14:11:10.451914Z",
+      "itens": [],
+      "total_atividades": 0,
+      "total_A_mais": 0,
+      "total_A": 0,
+      "total_B": 0,
+      "total_C": 0,
+      "custo_A_mais_pct": 0.0,
+      "notas_engenheiro": null
+    },
+    "sensibilidade": {
+      "projeto_id": "b2f4bddd-f89c-49f4-81b2-c94d9b8f8503",
+      "versao": "1",
+      "gerado_em": "2026-06-08T14:11:10.451914Z",
+      "status_margem": "VERMELHO",
+      "margem_entrada": 0.0,
+      "margem_alvo_min": 0.0,
+      "repair_viavel": false,
+      "passos_repair": [
+        {
+          "lever_tipo": "REVIEW_BDI",
+          "lever_checkpoint": "",
+          "delta_margem": 0.0,
+          "custo_aplicacao": null,
+          "ratio_beneficio": 0.0,
+          "confianca": "BAIXA",
+          "atividades_afetadas": []
+        }
+      ],
+      "oportunidades": [],
+      "margem_pos_repair": null,
+      "exposicao_por_cpu": []
+    },
+    "intervencao": {
+      "projeto_id": "b2f4bddd-f89c-49f4-81b2-c94d9b8f8503",
+      "versao": "1",
+      "gerado_em": "2026-06-08T14:11:10.451914Z",
+      "status_entrada": "VERMELHO",
+      "eixos_intervencao": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.206082,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        },
+        {
+          "nome": "Oportunidade RECALIBRAR_PU",
+          "margem_estimada": 0.011735,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": [
+            "RECALIBRAR_PU"
+          ]
+        }
+      ],
+      "fronteira_pareto": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.206082,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        }
+      ],
+      "recomendacao_primaria": {
+        "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+        "margem_estimada": 0.206082,
+        "prazo_delta_dias": null,
+        "confianca": "MEDIA",
+        "risco": "MEDIO",
+        "levers_combinados": []
+      }
+    }
+  },
+  "validacoes_pipeline": [],
+  "resumo_utilizacao_contratos": [],
+  "instancias_recurso": [],
+  "decomposicao_pool": null,
+  "relatorio_oportunidades": null,
+  "COMPRESSAO_CRONOGRAMA": null
+}

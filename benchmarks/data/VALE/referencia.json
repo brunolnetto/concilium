@@ -1,0 +1,650 @@
+{
+  "slug": "VALE",
+  "planejamento": {
+    "custo_direto_sem_bdi": 10965877.33,
+    "custo_indireto": 6705122.67,
+    "total_projeto": 17671000.0
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "VALE",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "1.1",
+        "ordem": 1,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+        "descricao": "Supress\u00e3o vegetal com ou sem destocamento de vegeta\u00e7\u00e3o com \u00d8 =< 30cm, assim como remo\u00e7\u00e3o de arbustos, vegeta\u00e7\u00e3o rasteira e limpeza para a \u00e1rea de dep\u00f3sito - DMT at\u00e9 350m - ALTA",
+        "unidade": "M2",
+        "quantitativo": 383592.55,
+        "predecessores": [],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "1.2",
+        "ordem": 2,
+        "cpu_id": "CPU-TERRA-ATI-003",
+        "descricao": "Supress\u00e3o vegetal, destocamento e limpeza de \u00e1rvores, arbustos, vegeta\u00e7\u00e3o rasteira e entulhos com remo\u00e7\u00e3o para \u00e1rea de dep\u00f3sito - DMT at\u00e9 350m",
+        "unidade": "M2",
+        "quantitativo": 2036512.35,
+        "predecessores": [
+          {
+            "item_id": "1.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.1",
+        "ordem": 3,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00f5es de concreto, se\u00e7\u00e3o quadrada 10 x 10 cm (padr\u00e3o VALEC) executada em solos compostos por material de 1\u00aa e 2\u00aa categoria",
+        "unidade": "M",
+        "quantitativo": 45102.63,
+        "predecessores": [],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.2",
+        "ordem": 4,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00f5es de concreto, se\u00e7\u00e3o quadrada 10 x 10 cm (padr\u00e3o VALEC) executada em solos alag\u00e1veis",
+        "unidade": "M",
+        "quantitativo": 575.0,
+        "predecessores": [
+          {
+            "item_id": "3.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.3",
+        "ordem": 5,
+        "cpu_id": "CPU-DIVER-ATI-065",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00e3o de eucalipto e mour\u00e3o de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1\u00aa e 2\u00aa categoria",
+        "unidade": "M",
+        "quantitativo": 14755.9,
+        "predecessores": [
+          {
+            "item_id": "3.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.4",
+        "ordem": 6,
+        "cpu_id": "CPU-DIVER-ATI-065",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00e3o de eucalipto e mour\u00e3o de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1\u00aa e 2\u00aa categoria",
+        "unidade": "M",
+        "quantitativo": 700.0,
+        "predecessores": [
+          {
+            "item_id": "3.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.5",
+        "ordem": 7,
+        "cpu_id": "CPU-DIVER-ATI-065",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00e3o de eucalipto e mour\u00e3o de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas",
+        "unidade": "M",
+        "quantitativo": 1000.0,
+        "predecessores": [
+          {
+            "item_id": "3.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.6",
+        "ordem": 8,
+        "cpu_id": "CPU-DIVER-ATI-067",
+        "descricao": "Remo\u00e7\u00e3o de cerca de mour\u00e3o de madeira",
+        "unidade": "M",
+        "quantitativo": 24394.3,
+        "predecessores": [
+          {
+            "item_id": "3.5",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "5.1",
+        "ordem": 9,
+        "cpu_id": "CPU-DIVER-ATI-067",
+        "descricao": "Abertura de acesso para implanta\u00e7\u00e3o de cerca",
+        "unidade": "M",
+        "quantitativo": 18490.0,
+        "predecessores": [
+          {
+            "item_id": "4.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "4.1",
+        "ordem": 10,
+        "cpu_id": "CPU-DIVER-ATI-070",
+        "descricao": "Implanta\u00e7\u00e3o do eixo",
+        "unidade": "KM",
+        "quantitativo": 18.49,
+        "predecessores": [
+          {
+            "item_id": "3.6",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      }
+    ],
+    "bdi": {
+      "bdi_lucro_impostos": 0.29974983,
+      "mao_obra": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "material": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      },
+      "servicos": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "indireto": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.05,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "diesel": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      }
+    },
+    "cronograma": [
+      {
+        "item_id": "1.1",
+        "producao_diaria": 7671.85,
+        "semanas": {
+          "2026-W01": {
+            "num_equipes": 1
+          },
+          "2026-W02": {
+            "num_equipes": 1
+          },
+          "2026-W03": {
+            "num_equipes": 1
+          },
+          "2026-W04": {
+            "num_equipes": 1
+          },
+          "2026-W05": {
+            "num_equipes": 1
+          },
+          "2026-W06": {
+            "num_equipes": 1
+          },
+          "2026-W07": {
+            "num_equipes": 1
+          },
+          "2026-W08": {
+            "num_equipes": 1
+          },
+          "2026-W09": {
+            "num_equipes": 1
+          },
+          "2026-W10": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "1.2",
+        "producao_diaria": 40730.25,
+        "semanas": {
+          "2026-W11": {
+            "num_equipes": 1
+          },
+          "2026-W12": {
+            "num_equipes": 1
+          },
+          "2026-W13": {
+            "num_equipes": 1
+          },
+          "2026-W14": {
+            "num_equipes": 1
+          },
+          "2026-W15": {
+            "num_equipes": 1
+          },
+          "2026-W16": {
+            "num_equipes": 1
+          },
+          "2026-W17": {
+            "num_equipes": 1
+          },
+          "2026-W18": {
+            "num_equipes": 1
+          },
+          "2026-W19": {
+            "num_equipes": 1
+          },
+          "2026-W20": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 902.05,
+        "semanas": {
+          "2026-W21": {
+            "num_equipes": 1
+          },
+          "2026-W22": {
+            "num_equipes": 1
+          },
+          "2026-W23": {
+            "num_equipes": 1
+          },
+          "2026-W24": {
+            "num_equipes": 1
+          },
+          "2026-W25": {
+            "num_equipes": 1
+          },
+          "2026-W26": {
+            "num_equipes": 1
+          },
+          "2026-W27": {
+            "num_equipes": 1
+          },
+          "2026-W28": {
+            "num_equipes": 1
+          },
+          "2026-W29": {
+            "num_equipes": 1
+          },
+          "2026-W30": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.2",
+        "producao_diaria": 11.5,
+        "semanas": {
+          "2026-W31": {
+            "num_equipes": 1
+          },
+          "2026-W32": {
+            "num_equipes": 1
+          },
+          "2026-W33": {
+            "num_equipes": 1
+          },
+          "2026-W34": {
+            "num_equipes": 1
+          },
+          "2026-W35": {
+            "num_equipes": 1
+          },
+          "2026-W36": {
+            "num_equipes": 1
+          },
+          "2026-W37": {
+            "num_equipes": 1
+          },
+          "2026-W38": {
+            "num_equipes": 1
+          },
+          "2026-W39": {
+            "num_equipes": 1
+          },
+          "2026-W40": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.3",
+        "producao_diaria": 295.12,
+        "semanas": {
+          "2026-W41": {
+            "num_equipes": 1
+          },
+          "2026-W42": {
+            "num_equipes": 1
+          },
+          "2026-W43": {
+            "num_equipes": 1
+          },
+          "2026-W44": {
+            "num_equipes": 1
+          },
+          "2026-W45": {
+            "num_equipes": 1
+          },
+          "2026-W46": {
+            "num_equipes": 1
+          },
+          "2026-W47": {
+            "num_equipes": 1
+          },
+          "2026-W48": {
+            "num_equipes": 1
+          },
+          "2026-W49": {
+            "num_equipes": 1
+          },
+          "2026-W50": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.4",
+        "producao_diaria": 14.0,
+        "semanas": {
+          "2026-W51": {
+            "num_equipes": 1
+          },
+          "2026-W52": {
+            "num_equipes": 1
+          },
+          "2026-W53": {
+            "num_equipes": 1
+          },
+          "2027-W01": {
+            "num_equipes": 1
+          },
+          "2027-W02": {
+            "num_equipes": 1
+          },
+          "2027-W03": {
+            "num_equipes": 1
+          },
+          "2027-W04": {
+            "num_equipes": 1
+          },
+          "2027-W05": {
+            "num_equipes": 1
+          },
+          "2027-W06": {
+            "num_equipes": 1
+          },
+          "2027-W07": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.5",
+        "producao_diaria": 20.0,
+        "semanas": {
+          "2027-W08": {
+            "num_equipes": 1
+          },
+          "2027-W09": {
+            "num_equipes": 1
+          },
+          "2027-W10": {
+            "num_equipes": 1
+          },
+          "2027-W11": {
+            "num_equipes": 1
+          },
+          "2027-W12": {
+            "num_equipes": 1
+          },
+          "2027-W13": {
+            "num_equipes": 1
+          },
+          "2027-W14": {
+            "num_equipes": 1
+          },
+          "2027-W15": {
+            "num_equipes": 1
+          },
+          "2027-W16": {
+            "num_equipes": 1
+          },
+          "2027-W17": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.6",
+        "producao_diaria": 487.89,
+        "semanas": {
+          "2027-W18": {
+            "num_equipes": 1
+          },
+          "2027-W19": {
+            "num_equipes": 1
+          },
+          "2027-W20": {
+            "num_equipes": 1
+          },
+          "2027-W21": {
+            "num_equipes": 1
+          },
+          "2027-W22": {
+            "num_equipes": 1
+          },
+          "2027-W23": {
+            "num_equipes": 1
+          },
+          "2027-W24": {
+            "num_equipes": 1
+          },
+          "2027-W25": {
+            "num_equipes": 1
+          },
+          "2027-W26": {
+            "num_equipes": 1
+          },
+          "2027-W27": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "5.1",
+        "producao_diaria": 369.8,
+        "semanas": {
+          "2027-W28": {
+            "num_equipes": 1
+          },
+          "2027-W29": {
+            "num_equipes": 1
+          },
+          "2027-W30": {
+            "num_equipes": 1
+          },
+          "2027-W31": {
+            "num_equipes": 1
+          },
+          "2027-W32": {
+            "num_equipes": 1
+          },
+          "2027-W33": {
+            "num_equipes": 1
+          },
+          "2027-W34": {
+            "num_equipes": 1
+          },
+          "2027-W35": {
+            "num_equipes": 1
+          },
+          "2027-W36": {
+            "num_equipes": 1
+          },
+          "2027-W37": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "4.1",
+        "producao_diaria": 0.37,
+        "semanas": {
+          "2027-W38": {
+            "num_equipes": 1
+          },
+          "2027-W39": {
+            "num_equipes": 1
+          },
+          "2027-W40": {
+            "num_equipes": 1
+          },
+          "2027-W41": {
+            "num_equipes": 1
+          },
+          "2027-W42": {
+            "num_equipes": 1
+          },
+          "2027-W43": {
+            "num_equipes": 1
+          },
+          "2027-W44": {
+            "num_equipes": 1
+          },
+          "2027-W45": {
+            "num_equipes": 1
+          },
+          "2027-W46": {
+            "num_equipes": 1
+          },
+          "2027-W47": {
+            "num_equipes": 1
+          }
+        }
+      }
+    ],
+    "indiretos": [
+      {
+        "categoria": "ADM",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 60958.31,
+        "mao_obra": []
+      },
+      {
+        "categoria": "TOP",
+        "driver": "projeto",
+        "custo_fixo_total": 463323.98,
+        "mao_obra": []
+      },
+      {
+        "categoria": "LAB",
+        "driver": "projeto",
+        "custo_fixo_total": 318493.33,
+        "mao_obra": []
+      },
+      {
+        "categoria": "QSMS",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 12477.36,
+        "mao_obra": []
+      },
+      {
+        "categoria": "MOB",
+        "driver": "projeto",
+        "custo_fixo_total": 4236967.02,
+        "mao_obra": []
+      }
+    ]
+  },
+  "mob_schedule": {
+    "mobilizacao": {
+      "inicio": "2026-01-01",
+      "fim": "2026-01-01"
+    },
+    "operacao": {
+      "inicio": "2026-01-01",
+      "fim": "2027-12-31"
+    },
+    "desmobilizacao": {
+      "inicio": "2027-12-31",
+      "fim": "2027-12-31"
+    }
+  }
+}

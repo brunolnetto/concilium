@@ -1,0 +1,691 @@
+{
+  "slug": "MARA_ROSA",
+  "planejamento": {
+    "custo_direto_sem_bdi": 2752766.68,
+    "custo_indireto": 3290671.73,
+    "total_projeto": 6043438.41
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "MARA_ROSA",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "2.1",
+        "ordem": 1,
+        "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+        "descricao": "Corte de Arvore Isolada, com destocamento com \u00d8 > 45cm",
+        "unidade": "un",
+        "quantitativo": 30.0,
+        "predecessores": [],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "2.2",
+        "ordem": 2,
+        "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
+        "descricao": "Corte de Arvore Isolada, com destocamento com \u00d8 < 45cm",
+        "unidade": "un",
+        "quantitativo": 30.0,
+        "predecessores": [
+          {
+            "item_id": "2.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "2.3",
+        "ordem": 3,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
+        "descricao": "Supress\u00e3o vegetal com destocamento de vegeta\u00e7\u00e3o com \u00d8 =< 45cm",
+        "unidade": "m\u00b2",
+        "quantitativo": 40000.0,
+        "predecessores": [
+          {
+            "item_id": "2.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "2.4",
+        "ordem": 4,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 0 at\u00e9 500 m",
+        "unidade": "m\u00b3",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "2.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "2.5",
+        "ordem": 5,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Carga, transporte, descarga e estocagem de madeira - Romaneio e Cubagem - DMT 501 at\u00e9 1000 m",
+        "unidade": "m\u00b3",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "2.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.1",
+        "ordem": 6,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a \u00e1rea de dep\u00f3sito - DMT 0 at\u00e9 500 m",
+        "unidade": "m\u00b3",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "2.5",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "3.2",
+        "ordem": 7,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, carga e transporte de camada de solo superficial com espessura maxima de 15cm para a \u00e1rea de dep\u00f3sito - DMT 501 at\u00e9 1000 m",
+        "unidade": "m\u00b3",
+        "quantitativo": 1.0,
+        "predecessores": [
+          {
+            "item_id": "3.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "4.1",
+        "ordem": 8,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, Carga, Transporte e Espalhamento - material de 1\u00b0 categoria - DMT 0 at\u00e9 500m",
+        "unidade": "m\u00b3",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "3.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "4.2",
+        "ordem": 9,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, Carga, Transporte e Espalhamento - material de 1\u00b0 categoria - DMT 501 at\u00e9 1000m",
+        "unidade": "m\u00b3",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "4.3",
+        "ordem": 10,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, Carga, Transporte e Espalhamento - material de 1\u00b0 categoria - DMT 1001 at\u00e9 1500m",
+        "unidade": "m\u00b3",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "4.4",
+        "ordem": 11,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, Carga, Transporte e Espalhamento - material de 1\u00b0 categoria - DMT 1501 at\u00e9 2000m",
+        "unidade": "m\u00b3",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.3",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "4.5",
+        "ordem": 12,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, Carga, Transporte e Espalhamento - material de 1\u00b0 categoria - DMT 2001 at\u00e9 2500m",
+        "unidade": "m\u00b3",
+        "quantitativo": 32000.0,
+        "predecessores": [
+          {
+            "item_id": "4.4",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      }
+    ],
+    "bdi": {
+      "bdi_lucro_impostos": 0.29974983,
+      "mao_obra": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "material": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      },
+      "servicos": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "indireto": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.05,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "diesel": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      }
+    },
+    "cronograma": [
+      {
+        "item_id": "2.1",
+        "producao_diaria": 0.75,
+        "semanas": {
+          "2026-W01": {
+            "num_equipes": 1
+          },
+          "2026-W02": {
+            "num_equipes": 1
+          },
+          "2026-W03": {
+            "num_equipes": 1
+          },
+          "2026-W04": {
+            "num_equipes": 1
+          },
+          "2026-W05": {
+            "num_equipes": 1
+          },
+          "2026-W06": {
+            "num_equipes": 1
+          },
+          "2026-W07": {
+            "num_equipes": 1
+          },
+          "2026-W08": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "2.2",
+        "producao_diaria": 0.75,
+        "semanas": {
+          "2026-W09": {
+            "num_equipes": 1
+          },
+          "2026-W10": {
+            "num_equipes": 1
+          },
+          "2026-W11": {
+            "num_equipes": 1
+          },
+          "2026-W12": {
+            "num_equipes": 1
+          },
+          "2026-W13": {
+            "num_equipes": 1
+          },
+          "2026-W14": {
+            "num_equipes": 1
+          },
+          "2026-W15": {
+            "num_equipes": 1
+          },
+          "2026-W16": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "2.3",
+        "producao_diaria": 1000.0,
+        "semanas": {
+          "2026-W17": {
+            "num_equipes": 1
+          },
+          "2026-W18": {
+            "num_equipes": 1
+          },
+          "2026-W19": {
+            "num_equipes": 1
+          },
+          "2026-W20": {
+            "num_equipes": 1
+          },
+          "2026-W21": {
+            "num_equipes": 1
+          },
+          "2026-W22": {
+            "num_equipes": 1
+          },
+          "2026-W23": {
+            "num_equipes": 1
+          },
+          "2026-W24": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "2.4",
+        "producao_diaria": 0.03,
+        "semanas": {
+          "2026-W25": {
+            "num_equipes": 1
+          },
+          "2026-W26": {
+            "num_equipes": 1
+          },
+          "2026-W27": {
+            "num_equipes": 1
+          },
+          "2026-W28": {
+            "num_equipes": 1
+          },
+          "2026-W29": {
+            "num_equipes": 1
+          },
+          "2026-W30": {
+            "num_equipes": 1
+          },
+          "2026-W31": {
+            "num_equipes": 1
+          },
+          "2026-W32": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "2.5",
+        "producao_diaria": 0.03,
+        "semanas": {
+          "2026-W33": {
+            "num_equipes": 1
+          },
+          "2026-W34": {
+            "num_equipes": 1
+          },
+          "2026-W35": {
+            "num_equipes": 1
+          },
+          "2026-W36": {
+            "num_equipes": 1
+          },
+          "2026-W37": {
+            "num_equipes": 1
+          },
+          "2026-W38": {
+            "num_equipes": 1
+          },
+          "2026-W39": {
+            "num_equipes": 1
+          },
+          "2026-W40": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 0.03,
+        "semanas": {
+          "2026-W41": {
+            "num_equipes": 1
+          },
+          "2026-W42": {
+            "num_equipes": 1
+          },
+          "2026-W43": {
+            "num_equipes": 1
+          },
+          "2026-W44": {
+            "num_equipes": 1
+          },
+          "2026-W45": {
+            "num_equipes": 1
+          },
+          "2026-W46": {
+            "num_equipes": 1
+          },
+          "2026-W47": {
+            "num_equipes": 1
+          },
+          "2026-W48": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "3.2",
+        "producao_diaria": 0.03,
+        "semanas": {
+          "2026-W49": {
+            "num_equipes": 1
+          },
+          "2026-W50": {
+            "num_equipes": 1
+          },
+          "2026-W51": {
+            "num_equipes": 1
+          },
+          "2026-W52": {
+            "num_equipes": 1
+          },
+          "2026-W53": {
+            "num_equipes": 1
+          },
+          "2027-W01": {
+            "num_equipes": 1
+          },
+          "2027-W02": {
+            "num_equipes": 1
+          },
+          "2027-W03": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "4.1",
+        "producao_diaria": 800.0,
+        "semanas": {
+          "2027-W04": {
+            "num_equipes": 1
+          },
+          "2027-W05": {
+            "num_equipes": 1
+          },
+          "2027-W06": {
+            "num_equipes": 1
+          },
+          "2027-W07": {
+            "num_equipes": 1
+          },
+          "2027-W08": {
+            "num_equipes": 1
+          },
+          "2027-W09": {
+            "num_equipes": 1
+          },
+          "2027-W10": {
+            "num_equipes": 1
+          },
+          "2027-W11": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "4.2",
+        "producao_diaria": 800.0,
+        "semanas": {
+          "2027-W12": {
+            "num_equipes": 1
+          },
+          "2027-W13": {
+            "num_equipes": 1
+          },
+          "2027-W14": {
+            "num_equipes": 1
+          },
+          "2027-W15": {
+            "num_equipes": 1
+          },
+          "2027-W16": {
+            "num_equipes": 1
+          },
+          "2027-W17": {
+            "num_equipes": 1
+          },
+          "2027-W18": {
+            "num_equipes": 1
+          },
+          "2027-W19": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "4.3",
+        "producao_diaria": 800.0,
+        "semanas": {
+          "2027-W20": {
+            "num_equipes": 1
+          },
+          "2027-W21": {
+            "num_equipes": 1
+          },
+          "2027-W22": {
+            "num_equipes": 1
+          },
+          "2027-W23": {
+            "num_equipes": 1
+          },
+          "2027-W24": {
+            "num_equipes": 1
+          },
+          "2027-W25": {
+            "num_equipes": 1
+          },
+          "2027-W26": {
+            "num_equipes": 1
+          },
+          "2027-W27": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "4.4",
+        "producao_diaria": 800.0,
+        "semanas": {
+          "2027-W28": {
+            "num_equipes": 1
+          },
+          "2027-W29": {
+            "num_equipes": 1
+          },
+          "2027-W30": {
+            "num_equipes": 1
+          },
+          "2027-W31": {
+            "num_equipes": 1
+          },
+          "2027-W32": {
+            "num_equipes": 1
+          },
+          "2027-W33": {
+            "num_equipes": 1
+          },
+          "2027-W34": {
+            "num_equipes": 1
+          },
+          "2027-W35": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "4.5",
+        "producao_diaria": 800.0,
+        "semanas": {
+          "2027-W36": {
+            "num_equipes": 1
+          },
+          "2027-W37": {
+            "num_equipes": 1
+          },
+          "2027-W38": {
+            "num_equipes": 1
+          },
+          "2027-W39": {
+            "num_equipes": 1
+          },
+          "2027-W40": {
+            "num_equipes": 1
+          },
+          "2027-W41": {
+            "num_equipes": 1
+          },
+          "2027-W42": {
+            "num_equipes": 1
+          },
+          "2027-W43": {
+            "num_equipes": 1
+          }
+        }
+      }
+    ],
+    "indiretos": [
+      {
+        "categoria": "ADM",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 29916.5,
+        "mao_obra": []
+      },
+      {
+        "categoria": "TOP",
+        "driver": "projeto",
+        "custo_fixo_total": 227385.42,
+        "mao_obra": []
+      },
+      {
+        "categoria": "LAB",
+        "driver": "projeto",
+        "custo_fixo_total": 156306.91,
+        "mao_obra": []
+      },
+      {
+        "categoria": "QSMS",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 6123.51,
+        "mao_obra": []
+      },
+      {
+        "categoria": "MOB",
+        "driver": "projeto",
+        "custo_fixo_total": 2079375.47,
+        "mao_obra": []
+      }
+    ]
+  },
+  "mob_schedule": {
+    "mobilizacao": {
+      "inicio": "2026-01-01",
+      "fim": "2026-01-01"
+    },
+    "operacao": {
+      "inicio": "2026-01-01",
+      "fim": "2027-12-31"
+    },
+    "desmobilizacao": {
+      "inicio": "2027-12-31",
+      "fim": "2027-12-31"
+    }
+  }
+}

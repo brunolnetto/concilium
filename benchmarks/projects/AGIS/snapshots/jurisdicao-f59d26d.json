@@ -1,0 +1,130 @@
+{
+  "$schema": "https://concilium.framework/schemas/v1/jurisdicao",
+  "codigo": "BR",
+  "nome": "Brasil",
+  "moeda": "BRL",
+  "regime_trabalhista": "CLT",
+  "provedores_referencia": [
+    {
+      "codigo": "SICRO",
+      "nome": "Sistema de Custos Referenciais de Obras",
+      "mantenedor": "DNIT",
+      "cadencia_atualizacao": "anual",
+      "uso_tipico": "Obras rodoviárias federais"
+    },
+    {
+      "codigo": "SINAPI",
+      "nome": "Sistema Nacional de Pesquisa de Custos e Índices",
+      "mantenedor": "Caixa Econômica Federal",
+      "cadencia_atualizacao": "mensal",
+      "uso_tipico": "Edificações e infraestrutura urbana"
+    },
+    {
+      "codigo": "GoInfra",
+      "nome": "Tabela de referência da Goinfra",
+      "mantenedor": "Agência Goiana de Infraestrutura",
+      "cadencia_atualizacao": "anual",
+      "uso_tipico": "Obras estaduais em Goiás"
+    }
+  ],
+  "fonte_climatica": {
+    "provedor": "meteoblue",
+    "url_base": "https://www.meteoblue.com/pt/tempo/historyclimate/climatemodelled/",
+    "metodo_consulta": "URL_por_cidade_e_pais",
+    "granularidade": "mensal"
+  },
+  "motor_encargos_sociais": {
+    "versao": "v2024",
+    "percentual_total": 1.777,
+    "$comment": "Encargos CLT consolidados — valor agregado para Fase 1A. Decomposição detalhada na evolução.",
+    "componentes": [
+      {
+        "nome": "INSS_patronal",
+        "percentual": 0.2
+      },
+      {
+        "nome": "FGTS",
+        "percentual": 0.08
+      },
+      {
+        "nome": "salario_educacao",
+        "percentual": 0.025
+      },
+      {
+        "nome": "SESI",
+        "percentual": 0.015
+      },
+      {
+        "nome": "SENAI",
+        "percentual": 0.01
+      },
+      {
+        "nome": "SEBRAE",
+        "percentual": 0.006
+      },
+      {
+        "nome": "INCRA",
+        "percentual": 0.002
+      },
+      {
+        "nome": "INSS_seguro",
+        "percentual": 0.03
+      },
+      {
+        "nome": "SECONCI",
+        "percentual": 0.01
+      },
+      {
+        "nome": "repouso_feriados",
+        "percentual": 0.212
+      },
+      {
+        "nome": "aux_enfermidade",
+        "percentual": 0.0124
+      },
+      {
+        "nome": "licenca_paternidade",
+        "percentual": 0.0034
+      },
+      {
+        "nome": "decimo_terceiro",
+        "percentual": 0.1057
+      },
+      {
+        "nome": "dias_chuva_faltas",
+        "percentual": 0.0632
+      },
+      {
+        "nome": "ausencias_morte_casamento",
+        "percentual": 0.01
+      },
+      {
+        "nome": "ausencias_acidente",
+        "percentual": 0.0166
+      },
+      {
+        "nome": "he_convencional",
+        "percentual": 0.0551
+      },
+      {
+        "nome": "ferias",
+        "percentual": 0.1177
+      },
+      {
+        "nome": "multa_fgts_rescisao",
+        "percentual": 0.04
+      }
+    ],
+    "percentual_mensalista": 1.06
+  },
+  "motor_tributario_bdi": {
+    "versao": "2024.1",
+    "aliquotas": {
+      "ISS": 0.05,
+      "PIS": 0.0065,
+      "COFINS": 0.03,
+      "CPRB": 0.045
+    },
+    "": "Alíquotas base para obras de infraestrutura."
+  }
+}

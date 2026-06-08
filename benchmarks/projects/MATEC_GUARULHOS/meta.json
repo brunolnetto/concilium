@@ -1,0 +1,11 @@
+{
+  "id": "MATEC_GUARULHOS",
+  "nome": "MATEC_GUARULHOS",
+  "contexto_id": "mendeslobo",
+  "criado_em": "2026-06-08T13:07:33.538872+00:00",
+  "current_version": "v1",
+  "catalogo_base": null,
+  "derivado_de_benchmark": "MATEC_GUARULHOS",
+  "benchmark_versao": null,
+  "benchmark_execution_id": null
+}

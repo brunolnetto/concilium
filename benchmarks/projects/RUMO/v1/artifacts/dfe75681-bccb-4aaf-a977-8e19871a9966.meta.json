@@ -1,0 +1,16 @@
+{
+  "artifact_id": "dfe75681-bccb-4aaf-a977-8e19871a9966",
+  "version": "1.0.0",
+  "kind": "relatorio_criticidade",
+  "schema_name": "RelatorioCriticidade",
+  "schema_version": "1.0.0",
+  "created_at": "2026-06-08T13:34:59.883216Z",
+  "created_by": "15-relatorio-executivo",
+  "trace_id": null,
+  "parent_refs": [],
+  "state": "draft",
+  "content_hash": "659e59b3fd57ecf12880bfb208c6918ef9d01e21b876c6e25192a672b73a0560",
+  "catalog_snapshot_id": null,
+  "bdi_perfil_id": null,
+  "referencia_ids": []
+}

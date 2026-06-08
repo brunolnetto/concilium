@@ -70,14 +70,78 @@ def merge_catalog(
 _DEFAULT_ROOT = Path(__file__).resolve().parents[4]
 
 
+@app.command("run-batch")
+def run_benchmarks_batch(
+    reset: bool = typer.Option(False, "--reset", help="Força re-execução mesmo se já existir resultado."),
+    quiet: bool = typer.Option(False, "-q", "--quiet", help="Modo silencioso: apenas status por linha."),
+    json_output: bool = typer.Option(False, "--json", help="Output em JSON puro (sem tabela)."),
+    pack: bool = typer.Option(False, "--pack", help="Empacota artefatos ao final (requer slug)."),
+) -> None:
+    """Executa todos os benchmarks em modo batch silencioso e eficiente."""
+    from concilium.application.benchmarks import BenchmarkBatchRunner
+    from concilium.presentation.cli.shared import _tools_root, benchmark_projects_root, config_root
+    from datetime import datetime, UTC
+
+    root = _tools_root()
+    batch_runner = BenchmarkBatchRunner(
+        benchmarks_root=root / "benchmarks" / "data",
+        config_root=config_root(),
+        projects_root=benchmark_projects_root(),
+    )
+
+    if not quiet:
+        rprint(f"\n[cyan]Executando {len(batch_runner.discover_specs())} benchmarks...[/cyan]\n")
+
+    reports = batch_runner.run_all(reset=reset, quiet=quiet)
+    summary = batch_runner.build_summary(reports)
+
+    if json_output:
+        output = {
+            "meta": {"timestamp": datetime.now(UTC).isoformat(), "total": len(reports)},
+            "summary": summary,
+        }
+        print(json.dumps(output, indent=2, ensure_ascii=False, default=str))
+    else:
+        if summary and not quiet:
+            rprint("\n")
+            table = Table(title="📊 Benchmark — Resumo")
+            table.add_column("Projeto", style="cyan")
+            table.add_column("Status", style="bold")
+            table.add_column("Delta Direto %", justify="right")
+            table.add_column("Delta Indireto %", justify="right")
+            table.add_column("Delta Total %", justify="right")
+            table.add_column("Delta Venda %", justify="right")
+            for row in summary:
+                status_style = "green" if "OK" in row["Status"] else "yellow" if "AVISO" in row["Status"] else "red"
+                table.add_row(
+                    row["Projeto"],
+                    row["Status"],
+                    row["Delta Direto %"],
+                    row["Delta Indireto %"],
+                    row["Delta Total %"],
+                    row["Delta Venda %"],
+                    style=status_style,
+                )
+            rprint(table)
+
+        # Save summary file
+        summary_file = root / "BENCHMARK_SUMMARY.json"
+        summary_artifact = {
+            "meta": {"timestamp": datetime.now(UTC).isoformat(), "total": len(reports)},
+            "summary": summary,
+        }
+        summary_file.write_text(json.dumps(summary_artifact, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+        rprint(f"\n✓ Resumo salvo em: {summary_file}")
+
+
 @app.command("run")
 def run_benchmarks(
-    slug: str = typer.Option("", help="Slug do benchmark (ex: CTC). Omita para todos."),
+    slug: str = typer.Option("", help="Slug do benchmark (ex: CTC). Omita para todos (use run-batch para batch mode)."),
     reset: bool = typer.Option(False, "--reset", help="Força re-execução mesmo se já existir resultado."),
     pack: bool = typer.Option(False, "--pack", help="Empacota artefatos de saída em ZIP ao final."),
     charts: bool = typer.Option(False, "--charts", help="Gera gráficos PNG antes de empacotar (requer matplotlib)."),
 ) -> None:
-    """Executa um ou todos os benchmarks."""
+    """Executa um benchmark específico ou todos (use run-batch para modo batch)."""
     from concilium.application.benchmarks import BenchmarkBatchRunner, BenchmarkRunner
     from concilium.application.benchmarks.batch import discover_benchmark_slugs, find_benchmark_reference
     from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder

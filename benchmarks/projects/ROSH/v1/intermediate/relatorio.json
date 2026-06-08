@@ -1,0 +1,1136 @@
+{
+  "meta": {
+    "gerado_em": "2026-06-08T14:11:35.945965+00:00",
+    "framework": "concilium",
+    "adapter": "relatorio_validacao_v1",
+    "nota": "Relatório de validação na ausência do template .xlsm original."
+  },
+  "resumo": {
+    "projeto": "ROSH",
+    "tipo_obra": "terraplenagem",
+    "localizacao": "Brasil",
+    "periodo": "2026-01-01 -> 2027-12-31",
+    "status": "RASCUNHO"
+  },
+  "PLANEJAMENTO": [
+    {
+      "item_id": "1.1",
+      "cpu_id": "CPU-TERRA-ATI-021",
+      "descricao": "Rebaixo Terreno natural - 40 cm",
+      "unidade": "m²",
+      "quantitativo": 110000.0,
+      "subtotal_sem_bdi_mo": 79080.21,
+      "subtotal_sem_bdi_eq": 216236.57,
+      "subtotal_sem_bdi_diesel": 141800.34,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 437117.12,
+      "subtotal_com_bdi": 514460.1,
+      "pu_total_sem_bdi": 3.9738,
+      "pu_total_com_bdi": 4.6769
+    },
+    {
+      "item_id": "1.2",
+      "cpu_id": "CPU-TERRA-ATI-021",
+      "descricao": "Regularização e compactação do terreno natural",
+      "unidade": "m²",
+      "quantitativo": 110000.0,
+      "subtotal_sem_bdi_mo": 79080.21,
+      "subtotal_sem_bdi_eq": 216236.57,
+      "subtotal_sem_bdi_diesel": 141800.34,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 437117.12,
+      "subtotal_com_bdi": 514460.1,
+      "pu_total_sem_bdi": 3.9738,
+      "pu_total_com_bdi": 4.6769
+    },
+    {
+      "item_id": "1.3",
+      "cpu_id": "CPU-PAVIM-PAV-BASE-BGTC",
+      "descricao": "Execução das guias",
+      "unidade": "m",
+      "quantitativo": 1392.98,
+      "subtotal_sem_bdi_mo": 8775.27,
+      "subtotal_sem_bdi_eq": 37017.81,
+      "subtotal_sem_bdi_diesel": 8409.17,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 54202.25,
+      "subtotal_com_bdi": 65380.48,
+      "pu_total_sem_bdi": 38.911,
+      "pu_total_com_bdi": 46.9357
+    },
+    {
+      "item_id": "1.5",
+      "cpu_id": "CPU-DIVER-ATI-069",
+      "descricao": "Lançamento da manta geotêxtil",
+      "unidade": "m²",
+      "quantitativo": 115500.0,
+      "subtotal_sem_bdi_mo": 44063.48,
+      "subtotal_sem_bdi_eq": 7758.83,
+      "subtotal_sem_bdi_diesel": 1972.16,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 53794.47,
+      "subtotal_com_bdi": 68802.49,
+      "pu_total_sem_bdi": 0.4658,
+      "pu_total_com_bdi": 0.5957
+    },
+    {
+      "item_id": "1.10",
+      "cpu_id": "CPU-MOB-010",
+      "descricao": "Lançamento da geogrelha",
+      "unidade": "m²",
+      "quantitativo": 115500.0,
+      "subtotal_sem_bdi_mo": 22276.37,
+      "subtotal_sem_bdi_eq": 44803.37,
+      "subtotal_sem_bdi_diesel": 34175.41,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 101255.15,
+      "subtotal_com_bdi": 119238.02,
+      "pu_total_sem_bdi": 0.8767,
+      "pu_total_com_bdi": 1.0324
+    },
+    {
+      "item_id": "1.14",
+      "cpu_id": "CPU-TERRA-ATI-020",
+      "descricao": "Lançamento e espalhamento de areia",
+      "unidade": "m³",
+      "quantitativo": 7150.0,
+      "subtotal_sem_bdi_mo": 5406.32,
+      "subtotal_sem_bdi_eq": 14783.01,
+      "subtotal_sem_bdi_diesel": 9694.18,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 29883.5,
+      "subtotal_com_bdi": 35171.06,
+      "pu_total_sem_bdi": 4.1795,
+      "pu_total_com_bdi": 4.919
+    },
+    {
+      "item_id": "1.17",
+      "cpu_id": "CPU-TERRA-ATI-022",
+      "descricao": "Espalhamento e compactação de rachão",
+      "unidade": "m³",
+      "quantitativo": 28875.0,
+      "subtotal_sem_bdi_mo": 21833.2,
+      "subtotal_sem_bdi_eq": 59700.62,
+      "subtotal_sem_bdi_diesel": 39149.56,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 120683.38,
+      "subtotal_com_bdi": 142036.95,
+      "pu_total_sem_bdi": 4.1795,
+      "pu_total_com_bdi": 4.919
+    },
+    {
+      "item_id": "1.21",
+      "cpu_id": "CPU-TERRA-ATI-022",
+      "descricao": "Espalhamento e Compactação de  bica corrida",
+      "unidade": "m³",
+      "quantitativo": 17820.0,
+      "subtotal_sem_bdi_mo": 13474.2,
+      "subtotal_sem_bdi_eq": 36843.81,
+      "subtotal_sem_bdi_diesel": 24160.87,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 74478.89,
+      "subtotal_com_bdi": 87657.09,
+      "pu_total_sem_bdi": 4.1795,
+      "pu_total_com_bdi": 4.919
+    },
+    {
+      "item_id": "1.25",
+      "cpu_id": "CPU-TERRA-ATI-023",
+      "descricao": "Espalhamento e compactação de BGTC",
+      "unidade": "m³",
+      "quantitativo": 46200.0,
+      "subtotal_sem_bdi_mo": 37846.72,
+      "subtotal_sem_bdi_eq": 103488.0,
+      "subtotal_sem_bdi_diesel": 67863.78,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 209198.5,
+      "subtotal_com_bdi": 246213.83,
+      "pu_total_sem_bdi": 4.5281,
+      "pu_total_com_bdi": 5.3293
+    },
+    {
+      "item_id": "1.29",
+      "cpu_id": "CPU-TERRA-ATI-020",
+      "descricao": "Lançamento e espalhamento de pó de pedra",
+      "unidade": "m³",
+      "quantitativo": 5720.0,
+      "subtotal_sem_bdi_mo": 4325.05,
+      "subtotal_sem_bdi_eq": 11826.41,
+      "subtotal_sem_bdi_diesel": 7755.34,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 23906.8,
+      "subtotal_com_bdi": 28136.84,
+      "pu_total_sem_bdi": 4.1795,
+      "pu_total_com_bdi": 4.919
+    },
+    {
+      "item_id": "1.33",
+      "cpu_id": "CPU-DIVER-ATI-073",
+      "descricao": "Instação de piso intertravado",
+      "unidade": "m²",
+      "quantitativo": 110000.0,
+      "subtotal_sem_bdi_mo": 177477.19,
+      "subtotal_sem_bdi_eq": 0.0,
+      "subtotal_sem_bdi_diesel": 0.0,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 177477.19,
+      "subtotal_com_bdi": 230675.98,
+      "pu_total_sem_bdi": 1.6134,
+      "pu_total_com_bdi": 2.0971
+    },
+    {
+      "item_id": "1.34",
+      "cpu_id": "CPU-DIVER-ATI-073",
+      "descricao": "Rejuntamento do piso intertravado",
+      "unidade": "m²",
+      "quantitativo": 110000.0,
+      "subtotal_sem_bdi_mo": 177477.19,
+      "subtotal_sem_bdi_eq": 0.0,
+      "subtotal_sem_bdi_diesel": 0.0,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 177477.19,
+      "subtotal_com_bdi": 230675.98,
+      "pu_total_sem_bdi": 1.6134,
+      "pu_total_com_bdi": 2.0971
+    },
+    {
+      "item_id": "2.1",
+      "cpu_id": "CPU-DIVER-ATI-069",
+      "descricao": "Lançamento da manta geotêxtil",
+      "unidade": "m²",
+      "quantitativo": 115500.0,
+      "subtotal_sem_bdi_mo": 44063.48,
+      "subtotal_sem_bdi_eq": 7758.83,
+      "subtotal_sem_bdi_diesel": 1972.16,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 53794.47,
+      "subtotal_com_bdi": 68802.49,
+      "pu_total_sem_bdi": 0.4658,
+      "pu_total_com_bdi": 0.5957
+    },
+    {
+      "item_id": "3.1",
+      "cpu_id": "CPU-LIMP-001",
+      "descricao": "Lançamento da geogrelha",
+      "unidade": "m²",
+      "quantitativo": 115500.0,
+      "subtotal_sem_bdi_mo": 22276.37,
+      "subtotal_sem_bdi_eq": 44803.37,
+      "subtotal_sem_bdi_diesel": 34175.41,
+      "subtotal_sem_bdi_mat": 0.0,
+      "subtotal_sem_bdi": 101255.15,
+      "subtotal_com_bdi": 119238.02,
+      "pu_total_sem_bdi": 0.8767,
+      "pu_total_com_bdi": 1.0324
+    }
+  ],
+  "EQUIPE": [
+    {
+      "equipe_id": "eq-1.1",
+      "item_id": "1.1",
+      "cpu_id": "CPU-TERRA-ATI-021",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 2.55818,
+      "status_pe": "OK",
+      "custo_venda_cpu": 514460.1
+    },
+    {
+      "equipe_id": "eq-1.2",
+      "item_id": "1.2",
+      "cpu_id": "CPU-TERRA-ATI-021",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 2.55818,
+      "status_pe": "OK",
+      "custo_venda_cpu": 514460.1
+    },
+    {
+      "equipe_id": "eq-1.3",
+      "item_id": "1.3",
+      "cpu_id": "CPU-PAVIM-PAV-BASE-BGTC",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.69952,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 65380.48
+    },
+    {
+      "equipe_id": "eq-1.5",
+      "item_id": "1.5",
+      "cpu_id": "CPU-DIVER-ATI-069",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 0.78909,
+      "status_pe": "OK",
+      "custo_venda_cpu": 68802.49
+    },
+    {
+      "equipe_id": "eq-1.14",
+      "item_id": "1.14",
+      "cpu_id": "CPU-TERRA-ATI-020",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.75675,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 35171.06
+    },
+    {
+      "equipe_id": "eq-1.17",
+      "item_id": "1.17",
+      "cpu_id": "CPU-TERRA-ATI-022",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.01762,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 142036.95
+    },
+    {
+      "equipe_id": "eq-1.21",
+      "item_id": "1.21",
+      "cpu_id": "CPU-TERRA-ATI-022",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.39373,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 87657.09
+    },
+    {
+      "equipe_id": "eq-1.25",
+      "item_id": "1.25",
+      "cpu_id": "CPU-TERRA-ATI-023",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 0.7029,
+      "status_pe": "OK",
+      "custo_venda_cpu": 246213.83
+    },
+    {
+      "equipe_id": "eq-1.29",
+      "item_id": "1.29",
+      "cpu_id": "CPU-TERRA-ATI-020",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": -0.8054,
+      "status_pe": "AVISO",
+      "custo_venda_cpu": 28136.84
+    },
+    {
+      "equipe_id": "eq-1.33",
+      "item_id": "1.33",
+      "cpu_id": "CPU-DIVER-ATI-073",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 20.9205,
+      "status_pe": "OK",
+      "custo_venda_cpu": 230675.98
+    },
+    {
+      "equipe_id": "eq-1.34",
+      "item_id": "1.34",
+      "cpu_id": "CPU-DIVER-ATI-073",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 20.9205,
+      "status_pe": "OK",
+      "custo_venda_cpu": 230675.98
+    },
+    {
+      "equipe_id": "eq-2.1",
+      "item_id": "2.1",
+      "cpu_id": "CPU-DIVER-ATI-069",
+      "custo_fixo_total": 0.0,
+      "custo_total": 0.0,
+      "permanencia_meses": 0.0,
+      "delta_pct": 0.78909,
+      "status_pe": "OK",
+      "custo_venda_cpu": 68802.49
+    }
+  ],
+  "analise_composicional": [
+    {
+      "item_id": "1.1",
+      "custo_venda_cpu": 514460.1,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 514460.1,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 39591.39,
+      "custo_equipamentos": 68006.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 36987.43
+    },
+    {
+      "item_id": "1.2",
+      "custo_venda_cpu": 514460.1,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 514460.1,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 39591.39,
+      "custo_equipamentos": 68006.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 36987.43
+    },
+    {
+      "item_id": "1.3",
+      "custo_venda_cpu": 65380.48,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 65380.48,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 56505.28,
+      "custo_equipamentos": 128620.8,
+      "custo_materiais": 0.0,
+      "custo_diesel": 32461.72
+    },
+    {
+      "item_id": "1.5",
+      "custo_venda_cpu": 68802.49,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 68802.49,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 32596.4,
+      "custo_equipamentos": 4840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 1020.34
+    },
+    {
+      "item_id": "1.14",
+      "custo_venda_cpu": 35171.06,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 35171.06,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 39591.39,
+      "custo_equipamentos": 68006.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 36987.43
+    },
+    {
+      "item_id": "1.17",
+      "custo_venda_cpu": 142036.95,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 142036.95,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 39591.39,
+      "custo_equipamentos": 68006.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 36987.43
+    },
+    {
+      "item_id": "1.21",
+      "custo_venda_cpu": 87657.09,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 87657.09,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 39591.39,
+      "custo_equipamentos": 68006.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 36987.43
+    },
+    {
+      "item_id": "1.25",
+      "custo_venda_cpu": 246213.83,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 246213.83,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 39591.39,
+      "custo_equipamentos": 68006.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 36987.43
+    },
+    {
+      "item_id": "1.29",
+      "custo_venda_cpu": 28136.84,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 28136.84,
+      "gap_pct": 0.0,
+      "dominante": "Equipamentos",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 39591.39,
+      "custo_equipamentos": 68006.4,
+      "custo_materiais": 0.0,
+      "custo_diesel": 36987.43
+    },
+    {
+      "item_id": "1.33",
+      "custo_venda_cpu": 230675.98,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 230675.98,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 10523.3,
+      "custo_equipamentos": 0.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 0.0
+    },
+    {
+      "item_id": "1.34",
+      "custo_venda_cpu": 230675.98,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 230675.98,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 10523.3,
+      "custo_equipamentos": 0.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 0.0
+    },
+    {
+      "item_id": "2.1",
+      "custo_venda_cpu": 68802.49,
+      "custo_operacional_real": 0.0,
+      "gap_operacional": 68802.49,
+      "gap_pct": 0.0,
+      "dominante": "Mão de Obra",
+      "acao_sugerida": "Manter baseline",
+      "custo_mao_obra": 32596.4,
+      "custo_equipamentos": 4840.0,
+      "custo_materiais": 0.0,
+      "custo_diesel": 1020.34
+    }
+  ],
+  "INDIRETOS": [
+    {
+      "categoria": "ADM",
+      "descricao": "Administracao de obra",
+      "permanencia_meses": 24.0,
+      "custo_total": 824977.44
+    },
+    {
+      "categoria": "TOP",
+      "descricao": "Topografia",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "LAB",
+      "descricao": "Laboratorio de solos e materiais",
+      "permanencia_meses": 24.0,
+      "custo_total": 0.0
+    },
+    {
+      "categoria": "QSMS",
+      "descricao": "Qualidade, Saude, Seguranca e Meio Ambiente",
+      "permanencia_meses": 24.0,
+      "custo_total": 168862.08
+    },
+    {
+      "categoria": "MOB",
+      "descricao": "Mobilizacao e desmobilizacao",
+      "permanencia_meses": 24.0,
+      "custo_total": 2389202.97
+    }
+  ],
+  "RESULTADO": {
+    "preco_venda_total": 6706697.93,
+    "custo_total": 5434683.67,
+    "custo_direto": 2051641.18,
+    "custo_direto_equipes": 2051641.18,
+    "custo_direto_fonte": "operacional_equipes",
+    "benchmark_guard_aplicado": false,
+    "custo_indireto": 3383042.49,
+    "razao_indireto_direto": 1.648944524500137,
+    "resultado_bruto": 1272014.2599999998,
+    "margem_pct": 0.1896632699543693,
+    "status_margem": "VERMELHO",
+    "referencia": null
+  },
+  "GRAFICOS": {
+    "equipamentos": {
+      "labels": [],
+      "values": []
+    },
+    "mao_obra": {
+      "labels": [],
+      "values": []
+    },
+    "cronograma": {
+      "tasks": [
+        {
+          "item_id": "1.1",
+          "name": "Rebaixo Terreno natural - 40 cm",
+          "start": "2025-12-29",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": []
+        },
+        {
+          "item_id": "1.2",
+          "name": "Regularização e compactação do terreno natural",
+          "start": "2026-01-05",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.1",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.3",
+          "name": "Execução das guias",
+          "start": "2026-01-12",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.2",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.5",
+          "name": "Lançamento da manta geotêxtil",
+          "start": "2026-01-19",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.3",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.14",
+          "name": "Lançamento e espalhamento de areia",
+          "start": "2026-02-02",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.10",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.17",
+          "name": "Espalhamento e compactação de rachão",
+          "start": "2026-02-09",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.14",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.21",
+          "name": "Espalhamento e Compactação de  bica corrida",
+          "start": "2026-02-16",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.17",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.25",
+          "name": "Espalhamento e compactação de BGTC",
+          "start": "2026-02-23",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.21",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.29",
+          "name": "Lançamento e espalhamento de pó de pedra",
+          "start": "2026-03-02",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.25",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.33",
+          "name": "Instação de piso intertravado",
+          "start": "2026-03-09",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.29",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "1.34",
+          "name": "Rejuntamento do piso intertravado",
+          "start": "2026-03-16",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.33",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        },
+        {
+          "item_id": "2.1",
+          "name": "Lançamento da manta geotêxtil",
+          "start": "2026-03-23",
+          "duration_days": 7,
+          "level": 0,
+          "predecessores": [
+            {
+              "item_id": "1.34",
+              "tipo": "FS",
+              "lag": 0
+            }
+          ]
+        }
+      ]
+    },
+    "financeiro": {
+      "labels": [
+        "Dez/25",
+        "Jan/26",
+        "Fev/26",
+        "Mar/26"
+      ],
+      "receita": [
+        1676674.0,
+        1676674.0,
+        1676674.0,
+        1676675.9299999997
+      ],
+      "despesa": [
+        2637662.85,
+        248459.87999999998,
+        248459.87999999998,
+        248459.87999999998
+      ],
+      "saldo": [
+        -960988.8500000001,
+        1428214.12,
+        1428214.12,
+        1428216.0499999998
+      ],
+      "exposicao": [
+        960988.8500000001,
+        -467225.27,
+        -1895439.3900000001,
+        -3323655.44
+      ]
+    },
+    "painel_equilibrio": {
+      "delta_total": 904828.97,
+      "soma_levers": 437546.26,
+      "break_even_alcancavel": true,
+      "levers": [
+        {
+          "id": "revisao_bdi_minima",
+          "tipo": "preco",
+          "descricao": "BDI: revisao minima de preco para cobrir ineficiencia",
+          "restricoes": [
+            "Lever de precificacao — fora do alcance do planejador"
+          ],
+          "delta_margin_total": 437546.26,
+          "item_count": 5,
+          "break_even_solo": false,
+          "participa_combo": false
+        }
+      ],
+      "combinacoes_break_even": [],
+      "frentes_nec_media": 0.0
+    }
+  },
+  "ponto_equilibrio": [
+    {
+      "item_id": "1.1",
+      "custo_fixo_equipe": 144585.22,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 514460.1,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 1545518.3,
+      "custo_direto_atribuido": 472788.4,
+      "custo_indireto_atribuido": 779601.85,
+      "resultado_total_atribuido": 293128.06,
+      "gap_operacional": 514460.1,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.2",
+      "custo_fixo_equipe": 144585.22,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 514460.1,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 1545518.3,
+      "custo_direto_atribuido": 472788.4,
+      "custo_indireto_atribuido": 779601.85,
+      "resultado_total_atribuido": 293128.06,
+      "gap_operacional": 514460.1,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.3",
+      "custo_fixo_equipe": 217587.8,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 65380.48,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 196413.15,
+      "custo_direto_atribuido": 60084.61,
+      "custo_indireto_atribuido": 99076.18,
+      "resultado_total_atribuido": 37252.36,
+      "gap_operacional": 65380.48,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.5",
+      "custo_fixo_equipe": 38456.74,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 68802.49,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 206693.4,
+      "custo_direto_atribuido": 63229.43,
+      "custo_indireto_atribuido": 104261.82,
+      "resultado_total_atribuido": 39202.15,
+      "gap_operacional": 68802.49,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.14",
+      "custo_fixo_equipe": 144585.22,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 35171.06,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 105659.34,
+      "custo_direto_atribuido": 32322.17,
+      "custo_indireto_atribuido": 53297.47,
+      "resultado_total_atribuido": 20039.7,
+      "gap_operacional": 35171.06,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.17",
+      "custo_fixo_equipe": 144585.22,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 142036.95,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 426701.13,
+      "custo_direto_atribuido": 130531.84,
+      "custo_indireto_atribuido": 215239.76,
+      "resultado_total_atribuido": 80929.53,
+      "gap_operacional": 142036.95,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.21",
+      "custo_fixo_equipe": 144585.22,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 87657.09,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 263335.56,
+      "custo_direto_atribuido": 80556.79,
+      "custo_indireto_atribuido": 132833.68,
+      "resultado_total_atribuido": 49945.08,
+      "gap_operacional": 87657.09,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.25",
+      "custo_fixo_equipe": 144585.22,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 246213.83,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 739664.71,
+      "custo_direto_atribuido": 226270.3,
+      "custo_indireto_atribuido": 373107.18,
+      "resultado_total_atribuido": 140287.23,
+      "gap_operacional": 246213.83,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.29",
+      "custo_fixo_equipe": 144585.22,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 28136.84,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "AVISO",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 84527.45,
+      "custo_direto_atribuido": 25857.73,
+      "custo_indireto_atribuido": 42637.97,
+      "resultado_total_atribuido": 16031.75,
+      "gap_operacional": 28136.84,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.33",
+      "custo_fixo_equipe": 10523.3,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 230675.98,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 692986.59,
+      "custo_direto_atribuido": 211991.03,
+      "custo_indireto_atribuido": 349561.45,
+      "resultado_total_atribuido": 131434.1,
+      "gap_operacional": 230675.98,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "1.34",
+      "custo_fixo_equipe": 10523.3,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 230675.98,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 692986.59,
+      "custo_direto_atribuido": 211991.03,
+      "custo_indireto_atribuido": 349561.45,
+      "resultado_total_atribuido": 131434.1,
+      "gap_operacional": 230675.98,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    },
+    {
+      "item_id": "2.1",
+      "custo_fixo_equipe": 38456.74,
+      "custo_operacional_real": 0.0,
+      "custo_venda_cpu": 68802.49,
+      "frentes_equivalentes": 0.0,
+      "status_validacao": "OK",
+      "margem_operacional_direta": 1.0,
+      "margem_total_atribuida": 0.189663,
+      "receita_atribuida": 206693.4,
+      "custo_direto_atribuido": 63229.43,
+      "custo_indireto_atribuido": 104261.82,
+      "resultado_total_atribuido": 39202.15,
+      "gap_operacional": 68802.49,
+      "gap_produtivo": 0.0,
+      "gap_mob_demob": 0.0,
+      "gap_ociosidade": 0.0,
+      "custo_produtivo_particionado": 0.0,
+      "custo_mob_demob_particionado": 0.0,
+      "custo_ociosidade_particionado": 0.0
+    }
+  ],
+  "ACTIONABLE_INSIGHTS": {
+    "criticidade": {
+      "projeto_id": "b387ca45-5e65-43fe-b9ae-658c2855d325",
+      "versao": "1",
+      "gerado_em": "2026-06-08T14:10:42.254862Z",
+      "itens": [],
+      "total_atividades": 0,
+      "total_A_mais": 0,
+      "total_A": 0,
+      "total_B": 0,
+      "total_C": 0,
+      "custo_A_mais_pct": 0.0,
+      "notas_engenheiro": null
+    },
+    "sensibilidade": {
+      "projeto_id": "b387ca45-5e65-43fe-b9ae-658c2855d325",
+      "versao": "1",
+      "gerado_em": "2026-06-08T14:10:42.254862Z",
+      "status_margem": "VERMELHO",
+      "margem_entrada": 0.0,
+      "margem_alvo_min": 0.0,
+      "repair_viavel": false,
+      "passos_repair": [
+        {
+          "lever_tipo": "REDUCE_DURATION",
+          "lever_checkpoint": "",
+          "delta_margem": 0.0,
+          "custo_aplicacao": null,
+          "ratio_beneficio": 0.0,
+          "confianca": "MEDIA",
+          "atividades_afetadas": []
+        }
+      ],
+      "oportunidades": [],
+      "margem_pos_repair": null,
+      "exposicao_por_cpu": []
+    },
+    "intervencao": {
+      "projeto_id": "b387ca45-5e65-43fe-b9ae-658c2855d325",
+      "versao": "1",
+      "gerado_em": "2026-06-08T14:10:42.254862Z",
+      "status_entrada": "VERMELHO",
+      "eixos_intervencao": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.189663,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        },
+        {
+          "nome": "Oportunidade RECALIBRAR_PU",
+          "margem_estimada": 0.103298,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": [
+            "RECALIBRAR_PU"
+          ]
+        }
+      ],
+      "fronteira_pareto": [
+        {
+          "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+          "margem_estimada": 0.189663,
+          "prazo_delta_dias": null,
+          "confianca": "MEDIA",
+          "risco": "MEDIO",
+          "levers_combinados": []
+        }
+      ],
+      "recomendacao_primaria": {
+        "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+        "margem_estimada": 0.189663,
+        "prazo_delta_dias": null,
+        "confianca": "MEDIA",
+        "risco": "MEDIO",
+        "levers_combinados": []
+      }
+    }
+  },
+  "validacoes_pipeline": [],
+  "resumo_utilizacao_contratos": [],
+  "instancias_recurso": [],
+  "decomposicao_pool": null,
+  "relatorio_oportunidades": null,
+  "COMPRESSAO_CRONOGRAMA": null
+}

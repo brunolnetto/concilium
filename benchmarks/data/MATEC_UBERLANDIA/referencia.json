@@ -1,0 +1,485 @@
+{
+  "slug": "MATEC_UBERLANDIA",
+  "planejamento": {
+    "custo_direto_sem_bdi": 2000116.38,
+    "custo_indireto": 11688302.72,
+    "total_projeto": 13688419.100000001
+  },
+  "meta": {
+    "data_inicio": "2026-01-01",
+    "data_termino": "2027-12-31",
+    "projeto": "MATEC_UBERLANDIA",
+    "localizacao": "Brasil",
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "2.2",
+        "ordem": 1,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material  de 1\u00aa categoria - DMT at\u00e9 4 km",
+        "unidade": "m3",
+        "quantitativo": 69952.84,
+        "predecessores": [],
+        "cpu_meta": {}
+      },
+      {
+        "item_id": "2.3",
+        "ordem": 2,
+        "cpu_id": "CPU-TERRA-COMPACT-ATERRO-100PN",
+        "descricao": "Aterro",
+        "unidade": "m3",
+        "quantitativo": 41045.38,
+        "predecessores": [
+          {
+            "item_id": "2.2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "cpu_meta": {}
+      }
+    ],
+    "bdi": {
+      "bdi_lucro_impostos": 0.29974983,
+      "mao_obra": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "material": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      },
+      "servicos": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "indireto": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.05,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "diesel": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      }
+    },
+    "cronograma": [
+      {
+        "item_id": "2.2",
+        "producao_diaria": 269.05,
+        "semanas": {
+          "2026-W01": {
+            "num_equipes": 1
+          },
+          "2026-W02": {
+            "num_equipes": 1
+          },
+          "2026-W03": {
+            "num_equipes": 1
+          },
+          "2026-W04": {
+            "num_equipes": 1
+          },
+          "2026-W05": {
+            "num_equipes": 1
+          },
+          "2026-W06": {
+            "num_equipes": 1
+          },
+          "2026-W07": {
+            "num_equipes": 1
+          },
+          "2026-W08": {
+            "num_equipes": 1
+          },
+          "2026-W09": {
+            "num_equipes": 1
+          },
+          "2026-W10": {
+            "num_equipes": 1
+          },
+          "2026-W11": {
+            "num_equipes": 1
+          },
+          "2026-W12": {
+            "num_equipes": 1
+          },
+          "2026-W13": {
+            "num_equipes": 1
+          },
+          "2026-W14": {
+            "num_equipes": 1
+          },
+          "2026-W15": {
+            "num_equipes": 1
+          },
+          "2026-W16": {
+            "num_equipes": 1
+          },
+          "2026-W17": {
+            "num_equipes": 1
+          },
+          "2026-W18": {
+            "num_equipes": 1
+          },
+          "2026-W19": {
+            "num_equipes": 1
+          },
+          "2026-W20": {
+            "num_equipes": 1
+          },
+          "2026-W21": {
+            "num_equipes": 1
+          },
+          "2026-W22": {
+            "num_equipes": 1
+          },
+          "2026-W23": {
+            "num_equipes": 1
+          },
+          "2026-W24": {
+            "num_equipes": 1
+          },
+          "2026-W25": {
+            "num_equipes": 1
+          },
+          "2026-W26": {
+            "num_equipes": 1
+          },
+          "2026-W27": {
+            "num_equipes": 1
+          },
+          "2026-W28": {
+            "num_equipes": 1
+          },
+          "2026-W29": {
+            "num_equipes": 1
+          },
+          "2026-W30": {
+            "num_equipes": 1
+          },
+          "2026-W31": {
+            "num_equipes": 1
+          },
+          "2026-W32": {
+            "num_equipes": 1
+          },
+          "2026-W33": {
+            "num_equipes": 1
+          },
+          "2026-W34": {
+            "num_equipes": 1
+          },
+          "2026-W35": {
+            "num_equipes": 1
+          },
+          "2026-W36": {
+            "num_equipes": 1
+          },
+          "2026-W37": {
+            "num_equipes": 1
+          },
+          "2026-W38": {
+            "num_equipes": 1
+          },
+          "2026-W39": {
+            "num_equipes": 1
+          },
+          "2026-W40": {
+            "num_equipes": 1
+          },
+          "2026-W41": {
+            "num_equipes": 1
+          },
+          "2026-W42": {
+            "num_equipes": 1
+          },
+          "2026-W43": {
+            "num_equipes": 1
+          },
+          "2026-W44": {
+            "num_equipes": 1
+          },
+          "2026-W45": {
+            "num_equipes": 1
+          },
+          "2026-W46": {
+            "num_equipes": 1
+          },
+          "2026-W47": {
+            "num_equipes": 1
+          },
+          "2026-W48": {
+            "num_equipes": 1
+          },
+          "2026-W49": {
+            "num_equipes": 1
+          },
+          "2026-W50": {
+            "num_equipes": 1
+          },
+          "2026-W51": {
+            "num_equipes": 1
+          },
+          "2026-W52": {
+            "num_equipes": 1
+          }
+        }
+      },
+      {
+        "item_id": "2.3",
+        "producao_diaria": 157.87,
+        "semanas": {
+          "2026-W53": {
+            "num_equipes": 1
+          },
+          "2027-W01": {
+            "num_equipes": 1
+          },
+          "2027-W02": {
+            "num_equipes": 1
+          },
+          "2027-W03": {
+            "num_equipes": 1
+          },
+          "2027-W04": {
+            "num_equipes": 1
+          },
+          "2027-W05": {
+            "num_equipes": 1
+          },
+          "2027-W06": {
+            "num_equipes": 1
+          },
+          "2027-W07": {
+            "num_equipes": 1
+          },
+          "2027-W08": {
+            "num_equipes": 1
+          },
+          "2027-W09": {
+            "num_equipes": 1
+          },
+          "2027-W10": {
+            "num_equipes": 1
+          },
+          "2027-W11": {
+            "num_equipes": 1
+          },
+          "2027-W12": {
+            "num_equipes": 1
+          },
+          "2027-W13": {
+            "num_equipes": 1
+          },
+          "2027-W14": {
+            "num_equipes": 1
+          },
+          "2027-W15": {
+            "num_equipes": 1
+          },
+          "2027-W16": {
+            "num_equipes": 1
+          },
+          "2027-W17": {
+            "num_equipes": 1
+          },
+          "2027-W18": {
+            "num_equipes": 1
+          },
+          "2027-W19": {
+            "num_equipes": 1
+          },
+          "2027-W20": {
+            "num_equipes": 1
+          },
+          "2027-W21": {
+            "num_equipes": 1
+          },
+          "2027-W22": {
+            "num_equipes": 1
+          },
+          "2027-W23": {
+            "num_equipes": 1
+          },
+          "2027-W24": {
+            "num_equipes": 1
+          },
+          "2027-W25": {
+            "num_equipes": 1
+          },
+          "2027-W26": {
+            "num_equipes": 1
+          },
+          "2027-W27": {
+            "num_equipes": 1
+          },
+          "2027-W28": {
+            "num_equipes": 1
+          },
+          "2027-W29": {
+            "num_equipes": 1
+          },
+          "2027-W30": {
+            "num_equipes": 1
+          },
+          "2027-W31": {
+            "num_equipes": 1
+          },
+          "2027-W32": {
+            "num_equipes": 1
+          },
+          "2027-W33": {
+            "num_equipes": 1
+          },
+          "2027-W34": {
+            "num_equipes": 1
+          },
+          "2027-W35": {
+            "num_equipes": 1
+          },
+          "2027-W36": {
+            "num_equipes": 1
+          },
+          "2027-W37": {
+            "num_equipes": 1
+          },
+          "2027-W38": {
+            "num_equipes": 1
+          },
+          "2027-W39": {
+            "num_equipes": 1
+          },
+          "2027-W40": {
+            "num_equipes": 1
+          },
+          "2027-W41": {
+            "num_equipes": 1
+          },
+          "2027-W42": {
+            "num_equipes": 1
+          },
+          "2027-W43": {
+            "num_equipes": 1
+          },
+          "2027-W44": {
+            "num_equipes": 1
+          },
+          "2027-W45": {
+            "num_equipes": 1
+          },
+          "2027-W46": {
+            "num_equipes": 1
+          },
+          "2027-W47": {
+            "num_equipes": 1
+          },
+          "2027-W48": {
+            "num_equipes": 1
+          },
+          "2027-W49": {
+            "num_equipes": 1
+          },
+          "2027-W50": {
+            "num_equipes": 1
+          },
+          "2027-W51": {
+            "num_equipes": 1
+          }
+        }
+      }
+    ],
+    "indiretos": [
+      {
+        "categoria": "ADM",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 106261.92,
+        "mao_obra": []
+      },
+      {
+        "categoria": "TOP",
+        "driver": "projeto",
+        "custo_fixo_total": 807661.72,
+        "mao_obra": []
+      },
+      {
+        "categoria": "LAB",
+        "driver": "projeto",
+        "custo_fixo_total": 555194.38,
+        "mao_obra": []
+      },
+      {
+        "categoria": "QSMS",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 21750.41,
+        "mao_obra": []
+      },
+      {
+        "categoria": "MOB",
+        "driver": "projeto",
+        "custo_fixo_total": 7385838.49,
+        "mao_obra": []
+      }
+    ]
+  },
+  "mob_schedule": {
+    "mobilizacao": {
+      "inicio": "2026-01-01",
+      "fim": "2026-01-01"
+    },
+    "operacao": {
+      "inicio": "2026-01-01",
+      "fim": "2027-12-31"
+    },
+    "desmobilizacao": {
+      "inicio": "2027-12-31",
+      "fim": "2027-12-31"
+    }
+  }
+}

@@ -145,6 +145,7 @@ def _load_project() -> None:
 def _load_benchmark() -> None:
     from concilium.presentation.cli import commands_benchmark, commands_reconciliacao, commands_schedule
 
+    benchmark_app.command("run-batch")(commands_benchmark.run_benchmarks_batch)
     benchmark_app.command("run")(commands_benchmark.run_benchmarks)
     benchmark_app.command("analyze")(commands_benchmark.analyze)
     benchmark_app.command("extract-trace")(commands_benchmark.extract_trace)
