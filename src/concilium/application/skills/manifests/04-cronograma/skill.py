@@ -1785,13 +1785,20 @@ def _build_scheduled_activities(
     scheduled_activities_out = []
 
     # ADR-072: Preservar duração original do scheduler em vez de recalcular
-    # Constrói mapa de activity_id → ScheduledActivityCanonical do schedule_selected
+    # Constrói mapa de item_id → duration_weeks do schedule_selected
+    # (activity_id do scheduler tem formato "item_id-atv-1", need to extract item_id)
     duration_lookup = {}
     if schedule_selected is not None:
         for sa in getattr(schedule_selected, "scheduled_activities", []):
             activity_id = getattr(sa, "activity_id", None)
             if activity_id:
-                duration_lookup[activity_id] = getattr(sa, "duration_weeks", 1)
+                # Extract item_id from activity_id (format: "item_id-atv-1")
+                # activity_id pode ser "eap-1_0-atv-1" ou simplesmente "eap-1_0"
+                if "-atv-" in activity_id:
+                    item_id = activity_id.rsplit("-atv-", 1)[0]
+                else:
+                    item_id = activity_id
+                duration_lookup[item_id] = getattr(sa, "duration_weeks", 1)
 
     for item in canonical_in.eap:  # type: ignore[union-attr]
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
