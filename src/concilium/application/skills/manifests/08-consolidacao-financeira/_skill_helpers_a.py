@@ -458,6 +458,12 @@ def _build_pe_for_equipe(
         elif custo_total_autonomo <= 0 and custo_venda_total > 0:
             frentes_nec = round(custo_operacional_real / custo_venda_total, 4)
 
+        # ADR-076 Fallback: se frentes_nec >> 10 (absurdo), usar 1 como conservador
+        # Isso ocorre quando há discrepância entre escala de custo_total e venda_sem_bdi por item.
+        # Requer investigação de particionamento de custos por item (ADR-083).
+        if frentes_nec > 10.0:
+            frentes_nec = 1.0
+
         pu_aut_unit = custo_total_autonomo / Q if custo_total_autonomo > 0 else 0.0
         pu_calibrado_unitario = round(max(pu_catalogo_unitario, pu_aut_unit), 4)
         if pu_catalogo_unitario > 0:
