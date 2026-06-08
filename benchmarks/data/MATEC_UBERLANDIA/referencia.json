@@ -21,7 +21,7 @@
       {
         "item_id": "2.2",
         "ordem": 1,
-        "cpu_id": "CPU-SUPP-002",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
         "descricao": "Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km",
         "unidade": "m3",
         "quantitativo": 69952.84,
@@ -31,7 +31,7 @@
       {
         "item_id": "2.3",
         "ordem": 2,
-        "cpu_id": "CPU-SUPP-003",
+        "cpu_id": "CPU-TERRA-COMPACT-ATERRO-100PN",
         "descricao": "Aterro",
         "unidade": "m3",
         "quantitativo": 41045.38,
@@ -44,18 +44,6 @@
           }
         ],
         "cpu_meta": {}
-      }
-    ],
-    "cronograma": [
-      {
-        "item_id": "2.2",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "2.3",
-        "producao_diaria": 0.0,
-        "semanas": {}
       }
     ],
     "bdi": {
@@ -121,6 +109,17 @@
         "ir": 0.0
       }
     },
-    "rcpsp_spec": {}
+    "cronograma": [
+      {
+        "item_id": "2.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ]
   }
 }

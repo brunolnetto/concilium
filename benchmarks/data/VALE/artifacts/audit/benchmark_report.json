@@ -6,27 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 1952,
-      "avisos": [
-        "10 EAP items referenciam CPUs inexistentes no catálogo: '1.1' (CPU-MOB-001), '1.2' (CPU-MOB-002), '3.1' (CPU-LIMP-001)..."
-      ]
+      "duration_ms": 883,
+      "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 208,
+      "duration_ms": 82,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 160,
+      "duration_ms": 69,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 243,
+      "duration_ms": 89,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -67,163 +65,161 @@
         "CPU CPU-DREN-CORPO-BSCC-100-200X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BDTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.15 vs P_original=0.38. PU_sbdi=1239.0366 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "Pool vazio — agendando sem restrições de recursos.",
-        "CPU CPU-MOB-001 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-MOB-001 (producao_id_ref); assumindo 1000.0.",
         "Item '1.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-MOB-002 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-MOB-002 (producao_id_ref); assumindo 1000.0.",
         "Item '1.2' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-LIMP-001 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-LIMP-001 (producao_id_ref); assumindo 1000.0.",
         "Item '3.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-LIMP-002 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-LIMP-002 (producao_id_ref); assumindo 1000.0.",
         "Item '3.2' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-LIMP-003 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-LIMP-003 (producao_id_ref); assumindo 1000.0.",
         "Item '3.3' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-LIMP-004 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-LIMP-004 (producao_id_ref); assumindo 1000.0.",
         "Item '3.4' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-LIMP-005 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-LIMP-005 (producao_id_ref); assumindo 1000.0.",
         "Item '3.5' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-LIMP-006 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-LIMP-006 (producao_id_ref); assumindo 1000.0.",
         "Item '3.6' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-EQUIP-001 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-EQUIP-001 (producao_id_ref); assumindo 1000.0.",
         "Item '5.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "CPU CPU-ESCA-001 não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-ESCA-001 (producao_id_ref); assumindo 1000.0.",
         "Item '4.1' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091)."
       ]
     },
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 62,
+      "duration_ms": 21,
       "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 55,
+      "duration_ms": 21,
       "avisos": [
-        "CPU 'CPU-MOB-001' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-MOB-002' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-LIMP-001' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-LIMP-002' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-LIMP-003' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-LIMP-004' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-LIMP-005' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-LIMP-006' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-EQUIP-001' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
-        "CPU 'CPU-ESCA-001' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão."
+        "Item '1.1': custo_total=0.00 ou Q=383592.55 inválido — cobertura não calculada.",
+        "Item '1.2': custo_total=0.00 ou Q=2036512.35 inválido — cobertura não calculada.",
+        "Item '3.1': custo_total=0.00 ou Q=45102.63 inválido — cobertura não calculada.",
+        "Item '3.2': custo_total=0.00 ou Q=575.0 inválido — cobertura não calculada.",
+        "Item '3.3': custo_total=0.00 ou Q=14755.9 inválido — cobertura não calculada.",
+        "Item '3.4': custo_total=0.00 ou Q=700.0 inválido — cobertura não calculada.",
+        "Item '3.5': custo_total=0.00 ou Q=1000.0 inválido — cobertura não calculada.",
+        "Item '3.6': custo_total=0.00 ou Q=24394.3 inválido — cobertura não calculada.",
+        "Item '5.1': custo_total=0.00 ou Q=18490.0 inválido — cobertura não calculada.",
+        "Item '4.1': custo_total=0.00 ou Q=18.49 inválido — cobertura não calculada."
       ]
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 59,
-      "avisos": [
-        "equipes_diretas vazia — usando 0 pessoas para cálculo de MOB"
-      ]
+      "duration_ms": 21,
+      "avisos": []
     },
     {
       "skill": "10-diagnostico-criticidade",
-      "status": "ERRO",
-      "duration_ms": 58,
+      "status": "EXCEPTION",
+      "duration_ms": 18,
       "avisos": [],
       "erros": [
-        "Cronograma e Equipes necessários."
-      ]
+        "'CanonicalModel' object has no attribute 'resultado_planejamento'"
+      ],
+      "erro": "'CanonicalModel' object has no attribute 'resultado_planejamento'"
     },
     {
       "skill": "08-consolidacao-financeira",
-      "status": "ERRO",
-      "duration_ms": 49,
-      "avisos": [],
-      "erros": [
-        "Equipes e Planejamento necessários."
+      "status": "OK",
+      "duration_ms": 24,
+      "avisos": [
+        "Margem operacional 20.61% | status=VERMELHO | preço R$ 3,797,512 (operacional) vs R$ 16,411,540,498 (catálogo)",
+        "Família 'CPU' com itens originalmente em ERRO (3.4, 3.5, 4.1) mas saldo agregado positivo (Δfam = R$ 16,406,545,792.70). Criticidade rebaixada para AVISO."
       ]
     },
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 58,
+      "duration_ms": 20,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
-      "status": "ERRO",
-      "duration_ms": 51,
-      "avisos": [],
-      "erros": [
-        "Adapter requer resultado consolidado (skill 06)"
+      "status": "OK",
+      "duration_ms": 321,
+      "avisos": [
+        "Relatório de criticidade ausente. Execute skill-15 (diagnóstico) para enriquecer o relatório.",
+        "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
     },
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 68,
+      "duration_ms": 18,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
-      "status": "ERRO",
-      "duration_ms": 60,
-      "avisos": [],
-      "erros": [
-        "Skill 06-consolidar deve ser executada antes: canonical.resultado ausente."
-      ]
+      "status": "OK",
+      "duration_ms": 18,
+      "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
-      "status": "ERRO",
-      "duration_ms": 61,
-      "avisos": [],
-      "erros": [
-        "resultado (08) ausente — execute 08-consolidar antes."
-      ]
+      "status": "OK",
+      "duration_ms": 19,
+      "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 54,
-      "avisos": [
-        "Bridge Analysis ausente — execute a Skill 08 (Consolidação Financeira) antes."
-      ]
+      "duration_ms": 94,
+      "avisos": []
     }
   ],
   "referencia_disponivel": true,
   "confronto": {
+    "ferramenta": {
+      "custo_direto": 13026370931.43,
+      "custo_direto_equipes": 13026370931.43,
+      "custo_direto_pu_q": 13026370931.43,
+      "custo_indireto": 3021600.0,
+      "custo_total": 13029392531.43,
+      "preco_venda": 16411540498.29,
+      "preco_venda_plus_eq": 3797512.44,
+      "preco_venda_catalogo": 16411540498.29,
+      "preco_venda_operacional": 16411540498.29,
+      "bdi_lucro_impostos": 0.2595783309698785
+    },
     "ferramenta_breakdown_direto": {
       "base": "pu_q",
-      "mao_obra_total": 487021.47,
-      "equipamentos_total": 979522.48,
-      "diesel_total": 747166.55,
+      "mao_obra_total": 8860318051.34,
+      "equipamentos_total": 3073557559.99,
+      "diesel_total": 1092495320.1,
       "materiais_total": 0.0,
-      "direto_total": 2213710.5,
-      "direto_total_pu_q": 2213710.5,
+      "direto_total": 13026370931.43,
+      "direto_total_pu_q": 13026370931.43,
       "direto_total_equipes": 0.0
     },
+    "ferramenta_breakdown_indireto": {
+      "adm": 384000.0,
+      "top": 0.0,
+      "lab": 240000.0,
+      "qsms": 0.0,
+      "mob": 2397600.0,
+      "total": 3021600.0
+    },
     "actionable_insights": {
-      "sensibilidade": "0 alavancas corretivas, 0 oportunidades",
-      "intervencao": "Recomendacao Principal: Nenhuma"
+      "sensibilidade": "1 alavancas corretivas, 0 oportunidades",
+      "intervencao": "Recomendacao Principal: Repair (AMARELO/VERMELHO->VERDE)"
     },
     "breakdown_por_fase": {
       "direto": {
         "base": "pu_q",
-        "mao_obra_total": 487021.47,
-        "equipamentos_total": 979522.48,
-        "diesel_total": 747166.55,
+        "mao_obra_total": 8860318051.34,
+        "equipamentos_total": 3073557559.99,
+        "diesel_total": 1092495320.1,
         "materiais_total": 0.0,
-        "direto_total": 2213710.5,
-        "direto_total_pu_q": 2213710.5,
+        "direto_total": 13026370931.43,
+        "direto_total_pu_q": 13026370931.43,
         "direto_total_equipes": 0.0
       },
-      "indireto": null
+      "indireto": {
+        "adm": 384000.0,
+        "top": 0.0,
+        "lab": 240000.0,
+        "qsms": 0.0,
+        "mob": 2397600.0,
+        "total": 3021600.0
+      }
     }
   },
   "quality_gates": {
@@ -233,7 +229,7 @@
     "items": []
   },
   "action_report": [],
-  "status_final": "INVIAVEL",
+  "status_final": "APROVADO",
   "rcpsp_schedule": {
     "algorithm": "CP-SAT",
     "makespan_weeks": 8,

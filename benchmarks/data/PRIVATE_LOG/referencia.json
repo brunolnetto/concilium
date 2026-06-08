@@ -21,7 +21,7 @@
       {
         "item_id": "1.1",
         "ordem": 1,
-        "cpu_id": "CPU-MOB-001",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Limpeza mecanizada de camada vegetal (20cm), incluso carga, transporte a um dt maximo de 1km e espalhamento",
         "unidade": "m2",
         "quantitativo": 487243.38,
@@ -31,7 +31,7 @@
       {
         "item_id": "1.2",
         "ordem": 2,
-        "cpu_id": "CPU-MOB-002",
+        "cpu_id": "CPU-DIVER-ATI-007",
         "descricao": "Supressão de árvores isoladas",
         "unidade": "un",
         "quantitativo": 80.0,
@@ -48,7 +48,7 @@
       {
         "item_id": "1.3",
         "ordem": 3,
-        "cpu_id": "CPU-MOB-003",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km",
         "unidade": "m3",
         "quantitativo": 614502.27,
@@ -65,7 +65,7 @@
       {
         "item_id": "1.4",
         "ordem": 4,
-        "cpu_id": "CPU-MOB-004",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA)",
         "unidade": "m3",
         "quantitativo": 114791.36,
@@ -82,7 +82,7 @@
       {
         "item_id": "1.5",
         "ordem": 5,
-        "cpu_id": "CPU-MOB-005",
+        "cpu_id": "CPU-TERRA-ATI-017",
         "descricao": "Aterro Compactado a 100% PN",
         "unidade": "m3",
         "quantitativo": 662994.21,
@@ -99,7 +99,7 @@
       {
         "item_id": "1.6",
         "ordem": 6,
-        "cpu_id": "CPU-MOB-006",
+        "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
         "descricao": "Desmonte de rocha com escavadeira e rompedor hidráulico",
         "unidade": "m3",
         "quantitativo": 12000.0,
@@ -116,7 +116,7 @@
       {
         "item_id": "1.8",
         "ordem": 7,
-        "cpu_id": "CPU-MOB-008",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Escavação de solo mole, incluso tranporte em ate 1km, e espalhamento",
         "unidade": "m3",
         "quantitativo": 25000.0,
@@ -133,7 +133,7 @@
       {
         "item_id": "1.11",
         "ordem": 8,
-        "cpu_id": "CPU-MOB-011",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA) - substituição do solo mole",
         "unidade": "m3",
         "quantitativo": 25000.0,
@@ -150,7 +150,7 @@
       {
         "item_id": "1.12",
         "ordem": 9,
-        "cpu_id": "CPU-MOB-012",
+        "cpu_id": "CPU-TERRA-ATI-017",
         "descricao": "Aterro Compactado a 100% PN",
         "unidade": "m3",
         "quantitativo": 25000.0,
@@ -167,7 +167,7 @@
       {
         "item_id": "1.9",
         "ordem": 10,
-        "cpu_id": "CPU-MOB-009",
+        "cpu_id": "CPU-SANEA-ATI-048",
         "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha dupla 150mm",
         "unidade": "m",
         "quantitativo": 1720.0,
@@ -184,7 +184,7 @@
       {
         "item_id": "1.10",
         "ordem": 11,
-        "cpu_id": "CPU-MOB-010",
+        "cpu_id": "CPU-SANEA-ATI-048",
         "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha simples 150mm",
         "unidade": "m",
         "quantitativo": 1740.0,
@@ -197,63 +197,6 @@
           }
         ],
         "cpu_meta": {}
-      }
-    ],
-    "cronograma": [
-      {
-        "item_id": "1.1",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.2",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.3",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.4",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.5",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.6",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.8",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.11",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.12",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.9",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.10",
-        "producao_diaria": 0.0,
-        "semanas": {}
       }
     ],
     "bdi": {
@@ -319,6 +262,62 @@
         "ir": 0.0
       }
     },
-    "rcpsp_spec": {}
+    "cronograma": [
+      {
+        "item_id": "1.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.6",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.8",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.11",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.12",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.9",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.10",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ]
   }
 }

@@ -21,7 +21,7 @@
       {
         "item_id": "1.1",
         "ordem": 1,
-        "cpu_id": "CPU-MOB-001",
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA",
         "unidade": "M2",
         "quantitativo": 383592.55,
@@ -31,7 +31,7 @@
       {
         "item_id": "1.2",
         "ordem": 2,
-        "cpu_id": "CPU-MOB-002",
+        "cpu_id": "CPU-TERRA-ATI-003",
         "descricao": "Supressão vegetal, destocamento e limpeza de árvores, arbustos, vegetação rasteira e entulhos com remoção para área de depósito - DMT até 350m",
         "unidade": "M2",
         "quantitativo": 2036512.35,
@@ -48,7 +48,7 @@
       {
         "item_id": "3.1",
         "ordem": 3,
-        "cpu_id": "CPU-LIMP-001",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria",
         "unidade": "M",
         "quantitativo": 45102.63,
@@ -58,7 +58,7 @@
       {
         "item_id": "3.2",
         "ordem": 4,
-        "cpu_id": "CPU-LIMP-002",
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos alagáveis",
         "unidade": "M",
         "quantitativo": 575.0,
@@ -75,7 +75,7 @@
       {
         "item_id": "3.3",
         "ordem": 5,
-        "cpu_id": "CPU-LIMP-003",
+        "cpu_id": "CPU-DIVER-ATI-065",
         "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
         "unidade": "M",
         "quantitativo": 14755.9,
@@ -92,7 +92,7 @@
       {
         "item_id": "3.4",
         "ordem": 6,
-        "cpu_id": "CPU-LIMP-004",
+        "cpu_id": "CPU-DIVER-ATI-065",
         "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
         "unidade": "M",
         "quantitativo": 700.0,
@@ -109,7 +109,7 @@
       {
         "item_id": "3.5",
         "ordem": 7,
-        "cpu_id": "CPU-LIMP-005",
+        "cpu_id": "CPU-DIVER-ATI-065",
         "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas",
         "unidade": "M",
         "quantitativo": 1000.0,
@@ -126,7 +126,7 @@
       {
         "item_id": "3.6",
         "ordem": 8,
-        "cpu_id": "CPU-LIMP-006",
+        "cpu_id": "CPU-DIVER-ATI-067",
         "descricao": "Remoção de cerca de mourão de madeira",
         "unidade": "M",
         "quantitativo": 24394.3,
@@ -143,7 +143,7 @@
       {
         "item_id": "5.1",
         "ordem": 9,
-        "cpu_id": "CPU-EQUIP-001",
+        "cpu_id": "CPU-DIVER-ATI-067",
         "descricao": "Abertura de acesso para implantação de cerca",
         "unidade": "M",
         "quantitativo": 18490.0,
@@ -160,7 +160,7 @@
       {
         "item_id": "4.1",
         "ordem": 10,
-        "cpu_id": "CPU-ESCA-001",
+        "cpu_id": "CPU-DIVER-ATI-070",
         "descricao": "Implantação do eixo",
         "unidade": "KM",
         "quantitativo": 18.49,
@@ -173,58 +173,6 @@
           }
         ],
         "cpu_meta": {}
-      }
-    ],
-    "cronograma": [
-      {
-        "item_id": "1.1",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "1.2",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "3.1",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "3.2",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "3.3",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "3.4",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "3.5",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "3.6",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "5.1",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      },
-      {
-        "item_id": "4.1",
-        "producao_diaria": 0.0,
-        "semanas": {}
       }
     ],
     "bdi": {
@@ -290,6 +238,57 @@
         "ir": 0.0
       }
     },
-    "rcpsp_spec": {}
+    "cronograma": [
+      {
+        "item_id": "1.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.6",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "5.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "4.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ]
   }
 }

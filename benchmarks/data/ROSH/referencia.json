@@ -21,7 +21,7 @@
       {
         "item_id": "1.1",
         "ordem": 1,
-        "cpu_id": "CPU-MOB-001",
+        "cpu_id": "CPU-TERRA-ATI-021",
         "descricao": "Rebaixo Terreno natural - 40 cm",
         "unidade": "m²",
         "quantitativo": 110000.0,
@@ -31,7 +31,7 @@
       {
         "item_id": "1.2",
         "ordem": 2,
-        "cpu_id": "CPU-MOB-002",
+        "cpu_id": "CPU-TERRA-ATI-021",
         "descricao": "Regularização e compactação do terreno natural",
         "unidade": "m²",
         "quantitativo": 110000.0,
@@ -48,7 +48,7 @@
       {
         "item_id": "1.3",
         "ordem": 3,
-        "cpu_id": "CPU-MOB-003",
+        "cpu_id": "CPU-PAVIM-PAV-BASE-BGTC",
         "descricao": "Execução das guias",
         "unidade": "m",
         "quantitativo": 1392.98,
@@ -65,7 +65,7 @@
       {
         "item_id": "1.5",
         "ordem": 4,
-        "cpu_id": "CPU-MOB-005",
+        "cpu_id": "CPU-DIVER-ATI-069",
         "descricao": "Lançamento da manta geotêxtil",
         "unidade": "m²",
         "quantitativo": 115500.0,
@@ -99,7 +99,7 @@
       {
         "item_id": "1.14",
         "ordem": 6,
-        "cpu_id": "CPU-MOB-014",
+        "cpu_id": "CPU-TERRA-ATI-020",
         "descricao": "Lançamento e espalhamento de areia",
         "unidade": "m³",
         "quantitativo": 7150.0,
@@ -116,7 +116,7 @@
       {
         "item_id": "1.17",
         "ordem": 7,
-        "cpu_id": "CPU-MOB-017",
+        "cpu_id": "CPU-TERRA-ATI-022",
         "descricao": "Espalhamento e compactação de rachão",
         "unidade": "m³",
         "quantitativo": 28875.0,
@@ -133,7 +133,7 @@
       {
         "item_id": "1.21",
         "ordem": 8,
-        "cpu_id": "CPU-MOB-021",
+        "cpu_id": "CPU-TERRA-ATI-022",
         "descricao": "Espalhamento e Compactação de  bica corrida",
         "unidade": "m³",
         "quantitativo": 17820.0,
@@ -150,7 +150,7 @@
       {
         "item_id": "1.25",
         "ordem": 9,
-        "cpu_id": "CPU-MOB-025",
+        "cpu_id": "CPU-TERRA-ATI-023",
         "descricao": "Espalhamento e compactação de BGTC",
         "unidade": "m³",
         "quantitativo": 46200.0,
@@ -167,7 +167,7 @@
       {
         "item_id": "1.29",
         "ordem": 10,
-        "cpu_id": "CPU-MOB-029",
+        "cpu_id": "CPU-TERRA-ATI-020",
         "descricao": "Lançamento e espalhamento de pó de pedra",
         "unidade": "m³",
         "quantitativo": 5720.0,
@@ -184,7 +184,7 @@
       {
         "item_id": "1.33",
         "ordem": 11,
-        "cpu_id": "CPU-MOB-033",
+        "cpu_id": "CPU-DIVER-ATI-073",
         "descricao": "Instação de piso intertravado",
         "unidade": "m²",
         "quantitativo": 110000.0,
@@ -201,7 +201,7 @@
       {
         "item_id": "1.34",
         "ordem": 12,
-        "cpu_id": "CPU-MOB-034",
+        "cpu_id": "CPU-DIVER-ATI-073",
         "descricao": "Rejuntamento do piso intertravado",
         "unidade": "m²",
         "quantitativo": 110000.0,
@@ -218,7 +218,7 @@
       {
         "item_id": "2.1",
         "ordem": 13,
-        "cpu_id": "CPU-SUPP-001",
+        "cpu_id": "CPU-DIVER-ATI-069",
         "descricao": "Lançamento da manta geotêxtil",
         "unidade": "m²",
         "quantitativo": 115500.0,
@@ -250,6 +250,69 @@
         "cpu_meta": {}
       }
     ],
+    "bdi": {
+      "bdi_lucro_impostos": 0.29974983,
+      "mao_obra": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "material": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      },
+      "servicos": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "indireto": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.05,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "diesel": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      }
+    },
     "cronograma": [
       {
         "item_id": "1.1",
@@ -321,69 +384,6 @@
         "producao_diaria": 0.0,
         "semanas": {}
       }
-    ],
-    "bdi": {
-      "bdi_lucro_impostos": 0.29974983,
-      "mao_obra": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "material": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      },
-      "servicos": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "indireto": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.05,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "diesel": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      }
-    }
+    ]
   }
 }

@@ -204,8 +204,26 @@ def run_diagnostico_criticidade(
 
     custo_total_obra = sum(eq.custo_total for eq in (canonical_in.equipes_diretas or []))
     if canonical_in.equipes_diretas and custo_total_obra == 0:
-        validacoes.append(ValidacaoItem(codigo="VAL-CC-01", status="ERRO", mensagem="Custo total da obra é zero."))
-        return SkillResult(canonical_in, validacoes)
+        # Fallback: try to use custo from resultado_planejamento (calculated by skill 08)
+        fallback_custo = 0.0
+        if canonical_in.resultado_planejamento:
+            rp = canonical_in.resultado_planejamento
+            fallback_custo = getattr(rp, "custo_direto", 0.0) or getattr(rp, "custo_sem_bdi", 0.0) or 0.0
+
+        if fallback_custo == 0:
+            validacoes.append(ValidacaoItem(codigo="VAL-CC-01", status="ERRO", mensagem="Custo total da obra é zero."))
+            return SkillResult(canonical_in, validacoes)
+
+        # Use fallback custo — distribute equally across equipes
+        if canonical_in.equipes_diretas:
+            custo_per_eq = fallback_custo / len(canonical_in.equipes_diretas)
+            for eq in canonical_in.equipes_diretas:
+                eq.custo_total = custo_per_eq
+            validacoes.append(ValidacaoItem(
+                codigo="VAL-CC-02",
+                status="AVISO",
+                mensagem=f"Usando custo do resultado_planejamento para diagnóstico ({fallback_custo:,.0f})."
+            ))
 
     if not canonical_in.cronograma or not canonical_in.equipes_diretas:
         validacoes.append(

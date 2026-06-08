@@ -27,13 +27,6 @@
         "predecessores": []
       }
     ],
-    "cronograma": [
-      {
-        "item_id": "0",
-        "producao_diaria": 0.0,
-        "semanas": {}
-      }
-    ],
     "bdi": {
       "bdi_lucro_impostos": 0.29974983,
       "mao_obra": {
@@ -96,6 +89,13 @@
         "cssl": 0.0,
         "ir": 0.0
       }
-    }
+    },
+    "cronograma": [
+      {
+        "item_id": "0",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      }
+    ]
   }
 }

@@ -21,7 +21,7 @@
       {
         "item_id": "1.1",
         "ordem": 1,
-        "cpu_id": "CPU-MOB-001",
+        "cpu_id": "CPU-TERRA-ATI-002",
         "descricao": "Limpeza mecanizada da camada vegetal (espessura média de 30 cm) - volume geométrico",
         "unidade": "m2",
         "quantitativo": 52000.0,
@@ -31,7 +31,7 @@
       {
         "item_id": "1.3",
         "ordem": 2,
-        "cpu_id": "CPU-MOB-003",
+        "cpu_id": "CPU-TERRA-ATI-022",
         "descricao": "Regularização de bota-fora com espalhamento e compactação",
         "unidade": "m3",
         "quantitativo": 15600.0,
@@ -48,7 +48,7 @@
       {
         "item_id": "2.1",
         "ordem": 3,
-        "cpu_id": "CPU-SUPP-001",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Escavação, carga e transporte de material de 1ª categoria - dmt de 400 a 600 m - caminho de serviço em leito natural - com carregadeira e caminhão basculante de 14 m³ - volume geométrico",
         "unidade": "m3",
         "quantitativo": 1194.65,
@@ -65,7 +65,7 @@
       {
         "item_id": "2.2",
         "ordem": 4,
-        "cpu_id": "CPU-SUPP-002",
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
         "descricao": "Escavação, carga e transporte de material de 1° cat. - dmt: 4700m (importação solo de jazida interna ao TBR070)",
         "unidade": "m3",
         "quantitativo": 51353.78,
@@ -82,7 +82,7 @@
       {
         "item_id": "2.3",
         "ordem": 5,
-        "cpu_id": "CPU-SUPP-003",
+        "cpu_id": "CPU-TERRA-COMPAC-PI",
         "descricao": "Compactação de aterros a 100% do proctor intermediário (camada final) - volume homogeneizado (vol. geométrico x 1,25)",
         "unidade": "m3",
         "quantitativo": 40421.87,
@@ -99,7 +99,7 @@
       {
         "item_id": "3.1",
         "ordem": 6,
-        "cpu_id": "CPU-LIMP-001",
+        "cpu_id": "CPU-PAVIM-ATI-060",
         "descricao": "Demolição mecânica de pavimento",
         "unidade": "m3",
         "quantitativo": 4200.0,
@@ -116,7 +116,7 @@
       {
         "item_id": "3.3",
         "ordem": 7,
-        "cpu_id": "CPU-LIMP-003",
+        "cpu_id": "CPU-TERRA-ATI-022",
         "descricao": "Regularização de bota-fora com espalhamento e compactação",
         "unidade": "m3",
         "quantitativo": 6300.0,
@@ -133,7 +133,7 @@
       {
         "item_id": "4.1",
         "ordem": 8,
-        "cpu_id": "CPU-ESCA-001",
+        "cpu_id": "CPU-TERRA-ATI-019-M2",
         "descricao": "Regularização do subleito",
         "unidade": "m2",
         "quantitativo": 37509.04,
@@ -150,7 +150,7 @@
       {
         "item_id": "4.2",
         "ordem": 9,
-        "cpu_id": "CPU-ESCA-002",
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA",
         "descricao": "Reforço de subleito com solo de jazida selecionada - volume geométrico",
         "unidade": "m3",
         "quantitativo": 22505.42,
@@ -167,7 +167,7 @@
       {
         "item_id": "4.3",
         "ordem": 10,
-        "cpu_id": "CPU-ESCA-003",
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA",
         "descricao": "Sub-base estabilizada granulometricamente com mistura solo brita (70% - 30%) na pista com material de jazida e brita comercial - volume geométrico",
         "unidade": "m3",
         "quantitativo": 5626.36,
@@ -184,7 +184,7 @@
       {
         "item_id": "4.4",
         "ordem": 11,
-        "cpu_id": "CPU-ESCA-004",
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA",
         "descricao": "Base ou sub-base de brita graduada executada com vibroacabadora - brita comercial",
         "unidade": "m3",
         "quantitativo": 5501.33,
@@ -201,7 +201,7 @@
       {
         "item_id": "4.5",
         "ordem": 12,
-        "cpu_id": "CPU-ESCA-005",
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Imprimação com asfalto diluído",
         "unidade": "m2",
         "quantitativo": 35842.04,
@@ -218,7 +218,7 @@
       {
         "item_id": "4.6",
         "ordem": 13,
-        "cpu_id": "CPU-ESCA-006",
+        "cpu_id": "CPU-PAVIM-ATI-057",
         "descricao": "Pintura de ligação (RR1C)",
         "unidade": "m2",
         "quantitativo": 71684.08,
@@ -235,7 +235,7 @@
       {
         "item_id": "4.7",
         "ordem": 14,
-        "cpu_id": "CPU-ESCA-007",
+        "cpu_id": "CPU-PAVIM-ATI-057",
         "descricao": "Binder - camada de ligação (FAIXA B)",
         "unidade": "t",
         "quantitativo": 5851.41,
@@ -252,7 +252,7 @@
       {
         "item_id": "4.8",
         "ordem": 15,
-        "cpu_id": "CPU-ESCA-008",
+        "cpu_id": "CPU-PAVIM-ATI-058",
         "descricao": "Cbuq - concreto betuminoso usinado a quente",
         "unidade": "t",
         "quantitativo": 5401.3,
@@ -269,7 +269,7 @@
       {
         "item_id": "5.1",
         "ordem": 16,
-        "cpu_id": "CPU-EQUIP-001",
+        "cpu_id": "CPU-DREN-CORPO-BSTC-100-PA2",
         "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø600mm - areia e brita comerciais (incluso fornecimento e execução)",
         "unidade": "m",
         "quantitativo": 60.0,
@@ -286,7 +286,7 @@
       {
         "item_id": "5.2",
         "ordem": 17,
-        "cpu_id": "CPU-EQUIP-002",
+        "cpu_id": "CPU-DREN-CORPO-BSTC-100-PA2",
         "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø1000mm - areia e brita comerciais (incluso fornecimento e execução)",
         "unidade": "m",
         "quantitativo": 20.0,
@@ -303,7 +303,7 @@
       {
         "item_id": "5.3",
         "ordem": 18,
-        "cpu_id": "CPU-EQUIP-003",
+        "cpu_id": "CPU-DREN-BOCA-BSTC-100",
         "descricao": "Boca de BSTC D = 0,60 m - esconsidade 0° - areia e brita comerciais - alas retas",
         "unidade": "und",
         "quantitativo": 6.0,
@@ -320,7 +320,7 @@
       {
         "item_id": "5.4",
         "ordem": 19,
-        "cpu_id": "CPU-EQUIP-004",
+        "cpu_id": "CPU-DREN-BOCA-BSTC-100",
         "descricao": "Boca de BSTC D = 1,00 m - esconsidade 0° - areia e brita comerciais - alas retas",
         "unidade": "und",
         "quantitativo": 2.0,
@@ -337,7 +337,7 @@
       {
         "item_id": "5.5",
         "ordem": 20,
-        "cpu_id": "CPU-EQUIP-005",
+        "cpu_id": "CPU-DREN-CORPO-BSCC-250X250",
         "descricao": "Escavação mecanizada de cavas ou valas de solo local - volume geométrico",
         "unidade": "m³",
         "quantitativo": 1732.48,
@@ -354,7 +354,7 @@
       {
         "item_id": "5.6",
         "ordem": 21,
-        "cpu_id": "CPU-EQUIP-006",
+        "cpu_id": "CPU-TERRA-REGULARIZACAO-SUBLEITO",
         "descricao": "Regularização de valas com apiloamento do fundo",
         "unidade": "m²",
         "quantitativo": 2977.1,
@@ -371,7 +371,7 @@
       {
         "item_id": "5.7",
         "ordem": 22,
-        "cpu_id": "CPU-EQUIP-007",
+        "cpu_id": "CPU-TERRA-ATI-022",
         "descricao": "Regularização de bota-fora com espalhamento e compactação",
         "unidade": "m³",
         "quantitativo": 1732.48,
@@ -388,7 +388,7 @@
       {
         "item_id": "5.8",
         "ordem": 23,
-        "cpu_id": "CPU-EQUIP-008",
+        "cpu_id": "CPU-TERRA-ATI-080",
         "descricao": "Hidrossemeadura para cobertura de taludes",
         "unidade": "m²",
         "quantitativo": 2977.1,
@@ -405,7 +405,7 @@
       {
         "item_id": "7.1",
         "ordem": 24,
-        "cpu_id": "CPU-SEC7-001",
+        "cpu_id": "CPU-TERRA-ATI-080",
         "descricao": "Hidrossemeadura para cobertura de taludes",
         "unidade": "m2",
         "quantitativo": 85475.66,
@@ -413,6 +413,69 @@
         "cpu_meta": {}
       }
     ],
+    "bdi": {
+      "bdi_lucro_impostos": 0.29974983,
+      "mao_obra": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "material": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      },
+      "servicos": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.09,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "indireto": {
+        "ac": 0.05,
+        "df": 0.015,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.05,
+        "cofins": 0.0,
+        "iss": 0.05,
+        "pis": 0.0,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "diesel": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      }
+    },
     "cronograma": [
       {
         "item_id": "1.1",
@@ -534,69 +597,6 @@
         "producao_diaria": 0.0,
         "semanas": {}
       }
-    ],
-    "bdi": {
-      "bdi_lucro_impostos": 0.29974983,
-      "mao_obra": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "material": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      },
-      "servicos": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "indireto": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.05,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "diesel": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      }
-    }
+    ]
   }
 }
