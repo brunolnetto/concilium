@@ -17,13 +17,14 @@ def main():
     project_root = Path(__file__).parent.parent
     config_root = project_root / "config"
     benchmarks_root = project_root / "benchmarks" / "data"
+    projects_root = project_root / "benchmarks" / "projects"  # Store project state separately from reference data
 
     # Initialize runner
     builder = BenchmarkReportBuilder()
     printer = BenchmarkReportPrinter()
     runner = BenchmarkRunner(
         config_root=config_root,
-        projects_root=benchmarks_root,
+        projects_root=projects_root,
         report_builder=builder,
         report_printer=printer,
     )

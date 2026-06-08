@@ -89,7 +89,9 @@ class ProjectStore:
         benchmark_execution_id: str | None = None,
     ) -> "ProjectStore":
         """Cria novo projeto. Retorna o ProjectStore configurado."""
-        project_id = str(uuid4())
+        # Use benchmark slug as project_id if available, otherwise generate UUID
+        # This makes directory structure cleaner and more readable for benchmarks
+        project_id = derivado_de_benchmark if derivado_de_benchmark else str(uuid4())
         proj_root = projetos_root / project_id
         proj_root.mkdir(parents=True, exist_ok=False)
         (proj_root / "snapshots").mkdir()
