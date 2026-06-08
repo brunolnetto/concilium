@@ -485,9 +485,9 @@ def _extract_dag(
     if canonical.eap:
         for item in canonical.eap:
             for pred in item.predecessores_tipados():
-                # pred.item_id referencia outro item da EAP
-                # mas o activity_id é "item_id-atv-1"
-                key = (f"{pred.item_id}-atv-1", f"{item.item_id}-atv-1")
+                # activity_id é item_id direto (não "item_id-atv-1")
+                # ver: ScheduledActivityCanonical.activity_id = item.item_id
+                key = (pred.item_id, item.item_id)
                 edge_thresholds[key] = float(pred.completion_threshold_pct)
 
     # Se não há predecessores na EAP, inferir sequência linear
