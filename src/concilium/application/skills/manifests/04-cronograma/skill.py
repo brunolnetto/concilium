@@ -446,7 +446,6 @@ def _extract_activities(
     # Matches DAG precedence keys which use item_id directly (ADR-081)
     # ADR-072 Direção A: calcular duração produtiva se catálogos disponíveis
     validacoes = validacoes or []
-    import sys
     for item in canonical_in.eap:
         activity_id = item.item_id
 
@@ -457,7 +456,6 @@ def _extract_activities(
             computed = _compute_productive_weeks(item.item_id, 1, canonical_in, cpu_lookup, producao_lookup, validacoes)
             if computed:
                 duration_weeks = computed
-            import sys
 
         activities.append(
             Activity(
@@ -644,8 +642,7 @@ def _compute_productive_weeks(
     prod_per_week = P * regime.horas_dia * regime.dias_semana * n_resources
     if prod_per_week <= 0:
         return None
-    result = max(1, math.ceil(Q / prod_per_week))
-    return result
+    return max(1, math.ceil(Q / prod_per_week))
 
 
 def _extract_activities_from_spec(
@@ -668,7 +665,7 @@ def _extract_activities_from_spec(
     """
     use_productive = canonical_in is not None and cpu_lookup is not None and producao_lookup is not None
     activities = []
-    for i, a in enumerate(spec["activities"]):
+    for a in spec["activities"]:
         window_w = int(a["duration_weeks"])
         productive_w = window_w  # fallback: sem alteração
         if use_productive:
@@ -1245,7 +1242,6 @@ def _run_auto_schedule_fallback_chain(
     em vez de tentar derivar do canônico (que pode estar incompleto).
     ADR-072: cpu_lookup/producao_lookup usados para derivar duração produtiva.
     """
-    _rcpsp_spec = inputs.get("rcpsp_spec")
     extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
     if extracted is None:
         validacoes.append(
@@ -1373,12 +1369,6 @@ def _convert_schedule_to_distribuicao(
             )
             qtd_acumulada = cell.qtd_acumulada
             distribuicao[semana_key] = cell
-
-        # DEBUG: verificar distribuição final
-        if item.item_id in ["eap-1_0", "eap-1_1"]:
-            for semana, dist in sorted(distribuicao.items())[:3]:
-                print(f"  {semana}: qtd_executada={dist.qtd_executada:.1f}", file=_sys_distribuicao.stderr)
-        distribuicao_por_item[item.item_id] = distribuicao
 
         # ADR-082-cons: checagem de completude também no caminho AUTO_SCHEDULE
         # (antes só existia no modo manual) — torna VISÍVEL a sub-entrega Σ q_ij < Q

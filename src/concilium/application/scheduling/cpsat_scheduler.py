@@ -206,10 +206,9 @@ class CpSatScheduler:
 
         # ── build output ─────────────────────────────────────────────────
         scheduled: list[ScheduledActivity] = []
-        for i, a in enumerate(dag.activities):
+        for a in dag.activities:
             s = solver.value(starts[a.activity_id])
             e = s + a.duration_weeks
-            if i < 11:
             scheduled.append(
                 ScheduledActivity(
                     activity_id=a.activity_id,
