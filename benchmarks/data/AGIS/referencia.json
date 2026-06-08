@@ -3,10 +3,7 @@
     "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
     "data_inicio": "2026-06-01",
     "data_termino": "2027-06-27",
-    "localizacao": {
-      "tipo": "endereco_descritivo",
-      "valor": "Ceara, Brasil"
-    },
+    "localizacao": "Ceara, Brasil",
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
