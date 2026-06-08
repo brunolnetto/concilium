@@ -1,10 +1,4 @@
 {
-  "slug": "ODFJELL",
-  "planejamento": {
-    "custo_direto_sem_bdi": 3324281.23,
-    "custo_indireto": 2975675.94,
-    "total_projeto": 6299957.17
-  },
   "meta": {
     "data_inicio": "2026-01-01",
     "data_termino": "2027-12-31",
@@ -18,253 +12,181 @@
   "spec": {
     "eap": [
       {
-        "item_id": "1.1",
-        "descricao": "Desmatamento, destocamento e limpeza - árvores com diâmetros até 15 cm",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ATI-003"
-      },
-      {
-        "item_id": "1.2",
-        "descricao": "Carga e Transporte de material proveniente da limpeza vegetal",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
-      },
-      {
-        "item_id": "1.3",
-        "descricao": "Espalhamento de material em bota-fora",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
-      },
-      {
-        "item_id": "2.1",
-        "descricao": "Regularização de Subleito, incluindo compactação",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-PAVIM-ATI-052"
-      },
-      {
-        "item_id": "2.5",
-        "descricao": "Escavação, carga e transporte de material de 1ª categoria - 400<DMT<600 m - caminho  de serviço em leito natural - com escavadeira e caminhão basculante de 14 m³",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
-      },
-      {
-        "item_id": "2.6",
-        "descricao": "Compactação de aterros a 100% do proctor intermediario (camada final)",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-COMPACT-ATERRO-100PN"
-      },
-      {
         "item_id": "3.1",
+        "ordem": 1,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
         "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,60 m - fornecimento, instalação, incluso escavação, reaterro e bota fora do material execedente",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+        "unidade": "m",
+        "quantitativo": 24000.0,
+        "predecessores": []
       },
       {
         "item_id": "3.2",
+        "ordem": 2,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
         "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,40 m - fornecimento e instalação, incluso escavação, reaterro e bota fora do material execedente",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+        "unidade": "m",
+        "quantitativo": 74100.0,
+        "predecessores": []
       },
       {
         "item_id": "3.3",
+        "ordem": 3,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
         "descricao": "Canaleta retangular em concreto, 0,50x0,50m, com grelha metálica, incluso escavação, reaterro e bota fora do material execedente",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+        "unidade": "m",
+        "quantitativo": 2100.0,
+        "predecessores": []
       },
       {
         "item_id": "3.4",
+        "ordem": 4,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Caixa de passagem em concreto armado, dimensões 1,10x1,10m, com tampão de ferro diâmetro de 0,60m, altura variável",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DREN-CORPO-BSCC-250X250"
+        "unidade": "und",
+        "quantitativo": 2300.0,
+        "predecessores": []
       },
       {
         "item_id": "3.5",
+        "ordem": 5,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Poço de Visita em concreto armado 1,10x1,10m, até 2,00m de profundidade, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-SANEA-POCO-VISITA-PADRAO"
+        "unidade": "und",
+        "quantitativo": 1200.0,
+        "predecessores": []
       },
       {
         "item_id": "3.6",
+        "ordem": 6,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Poço de Visita em concreto armado 1,10x1,10m, acima de 2,00m de profundidade,  rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-SANEA-POCO-VISITA-PADRAO"
+        "unidade": "und",
+        "quantitativo": 700.0,
+        "predecessores": []
       },
       {
         "item_id": "3.7",
+        "ordem": 7,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Caixa de Ralo em concreto armado 0,90x0,30m, profundidade 0,90m, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DIVER-ATI-066"
+        "unidade": "und",
+        "quantitativo": 1600.0,
+        "predecessores": []
       },
       {
         "item_id": "3.8",
+        "ordem": 8,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Boca de Lobo Simples em concreto armado 1,00x1,00m, , altura variável, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350"
+        "unidade": "und",
+        "quantitativo": 900.0,
+        "predecessores": []
       },
       {
         "item_id": "3.9",
+        "ordem": 9,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
         "descricao": "Tubo corrugado perfurado em PEAD, DN Ø100mm Kananet, Ref Kanaflex ou similar, incluso escavação, reaterro e bota fora do material execedente",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
-      },
-      {
-        "item_id": "3.10",
-        "descricao": "Manta geotêxtil para drenos profundos",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DIVER-ATI-069"
-      },
-      {
-        "item_id": "3.10",
-        "descricao": "Aplicação de manta Bidim",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DIVER-ATI-069"
+        "unidade": "m",
+        "quantitativo": 66700.0,
+        "predecessores": []
       },
       {
         "item_id": "3.11",
+        "ordem": 10,
+        "cpu_id": "CPU-TERRA-COMPAC-PN",
         "descricao": "Brita n° 2",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350"
+        "unidade": "m3",
+        "quantitativo": 10200.0,
+        "predecessores": []
       },
       {
         "item_id": "3.12",
+        "ordem": 11,
+        "cpu_id": "CPU-TERRA-COMPAC-PN",
         "descricao": "Areia Média Lavada",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350"
-      },
-      {
-        "item_id": "3.13",
-        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT de 200 a 400 m - caminho de serviço em leito natural - com escavadeira e caminhão basculante de 14 m³",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
-      },
-      {
-        "item_id": "3.14",
-        "descricao": "Regularização de Sub-leito, incluindo compactação",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-PAVIM-ATI-052"
+        "unidade": "m3",
+        "quantitativo": 13600.0,
+        "predecessores": []
       },
       {
         "item_id": "3.15",
+        "ordem": 12,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
         "descricao": "Tubo corrugado PEAD, parede dupla, interna lisa, JEI, DN/DI 600 mm, para saneamento (drenagem/esgoto) - incluindo escavação, reaterro e bota-fora com DMT 500 m",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-SANEA-ATI-048"
+        "unidade": "m",
+        "quantitativo": 20222.0,
+        "predecessores": []
       },
       {
         "item_id": "3.16",
+        "ordem": 13,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Valeta trapezoidal com revestimento vegetal 120-40 - padrão DNIT, incluindo fornecimento e aplicação de grama",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DIVER-ATI-091"
+        "unidade": "m",
+        "quantitativo": 38000.0,
+        "predecessores": []
       },
       {
         "item_id": "3.17",
+        "ordem": 14,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
         "descricao": "Canaleta retangular de concreto armado, com 0,60m de largura e altura variável de 0,20 a 0,40m, inclusive escavação e reaterro.",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-TERRA-ATI-010"
+        "unidade": "m",
+        "quantitativo": 40625.0,
+        "predecessores": []
       },
       {
         "item_id": "3.18",
+        "ordem": 15,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Calha/Canaleta de concreto simples, tipo meia cana, diametro de 60 cm, para água pluvial.",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-SANEA-ATI-046"
+        "unidade": "m",
+        "quantitativo": 27000.0,
+        "predecessores": []
       },
       {
         "item_id": "3.19",
+        "ordem": 16,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Caixa de Ligação e Passagem - CLP 02 - Ø 600mm, sem dispositivo interno de queda",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-PAVIM-ATI-057"
-      },
-      {
-        "item_id": "3.20",
-        "descricao": "Junta dilatação elástica para concreto (FUGENBAND) O-12, ATE 5 MCA",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DIVER-ATI-073"
+        "unidade": "un",
+        "quantitativo": 700.0,
+        "predecessores": []
       },
       {
         "item_id": "3.21",
+        "ordem": 17,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Dissipador de Energia DED 01 - Aplicável a Descidas DAR",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-UNKNOWN"
+        "unidade": "un",
+        "quantitativo": 200.0,
+        "predecessores": []
       },
       {
         "item_id": "3.22",
+        "ordem": 18,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Dissipador de Energia DEB 360-414 - Aplicável a Bueiros e Descidas",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-UNKNOWN"
+        "unidade": "un",
+        "quantitativo": 200.0,
+        "predecessores": []
       },
       {
         "item_id": "3.23",
+        "ordem": 19,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
         "descricao": "Bueiro Simples Tubular de Concreto CA1 - BSTC Ø 1.200mm - (CORPO)",
-        "quantitativo": 0.0,
-        "cpu_id": "CPU-DREN-CORPO-BSTC-100-PA2"
+        "unidade": "m",
+        "quantitativo": 3700.0,
+        "predecessores": []
       }
     ],
-    "bdi": {
-      "bdi_lucro_impostos": 0.29974983,
-      "mao_obra": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "material": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      },
-      "servicos": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "indireto": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.05,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "diesel": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      }
-    },
     "cronograma": [
       {
-        "item_id": "1.1",
-        "producao_diaria": 0.0,
+        "item_id": "3.1",
+        "producao_diaria": 960.0,
         "semanas": {
           "2026-W01": {
             "num_equipes": 1
@@ -274,28 +196,22 @@
           },
           "2026-W03": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "1.2",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2026-W04": {
             "num_equipes": 1
           },
           "2026-W05": {
             "num_equipes": 1
-          },
-          "2026-W06": {
-            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "1.3",
-        "producao_diaria": 0.0,
+        "item_id": "3.2",
+        "producao_diaria": 2964.0,
         "semanas": {
+          "2026-W06": {
+            "num_equipes": 1
+          },
           "2026-W07": {
             "num_equipes": 1
           },
@@ -304,28 +220,22 @@
           },
           "2026-W09": {
             "num_equipes": 1
+          },
+          "2026-W10": {
+            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "2.1",
-        "producao_diaria": 0.0,
+        "item_id": "3.3",
+        "producao_diaria": 84.0,
         "semanas": {
-          "2026-W10": {
-            "num_equipes": 1
-          },
           "2026-W11": {
             "num_equipes": 1
           },
           "2026-W12": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "2.5",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2026-W13": {
             "num_equipes": 1
           },
@@ -338,8 +248,8 @@
         }
       },
       {
-        "item_id": "2.6",
-        "producao_diaria": 0.0,
+        "item_id": "3.4",
+        "producao_diaria": 92.0,
         "semanas": {
           "2026-W16": {
             "num_equipes": 1
@@ -349,28 +259,22 @@
           },
           "2026-W18": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.1",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2026-W19": {
             "num_equipes": 1
           },
           "2026-W20": {
             "num_equipes": 1
-          },
-          "2026-W21": {
-            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "3.2",
-        "producao_diaria": 0.0,
+        "item_id": "3.5",
+        "producao_diaria": 48.0,
         "semanas": {
+          "2026-W21": {
+            "num_equipes": 1
+          },
           "2026-W22": {
             "num_equipes": 1
           },
@@ -379,28 +283,22 @@
           },
           "2026-W24": {
             "num_equipes": 1
+          },
+          "2026-W25": {
+            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "3.3",
-        "producao_diaria": 0.0,
+        "item_id": "3.6",
+        "producao_diaria": 28.0,
         "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
           "2026-W26": {
             "num_equipes": 1
           },
           "2026-W27": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.4",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2026-W28": {
             "num_equipes": 1
           },
@@ -413,8 +311,8 @@
         }
       },
       {
-        "item_id": "3.5",
-        "producao_diaria": 0.0,
+        "item_id": "3.7",
+        "producao_diaria": 64.0,
         "semanas": {
           "2026-W31": {
             "num_equipes": 1
@@ -424,28 +322,22 @@
           },
           "2026-W33": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.6",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2026-W34": {
             "num_equipes": 1
           },
           "2026-W35": {
             "num_equipes": 1
-          },
-          "2026-W36": {
-            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "3.7",
-        "producao_diaria": 0.0,
+        "item_id": "3.8",
+        "producao_diaria": 36.0,
         "semanas": {
+          "2026-W36": {
+            "num_equipes": 1
+          },
           "2026-W37": {
             "num_equipes": 1
           },
@@ -454,28 +346,22 @@
           },
           "2026-W39": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.8",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2026-W40": {
-            "num_equipes": 1
-          },
-          "2026-W41": {
-            "num_equipes": 1
-          },
-          "2026-W42": {
             "num_equipes": 1
           }
         }
       },
       {
         "item_id": "3.9",
-        "producao_diaria": 0.0,
+        "producao_diaria": 2668.0,
         "semanas": {
+          "2026-W41": {
+            "num_equipes": 1
+          },
+          "2026-W42": {
+            "num_equipes": 1
+          },
           "2026-W43": {
             "num_equipes": 1
           },
@@ -488,8 +374,8 @@
         }
       },
       {
-        "item_id": "3.10",
-        "producao_diaria": 0.0,
+        "item_id": "3.11",
+        "producao_diaria": 408.0,
         "semanas": {
           "2026-W46": {
             "num_equipes": 1
@@ -499,28 +385,22 @@
           },
           "2026-W48": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.10",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2026-W49": {
             "num_equipes": 1
           },
           "2026-W50": {
             "num_equipes": 1
-          },
-          "2026-W51": {
-            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "3.11",
-        "producao_diaria": 0.0,
+        "item_id": "3.12",
+        "producao_diaria": 544.0,
         "semanas": {
+          "2026-W51": {
+            "num_equipes": 1
+          },
           "2026-W52": {
             "num_equipes": 1
           },
@@ -529,28 +409,22 @@
           },
           "2027-W01": {
             "num_equipes": 1
+          },
+          "2027-W02": {
+            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "3.12",
-        "producao_diaria": 0.0,
+        "item_id": "3.15",
+        "producao_diaria": 808.88,
         "semanas": {
-          "2027-W02": {
-            "num_equipes": 1
-          },
           "2027-W03": {
             "num_equipes": 1
           },
           "2027-W04": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.13",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2027-W05": {
             "num_equipes": 1
           },
@@ -563,8 +437,8 @@
         }
       },
       {
-        "item_id": "3.14",
-        "producao_diaria": 0.0,
+        "item_id": "3.16",
+        "producao_diaria": 1520.0,
         "semanas": {
           "2027-W08": {
             "num_equipes": 1
@@ -574,28 +448,22 @@
           },
           "2027-W10": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.15",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2027-W11": {
             "num_equipes": 1
           },
           "2027-W12": {
             "num_equipes": 1
-          },
-          "2027-W13": {
-            "num_equipes": 1
           }
         }
       },
       {
-        "item_id": "3.16",
-        "producao_diaria": 0.0,
+        "item_id": "3.17",
+        "producao_diaria": 1625.0,
         "semanas": {
+          "2027-W13": {
+            "num_equipes": 1
+          },
           "2027-W14": {
             "num_equipes": 1
           },
@@ -604,28 +472,22 @@
           },
           "2027-W16": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.17",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2027-W17": {
-            "num_equipes": 1
-          },
-          "2027-W18": {
-            "num_equipes": 1
-          },
-          "2027-W19": {
             "num_equipes": 1
           }
         }
       },
       {
         "item_id": "3.18",
-        "producao_diaria": 0.0,
+        "producao_diaria": 1080.0,
         "semanas": {
+          "2027-W18": {
+            "num_equipes": 1
+          },
+          "2027-W19": {
+            "num_equipes": 1
+          },
           "2027-W20": {
             "num_equipes": 1
           },
@@ -639,7 +501,7 @@
       },
       {
         "item_id": "3.19",
-        "producao_diaria": 0.0,
+        "producao_diaria": 28.0,
         "semanas": {
           "2027-W23": {
             "num_equipes": 1
@@ -649,28 +511,22 @@
           },
           "2027-W25": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.20",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2027-W26": {
             "num_equipes": 1
           },
           "2027-W27": {
-            "num_equipes": 1
-          },
-          "2027-W28": {
             "num_equipes": 1
           }
         }
       },
       {
         "item_id": "3.21",
-        "producao_diaria": 0.0,
+        "producao_diaria": 8.0,
         "semanas": {
+          "2027-W28": {
+            "num_equipes": 1
+          },
           "2027-W29": {
             "num_equipes": 1
           },
@@ -679,28 +535,22 @@
           },
           "2027-W31": {
             "num_equipes": 1
+          },
+          "2027-W32": {
+            "num_equipes": 1
           }
         }
       },
       {
         "item_id": "3.22",
-        "producao_diaria": 0.0,
+        "producao_diaria": 8.0,
         "semanas": {
-          "2027-W32": {
-            "num_equipes": 1
-          },
           "2027-W33": {
             "num_equipes": 1
           },
           "2027-W34": {
             "num_equipes": 1
-          }
-        }
-      },
-      {
-        "item_id": "3.23",
-        "producao_diaria": 0.0,
-        "semanas": {
+          },
           "2027-W35": {
             "num_equipes": 1
           },
@@ -711,7 +561,66 @@
             "num_equipes": 1
           }
         }
+      },
+      {
+        "item_id": "3.23",
+        "producao_diaria": 148.0,
+        "semanas": {
+          "2027-W38": {
+            "num_equipes": 1
+          },
+          "2027-W39": {
+            "num_equipes": 1
+          },
+          "2027-W40": {
+            "num_equipes": 1
+          },
+          "2027-W41": {
+            "num_equipes": 1
+          },
+          "2027-W42": {
+            "num_equipes": 1
+          }
+        }
       }
-    ]
+    ],
+    "bdi": {
+      "mao_obra": {
+        "ac": 0.04,
+        "df": 0.08,
+        "r": 0.05,
+        "cr": 0.0,
+        "ir": 0.0
+      },
+      "material": {
+        "ac": 0.04,
+        "df": 0.08,
+        "r": 0.05,
+        "cr": 0.0,
+        "ir": 0.0
+      },
+      "servicos": {
+        "ac": 0.04,
+        "df": 0.08,
+        "r": 0.05,
+        "cr": 0.0,
+        "ir": 0.0
+      },
+      "diesel": {
+        "ac": 0.04,
+        "df": 0.08,
+        "r": 0.05,
+        "cr": 0.0,
+        "ir": 0.0
+      },
+      "indireto": {
+        "ac": 0.04,
+        "df": 0.08,
+        "r": 0.05,
+        "cr": 0.0,
+        "ir": 0.0
+      }
+    },
+    "indiretos": []
   }
 }

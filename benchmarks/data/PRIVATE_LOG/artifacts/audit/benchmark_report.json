@@ -6,25 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 760,
+      "duration_ms": 643,
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 70,
+      "duration_ms": 42,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 61,
+      "duration_ms": 21,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 83,
+      "duration_ms": 26,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -105,13 +105,13 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 22,
+      "duration_ms": 23,
       "avisos": []
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "ERRO",
-      "duration_ms": 20,
+      "duration_ms": 22,
       "avisos": [],
       "erros": [
         "Custo total da obra é zero."
@@ -120,7 +120,7 @@
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 25,
+      "duration_ms": 23,
       "avisos": [
         "Margem operacional 17.43% | status=VERMELHO | preço R$ 5,298,474 (operacional) vs R$ 37,702,282 (catálogo)",
         "Família 'CPU' com itens originalmente em ERRO (1.2, 1.6, 1.12, 1.9, 1.10) mas saldo agregado positivo (Δfam = R$ 28,829,814.35). Criticidade rebaixada para AVISO."
@@ -129,13 +129,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 18,
+      "duration_ms": 21,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 402,
+      "duration_ms": 462,
       "avisos": [
         "Relatório de criticidade ausente. Execute skill-15 (diagnóstico) para enriquecer o relatório.",
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
@@ -144,25 +144,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 18,
+      "duration_ms": 20,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 17,
+      "duration_ms": 21,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 18,
+      "duration_ms": 21,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 88,
+      "duration_ms": 25,
       "avisos": []
     }
   ],

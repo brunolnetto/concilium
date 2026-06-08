@@ -1,16 +1,16 @@
 {
   "meta": {
-    "gerado_em": "2026-06-07T23:38:59.699719+00:00",
+    "gerado_em": "2026-06-08T10:30:07.251592+00:00",
     "total": 12
   },
   "rows": [
     {
       "Projeto": "AGIS",
-      "Status": "INVIAVEL/AVISO",
-      "Delta Direto %": "N/A",
-      "Delta Indireto %": "N/A",
+      "Status": "APROVADO_COM_RESSALVAS",
+      "Delta Direto %": "-0.05%",
+      "Delta Indireto %": "-0.00%",
       "Delta Total %": "N/A",
-      "Delta Venda %": "N/A"
+      "Delta Venda %": "+5.38%"
     },
     {
       "Projeto": "CTC",
@@ -38,7 +38,7 @@
     },
     {
       "Projeto": "MATEC_GUARULHOS",
-      "Status": "INVIAVEL/AVISO",
+      "Status": "APROVADO/AVISO",
       "Delta Direto %": "N/A",
       "Delta Indireto %": "N/A",
       "Delta Total %": "N/A",
@@ -62,7 +62,7 @@
     },
     {
       "Projeto": "ODFJELL",
-      "Status": "INVIAVEL/AVISO",
+      "Status": "APROVADO/AVISO",
       "Delta Direto %": "N/A",
       "Delta Indireto %": "N/A",
       "Delta Total %": "N/A",
