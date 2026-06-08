@@ -38,8 +38,8 @@ def main():
             report = json.loads(report_path.read_text())
             status = report.get("status_final", "UNKNOWN")
 
-            if status == "APROVADO_COM_RESSALVAS":
-                print(f"  ✓ {slug:25} PASSED")
+            if status in ("APROVADO", "APROVADO_COM_RESSALVAS"):
+                print(f"  ✓ {slug:25} PASSED ({status})")
                 passed += 1
             elif status == "BLOQUEADO":
                 print(f"  ⚠ {slug:25} BLOCKED")

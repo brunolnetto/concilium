@@ -18,13 +18,106 @@
   "spec": {
     "eap": [
       {
-        "item_id": "0",
-        "ordem": 1,
-        "cpu_id": "CPU-UNKNOWN",
-        "descricao": "ESPECIFICAÇÃO",
-        "unidade": "un",
-        "quantitativo": 1.0,
-        "predecessores": []
+        "item_id": "1.1",
+        "descricao": "Limpeza da camada vegetal até 30cm - incluso bota fora",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ATI-002"
+      },
+      {
+        "item_id": "1.2",
+        "descricao": "Carga e transporte de material de limpeza - DMT 1.000 m",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "2.1",
+        "descricao": "Escavação de material de 1ª categoria, carga e transporte",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "2.2",
+        "descricao": "Aterro compactado",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ATI-017"
+      },
+      {
+        "item_id": "2.3",
+        "descricao": "Aterro de sobrecarga",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-250X250"
+      },
+      {
+        "item_id": "2.4",
+        "descricao": "Escavação de turfas e solos orgânicos, carga e transporte para bota fora",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "2.5",
+        "descricao": "Aterro compactado",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ATI-017"
+      },
+      {
+        "item_id": "2.6",
+        "descricao": "Aterro de sobrecarga",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-250X250"
+      },
+      {
+        "item_id": "2.7",
+        "descricao": "Espinha de peixe (60x60 - kanaflex corrugado, material granular e geotêxttil)",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "2.8",
+        "descricao": "Bueiro triplo celular de concreto",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-OBRAS-ATI-042"
+      },
+      {
+        "item_id": "2.9",
+        "descricao": "Alas do bueiro triplo",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-BOCA-BTTC-120"
+      },
+      {
+        "item_id": "3.1",
+        "descricao": "Administração Local",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-250X250"
+      },
+      {
+        "item_id": "3.2",
+        "descricao": "Topografia",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ATI-005"
+      },
+      {
+        "item_id": "3.3",
+        "descricao": "Laboratório",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-UNKNOWN"
+      },
+      {
+        "item_id": "3.4",
+        "descricao": "QSMS",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-UNKNOWN"
+      },
+      {
+        "item_id": "3.5",
+        "descricao": "Mobilização e desmobilização",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-UNKNOWN"
+      },
+      {
+        "item_id": "3.6",
+        "descricao": "Desmobilização",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-UNKNOWN"
       }
     ],
     "bdi": {
@@ -92,7 +185,87 @@
     },
     "cronograma": [
       {
-        "item_id": "0",
+        "item_id": "1.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.6",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.7",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.8",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.9",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.6",
         "producao_diaria": 0.0,
         "semanas": {}
       }

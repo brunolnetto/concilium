@@ -5,191 +5,17 @@
   "skills_log": [
     {
       "skill": "01-escopo-e-eap",
-      "status": "OK",
-      "duration_ms": 746,
-      "avisos": [
-        "1 EAP items referenciam CPUs inexistentes no catálogo: '0' (CPU-UNKNOWN)"
-      ]
-    },
-    {
-      "skill": "02-produtividade-climatica",
-      "status": "OK",
-      "duration_ms": 62,
-      "avisos": []
-    },
-    {
-      "skill": "03-catalogo-de-recursos",
-      "status": "OK",
-      "duration_ms": 58,
-      "avisos": []
-    },
-    {
-      "skill": "04-cronograma",
-      "status": "OK",
-      "duration_ms": 74,
-      "avisos": [
-        "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-ESCAV-VALA-1CAT: ratio P_can/P_orig=2.668 fora do intervalo aceitável [0.5,2.0]. P_canonico=52.57 vs P_original=19.70. PU_sbdi=6.4269 implica custo=337.9 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCC-200X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSTC-100-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=3.05 vs P_original=1.00. PU_sbdi=464.6387 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCC-100-300X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCC-300X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCC-150X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.61 vs P_original=0.75. PU_sbdi=502.8453 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BDCAP-100: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=3.05 vs P_original=1.00. PU_sbdi=464.6387 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSTC-100-PA1: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=3.05 vs P_original=1.00. PU_sbdi=464.6387 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BSCAP-100: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BTTC-120: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BDTC-100-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.53 vs P_original=0.50. PU_sbdi=929.2774 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BSTC-100: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BTCC-100: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.17 vs P_original=0.05. PU_sbdi=7542.6800 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BTCAP-100: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BDTC-100: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BTTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.76 vs P_original=0.25. PU_sbdi=1858.5549 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BDTC-120: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BTCC-300X300: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BTCC: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.17 vs P_original=0.05. PU_sbdi=7542.6800 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BSCC-250X250: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BSCC-200X150: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.29 vs P_original=0.75. PU_sbdi=619.5183 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BDTC-100-PA1: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.53 vs P_original=0.50. PU_sbdi=929.2774 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BDCC: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.70 vs P_original=0.20. PU_sbdi=1885.6700 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BSCC-200X200: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCC-100-200X150: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.61 vs P_original=0.75. PU_sbdi=502.8453 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BSCC-300X200: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BDCC-100: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.52 vs P_original=0.15. PU_sbdi=2514.2267 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BDCAP-100: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BDCC: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-BOCA-BSTC-120: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.15 vs P_original=0.04. PU_sbdi=4367.5383 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCAP-100: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=3.05 vs P_original=1.00. PU_sbdi=464.6387 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BTCAP-100: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=3.48 vs P_original=1.00. PU_sbdi=377.1340 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSTC-120-PA3: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.29 vs P_original=0.75. PU_sbdi=619.5183 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BSCC-100-200X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "CPU CPU-DREN-CORPO-BDTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.15 vs P_original=0.38. PU_sbdi=1239.0366 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "Pool vazio — agendando sem restrições de recursos.",
-        "CPU CPU-UNKNOWN não encontrada no catálogo; usando CPU sintética.",
-        "Produtividade não encontrada para CPU CPU-UNKNOWN (producao_id_ref); assumindo 1000.0.",
-        "Item '0' sub-entrega: Σ q_ij = 0.0% de Q na janela agendada (1sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~2sem OU +equipes (decisão de prazo/pool — ADR-091)."
-      ]
-    },
-    {
-      "skill": "05-equipes-e-alocacao",
-      "status": "OK",
-      "duration_ms": 17,
-      "avisos": []
-    },
-    {
-      "skill": "06-precificacao-unitaria",
-      "status": "OK",
-      "duration_ms": 19,
-      "avisos": [
-        "CPU 'CPU-UNKNOWN' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão."
-      ]
-    },
-    {
-      "skill": "07-custos-indiretos",
-      "status": "OK",
-      "duration_ms": 19,
-      "avisos": [
-        "equipes_diretas vazia — usando 0 pessoas para cálculo de MOB"
-      ]
-    },
-    {
-      "skill": "10-diagnostico-criticidade",
-      "status": "ERRO",
-      "duration_ms": 17,
+      "status": "EXCEPTION",
+      "duration_ms": 742,
       "avisos": [],
       "erros": [
-        "Cronograma e Equipes necessários."
-      ]
-    },
-    {
-      "skill": "08-consolidacao-financeira",
-      "status": "ERRO",
-      "duration_ms": 15,
-      "avisos": [],
-      "erros": [
-        "Equipes e Planejamento necessários."
-      ]
-    },
-    {
-      "skill": "11-avaliacao-intervencoes",
-      "status": "OK",
-      "duration_ms": 15,
-      "avisos": []
-    },
-    {
-      "skill": "09-relatorio-e-artefatos",
-      "status": "ERRO",
-      "duration_ms": 16,
-      "avisos": [],
-      "erros": [
-        "Adapter requer resultado consolidado (skill 06)"
-      ]
-    },
-    {
-      "skill": "12-registro-decisoes",
-      "status": "OK",
-      "duration_ms": 16,
-      "avisos": []
-    },
-    {
-      "skill": "13-assessor-replanejamento",
-      "status": "ERRO",
-      "duration_ms": 15,
-      "avisos": [],
-      "erros": [
-        "Skill 06-consolidar deve ser executada antes: canonical.resultado ausente."
-      ]
-    },
-    {
-      "skill": "14-explorador-cenarios",
-      "status": "ERRO",
-      "duration_ms": 20,
-      "avisos": [],
-      "erros": [
-        "resultado (08) ausente — execute 08-consolidar antes."
-      ]
-    },
-    {
-      "skill": "15-relatorio-executivo",
-      "status": "OK",
-      "duration_ms": 14,
-      "avisos": [
-        "Bridge Analysis ausente — execute a Skill 08 (Consolidação Financeira) antes."
-      ]
+        "3 validation errors for EapItem\nordem\n  Field required [type=missing, input_value={'item_id': '1.1', 'descr...d': 'CPU-TERRA-ATI-003'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nunidade\n  Field required [type=missing, input_value={'item_id': '1.1', 'descr...d': 'CPU-TERRA-ATI-003'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nquantitativo\n  Input should be greater than 0 [type=greater_than, input_value=0.0, input_type=float]\n    For further information visit https://errors.pydantic.dev/2.13/v/greater_than"
+      ],
+      "erro": "3 validation errors for EapItem\nordem\n  Field required [type=missing, input_value={'item_id': '1.1', 'descr...d': 'CPU-TERRA-ATI-003'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nunidade\n  Field required [type=missing, input_value={'item_id': '1.1', 'descr...d': 'CPU-TERRA-ATI-003'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nquantitativo\n  Input should be greater than 0 [type=greater_than, input_value=0.0, input_type=float]\n    For further information visit https://errors.pydantic.dev/2.13/v/greater_than"
     }
   ],
   "referencia_disponivel": true,
-  "confronto": {
-    "ferramenta_breakdown_direto": {
-      "base": "pu_q",
-      "mao_obra_total": 0.19,
-      "equipamentos_total": 0.39,
-      "diesel_total": 0.3,
-      "materiais_total": 0.0,
-      "direto_total": 0.88,
-      "direto_total_pu_q": 0.88,
-      "direto_total_equipes": 0.0
-    },
-    "actionable_insights": {
-      "sensibilidade": "0 alavancas corretivas, 0 oportunidades",
-      "intervencao": "Recomendacao Principal: Nenhuma"
-    },
-    "breakdown_por_fase": {
-      "direto": {
-        "base": "pu_q",
-        "mao_obra_total": 0.19,
-        "equipamentos_total": 0.39,
-        "diesel_total": 0.3,
-        "materiais_total": 0.0,
-        "direto_total": 0.88,
-        "direto_total_pu_q": 0.88,
-        "direto_total_equipes": 0.0
-      },
-      "indireto": null
-    }
-  },
+  "confronto": {},
   "quality_gates": {
     "decision": "APROVADO",
     "worst_severity": "S0",
@@ -197,20 +23,5 @@
     "items": []
   },
   "action_report": [],
-  "status_final": "INVIAVEL",
-  "rcpsp_schedule": {
-    "algorithm": "CP-SAT",
-    "makespan_weeks": 1,
-    "is_feasible": true,
-    "was_relaxed": false,
-    "deadline_weeks": 105,
-    "folga_semanas": 104,
-    "atividades": {
-      "0": {
-        "start_week": 0,
-        "end_week": 0,
-        "duration_weeks": 1
-      }
-    }
-  }
+  "status_final": "APROVADO"
 }

@@ -18,13 +18,184 @@
   "spec": {
     "eap": [
       {
-        "item_id": "0",
-        "ordem": 1,
-        "cpu_id": "CPU-UNKNOWN",
-        "descricao": "CUSTO UNITÁRIO",
-        "unidade": "un",
-        "quantitativo": 1.0,
-        "predecessores": []
+        "item_id": "1.1",
+        "descricao": "Desmatamento, destocamento e limpeza - árvores com diâmetros até 15 cm",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ATI-003"
+      },
+      {
+        "item_id": "1.2",
+        "descricao": "Carga e Transporte de material proveniente da limpeza vegetal",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "1.3",
+        "descricao": "Espalhamento de material em bota-fora",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "2.1",
+        "descricao": "Regularização de Subleito, incluindo compactação",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-PAVIM-ATI-052"
+      },
+      {
+        "item_id": "2.5",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - 400<DMT<600 m - caminho  de serviço em leito natural - com escavadeira e caminhão basculante de 14 m³",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "2.6",
+        "descricao": "Compactação de aterros a 100% do proctor intermediario (camada final)",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-COMPACT-ATERRO-100PN"
+      },
+      {
+        "item_id": "3.1",
+        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,60 m - fornecimento, instalação, incluso escavação, reaterro e bota fora do material execedente",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "3.2",
+        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,40 m - fornecimento e instalação, incluso escavação, reaterro e bota fora do material execedente",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "3.3",
+        "descricao": "Canaleta retangular em concreto, 0,50x0,50m, com grelha metálica, incluso escavação, reaterro e bota fora do material execedente",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "3.4",
+        "descricao": "Caixa de passagem em concreto armado, dimensões 1,10x1,10m, com tampão de ferro diâmetro de 0,60m, altura variável",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-250X250"
+      },
+      {
+        "item_id": "3.5",
+        "descricao": "Poço de Visita em concreto armado 1,10x1,10m, até 2,00m de profundidade, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-SANEA-POCO-VISITA-PADRAO"
+      },
+      {
+        "item_id": "3.6",
+        "descricao": "Poço de Visita em concreto armado 1,10x1,10m, acima de 2,00m de profundidade,  rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-SANEA-POCO-VISITA-PADRAO"
+      },
+      {
+        "item_id": "3.7",
+        "descricao": "Caixa de Ralo em concreto armado 0,90x0,30m, profundidade 0,90m, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DIVER-ATI-066"
+      },
+      {
+        "item_id": "3.8",
+        "descricao": "Boca de Lobo Simples em concreto armado 1,00x1,00m, , altura variável, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350"
+      },
+      {
+        "item_id": "3.9",
+        "descricao": "Tubo corrugado perfurado em PEAD, DN Ø100mm Kananet, Ref Kanaflex ou similar, incluso escavação, reaterro e bota fora do material execedente",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "3.10",
+        "descricao": "Manta geotêxtil para drenos profundos",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DIVER-ATI-069"
+      },
+      {
+        "item_id": "3.10",
+        "descricao": "Aplicação de manta Bidim",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DIVER-ATI-069"
+      },
+      {
+        "item_id": "3.11",
+        "descricao": "Brita n° 2",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350"
+      },
+      {
+        "item_id": "3.12",
+        "descricao": "Areia Média Lavada",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-BOCA-BTCC-350X350"
+      },
+      {
+        "item_id": "3.13",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT de 200 a 400 m - caminho de serviço em leito natural - com escavadeira e caminhão basculante de 14 m³",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"
+      },
+      {
+        "item_id": "3.14",
+        "descricao": "Regularização de Sub-leito, incluindo compactação",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-PAVIM-ATI-052"
+      },
+      {
+        "item_id": "3.15",
+        "descricao": "Tubo corrugado PEAD, parede dupla, interna lisa, JEI, DN/DI 600 mm, para saneamento (drenagem/esgoto) - incluindo escavação, reaterro e bota-fora com DMT 500 m",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-SANEA-ATI-048"
+      },
+      {
+        "item_id": "3.16",
+        "descricao": "Valeta trapezoidal com revestimento vegetal 120-40 - padrão DNIT, incluindo fornecimento e aplicação de grama",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DIVER-ATI-091"
+      },
+      {
+        "item_id": "3.17",
+        "descricao": "Canaleta retangular de concreto armado, com 0,60m de largura e altura variável de 0,20 a 0,40m, inclusive escavação e reaterro.",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-TERRA-ATI-010"
+      },
+      {
+        "item_id": "3.18",
+        "descricao": "Calha/Canaleta de concreto simples, tipo meia cana, diametro de 60 cm, para água pluvial.",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-SANEA-ATI-046"
+      },
+      {
+        "item_id": "3.19",
+        "descricao": "Caixa de Ligação e Passagem - CLP 02 - Ø 600mm, sem dispositivo interno de queda",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-PAVIM-ATI-057"
+      },
+      {
+        "item_id": "3.20",
+        "descricao": "Junta dilatação elástica para concreto (FUGENBAND) O-12, ATE 5 MCA",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DIVER-ATI-073"
+      },
+      {
+        "item_id": "3.21",
+        "descricao": "Dissipador de Energia DED 01 - Aplicável a Descidas DAR",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-UNKNOWN"
+      },
+      {
+        "item_id": "3.22",
+        "descricao": "Dissipador de Energia DEB 360-414 - Aplicável a Bueiros e Descidas",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-UNKNOWN"
+      },
+      {
+        "item_id": "3.23",
+        "descricao": "Bueiro Simples Tubular de Concreto CA1 - BSTC Ø 1.200mm - (CORPO)",
+        "quantitativo": 0.0,
+        "cpu_id": "CPU-DREN-CORPO-BSTC-100-PA2"
       }
     ],
     "bdi": {
@@ -92,7 +263,152 @@
     },
     "cronograma": [
       {
-        "item_id": "0",
+        "item_id": "1.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "1.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "2.6",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.1",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.2",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.3",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.4",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.5",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.6",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.7",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.8",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.9",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.10",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.10",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.11",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.12",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.13",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.14",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.15",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.16",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.17",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.18",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.19",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.20",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.21",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.22",
+        "producao_diaria": 0.0,
+        "semanas": {}
+      },
+      {
+        "item_id": "3.23",
         "producao_diaria": 0.0,
         "semanas": {}
       }
