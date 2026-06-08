@@ -16,7 +16,10 @@
         "item_id": "eap-1_0",
         "cpu_id": "CPU-TERRA-ATI-003",
         "quantitativo": 2400000.0,
-        "predecessores": []
+        "predecessores": [],
+        "ordem": 1,
+        "descricao": "Atividade eap-1_0",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_1",
@@ -29,7 +32,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.35
           }
-        ]
+        ],
+        "ordem": 2,
+        "descricao": "Atividade eap-1_1",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_2",
@@ -42,7 +48,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.35
           }
-        ]
+        ],
+        "ordem": 3,
+        "descricao": "Atividade eap-1_2",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_3",
@@ -55,7 +64,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.05
           }
-        ]
+        ],
+        "ordem": 4,
+        "descricao": "Atividade eap-1_3",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_4",
@@ -68,7 +80,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.05
           }
-        ]
+        ],
+        "ordem": 5,
+        "descricao": "Atividade eap-1_4",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_5",
@@ -81,7 +96,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.05
           }
-        ]
+        ],
+        "ordem": 6,
+        "descricao": "Atividade eap-1_5",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_6",
@@ -94,7 +112,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.05
           }
-        ]
+        ],
+        "ordem": 7,
+        "descricao": "Atividade eap-1_6",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_7",
@@ -107,7 +128,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.05
           }
-        ]
+        ],
+        "ordem": 8,
+        "descricao": "Atividade eap-1_7",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_8",
@@ -126,7 +150,10 @@
             "lag": 0,
             "completion_threshold_pct": 1.0
           }
-        ]
+        ],
+        "ordem": 9,
+        "descricao": "Atividade eap-1_8",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_9",
@@ -139,7 +166,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.6
           }
-        ]
+        ],
+        "ordem": 10,
+        "descricao": "Atividade eap-1_9",
+        "unidade": "un"
       },
       {
         "item_id": "eap-1_10",
@@ -152,7 +182,10 @@
             "lag": 0,
             "completion_threshold_pct": 0.85
           }
-        ]
+        ],
+        "ordem": 11,
+        "descricao": "Atividade eap-1_10",
+        "unidade": "un"
       }
     ],
     "cronograma": [
