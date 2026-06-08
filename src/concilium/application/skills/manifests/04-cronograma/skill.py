@@ -681,13 +681,11 @@ def _extract_activities_from_spec(
                 producao_lookup,  # type: ignore[arg-type]
                 validacoes or [],
             )
-            if computed is not None and computed < window_w:
+            if computed is not None:
+                # ADR-072: Usar duração produtiva se disponível
+                # window_w é a janela máxima (deadline), não a duração padrão
+                # Se computed > window_w, ainda usar computed — o scheduler lidará com inviabilidade
                 productive_w = computed
-            elif computed is not None and computed >= window_w:
-                # ADR-072: Se duração produtiva >= window_w, o projeto é infeasível no prazo
-                # Por enquanto, usar window_w como fallback para não quebrar o scheduler
-                # TODO: Investigar se quantitativos/produtividades têm unidades corretas
-                pass
 
         # ADR-074: derive ramp_profile from ramp_params if present
         ramp_profile: list[float] | None = None
@@ -1377,6 +1375,12 @@ def _convert_schedule_to_distribuicao(
             )
             qtd_acumulada = cell.qtd_acumulada
             distribuicao[semana_key] = cell
+
+        # DEBUG: verificar distribuição final
+        if item.item_id in ["eap-1_0", "eap-1_1"]:
+            for semana, dist in sorted(distribuicao.items())[:3]:
+                print(f"  {semana}: qtd_executada={dist.qtd_executada:.1f}", file=_sys_distribuicao.stderr)
+        distribuicao_por_item[item.item_id] = distribuicao
 
         # ADR-082-cons: checagem de completude também no caminho AUTO_SCHEDULE
         # (antes só existia no modo manual) — torna VISÍVEL a sub-entrega Σ q_ij < Q

@@ -146,6 +146,8 @@ class CpSatScheduler:
         # ── FS precedences from ActivityDAG (ADR-081: completion_threshold_pct) ──
         for pred_id, succ_id in dag.precedence:
             theta = dag.get_threshold(pred_id, succ_id)
+            if pred_id not in acts or succ_id not in acts:
+                continue
             if theta >= 1.0:
                 model.add(starts[succ_id] >= ends[pred_id])
             else:
@@ -204,9 +206,10 @@ class CpSatScheduler:
 
         # ── build output ─────────────────────────────────────────────────
         scheduled: list[ScheduledActivity] = []
-        for a in dag.activities:
+        for i, a in enumerate(dag.activities):
             s = solver.value(starts[a.activity_id])
             e = s + a.duration_weeks
+            if i < 11:
             scheduled.append(
                 ScheduledActivity(
                     activity_id=a.activity_id,
