@@ -186,10 +186,10 @@ class EapItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     item_id: str
-    ordem: int = Field(ge=1)
+    ordem: int | None = Field(default=None, ge=1)  # Opcional — inferido do catálogo se não fornecido
     cpu_id: str
-    descricao: str
-    unidade: str
+    descricao: str | None = None  # Opcional — inferido do catálogo se não fornecido
+    unidade: str | None = None  # Opcional — inferido do catálogo se não fornecido
     quantitativo: float = Field(gt=0)
     # NEP-031 L4: predecessores com tipo de relação (FS/SS/FF) e lag.
     # Aceita str (legado, tratado como FS lag=0) ou PrecedenciaItem.
