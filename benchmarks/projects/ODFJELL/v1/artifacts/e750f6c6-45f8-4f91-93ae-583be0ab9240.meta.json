@@ -1,0 +1,16 @@
+{
+  "artifact_id": "e750f6c6-45f8-4f91-93ae-583be0ab9240",
+  "version": "1.0.0",
+  "kind": "relatorio_sensibilidade",
+  "schema_name": "RelatorioSensibilidade",
+  "schema_version": "1.0.0",
+  "created_at": "2026-06-08T17:25:11.185258Z",
+  "created_by": "15-relatorio-executivo",
+  "trace_id": null,
+  "parent_refs": [],
+  "state": "draft",
+  "content_hash": "a25bda69e71751c438d6d83fa89b99d9bd1534d2b48f492a8a525b6b8710e191",
+  "catalog_snapshot_id": null,
+  "bdi_perfil_id": null,
+  "referencia_ids": []
+}

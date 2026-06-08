@@ -1,0 +1,44 @@
+{
+  "projeto_id": "e3269f38-2954-481f-bd7e-359a16f152d1",
+  "versao": "1",
+  "gerado_em": "2026-06-08T17:19:05.988563Z",
+  "status_entrada": "VERMELHO",
+  "eixos_intervencao": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.180898,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    },
+    {
+      "nome": "Oportunidade REDUCE_DURATION",
+      "margem_estimada": 0.077527,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "ALTO",
+      "levers_combinados": [
+        "REDUCE_DURATION"
+      ]
+    }
+  ],
+  "fronteira_pareto": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.180898,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    }
+  ],
+  "recomendacao_primaria": {
+    "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+    "margem_estimada": 0.180898,
+    "prazo_delta_dias": null,
+    "confianca": "MEDIA",
+    "risco": "MEDIO",
+    "levers_combinados": []
+  }
+}

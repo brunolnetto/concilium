@@ -1,11 +1,11 @@
 """Unit tests for MOB (Mobilização/Desmobilização) scheduling — ADR-105."""
 
-import pytest
 from datetime import date
+
 from concilium.application.scheduling.mob_scheduling import (
-    infer_mob_windows,
     calcular_custo_indireto_mob,
     get_mob_summary,
+    infer_mob_windows,
 )
 
 

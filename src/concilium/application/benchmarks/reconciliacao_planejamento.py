@@ -185,9 +185,8 @@ class ReconciliadorPlanejamento:
         """Agrupa dados do canonical por item."""
         # Diretos
         for eq in self.canonical.equipes_diretas:
-            analise.canonical_direto[eq.item_id] = (
-                analise.canonical_direto.get(eq.item_id, 0.0)
-                + eq.custo_total * max(1, getattr(eq, "num_equipes_base", 1) or 1)
+            analise.canonical_direto[eq.item_id] = analise.canonical_direto.get(eq.item_id, 0.0) + eq.custo_total * max(
+                1, getattr(eq, "num_equipes_base", 1) or 1
             )
             analise.total_canonical_direto += eq.custo_total * max(1, getattr(eq, "num_equipes_base", 1) or 1)
 
@@ -217,43 +216,55 @@ class ReconciliadorPlanejamento:
                 delta_pct = (delta / planej.total_sem_bdi * 100) if planej.total_sem_bdi > 0 else 0
 
                 if abs(delta) > 1.0:  # Desvios acima de R$ 1
-                    analise.disparidades.append({
+                    analise.disparidades.append(
+                        {
+                            "item_id": item_id,
+                            "descricao": planej.descricao,
+                            "planejamento_sem_bdi": planej.total_sem_bdi,
+                            "planejamento_com_bdi": planej.total_com_bdi,
+                            "canonical": canon,
+                            "delta": delta,
+                            "delta_pct": delta_pct,
+                            "tipo": "FALTA_PLANEJ" if canon > planej.total_sem_bdi else "SOBRA_PLANEJ",
+                        }
+                    )
+            elif planej and not canon:
+                analise.disparidades.append(
+                    {
                         "item_id": item_id,
                         "descricao": planej.descricao,
                         "planejamento_sem_bdi": planej.total_sem_bdi,
                         "planejamento_com_bdi": planej.total_com_bdi,
-                        "canonical": canon,
-                        "delta": delta,
-                        "delta_pct": delta_pct,
-                        "tipo": "FALTA_PLANEJ" if canon > planej.total_sem_bdi else "SOBRA_PLANEJ",
-                    })
-            elif planej and not canon:
-                analise.disparidades.append({
-                    "item_id": item_id,
-                    "descricao": planej.descricao,
-                    "planejamento_sem_bdi": planej.total_sem_bdi,
-                    "planejamento_com_bdi": planej.total_com_bdi,
-                    "canonical": 0.0,
-                    "delta": -planej.total_sem_bdi,
-                    "delta_pct": -100,
-                    "tipo": "NAO_EXECUTADO",
-                })
+                        "canonical": 0.0,
+                        "delta": -planej.total_sem_bdi,
+                        "delta_pct": -100,
+                        "tipo": "NAO_EXECUTADO",
+                    }
+                )
             elif canon and not planej:
-                analise.disparidades.append({
-                    "item_id": item_id,
-                    "descricao": "Não planejado",
-                    "planejamento_sem_bdi": 0.0,
-                    "planejamento_com_bdi": 0.0,
-                    "canonical": canon,
-                    "delta": canon,
-                    "delta_pct": float("inf"),
-                    "tipo": "NAO_PLANEJADO",
-                })
+                analise.disparidades.append(
+                    {
+                        "item_id": item_id,
+                        "descricao": "Não planejado",
+                        "planejamento_sem_bdi": 0.0,
+                        "planejamento_com_bdi": 0.0,
+                        "canonical": canon,
+                        "delta": canon,
+                        "delta_pct": float("inf"),
+                        "tipo": "NAO_PLANEJADO",
+                    }
+                )
 
         # Totais
-        analise.total_planej_direto_sem_bdi = sum(p.total_sem_bdi for p in analise.planejamento.values() if p.tipo == "DIRETO")
-        analise.total_planej_direto_com_bdi = sum(p.total_com_bdi for p in analise.planejamento.values() if p.tipo == "DIRETO")
-        analise.total_planej_indireto = sum(p.total_com_bdi for p in analise.planejamento.values() if p.tipo == "INDIRETO")
+        analise.total_planej_direto_sem_bdi = sum(
+            p.total_sem_bdi for p in analise.planejamento.values() if p.tipo == "DIRETO"
+        )
+        analise.total_planej_direto_com_bdi = sum(
+            p.total_com_bdi for p in analise.planejamento.values() if p.tipo == "DIRETO"
+        )
+        analise.total_planej_indireto = sum(
+            p.total_com_bdi for p in analise.planejamento.values() if p.tipo == "INDIRETO"
+        )
 
 
 def gerar_relatorio_reconciliacao(analise: DisparityAnalysis) -> str:
@@ -290,9 +301,11 @@ def gerar_relatorio_reconciliacao(analise: DisparityAnalysis) -> str:
     else:
         linhas.append("  (Nenhuma disparidade > 5%)")
 
-    linhas.extend([
-        "",
-        "=" * 100,
-    ])
+    linhas.extend(
+        [
+            "",
+            "=" * 100,
+        ]
+    )
 
     return "\n".join(linhas)

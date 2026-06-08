@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
 from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # ADR-056 §T3
 from concilium.domain.models.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 from concilium.domain.models.canonical import (
@@ -35,7 +36,6 @@ from concilium.domain.models.canonical import (
 )
 from concilium.domain.models.decision_variables import DecisionVariables
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
-from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
 
 try:
     from ._skill_helpers_a import (

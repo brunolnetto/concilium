@@ -1,0 +1,28 @@
+{
+  "decision_id": "dec_2ea58a54",
+  "project_version": "e3269f38-2954-481f-bd7e-359a16f152d1",
+  "context": {
+    "objective": "Aprovacao de Baseline para Auditoria Financeira",
+    "constraints": []
+  },
+  "considered_interventions": [
+    {
+      "nome": "Baseline Automatica",
+      "variavel": "baseline",
+      "custo_estimado": 0,
+      "impacto_prazo_semanas": 0,
+      "justificativa": "Ponto de partida para benchmark de engenharia."
+    }
+  ],
+  "selected_intervention": "baseline",
+  "justification": {
+    "main_reason": "Alinhamento com dados de referencia historicos.",
+    "rejected_reasons": {}
+  },
+  "expected_outcome": {},
+  "decided_by": {
+    "type": "system",
+    "id": "benchmark_runner"
+  },
+  "timestamp": "2026-06-08T18:35:17.795557+00:00"
+}

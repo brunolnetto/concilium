@@ -1,7 +1,7 @@
 {
   "meta": {
     "versao_schema": "1.0.0",
-    "gerado_em": "2026-06-08T13:07:44.793110Z",
+    "gerado_em": "2026-06-08T14:37:25.147626Z",
     "framework": "concilium",
     "contexto_id": "mendeslobo",
     "escopo_id": "default",
@@ -11,7 +11,7 @@
     "benchmark_execution_id": null
   },
   "projeto": {
-    "id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+    "id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
     "nome": "MATEC_HINES",
     "tipo_obra": "terraplenagem",
     "localizacao": "Brasil",
@@ -35,7 +35,7 @@
   "praticabilidade": {
     "fonte": "open-meteo",
     "limiar_inviabilidade_mm": 10.0,
-    "calculada_em": "2026-06-08T14:10:54.687466Z",
+    "calculada_em": "2026-06-08T18:36:49.860472Z",
     "percentual_produtivo_semanal": {
       "2025-W01": 0.8571,
       "2025-W02": 1.0,
@@ -1044,38 +1044,38 @@
     {
       "atividade_id": "1.0",
       "semana_iso": "2026-W01",
-      "num_equipes": 0,
-      "qtd_planejada": 0.0,
-      "qtd_acumulada": 0.0,
-      "eficiencia": 0.0,
-      "pct_completude": 0.0
+      "num_equipes": 1,
+      "qtd_planejada": 288.0,
+      "qtd_acumulada": 288.0,
+      "eficiencia": 1.0,
+      "pct_completude": 0.001
     },
     {
       "atividade_id": "1.1",
       "semana_iso": "2026-W01",
-      "num_equipes": 0,
-      "qtd_planejada": 0.0,
-      "qtd_acumulada": 0.0,
-      "eficiencia": 0.0,
-      "pct_completude": 0.0
+      "num_equipes": 1,
+      "qtd_planejada": 288.0,
+      "qtd_acumulada": 288.0,
+      "eficiencia": 1.0,
+      "pct_completude": 0.0012
     },
     {
       "atividade_id": "1.2",
       "semana_iso": "2026-W02",
-      "num_equipes": 0,
-      "qtd_planejada": 0.0,
-      "qtd_acumulada": 0.0,
-      "eficiencia": 0.0,
-      "pct_completude": 0.0
+      "num_equipes": 1,
+      "qtd_planejada": 362.32,
+      "qtd_acumulada": 362.32,
+      "eficiencia": 1.0,
+      "pct_completude": 0.0003
     },
     {
       "atividade_id": "1.3",
       "semana_iso": "2026-W03",
-      "num_equipes": 0,
-      "qtd_planejada": 0.0,
-      "qtd_acumulada": 0.0,
-      "eficiencia": 0.0,
-      "pct_completude": 0.0
+      "num_equipes": 1,
+      "qtd_planejada": 6526.56,
+      "qtd_acumulada": 6526.56,
+      "eficiencia": 1.0,
+      "pct_completude": 0.0065
     }
   ],
   "activity_dag": {
@@ -1137,19 +1137,19 @@
         "ramp_profile": null,
         "distribuicao_semanal": {
           "2026-W01": {
-            "num_equipes": 0,
-            "qtd_executada": 0.0,
-            "qtd_acumulada": 0.0,
-            "pct": 0.0,
-            "eficiencia": 0.0,
+            "num_equipes": 1,
+            "qtd_executada": 288.0,
+            "qtd_acumulada": 288.0,
+            "pct": 0.001,
+            "eficiencia": 1.0,
             "fator_clima": 1.0,
             "fator_calendario": 1.0,
-            "fator_total": 0.0,
-            "eta_s": 0.0,
+            "fator_total": 1.0,
+            "eta_s": 1.0,
             "eta_p": 1.0,
-            "eta_w": 0.0,
+            "eta_w": 1.0,
             "q_max_celula": 288.0,
-            "perda_fisica": 288.0
+            "perda_fisica": 0.0
           }
         }
       },
@@ -1164,80 +1164,80 @@
         "ramp_profile": null,
         "distribuicao_semanal": {
           "2026-W01": {
-            "num_equipes": 0,
-            "qtd_executada": 0.0,
-            "qtd_acumulada": 0.0,
-            "pct": 0.0,
-            "eficiencia": 0.0,
+            "num_equipes": 1,
+            "qtd_executada": 288.0,
+            "qtd_acumulada": 288.0,
+            "pct": 0.0012,
+            "eficiencia": 1.0,
             "fator_clima": 1.0,
             "fator_calendario": 1.0,
-            "fator_total": 0.0,
-            "eta_s": 0.0,
+            "fator_total": 1.0,
+            "eta_s": 1.0,
             "eta_p": 1.0,
-            "eta_w": 0.0,
+            "eta_w": 1.0,
             "q_max_celula": 288.0,
-            "perda_fisica": 288.0
+            "perda_fisica": 0.0
           }
         }
       },
       {
         "activity_id": "1.2",
-        "start_week": 0,
-        "end_week": 0,
+        "start_week": 1,
+        "end_week": 1,
         "duration_weeks": 1,
-        "data_inicio": "2026-01-01",
-        "data_fim": "2026-01-08",
+        "data_inicio": "2026-01-08",
+        "data_fim": "2026-01-15",
         "assigned_resources": {},
         "ramp_profile": null,
         "distribuicao_semanal": {
           "2026-W02": {
-            "num_equipes": 0,
-            "qtd_executada": 0.0,
-            "qtd_acumulada": 0.0,
-            "pct": 0.0,
-            "eficiencia": 0.0,
+            "num_equipes": 1,
+            "qtd_executada": 362.32,
+            "qtd_acumulada": 362.32,
+            "pct": 0.0003,
+            "eficiencia": 1.0,
             "fator_clima": 0.8387,
             "fator_calendario": 1.0,
-            "fator_total": 0.0,
-            "eta_s": 0.0,
+            "fator_total": 0.8387,
+            "eta_s": 1.0,
             "eta_p": 0.8387,
-            "eta_w": 0.0,
+            "eta_w": 1.0,
             "q_max_celula": 432.0,
-            "perda_fisica": 432.0
+            "perda_fisica": 69.68
           }
         }
       },
       {
         "activity_id": "1.3",
-        "start_week": 0,
-        "end_week": 0,
+        "start_week": 2,
+        "end_week": 2,
         "duration_weeks": 1,
-        "data_inicio": "2026-01-01",
-        "data_fim": "2026-01-08",
+        "data_inicio": "2026-01-15",
+        "data_fim": "2026-01-22",
         "assigned_resources": {},
         "ramp_profile": null,
         "distribuicao_semanal": {
           "2026-W03": {
-            "num_equipes": 0,
-            "qtd_executada": 0.0,
-            "qtd_acumulada": 0.0,
-            "pct": 0.0,
-            "eficiencia": 0.0,
+            "num_equipes": 1,
+            "qtd_executada": 6526.56,
+            "qtd_acumulada": 6526.56,
+            "pct": 0.0065,
+            "eficiencia": 1.0,
             "fator_clima": 0.8387,
             "fator_calendario": 1.0,
-            "fator_total": 0.0,
-            "eta_s": 0.0,
+            "fator_total": 0.8387,
+            "eta_s": 1.0,
             "eta_p": 0.8387,
-            "eta_w": 0.0,
+            "eta_w": 1.0,
             "q_max_celula": 7781.76,
-            "perda_fisica": 7781.76
+            "perda_fisica": 1255.2
           }
         }
       }
     ],
     "distribuicao_mensal": {
       "01-2026": {
-        "qtd_executada": 0.0,
+        "qtd_executada": 7464.88,
         "num_itens": 4,
         "atividades": [
           "1.0",
@@ -1304,9 +1304,9 @@
       "custo_fixo_mensal": 50619.45,
       "custo_locacao_mensal": 15840.0,
       "custo_manutencao_mensal": 0.0,
-      "permanencia_meses": 0.0,
-      "permanencia_efetiva_meses": 0.0,
-      "custo_total": 0.0,
+      "permanencia_meses": 0.23,
+      "permanencia_efetiva_meses": 0.23,
+      "custo_total": 11641.43,
       "modo_estimativa": "inicial",
       "custo_ocioso_equipamentos": 0.0,
       "custo_mob_desmob": 0.0,
@@ -1373,9 +1373,9 @@
       "custo_fixo_mensal": 50619.45,
       "custo_locacao_mensal": 15840.0,
       "custo_manutencao_mensal": 0.0,
-      "permanencia_meses": 0.0,
-      "permanencia_efetiva_meses": 0.0,
-      "custo_total": 0.0,
+      "permanencia_meses": 0.23,
+      "permanencia_efetiva_meses": 0.23,
+      "custo_total": 11641.43,
       "modo_estimativa": "inicial",
       "custo_ocioso_equipamentos": 0.0,
       "custo_mob_desmob": 0.0,
@@ -1452,9 +1452,9 @@
       "custo_fixo_mensal": 159240.06,
       "custo_locacao_mensal": 90970.88,
       "custo_manutencao_mensal": 0.0,
-      "permanencia_meses": 0.0,
-      "permanencia_efetiva_meses": 0.0,
-      "custo_total": 0.0,
+      "permanencia_meses": 0.23,
+      "permanencia_efetiva_meses": 0.23,
+      "custo_total": 36621.94,
       "modo_estimativa": "inicial",
       "custo_ocioso_equipamentos": 0.0,
       "custo_mob_desmob": 0.0,
@@ -1575,9 +1575,9 @@
       "custo_fixo_mensal": 205963.07,
       "custo_locacao_mensal": 105462.72,
       "custo_manutencao_mensal": 0.0,
-      "permanencia_meses": 0.0,
-      "permanencia_efetiva_meses": 0.0,
-      "custo_total": 0.0,
+      "permanencia_meses": 0.23,
+      "permanencia_efetiva_meses": 0.23,
+      "custo_total": 47367.28,
       "modo_estimativa": "inicial",
       "custo_ocioso_equipamentos": 0.0,
       "custo_mob_desmob": 0.0,
@@ -6627,8 +6627,8 @@
     {
       "atividade_id": "1.2",
       "nome": "Corte e transporte interno",
-      "semana_inicio": 0,
-      "semana_fim": 0,
+      "semana_inicio": 1,
+      "semana_fim": 1,
       "custos_diretos": [],
       "indireto_alocacao": null,
       "custo_indireto_atribuido": 0.0,
@@ -6637,8 +6637,8 @@
     {
       "atividade_id": "1.3",
       "nome": "Aterro compactado / 98% e 100% P.N nas útimas 5 camadas",
-      "semana_inicio": 0,
-      "semana_fim": 0,
+      "semana_inicio": 2,
+      "semana_fim": 2,
       "custos_diretos": [],
       "indireto_alocacao": null,
       "custo_indireto_atribuido": 0.0,
@@ -6648,17 +6648,17 @@
   "ponto_equilibrio": [
     {
       "item_id": "1.0",
-      "custo_fixo_equipe": 50619.45,
+      "custo_fixo_equipe": 11642.47,
       "custo_venda_cpu": 13175439.99,
-      "delta": 13124820.54,
-      "delta_pct": 259.28414,
+      "delta": 13163797.52,
+      "delta_pct": 1130.67017,
       "status_validacao": "OK",
-      "custo_operacional_real": 0.0,
-      "frentes_equivalentes": 0.0,
+      "custo_operacional_real": 11641.43,
+      "frentes_equivalentes": 1.0,
       "validacao_pu_status": null,
       "confianca_pe": null,
       "diagnostico_pu": null,
-      "frentes_equivalentes_necessarias": 0.0,
+      "frentes_equivalentes_necessarias": 0.0011,
       "gap_pool_overhead": 0.0,
       "status_frentes": "OK",
       "pu_catalogo_unitario": 35.6191,
@@ -6667,7 +6667,7 @@
       "gap_praticabilidade_abs": 0.0,
       "gap_pool_abs": 0.0,
       "n_equipes_efetivo": 1.0,
-      "semanas_ativas": 0,
+      "semanas_ativas": 1,
       "fator_clima_medio": 1.0,
       "fator_calendario_medio": 1.0,
       "semanas_lesadas_clima": 0,
@@ -6677,17 +6677,17 @@
     },
     {
       "item_id": "1.1",
-      "custo_fixo_equipe": 50619.45,
+      "custo_fixo_equipe": 11642.47,
       "custo_venda_cpu": 10816839.24,
-      "delta": 10766219.79,
-      "delta_pct": 212.68939,
+      "delta": 10805196.77,
+      "delta_pct": 928.08429,
       "status_validacao": "OK",
-      "custo_operacional_real": 0.0,
-      "frentes_equivalentes": 0.0,
+      "custo_operacional_real": 11641.43,
+      "frentes_equivalentes": 1.0,
       "validacao_pu_status": null,
       "confianca_pe": null,
       "diagnostico_pu": null,
-      "frentes_equivalentes_necessarias": 0.0,
+      "frentes_equivalentes_necessarias": 0.0013,
       "gap_pool_overhead": 0.0,
       "status_frentes": "OK",
       "pu_catalogo_unitario": 35.6191,
@@ -6696,7 +6696,7 @@
       "gap_praticabilidade_abs": 0.0,
       "gap_pool_abs": 0.0,
       "n_equipes_efetivo": 1.0,
-      "semanas_ativas": 0,
+      "semanas_ativas": 1,
       "fator_clima_medio": 1.0,
       "fator_calendario_medio": 1.0,
       "semanas_lesadas_clima": 0,
@@ -6706,68 +6706,88 @@
     },
     {
       "item_id": "1.2",
-      "custo_fixo_equipe": 159240.06,
+      "custo_fixo_equipe": 36625.21,
       "custo_venda_cpu": 120205962.71,
-      "delta": 120046722.65,
-      "delta_pct": 753.87263,
+      "delta": 120169337.5,
+      "delta_pct": 3281.05491,
       "status_validacao": "OK",
-      "custo_operacional_real": 0.0,
-      "frentes_equivalentes": 0.0,
+      "custo_operacional_real": 36621.94,
+      "frentes_equivalentes": 1.0,
       "validacao_pu_status": null,
       "confianca_pe": null,
       "diagnostico_pu": null,
-      "frentes_equivalentes_necessarias": 0.0,
+      "frentes_equivalentes_necessarias": 0.0004,
       "gap_pool_overhead": 0.0,
       "status_frentes": "OK",
       "pu_catalogo_unitario": 80.1564,
       "pu_calibrado_unitario": 80.1564,
       "ajuste_minimo_pct": 0.0,
-      "gap_praticabilidade_abs": 0.0,
+      "gap_praticabilidade_abs": 5907.12,
       "gap_pool_abs": 0.0,
       "n_equipes_efetivo": 1.0,
-      "semanas_ativas": 0,
-      "fator_clima_medio": 1.0,
+      "semanas_ativas": 1,
+      "fator_clima_medio": 0.8387,
       "fator_calendario_medio": 1.0,
-      "semanas_lesadas_clima": 0,
+      "semanas_lesadas_clima": 1,
       "gap_escala_abs": 0.0,
-      "diagnostico_lesao": "Sem desvio significativo identificado.",
-      "levers_equilibrio": []
+      "diagnostico_lesao": "1 sem. de 1 com clima < 90% (f_clima=0.839, lesao 16.1% da produtividade horaria).",
+      "levers_equilibrio": [
+        {
+          "id": "fechar_gap_praticabilidade",
+          "tipo": "custo",
+          "descricao": "Praticabilidade: eta=83.9% aproveitamento efetivo",
+          "delta_margin": 5907.12,
+          "delta_margin_pct": 0.000049,
+          "viavel": true,
+          "restricoes": []
+        }
+      ]
     },
     {
       "item_id": "1.3",
-      "custo_fixo_equipe": 205963.07,
+      "custo_fixo_equipe": 47371.51,
       "custo_venda_cpu": 6329476.16,
-      "delta": 6123513.09,
-      "delta_pct": 29.73112,
+      "delta": 6282104.65,
+      "delta_pct": 132.61357,
       "status_validacao": "OK",
-      "custo_operacional_real": 0.0,
-      "frentes_equivalentes": 0.0,
+      "custo_operacional_real": 47367.28,
+      "frentes_equivalentes": 1.0,
       "validacao_pu_status": null,
       "confianca_pe": null,
       "diagnostico_pu": null,
-      "frentes_equivalentes_necessarias": 0.0,
+      "frentes_equivalentes_necessarias": 0.0089,
       "gap_pool_overhead": 0.0,
       "status_frentes": "OK",
       "pu_catalogo_unitario": 5.3142,
       "pu_calibrado_unitario": 5.3142,
       "ajuste_minimo_pct": 0.0,
-      "gap_praticabilidade_abs": 0.0,
+      "gap_praticabilidade_abs": 7640.34,
       "gap_pool_abs": 0.0,
       "n_equipes_efetivo": 1.0,
-      "semanas_ativas": 0,
-      "fator_clima_medio": 1.0,
+      "semanas_ativas": 1,
+      "fator_clima_medio": 0.8387,
       "fator_calendario_medio": 1.0,
-      "semanas_lesadas_clima": 0,
+      "semanas_lesadas_clima": 1,
       "gap_escala_abs": 0.0,
-      "diagnostico_lesao": "Sem desvio significativo identificado.",
-      "levers_equilibrio": []
+      "diagnostico_lesao": "1 sem. de 1 com clima < 90% (f_clima=0.839, lesao 16.1% da produtividade horaria).",
+      "levers_equilibrio": [
+        {
+          "id": "fechar_gap_praticabilidade",
+          "tipo": "custo",
+          "descricao": "Praticabilidade: eta=83.9% aproveitamento efetivo",
+          "delta_margin": 7640.34,
+          "delta_margin_pct": 0.001207,
+          "viavel": true,
+          "restricoes": []
+        }
+      ]
     }
   ],
   "resultado": {
     "venda": {
       "total_sem_bdi": 124865855.94,
       "total_com_bdi": 158472371.4,
-      "total_custo_plus": 7944653.3,
+      "total_custo_plus": 8065805.71,
       "total_custo_plus_catalogo": 158472371.4,
       "bdi_lucro_impostos": 0.2077659777631109
     },
@@ -6788,14 +6808,125 @@
     "balanco_ponto_equilibrio": null
   },
   "criticality_report": {
-    "project_duration_meses": 1,
-    "critical_path": []
+    "project_duration_meses": 3,
+    "critical_path": [
+      "1.3"
+    ]
   },
   "cost_criticality_report": {
-    "atividades": [],
-    "n_pareto_frontier": 0,
+    "atividades": [
+      {
+        "atividade_id": "1.0",
+        "custo": {
+          "valor_raw": 0.1085224598982326,
+          "rank": 3,
+          "percentil": 0.0
+        },
+        "duracao": {
+          "valor_raw": 0.3333333333333333,
+          "rank": 1,
+          "percentil": 0.0
+        },
+        "recurso": {
+          "valor_raw": 0.0,
+          "rank": 1,
+          "percentil": 0.0
+        },
+        "sensibilidade": {
+          "valor_raw": 0.5863,
+          "rank": 1,
+          "percentil": 0.6667
+        },
+        "pareto_frontier": false,
+        "rank_lexicografico": 3,
+        "classe": "B",
+        "interpretacao": "Análise consolidada"
+      },
+      {
+        "atividade_id": "1.1",
+        "custo": {
+          "valor_raw": 0.1085224598982326,
+          "rank": 4,
+          "percentil": 0.0
+        },
+        "duracao": {
+          "valor_raw": 0.3333333333333333,
+          "rank": 2,
+          "percentil": 0.0
+        },
+        "recurso": {
+          "valor_raw": 0.0,
+          "rank": 2,
+          "percentil": 0.0
+        },
+        "sensibilidade": {
+          "valor_raw": 0.5863,
+          "rank": 2,
+          "percentil": 0.6667
+        },
+        "pareto_frontier": false,
+        "rank_lexicografico": 4,
+        "classe": "C",
+        "interpretacao": "Análise consolidada"
+      },
+      {
+        "atividade_id": "1.2",
+        "custo": {
+          "valor_raw": 0.34139302603249605,
+          "rank": 2,
+          "percentil": 0.6667
+        },
+        "duracao": {
+          "valor_raw": 0.3333333333333333,
+          "rank": 3,
+          "percentil": 0.0
+        },
+        "recurso": {
+          "valor_raw": 0.0,
+          "rank": 3,
+          "percentil": 0.0
+        },
+        "sensibilidade": {
+          "valor_raw": 0.2525,
+          "rank": 4,
+          "percentil": 0.0
+        },
+        "pareto_frontier": false,
+        "rank_lexicografico": 2,
+        "classe": "A",
+        "interpretacao": "Análise consolidada"
+      },
+      {
+        "atividade_id": "1.3",
+        "custo": {
+          "valor_raw": 0.4415620541710387,
+          "rank": 1,
+          "percentil": 1.0
+        },
+        "duracao": {
+          "valor_raw": 0.3333333333333333,
+          "rank": 4,
+          "percentil": 0.0
+        },
+        "recurso": {
+          "valor_raw": 0.0,
+          "rank": 4,
+          "percentil": 0.0
+        },
+        "sensibilidade": {
+          "valor_raw": 0.296,
+          "rank": 3,
+          "percentil": 0.3333
+        },
+        "pareto_frontier": true,
+        "rank_lexicografico": 1,
+        "classe": "A+",
+        "interpretacao": "Análise consolidada"
+      }
+    ],
+    "n_pareto_frontier": 4,
     "criterio_primario": "custo",
-    "n_atividades": 0
+    "n_atividades": 4
   },
   "intervention_assessments": [
     {
@@ -6803,7 +6934,7 @@
       "variavel": "",
       "descricao": "",
       "tipo_perturbacao": "",
-      "roi_margem_pp": 0.5,
+      "roi_margem_pp": 0.65,
       "delta_prazo_dias": 0,
       "effort": {
         "nivel": "MED",
@@ -6907,108 +7038,108 @@
   ],
   "recurso_pool": [
     {
-      "id": "cc6d8bc4-2d3e-4d6a-b45a-18534870699d",
+      "id": "ea13b279-5ad0-437a-8678-b4ec5ddf51f7",
       "tipo_id": "FUNC-MO-OPERADOR-DE-MOTOSCRA",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "db1c1a95-be5a-46d5-80ef-558ac6c6e659",
+      "id": "199cc64f-d238-4ab6-8ecc-170bbd84a275",
       "tipo_id": "FUNC-MO-AJUDANTE",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "4840a3d2-b109-4a89-88e1-e69333150d4d",
+      "id": "938e51d5-18f5-4951-9e50-14932f0b5adb",
       "tipo_id": "EQUIP-EQ-E0031",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "496a4afd-51e3-4716-832f-2e6f82d66c88",
+      "id": "7f06b007-6fdc-49e9-a4c0-8a7e3a88990d",
       "tipo_id": "FUNC-MO-OPER-TRATOR-EST",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "2f95a341-a409-4d5f-9b12-8b067e2bbcad",
+      "id": "5eb4515d-3490-47bc-bab9-fbf308d8e59b",
       "tipo_id": "FUNC-MO-ENCARREG-TERRA",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "c8c54530-0f47-47c8-a2dc-e7f784d6fb90",
+      "id": "7f312155-ce9b-42c4-af0c-c61deb5b0458",
       "tipo_id": "EQUIP-EQ-E0025",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "80e47145-6af9-4990-937d-7206f4323fc1",
+      "id": "5d8696e5-e0cd-44e9-878d-174615b0bc40",
       "tipo_id": "FUNC-MO-OPER-MOTO",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "1f1b4f36-b1ea-49ca-a8fa-2447826131d5",
+      "id": "c3c04dc0-0dc5-49c4-ad98-5ca578fd0be9",
       "tipo_id": "FUNC-MO-OPER-ROLO-COMP",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "5d0ad723-3684-4997-b142-419ff13b08a3",
+      "id": "df61628a-b152-4a7f-b021-e5fee5bfa7c9",
       "tipo_id": "FUNC-MO-MOTOR-CAM-PIPA",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "fd80ee3d-3122-4ff0-be67-eb43d4c237e3",
+      "id": "206828c1-55a3-48e1-80db-30137e8444cf",
       "tipo_id": "EQUIP-EQ-E0029",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "3d7cd093-0ae7-43f7-a82f-3e0fcc08adee",
+      "id": "c8d4129d-1bc1-415c-9090-088a227c55d0",
       "tipo_id": "EQUIP-EQ-E0035",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
       "custo_aquisicao_total": 0.0
     },
     {
-      "id": "627634e5-5a37-4dab-850f-e63418e67bba",
+      "id": "d3a58b98-3481-48fd-8c15-5e2e6f35f6d0",
       "tipo_id": "EQUIP-EQ-E0010",
-      "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+      "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
       "quantidade_total": 1000,
       "quantidade_disponivel": 1000,
       "data_aquisicao": null,
@@ -7023,7 +7154,7 @@
   "relatorio_oportunidades": null,
   "requisitos": [
     {
-      "requisito_id": "ee403d58-d3d8-443b-8ed1-6f4f02afc30f",
+      "requisito_id": "86f297cb-bbe4-4596-bae0-63e1ae61473c",
       "atividade_id": "1.0-atv-1",
       "tipo_recurso_id": "FUNC-MO-OPERADOR-DE-MOTOSCRA",
       "descricao": "Operador de Motoscraper",
@@ -7033,7 +7164,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "194b673a-5f7d-4d4c-b574-6104280158e4",
+      "requisito_id": "669d287a-fb21-48de-b5ce-fe3f66fbf06e",
       "atividade_id": "1.0-atv-1",
       "tipo_recurso_id": "FUNC-MO-AJUDANTE",
       "descricao": "Ajudante",
@@ -7043,7 +7174,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "b04364b7-db05-4870-85a0-34a156e15ed4",
+      "requisito_id": "42c948a8-d5a3-49d1-ac47-d2a84311a332",
       "atividade_id": "1.0-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0031",
       "descricao": "Spread",
@@ -7053,7 +7184,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "550e1ef1-9cad-4b17-bcd0-a7e3c3a13b67",
+      "requisito_id": "e41c7b92-5f65-4a2b-97af-6fe137522b0b",
       "atividade_id": "1.1-atv-1",
       "tipo_recurso_id": "FUNC-MO-OPERADOR-DE-MOTOSCRA",
       "descricao": "Operador de Motoscraper",
@@ -7063,7 +7194,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "ba660ebc-4fe2-4458-9e4e-302a157aeb38",
+      "requisito_id": "5c34f836-b6f5-43ff-bd67-8c86ea5092d0",
       "atividade_id": "1.1-atv-1",
       "tipo_recurso_id": "FUNC-MO-AJUDANTE",
       "descricao": "Ajudante",
@@ -7073,7 +7204,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "ba2950a9-b4f6-418e-8e7a-54303fa2f5dc",
+      "requisito_id": "6275066b-d894-43da-90ec-4a20177c2c91",
       "atividade_id": "1.1-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0031",
       "descricao": "Spread",
@@ -7083,7 +7214,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "e4ea39c7-56e0-4621-839f-aa2ee3766203",
+      "requisito_id": "3b8f1d73-0ab6-4770-9dfe-a980cb9ff3d7",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-MO-OPER-TRATOR-EST",
       "descricao": "Operador de Trator de Esteiras",
@@ -7093,7 +7224,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "f0bf5564-e1db-473a-94de-9a76b0078384",
+      "requisito_id": "2c988e19-9998-4e36-81b5-81af13d43c00",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-MO-AJUDANTE",
       "descricao": "Ajudante",
@@ -7103,7 +7234,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "01d808d0-96cf-485d-b119-7c8b8a9a341a",
+      "requisito_id": "2f92c098-f4fa-4b01-b652-5a79143e4cbe",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-MO-ENCARREG-TERRA",
       "descricao": "Encarregado de Terraplenagem",
@@ -7113,7 +7244,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "5f53f88c-5b9a-410c-9536-f221c6665147",
+      "requisito_id": "8af81981-da54-40e9-ab1c-7b3a466fbdba",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0025",
       "descricao": "Trator de Esteiras 30t (440HP)",
@@ -7123,7 +7254,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "01b4bef6-c484-406f-921c-8b1b6d1d219b",
+      "requisito_id": "47bdfec5-5e24-4799-b1c1-786b254109fc",
       "atividade_id": "1.3-atv-1",
       "tipo_recurso_id": "FUNC-MO-OPER-MOTO",
       "descricao": "Operador de Motoniveladora",
@@ -7133,7 +7264,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "6a0ae6a3-8801-4180-9334-c2685fd75e34",
+      "requisito_id": "2bd19a6b-f4d8-4a72-b679-70dffe9af793",
       "atividade_id": "1.3-atv-1",
       "tipo_recurso_id": "FUNC-MO-OPER-ROLO-COMP",
       "descricao": "Operador de Rolo Compactador",
@@ -7143,7 +7274,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "66ff115c-38da-4e1e-b20e-26695527c603",
+      "requisito_id": "73c36b39-4fe2-4efc-9f43-15cbb1113513",
       "atividade_id": "1.3-atv-1",
       "tipo_recurso_id": "FUNC-MO-MOTOR-CAM-PIPA",
       "descricao": "Motorista de Caminhão Pipa",
@@ -7153,7 +7284,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "a5505c16-b2fb-43ab-9dce-740e8b457ce8",
+      "requisito_id": "e58c071a-9a3e-4c6c-8b8b-d3da0ce4ee6d",
       "atividade_id": "1.3-atv-1",
       "tipo_recurso_id": "FUNC-MO-ENCARREG-TERRA",
       "descricao": "Encarregado de Terraplenagem",
@@ -7163,7 +7294,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "b5338c94-439d-4672-ac2e-16da717697b2",
+      "requisito_id": "358d6b66-9f4f-4da0-870e-dde32079a403",
       "atividade_id": "1.3-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0029",
       "descricao": "Motoniveladora 140HP",
@@ -7173,7 +7304,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "442712b3-6575-48be-8b80-a09ae6011850",
+      "requisito_id": "c6fa5721-378c-4563-8665-b53f725a9791",
       "atividade_id": "1.3-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0035",
       "descricao": "Trator de esteiras 20T",
@@ -7183,7 +7314,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "b55ade05-2fdb-41f0-9b57-6cbf64167120",
+      "requisito_id": "c2b8db71-ca87-4407-aa50-a3e6bc0ddf81",
       "atividade_id": "1.3-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0010",
       "descricao": "Caminhão Pipa 10.000L",
@@ -7195,9 +7326,9 @@
   ],
   "alocacoes": [
     {
-      "id": "e15d0851-868d-4422-a02c-6b0cdbc00442",
+      "id": "b04e567c-ebf8-491e-980e-72d8b232c3d2",
       "atividade_id": "1.0-atv-1",
-      "recurso_id": "cc6d8bc4-2d3e-4d6a-b45a-18534870699d",
+      "recurso_id": "ea13b279-5ad0-437a-8678-b4ec5ddf51f7",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7205,9 +7336,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "0439ff5e-01c8-427d-9730-3047a2d97ad2",
+      "id": "4bbdc025-131d-4627-a0e1-c54e85053581",
       "atividade_id": "1.0-atv-1",
-      "recurso_id": "db1c1a95-be5a-46d5-80ef-558ac6c6e659",
+      "recurso_id": "199cc64f-d238-4ab6-8ecc-170bbd84a275",
       "quantidade_alocada": 3.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7215,9 +7346,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "cdad5c4a-1e1b-4440-9a58-dacf02873e28",
+      "id": "93688ba6-c32b-47c5-9596-498d55415afc",
       "atividade_id": "1.0-atv-1",
-      "recurso_id": "4840a3d2-b109-4a89-88e1-e69333150d4d",
+      "recurso_id": "938e51d5-18f5-4951-9e50-14932f0b5adb",
       "quantidade_alocada": 2.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7225,9 +7356,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "a69220a4-907e-4099-a522-1f6798e6b3e7",
+      "id": "fd072d71-5f57-4a5c-b4d9-ff9900a77fba",
       "atividade_id": "1.1-atv-1",
-      "recurso_id": "cc6d8bc4-2d3e-4d6a-b45a-18534870699d",
+      "recurso_id": "ea13b279-5ad0-437a-8678-b4ec5ddf51f7",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7235,9 +7366,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "3b2fc6d0-b965-4a0a-8881-b1e23262525d",
+      "id": "7cb964d5-1f58-4783-89d2-9d0528966d48",
       "atividade_id": "1.1-atv-1",
-      "recurso_id": "db1c1a95-be5a-46d5-80ef-558ac6c6e659",
+      "recurso_id": "199cc64f-d238-4ab6-8ecc-170bbd84a275",
       "quantidade_alocada": 3.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7245,9 +7376,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "22b9380f-3824-4fb5-a3aa-4eb72fd75395",
+      "id": "973a50d4-6cdf-48a3-a967-85e0893a2342",
       "atividade_id": "1.1-atv-1",
-      "recurso_id": "4840a3d2-b109-4a89-88e1-e69333150d4d",
+      "recurso_id": "938e51d5-18f5-4951-9e50-14932f0b5adb",
       "quantidade_alocada": 2.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7255,9 +7386,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "8180d7f7-ae5f-48be-8982-2fda1309eff1",
+      "id": "1f381c24-35f2-4f86-8f52-f16b1f232738",
       "atividade_id": "1.2-atv-1",
-      "recurso_id": "496a4afd-51e3-4716-832f-2e6f82d66c88",
+      "recurso_id": "7f06b007-6fdc-49e9-a4c0-8a7e3a88990d",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7265,9 +7396,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "6c57ba2e-346d-466f-9ca6-ca1b22b77433",
+      "id": "31328b98-7c34-4154-90d6-052279c72836",
       "atividade_id": "1.2-atv-1",
-      "recurso_id": "db1c1a95-be5a-46d5-80ef-558ac6c6e659",
+      "recurso_id": "199cc64f-d238-4ab6-8ecc-170bbd84a275",
       "quantidade_alocada": 3.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7275,9 +7406,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "6a053ff1-417e-4aef-9e16-bef8db373d38",
+      "id": "bdcbffef-d862-4bc3-9209-f88eca723a9c",
       "atividade_id": "1.2-atv-1",
-      "recurso_id": "2f95a341-a409-4d5f-9b12-8b067e2bbcad",
+      "recurso_id": "5eb4515d-3490-47bc-bab9-fbf308d8e59b",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7285,9 +7416,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "d0a9f3a0-46b8-407e-85d3-c44a4c5b4af8",
+      "id": "ced0273f-8c51-4ee3-9064-c391644a7bfb",
       "atividade_id": "1.2-atv-1",
-      "recurso_id": "c8c54530-0f47-47c8-a2dc-e7f784d6fb90",
+      "recurso_id": "7f312155-ce9b-42c4-af0c-c61deb5b0458",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7295,9 +7426,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "a4f83823-ad4e-41a0-ae1c-3cb1bd665f56",
+      "id": "89418145-04fb-4a42-b0e2-be7c47b4e852",
       "atividade_id": "1.3-atv-1",
-      "recurso_id": "80e47145-6af9-4990-937d-7206f4323fc1",
+      "recurso_id": "5d8696e5-e0cd-44e9-878d-174615b0bc40",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7305,9 +7436,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "ac2ff820-427e-4773-b929-2e7dbccdda87",
+      "id": "4ddb7caf-f704-455b-a3f7-c790fd31afbb",
       "atividade_id": "1.3-atv-1",
-      "recurso_id": "1f1b4f36-b1ea-49ca-a8fa-2447826131d5",
+      "recurso_id": "c3c04dc0-0dc5-49c4-ad98-5ca578fd0be9",
       "quantidade_alocada": 2.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7315,9 +7446,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "a40cf465-b9c7-496c-8d4b-16d071eb0bd0",
+      "id": "fba55608-1d4c-4866-af1d-3653bfdc42e8",
       "atividade_id": "1.3-atv-1",
-      "recurso_id": "5d0ad723-3684-4997-b142-419ff13b08a3",
+      "recurso_id": "df61628a-b152-4a7f-b021-e5fee5bfa7c9",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7325,9 +7456,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "832a599d-32ff-43d1-aa79-3a8f9dec6cbd",
+      "id": "76d78a67-5cc3-445f-a7df-de454cb25953",
       "atividade_id": "1.3-atv-1",
-      "recurso_id": "2f95a341-a409-4d5f-9b12-8b067e2bbcad",
+      "recurso_id": "5eb4515d-3490-47bc-bab9-fbf308d8e59b",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7335,9 +7466,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "bd83feda-a7fb-4d8f-a0ad-dca39a1235a0",
+      "id": "c1f76dea-7c59-46b5-8f13-dd31b78091fc",
       "atividade_id": "1.3-atv-1",
-      "recurso_id": "fd80ee3d-3122-4ff0-be67-eb43d4c237e3",
+      "recurso_id": "206828c1-55a3-48e1-80db-30137e8444cf",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7345,9 +7476,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "b80737aa-a480-4e5a-b077-1ce28106fc9e",
+      "id": "24b582d2-7378-4850-bf82-d898f6bda647",
       "atividade_id": "1.3-atv-1",
-      "recurso_id": "3d7cd093-0ae7-43f7-a82f-3e0fcc08adee",
+      "recurso_id": "c8d4129d-1bc1-415c-9090-088a227c55d0",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7355,9 +7486,9 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "0e4944c3-b202-49a1-b053-d0322888a513",
+      "id": "3e91a18d-849a-400a-8987-efd17e5adecf",
       "atividade_id": "1.3-atv-1",
-      "recurso_id": "627634e5-5a37-4dab-850f-e63418e67bba",
+      "recurso_id": "d3a58b98-3481-48fd-8c15-5e2e6f35f6d0",
       "quantidade_alocada": 1.0,
       "data_inicio": "2026-01-01",
       "data_termino": "2026-12-31",
@@ -7371,7 +7502,7 @@
   "progresso": {},
   "replanning_history": [
     {
-      "timestamp": "2026-06-08T13:07:53.653019+00:00",
+      "timestamp": "2026-06-08T14:37:35.795227+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7379,7 +7510,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:09:58.339443+00:00",
+      "timestamp": "2026-06-08T14:40:47.678112+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7387,7 +7518,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:11:29.230370+00:00",
+      "timestamp": "2026-06-08T14:44:24.690949+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7395,7 +7526,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:21:06.501753+00:00",
+      "timestamp": "2026-06-08T14:47:30.399357+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7403,7 +7534,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:25:26.204346+00:00",
+      "timestamp": "2026-06-08T14:50:24.992651+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7411,7 +7542,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:28:12.034122+00:00",
+      "timestamp": "2026-06-08T14:55:28.208166+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7419,7 +7550,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:33:48.134570+00:00",
+      "timestamp": "2026-06-08T16:19:10.322251+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7427,7 +7558,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:36:06.319947+00:00",
+      "timestamp": "2026-06-08T16:22:07.011393+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7435,7 +7566,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:38:10.662874+00:00",
+      "timestamp": "2026-06-08T16:30:43.135082+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7443,7 +7574,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T13:45:28.531861+00:00",
+      "timestamp": "2026-06-08T16:36:23.338012+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7451,7 +7582,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T14:04:12.216904+00:00",
+      "timestamp": "2026-06-08T16:45:48.798731+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7459,7 +7590,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T14:07:44.567845+00:00",
+      "timestamp": "2026-06-08T16:57:56.041605+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7467,7 +7598,7 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T14:09:48.511456+00:00",
+      "timestamp": "2026-06-08T17:03:14.465706+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
@@ -7475,12 +7606,132 @@
       "sugestao_prioritaria": "REPLAN-005"
     },
     {
-      "timestamp": "2026-06-08T14:11:03.410178+00:00",
+      "timestamp": "2026-06-08T17:05:52.256303+00:00",
       "status_gatilho": "VERMELHO",
       "margem_atual_pct": 17.2,
       "delta_margem_necessario_pct": -11.2,
       "n_sugestoes": 1,
       "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:08:37.272556+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:11:30.676120+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:19:46.312961+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:24:27.958342+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:30:39.772965+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:34:40.865449+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:38:10.678252+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:41:04.225172+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T17:45:35.318116+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-002"
+    },
+    {
+      "timestamp": "2026-06-08T17:51:59.144956+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-002"
+    },
+    {
+      "timestamp": "2026-06-08T17:55:25.339699+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-002"
+    },
+    {
+      "timestamp": "2026-06-08T17:59:38.960814+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-002"
+    },
+    {
+      "timestamp": "2026-06-08T18:06:00.089463+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-002"
+    },
+    {
+      "timestamp": "2026-06-08T18:09:26.870746+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-002"
+    },
+    {
+      "timestamp": "2026-06-08T18:36:59.478884+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 17.2,
+      "delta_margem_necessario_pct": -11.2,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-002"
     }
   ],
   "resultado_reconciliado": {
@@ -7497,21 +7748,23 @@
     "delta_margem_necessario": -0.112025,
     "sugestoes": [
       {
-        "id": "REPLAN-005",
-        "tipo": "BDI",
-        "checkpoint_skill": "07-custos-indiretos",
-        "parametros_sugeridos": {},
-        "delta_margem_estimado": 0.028,
+        "id": "REPLAN-002",
+        "tipo": "EQUIPES",
+        "checkpoint_skill": "03-equipes-diretas",
+        "parametros_sugeridos": {
+          "1.3": "aumentar num_equipes em +1"
+        },
+        "delta_margem_estimado": 0.0224,
         "confianca": "BAIXA",
-        "justificativa": "Margem 17.2% abaixo da faixa alvo. Revisar composição de BDI e custos indiretos (ADM/TOP/LAB/QSMS/MOB) pode revelar espaço para redução.",
+        "justificativa": "Itens 1.3 são classe A+ e representam 44.2% do custo. Mais equipes reduz permanência e custo fixo.",
         "restricoes": [
-          "Necessário levantamento detalhado dos indiretos para estimativa precisa",
-          "Execute skill 06-consolidar antes para dados completos"
+          "Pode não reduzir margem se custo variável superar ganho de prazo",
+          "Validar produtividade esperada com equipes paralelas"
         ],
         "controle": "TUNAVEL"
       }
     ],
-    "sugestao_prioritaria": "REPLAN-005"
+    "sugestao_prioritaria": "REPLAN-002"
   },
   "plan_space_result": {
     "status_entrada": "VERMELHO",
@@ -7525,27 +7778,29 @@
     "oportunidades": [
       {
         "lever": {
-          "tipo": "REDUCE_DURATION",
+          "tipo": "MELHORAR_PRATICABILIDADE",
           "checkpoint_skill": "04-cronograma",
           "parametros": {
-            "deadline_weeks": "93"
+            "delta_margem_rs": "13547",
+            "n_atividades": "2",
+            "itens": "1.2,1.3"
           },
-          "delta_margem_estimado": 0.079869,
+          "delta_margem_estimado": 0.00168,
           "custo_aplicacao": 0.0,
-          "ratio_beneficio": 0.079869,
-          "confianca": "BAIXA",
-          "justificativa": "Fallback: redução de 10% no prazo → corte proporcional de indiretos.",
+          "ratio_beneficio": 0.00168,
+          "confianca": "MEDIA",
+          "justificativa": "MELHORAR_PRATICABILIDADE — 2 atividade(s). Δ margem R$ 13,547 (0.17% da venda). Sem restrições identificadas.",
           "controle": "TUNAVEL"
         },
-        "margem_adicional_estimada": 0.079869,
-        "risco": "ALTO"
+        "margem_adicional_estimada": 0.00168,
+        "risco": "MEDIO"
       }
     ]
   },
   "relatorio_criticidade": {
-    "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+    "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
     "versao": "1",
-    "gerado_em": "2026-06-08T14:11:03.895788Z",
+    "gerado_em": "2026-06-08T18:36:59.580377Z",
     "itens": [],
     "total_atividades": 0,
     "total_A_mais": 0,
@@ -7556,16 +7811,16 @@
     "notas_engenheiro": null
   },
   "relatorio_sensibilidade": {
-    "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+    "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
     "versao": "1",
-    "gerado_em": "2026-06-08T14:11:03.895788Z",
+    "gerado_em": "2026-06-08T18:36:59.580377Z",
     "status_margem": "VERMELHO",
     "margem_entrada": 0.0,
     "margem_alvo_min": 0.0,
     "repair_viavel": false,
     "passos_repair": [
       {
-        "lever_tipo": "REVIEW_BDI",
+        "lever_tipo": "ADD_TEAMS",
         "lever_checkpoint": "",
         "delta_margem": 0.0,
         "custo_aplicacao": null,
@@ -7579,9 +7834,9 @@
     "exposicao_por_cpu": []
   },
   "relatorio_intervencao": {
-    "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+    "projeto_id": "911387cd-ad20-42a0-88ac-8479ccc6e3d9",
     "versao": "1",
-    "gerado_em": "2026-06-08T14:11:03.895788Z",
+    "gerado_em": "2026-06-08T18:36:59.580377Z",
     "status_entrada": "VERMELHO",
     "eixos_intervencao": [
       {
@@ -7593,13 +7848,13 @@
         "levers_combinados": []
       },
       {
-        "nome": "Oportunidade REDUCE_DURATION",
-        "margem_estimada": 0.079869,
+        "nome": "Oportunidade MELHORAR_PRATICABILIDADE",
+        "margem_estimada": 0.00168,
         "prazo_delta_dias": null,
         "confianca": "MEDIA",
-        "risco": "ALTO",
+        "risco": "MEDIO",
         "levers_combinados": [
-          "REDUCE_DURATION"
+          "MELHORAR_PRATICABILIDADE"
         ]
       }
     ],
@@ -7643,7 +7898,7 @@
   "benchmark_alignment": null,
   "diagnostico_pe": {
     "projeto_id": "MATEC_HINES",
-    "gerado_em": "2026-06-08T14:10:55.244139+00:00",
+    "gerado_em": "2026-06-08T18:36:50.352251+00:00",
     "n_itens_deficit": 0,
     "gap_total_rs": 0.0,
     "gap_evitavel_rs": 0.0,
@@ -7658,7 +7913,7 @@
   },
   "backtracking_pe": {
     "projeto_id": "MATEC_HINES",
-    "gerado_em": "2026-06-08T14:10:55.244193+00:00",
+    "gerado_em": "2026-06-08T18:36:50.352302+00:00",
     "pe_gap_alvo": 0.0,
     "itens": [],
     "consistencia_global": true,
@@ -7668,22 +7923,233 @@
   },
   "curva_abc_insumo": {
     "projeto_id": "MATEC_HINES",
-    "gerado_em": "2026-06-08T14:10:55.244292+00:00",
-    "total_custo_direto": 0.0,
-    "itens": [],
-    "total_a": 0.0,
-    "total_b": 0.0,
-    "total_c": 0.0,
-    "n_itens_a": 0,
-    "n_itens_b": 0,
-    "n_itens_c": 0
+    "gerado_em": "2026-06-08T18:36:50.352590+00:00",
+    "total_custo_direto": 102465.07,
+    "itens": [
+      {
+        "insumo_id": "EQ-E0025",
+        "descricao": "Trator de Esteiras 30t (440HP)",
+        "categoria": "EQUIPAMENTO",
+        "custo_total": 20923.3,
+        "pct_custo": 0.204199,
+        "pct_custo_acumulado": 0.204199,
+        "classe": "A",
+        "atividades": [
+          "1.2"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0029",
+        "descricao": "Motoniveladora 140HP",
+        "categoria": "EQUIPAMENTO",
+        "custo_total": 12456.51,
+        "pct_custo": 0.121568,
+        "pct_custo_acumulado": 0.325768,
+        "classe": "A",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "MO-AJUDANTE",
+        "descricao": "Ajudante",
+        "categoria": "MAO_OBRA",
+        "custo_total": 10891.62,
+        "pct_custo": 0.106296,
+        "pct_custo_acumulado": 0.432064,
+        "classe": "A",
+        "atividades": [
+          "1.0",
+          "1.1",
+          "1.2"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0025__DIESEL",
+        "descricao": "Diesel: Trator de Esteiras 30t (440HP)",
+        "categoria": "DIESEL",
+        "custo_total": 6453.67,
+        "pct_custo": 0.062984,
+        "pct_custo_acumulado": 0.495048,
+        "classe": "A",
+        "atividades": [
+          "1.2"
+        ]
+      },
+      {
+        "insumo_id": "MO-OPERADOR-DE-MOTOSCRA",
+        "descricao": "Operador de Motoscraper",
+        "categoria": "MAO_OBRA",
+        "custo_total": 6390.68,
+        "pct_custo": 0.062369,
+        "pct_custo_acumulado": 0.557417,
+        "classe": "A",
+        "atividades": [
+          "1.0",
+          "1.1"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0035",
+        "descricao": "Trator de esteiras 20T",
+        "categoria": "EQUIPAMENTO",
+        "custo_total": 6233.92,
+        "pct_custo": 0.060839,
+        "pct_custo_acumulado": 0.618256,
+        "classe": "A",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0010",
+        "descricao": "Caminhão Pipa 10.000L",
+        "categoria": "EQUIPAMENTO",
+        "custo_total": 5566.0,
+        "pct_custo": 0.054321,
+        "pct_custo_acumulado": 0.672577,
+        "classe": "A",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "MO-ENCARREG-TERRA",
+        "descricao": "Encarregado de Terraplenagem",
+        "categoria": "MAO_OBRA",
+        "custo_total": 5312.91,
+        "pct_custo": 0.051851,
+        "pct_custo_acumulado": 0.724428,
+        "classe": "A",
+        "atividades": [
+          "1.2",
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0035__DIESEL",
+        "descricao": "Diesel: Trator de esteiras 20T",
+        "categoria": "DIESEL",
+        "custo_total": 5280.27,
+        "pct_custo": 0.051532,
+        "pct_custo_acumulado": 0.775961,
+        "classe": "A",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "MO-OPER-ROLO-COMP",
+        "descricao": "Operador de Rolo Compactador",
+        "categoria": "MAO_OBRA",
+        "custo_total": 4915.26,
+        "pct_custo": 0.04797,
+        "pct_custo_acumulado": 0.823931,
+        "classe": "B",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "MO-OPER-MOTO",
+        "descricao": "Operador de Motoniveladora",
+        "categoria": "MAO_OBRA",
+        "custo_total": 3991.94,
+        "pct_custo": 0.038959,
+        "pct_custo_acumulado": 0.86289,
+        "classe": "B",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0031",
+        "descricao": "Spread",
+        "categoria": "EQUIPAMENTO",
+        "custo_total": 3643.2,
+        "pct_custo": 0.035556,
+        "pct_custo_acumulado": 0.898445,
+        "classe": "B",
+        "atividades": [
+          "1.0",
+          "1.1"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0029__DIESEL",
+        "descricao": "Diesel: Motoniveladora 140HP",
+        "categoria": "DIESEL",
+        "custo_total": 3226.83,
+        "pct_custo": 0.031492,
+        "pct_custo_acumulado": 0.929937,
+        "classe": "B",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "MO-OPER-TRATOR-EST",
+        "descricao": "Operador de Trator de Esteiras",
+        "categoria": "MAO_OBRA",
+        "custo_total": 2961.25,
+        "pct_custo": 0.0289,
+        "pct_custo_acumulado": 0.958837,
+        "classe": "C",
+        "atividades": [
+          "1.2"
+        ]
+      },
+      {
+        "insumo_id": "MO-MOTOR-CAM-PIPA",
+        "descricao": "Motorista de Caminhão Pipa",
+        "categoria": "MAO_OBRA",
+        "custo_total": 2457.63,
+        "pct_custo": 0.023985,
+        "pct_custo_acumulado": 0.982823,
+        "classe": "C",
+        "atividades": [
+          "1.3"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0031__DIESEL",
+        "descricao": "Diesel: Spread",
+        "categoria": "DIESEL",
+        "custo_total": 1173.4,
+        "pct_custo": 0.011452,
+        "pct_custo_acumulado": 0.994274,
+        "classe": "C",
+        "atividades": [
+          "1.0",
+          "1.1"
+        ]
+      },
+      {
+        "insumo_id": "EQ-E0010__DIESEL",
+        "descricao": "Diesel: Caminhão Pipa 10.000L",
+        "categoria": "DIESEL",
+        "custo_total": 586.7,
+        "pct_custo": 0.005726,
+        "pct_custo_acumulado": 1.0,
+        "classe": "C",
+        "atividades": [
+          "1.3"
+        ]
+      }
+    ],
+    "total_a": 79508.88,
+    "total_b": 15777.23,
+    "total_c": 7178.98,
+    "n_itens_a": 9,
+    "n_itens_b": 4,
+    "n_itens_c": 4
   },
   "s_curve": {
     "projeto_id": "MATEC_HINES",
-    "gerado_em": "2026-06-08T14:10:55.247235+00:00",
-    "total_custo_direto": 0.0,
+    "gerado_em": "2026-06-08T18:36:50.355251+00:00",
+    "total_custo_direto": 104764.51,
     "total_custo_indireto": 4481236.24,
-    "total_projeto": 4481236.24,
+    "total_projeto": 4586000.75,
     "semanas_iso": [
       "2026-W01",
       "2026-W02",
@@ -7792,9 +8258,9 @@
       "2027-W52"
     ],
     "custo_semanal": [
-      2240618.12,
-      0.0,
-      0.0,
+      2263900.99,
+      35581.06,
+      45900.58,
       0.0,
       0.0,
       0.0,
@@ -7899,249 +8365,257 @@
       2240618.12
     ],
     "custo_acumulado": [
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      2240618.12,
-      4481236.24
+      2263900.99,
+      2299482.05,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      2345382.63,
+      4586000.75
     ],
     "pct_acumulado": [
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
-      0.5,
+      0.493655,
+      0.501413,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
+      0.511422,
       1.0
     ],
     "agregacao_semanal": [
       {
         "semana_iso": "2026-W01",
         "semana_offset": 0,
-        "equipamentos_ativos": {},
-        "n_equipamentos_unicos": 0,
-        "n_equipes_totais": 0,
-        "custo_direto_semana": 0.0,
+        "equipamentos_ativos": {
+          "EQ-E0031": 4
+        },
+        "n_equipamentos_unicos": 1,
+        "n_equipes_totais": 2,
+        "custo_direto_semana": 23282.87,
         "custo_indireto_semana": 2240618.12,
-        "custo_total_semana": 2240618.12
+        "custo_total_semana": 2263900.99
       },
       {
         "semana_iso": "2026-W02",
         "semana_offset": 1,
-        "equipamentos_ativos": {},
-        "n_equipamentos_unicos": 0,
-        "n_equipes_totais": 0,
-        "custo_direto_semana": 0.0,
+        "equipamentos_ativos": {
+          "EQ-E0025": 1
+        },
+        "n_equipamentos_unicos": 1,
+        "n_equipes_totais": 1,
+        "custo_direto_semana": 35581.06,
         "custo_indireto_semana": 0.0,
-        "custo_total_semana": 0.0
+        "custo_total_semana": 35581.06
       },
       {
         "semana_iso": "2026-W03",
         "semana_offset": 2,
-        "equipamentos_ativos": {},
-        "n_equipamentos_unicos": 0,
-        "n_equipes_totais": 0,
-        "custo_direto_semana": 0.0,
+        "equipamentos_ativos": {
+          "EQ-E0029": 1,
+          "EQ-E0035": 1,
+          "EQ-E0010": 1
+        },
+        "n_equipamentos_unicos": 3,
+        "n_equipes_totais": 1,
+        "custo_direto_semana": 45900.58,
         "custo_indireto_semana": 0.0,
-        "custo_total_semana": 0.0
+        "custo_total_semana": 45900.58
       },
       {
         "semana_iso": "2026-W04",
@@ -9167,10 +9641,803 @@
   },
   "cubo_analitico": {
     "projeto_id": "MATEC_HINES",
-    "gerado_em": "2026-06-08T14:10:55.247462+00:00",
+    "gerado_em": "2026-06-08T18:36:50.356194+00:00",
     "regime_bdi": "pre_reforma",
-    "total_preco_venda": 0.0,
-    "celulas": []
+    "total_preco_venda": 134779.18,
+    "celulas": [
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 6873.8,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 343.69,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 103.11,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 68.73,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "margem_l",
+        "valor_rs": 618.64,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 443.56,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 176.54,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 243.07,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 3668.78,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 183.44,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 55.03,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 36.69,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "margem_l",
+        "valor_rs": 330.19,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 236.74,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 94.22,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 129.73,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 1173.29,
+        "valor_fisico": 192.0,
+        "unidade_fisica": "L"
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.0",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "margem_l",
+        "valor_rs": 46.93,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 6873.8,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 343.69,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 103.11,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 68.73,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "margem_l",
+        "valor_rs": 618.64,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 443.56,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 176.54,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 243.07,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 3668.78,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 183.44,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 55.03,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 36.69,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "margem_l",
+        "valor_rs": 330.19,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 236.74,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 94.22,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 129.73,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 1173.29,
+        "valor_fisico": 192.0,
+        "unidade_fisica": "L"
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.1",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W01",
+        "componente_bdi": "margem_l",
+        "valor_rs": 46.93,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 9313.18,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 465.65,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 139.7,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 93.13,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "margem_l",
+        "valor_rs": 838.18,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 600.97,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 239.18,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 329.33,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 21070.21,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 1053.5,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 316.06,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 210.69,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "margem_l",
+        "valor_rs": 1896.31,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 1359.63,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 541.13,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 745.08,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 6453.09,
+        "valor_fisico": 1056.0,
+        "unidade_fisica": "L"
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.2",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W02",
+        "componente_bdi": "margem_l",
+        "valor_rs": 258.13,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 14119.72,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 705.98,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 211.8,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 141.19,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "margem_l",
+        "valor_rs": 1270.77,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 911.13,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 362.63,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "mao_obra",
+        "propriedade": "salario_encargos",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 499.3,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 24426.74,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "overhead_ac",
+        "valor_rs": 1221.32,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "overhead_df",
+        "valor_rs": 366.41,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "overhead_r",
+        "valor_rs": 244.25,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "margem_l",
+        "valor_rs": 2198.39,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "tributo_iss",
+        "valor_rs": 1576.22,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "tributo_cssl",
+        "valor_rs": 627.34,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "equipamento",
+        "propriedade": "aluguel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "tributo_ir",
+        "valor_rs": 863.77,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "custo_direto",
+        "valor_rs": 9092.99,
+        "valor_fisico": 1488.0,
+        "unidade_fisica": "L"
+      },
+      {
+        "natureza": "direto",
+        "atividade_id": "1.3",
+        "categoria_insumo": "material",
+        "propriedade": "combustivel",
+        "semana_iso": "2026-W03",
+        "componente_bdi": "margem_l",
+        "valor_rs": 363.72,
+        "valor_fisico": 0.0,
+        "unidade_fisica": ""
+      }
+    ]
   },
   "tabela_bdi_efetiva": {
     "mao_obra": {
@@ -9237,7 +10504,7 @@
   },
   "analise_campanhas": {
     "projeto_id": "MATEC_HINES",
-    "gerado_em": "2026-06-08T14:10:54.852016+00:00",
+    "gerado_em": "2026-06-08T18:36:50.000647+00:00",
     "n_campanhas": 5,
     "n_instancias": 5,
     "economia_total": 2772.0,
@@ -9264,8 +10531,8 @@
       {
         "instancia_id": "EQ-E0025#1",
         "tipo_id": "EQ-E0025",
-        "semana_entrada": 0,
-        "semana_saida": 0,
+        "semana_entrada": 1,
+        "semana_saida": 1,
         "atividades": [
           "1.2"
         ],
@@ -9280,8 +10547,8 @@
       {
         "instancia_id": "EQ-E0029#1",
         "tipo_id": "EQ-E0029",
-        "semana_entrada": 0,
-        "semana_saida": 0,
+        "semana_entrada": 2,
+        "semana_saida": 2,
         "atividades": [
           "1.3"
         ],
@@ -9296,8 +10563,8 @@
       {
         "instancia_id": "EQ-E0035#1",
         "tipo_id": "EQ-E0035",
-        "semana_entrada": 0,
-        "semana_saida": 0,
+        "semana_entrada": 2,
+        "semana_saida": 2,
         "atividades": [
           "1.3"
         ],
@@ -9312,8 +10579,8 @@
       {
         "instancia_id": "EQ-E0010#1",
         "tipo_id": "EQ-E0010",
-        "semana_entrada": 0,
-        "semana_saida": 0,
+        "semana_entrada": 2,
+        "semana_saida": 2,
         "atividades": [
           "1.3"
         ],
@@ -9332,7 +10599,7 @@
     "meta": {
       "projeto_id": "MATEC_HINES",
       "version": "?",
-      "gerado_em": "2026-06-08T14:10:55.247555+00:00",
+      "gerado_em": "2026-06-08T18:36:50.356296+00:00",
       "skill_versao": "08-consolidacao-financeira",
       "vigencia_encargos": "2026-04-01",
       "vigencia_bdi": "2026-04-01",

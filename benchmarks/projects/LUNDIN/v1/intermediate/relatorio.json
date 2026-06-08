@@ -1,6 +1,6 @@
 {
   "meta": {
-    "gerado_em": "2026-06-08T14:10:13.431001+00:00",
+    "gerado_em": "2026-06-08T18:35:45.752852+00:00",
     "framework": "concilium",
     "adapter": "relatorio_validacao_v1",
     "nota": "Relatório de validação na ausência do template .xlsm original."
@@ -26,7 +26,8 @@
       "subtotal_sem_bdi": 49866712.0,
       "subtotal_com_bdi": 61810509.92,
       "pu_total_sem_bdi": 35.6191,
-      "pu_total_com_bdi": 44.1504
+      "pu_total_com_bdi": 44.1504,
+      "criticidade": "A"
     },
     {
       "item_id": "1.5",
@@ -41,7 +42,8 @@
       "subtotal_sem_bdi": 3664890.6,
       "subtotal_com_bdi": 4659997.42,
       "pu_total_sem_bdi": 2.6178,
-      "pu_total_com_bdi": 3.3286
+      "pu_total_com_bdi": 3.3286,
+      "criticidade": "B"
     },
     {
       "item_id": "1.3",
@@ -56,7 +58,8 @@
       "subtotal_sem_bdi": 2217970.04,
       "subtotal_com_bdi": 2611880.45,
       "pu_total_sem_bdi": 0.8767,
-      "pu_total_com_bdi": 1.0324
+      "pu_total_com_bdi": 1.0324,
+      "criticidade": "A+"
     }
   ],
   "EQUIPE": [
@@ -64,10 +67,10 @@
       "equipe_id": "eq-1.1",
       "item_id": "1.1",
       "cpu_id": "CPU-TERRA-ATI-001",
-      "custo_fixo_total": 0.0,
-      "custo_total": 0.0,
-      "permanencia_meses": 0.0,
-      "delta_pct": 1220.08221,
+      "custo_fixo_total": 11642.47,
+      "custo_total": 11641.43,
+      "permanencia_meses": 0.23,
+      "delta_pct": 5308.05309,
       "status_pe": "OK",
       "custo_venda_cpu": 61810509.92
     },
@@ -75,10 +78,10 @@
       "equipe_id": "eq-1.5",
       "item_id": "1.5",
       "cpu_id": "CPU-DIVER-ATI-067",
-      "custo_fixo_total": 0.0,
-      "custo_total": 0.0,
-      "permanencia_meses": 0.0,
-      "delta_pct": 165.82505,
+      "custo_fixo_total": 6424.69,
+      "custo_total": 6424.12,
+      "permanencia_meses": 0.23,
+      "delta_pct": 724.32629,
       "status_pe": "OK",
       "custo_venda_cpu": 4659997.42
     },
@@ -86,10 +89,10 @@
       "equipe_id": "eq-1.3",
       "item_id": "1.3",
       "cpu_id": "CPU-TERRA-ATI-003",
-      "custo_fixo_total": 0.0,
-      "custo_total": 0.0,
-      "permanencia_meses": 0.0,
-      "delta_pct": 19.08373,
+      "custo_fixo_total": 29911.4,
+      "custo_total": 29908.73,
+      "permanencia_meses": 0.23,
+      "delta_pct": 86.32056,
       "status_pe": "OK",
       "custo_venda_cpu": 2611880.45
     }
@@ -98,9 +101,9 @@
     {
       "item_id": "1.1",
       "custo_venda_cpu": 61810509.92,
-      "custo_operacional_real": 0.0,
-      "gap_operacional": 61810509.92,
-      "gap_pct": 0.0,
+      "custo_operacional_real": 11641.43,
+      "gap_operacional": 61798868.49,
+      "gap_pct": 5308.528977,
       "dominante": "Mão de Obra",
       "acao_sugerida": "Manter baseline",
       "custo_mao_obra": 29677.73,
@@ -111,9 +114,9 @@
     {
       "item_id": "1.5",
       "custo_venda_cpu": 4659997.42,
-      "custo_operacional_real": 0.0,
-      "gap_operacional": 4659997.42,
-      "gap_pct": 0.0,
+      "custo_operacional_real": 6424.12,
+      "gap_operacional": 4653573.3,
+      "gap_pct": 724.39078,
       "dominante": "Mão de Obra",
       "acao_sugerida": "Manter baseline",
       "custo_mao_obra": 22073.1,
@@ -124,9 +127,9 @@
     {
       "item_id": "1.3",
       "custo_venda_cpu": 2611880.45,
-      "custo_operacional_real": 0.0,
-      "gap_operacional": 2611880.45,
-      "gap_pct": 0.0,
+      "custo_operacional_real": 29908.73,
+      "gap_operacional": 2581971.72,
+      "gap_pct": 86.328364,
       "dominante": "Equipamentos",
       "acao_sugerida": "Manter baseline",
       "custo_mao_obra": 31314.14,
@@ -183,12 +186,102 @@
   },
   "GRAFICOS": {
     "equipamentos": {
-      "labels": [],
-      "values": []
+      "labels": [
+        "2026-W01",
+        "2026-W02",
+        "2026-W03"
+      ],
+      "values": [
+        1.0,
+        3.0,
+        1.0
+      ],
+      "by_type": {
+        "Spread": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "Automóvel (veículo leve)": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "Trator de Esteiras 20T": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "Escavadeira Hidráulica sobre esteira 22T": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "Motosserra a Gasolina": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      }
     },
     "mao_obra": {
-      "labels": [],
-      "values": []
+      "labels": [
+        "2026-W01",
+        "2026-W02",
+        "2026-W03"
+      ],
+      "values": [
+        2.0,
+        7.0,
+        3.0
+      ],
+      "by_funcao": {
+        "Operador de Motoscraper": [
+          0.5,
+          0.0,
+          0.0
+        ],
+        "Ajudante": [
+          1.5,
+          1.0,
+          2.0
+        ],
+        "Encarregado de Terraplenagem": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "Operador de Trator de Esteiras": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "Operador de Escavadeira": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "Operador de Motosserra": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "Encarregado de Frente": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "Apontador": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "Sinaleiro": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      }
     },
     "cronograma": {
       "tasks": [
@@ -240,42 +333,53 @@
         45396341.29000001
       ],
       "despesa": [
-        14792798.540000001,
-        2546958.2399999998
+        14804439.97,
+        2583291.09
       ],
       "saldo": [
-        30603542.46,
-        42849383.050000004
+        30591901.03,
+        42813050.2
       ],
       "exposicao": [
-        -30603542.46,
-        -73452925.51
+        -30591901.03,
+        -73404951.23
       ]
     },
     "painel_equilibrio": {
-      "delta_total": 68873785.32,
-      "soma_levers": 0,
+      "delta_total": 69034409.23,
+      "soma_levers": 5860.49,
       "break_even_alcancavel": true,
-      "levers": [],
+      "levers": [
+        {
+          "id": "fechar_gap_praticabilidade",
+          "tipo": "custo",
+          "descricao": "Praticabilidade: eta=83.9% aproveitamento efetivo",
+          "restricoes": [],
+          "delta_margin_total": 5860.49,
+          "item_count": 2,
+          "break_even_solo": false,
+          "participa_combo": false
+        }
+      ],
       "combinacoes_break_even": [],
-      "frentes_nec_media": 0.0
+      "frentes_nec_media": 0.001
     }
   },
   "ponto_equilibrio": [
     {
       "item_id": "1.1",
-      "custo_fixo_equipe": 50619.45,
-      "custo_operacional_real": 0.0,
+      "custo_fixo_equipe": 11642.47,
+      "custo_operacional_real": 11641.43,
       "custo_venda_cpu": 61810509.92,
-      "frentes_equivalentes": 0.0,
+      "frentes_equivalentes": 1.0,
       "status_validacao": "OK",
-      "margem_operacional_direta": 1.0,
+      "margem_operacional_direta": 0.999812,
       "margem_total_atribuida": 0.194987,
       "receita_atribuida": 81235495.31,
       "custo_direto_atribuido": 49881158.18,
       "custo_indireto_atribuido": 15514507.28,
       "resultado_total_atribuido": 15839829.85,
-      "gap_operacional": 61810509.92,
+      "gap_operacional": 61798868.49,
       "gap_produtivo": 0.0,
       "gap_mob_demob": 0.0,
       "gap_ociosidade": 0.0,
@@ -285,18 +389,18 @@
     },
     {
       "item_id": "1.5",
-      "custo_fixo_equipe": 27933.44,
-      "custo_operacional_real": 0.0,
+      "custo_fixo_equipe": 6424.69,
+      "custo_operacional_real": 6424.12,
       "custo_venda_cpu": 4659997.42,
-      "frentes_equivalentes": 0.0,
+      "frentes_equivalentes": 1.0,
       "status_validacao": "OK",
-      "margem_operacional_direta": 1.0,
+      "margem_operacional_direta": 0.998621,
       "margem_total_atribuida": 0.194987,
       "receita_atribuida": 6124479.46,
       "custo_direto_atribuido": 3760623.7,
       "custo_indireto_atribuido": 1169664.58,
       "resultado_total_atribuido": 1194191.19,
-      "gap_operacional": 4659997.42,
+      "gap_operacional": 4653573.3,
       "gap_produtivo": 0.0,
       "gap_mob_demob": 0.0,
       "gap_ociosidade": 0.0,
@@ -306,18 +410,18 @@
     },
     {
       "item_id": "1.3",
-      "custo_fixo_equipe": 130049.58,
-      "custo_operacional_real": 0.0,
+      "custo_fixo_equipe": 29911.4,
+      "custo_operacional_real": 29908.73,
       "custo_venda_cpu": 2611880.45,
-      "frentes_equivalentes": 0.0,
+      "frentes_equivalentes": 1.0,
       "status_validacao": "OK",
-      "margem_operacional_direta": 1.0,
+      "margem_operacional_direta": 0.988549,
       "margem_total_atribuida": 0.194987,
       "receita_atribuida": 3432707.52,
       "custo_direto_atribuido": 2107790.76,
       "custo_indireto_atribuido": 655584.92,
       "resultado_total_atribuido": 669331.83,
-      "gap_operacional": 2611880.45,
+      "gap_operacional": 2581971.72,
       "gap_produtivo": 0.0,
       "gap_mob_demob": 0.0,
       "gap_ociosidade": 0.0,
@@ -328,9 +432,9 @@
   ],
   "ACTIONABLE_INSIGHTS": {
     "criticidade": {
-      "projeto_id": "95045c61-3cdd-4e48-a72b-1f917e9d5fcd",
+      "projeto_id": "2a2a3302-0886-4311-9d98-180978d6a522",
       "versao": "1",
-      "gerado_em": "2026-06-08T14:09:23.113387Z",
+      "gerado_em": "2026-06-08T18:08:48.803029Z",
       "itens": [],
       "total_atividades": 0,
       "total_A_mais": 0,
@@ -341,16 +445,16 @@
       "notas_engenheiro": null
     },
     "sensibilidade": {
-      "projeto_id": "95045c61-3cdd-4e48-a72b-1f917e9d5fcd",
+      "projeto_id": "2a2a3302-0886-4311-9d98-180978d6a522",
       "versao": "1",
-      "gerado_em": "2026-06-08T14:09:23.113387Z",
+      "gerado_em": "2026-06-08T18:08:48.803029Z",
       "status_margem": "VERMELHO",
       "margem_entrada": 0.0,
       "margem_alvo_min": 0.0,
       "repair_viavel": false,
       "passos_repair": [
         {
-          "lever_tipo": "REVIEW_BDI",
+          "lever_tipo": "ADD_TEAMS",
           "lever_checkpoint": "",
           "delta_margem": 0.0,
           "custo_aplicacao": null,
@@ -364,9 +468,9 @@
       "exposicao_por_cpu": []
     },
     "intervencao": {
-      "projeto_id": "95045c61-3cdd-4e48-a72b-1f917e9d5fcd",
+      "projeto_id": "2a2a3302-0886-4311-9d98-180978d6a522",
       "versao": "1",
-      "gerado_em": "2026-06-08T14:09:23.113387Z",
+      "gerado_em": "2026-06-08T18:08:48.803029Z",
       "status_entrada": "VERMELHO",
       "eixos_intervencao": [
         {
@@ -378,13 +482,13 @@
           "levers_combinados": []
         },
         {
-          "nome": "Oportunidade REDUCE_DURATION",
-          "margem_estimada": 0.079869,
+          "nome": "Oportunidade MELHORAR_PRATICABILIDADE",
+          "margem_estimada": 0.000269,
           "prazo_delta_dias": null,
           "confianca": "MEDIA",
-          "risco": "ALTO",
+          "risco": "MEDIO",
           "levers_combinados": [
-            "REDUCE_DURATION"
+            "MELHORAR_PRATICABILIDADE"
           ]
         }
       ],

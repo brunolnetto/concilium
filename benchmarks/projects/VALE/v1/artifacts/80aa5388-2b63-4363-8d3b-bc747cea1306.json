@@ -1,0 +1,54 @@
+{
+  "projeto_id": "a7c0383f-2cdb-447a-9561-22187b8346b7",
+  "versao": "1",
+  "gerado_em": "2026-06-08T17:53:58.208655Z",
+  "status_entrada": "VERMELHO",
+  "eixos_intervencao": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.206082,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    },
+    {
+      "nome": "Oportunidade OTIMIZAR_POOL",
+      "margem_estimada": 0.035148,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "BAIXO",
+      "levers_combinados": [
+        "OTIMIZAR_POOL"
+      ]
+    },
+    {
+      "nome": "Oportunidade RECALIBRAR_PU",
+      "margem_estimada": 0.001364,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": [
+        "RECALIBRAR_PU"
+      ]
+    }
+  ],
+  "fronteira_pareto": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.206082,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    }
+  ],
+  "recomendacao_primaria": {
+    "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+    "margem_estimada": 0.206082,
+    "prazo_delta_dias": null,
+    "confianca": "MEDIA",
+    "risco": "MEDIO",
+    "levers_combinados": []
+  }
+}

@@ -1,6 +1,6 @@
 {
-  "decision_id": "dec_67c0b913",
-  "project_version": "8e5bc401-d865-4142-b467-582f8c3846f1",
+  "decision_id": "dec_172d47fb",
+  "project_version": "082c36f1-2e87-46b8-8e93-8a484df3af5c",
   "context": {
     "objective": "Aprovacao de Baseline para Auditoria Financeira",
     "constraints": []
@@ -24,5 +24,5 @@
     "type": "system",
     "id": "benchmark_runner"
   },
-  "timestamp": "2026-06-08T14:11:33.343493+00:00"
+  "timestamp": "2026-06-08T18:37:35.969330+00:00"
 }

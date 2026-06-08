@@ -1,0 +1,16 @@
+{
+  "artifact_id": "dc28589a-a196-4308-88dc-7179ee31b2c5",
+  "version": "v1",
+  "kind": "canonical",
+  "schema_name": "CanonicalModel",
+  "schema_version": "2026-05-03",
+  "created_at": "2026-06-08T18:35:18.091509Z",
+  "created_by": "15-relatorio-executivo",
+  "trace_id": null,
+  "parent_refs": [],
+  "state": "draft",
+  "content_hash": "c217b0a61d3d966318e54b188109ee2dc28c37ebc3f18e09d02eb42c5e13e2d1",
+  "catalog_snapshot_id": null,
+  "bdi_perfil_id": null,
+  "referencia_ids": []
+}

@@ -43,14 +43,14 @@ class TestCostDecompositionInvariant:
                     + eq.custo_inst_mob_demob
                 )
                 desvio = abs(soma - eq.custo_total)
-                assert (
-                    desvio < 0.05
-                ), f"Item {eq.item_id}: decomposição não fecha (soma={soma:,.2f}, total={eq.custo_total:,.2f}, desvio={desvio:,.2f})"
+                assert desvio < 0.05, (
+                    f"Item {eq.item_id}: decomposição não fecha (soma={soma:,.2f}, total={eq.custo_total:,.2f}, desvio={desvio:,.2f})"
+                )
 
         # Deve haver pelo menos alguns items com decomposição (estágio 4 com pool)
-        assert (
-            len(items_com_decomposicao) > 0
-        ), "Nenhum item com decomposição instancial preenchida — ADR-085 não foi executado?"
+        assert len(items_com_decomposicao) > 0, (
+            "Nenhum item com decomposição instancial preenchida — ADR-085 não foi executado?"
+        )
 
     def test_projection_breakdown_sums_correctly(self, agis_benchmark):
         """Valida que breakdown em report (MO+EQ+COMB+MAT) == total."""
@@ -69,9 +69,9 @@ class TestCostDecompositionInvariant:
             total = breakdown.get("direto_total", 0)
 
             # Agora deve fechar! (tolerância R$ 1.00 por arredondamentos)
-            assert (
-                abs(componentes - total) < 1.0
-            ), f"Breakdown não fecha: componentes={componentes:,.2f}, total={total:,.2f}"
+            assert abs(componentes - total) < 1.0, (
+                f"Breakdown não fecha: componentes={componentes:,.2f}, total={total:,.2f}"
+            )
 
     def test_agis_custo_direto_matches_reference(self, agis_benchmark):
         """AGIS: custo_direto agregado deve estar próximo de R$ 46,843,791.49 (PU×Q)."""
@@ -84,9 +84,9 @@ class TestCostDecompositionInvariant:
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         # Tolerância: 0.5% de desvio é aceitável após ajustes de decomposição
-        assert (
-            desvio_pct < 0.5
-        ), f"AGIS custo_direto={custo_direto_agregado:,.2f}, esperado={expected:,.2f}, desvio={desvio_pct:.2f}%"
+        assert desvio_pct < 0.5, (
+            f"AGIS custo_direto={custo_direto_agregado:,.2f}, esperado={expected:,.2f}, desvio={desvio_pct:.2f}%"
+        )
 
     def test_enrich_copies_decomposition_from_particao(self, agis_benchmark):
         """Items em contratos têm decomposição copiada de particao_por_item."""
@@ -102,18 +102,14 @@ class TestCostDecompositionInvariant:
         items_encontrados = set()
         for eq in canonical.equipes_diretas:
             if eq.item_id in items_esperados:
-                assert (
-                    eq.custo_inst_mo is not None
-                ), f"Item {eq.item_id}: custo_inst_mo é None, esperava decomposição"
-                assert (
-                    eq.custo_inst_eq is not None
-                ), f"Item {eq.item_id}: custo_inst_eq é None"
+                assert eq.custo_inst_mo is not None, f"Item {eq.item_id}: custo_inst_mo é None, esperava decomposição"
+                assert eq.custo_inst_eq is not None, f"Item {eq.item_id}: custo_inst_eq é None"
                 items_encontrados.add(eq.item_id)
 
         # Todos os items esperados devem ter sido encontrados
-        assert (
-            items_encontrados == items_esperados
-        ), f"Items faltando decomposição: {items_esperados - items_encontrados}"
+        assert items_encontrados == items_esperados, (
+            f"Items faltando decomposição: {items_esperados - items_encontrados}"
+        )
 
 
 class TestADR104Checkpoints:

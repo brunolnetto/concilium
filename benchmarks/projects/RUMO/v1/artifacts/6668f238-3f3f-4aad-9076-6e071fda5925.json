@@ -1,0 +1,23 @@
+{
+  "projeto_id": "9761243a-9b1d-4091-bb7c-13500a26fb8a",
+  "versao": "1",
+  "gerado_em": "2026-06-08T17:47:48.873724Z",
+  "status_margem": "VERMELHO",
+  "margem_entrada": 0.0,
+  "margem_alvo_min": 0.0,
+  "repair_viavel": false,
+  "passos_repair": [
+    {
+      "lever_tipo": "ADD_TEAMS",
+      "lever_checkpoint": "",
+      "delta_margem": 0.0,
+      "custo_aplicacao": null,
+      "ratio_beneficio": 0.0,
+      "confianca": "BAIXA",
+      "atividades_afetadas": []
+    }
+  ],
+  "oportunidades": [],
+  "margem_pos_repair": null,
+  "exposicao_por_cpu": []
+}

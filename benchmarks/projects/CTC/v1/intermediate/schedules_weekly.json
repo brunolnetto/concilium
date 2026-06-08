@@ -15,43 +15,43 @@
     },
     {
       "activity_id": "1.2",
-      "start_week": 0,
-      "end_week": 0,
+      "start_week": 1,
+      "end_week": 1,
       "duration_weeks": 1,
-      "data_inicio": "2026-01-01",
-      "data_fim": "2026-01-08"
+      "data_inicio": "2026-01-08",
+      "data_fim": "2026-01-15"
     },
     {
       "activity_id": "1.3",
-      "start_week": 0,
-      "end_week": 0,
+      "start_week": 2,
+      "end_week": 2,
       "duration_weeks": 1,
-      "data_inicio": "2026-01-01",
-      "data_fim": "2026-01-08"
+      "data_inicio": "2026-01-15",
+      "data_fim": "2026-01-22"
     },
     {
       "activity_id": "1.4",
-      "start_week": 0,
-      "end_week": 0,
+      "start_week": 3,
+      "end_week": 3,
       "duration_weeks": 1,
-      "data_inicio": "2026-01-01",
-      "data_fim": "2026-01-08"
+      "data_inicio": "2026-01-22",
+      "data_fim": "2026-01-29"
     },
     {
       "activity_id": "1.5",
-      "start_week": 0,
-      "end_week": 0,
+      "start_week": 4,
+      "end_week": 4,
       "duration_weeks": 1,
-      "data_inicio": "2026-01-01",
-      "data_fim": "2026-01-08"
+      "data_inicio": "2026-01-29",
+      "data_fim": "2026-02-05"
     },
     {
       "activity_id": "1.6",
-      "start_week": 0,
-      "end_week": 0,
+      "start_week": 5,
+      "end_week": 5,
       "duration_weeks": 1,
-      "data_inicio": "2026-01-01",
-      "data_fim": "2026-01-08"
+      "data_inicio": "2026-02-05",
+      "data_fim": "2026-02-12"
     }
   ]
 }

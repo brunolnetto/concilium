@@ -1,0 +1,97 @@
+{
+  "algorithm": "CP-SAT",
+  "quality_score": 0.85,
+  "makespan_weeks": 3,
+  "is_feasible": true,
+  "was_relaxed": false,
+  "activities": [
+    {
+      "activity_id": "eap-1_0",
+      "start_week": 0,
+      "end_week": 0,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-01",
+      "data_fim": "2026-06-08"
+    },
+    {
+      "activity_id": "eap-1_1",
+      "start_week": 1,
+      "end_week": 1,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-08",
+      "data_fim": "2026-06-15"
+    },
+    {
+      "activity_id": "eap-1_2",
+      "start_week": 2,
+      "end_week": 2,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-06-22"
+    },
+    {
+      "activity_id": "eap-1_3",
+      "start_week": 1,
+      "end_week": 1,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-08",
+      "data_fim": "2026-06-15"
+    },
+    {
+      "activity_id": "eap-1_4",
+      "start_week": 1,
+      "end_week": 1,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-08",
+      "data_fim": "2026-06-15"
+    },
+    {
+      "activity_id": "eap-1_5",
+      "start_week": 2,
+      "end_week": 2,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-06-22"
+    },
+    {
+      "activity_id": "eap-1_6",
+      "start_week": 2,
+      "end_week": 2,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-06-22"
+    },
+    {
+      "activity_id": "eap-1_7",
+      "start_week": 2,
+      "end_week": 2,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-06-22"
+    },
+    {
+      "activity_id": "eap-1_8",
+      "start_week": 2,
+      "end_week": 2,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-06-22"
+    },
+    {
+      "activity_id": "eap-1_9",
+      "start_week": 1,
+      "end_week": 1,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-08",
+      "data_fim": "2026-06-15"
+    },
+    {
+      "activity_id": "eap-1_10",
+      "start_week": 2,
+      "end_week": 2,
+      "duration_weeks": 1,
+      "data_inicio": "2026-06-15",
+      "data_fim": "2026-06-22"
+    }
+  ]
+}

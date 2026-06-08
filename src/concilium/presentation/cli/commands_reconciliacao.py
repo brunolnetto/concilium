@@ -1,7 +1,6 @@
 """Comando CLI para reconciliação de planejamento.txt ↔ canonical."""
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -14,7 +13,7 @@ from concilium.infrastructure.storage.project import ProjectStore
 
 def reconciliar(
     slug: str = typer.Option("AGIS", help="Slug do benchmark (ex: AGIS, RUMO)"),
-    projects_root: Optional[str] = typer.Option(
+    projects_root: str | None = typer.Option(
         None,
         help="Raiz de diretórios de projetos (padrão: benchmarks/projetos/)",
     ),
@@ -113,8 +112,7 @@ def reconciliar(
                 api_key = os.getenv("ANTHROPIC_API_KEY")
                 if not api_key:
                     raise ValueError(
-                        "ANTHROPIC_API_KEY não configurada. "
-                        "Configure via: export ANTHROPIC_API_KEY=sk-..."
+                        "ANTHROPIC_API_KEY não configurada. Configure via: export ANTHROPIC_API_KEY=sk-..."
                     )
 
                 analisador = AnalisadorLLMReconciliacao(api_key=api_key)
@@ -137,11 +135,7 @@ def reconciliar(
                 relatorio_llm_path = output_dir / "reconciliacao_analise_llm.txt"
                 relatorio_llm_path.write_text(relatorio_llm, encoding="utf-8")
 
-                typer.echo(
-                    f"\n✅ Relatórios salvos em:\n"
-                    f"   - {relatorio_path}\n"
-                    f"   - {relatorio_llm_path}"
-                )
+                typer.echo(f"\n✅ Relatórios salvos em:\n   - {relatorio_path}\n   - {relatorio_llm_path}")
             except Exception as e:
                 typer.echo(f"\n⚠️  Erro na análise LLM (continuando com relatório básico): {e}", err=True)
                 # Continuar mesmo sem análise LLM

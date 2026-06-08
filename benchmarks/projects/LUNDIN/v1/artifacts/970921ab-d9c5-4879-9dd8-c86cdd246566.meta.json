@@ -1,0 +1,16 @@
+{
+  "artifact_id": "970921ab-d9c5-4879-9dd8-c86cdd246566",
+  "version": "1.0.0",
+  "kind": "relatorio_intervencao",
+  "schema_name": "RelatorioIntervencao",
+  "schema_version": "1.0.0",
+  "created_at": "2026-06-08T14:55:07.788701Z",
+  "created_by": "15-relatorio-executivo",
+  "trace_id": null,
+  "parent_refs": [],
+  "state": "draft",
+  "content_hash": "87fb6c3de89adbc3ffd2389bc6b6068caa846e1e75374f31b23a186e594be032",
+  "catalog_snapshot_id": null,
+  "bdi_perfil_id": null,
+  "referencia_ids": []
+}

@@ -44,7 +44,7 @@ WORKDIR /workspace/concilium
 USER nonroot
 
 # Porta 8000: FastAPI REST
-# Porta 8080: FastMCP MCP server (transport HTTP — ADR-096)
+# Porta 8080: FastMCP MCP server (transport HTTP)
 EXPOSE 8000 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

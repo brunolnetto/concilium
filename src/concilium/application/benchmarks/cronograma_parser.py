@@ -11,11 +11,10 @@ Transforms cronograma.txt (TSV schedule data) into spec.eap format with:
 
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
-import csv
 
 
 @dataclass
@@ -65,7 +64,7 @@ def _load_produtividade_map(produtividade_path: Path) -> dict[str, float]:
             if not line:
                 continue
 
-            parts = [p.strip() for p in line.split('\t')]
+            parts = [p.strip() for p in line.split("\t")]
             if len(parts) < 4:
                 continue
 
@@ -75,7 +74,7 @@ def _load_produtividade_map(produtividade_path: Path) -> dict[str, float]:
 
             # Produção horária is 4th column (index 3)
             try:
-                prod_str = parts[3].replace('.', '').replace(',', '.')
+                prod_str = parts[3].replace(".", "").replace(",", ".")
                 produtividade[item_id] = float(prod_str)
             except (ValueError, IndexError):
                 pass
@@ -106,11 +105,7 @@ def _find_cpu_for_item(descricao: str, cpus_map: dict[str, str]) -> str | None:
     return None
 
 
-def _infer_predecessores(
-    items: list[CronogramaItem],
-    item_id: str,
-    secao_map: dict[str, str]
-) -> list[dict[str, Any]]:
+def _infer_predecessores(items: list[CronogramaItem], item_id: str, secao_map: dict[str, str]) -> list[dict[str, Any]]:
     """Infer predecessores from item structure and order.
 
     Rules:
@@ -162,12 +157,14 @@ def _infer_predecessores(
                         pass
 
             if last_prev_item:
-                predecessores.append({
-                    "item_id": last_prev_item,
-                    "tipo": "FS",
-                    "lag": 0,
-                    "completion_threshold_pct": 1.0  # Must finish before this can start
-                })
+                predecessores.append(
+                    {
+                        "item_id": last_prev_item,
+                        "tipo": "FS",
+                        "lag": 0,
+                        "completion_threshold_pct": 1.0,  # Must finish before this can start
+                    }
+                )
         # else: section == 1, first item overall, no predecessors
     else:
         # Find previous existing item in same section (may not be item_num - 1 due to gaps)
@@ -178,12 +175,14 @@ def _infer_predecessores(
                 break
 
         if prev_found:
-            predecessores.append({
-                "item_id": prev_found,
-                "tipo": "FS",
-                "lag": 0,
-                "completion_threshold_pct": 1.0  # Must finish before this can start
-            })
+            predecessores.append(
+                {
+                    "item_id": prev_found,
+                    "tipo": "FS",
+                    "lag": 0,
+                    "completion_threshold_pct": 1.0,  # Must finish before this can start
+                }
+            )
         else:
             # No previous item in section, depend on last item of previous section
             if section > 1:
@@ -201,12 +200,9 @@ def _infer_predecessores(
                             pass
 
                 if last_prev_item:
-                    predecessores.append({
-                        "item_id": last_prev_item,
-                        "tipo": "FS",
-                        "lag": 0,
-                        "completion_threshold_pct": 1.0
-                    })
+                    predecessores.append(
+                        {"item_id": last_prev_item, "tipo": "FS", "lag": 0, "completion_threshold_pct": 1.0}
+                    )
 
     return predecessores
 
@@ -239,7 +235,7 @@ class CronogramaParser:
             if not line.strip():
                 continue
 
-            parts = line.split('\t')
+            parts = line.split("\t")
             if len(parts) < 3:
                 continue
 
@@ -274,14 +270,16 @@ class CronogramaParser:
                 producao_diaria = _parse_valor(producao_str)
 
                 if quantitativo > 0:
-                    items.append(CronogramaItem(
-                        item_id=item_id,
-                        descricao=descricao,
-                        unidade=unidade,
-                        quantitativo=quantitativo,
-                        producao_diaria=producao_diaria,
-                        producao_horaria=producao_horaria,
-                    ))
+                    items.append(
+                        CronogramaItem(
+                            item_id=item_id,
+                            descricao=descricao,
+                            unidade=unidade,
+                            quantitativo=quantitativo,
+                            producao_diaria=producao_diaria,
+                            producao_horaria=producao_horaria,
+                        )
+                    )
 
         # Deduplicate items by item_id (keep first occurrence)
         seen_ids: set[str] = set()
@@ -325,7 +323,7 @@ class CronogramaParser:
             return cpus_map
 
         with open(cpus_path, encoding="utf-8") as f:
-            reader = csv.reader(f, delimiter='\t')
+            reader = csv.reader(f, delimiter="\t")
             next(reader, None)  # Skip header
 
             for row in reader:

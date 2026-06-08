@@ -11,26 +11,13 @@ Objetivo: Reduzir fragmentação e garantir consistência atômica entre dimensi
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from concilium.application.skills.base import SkillResult
-from concilium.domain.constants import (
-    ENCARGOS_CLT,
-    ENCARGOS_MENSALISTA,
-    SEMANAS_POR_MES,
-)
 from concilium.domain.models.canonical import (
-    Alocacao,
     CanonicalModel,
     ConflitoPico,
-    EquipamentoEquipeDireta,
-    EquipeDireta,
-    FuncaoEquipeDireta,
     RecursoContrato,
-    RecursoPool,
-    RequisitoRecurso,
-    TipoRecurso,
     ValidacaoItem,
 )
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
@@ -99,13 +86,13 @@ def run_equipes_e_alocacao(
     # ADR-107: Reconciliar custo_total com planejamento (fonte de verdade)
     # Se spec.planejamento[item_id] existe, use seu custo_sem_bdi como custo_total
     planejamento_map = {}
-    if hasattr(canonical_in, 'planejamento') and canonical_in.planejamento:
+    if hasattr(canonical_in, "planejamento") and canonical_in.planejamento:
         planejamento_map = {p.item_id: p for p in canonical_in.planejamento}
 
     for eq in equipes:
         if eq.item_id in planejamento_map:
             plan = planejamento_map[eq.item_id]
-            custo_ref = float(getattr(plan, 'custo_sem_bdi', None) or 0.0)
+            custo_ref = float(getattr(plan, "custo_sem_bdi", None) or 0.0)
             if custo_ref > 0 and abs(custo_ref - eq.custo_total) > 1.0:
                 desvio = abs(custo_ref - eq.custo_total)
                 validacoes.append(
@@ -278,6 +265,7 @@ def run_equipes_e_alocacao(
 
 class _RepoCtx:
     """Contexto para lookups rápidos durante dimensionamento."""
+
     def __init__(self, repo, jurisdicao_id, overrides, data_base):
         self.repo = repo
         self.jurisdicao_id = jurisdicao_id

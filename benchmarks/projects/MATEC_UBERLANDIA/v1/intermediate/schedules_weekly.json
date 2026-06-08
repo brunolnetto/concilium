@@ -15,11 +15,11 @@
     },
     {
       "activity_id": "2.3",
-      "start_week": 0,
-      "end_week": 0,
+      "start_week": 1,
+      "end_week": 1,
       "duration_weeks": 1,
-      "data_inicio": "2026-01-01",
-      "data_fim": "2026-01-08"
+      "data_inicio": "2026-01-08",
+      "data_fim": "2026-01-15"
     }
   ]
 }
