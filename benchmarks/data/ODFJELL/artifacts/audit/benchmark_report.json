@@ -6,7 +6,7 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "EXCEPTION",
-      "duration_ms": 742,
+      "duration_ms": 1483,
       "avisos": [],
       "erros": [
         "3 validation errors for EapItem\nordem\n  Field required [type=missing, input_value={'item_id': '1.1', 'descr...d': 'CPU-TERRA-ATI-003'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nunidade\n  Field required [type=missing, input_value={'item_id': '1.1', 'descr...d': 'CPU-TERRA-ATI-003'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nquantitativo\n  Input should be greater than 0 [type=greater_than, input_value=0.0, input_type=float]\n    For further information visit https://errors.pydantic.dev/2.13/v/greater_than"

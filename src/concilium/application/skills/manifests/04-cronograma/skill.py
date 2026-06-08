@@ -899,6 +899,10 @@ def _infer_teams_from_resources(
 
     ADR-074: Quando ``ramp_profile`` é fornecido, escala a demanda peak pelo
     fator da semana. ``ramp_profile[week_offset]`` ∈ [0.0, 1.0] onde 1.0 = pico.
+
+    Minimalista fallback: Quando assigned_resources está vazio (pool vazio em AUTO_SCHEDULE),
+    retorna 1 equipe por semana para permitir que skill-05 calcule custos. Isso é uma
+    heurística padrão que representa "1 equipe típica para essa atividade".
     """
     if not assigned_resources:
         return 0
