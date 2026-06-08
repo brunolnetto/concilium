@@ -442,11 +442,12 @@ def _extract_activities(
             )
         return activities
 
-    # Fallback to EAP: must use activity_id format "item_id-atv-1" to match DAG edges
+    # Fallback to EAP: activity_id is item_id (without "-atv-1" suffix)
+    # Matches DAG precedence keys which use item_id directly (ADR-081)
     # ADR-072 Direção A: calcular duração produtiva se catálogos disponíveis
     validacoes = validacoes or []
     for item in canonical_in.eap:
-        activity_id = f"{item.item_id}-atv-1"
+        activity_id = item.item_id
 
         # Calcular duração produtiva se catálogos disponíveis
         duration_weeks = 1  # default
