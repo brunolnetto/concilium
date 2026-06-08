@@ -1,0 +1,23 @@
+{
+  "projeto_id": "02b908eb-5f16-4850-bdae-aff91f1ee991",
+  "versao": "1",
+  "gerado_em": "2026-06-08T14:11:03.895788Z",
+  "status_margem": "VERMELHO",
+  "margem_entrada": 0.0,
+  "margem_alvo_min": 0.0,
+  "repair_viavel": false,
+  "passos_repair": [
+    {
+      "lever_tipo": "REVIEW_BDI",
+      "lever_checkpoint": "",
+      "delta_margem": 0.0,
+      "custo_aplicacao": null,
+      "ratio_beneficio": 0.0,
+      "confianca": "BAIXA",
+      "atividades_afetadas": []
+    }
+  ],
+  "oportunidades": [],
+  "margem_pos_repair": null,
+  "exposicao_por_cpu": []
+}

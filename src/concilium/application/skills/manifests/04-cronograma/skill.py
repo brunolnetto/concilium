@@ -8,6 +8,11 @@ Dual-mode scheduling:
           Fallback chain: heurísticas -> relax -> MILP
 
 Saída unificada: Cronograma com scheduled_activities (semanal) + distribuicao_mensal (mensal)
+
+DEPRECATION NOTICE (ADR-105):
+  spec.rcpsp_spec is deprecated in favor of automatic MOB window inference.
+  Use infer_mob_windows() with meta.data_inicio/termino + spec.eap.predecessores.
+  Target removal: v4.0. Migration guide: docs/engineering/ADR-105-migration.md
 """
 
 from __future__ import annotations

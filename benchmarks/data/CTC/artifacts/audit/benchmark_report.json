@@ -6,19 +6,19 @@
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 977,
+      "duration_ms": 1745,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 82,
+      "duration_ms": 148,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 136,
+      "duration_ms": 294,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -69,13 +69,13 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 33,
+      "duration_ms": 54,
       "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 31,
+      "duration_ms": 54,
       "avisos": [
         "Item '1.1': custo_total=0.00 ou Q=330133.0 inválido — cobertura não calculada.",
         "Item '1.2': custo_total=0.00 ou Q=2200000.0 inválido — cobertura não calculada.",
@@ -88,13 +88,13 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 31,
+      "duration_ms": 75,
       "avisos": []
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 29,
+      "duration_ms": 50,
       "avisos": [
         "Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)",
         "Sem execução no cronograma"
@@ -103,7 +103,7 @@
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 38,
+      "duration_ms": 83,
       "avisos": [
         "Margem operacional 17.87% | status=VERMELHO | preço R$ 41,567,615 (operacional) vs R$ 162,058,379 (catálogo)",
         "Família 'CPU' com itens originalmente em ERRO (1.6) mas saldo agregado positivo (Δfam = R$ 117,805,810.73). Criticidade rebaixada para AVISO."
@@ -112,13 +112,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 29,
+      "duration_ms": 70,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 401,
+      "duration_ms": 874,
       "avisos": [
         "Relatório de criticidade presente, mas sem atividades classificadas.",
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
@@ -127,25 +127,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 29,
+      "duration_ms": 52,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 29,
+      "duration_ms": 38,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 124,
+      "duration_ms": 185,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 29,
+      "duration_ms": 47,
       "avisos": []
     }
   ],
