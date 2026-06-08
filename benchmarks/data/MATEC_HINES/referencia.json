@@ -506,5 +506,14 @@
         "mao_obra": []
       }
     ]
+  },
+  "resultado": {
+    "benchmark_confronto_referencia": {
+      "custo_direto": 21577942.76,
+      "custo_indireto": 7091685.77,
+      "custo_total": 28669628.53,
+      "preco_venda": 35837035.66
+    },
+    "bdi_lucro_impostos": 0.25
   }
 }
