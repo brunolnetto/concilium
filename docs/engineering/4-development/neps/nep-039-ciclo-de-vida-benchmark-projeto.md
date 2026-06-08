@@ -1,11 +1,16 @@
 # NEP-039: Ciclo de vida benchmark-projeto e governança de reutilização
 
-**Status:** Proposta  
+**Status:** Parcialmente Implementado ⚠️ _(auditado 2026-06-08)_  
 **Prioridade:** 🟠 Alto  
 **Área:** Arquitetura e Skills  
 **Tipo:** Governança + Feature  
 **Esforço:** L  
 **Identificado em:** 2026-06-03
+
+> **Nota de auditoria (2026-06-08):** `BenchmarkMetadata` e `BenchmarkExecution` implementados em
+> `src/concilium/domain/benchmark/models.py`; `benchmark_nep039.py` MCP tool presente.
+> Pendente: MCP tools de edição controlada, migração de benchmarks existentes, campos
+> `derivado_de_benchmark`/`benchmark_versao` em `ProjectMetadata`.
 
 ---
 

@@ -1,12 +1,17 @@
 # NEP-038: Criticidade RCPSP e Teoria de Compressão de Cronograma
 
-**Status:** Proposta  
+**Status:** Implementado ✅ _(auditado 2026-06-08)_  
 **Prioridade:** 🟡 Alta  
 **Área:** Scheduling e Otimização  
 **Tipo:** Formalização + Feature  
 **Esforço:** L  
 **Identificado em:** 2026-06-01  
 **Depende de:** ADR-071 (pool contracts), ADR-079 (ativação econômica), NEP-035 (η)
+
+> **Nota de auditoria (2026-06-08):** `compute_compression_sensitivities` presente em
+> `compression_analysis.py`; integrado em skill-09 via `_rra_build_compressao_cronograma`.
+> Checklist de itens secundários (serialização no canônico, seção PDF) ainda pendente —
+> funcionalidade core implementada.
 
 ---
 

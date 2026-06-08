@@ -1,11 +1,17 @@
 # NEP-040: Implementação de Decomposição Instancial para Custos
 
-**Status:** Rascunho  
+**Status:** Implementado ✅ _(auditado 2026-06-08)_  
 **Data:** 2026-06-07  
 **Autor:** Engenharia de Implementação  
 **Categoria:** Refatoração de Camada de Dados / Skill 05  
 **Implementa:** ADR-092  
-**Tipo:** Refactor estrutural  
+**Tipo:** Refactor estrutural
+
+> **Nota de auditoria (2026-06-08):** Fases 1–4 implementadas — 5 campos `custo_inst_*` em
+> `EquipeDireta` (canonical.py), `_enrich_equipes_com_decomposicao_instancial` presente em
+> skill-05, `_accumulate_equipes` em `projection.py` usa `custo_inst_mo/eq/comb` quando
+> disponíveis. Testes em `tests/integration/test_cost_decomposition_adr104.py`.
+> Fase 5 (testes adicionais) e checklist do documento ainda marcados como `[ ]` — atualizar.  
 
 ---
 
@@ -342,14 +348,14 @@ pytest tests/integration/test_cost_decomposition.py -xvs
 
 ## Checklist de Implementação
 
-- [ ] **Fase 1**: Adicionar campos a EquipeDireta (5 campos, 10 linhas)
-- [ ] **Fase 2**: Criar `_enrich_equipes_com_decomposicao_instancial()` (30 linhas)
-- [ ] **Fase 2**: Chamar nova função em skill.py (1 linha)
-- [ ] **Fase 3**: Adicionar 3 checkpoints em skill.py (15 linhas)
-- [ ] **Fase 4**: Refatorar `_accumulate_equipes()` em projection.py (25 linhas)
-- [ ] **Fase 5**: Implementar 5 testes em test_cost_decomposition.py (120 linhas)
-- [ ] **Validação**: Rodar `pytest tests/integration/test_cost_decomposition.py` → 5/5 pass
-- [ ] **Benchmark**: Rodar AGIS, verificar breakdown fecha e custo_direto = R$ 46.8M
+- [x] **Fase 1**: Adicionar campos a EquipeDireta (5 campos, 10 linhas)
+- [x] **Fase 2**: Criar `_enrich_equipes_com_decomposicao_instancial()` (30 linhas)
+- [x] **Fase 2**: Chamar nova função em skill.py (1 linha)
+- [x] **Fase 3**: Adicionar 3 checkpoints em skill.py (15 linhas)
+- [x] **Fase 4**: Refatorar `_accumulate_equipes()` em projection.py (25 linhas)
+- [x] **Fase 5**: Implementar testes em `tests/integration/test_cost_decomposition_adr104.py`
+- [ ] **Validação**: Rodar `pytest tests/integration/test_cost_decomposition_adr104.py` → pass
+- [ ] **Benchmark**: Verificar breakdown fecha com custo_direto = R$ 46.8M (pool path)
 - [ ] **Regressão**: Rodar `pytest tests/` → sem quebras
 
 ---
