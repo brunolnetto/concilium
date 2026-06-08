@@ -961,7 +961,7 @@ def _infer_teams_from_resources(
     heurística padrão que representa "1 equipe típica para essa atividade".
     """
     if not assigned_resources:
-        return 0
+        return 1
     peak = int(sum(assigned_resources.values()))
     if ramp_profile is not None and week_offset < len(ramp_profile):
         return max(0, round(peak * ramp_profile[week_offset]))
@@ -1788,17 +1788,25 @@ def _build_scheduled_activities(
     # Constrói mapa de item_id → duration_weeks do schedule_selected
     # (activity_id do scheduler tem formato "item_id-atv-1", need to extract item_id)
     duration_lookup = {}
-    if schedule_selected is not None:
-        for sa in getattr(schedule_selected, "scheduled_activities", []):
+    if schedule_selected is not None and getattr(schedule_selected, "scheduled_activities", None):
+        for sa in schedule_selected.scheduled_activities:
             activity_id = getattr(sa, "activity_id", None)
-            if activity_id:
+            duration = getattr(sa, "duration_weeks", None)
+            if activity_id and duration:
                 # Extract item_id from activity_id (format: "item_id-atv-1")
                 # activity_id pode ser "eap-1_0-atv-1" ou simplesmente "eap-1_0"
                 if "-atv-" in activity_id:
                     item_id = activity_id.rsplit("-atv-", 1)[0]
                 else:
                     item_id = activity_id
-                duration_lookup[item_id] = getattr(sa, "duration_weeks", 1)
+                duration_lookup[item_id] = duration
+
+    # Log: show if duration_lookup was populated
+    import sys
+    if duration_lookup:
+        print(f"DEBUG: duration_lookup populated with {len(duration_lookup)} items", file=sys.stderr)
+    else:
+        print(f"DEBUG: duration_lookup is EMPTY (schedule_selected={schedule_selected is not None})", file=sys.stderr)
 
     for item in canonical_in.eap:  # type: ignore[union-attr]
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
