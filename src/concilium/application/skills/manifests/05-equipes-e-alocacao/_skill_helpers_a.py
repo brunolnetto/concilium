@@ -700,15 +700,15 @@ def _build_dimensionamento(
         # ADR-091: Dividir permanência pelo número de equipes paralelas alocadas para evitar duplicação de custos
         # assigned_resources é propagado por skill-04 em modo AUTO; em MANUAL_ALLOCATION fica vazio.
         # Para ambos os casos, inferimos o número de equipes paralelas do cronograma: max(num_equipes) na distribuição semanal
-        assigned_resources = getattr(cron, 'assigned_resources', None) or {}
+        assigned_resources = getattr(cron, "assigned_resources", None) or {}
         num_equipes_paralelas = sum(assigned_resources.values()) if assigned_resources else 1
 
         # Se assigned_resources está vazio, deduzir do cronograma (MANUAL_ALLOCATION case)
         if not num_equipes_paralelas or num_equipes_paralelas == 1:
-            dist_semanal = getattr(cron, 'distribuicao_semanal', {}) or {}
+            dist_semanal = getattr(cron, "distribuicao_semanal", {}) or {}
             if dist_semanal and isinstance(dist_semanal, dict):
                 values_list = list(dist_semanal.values())
-                max_num_eq = max((getattr(d, 'num_equipes', 0) for d in values_list), default=1)
+                max_num_eq = max((getattr(d, "num_equipes", 0) for d in values_list), default=1)
                 if max_num_eq > 1:
                     num_equipes_paralelas = max_num_eq
 
@@ -727,7 +727,9 @@ def _build_dimensionamento(
         # Fórmula original: custo_total = (fixo_sem_comb + comb_nominal*eff) * team_weeks
         # Ajustar: custo_total_ajustado = custo_total / num_equipes_paralelas (para casos com múltiplas equipes)
         custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
-        custo_total_final = round(custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
+        custo_total_final = round(
+            custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2
+        )
         fixo_mensal_total = round(fixo_mensal + custo_mat, 2)
         equipes.append(
             EquipeDireta(
@@ -746,6 +748,7 @@ def _build_dimensionamento(
                 permanencia_meses=round(ativos / SEMANAS_POR_MES, 2),
                 permanencia_efetiva_meses=permanencia_efetiva,
                 custo_total=custo_total_final,
+                custo_total_autonomo=custo_total_final,
                 modo_estimativa=modo_est,
                 custo_ocioso_equipamentos=custo_ocioso,
                 custo_mob_desmob=custo_mob_desmob,
@@ -2460,12 +2463,7 @@ def _enrich_equipes_com_decomposicao_instancial(
             # Validar invariante (detecção precoce de bugs)
             # ADR-085: custo_total_particionado = custo_inst_mo + eq + comb + mat
             # (mob_demob já está incluído em custo_inst_mo como resíduo)
-            soma = (
-                eq.custo_inst_mo
-                + eq.custo_inst_eq
-                + eq.custo_inst_comb
-                + eq.custo_inst_mat
-            )
+            soma = eq.custo_inst_mo + eq.custo_inst_eq + eq.custo_inst_comb + eq.custo_inst_mat
             desvio = abs(soma - eq.custo_total)
 
             # ADR-106: Se há desvio significativo, reescalar proporcionalmente para garantir invariante
