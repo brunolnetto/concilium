@@ -830,6 +830,7 @@ def _add_tipo_item_demand(
     dist: dict,
     tipo_items: dict,
     tipo_week_demand: dict,
+    custo_hora_ref_sem: float = 0.0,
 ) -> None:
     """Appends item entry and week demand for a single tipo."""
     actual_mw = sum(
@@ -853,6 +854,10 @@ def _add_tipo_item_demand(
             "comp_eq": comp_eq,
             "comp_comb": comp_comb,
             "comp_mat": comp_mat,
+            # Custo de 1 equipe por 1 semana de trabalho ativo (custo_hora_total_referencia × horas).
+            # Quando disponível (via catálogo), sobrepõe custo_total_item/machine_weeks que pode ser
+            # afetado por distorções do schedule (n_frentes × durações ainda não convergidas).
+            "custo_hora_ref_sem": custo_hora_ref_sem,
         }
     )
     _accum_week_demand(tipo_week_demand, tipo, active_weeks, dist, required, total_required_peak)
@@ -864,6 +869,24 @@ def _get_active_weeks(sa) -> list:
     return sorted([w for w, d in dist.items() if (getattr(d, "num_equipes", 0) or 0) > 0], key=_week_idx)
 
 
+def _resolve_custo_hora_ref_sem(eq, cpu_lookup: dict | None, prod_lookup: dict | None, horas_semana: float) -> float:
+    """Resolve custo_hora_total_referencia × horas_semana do catálogo para a equipe.
+
+    Retorna 0.0 quando o lookup não está disponível ou o campo está ausente —
+    nesse caso _compute_custo_unit_fracs usa o fallback (custo_total_item/machine_weeks).
+    """
+    if not cpu_lookup or not prod_lookup:
+        return 0.0
+    cpu = cpu_lookup.get(getattr(eq, "cpu_id", "") or "")
+    if not cpu:
+        return 0.0
+    prod = prod_lookup.get(cpu.get("producao_id_ref") or "")
+    if not prod:
+        return 0.0
+    c_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
+    return round(c_ref * horas_semana, 4) if c_ref > 0.0 else 0.0
+
+
 def _process_item_tipo_map(
     iid: str,
     tipo_map: dict,
@@ -873,6 +896,9 @@ def _process_item_tipo_map(
     tipo_items: dict,
     tipo_week_demand: dict,
     validacoes: list,
+    cpu_lookup: dict | None = None,
+    prod_lookup: dict | None = None,
+    horas_semana: float = 48.0,
 ) -> None:
     """Processes one iid from item_tipo_map, appending to tipo_items/tipo_week_demand."""
     eq = equipe_map.get(iid)
@@ -891,11 +917,13 @@ def _process_item_tipo_map(
         return
     dist = getattr(sa, "distribuicao_semanal", None) or {}
     total_required_peak = sum(tipo_map.values()) or 1
+    custo_hora_ref_sem = _resolve_custo_hora_ref_sem(eq, cpu_lookup, prod_lookup, horas_semana)
     for tipo, required in tipo_map.items():
         if tipo not in pool:
             continue
         _add_tipo_item_demand(
-            tipo, iid, required, total_required_peak, active_weeks, eq, dist, tipo_items, tipo_week_demand
+            tipo, iid, required, total_required_peak, active_weeks, eq, dist, tipo_items, tipo_week_demand,
+            custo_hora_ref_sem=custo_hora_ref_sem,
         )
 
 
@@ -905,21 +933,40 @@ def _collect_tipo_items_and_demands(
     pool: dict,
     sched_lookup: dict,
     validacoes: list,
+    cpu_lookup: dict | None = None,
+    prod_lookup: dict | None = None,
+    horas_semana: float = 48.0,
 ) -> tuple[dict, dict]:
     """Itera items e constrói tipo_items / tipo_week_demand."""
     tipo_items: dict[str, list[dict]] = {}
     tipo_week_demand: dict[str, dict[str, int]] = {}
     for iid, tipo_map in item_tipo_map.items():
-        _process_item_tipo_map(iid, tipo_map, equipe_map, pool, sched_lookup, tipo_items, tipo_week_demand, validacoes)
+        _process_item_tipo_map(
+            iid, tipo_map, equipe_map, pool, sched_lookup, tipo_items, tipo_week_demand, validacoes,
+            cpu_lookup=cpu_lookup, prod_lookup=prod_lookup, horas_semana=horas_semana,
+        )
     return tipo_items, tipo_week_demand
 
 
 def _compute_custo_unit_fracs(mw_list: list) -> tuple:
-    """Retorna (custo_unit_semanal, frac_mo, frac_eq, frac_comb, frac_mat) via média ponderada."""
+    """Retorna (custo_unit_semanal, frac_mo, frac_eq, frac_comb, frac_mat) via média ponderada.
+
+    custo_unit_semanal é o custo de 1 recurso-tipo por 1 semana de trabalho ativo.
+    Quando ``custo_hora_ref_sem`` está disponível (derivado de producao.custo_hora_total_referencia),
+    usa esse valor autoritativo de catálogo — garante que o pool usa o mesmo preço base do PUxQ,
+    independente de distorções do schedule em equipe.custo_total.
+    Fallback: custo_total_item / machine_weeks (estimativa a partir da equipe dimensionada).
+    """
     total_mw = sum(mw for _, mw, _ in mw_list)
+    # Preferir custo_hora_ref_sem (catálogo) quando disponível
     custo_unit_semanal = (
-        sum((it["custo_total_item"] / it["machine_weeks"]) * mw for _, mw, it in mw_list if it["machine_weeks"] > 0)
+        sum(
+            (it.get("custo_hora_ref_sem") or (it["custo_total_item"] / it["machine_weeks"] if it["machine_weeks"] > 0 else 0.0)) * mw
+            for _, mw, it in mw_list
+        )
         / total_mw
+        if total_mw > 0
+        else 0.0
     )
     _acc = {"mo": 0.0, "eq": 0.0, "comb": 0.0, "mat": 0.0}
     for _, mw, it in mw_list:
@@ -1143,6 +1190,9 @@ def _build_contratos_recurso(
     rcpsp_spec: dict,
     sched_lookup: dict,
     validacoes: list,
+    cpu_lookup: dict | None = None,
+    prod_lookup: dict | None = None,
+    horas_semana: float = 48.0,
 ) -> tuple[list[RecursoContrato], dict[str, tuple[float, str, float]], list[CadeiaPerpetuacao]]:
     """Calcula contratos de pool e retorna (contratos, atribuicao_por_item, cadeias).
 
@@ -1177,7 +1227,8 @@ def _build_contratos_recurso(
         return [], {}, []
 
     tipo_items, tipo_week_demand = _collect_tipo_items_and_demands(
-        item_tipo_map, equipe_map, pool, sched_lookup, validacoes
+        item_tipo_map, equipe_map, pool, sched_lookup, validacoes,
+        cpu_lookup=cpu_lookup, prod_lookup=prod_lookup, horas_semana=horas_semana,
     )
 
     contratos: list[RecursoContrato] = []

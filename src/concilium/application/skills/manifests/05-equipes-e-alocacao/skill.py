@@ -125,10 +125,20 @@ def run_equipes_e_alocacao(
     # ADR-071/073: Pool Contract Model + Perpetuation Chains
     contratos_recurso: list[RecursoContrato] = []
     cadeias_perpetuacao = []
+    # Indexes para custo_hora_total_referencia do catálogo → custo_unit_semanal de catálogo
+    _cpu_lookup: dict = {c["codigo"]: c for c in catalogo.get("cpus", []) if c.get("codigo")}
+    _prod_lookup: dict = {
+        p.get("id") or p.get("codigo", ""): p
+        for p in (catalogo.get("producoes") or catalogo.get("produtividades") or [])
+    }
+    _regime = canonical_in.projeto.regime_trabalho
+    _horas_semana = float(_regime.horas_dia * _regime.dias_semana)
+
     rcpsp_spec = inputs.get("rcpsp_spec") if isinstance(inputs.get("rcpsp_spec"), dict) else None
     if rcpsp_spec:
         contratos_recurso, atribuicao, cadeias_perpetuacao = _build_contratos_recurso(
-            equipes, rcpsp_spec, cron_lookup, validacoes
+            equipes, rcpsp_spec, cron_lookup, validacoes,
+            cpu_lookup=_cpu_lookup, prod_lookup=_prod_lookup, horas_semana=_horas_semana,
         )
         # Atualiza custo_total de cada equipe coberta pelo pool contract
         for eq in equipes:
