@@ -35,7 +35,7 @@
   "praticabilidade": {
     "fonte": "open-meteo",
     "limiar_inviabilidade_mm": 10.0,
-    "calculada_em": "2026-06-08T13:46:11.044575Z",
+    "calculada_em": "2026-06-08T14:08:43.116671Z",
     "percentual_produtivo_semanal": {
       "2025-W01": 0.8571,
       "2025-W02": 1.0,
@@ -8688,7 +8688,7 @@
   "relatorio_oportunidades": null,
   "requisitos": [
     {
-      "requisito_id": "8fec658f-7534-4d5f-ac18-99b04426bb3b",
+      "requisito_id": "5f5361b1-b25b-4167-91ef-ba4cedd426ab",
       "atividade_id": "1.1-atv-1",
       "tipo_recurso_id": "FUNC-P0052",
       "descricao": "Oficial",
@@ -8698,7 +8698,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "f7279cab-596b-4f9f-8c38-227a5f245c21",
+      "requisito_id": "49f4ec06-7f61-4347-82a9-4d4c9024cfac",
       "atividade_id": "1.1-atv-1",
       "tipo_recurso_id": "FUNC-P0001",
       "descricao": "Ajudante",
@@ -8708,7 +8708,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "8eb59be7-5210-48f8-ac21-e72ea6f6676d",
+      "requisito_id": "c5f4e57b-4710-4971-93b7-eed5f56aa84a",
       "atividade_id": "1.1-atv-1",
       "tipo_recurso_id": "FUNC-P0071",
       "descricao": "Motorista de caminhão munck",
@@ -8718,7 +8718,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "5ce7083b-7c11-4ead-bd27-5cf51b60fce8",
+      "requisito_id": "5ce434da-0fef-4609-94cd-539b83eafa09",
       "atividade_id": "1.1-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0007",
       "descricao": "Caminhão Basculante 14m³",
@@ -8728,7 +8728,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "ca736208-1748-41d7-8d65-335249b90cd1",
+      "requisito_id": "0abc542e-f08f-4acc-bf63-dbc4b29a798a",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-OPER-TRAT-EST",
       "descricao": "Operador de Trator de Esteiras",
@@ -8738,7 +8738,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "9c0a10e8-cc2e-4044-8a79-557405d8ec08",
+      "requisito_id": "4d26c709-d734-46b7-a596-2cb09f55c52e",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-OPER-ESCAV",
       "descricao": "Operador de Escavadeira",
@@ -8748,7 +8748,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "03ee8923-13c5-4c6c-b78e-55cdf5934298",
+      "requisito_id": "3bb439bc-5131-4211-bfe3-fe3b076dc15d",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-OPER-MOTOSSERRA",
       "descricao": "Operador de Motosserra",
@@ -8758,7 +8758,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "de55b313-888b-42a3-8fa2-21ba0f5c7340",
+      "requisito_id": "5b4ed24f-08e1-4181-90f3-5c75a5e61450",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-AJUD",
       "descricao": "Ajudante",
@@ -8768,7 +8768,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "4c8164ff-7681-4af8-a86c-62d84dd301ca",
+      "requisito_id": "216237c3-2ecd-4be8-8835-558cb2b169a8",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-ENCAR",
       "descricao": "Encarregado de Frente",
@@ -8778,7 +8778,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "7901cad1-123f-4341-9b1e-12ad6a6b6ba5",
+      "requisito_id": "1551b4fa-7321-43bd-8fe9-dae5a988a1ce",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-APONTADOR",
       "descricao": "Apontador",
@@ -8788,7 +8788,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "166b9a29-469a-4f0b-85e1-9fd0d705dcdf",
+      "requisito_id": "66ab60cd-6b82-4a32-aee8-9052a83c52f7",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-SINALEIRO",
       "descricao": "Sinaleiro",
@@ -8798,7 +8798,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "3abb5c3c-1d1f-4455-9dd9-a9c933ea436c",
+      "requisito_id": "eea0b384-df45-488c-a423-6a873283f8a7",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "EQUIP-AGIS-TRAT-EST-20T",
       "descricao": "Trator de Esteiras 20T",
@@ -8808,7 +8808,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "61fc1a4d-0a9d-4a45-bfdb-f2c6d0285205",
+      "requisito_id": "74efe568-d618-41eb-a785-a00315b4a419",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "EQUIP-AGIS-ESCAV-22T",
       "descricao": "Escavadeira Hidráulica sobre esteira 22T",
@@ -8818,7 +8818,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "d0c1c67d-137c-4634-8d38-8c6e458f7c30",
+      "requisito_id": "c2408628-a01c-49bb-b588-1f5412529b3b",
       "atividade_id": "1.2-atv-1",
       "tipo_recurso_id": "EQUIP-AGIS-MOTOSSERRA",
       "descricao": "Motosserra a Gasolina",
@@ -8828,7 +8828,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "2bee9476-5487-41d4-88af-b80485160889",
+      "requisito_id": "76fcefca-bde1-445c-9b6f-581f03b85187",
       "atividade_id": "3.1-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-OPER-ESCAV",
       "descricao": "Operador de Escavadeira",
@@ -8838,7 +8838,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "e3b3cefc-57fb-4305-a08e-8f96106b5b24",
+      "requisito_id": "b8143b19-3c73-4673-8682-71d9a4e211c7",
       "atividade_id": "3.1-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-AJUD",
       "descricao": "Ajudante",
@@ -8848,7 +8848,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "c23df908-851c-40e4-b556-e6390aabb065",
+      "requisito_id": "36ac8b45-27d3-4093-a9cf-d26ede5e1e74",
       "atividade_id": "3.1-atv-1",
       "tipo_recurso_id": "FUNC-AGIS-FN-MOTOR-BASC",
       "descricao": "Motorista de Caminhão Basculante",
@@ -8858,7 +8858,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "a4722b30-1976-4301-88f5-f86381183ac2",
+      "requisito_id": "cac880e9-451d-48c4-a07e-707f64667aba",
       "atividade_id": "3.1-atv-1",
       "tipo_recurso_id": "EQUIP-AGIS-E0016",
       "descricao": "Escavadeira Hidráulica sobre esteira 48T",
@@ -8868,7 +8868,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "20b295d6-9298-456b-9920-b1c96bd939fb",
+      "requisito_id": "82e8169f-139d-46c3-a0e8-52d1fe250ccb",
       "atividade_id": "3.1-atv-1",
       "tipo_recurso_id": "EQUIP-AGIS-E0004",
       "descricao": "Caminhão Basculante 14 m³ - Rochas",
@@ -8878,7 +8878,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "28be51c1-b12a-4b07-9d8f-adcd5caf1a25",
+      "requisito_id": "27ffc79c-bb54-4886-bafe-ea0f0a1aef79",
       "atividade_id": "3.2-atv-1",
       "tipo_recurso_id": "FUNC-P0052",
       "descricao": "Oficial",
@@ -8888,7 +8888,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "d6504165-d807-4ec0-af59-78b5c5708a19",
+      "requisito_id": "02ac9607-de67-45f0-a6e1-65fa864a14f9",
       "atividade_id": "3.2-atv-1",
       "tipo_recurso_id": "FUNC-P0001",
       "descricao": "Ajudante",
@@ -8898,7 +8898,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "56cacad5-508f-4973-bcd1-b05b91f94927",
+      "requisito_id": "d740d182-cd38-46cb-a622-676353422c38",
       "atividade_id": "3.2-atv-1",
       "tipo_recurso_id": "FUNC-P0071",
       "descricao": "Motorista de caminhão munck",
@@ -8908,7 +8908,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "a1c2c006-a58f-46a5-a7ba-c84a692ad47b",
+      "requisito_id": "a57733bc-7dac-493a-9cb2-c03b2e57c2a8",
       "atividade_id": "3.2-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0007",
       "descricao": "Caminhão Basculante 14m³",
@@ -8918,7 +8918,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "c2e88c67-902a-44d8-a85d-16c8e5d12979",
+      "requisito_id": "014cfa1d-3d78-4996-b0c2-d2e257c3bf2a",
       "atividade_id": "3.3-atv-1",
       "tipo_recurso_id": "FUNC-MO-ENCARREG-TERRA",
       "descricao": "Encarregado de Terraplenagem",
@@ -8928,7 +8928,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "7fad67ea-793c-4853-bdd1-74206d2b8854",
+      "requisito_id": "5b846ceb-eaee-477d-9139-e3617a677658",
       "atividade_id": "3.3-atv-1",
       "tipo_recurso_id": "FUNC-MO-CERQUEIRO",
       "descricao": "Cerqueiro",
@@ -8938,7 +8938,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "29beb76c-83b5-453b-9fbb-bce1c99af540",
+      "requisito_id": "8f4878cc-e586-4cf4-8473-d4d79cf11d0d",
       "atividade_id": "3.3-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0001",
       "descricao": "Automóvel (veículo leve)",
@@ -8948,7 +8948,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "4ab27f66-3b44-4bf6-b705-aab389ef6635",
+      "requisito_id": "3fa2f291-7b37-4b5e-bc0b-d41bc89aef89",
       "atividade_id": "3.4-atv-1",
       "tipo_recurso_id": "FUNC-MO-ENCARREG-TERRA",
       "descricao": "Encarregado de Terraplenagem",
@@ -8958,7 +8958,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "91947e5c-a8bc-477e-9a50-7a06ce25e88c",
+      "requisito_id": "e098fc23-c38e-45ca-b973-dc730533f32a",
       "atividade_id": "3.4-atv-1",
       "tipo_recurso_id": "FUNC-MO-CERQUEIRO",
       "descricao": "Cerqueiro",
@@ -8968,7 +8968,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "1053c248-40f0-46f8-a932-b3d33576da93",
+      "requisito_id": "381e691b-9485-482e-a940-1228edba9f4d",
       "atividade_id": "3.4-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0001",
       "descricao": "Automóvel (veículo leve)",
@@ -8978,7 +8978,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "917f1d33-13d8-4911-8695-77ca373c45cc",
+      "requisito_id": "320c190a-9e1d-4a3b-8bd5-cbb283d98f13",
       "atividade_id": "3.5-atv-1",
       "tipo_recurso_id": "FUNC-MO-ENCARREG-TERRA",
       "descricao": "Encarregado de Terraplenagem",
@@ -8988,7 +8988,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "be49adb5-7589-4a8d-8562-8c78e55ef2eb",
+      "requisito_id": "01648632-5f5d-4e7d-8f45-7495afdc896b",
       "atividade_id": "3.5-atv-1",
       "tipo_recurso_id": "FUNC-MO-CERQUEIRO",
       "descricao": "Cerqueiro",
@@ -8998,7 +8998,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "c8f75564-6237-4202-a9d9-04139f1094f4",
+      "requisito_id": "06565ec9-d8bb-4b73-8f22-d144075741f2",
       "atividade_id": "3.5-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0001",
       "descricao": "Automóvel (veículo leve)",
@@ -9008,7 +9008,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "e20919c6-834b-4e3a-8646-bcfccbefac67",
+      "requisito_id": "f8c8f175-2cd4-4c38-84f1-c1f466436752",
       "atividade_id": "3.6-atv-1",
       "tipo_recurso_id": "FUNC-MO-ENCARREG-TERRA",
       "descricao": "Encarregado de Terraplenagem",
@@ -9018,7 +9018,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "f9be2511-96c1-406e-873b-8809472bd850",
+      "requisito_id": "7c876e6c-bc93-4f38-9bdb-e1d5b5b65f54",
       "atividade_id": "3.6-atv-1",
       "tipo_recurso_id": "FUNC-MO-AJUDANTE",
       "descricao": "Ajudante",
@@ -9028,7 +9028,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "0e364a4b-4327-42a5-9b4b-3fa3723bb734",
+      "requisito_id": "7ff96e3c-52d8-4945-bb37-c74f1a29a3b4",
       "atividade_id": "3.6-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0001",
       "descricao": "Automóvel (veículo leve)",
@@ -9038,7 +9038,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "e89f499b-77f8-4943-a1aa-65d1f0fc11ce",
+      "requisito_id": "cfa251f9-2b33-4e35-8c8f-655ab617ba4b",
       "atividade_id": "5.1-atv-1",
       "tipo_recurso_id": "FUNC-MO-ENCARREG-TERRA",
       "descricao": "Encarregado de Terraplenagem",
@@ -9048,7 +9048,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "d0dca351-2db7-488b-9c1a-c8592c804956",
+      "requisito_id": "c71ec196-eb80-4256-9da4-eda385cd6bff",
       "atividade_id": "5.1-atv-1",
       "tipo_recurso_id": "FUNC-MO-AJUDANTE",
       "descricao": "Ajudante",
@@ -9058,7 +9058,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "f80dbf99-b927-4cab-a5aa-15cda3b28daf",
+      "requisito_id": "7a19cc2d-8e0c-4dda-bb1f-aeaae409dff7",
       "atividade_id": "5.1-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0001",
       "descricao": "Automóvel (veículo leve)",
@@ -9068,7 +9068,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "d68ec427-7726-47ef-ac40-e62b0f137e21",
+      "requisito_id": "1e920d86-1e2f-417f-960e-271b168a2f3c",
       "atividade_id": "4.1-atv-1",
       "tipo_recurso_id": "FUNC-MO-TOPOGRAFO",
       "descricao": "Topógrafo",
@@ -9078,7 +9078,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "358aa4d8-7538-41fc-80ec-28d905020599",
+      "requisito_id": "15a0baa5-cd17-43be-a5aa-975a04775ff3",
       "atividade_id": "4.1-atv-1",
       "tipo_recurso_id": "FUNC-MO-AUX-TOPO",
       "descricao": "Auxiliar de topografia",
@@ -9088,7 +9088,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "dede71f9-60b3-4c2e-a92b-0a9a14ca6690",
+      "requisito_id": "70094e28-d8f2-4830-98f8-754adfa92241",
       "atividade_id": "4.1-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0013",
       "descricao": "Caminhonete (veículo leve)",
@@ -9098,7 +9098,7 @@
       "criticidade": "NORMAL"
     },
     {
-      "requisito_id": "6e24adb8-650d-4bef-9f25-cc5bf7389f5a",
+      "requisito_id": "fed718a0-2752-439c-8cf7-04360d1ecef3",
       "atividade_id": "4.1-atv-1",
       "tipo_recurso_id": "EQUIP-EQ-E0042",
       "descricao": "Vibroacabadora de asfalto sobre pneus - 82 kW",
@@ -9110,7 +9110,7 @@
   ],
   "alocacoes": [
     {
-      "id": "22cd660d-f38f-4066-8679-9ee4285cf428",
+      "id": "697d8254-37ce-4a6b-a33f-8538ca21d7d2",
       "atividade_id": "1.1-atv-1",
       "recurso_id": "50862418-ffd7-437a-8a88-a3b54ebd4d05",
       "quantidade_alocada": 5.0,
@@ -9120,7 +9120,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "6ccfdda1-edb0-452c-848b-8f9d49f014b2",
+      "id": "790d08fd-b3de-4b96-b048-64fcbb752d07",
       "atividade_id": "1.1-atv-1",
       "recurso_id": "59803252-c746-4e99-84cf-46e6689d9d90",
       "quantidade_alocada": 2.0,
@@ -9130,7 +9130,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "0e573375-4530-4f4d-85ea-8b2616d860d5",
+      "id": "05a99f21-2e25-4660-bd9c-77eee9af6a71",
       "atividade_id": "1.1-atv-1",
       "recurso_id": "c4cd55f0-0bc5-42c1-ba57-9a5557ba7564",
       "quantidade_alocada": 1.0,
@@ -9140,7 +9140,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "8334c40f-1ba3-4455-9664-33205172a4c7",
+      "id": "455bf5a2-bdd8-48c6-a6b5-0cfaeb31a2d7",
       "atividade_id": "1.1-atv-1",
       "recurso_id": "a825a616-123b-41bb-8f5c-17be1294b602",
       "quantidade_alocada": 1.0,
@@ -9150,7 +9150,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "bcbd7c80-2706-4e27-9207-294ab754c777",
+      "id": "ca51584a-1603-4c03-9ab1-a3eec3c9ac46",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "c1660286-8cd2-45e9-8852-a640ca0171e1",
       "quantidade_alocada": 1.0,
@@ -9160,7 +9160,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "f6643c38-7435-4502-ba93-3b9da3225382",
+      "id": "d8679e4e-ec1b-4da0-9f37-5b467403abab",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "9359a291-7c79-4a67-b491-61cb04d83808",
       "quantidade_alocada": 1.0,
@@ -9170,7 +9170,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "9c664ee2-93d3-4478-b23d-192393179e8e",
+      "id": "f942157b-df38-4f42-9c4c-9a255615cb5b",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "ae729172-0c38-459d-a34d-47f98a58228a",
       "quantidade_alocada": 1.0,
@@ -9180,7 +9180,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "3d4f17c8-cefa-4029-8ec8-ee070af48206",
+      "id": "2015a0b2-47e5-4bcb-b6ca-7b16b8028014",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "dd540f84-3d22-41d1-a7b2-edeec57ee748",
       "quantidade_alocada": 1.0,
@@ -9190,7 +9190,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "7f51902e-835d-41b1-9387-675e3d68ae42",
+      "id": "bb1d146d-021d-4b02-9f30-f07643de3a79",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "f5ff6e1f-c01d-4146-b14e-0f443b873433",
       "quantidade_alocada": 1.0,
@@ -9200,7 +9200,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "823de6ab-dac1-4910-9af0-b9951610d85a",
+      "id": "e3b6eebc-ae99-4369-830f-f8c158b1b5be",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "d57bb8a4-fdfd-40c1-9a5b-8f40b4560791",
       "quantidade_alocada": 1.0,
@@ -9210,7 +9210,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "4826ddb5-01e3-4178-8a84-ebbcd13a2d31",
+      "id": "72a2ca04-6397-4c48-961f-fc300174e050",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "e22cce91-a482-4e29-acb2-5a6a3fef5198",
       "quantidade_alocada": 1.0,
@@ -9220,7 +9220,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "defe7680-3899-4bdc-b62b-6b341a0321e3",
+      "id": "8c762a18-6931-4338-bebd-4b6ebc9e2773",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "f9405b75-07e0-4496-a03c-369ad634177f",
       "quantidade_alocada": 1.0,
@@ -9230,7 +9230,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "b528c2fb-0a8b-40b0-9751-a78c603325fa",
+      "id": "51b3d17b-ac40-4bd2-8786-8fa1671bd83b",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "908acbc6-bbbf-4e18-8a9d-b647eb4ae319",
       "quantidade_alocada": 1.0,
@@ -9240,7 +9240,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "bc1313bb-9fe9-4235-834a-248f9878652c",
+      "id": "d19a3990-389c-4269-be86-8f486633097f",
       "atividade_id": "1.2-atv-1",
       "recurso_id": "d39db6bf-5a40-4eb4-a558-5d4304c9b4e7",
       "quantidade_alocada": 1.0,
@@ -9250,7 +9250,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "6d959daa-df23-430a-bcc1-67dfc2a0715c",
+      "id": "9ac35d5f-81b3-4f71-aa50-8c9fcb7c27b4",
       "atividade_id": "3.1-atv-1",
       "recurso_id": "9359a291-7c79-4a67-b491-61cb04d83808",
       "quantidade_alocada": 1.0,
@@ -9260,7 +9260,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "9f5208f5-c854-4514-bd27-ae7b83ba05a3",
+      "id": "3da1308c-b45d-4471-b94f-488786584a3d",
       "atividade_id": "3.1-atv-1",
       "recurso_id": "dd540f84-3d22-41d1-a7b2-edeec57ee748",
       "quantidade_alocada": 1.0,
@@ -9270,7 +9270,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "d3efaf79-f0e4-4f9d-92d9-c0a5a6dd6fd7",
+      "id": "037cfc54-8c85-446a-9cc4-3fce799782c8",
       "atividade_id": "3.1-atv-1",
       "recurso_id": "9b7471bc-e262-4234-8251-bca45f9d61e7",
       "quantidade_alocada": 8.0,
@@ -9280,7 +9280,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "b2c1c32c-8f22-4a24-834d-c05bb07f391f",
+      "id": "2f97f238-d3c0-41ce-8f3c-e1a5923e3ac7",
       "atividade_id": "3.1-atv-1",
       "recurso_id": "a1d05b98-3091-4568-b53e-a22387565a30",
       "quantidade_alocada": 1.0,
@@ -9290,7 +9290,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "ad1a29ac-d3b2-49b4-863b-c55233322e48",
+      "id": "a0df9327-89e5-4836-ae06-c4456ea30316",
       "atividade_id": "3.1-atv-1",
       "recurso_id": "69576a7f-3666-4f62-a3f3-09852c476dd0",
       "quantidade_alocada": 8.0,
@@ -9300,7 +9300,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "d9163eaa-5d26-41fc-ad9d-d10e8d7b5e1e",
+      "id": "aa26a25f-1f94-4d50-928d-b261697beadb",
       "atividade_id": "3.2-atv-1",
       "recurso_id": "50862418-ffd7-437a-8a88-a3b54ebd4d05",
       "quantidade_alocada": 5.0,
@@ -9310,7 +9310,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "93deb73f-06c7-4a34-bca1-883f30057fe0",
+      "id": "089f11e3-afeb-4e5c-852e-3a5061ace41d",
       "atividade_id": "3.2-atv-1",
       "recurso_id": "59803252-c746-4e99-84cf-46e6689d9d90",
       "quantidade_alocada": 2.0,
@@ -9320,7 +9320,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "8dc6db10-a7e4-4260-828f-3c9600eea58b",
+      "id": "06e78836-8d09-4443-87ea-3aef64e07ea6",
       "atividade_id": "3.2-atv-1",
       "recurso_id": "c4cd55f0-0bc5-42c1-ba57-9a5557ba7564",
       "quantidade_alocada": 1.0,
@@ -9330,7 +9330,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "f565983b-86b5-4b22-ae49-40e9d5b4ba56",
+      "id": "34922936-b729-400a-a705-98abbcae4d96",
       "atividade_id": "3.2-atv-1",
       "recurso_id": "a825a616-123b-41bb-8f5c-17be1294b602",
       "quantidade_alocada": 1.0,
@@ -9340,7 +9340,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "0f911e72-bb9e-4286-92f6-a47ae0527408",
+      "id": "1d07bed7-8c1a-4cfa-80a7-839c1a0dc875",
       "atividade_id": "3.3-atv-1",
       "recurso_id": "dcf2a456-93f3-46f7-9340-e4ae2f87b477",
       "quantidade_alocada": 1.0,
@@ -9350,7 +9350,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "e9b14125-4831-41fd-bc06-6c6e731cf6b3",
+      "id": "3221143b-deb3-440c-abc5-a90fd09872d3",
       "atividade_id": "3.3-atv-1",
       "recurso_id": "3ec93337-9e50-46d1-94e7-b72071e58a2d",
       "quantidade_alocada": 3.0,
@@ -9360,7 +9360,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "5ff21efe-24ae-44a9-babd-1c14411ccaec",
+      "id": "d5848ea3-e6e8-461f-b39c-fa031e13144e",
       "atividade_id": "3.3-atv-1",
       "recurso_id": "930f26ab-bf98-4bb4-948a-038564f0b74a",
       "quantidade_alocada": 1.0,
@@ -9370,7 +9370,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "0bc78cb1-6641-4fe1-9142-1868b749b08c",
+      "id": "435e6410-5d22-4185-ba41-be0390e2d44d",
       "atividade_id": "3.4-atv-1",
       "recurso_id": "dcf2a456-93f3-46f7-9340-e4ae2f87b477",
       "quantidade_alocada": 1.0,
@@ -9380,7 +9380,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "a7d05932-f322-4734-ae7e-9ed801499fa6",
+      "id": "5c8fe5d8-8170-4a15-9ce9-6924b2dde0bd",
       "atividade_id": "3.4-atv-1",
       "recurso_id": "3ec93337-9e50-46d1-94e7-b72071e58a2d",
       "quantidade_alocada": 3.0,
@@ -9390,7 +9390,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "f8520b21-bee5-4203-b140-1349578fb06a",
+      "id": "ddd1f45c-b9a3-4daf-9655-8728d493c7c7",
       "atividade_id": "3.4-atv-1",
       "recurso_id": "930f26ab-bf98-4bb4-948a-038564f0b74a",
       "quantidade_alocada": 1.0,
@@ -9400,7 +9400,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "eb303a3f-df2d-41c7-9f32-f07329a19e0f",
+      "id": "83c6b19b-a64a-4434-b52a-2ae95dc12858",
       "atividade_id": "3.5-atv-1",
       "recurso_id": "dcf2a456-93f3-46f7-9340-e4ae2f87b477",
       "quantidade_alocada": 1.0,
@@ -9410,7 +9410,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "7b1384a4-a349-4243-9d9b-196fe837e274",
+      "id": "2509829a-5a77-42b6-a1a4-66ed59a44663",
       "atividade_id": "3.5-atv-1",
       "recurso_id": "3ec93337-9e50-46d1-94e7-b72071e58a2d",
       "quantidade_alocada": 3.0,
@@ -9420,7 +9420,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "e77e1647-6f89-4bcc-9c0f-395bc2e02736",
+      "id": "08be8476-bf44-4ff1-b937-22eac0409d41",
       "atividade_id": "3.5-atv-1",
       "recurso_id": "930f26ab-bf98-4bb4-948a-038564f0b74a",
       "quantidade_alocada": 1.0,
@@ -9430,7 +9430,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "a85531a7-54c8-4ed1-aa39-0957bfc78012",
+      "id": "abe2b557-10e1-476f-97a5-eb6060dc71bf",
       "atividade_id": "3.6-atv-1",
       "recurso_id": "dcf2a456-93f3-46f7-9340-e4ae2f87b477",
       "quantidade_alocada": 1.0,
@@ -9440,7 +9440,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "9ad2d980-b21f-4434-8d18-5390f0454daf",
+      "id": "183c50b1-fcfe-48b8-b976-6445d5d2ac79",
       "atividade_id": "3.6-atv-1",
       "recurso_id": "d77dde5b-9c33-4c77-8c1d-733160b73056",
       "quantidade_alocada": 2.0,
@@ -9450,7 +9450,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "752ebc60-8ea1-4eed-96a9-44d681183e55",
+      "id": "9da2c427-b7c3-4a10-a7ea-5e450cbf4a8a",
       "atividade_id": "3.6-atv-1",
       "recurso_id": "930f26ab-bf98-4bb4-948a-038564f0b74a",
       "quantidade_alocada": 1.0,
@@ -9460,7 +9460,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "790efcbb-f660-4ccd-910f-c010a8ef53f9",
+      "id": "68feada5-bb1b-4f3c-8f3d-6091f8091300",
       "atividade_id": "5.1-atv-1",
       "recurso_id": "dcf2a456-93f3-46f7-9340-e4ae2f87b477",
       "quantidade_alocada": 1.0,
@@ -9470,7 +9470,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "f9335d29-135e-4d76-af4a-59d8922ad09a",
+      "id": "59c68420-a8e9-49b8-b3e3-8dd585055927",
       "atividade_id": "5.1-atv-1",
       "recurso_id": "d77dde5b-9c33-4c77-8c1d-733160b73056",
       "quantidade_alocada": 2.0,
@@ -9480,7 +9480,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "49a64b8d-28f8-46c6-ac69-d08b12743af2",
+      "id": "c9564f1d-116c-4b60-ae89-29cc09ba745b",
       "atividade_id": "5.1-atv-1",
       "recurso_id": "930f26ab-bf98-4bb4-948a-038564f0b74a",
       "quantidade_alocada": 1.0,
@@ -9490,7 +9490,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "236d337c-8e48-41d9-b638-25b253cee758",
+      "id": "5e9c80a8-7891-4c00-9e35-33c26a22056d",
       "atividade_id": "4.1-atv-1",
       "recurso_id": "0c0ad0be-efef-4eca-9b60-d47ea837014f",
       "quantidade_alocada": 1.0,
@@ -9500,7 +9500,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "b77b4034-18bc-4da1-a40c-50c228ada953",
+      "id": "eff8abbe-f6a0-44d1-b0df-8c72a1e08904",
       "atividade_id": "4.1-atv-1",
       "recurso_id": "fd6b6b31-4527-488c-acca-5b795b8850a2",
       "quantidade_alocada": 2.0,
@@ -9510,7 +9510,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "5dd4b248-eac8-4d4d-b52c-26eda08fe09a",
+      "id": "a1a854f0-968c-4331-b249-02066486af4a",
       "atividade_id": "4.1-atv-1",
       "recurso_id": "356a2c76-8368-4c08-8aaf-d743c2573da0",
       "quantidade_alocada": 1.0,
@@ -9520,7 +9520,7 @@
       "criticidade_recurso": "LIVRE"
     },
     {
-      "id": "5fd8bf97-31b6-4ed2-bcff-8ee463474558",
+      "id": "1628b4e9-5611-4f7b-bcc1-dc252e487eae",
       "atividade_id": "4.1-atv-1",
       "recurso_id": "6bcb5f47-c5d7-4e69-8267-1d825c192e8c",
       "quantidade_alocada": 1.0,
@@ -9606,6 +9606,22 @@
       "delta_margem_necessario_pct": -14.61,
       "n_sugestoes": 1,
       "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T14:05:23.959395+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 20.61,
+      "delta_margem_necessario_pct": -14.61,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
+    },
+    {
+      "timestamp": "2026-06-08T14:08:49.210846+00:00",
+      "status_gatilho": "VERMELHO",
+      "margem_atual_pct": 20.61,
+      "delta_margem_necessario_pct": -14.61,
+      "n_sugestoes": 1,
+      "sugestao_prioritaria": "REPLAN-005"
     }
   ],
   "resultado_reconciliado": {
@@ -9672,7 +9688,7 @@
   "relatorio_criticidade": {
     "projeto_id": "b2f4bddd-f89c-49f4-81b2-c94d9b8f8503",
     "versao": "1",
-    "gerado_em": "2026-06-08T13:46:17.356859Z",
+    "gerado_em": "2026-06-08T14:08:49.273967Z",
     "itens": [],
     "total_atividades": 0,
     "total_A_mais": 0,
@@ -9685,7 +9701,7 @@
   "relatorio_sensibilidade": {
     "projeto_id": "b2f4bddd-f89c-49f4-81b2-c94d9b8f8503",
     "versao": "1",
-    "gerado_em": "2026-06-08T13:46:17.356859Z",
+    "gerado_em": "2026-06-08T14:08:49.273967Z",
     "status_margem": "VERMELHO",
     "margem_entrada": 0.0,
     "margem_alvo_min": 0.0,
@@ -9708,7 +9724,7 @@
   "relatorio_intervencao": {
     "projeto_id": "b2f4bddd-f89c-49f4-81b2-c94d9b8f8503",
     "versao": "1",
-    "gerado_em": "2026-06-08T13:46:17.356859Z",
+    "gerado_em": "2026-06-08T14:08:49.273967Z",
     "status_entrada": "VERMELHO",
     "eixos_intervencao": [
       {
@@ -9770,7 +9786,7 @@
   "benchmark_alignment": null,
   "diagnostico_pe": {
     "projeto_id": "VALE",
-    "gerado_em": "2026-06-08T13:46:11.409937+00:00",
+    "gerado_em": "2026-06-08T14:08:43.672027+00:00",
     "n_itens_deficit": 0,
     "gap_total_rs": 0.0,
     "gap_evitavel_rs": 0.0,
@@ -9797,7 +9813,7 @@
   },
   "backtracking_pe": {
     "projeto_id": "VALE",
-    "gerado_em": "2026-06-08T13:46:11.409983+00:00",
+    "gerado_em": "2026-06-08T14:08:43.672080+00:00",
     "pe_gap_alvo": 0.0,
     "itens": [],
     "consistencia_global": true,
@@ -9819,7 +9835,7 @@
   },
   "curva_abc_insumo": {
     "projeto_id": "VALE",
-    "gerado_em": "2026-06-08T13:46:11.410083+00:00",
+    "gerado_em": "2026-06-08T14:08:43.672206+00:00",
     "total_custo_direto": 0.0,
     "itens": [],
     "total_a": 0.0,
@@ -9831,7 +9847,7 @@
   },
   "s_curve": {
     "projeto_id": "VALE",
-    "gerado_em": "2026-06-08T13:46:11.411961+00:00",
+    "gerado_em": "2026-06-08T14:08:43.674287+00:00",
     "total_custo_direto": 0.0,
     "total_custo_indireto": 4236967.02,
     "total_projeto": 4236967.02,
@@ -11318,7 +11334,7 @@
   },
   "cubo_analitico": {
     "projeto_id": "VALE",
-    "gerado_em": "2026-06-08T13:46:11.412134+00:00",
+    "gerado_em": "2026-06-08T14:08:43.674477+00:00",
     "regime_bdi": "pre_reforma",
     "total_preco_venda": 0.0,
     "celulas": []
@@ -11388,7 +11404,7 @@
   },
   "analise_campanhas": {
     "projeto_id": "VALE",
-    "gerado_em": "2026-06-08T13:46:11.150533+00:00",
+    "gerado_em": "2026-06-08T14:08:43.243676+00:00",
     "n_campanhas": 9,
     "n_instancias": 9,
     "economia_total": 17771.6,
@@ -11551,7 +11567,7 @@
     "meta": {
       "projeto_id": "VALE",
       "version": "?",
-      "gerado_em": "2026-06-08T13:46:11.412199+00:00",
+      "gerado_em": "2026-06-08T14:08:43.674546+00:00",
       "skill_versao": "08-consolidacao-financeira",
       "vigencia_encargos": "2026-04-01",
       "vigencia_bdi": "2026-04-01",

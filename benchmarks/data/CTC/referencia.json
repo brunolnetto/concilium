@@ -22,7 +22,7 @@
         "item_id": "1.1",
         "ordem": 1,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "REMOÇÃO DO SOLO VEGETAL, E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA",
+        "descricao": "REMO\u00c7\u00c3O DO SOLO VEGETAL, E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA",
         "unidade": "m2",
         "quantitativo": 330133.0,
         "predecessores": [],
@@ -34,7 +34,7 @@
         "item_id": "1.2",
         "ordem": 2,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESCAVAÇÃO DE MATERIAL DE 1ª  CATEGORIA, REGULARIZAÇÃO, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA",
+        "descricao": "ESCAVA\u00c7\u00c3O DE MATERIAL DE 1\u00aa  CATEGORIA, REGULARIZA\u00c7\u00c3O, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPEC\u00cdFICO E DESCARGA",
         "unidade": "m3",
         "quantitativo": 2200000.0,
         "predecessores": [
@@ -51,7 +51,7 @@
         "item_id": "1.3",
         "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESCAVAÇÃO DE MATERIAL DE 2ª CATEGORIA, REGULARIZAÇÃO, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA",
+        "descricao": "ESCAVA\u00c7\u00c3O DE MATERIAL DE 2\u00aa CATEGORIA, REGULARIZA\u00c7\u00c3O, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPEC\u00cdFICO E DESCARGA",
         "unidade": "m3",
         "quantitativo": 202000.0,
         "predecessores": [
@@ -68,7 +68,7 @@
         "item_id": "1.4",
         "ordem": 4,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESCAVAÇÃO DE MATERIAL DE 3ª CATEGORIA, REGULARIZAÇÃO, CARGA, TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA",
+        "descricao": "ESCAVA\u00c7\u00c3O DE MATERIAL DE 3\u00aa CATEGORIA, REGULARIZA\u00c7\u00c3O, CARGA, TRANSPORTE DE MATERIAL PARA BOTA FORA ESPEC\u00cdFICO E DESCARGA",
         "unidade": "m3",
         "quantitativo": 173000.0,
         "predecessores": [
@@ -87,7 +87,7 @@
         "item_id": "1.5",
         "ordem": 5,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESPALHAMENTO, REGULARIZAÇÃO, COMPACTAÇÃO DE MATERIAL EM BOTA FORA",
+        "descricao": "ESPALHAMENTO, REGULARIZA\u00c7\u00c3O, COMPACTA\u00c7\u00c3O DE MATERIAL EM BOTA FORA",
         "unidade": "m3",
         "quantitativo": 2575000.0,
         "predecessores": [
@@ -106,7 +106,7 @@
         "item_id": "1.6",
         "ordem": 6,
         "cpu_id": "CPU-DIVER-ATI-069",
-        "descricao": "PROTEÇÃO DE TALUDE COM ENROCAMENTO DE PEDRA, ESPESSURA 05M SOBRE MANTA BIDIM RT-21, CONFORME ESPECIFICAÇÃO DER ET-DE-H00/011",
+        "descricao": "PROTE\u00c7\u00c3O DE TALUDE COM ENROCAMENTO DE PEDRA, ESPESSURA 05M SOBRE MANTA BIDIM RT-21, CONFORME ESPECIFICA\u00c7\u00c3O DER ET-DE-H00/011",
         "unidade": "m3",
         "quantitativo": 57980.0,
         "predecessores": [
@@ -561,5 +561,19 @@
         "mao_obra": []
       }
     ]
+  },
+  "mob_schedule": {
+    "mobilizacao": {
+      "inicio": "2026-01-01",
+      "fim": "2026-01-01"
+    },
+    "operacao": {
+      "inicio": "2026-01-01",
+      "fim": "2027-12-31"
+    },
+    "desmobilizacao": {
+      "inicio": "2027-12-31",
+      "fim": "2027-12-31"
+    }
   }
 }

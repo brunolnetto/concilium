@@ -1,15 +1,15 @@
 {
-  "artifact_id": "1f03c3fc-2a2a-4340-b0d5-0f58a30062ac",
+  "artifact_id": "42b0dbaf-e4d9-4866-a172-1f32b1ba9dd5",
   "version": "v1",
   "kind": "canonical",
   "schema_name": "CanonicalModel",
   "schema_version": "2026-05-03",
-  "created_at": "2026-06-08T13:45:28.770941Z",
+  "created_at": "2026-06-08T14:07:44.850377Z",
   "created_by": "15-relatorio-executivo",
   "trace_id": null,
   "parent_refs": [],
   "state": "draft",
-  "content_hash": "7eebcf3383620411a34a446310472d171d1a78bdcaccf711a698adea0a56fcc3",
+  "content_hash": "b3c6a43ee8f8556c7a91caa5d97c432a0a04d27220c61395a9b50308f31ef6f9",
   "catalog_snapshot_id": null,
   "bdi_perfil_id": null,
   "referencia_ids": []

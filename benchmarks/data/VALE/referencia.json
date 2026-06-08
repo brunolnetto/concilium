@@ -22,7 +22,7 @@
         "item_id": "1.1",
         "ordem": 1,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA",
+        "descricao": "Supress\u00e3o vegetal com ou sem destocamento de vegeta\u00e7\u00e3o com \u00d8 =< 30cm, assim como remo\u00e7\u00e3o de arbustos, vegeta\u00e7\u00e3o rasteira e limpeza para a \u00e1rea de dep\u00f3sito - DMT at\u00e9 350m - ALTA",
         "unidade": "M2",
         "quantitativo": 383592.55,
         "predecessores": [],
@@ -32,7 +32,7 @@
         "item_id": "1.2",
         "ordem": 2,
         "cpu_id": "CPU-TERRA-ATI-003",
-        "descricao": "Supressão vegetal, destocamento e limpeza de árvores, arbustos, vegetação rasteira e entulhos com remoção para área de depósito - DMT até 350m",
+        "descricao": "Supress\u00e3o vegetal, destocamento e limpeza de \u00e1rvores, arbustos, vegeta\u00e7\u00e3o rasteira e entulhos com remo\u00e7\u00e3o para \u00e1rea de dep\u00f3sito - DMT at\u00e9 350m",
         "unidade": "M2",
         "quantitativo": 2036512.35,
         "predecessores": [
@@ -49,7 +49,7 @@
         "item_id": "3.1",
         "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00f5es de concreto, se\u00e7\u00e3o quadrada 10 x 10 cm (padr\u00e3o VALEC) executada em solos compostos por material de 1\u00aa e 2\u00aa categoria",
         "unidade": "M",
         "quantitativo": 45102.63,
         "predecessores": [],
@@ -59,7 +59,7 @@
         "item_id": "3.2",
         "ordem": 4,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos alagáveis",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00f5es de concreto, se\u00e7\u00e3o quadrada 10 x 10 cm (padr\u00e3o VALEC) executada em solos alag\u00e1veis",
         "unidade": "M",
         "quantitativo": 575.0,
         "predecessores": [
@@ -76,7 +76,7 @@
         "item_id": "3.3",
         "ordem": 5,
         "cpu_id": "CPU-DIVER-ATI-065",
-        "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00e3o de eucalipto e mour\u00e3o de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1\u00aa e 2\u00aa categoria",
         "unidade": "M",
         "quantitativo": 14755.9,
         "predecessores": [
@@ -93,7 +93,7 @@
         "item_id": "3.4",
         "ordem": 6,
         "cpu_id": "CPU-DIVER-ATI-065",
-        "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00e3o de eucalipto e mour\u00e3o de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1\u00aa e 2\u00aa categoria",
         "unidade": "M",
         "quantitativo": 700.0,
         "predecessores": [
@@ -110,7 +110,7 @@
         "item_id": "3.5",
         "ordem": 7,
         "cpu_id": "CPU-DIVER-ATI-065",
-        "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas",
+        "descricao": "Cerca arame liso (5 fios) com mour\u00e3o de eucalipto e mour\u00e3o de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas",
         "unidade": "M",
         "quantitativo": 1000.0,
         "predecessores": [
@@ -127,7 +127,7 @@
         "item_id": "3.6",
         "ordem": 8,
         "cpu_id": "CPU-DIVER-ATI-067",
-        "descricao": "Remoção de cerca de mourão de madeira",
+        "descricao": "Remo\u00e7\u00e3o de cerca de mour\u00e3o de madeira",
         "unidade": "M",
         "quantitativo": 24394.3,
         "predecessores": [
@@ -144,7 +144,7 @@
         "item_id": "5.1",
         "ordem": 9,
         "cpu_id": "CPU-DIVER-ATI-067",
-        "descricao": "Abertura de acesso para implantação de cerca",
+        "descricao": "Abertura de acesso para implanta\u00e7\u00e3o de cerca",
         "unidade": "M",
         "quantitativo": 18490.0,
         "predecessores": [
@@ -161,7 +161,7 @@
         "item_id": "4.1",
         "ordem": 10,
         "cpu_id": "CPU-DIVER-ATI-070",
-        "descricao": "Implantação do eixo",
+        "descricao": "Implanta\u00e7\u00e3o do eixo",
         "unidade": "KM",
         "quantitativo": 18.49,
         "predecessores": [
@@ -632,5 +632,19 @@
         "mao_obra": []
       }
     ]
+  },
+  "mob_schedule": {
+    "mobilizacao": {
+      "inicio": "2026-01-01",
+      "fim": "2026-01-01"
+    },
+    "operacao": {
+      "inicio": "2026-01-01",
+      "fim": "2027-12-31"
+    },
+    "desmobilizacao": {
+      "inicio": "2027-12-31",
+      "fim": "2027-12-31"
+    }
   }
 }

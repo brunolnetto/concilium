@@ -32,7 +32,7 @@
         "item_id": "1.2",
         "ordem": 2,
         "cpu_id": "CPU-DIVER-ATI-007",
-        "descricao": "Supressão de árvores isoladas",
+        "descricao": "Supress\u00e3o de \u00e1rvores isoladas",
         "unidade": "un",
         "quantitativo": 80.0,
         "predecessores": [
@@ -49,7 +49,7 @@
         "item_id": "1.3",
         "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km",
+        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00aa categoria - DT M\u00e1ximo de 1km",
         "unidade": "m3",
         "quantitativo": 614502.27,
         "predecessores": [
@@ -66,7 +66,7 @@
         "item_id": "1.4",
         "ordem": 4,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA)",
+        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00aa categoria - DMT 3,5km  - (JAZIDA)",
         "unidade": "m3",
         "quantitativo": 114791.36,
         "predecessores": [
@@ -100,7 +100,7 @@
         "item_id": "1.6",
         "ordem": 6,
         "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
-        "descricao": "Desmonte de rocha com escavadeira e rompedor hidráulico",
+        "descricao": "Desmonte de rocha com escavadeira e rompedor hidr\u00e1ulico",
         "unidade": "m3",
         "quantitativo": 12000.0,
         "predecessores": [
@@ -117,7 +117,7 @@
         "item_id": "1.8",
         "ordem": 7,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escavação de solo mole, incluso tranporte em ate 1km, e espalhamento",
+        "descricao": "Escava\u00e7\u00e3o de solo mole, incluso tranporte em ate 1km, e espalhamento",
         "unidade": "m3",
         "quantitativo": 25000.0,
         "predecessores": [
@@ -134,7 +134,7 @@
         "item_id": "1.11",
         "ordem": 8,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA) - substituição do solo mole",
+        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00aa categoria - DMT 3,5km  - (JAZIDA) - substitui\u00e7\u00e3o do solo mole",
         "unidade": "m3",
         "quantitativo": 25000.0,
         "predecessores": [
@@ -168,7 +168,7 @@
         "item_id": "1.9",
         "ordem": 10,
         "cpu_id": "CPU-SANEA-ATI-048",
-        "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha dupla 150mm",
+        "descricao": "Dreno provisorio tipo espinha de peixe, para corre\u00e7\u00e3o de satura\u00e7\u00e3o do solo - linha dupla 150mm",
         "unidade": "m",
         "quantitativo": 1720.0,
         "predecessores": [
@@ -185,7 +185,7 @@
         "item_id": "1.10",
         "ordem": 11,
         "cpu_id": "CPU-SANEA-ATI-048",
-        "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha simples 150mm",
+        "descricao": "Dreno provisorio tipo espinha de peixe, para corre\u00e7\u00e3o de satura\u00e7\u00e3o do solo - linha simples 150mm",
         "unidade": "m",
         "quantitativo": 1740.0,
         "predecessores": [
@@ -659,5 +659,19 @@
         "mao_obra": []
       }
     ]
+  },
+  "mob_schedule": {
+    "mobilizacao": {
+      "inicio": "2026-01-01",
+      "fim": "2026-01-01"
+    },
+    "operacao": {
+      "inicio": "2026-01-01",
+      "fim": "2027-12-31"
+    },
+    "desmobilizacao": {
+      "inicio": "2027-12-31",
+      "fim": "2027-12-31"
+    }
   }
 }

@@ -22,7 +22,7 @@
         "item_id": "2.2",
         "ordem": 1,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
-        "descricao": "Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km",
+        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material  de 1\u00aa categoria - DMT at\u00e9 4 km",
         "unidade": "m3",
         "quantitativo": 69952.84,
         "predecessores": [],
@@ -467,5 +467,19 @@
         "mao_obra": []
       }
     ]
+  },
+  "mob_schedule": {
+    "mobilizacao": {
+      "inicio": "2026-01-01",
+      "fim": "2026-01-01"
+    },
+    "operacao": {
+      "inicio": "2026-01-01",
+      "fim": "2027-12-31"
+    },
+    "desmobilizacao": {
+      "inicio": "2027-12-31",
+      "fim": "2027-12-31"
+    }
   }
 }

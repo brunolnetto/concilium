@@ -1,0 +1,44 @@
+{
+  "projeto_id": "b2f4bddd-f89c-49f4-81b2-c94d9b8f8503",
+  "versao": "1",
+  "gerado_em": "2026-06-08T14:08:49.273967Z",
+  "status_entrada": "VERMELHO",
+  "eixos_intervencao": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.206082,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    },
+    {
+      "nome": "Oportunidade RECALIBRAR_PU",
+      "margem_estimada": 0.011735,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": [
+        "RECALIBRAR_PU"
+      ]
+    }
+  ],
+  "fronteira_pareto": [
+    {
+      "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+      "margem_estimada": 0.206082,
+      "prazo_delta_dias": null,
+      "confianca": "MEDIA",
+      "risco": "MEDIO",
+      "levers_combinados": []
+    }
+  ],
+  "recomendacao_primaria": {
+    "nome": "Repair (AMARELO/VERMELHO->VERDE)",
+    "margem_estimada": 0.206082,
+    "prazo_delta_dias": null,
+    "confianca": "MEDIA",
+    "risco": "MEDIO",
+    "levers_combinados": []
+  }
+}

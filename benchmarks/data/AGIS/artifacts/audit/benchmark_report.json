@@ -6,7 +6,7 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "EXCEPTION",
-      "duration_ms": 1503,
+      "duration_ms": 1229,
       "avisos": [],
       "erros": [
         "3 validation errors for EapItem\nordem\n  Field required [type=missing, input_value={'item_id': 'eap-1_0', 'c....0, 'predecessores': []}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\ndescricao\n  Field required [type=missing, input_value={'item_id': 'eap-1_0', 'c....0, 'predecessores': []}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nunidade\n  Field required [type=missing, input_value={'item_id': 'eap-1_0', 'c....0, 'predecessores': []}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
