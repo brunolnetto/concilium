@@ -212,6 +212,12 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [101](ADR-101-mcp-apps-interface-interativa.md) | MCP Apps — Interface Interativa de Relatórios e Formulários no Chat | 🔄 Parcialmente Implementado (Fases 1-2 ✅) | ADR-092, ADR-093, ADR-096, ADR-099 |
 | [104](adr-104-centralizacao-calculo-custos-equipedireta.md) | Centralização de Cálculos de Custo em EquipeDireta — Single Source of Truth para Decomposição Instancial | 🔴 Proposto | ADR-085, ADR-071, NEP-040 |
 
+### ADRs de Mobilização e Desmobilização (105–)
+
+| # | Título | Status | Dependências |
+|---|---|---|---|
+| [105](ADR-105-mobilizacao-desmobilizacao-workforce-equipment.md) | Mobilização e Desmobilização de Mão-de-Obra e Equipamentos: Política Integrada Diretos+Indiretos | 🔴 Proposto | ADR-046, ADR-054, ADR-071, ADR-085, ADR-090 |
+
 **Legenda:** ✅ Implementado · 🔄 Parcialmente Implementado · 🔴 Proposto/Aceito · ⬜ Supersedido
 
 ---
