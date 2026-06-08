@@ -692,6 +692,38 @@
           }
         }
       }
+    ],
+    "indiretos": [
+      {
+        "categoria": "ADM",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 34374.06,
+        "mao_obra": []
+      },
+      {
+        "categoria": "TOP",
+        "driver": "projeto",
+        "custo_fixo_total": 261265.91,
+        "mao_obra": []
+      },
+      {
+        "categoria": "LAB",
+        "driver": "projeto",
+        "custo_fixo_total": 179596.68,
+        "mao_obra": []
+      },
+      {
+        "categoria": "QSMS",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 7035.92,
+        "mao_obra": []
+      },
+      {
+        "categoria": "MOB",
+        "driver": "projeto",
+        "custo_fixo_total": 2389202.97,
+        "mao_obra": []
+      }
     ]
   }
 }

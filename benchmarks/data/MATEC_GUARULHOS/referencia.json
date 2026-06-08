@@ -483,6 +483,13 @@
         "ir": 0.0
       }
     },
-    "indiretos": []
+    "indiretos": [
+      {
+        "categoria": "MOB",
+        "driver": "projeto",
+        "custo_fixo_total": 2453473,
+        "mao_obra": []
+      }
+    ]
   }
 }
