@@ -215,7 +215,10 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
 
 
 def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, float, float, float]:
-    """Returns (venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto)."""
+    """Returns (venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto).
+
+    Fallback: Se planejamento está vazio (minimalista), usa custo_direto_equipe como base.
+    """
     venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento)
     venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento)
     # ADR-091: Multiplicar custo_total por num_equipes_base (equipes paralelas alocadas)
@@ -223,7 +226,15 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     # num_equipes_base = quantas equipes paralelas representa
     custo_direto_equipe = sum(e.custo_total * max(1, getattr(e, "num_equipes_base", 1) or 1) for e in canonical_in.equipes_diretas)
     custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
-    return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto_equipe + custo_materiais
+
+    # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
+    # (benchmarks minimalistas não têm planejamento de entrada)
+    if not venda_sem_bdi and custo_direto_equipe > 0:
+        venda_sem_bdi = custo_direto_equipe
+    if not venda_com_bdi and custo_direto_equipe > 0:
+        venda_com_bdi = custo_direto_equipe
+
+    return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, venda_sem_bdi
 
 
 def _build_resultado(

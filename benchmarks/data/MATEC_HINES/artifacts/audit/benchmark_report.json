@@ -6,7 +6,7 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 2089,
+      "duration_ms": 3516,
       "avisos": [
         "4 EAP items referenciam CPUs inexistentes no catálogo: '1.0' (CPU-MOB-000), '1.1' (CPU-MOB-001), '1.2' (CPU-MOB-002)..."
       ]
@@ -14,19 +14,19 @@
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 126,
+      "duration_ms": 181,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 134,
+      "duration_ms": 129,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 171,
+      "duration_ms": 190,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -84,13 +84,13 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 27,
+      "duration_ms": 43,
       "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 32,
+      "duration_ms": 43,
       "avisos": [
         "CPU 'CPU-MOB-000' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
         "CPU 'CPU-MOB-001' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
@@ -101,7 +101,7 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 28,
+      "duration_ms": 46,
       "avisos": [
         "equipes_diretas vazia — usando 0 pessoas para cálculo de MOB"
       ]
@@ -109,7 +109,7 @@
     {
       "skill": "10-diagnostico-criticidade",
       "status": "ERRO",
-      "duration_ms": 25,
+      "duration_ms": 42,
       "avisos": [],
       "erros": [
         "Cronograma e Equipes necessários."
@@ -118,7 +118,7 @@
     {
       "skill": "08-consolidacao-financeira",
       "status": "ERRO",
-      "duration_ms": 25,
+      "duration_ms": 41,
       "avisos": [],
       "erros": [
         "Equipes e Planejamento necessários."
@@ -127,13 +127,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 24,
+      "duration_ms": 43,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "ERRO",
-      "duration_ms": 56,
+      "duration_ms": 41,
       "avisos": [],
       "erros": [
         "Adapter requer resultado consolidado (skill 06)"
@@ -142,13 +142,13 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 57,
+      "duration_ms": 52,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "ERRO",
-      "duration_ms": 32,
+      "duration_ms": 71,
       "avisos": [],
       "erros": [
         "Skill 06-consolidar deve ser executada antes: canonical.resultado ausente."
@@ -157,7 +157,7 @@
     {
       "skill": "14-explorador-cenarios",
       "status": "ERRO",
-      "duration_ms": 50,
+      "duration_ms": 64,
       "avisos": [],
       "erros": [
         "resultado (08) ausente — execute 08-consolidar antes."
@@ -166,7 +166,7 @@
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 34,
+      "duration_ms": 62,
       "avisos": [
         "Bridge Analysis ausente — execute a Skill 08 (Consolidação Financeira) antes."
       ]
