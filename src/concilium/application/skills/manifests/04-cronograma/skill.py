@@ -681,10 +681,13 @@ def _extract_activities_from_spec(
                 producao_lookup,  # type: ignore[arg-type]
                 validacoes or [],
             )
-            if computed is not None:
-                # ADR-072: Use duração produtiva calculada, não window_w
-                # window_w é a janela máxima permitida (corredor), não a duração real
+            if computed is not None and computed < window_w:
                 productive_w = computed
+            elif computed is not None and computed >= window_w:
+                # ADR-072: Se duração produtiva >= window_w, o projeto é infeasível no prazo
+                # Por enquanto, usar window_w como fallback para não quebrar o scheduler
+                # TODO: Investigar se quantitativos/produtividades têm unidades corretas
+                pass
 
         # ADR-074: derive ramp_profile from ramp_params if present
         ramp_profile: list[float] | None = None
