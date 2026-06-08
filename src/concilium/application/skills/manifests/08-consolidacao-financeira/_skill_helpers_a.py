@@ -224,7 +224,9 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     # ADR-091: Multiplicar custo_total por num_equipes_base (equipes paralelas alocadas)
     # Após ADR-091, cada EquipeDireta tem custo_total = custo_uma_equipe e
     # num_equipes_base = quantas equipes paralelas representa
-    custo_direto_equipe = sum(e.custo_total * max(1, getattr(e, "num_equipes_base", 1) or 1) for e in canonical_in.equipes_diretas)
+    custo_direto_equipe = sum(
+        e.custo_total * max(1, getattr(e, "num_equipes_base", 1) or 1) for e in canonical_in.equipes_diretas
+    )
     custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
 
     # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
@@ -431,6 +433,9 @@ def _build_pe_for_equipe(
 
     # ── ADR-076 campos quantitativos ──────────────────────────────────────────
     custo_total_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
+    # Fallback: sem pool contract, usar custo_total como autonomo (sem gap overhead)
+    if custo_total_autonomo <= 0 and custo_operacional_real > 0:
+        custo_total_autonomo = custo_operacional_real
     gap_pool_overhead = round(custo_operacional_real - custo_total_autonomo, 2)
 
     pu_catalogo_unitario: float = 0.0
