@@ -442,18 +442,11 @@ def _build_pe_for_equipe(
         custo_total_autonomo = custo_operacional_real
     gap_pool_overhead = round(custo_operacional_real - custo_total_autonomo, 2)
 
-    # NEP-037 D3: fe_nec calculado sobre custo base (sem encargos) para reconciliar com PU_sbdi.
-    # PU_sbdi exclui encargos do numerador: PU = (A_equip + B_base + diesel) / C
-    # Fe_nec = custo_base_autonomo / (PU_sbdi × Q) → 1/η_p quando modelo correto
-    # custo_encargos_mensal (campo novo) presente → deriva proporção de encargos no total.
-    _custo_mo_mensal = float(getattr(equipe, "custo_mao_obra_mensal", 0.0) or 0.0)
-    _custo_enc_mensal = float(getattr(equipe, "custo_encargos_mensal", 0.0) or 0.0)
-    _custo_fixo_total = float(getattr(equipe, "custo_fixo_mensal", 0.0) or 0.0)
-    if _custo_fixo_total > 0 and _custo_enc_mensal > 0:
-        _frac_enc = _custo_enc_mensal / _custo_fixo_total
-        custo_base_autonomo = round(custo_total_autonomo * (1.0 - _frac_enc), 2)
-    else:
-        custo_base_autonomo = custo_total_autonomo
+    # fe_nec = custo_total_autonomo / (PU_sbdi × Q) = 1/η_p
+    # NOTA: PU_sbdi JÁ inclui encargos no numerador (nota NEP-029: B_base×(1+enc)).
+    # Portanto fe_nec usa custo_total (com encargos) — não remover encargos aqui.
+    # custo_encargos_mensal serve para decomposição interna (ADR-104, cubo, memorial),
+    # não para calibração de fe_nec. Ver investigação de invariantes 2026-06-09.
 
     pu_catalogo_unitario: float = 0.0
     pu_calibrado_unitario: float = 0.0
@@ -468,10 +461,9 @@ def _build_pe_for_equipe(
         venda_sem_bdi = float(plan.subtotal.sem_bdi.total if (plan.subtotal and plan.subtotal.sem_bdi) else 0.0)
         pu_catalogo_unitario = round(venda_sem_bdi / Q, 4) if Q > 0 else 0.0
 
-        # NEP-037 D3: usar custo_base_autonomo (sem encargos) para fe_nec → reconcilia com PU_sbdi
-        if venda_sem_bdi > 0 and custo_base_autonomo > 0:
-            frentes_nec = round(custo_base_autonomo / venda_sem_bdi, 4)
-        elif custo_base_autonomo <= 0 and custo_venda_total > 0:
+        if venda_sem_bdi > 0 and custo_total_autonomo > 0:
+            frentes_nec = round(custo_total_autonomo / venda_sem_bdi, 4)
+        elif custo_total_autonomo <= 0 and custo_venda_total > 0:
             frentes_nec = round(custo_operacional_real / custo_venda_total, 4)
 
         # ADR-076 Fallback: se frentes_nec >> 10 (absurdo), usar 1 como conservador
