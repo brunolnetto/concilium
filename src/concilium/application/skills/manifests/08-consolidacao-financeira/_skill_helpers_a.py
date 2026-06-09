@@ -219,28 +219,32 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
 
 
 def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, float, float, float]:
-    """Returns (venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto).
+    """Returns (venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto_pool).
 
-    Fallback: Se planejamento está vazio (minimalista), usa custo_direto_equipe como base.
+    custo_direto_pool = custo real das equipes via pool (mob/demob/ociosidade incluídos).
+    venda_sem_bdi     = PU×Q de catálogo (referência de mercado para confronto).
+    Usar sempre o pool como base do custo operacional — o trunfo do pool é exatamente
+    executar abaixo do PU×Q de catálogo, e isso deve aparecer no resultado financeiro.
     """
     venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento)
     venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento)
-    # ADR-091: Multiplicar custo_total por num_equipes_base (equipes paralelas alocadas)
-    # Após ADR-091, cada EquipeDireta tem custo_total = custo_uma_equipe e
-    # num_equipes_base = quantas equipes paralelas representa
-    custo_direto_equipe = sum(
-        e.custo_total * max(1, getattr(e, "num_equipes_base", 1) or 1) for e in canonical_in.equipes_diretas
-    )
+    # Custo real de pool: soma custo_total de cada equipe.
+    # No modelo de pool (ADR-071), custo_total já é o custo total atribuído ao item
+    # (fração proporcional ao machine-weeks) — não multiplicar por num_equipes_base.
+    # No modo autônomo legado (sem pool), custo_total era por-frente × permanência,
+    # mas esse caminho está sendo eliminado (ADR-106).
+    custo_direto_equipe = sum(float(e.custo_total or 0.0) for e in canonical_in.equipes_diretas)
     custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
 
     # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
-    # (benchmarks minimalistas não têm planejamento de entrada)
     if not venda_sem_bdi and custo_direto_equipe > 0:
         venda_sem_bdi = custo_direto_equipe
     if not venda_com_bdi and custo_direto_equipe > 0:
         venda_com_bdi = custo_direto_equipe
 
-    return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, venda_sem_bdi
+    # custo_direto_pool: pool é SEMPRE a base do custo operacional real.
+    # Diferença vs venda_sem_bdi = economia (ou sobrepreço) capturado pelo pool.
+    return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto_equipe
 
 
 def _build_resultado(
