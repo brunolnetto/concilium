@@ -213,7 +213,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [102](ADR-102-pipeline-jobs-async-execution.md) | Pipeline Jobs: Execução Assíncrona | ✅ Implementado | ADR-036, ADR-050 |
 | [103](ADR-103-mcp-apps-interface-interativa.md) | _(ver ADR-101 — possível duplicata)_ | ? | — |
 | [104](adr-104-centralizacao-calculo-custos-equipedireta.md) | Centralização de Cálculos de Custo em EquipeDireta | ✅ Implementado _(auditado 2026-06-08)_ | ADR-085, ADR-071, NEP-040 |
-| [105](ADR-105-mobilizacao-desmobilizacao-workforce-equipment.md) | Mobilização e Desmobilização de MO e Equipamentos | ⚠️ Parcial _(ADR-105 mob_schedule inferido; janelas diretas pendentes)_ | ADR-046, ADR-071, ADR-085 |
+| [105](ADR-105-mobilizacao-desmobilizacao-workforce-equipment.md) | Mobilização e Desmobilização de MO e Equipamentos | ⚠️ Parcial _(mob_schedule inferido; detalhamento MOB §2.5 extraído; desdobramento fases + operação aguardam S3)_ | ADR-046, ADR-071, ADR-085 |
 | [106](adr-106-equipe-custo-engine-lifecycle-unificado.md) | EquipeCustoEngine — Lifecycle Unificado Diretas e Indiretas | ⚠️ Parcial _(gap_pool corrigido; engine F1-F8 pendente)_ | ADR-085, ADR-104, NEP-029, NEP-031, NEP-037 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
