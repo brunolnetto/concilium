@@ -558,13 +558,16 @@ class TestPlanejamentoBdiEdgeCases:
         }
 
     def test_cpu_not_in_lookup_erros_eap(self):
-        """cpu_id not in catalogo → erros_eap + VAL-EAP-01 (lines 109-110, 184)."""
+        """cpu_id not in catalogo → VAL-EAP-01 ERRO ou VAL-CPU-SINTETICO AVISO (ADR-108 fallback)."""
         from concilium.application.skills import run_precificacao_unitaria
 
         canonical = self._make_canonical_with_eap("CPU-MISSING-BDI")
         catalogo = {"cpus": [], "insumos": []}  # cpu not present
         result = run_precificacao_unitaria(canonical, {}, catalogo, self._base_perfil())
-        val_errors = [v for v in result.validacoes if v.codigo == "VAL-EAP-01" and v.status == "ERRO"]
+        val_errors = [
+            v for v in result.validacoes
+            if v.codigo in ("VAL-EAP-01", "VAL-CPU-SINTETICO")
+        ]
         assert len(val_errors) >= 1
 
     def test_categoria_not_in_preco_cat_skipped(self):

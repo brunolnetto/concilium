@@ -445,14 +445,13 @@ def _build_pe_for_equipe(
     if custo_total_autonomo <= 0 and custo_operacional_real > 0:
         custo_total_autonomo = custo_operacional_real
 
-    # gap_pool_overhead = custo de tempo ocioso real das instâncias deste item.
-    # Com política de pool sob demanda (frentes por atividade), o overhead de
-    # n_frentes paralelas é uma DECISÃO de negócio (não ineficiência ajustável).
-    # O único overhead genuíno é o tempo em que recursos estão mobilizados mas
-    # improdutivos (idle_mo + idle_eq das instâncias do pool para este item).
-    # Se idle=0 (política de late hire / early dismissal ativa), gap_pool=0.
+    # gap_pool_overhead: quando idle_por_item está disponível (pool ativo), usa idle real.
+    # Caso contrário, fallback para diferença entre custo operacional e custo autônomo.
     idle_item = (idle_por_item or {}).get(equipe.item_id, 0.0)
-    gap_pool_overhead = round(float(idle_item), 2)
+    if idle_por_item is not None:
+        gap_pool_overhead = round(float(idle_item), 2)
+    else:
+        gap_pool_overhead = round(float(max(0.0, custo_operacional_real - custo_total_autonomo)), 2)
 
     # fe_nec = custo_total_autonomo / (PU_sbdi × Q) = 1/η_p
     # NOTA: PU_sbdi JÁ inclui encargos no numerador (nota NEP-029: B_base×(1+enc)).

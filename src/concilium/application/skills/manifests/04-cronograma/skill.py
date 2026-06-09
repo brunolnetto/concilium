@@ -1239,13 +1239,13 @@ def _execute_manual_mode(
         # ADR-082: Incomplete items are warnings, not errors. Climate/schedule constraints
         # may reduce capacity below project requirements. Decision to extend schedule or add
         # teams is a business decision (ADR-091), not a technical blocker.
-        validacoes.append(ValidacaoItem(codigo="VAL-CRON-01", status="AVISO", mensagem=f"Itens não completados: {msg}"))
+        validacoes.append(ValidacaoItem(codigo="VAL-CRON-01", status="ERRO", mensagem=f"Itens não completados: {msg}"))
     if erros_vazios_all:
         # ADR-082: Scheduling gaps are warnings, not errors. May indicate suboptimal
         # allocation but don't prevent schedule execution.
         validacoes.append(
             ValidacaoItem(
-                codigo="VAL-CRON-02", status="AVISO", mensagem=f"Gaps detectados: {'; '.join(erros_vazios_all[:5])}"
+                codigo="VAL-CRON-02", status="ERRO", mensagem=f"Gaps detectados: {'; '.join(erros_vazios_all[:5])}"
             )
         )
     return distribuicao_por_item

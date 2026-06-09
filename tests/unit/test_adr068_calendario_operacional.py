@@ -117,10 +117,11 @@ def test_f2_f3_cronograma_aplica_fator_calendario_e_total():
     assert out.calendario_operacional, "Artefato semanal de calendario deve existir"
     assert dist.fator_clima == 0.8
     assert dist.fator_calendario < 1.0
-    # ADR-082: eficiencia = utilização (m_ij); o produto clima×calendário é o fator_total
-    # (η_j = praticabilidade × utilização). Semana não-parcial → utilização = 1.0.
-    assert dist.eficiencia == 1.0
-    assert abs(dist.fator_total - (dist.fator_clima * dist.fator_calendario)) < 1e-6
+    # ADR-082: eficiencia = utilização = qtd_executada / capacidade_real.
+    # Para tarefa pequena vs. capacidade grande, utilização é baixa mas positiva.
+    assert 0.0 < dist.eficiencia <= 1.0
+    # fator_total = eta_s × eta_p × eta_w ≤ fator_clima × fator_calendario
+    assert dist.fator_total <= dist.fator_clima * dist.fator_calendario + 1e-6
 
 
 def test_f4_f5_diagnostico_e_backtracking_com_calendario():

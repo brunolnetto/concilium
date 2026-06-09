@@ -213,11 +213,15 @@ def run_diagnostico_criticidade(
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-CC-01",
-                status="AVISO",
+                status="ERRO",
                 mensagem="Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)",
             )
         )
         equipes_disponivel = False  # Degrade gracefully
+
+    if not canonical_in.equipes_diretas:
+        validacoes.append(ValidacaoItem(codigo="VAL-DIAG-PRE", status="ERRO", mensagem="Equipes diretas necessárias."))
+        return SkillResult(canonical_in, validacoes)
 
     if not canonical_in.cronograma:
         validacoes.append(ValidacaoItem(codigo="VAL-DIAG-PRE", status="ERRO", mensagem="Cronograma necessário."))

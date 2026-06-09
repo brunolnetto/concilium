@@ -83,15 +83,14 @@ def _validate_eap_cpus(eap: list, catalogo: dict | None, validacoes: list) -> No
             missing_cpus.append(f"'{item.item_id}' ({item.cpu_id})")
 
     if missing_cpus:
-        # Warning instead of error: allows pipeline to continue while noting missing CPUs
-        # These will be resolved in later skills via catalog lookup or during estimation
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-EAP-01",
-                status="AVISO",
-                mensagem=f"{len(missing_cpus)} EAP items referenciam CPUs inexistentes no catálogo: {', '.join(missing_cpus[:3])}{'...' if len(missing_cpus) > 3 else ''}",  # noqa: E501
+        for ref in missing_cpus:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-EAP-01",
+                    status="ERRO",
+                    mensagem=f"EAP item {ref} referencia CPU inexistente no catálogo",
+                )
             )
-        )
     else:
         validacoes.append(ValidacaoItem(codigo="VAL-EAP-01", status="OK"))
 
@@ -172,10 +171,9 @@ def _build_dag_from_precedencias(
         # activity_id format: "1.1-atv-1", "1.2-atv-1", etc.
         # Extract item_id by removing "-atv-N" suffix
         parts = activity_id.rsplit("-atv-", 1)
-        if len(parts) == 2:
-            item_id = parts[0]
-            if item_id not in item_to_first_activity:
-                item_to_first_activity[item_id] = activity_id
+        item_id = parts[0] if len(parts) == 2 else activity_id
+        if item_id not in item_to_first_activity:
+            item_to_first_activity[item_id] = activity_id
 
     eap_by_id = {item.item_id: item for item in eap}
     for item in eap:

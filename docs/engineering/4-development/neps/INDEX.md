@@ -2,7 +2,7 @@
 
 **Projeto:** Concilium — MendesLobo Construtora  
 **Última atualização:** 2026-06-09  
-**Total:** 40 NEPs | ✅ 27 Concluídas · ⚠️ 8 Parcial/Em Andamento · 💡 0 Proposta · 📄 5 Doc atualizada
+**Total:** 41 NEPs | ✅ 27 Concluídas · ⚠️ 8 Parcial/Em Andamento · 💡 1 Proposta · 📄 5 Doc atualizada
 
 ---
 
@@ -69,6 +69,7 @@
 | [038](nep-038-criticidade-rcpsp-compressao-cronograma.md) | Criticidade RCPSP e Teoria de Compressão de Cronograma | 📄 Implementado | 🟡 Alta | Auditado 2026-06-08 |
 | [039](nep-039-ciclo-de-vida-benchmark-projeto.md) | Ciclo de vida benchmark-projeto e governança | ⚠️ Parcial | 🟠 Alto | Modelos presentes; MCP tools pendentes |
 | [040](nep-040-implementacao-decomposicao-instancial-custos.md) | Implementação da Decomposição Instancial (`custo_inst_*`) | 📄 Implementado | 🔴 Crítico | Auditado 2026-06-08 |
+| [041](nep-041-consolidacao-skills-analise-saida.md) | Consolidação de Skills de Análise, Saída e Financeiro (09+15, 13+14, 06+07+08, freeze 11+12) | 💡 Proposta | 🟠 Alto | Aguarda implementação |
 
 ---
 

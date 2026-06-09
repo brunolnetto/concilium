@@ -98,14 +98,13 @@ def _build_breakdown_direto_pu_q(cat_totals: dict[str, float], custo_direto: Any
         cat_totals["mao_obra"] + cat_totals["equipamentos"] + cat_totals["diesel"] + cat_totals["materiais"]
     )
     computed_catalog_total = cat_total if cat_total > 0 else total_from_components
-    primary_total = float(custo_direto) if custo_direto is not None else computed_catalog_total
     return {
         "base": "pu_q",
         "mao_obra_total": round(cat_totals["mao_obra"], 2),
         "equipamentos_total": round(cat_totals["equipamentos"], 2),
         "diesel_total": round(cat_totals["diesel"], 2),
         "materiais_total": round(cat_totals["materiais"], 2),
-        "direto_total": round(primary_total, 2),
+        "direto_total": round(computed_catalog_total, 2),
         "direto_total_pu_q": round(computed_catalog_total, 2),
         "direto_total_equipes": round(eq_total, 2),
     }

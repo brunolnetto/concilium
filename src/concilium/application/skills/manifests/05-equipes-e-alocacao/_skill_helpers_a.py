@@ -574,7 +574,8 @@ def _calc_custo_mob_desmob(comp: dict, cron: object) -> float:
 
 def _validar_materiais_item(comp: dict, cpu: dict, validacoes: list) -> None:
     """Emite VAL-EQUIP-MAT-01/02 para inconsistências entre MaterialEquipe e composicao_itens."""
-    materiais_cpu_ids = {m["insumo_id"] for m in comp.get("materiais", [])}
+    # Ignora entradas promovidas automaticamente de cpu.composicao_itens — apenas MaterialEquipe explícitas.
+    materiais_cpu_ids = {m["insumo_id"] for m in comp.get("materiais", []) if m.get("fonte") != "cpu.composicao_itens"}
     itens_material_ids = {
         it["insumo_id"] for it in cpu.get("composicao_itens", []) if it.get("categoria_custo") == "MATERIAL"
     }
@@ -606,10 +607,28 @@ def _sum_eq_weeks_and_cron_cost(periodos_lista, fixo_sem_comb: float, comb_nomin
     return custo, team_weeks
 
 
+def _calcular_permanencia_e_custo_total(cron, custo_fixo_mensal: float) -> tuple[float, float]:
+    """Permanência em meses e custo total a partir da distribuição do cronograma."""
+    mensal = getattr(cron, "distribuicao_mensal", None) or {}
+    if mensal:
+        entries = list(mensal.values())
+        permanencia = float(len(entries))
+        custo_total = round(sum(d.num_equipes * custo_fixo_mensal for d in entries), 2)
+        return permanencia, custo_total
+    dist = getattr(cron, "distribuicao_semanal", {}) or {}
+    periodos = [d for d in dist.values() if d.num_equipes > 0]
+    permanencia = round(len(periodos) / SEMANAS_POR_MES, 2)
+    fixo_sem = custo_fixo_mensal / SEMANAS_POR_MES
+    custo_total = round(sum(d.num_equipes * fixo_sem for d in periodos), 2)
+    return permanencia, custo_total
+
+
 def _comb_efetivo_mensal(periodos_lista, comb_nominal: float, team_weeks: int, custo_comb: float) -> float:
     if not team_weeks:
         return custo_comb
-    comb_total = sum(comb_nominal * (getattr(d, "eficiencia", 1.0) or 1.0) * d.num_equipes for d in periodos_lista)
+    # Combustível é proporcional à presença (num_equipes > 0), não à utilização de capacidade.
+    # eta_w representa utilização de capacidade de produção, não uso de diesel.
+    comb_total = sum(comb_nominal * d.num_equipes for d in periodos_lista if d.num_equipes > 0)
     return comb_total / (team_weeks / SEMANAS_POR_MES)
 
 
@@ -767,8 +786,9 @@ def _build_dimensionamento(
             comp, item.item_id, item_custom, cpu, horas_dia, dias_uteis, preco_diesel, ctx, validacoes
         )
         _validar_materiais_item(comp, cpu, validacoes)
-        # NEP-029 D4: custo de material mensal (MaterialEquipe ou composicao_itens MATERIAL)
-        custo_mat = _calc_custo_material_item(comp, cpu, prod_lookup, ctx, horas_dia, dias_uteis)
+        # custo_material_mensal é responsabilidade de etapas posteriores (skill-06+).
+        # Skill-05 apenas valida cobertura via VAL-EQUIP-MAT-01/02.
+        custo_mat = 0.0
 
         # NEP-029/S1: calibrar custos mensais pelo custo_hora_total_referencia do catálogo.
         # precos_unitarios_sbdi fornece as frações mo/eq/diesel já calculadas pela planilha.
@@ -812,7 +832,8 @@ def _build_dimensionamento(
         # custo_total_ajustado = custo total / n_frentes = custo de 1 frente (ADR-091)
         custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
         custo_total_final = round(custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
-        fixo_mensal_total = round(fixo_mensal + custo_mat, 2)
+        # NEP-037: custo_fixo_mensal usa custo_mo_base (sem encargos) — encargos ficam em custo_encargos_mensal.
+        fixo_mensal_total = round(custo_mo_base + custo_eq + custo_comb_efetivo + custo_mat, 2)
         equipes.append(
             EquipeDireta(
                 equipe_id=f"eq-{item.item_id}",
@@ -1118,6 +1139,7 @@ def _build_contrato_entry(
     delta_max: int,
     todas_cadeias: list,
     equipe_map: dict,
+    resource_costs_absent: bool = False,
 ) -> RecursoContrato:
     """Constrói um RecursoContrato completo para o tipo dado."""
     import math as _math
@@ -1133,12 +1155,11 @@ def _build_contrato_entry(
     c_mob = float(tipo_costs.get("custo_mob_unit", 0.0))
     c_demob = float(tipo_costs.get("custo_demob_unit", 0.0))
     c_idle = float(tipo_costs.get("custo_idle_semanal_unit", 0.0))
-    # ADR-085: quando resource_costs não fornece a taxa ociosa (ex: rcpsp_spec
-    # construído do catálogo), deriva do custo fixo da própria composição: locação
-    # (aluguel de equipamento) + mão de obra (equipe na folha) continuam quando o
-    # recurso está mobilizado mas parado; combustível e manutenção (uso) cessam.
-    # Sem isso, adr085_active=False e o custo é cobrado cheio por todo o contrato.
-    if c_idle <= 0.0:
+    # ADR-085: quando resource_costs não fornece taxa ociosa explícita, deriva do custo
+    # fixo da própria composição — mas SOMENTE se a chave resource_costs estava ausente
+    # no spec (catálogo sem custos explícitos). Se resource_costs={} foi passado
+    # explicitamente, preserva o comportamento monolítico ADR-071.
+    if c_idle <= 0.0 and resource_costs_absent:
         _c_idle_fallback = round(cus_mo + cus_locacao, 4)
         if _c_idle_fallback > 0.0:
             c_idle = _c_idle_fallback
@@ -1211,6 +1232,7 @@ def _build_tipo_contrato(
     atribuicao: dict,
     delta_max: int,
     todas_cadeias: list,
+    resource_costs_absent: bool = False,
 ) -> RecursoContrato:
     """Builds one RecursoContrato entry from tipo/items data."""
     custo_unit_semanal, fmo, feq, fcomb, fmat = _compute_custo_unit_fracs(mw_list)
@@ -1239,6 +1261,7 @@ def _build_tipo_contrato(
         delta_max,
         todas_cadeias,
         equipe_map,
+        resource_costs_absent=resource_costs_absent,
     )
 
 
@@ -1267,7 +1290,10 @@ def _setup_contratos_context(equipes: list, rcpsp_spec: dict) -> tuple:
     delta_max = int(rcpsp_spec.get("delta_perpetuacao_semanas", 2))
     _raw = rcpsp_spec.get("resource_costs", {})
     resource_costs: dict = _raw if isinstance(_raw, dict) else {}
-    return pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs
+    # True quando a chave está ausente no spec (catálogo sem custos explícitos — usa fallback).
+    # False quando resource_costs={} foi passado explicitamente (retrocompatibilidade ADR-071).
+    resource_costs_absent = "resource_costs" not in rcpsp_spec
+    return pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs, resource_costs_absent
 
 
 def _build_contratos_recurso(
@@ -1305,7 +1331,7 @@ def _build_contratos_recurso(
     atribuicao   : {item_id: (custo_atribuido, tipo_id, fracao)} — por item coberto
     cadeias      : list[CadeiaPerpetuacao] — cadeias de perpetuação ADR-073
     """
-    pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs = _setup_contratos_context(
+    pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs, resource_costs_absent = _setup_contratos_context(
         equipes, rcpsp_spec
     )
     if not pool or not activities:
@@ -1345,6 +1371,7 @@ def _build_contratos_recurso(
                 atribuicao,
                 delta_max,
                 todas_cadeias,
+                resource_costs_absent=resource_costs_absent,
             )
         )
 
