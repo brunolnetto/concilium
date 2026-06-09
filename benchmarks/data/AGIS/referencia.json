@@ -1213,7 +1213,7 @@
           },
           {
             "codigo": "P0075",
-            "funcao": "T\u00c9CNICO DE PLANEJAMENTO",
+            "funcao": "TÉCNICO DE PLANEJAMENTO",
             "quantidade": 1,
             "salario_base": 14000.0,
             "custo_unitario": 14000.0,
@@ -1237,21 +1237,21 @@
           },
           {
             "codigo": "P0073",
-            "funcao": "MEC\u00c2NICO",
+            "funcao": "MECÂNICO",
             "quantidade": 2,
             "salario_base": 7200.0,
             "custo_unitario": 14493.6
           },
           {
             "codigo": "P0011",
-            "funcao": "AUXILIAR MEC\u00c2NICO",
+            "funcao": "AUXILIAR MECÂNICO",
             "quantidade": 2,
             "salario_base": 2217.6,
             "custo_unitario": 4463.06
           },
           {
             "codigo": "P0086",
-            "funcao": "ENCARREGADO DE MEC\u00c2NICA",
+            "funcao": "ENCARREGADO DE MECÂNICA",
             "quantidade": 1,
             "salario_base": 4485.36,
             "custo_unitario": 9027.16
@@ -1279,7 +1279,7 @@
           },
           {
             "codigo": "P0034",
-            "funcao": "MOTORISTA DE CAMINH\u00c3O COMBOIO",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
             "quantidade": 2,
             "salario_base": 4001.71,
             "custo_unitario": 8053.44
@@ -1300,7 +1300,7 @@
           },
           {
             "codigo": "P0063",
-            "funcao": "AUXILIAR DE SERVI\u00c7OS GERAIS",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
             "quantidade": 2,
             "salario_base": 2043.36,
             "custo_unitario": 4112.26
@@ -1314,14 +1314,14 @@
           },
           {
             "codigo": "P0089",
-            "funcao": "MOTORISTA DE CAMINH\u00c3O PRANCHA",
+            "funcao": "MOTORISTA DE CAMINHÃO PRANCHA",
             "quantidade": 1,
             "salario_base": 4002.24,
             "custo_unitario": 8054.51
           },
           {
             "codigo": "P0036",
-            "funcao": "MOTORISTA DE \u00d4NIBUS",
+            "funcao": "MOTORISTA DE ÔNIBUS",
             "quantidade": 4,
             "salario_base": 2656.5,
             "custo_unitario": 5346.71
@@ -1342,7 +1342,7 @@
         "mao_obra": [
           {
             "codigo": "P0057",
-            "funcao": "TOP\u00d3GRAFO",
+            "funcao": "TOPÓGRAFO",
             "quantidade": 2,
             "salario_base": 18000.0,
             "custo_unitario": 18000.0,
@@ -1357,7 +1357,7 @@
           },
           {
             "codigo": "P0058",
-            "funcao": "SALA T\u00c9CNICA",
+            "funcao": "SALA TÉCNICA",
             "quantidade": 1,
             "salario_base": 12000.0,
             "custo_unitario": 12000.0,
@@ -1387,7 +1387,7 @@
           },
           {
             "codigo": "P0009",
-            "funcao": "AUXILIAR DE LABORAT\u00d3RIO",
+            "funcao": "AUXILIAR DE LABORATÓRIO",
             "quantidade": 1,
             "salario_base": 2217.6,
             "custo_unitario": 4463.06,
@@ -1402,7 +1402,7 @@
         "mao_obra": [
           {
             "codigo": "P0056",
-            "funcao": "T\u00c9CNICO DE SEGURAN\u00c7A DO TRABALHO",
+            "funcao": "TÉCNICO DE SEGURANÇA DO TRABALHO",
             "quantidade": 2,
             "salario_base": 7500.0,
             "custo_unitario": 7500.0,
@@ -1425,7 +1425,7 @@
           },
           {
             "codigo": "MO-BIOLOGO",
-            "funcao": "BI\u00d3LOGO DE CAMPO",
+            "funcao": "BIÓLOGO DE CAMPO",
             "quantidade": 1,
             "salario_base": 7500.0,
             "custo_unitario": 7500.0,
@@ -1433,7 +1433,7 @@
           },
           {
             "codigo": "MO-BOTANICO",
-            "funcao": "BOT\u00c2NICO DE CAMPO",
+            "funcao": "BOTÂNICO DE CAMPO",
             "quantidade": 1,
             "salario_base": 7500.0,
             "custo_unitario": 7500.0,
@@ -1455,23 +1455,8 @@
       "custo_indireto": 19584539.37,
       "custo_total": 66451872.72,
       "preco_venda": 76961261.88
-    },
-    "bdi_lucro_impostos": 0.29974983
+    }
   },
   "_schema_version": "v3",
-  "_schema_upgraded_from": "v2",
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-06-01",
-      "fim": "2026-06-01"
-    },
-    "operacao": {
-      "inicio": "2026-06-01",
-      "fim": "2027-06-27"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-06-27",
-      "fim": "2027-06-27"
-    }
-  }
+  "_schema_upgraded_from": "v2"
 }
