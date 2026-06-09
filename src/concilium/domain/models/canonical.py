@@ -112,7 +112,8 @@ class Projeto(BaseModel):
     id: UUID | str
     nome: str
     tipo_obra: Literal["terraplenagem", "pavimentacao", "saneamento"]
-    localizacao: str
+    # localizacao aceita string legada ("Brasil") ou Coordenadas {lat, lng} (normalizado)
+    localizacao: str | Coordenadas
     coordenadas: Coordenadas
     regime_trabalho: RegimeTrabalho
     data_inicio: date

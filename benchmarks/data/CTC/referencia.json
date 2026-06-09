@@ -1,15 +1,13 @@
 {
   "slug": "CTC",
-  "planejamento": {
-    "custo_direto_sem_bdi": 105213001.33,
-    "custo_indireto": 37104760.55,
-    "total_projeto": 142317761.88
-  },
   "meta": {
+    "projeto": "CTC",
     "data_inicio": "2026-01-01",
     "data_termino": "2027-12-31",
-    "projeto": "CTC",
-    "localizacao": "Brasil",
+    "localizacao": {
+      "lat": -29.68333,
+      "lng": -53.8
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -22,7 +20,7 @@
         "item_id": "1.1",
         "ordem": 1,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "REMO\u00c7\u00c3O DO SOLO VEGETAL, E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA",
+        "descricao": "REMOÇÃO DO SOLO VEGETAL, E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA",
         "unidade": "m2",
         "quantitativo": 330133.0,
         "predecessores": [],
@@ -34,7 +32,7 @@
         "item_id": "1.2",
         "ordem": 2,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESCAVA\u00c7\u00c3O DE MATERIAL DE 1\u00aa  CATEGORIA, REGULARIZA\u00c7\u00c3O, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPEC\u00cdFICO E DESCARGA",
+        "descricao": "ESCAVAÇÃO DE MATERIAL DE 1ª  CATEGORIA, REGULARIZAÇÃO, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA",
         "unidade": "m3",
         "quantitativo": 2200000.0,
         "predecessores": [
@@ -51,7 +49,7 @@
         "item_id": "1.3",
         "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESCAVA\u00c7\u00c3O DE MATERIAL DE 2\u00aa CATEGORIA, REGULARIZA\u00c7\u00c3O, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPEC\u00cdFICO E DESCARGA",
+        "descricao": "ESCAVAÇÃO DE MATERIAL DE 2ª CATEGORIA, REGULARIZAÇÃO, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA",
         "unidade": "m3",
         "quantitativo": 202000.0,
         "predecessores": [
@@ -68,7 +66,7 @@
         "item_id": "1.4",
         "ordem": 4,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESCAVA\u00c7\u00c3O DE MATERIAL DE 3\u00aa CATEGORIA, REGULARIZA\u00c7\u00c3O, CARGA, TRANSPORTE DE MATERIAL PARA BOTA FORA ESPEC\u00cdFICO E DESCARGA",
+        "descricao": "ESCAVAÇÃO DE MATERIAL DE 3ª CATEGORIA, REGULARIZAÇÃO, CARGA, TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA",
         "unidade": "m3",
         "quantitativo": 173000.0,
         "predecessores": [
@@ -87,7 +85,7 @@
         "item_id": "1.5",
         "ordem": 5,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "ESPALHAMENTO, REGULARIZA\u00c7\u00c3O, COMPACTA\u00c7\u00c3O DE MATERIAL EM BOTA FORA",
+        "descricao": "ESPALHAMENTO, REGULARIZAÇÃO, COMPACTAÇÃO DE MATERIAL EM BOTA FORA",
         "unidade": "m3",
         "quantitativo": 2575000.0,
         "predecessores": [
@@ -106,7 +104,7 @@
         "item_id": "1.6",
         "ordem": 6,
         "cpu_id": "CPU-DIVER-ATI-069",
-        "descricao": "PROTE\u00c7\u00c3O DE TALUDE COM ENROCAMENTO DE PEDRA, ESPESSURA 05M SOBRE MANTA BIDIM RT-21, CONFORME ESPECIFICA\u00c7\u00c3O DER ET-DE-H00/011",
+        "descricao": "PROTEÇÃO DE TALUDE COM ENROCAMENTO DE PEDRA, ESPESSURA 05M SOBRE MANTA BIDIM RT-21, CONFORME ESPECIFICAÇÃO DER ET-DE-H00/011",
         "unidade": "m3",
         "quantitativo": 57980.0,
         "predecessores": [
@@ -241,6 +239,12 @@
           "2026-W17": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -298,6 +302,12 @@
           "2026-W34": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -355,6 +365,12 @@
           "2026-W51": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -412,6 +428,12 @@
           "2027-W15": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -469,6 +491,12 @@
           "2027-W32": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -526,6 +554,12 @@
           "2027-W49": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       }
     ],
@@ -562,18 +596,17 @@
       }
     ]
   },
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-01-01",
-      "fim": "2026-01-01"
-    },
-    "operacao": {
-      "inicio": "2026-01-01",
-      "fim": "2027-12-31"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-12-31",
-      "fim": "2027-12-31"
+  "planejamento": {
+    "custo_direto_sem_bdi": 105213001.33,
+    "custo_indireto": 37104760.55,
+    "total_projeto": 142317761.88
+  },
+  "resultado": {
+    "benchmark_confronto_referencia": {
+      "custo_indireto": 28286131.64,
+      "custo_direto": 75180960.59,
+      "preco_venda": 142317761.88,
+      "custo_total": 103467092.23
     }
   }
 }

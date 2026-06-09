@@ -3,7 +3,10 @@
     "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
     "data_inicio": "2026-06-01",
     "data_termino": "2027-06-27",
-    "localizacao": "Ceara, Brasil",
+    "localizacao": {
+      "lat": -7.3875,
+      "lng": -39.85
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -204,6 +207,12 @@
           "2026-W37": {
             "num_equipes": 3
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 6,
+          "ramp_up_semanas": 2,
+          "ramp_down_semanas": 1
         }
       },
       {
@@ -242,6 +251,12 @@
           "2026-W38": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -382,6 +397,12 @@
           "2026-W53": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -414,6 +435,12 @@
           "2026-W33": {
             "num_equipes": 2
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 2,
+          "ramp_up_semanas": 1,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -572,6 +599,12 @@
           "2026-W53": {
             "num_equipes": 2
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 2,
+          "ramp_up_semanas": 1,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -631,6 +664,12 @@
           "2026-W42": {
             "num_equipes": 3
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 3,
+          "ramp_up_semanas": 2,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -747,6 +786,12 @@
           "2026-W53": {
             "num_equipes": 3
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 4,
+          "ramp_up_semanas": 29,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -905,6 +950,12 @@
           "2026-W53": {
             "num_equipes": 4
           }
+        },
+        "mob_params": {
+          "q_0": 2,
+          "q_max": 4,
+          "ramp_up_semanas": 5,
+          "ramp_down_semanas": 3
         }
       },
       {
@@ -919,6 +970,12 @@
           "2027-W25": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 2,
+          "ramp_up_semanas": 1,
+          "ramp_down_semanas": 1
         }
       },
       {
@@ -1080,6 +1137,12 @@
           "2026-W53": {
             "num_equipes": 3
           }
+        },
+        "mob_params": {
+          "q_0": 2,
+          "q_max": 3,
+          "ramp_up_semanas": 5,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -1103,6 +1166,12 @@
           "2027-W23": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       }
     ],
@@ -1458,5 +1527,6 @@
     }
   },
   "_schema_version": "v3",
-  "_schema_upgraded_from": "v2"
+  "_schema_upgraded_from": "v2",
+  "slug": "AGIS"
 }

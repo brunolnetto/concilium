@@ -1,15 +1,13 @@
 {
   "slug": "ROSH",
-  "planejamento": {
-    "custo_direto_sem_bdi": 3602554.94,
-    "custo_indireto": 3780982.71,
-    "total_projeto": 7383537.65
-  },
   "meta": {
     "data_inicio": "2026-01-01",
     "data_termino": "2027-12-31",
     "projeto": "ROSH",
-    "localizacao": "Brasil",
+    "localizacao": {
+      "lat": -23.5475,
+      "lng": -46.63611
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -23,7 +21,7 @@
         "ordem": 1,
         "cpu_id": "CPU-TERRA-ATI-021",
         "descricao": "Rebaixo Terreno natural - 40 cm",
-        "unidade": "m\u00b2",
+        "unidade": "m²",
         "quantitativo": 110000.0,
         "predecessores": [],
         "cpu_meta": {}
@@ -32,8 +30,8 @@
         "item_id": "1.2",
         "ordem": 2,
         "cpu_id": "CPU-TERRA-ATI-021",
-        "descricao": "Regulariza\u00e7\u00e3o e compacta\u00e7\u00e3o do terreno natural",
-        "unidade": "m\u00b2",
+        "descricao": "Regularização e compactação do terreno natural",
+        "unidade": "m²",
         "quantitativo": 110000.0,
         "predecessores": [
           {
@@ -49,7 +47,7 @@
         "item_id": "1.3",
         "ordem": 3,
         "cpu_id": "CPU-PAVIM-PAV-BASE-BGTC",
-        "descricao": "Execu\u00e7\u00e3o das guias",
+        "descricao": "Execução das guias",
         "unidade": "m",
         "quantitativo": 1392.98,
         "predecessores": [
@@ -66,8 +64,8 @@
         "item_id": "1.5",
         "ordem": 4,
         "cpu_id": "CPU-DIVER-ATI-069",
-        "descricao": "Lan\u00e7amento da manta geot\u00eaxtil",
-        "unidade": "m\u00b2",
+        "descricao": "Lançamento da manta geotêxtil",
+        "unidade": "m²",
         "quantitativo": 115500.0,
         "predecessores": [
           {
@@ -83,8 +81,8 @@
         "item_id": "1.10",
         "ordem": 5,
         "cpu_id": "CPU-MOB-010",
-        "descricao": "Lan\u00e7amento da geogrelha",
-        "unidade": "m\u00b2",
+        "descricao": "Lançamento da geogrelha",
+        "unidade": "m²",
         "quantitativo": 115500.0,
         "predecessores": [
           {
@@ -100,8 +98,8 @@
         "item_id": "1.14",
         "ordem": 6,
         "cpu_id": "CPU-TERRA-ATI-020",
-        "descricao": "Lan\u00e7amento e espalhamento de areia",
-        "unidade": "m\u00b3",
+        "descricao": "Lançamento e espalhamento de areia",
+        "unidade": "m³",
         "quantitativo": 7150.0,
         "predecessores": [
           {
@@ -117,8 +115,8 @@
         "item_id": "1.17",
         "ordem": 7,
         "cpu_id": "CPU-TERRA-ATI-022",
-        "descricao": "Espalhamento e compacta\u00e7\u00e3o de rach\u00e3o",
-        "unidade": "m\u00b3",
+        "descricao": "Espalhamento e compactação de rachão",
+        "unidade": "m³",
         "quantitativo": 28875.0,
         "predecessores": [
           {
@@ -134,8 +132,8 @@
         "item_id": "1.21",
         "ordem": 8,
         "cpu_id": "CPU-TERRA-ATI-022",
-        "descricao": "Espalhamento e Compacta\u00e7\u00e3o de  bica corrida",
-        "unidade": "m\u00b3",
+        "descricao": "Espalhamento e Compactação de  bica corrida",
+        "unidade": "m³",
         "quantitativo": 17820.0,
         "predecessores": [
           {
@@ -151,8 +149,8 @@
         "item_id": "1.25",
         "ordem": 9,
         "cpu_id": "CPU-TERRA-ATI-023",
-        "descricao": "Espalhamento e compacta\u00e7\u00e3o de BGTC",
-        "unidade": "m\u00b3",
+        "descricao": "Espalhamento e compactação de BGTC",
+        "unidade": "m³",
         "quantitativo": 46200.0,
         "predecessores": [
           {
@@ -168,8 +166,8 @@
         "item_id": "1.29",
         "ordem": 10,
         "cpu_id": "CPU-TERRA-ATI-020",
-        "descricao": "Lan\u00e7amento e espalhamento de p\u00f3 de pedra",
-        "unidade": "m\u00b3",
+        "descricao": "Lançamento e espalhamento de pó de pedra",
+        "unidade": "m³",
         "quantitativo": 5720.0,
         "predecessores": [
           {
@@ -185,8 +183,8 @@
         "item_id": "1.33",
         "ordem": 11,
         "cpu_id": "CPU-DIVER-ATI-073",
-        "descricao": "Insta\u00e7\u00e3o de piso intertravado",
-        "unidade": "m\u00b2",
+        "descricao": "Instação de piso intertravado",
+        "unidade": "m²",
         "quantitativo": 110000.0,
         "predecessores": [
           {
@@ -203,7 +201,7 @@
         "ordem": 12,
         "cpu_id": "CPU-DIVER-ATI-073",
         "descricao": "Rejuntamento do piso intertravado",
-        "unidade": "m\u00b2",
+        "unidade": "m²",
         "quantitativo": 110000.0,
         "predecessores": [
           {
@@ -219,8 +217,8 @@
         "item_id": "2.1",
         "ordem": 13,
         "cpu_id": "CPU-DIVER-ATI-069",
-        "descricao": "Lan\u00e7amento da manta geot\u00eaxtil",
-        "unidade": "m\u00b2",
+        "descricao": "Lançamento da manta geotêxtil",
+        "unidade": "m²",
         "quantitativo": 115500.0,
         "predecessores": [
           {
@@ -236,8 +234,8 @@
         "item_id": "3.1",
         "ordem": 14,
         "cpu_id": "CPU-LIMP-001",
-        "descricao": "Lan\u00e7amento da geogrelha",
-        "unidade": "m\u00b2",
+        "descricao": "Lançamento da geogrelha",
+        "unidade": "m²",
         "quantitativo": 115500.0,
         "predecessores": [
           {
@@ -339,6 +337,12 @@
           "2026-W07": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -366,6 +370,12 @@
           "2026-W14": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -393,6 +403,12 @@
           "2026-W21": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -420,6 +436,12 @@
           "2026-W28": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -447,6 +469,12 @@
           "2026-W35": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -474,6 +502,12 @@
           "2026-W42": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -501,6 +535,12 @@
           "2026-W49": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -528,6 +568,12 @@
           "2027-W03": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -555,6 +601,12 @@
           "2027-W10": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -582,6 +634,12 @@
           "2027-W17": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -609,6 +667,12 @@
           "2027-W24": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -636,6 +700,12 @@
           "2027-W31": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -663,6 +733,12 @@
           "2027-W38": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -690,6 +766,12 @@
           "2027-W45": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       }
     ],
@@ -726,18 +808,17 @@
       }
     ]
   },
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-01-01",
-      "fim": "2026-01-01"
-    },
-    "operacao": {
-      "inicio": "2026-01-01",
-      "fim": "2027-12-31"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-12-31",
-      "fim": "2027-12-31"
+  "planejamento": {
+    "custo_direto_sem_bdi": 3602554.94,
+    "custo_indireto": 3780982.71,
+    "total_projeto": 7383537.65
+  },
+  "resultado": {
+    "benchmark_confronto_referencia": {
+      "custo_direto": 3602554.94,
+      "custo_indireto": 3780982.71,
+      "preco_venda": 7383537.65,
+      "custo_total": 7383537.65
     }
   }
 }

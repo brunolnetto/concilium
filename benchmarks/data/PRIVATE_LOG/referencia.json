@@ -1,15 +1,13 @@
 {
   "slug": "PRIVATE_LOG",
-  "planejamento": {
-    "custo_direto_sem_bdi": 16871719.86,
-    "custo_indireto": 9072759.57,
-    "total_projeto": 25944479.43
-  },
   "meta": {
     "data_inicio": "2026-01-01",
     "data_termino": "2027-12-31",
     "projeto": "PRIVATE_LOG",
-    "localizacao": "Brasil",
+    "localizacao": {
+      "lat": -20.18194,
+      "lng": -40.25917
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -32,7 +30,7 @@
         "item_id": "1.2",
         "ordem": 2,
         "cpu_id": "CPU-DIVER-ATI-007",
-        "descricao": "Supress\u00e3o de \u00e1rvores isoladas",
+        "descricao": "Supressão de árvores isoladas",
         "unidade": "un",
         "quantitativo": 80.0,
         "predecessores": [
@@ -49,7 +47,7 @@
         "item_id": "1.3",
         "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00aa categoria - DT M\u00e1ximo de 1km",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km",
         "unidade": "m3",
         "quantitativo": 614502.27,
         "predecessores": [
@@ -66,7 +64,7 @@
         "item_id": "1.4",
         "ordem": 4,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00aa categoria - DMT 3,5km  - (JAZIDA)",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA)",
         "unidade": "m3",
         "quantitativo": 114791.36,
         "predecessores": [
@@ -100,7 +98,7 @@
         "item_id": "1.6",
         "ordem": 6,
         "cpu_id": "CPU-TERRA-ENCHIMENTO-REBAIXO-ROCHA",
-        "descricao": "Desmonte de rocha com escavadeira e rompedor hidr\u00e1ulico",
+        "descricao": "Desmonte de rocha com escavadeira e rompedor hidráulico",
         "unidade": "m3",
         "quantitativo": 12000.0,
         "predecessores": [
@@ -117,7 +115,7 @@
         "item_id": "1.8",
         "ordem": 7,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escava\u00e7\u00e3o de solo mole, incluso tranporte em ate 1km, e espalhamento",
+        "descricao": "Escavação de solo mole, incluso tranporte em ate 1km, e espalhamento",
         "unidade": "m3",
         "quantitativo": 25000.0,
         "predecessores": [
@@ -134,7 +132,7 @@
         "item_id": "1.11",
         "ordem": 8,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00aa categoria - DMT 3,5km  - (JAZIDA) - substitui\u00e7\u00e3o do solo mole",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA) - substituição do solo mole",
         "unidade": "m3",
         "quantitativo": 25000.0,
         "predecessores": [
@@ -168,7 +166,7 @@
         "item_id": "1.9",
         "ordem": 10,
         "cpu_id": "CPU-SANEA-ATI-048",
-        "descricao": "Dreno provisorio tipo espinha de peixe, para corre\u00e7\u00e3o de satura\u00e7\u00e3o do solo - linha dupla 150mm",
+        "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha dupla 150mm",
         "unidade": "m",
         "quantitativo": 1720.0,
         "predecessores": [
@@ -185,7 +183,7 @@
         "item_id": "1.10",
         "ordem": 11,
         "cpu_id": "CPU-SANEA-ATI-048",
-        "descricao": "Dreno provisorio tipo espinha de peixe, para corre\u00e7\u00e3o de satura\u00e7\u00e3o do solo - linha simples 150mm",
+        "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha simples 150mm",
         "unidade": "m",
         "quantitativo": 1740.0,
         "predecessores": [
@@ -294,6 +292,12 @@
           "2026-W09": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -327,6 +331,12 @@
           "2026-W18": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -360,6 +370,12 @@
           "2026-W27": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -393,6 +409,12 @@
           "2026-W36": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -426,6 +448,12 @@
           "2026-W45": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -459,6 +487,12 @@
           "2027-W01": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -492,6 +526,12 @@
           "2027-W10": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -525,6 +565,12 @@
           "2027-W19": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -558,6 +604,12 @@
           "2027-W28": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -591,6 +643,12 @@
           "2027-W37": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -624,6 +682,12 @@
           "2027-W46": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       }
     ],
@@ -660,18 +724,17 @@
       }
     ]
   },
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-01-01",
-      "fim": "2026-01-01"
-    },
-    "operacao": {
-      "inicio": "2026-01-01",
-      "fim": "2027-12-31"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-12-31",
-      "fim": "2027-12-31"
+  "planejamento": {
+    "custo_direto_sem_bdi": 16871719.86,
+    "custo_indireto": 9072759.57,
+    "total_projeto": 25944479.43
+  },
+  "resultado": {
+    "benchmark_confronto_referencia": {
+      "custo_indireto": 6882876.35,
+      "custo_direto": 14885785.22,
+      "preco_venda": 25944479.43,
+      "custo_total": 21768661.57
     }
   }
 }

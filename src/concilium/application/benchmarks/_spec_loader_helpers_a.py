@@ -36,9 +36,13 @@ def _norm_ref_projeto_block(out: dict[str, Any], projeto_block: dict[str, Any]) 
     nome = projeto_block.get("nome") or projeto_block.get("projeto")
     if nome and not isinstance(out.get("projeto"), str):
         out["projeto"] = nome
-    if projeto_block.get("localizacao") and not out.get("localizacao"):
-        out["localizacao"] = projeto_block.get("localizacao")
-    if projeto_block.get("coordenadas") and not out.get("coordenadas"):
+    loc = projeto_block.get("localizacao")
+    if loc and not out.get("localizacao"):
+        out["localizacao"] = loc
+    # Se localizacao já é {lat, lng}, propagar como coordenadas também (retrocompat)
+    if isinstance(loc, dict) and "lat" in loc and not out.get("coordenadas"):
+        out["coordenadas"] = loc
+    elif projeto_block.get("coordenadas") and not out.get("coordenadas"):
         out["coordenadas"] = projeto_block.get("coordenadas")
 
 

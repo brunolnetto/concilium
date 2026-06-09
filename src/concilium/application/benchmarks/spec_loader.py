@@ -102,6 +102,7 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     out["projeto"] = meta.get("projeto", "")
     out["data_inicio"] = meta.get("data_inicio", "")
     out["data_termino"] = meta.get("data_termino", "")
+    # localizacao aceita string ("Brasil") ou {lat, lng} — ambos propagados downstream
     out["localizacao"] = meta.get("localizacao", "")
     out["regime_trabalho"] = meta.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6})
     out["mode"] = meta.get("mode", "benchmark_config")
@@ -351,8 +352,14 @@ class BenchmarkSpecLoader:
             inputs_escopo={
                 "nome": ref.get("projeto", slug),
                 "tipo_obra": "terraplenagem",
+                # localizacao: string legada OU {lat, lng} normalizado. coordenadas é
+                # alias retrocompat — se localizacao já é {lat,lng}, reusa o mesmo dict.
                 "localizacao": ref.get("localizacao", "Brasil"),
-                "coordenadas": ref.get("coordenadas", {"lat": 0, "lng": 0}),
+                "coordenadas": (
+                    ref.get("localizacao")
+                    if isinstance(ref.get("localizacao"), dict)
+                    else ref.get("coordenadas", {"lat": 0.0, "lng": 0.0})
+                ),
                 "regime_trabalho": ref.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6}),
                 "data_inicio": data_ini,
                 "data_termino": data_fim,

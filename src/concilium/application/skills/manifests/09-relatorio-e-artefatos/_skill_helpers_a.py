@@ -756,7 +756,11 @@ def _rra_build_relatorio(
         "resumo": {
             "projeto": proj.nome,
             "tipo_obra": proj.tipo_obra,
-            "localizacao": proj.localizacao,
+            "localizacao": (
+                f"lat={proj.localizacao.lat:.5f}, lng={proj.localizacao.lng:.5f}"
+                if hasattr(proj.localizacao, "lat")
+                else proj.localizacao
+            ),
             "periodo": f"{proj.data_inicio} -> {proj.data_termino}",
             "status": proj.status,
         },

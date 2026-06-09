@@ -9,7 +9,10 @@
     "data_inicio": "2026-01-01",
     "data_termino": "2027-12-31",
     "projeto": "RUMO",
-    "localizacao": "Brasil",
+    "localizacao": {
+      "lat": -15.78333,
+      "lng": -54.83333
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -22,7 +25,7 @@
         "item_id": "1.1",
         "ordem": 1,
         "cpu_id": "CPU-TERRA-ATI-002",
-        "descricao": "Limpeza mecanizada da camada vegetal (espessura m\u00e9dia de 30 cm) - volume geom\u00e9trico",
+        "descricao": "Limpeza mecanizada da camada vegetal (espessura média de 30 cm) - volume geométrico",
         "unidade": "m2",
         "quantitativo": 52000.0,
         "predecessores": [],
@@ -32,7 +35,7 @@
         "item_id": "1.3",
         "ordem": 2,
         "cpu_id": "CPU-TERRA-ATI-022",
-        "descricao": "Regulariza\u00e7\u00e3o de bota-fora com espalhamento e compacta\u00e7\u00e3o",
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
         "unidade": "m3",
         "quantitativo": 15600.0,
         "predecessores": [
@@ -49,7 +52,7 @@
         "item_id": "2.1",
         "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00aa categoria - dmt de 400 a 600 m - caminho de servi\u00e7o em leito natural - com carregadeira e caminh\u00e3o basculante de 14 m\u00b3 - volume geom\u00e9trico",
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - dmt de 400 a 600 m - caminho de serviço em leito natural - com carregadeira e caminhão basculante de 14 m³ - volume geométrico",
         "unidade": "m3",
         "quantitativo": 1194.65,
         "predecessores": [
@@ -66,7 +69,7 @@
         "item_id": "2.2",
         "ordem": 4,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "descricao": "Escava\u00e7\u00e3o, carga e transporte de material de 1\u00b0 cat. - dmt: 4700m (importa\u00e7\u00e3o solo de jazida interna ao TBR070)",
+        "descricao": "Escavação, carga e transporte de material de 1° cat. - dmt: 4700m (importação solo de jazida interna ao TBR070)",
         "unidade": "m3",
         "quantitativo": 51353.78,
         "predecessores": [
@@ -83,7 +86,7 @@
         "item_id": "2.3",
         "ordem": 5,
         "cpu_id": "CPU-TERRA-COMPAC-PI",
-        "descricao": "Compacta\u00e7\u00e3o de aterros a 100% do proctor intermedi\u00e1rio (camada final) - volume homogeneizado (vol. geom\u00e9trico x 1,25)",
+        "descricao": "Compactação de aterros a 100% do proctor intermediário (camada final) - volume homogeneizado (vol. geométrico x 1,25)",
         "unidade": "m3",
         "quantitativo": 40421.87,
         "predecessores": [
@@ -100,7 +103,7 @@
         "item_id": "3.1",
         "ordem": 6,
         "cpu_id": "CPU-PAVIM-ATI-060",
-        "descricao": "Demoli\u00e7\u00e3o mec\u00e2nica de pavimento",
+        "descricao": "Demolição mecânica de pavimento",
         "unidade": "m3",
         "quantitativo": 4200.0,
         "predecessores": [
@@ -117,7 +120,7 @@
         "item_id": "3.3",
         "ordem": 7,
         "cpu_id": "CPU-TERRA-ATI-022",
-        "descricao": "Regulariza\u00e7\u00e3o de bota-fora com espalhamento e compacta\u00e7\u00e3o",
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
         "unidade": "m3",
         "quantitativo": 6300.0,
         "predecessores": [
@@ -134,7 +137,7 @@
         "item_id": "4.1",
         "ordem": 8,
         "cpu_id": "CPU-TERRA-ATI-019-M2",
-        "descricao": "Regulariza\u00e7\u00e3o do subleito",
+        "descricao": "Regularização do subleito",
         "unidade": "m2",
         "quantitativo": 37509.04,
         "predecessores": [
@@ -151,7 +154,7 @@
         "item_id": "4.2",
         "ordem": 9,
         "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA",
-        "descricao": "Refor\u00e7o de subleito com solo de jazida selecionada - volume geom\u00e9trico",
+        "descricao": "Reforço de subleito com solo de jazida selecionada - volume geométrico",
         "unidade": "m3",
         "quantitativo": 22505.42,
         "predecessores": [
@@ -168,7 +171,7 @@
         "item_id": "4.3",
         "ordem": 10,
         "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA",
-        "descricao": "Sub-base estabilizada granulometricamente com mistura solo brita (70% - 30%) na pista com material de jazida e brita comercial - volume geom\u00e9trico",
+        "descricao": "Sub-base estabilizada granulometricamente com mistura solo brita (70% - 30%) na pista com material de jazida e brita comercial - volume geométrico",
         "unidade": "m3",
         "quantitativo": 5626.36,
         "predecessores": [
@@ -202,7 +205,7 @@
         "item_id": "4.5",
         "ordem": 12,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Imprima\u00e7\u00e3o com asfalto dilu\u00eddo",
+        "descricao": "Imprimação com asfalto diluído",
         "unidade": "m2",
         "quantitativo": 35842.04,
         "predecessores": [
@@ -219,7 +222,7 @@
         "item_id": "4.6",
         "ordem": 13,
         "cpu_id": "CPU-PAVIM-ATI-057",
-        "descricao": "Pintura de liga\u00e7\u00e3o (RR1C)",
+        "descricao": "Pintura de ligação (RR1C)",
         "unidade": "m2",
         "quantitativo": 71684.08,
         "predecessores": [
@@ -236,7 +239,7 @@
         "item_id": "4.7",
         "ordem": 14,
         "cpu_id": "CPU-PAVIM-ATI-057",
-        "descricao": "Binder - camada de liga\u00e7\u00e3o (FAIXA B)",
+        "descricao": "Binder - camada de ligação (FAIXA B)",
         "unidade": "t",
         "quantitativo": 5851.41,
         "predecessores": [
@@ -270,7 +273,7 @@
         "item_id": "5.1",
         "ordem": 16,
         "cpu_id": "CPU-DREN-CORPO-BSTC-100-PA2",
-        "descricao": "Tubula\u00e7\u00e3o em concreto armado, do tipo pa2 (nomenclatura abtc) \u00f8600mm - areia e brita comerciais (incluso fornecimento e execu\u00e7\u00e3o)",
+        "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø600mm - areia e brita comerciais (incluso fornecimento e execução)",
         "unidade": "m",
         "quantitativo": 60.0,
         "predecessores": [
@@ -287,7 +290,7 @@
         "item_id": "5.2",
         "ordem": 17,
         "cpu_id": "CPU-DREN-CORPO-BSTC-100-PA2",
-        "descricao": "Tubula\u00e7\u00e3o em concreto armado, do tipo pa2 (nomenclatura abtc) \u00f81000mm - areia e brita comerciais (incluso fornecimento e execu\u00e7\u00e3o)",
+        "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø1000mm - areia e brita comerciais (incluso fornecimento e execução)",
         "unidade": "m",
         "quantitativo": 20.0,
         "predecessores": [
@@ -304,7 +307,7 @@
         "item_id": "5.3",
         "ordem": 18,
         "cpu_id": "CPU-DREN-BOCA-BSTC-100",
-        "descricao": "Boca de BSTC D = 0,60 m - esconsidade 0\u00b0 - areia e brita comerciais - alas retas",
+        "descricao": "Boca de BSTC D = 0,60 m - esconsidade 0° - areia e brita comerciais - alas retas",
         "unidade": "und",
         "quantitativo": 6.0,
         "predecessores": [
@@ -321,7 +324,7 @@
         "item_id": "5.4",
         "ordem": 19,
         "cpu_id": "CPU-DREN-BOCA-BSTC-100",
-        "descricao": "Boca de BSTC D = 1,00 m - esconsidade 0\u00b0 - areia e brita comerciais - alas retas",
+        "descricao": "Boca de BSTC D = 1,00 m - esconsidade 0° - areia e brita comerciais - alas retas",
         "unidade": "und",
         "quantitativo": 2.0,
         "predecessores": [
@@ -338,8 +341,8 @@
         "item_id": "5.5",
         "ordem": 20,
         "cpu_id": "CPU-DREN-CORPO-BSCC-250X250",
-        "descricao": "Escava\u00e7\u00e3o mecanizada de cavas ou valas de solo local - volume geom\u00e9trico",
-        "unidade": "m\u00b3",
+        "descricao": "Escavação mecanizada de cavas ou valas de solo local - volume geométrico",
+        "unidade": "m³",
         "quantitativo": 1732.48,
         "predecessores": [
           {
@@ -355,8 +358,8 @@
         "item_id": "5.6",
         "ordem": 21,
         "cpu_id": "CPU-TERRA-REGULARIZACAO-SUBLEITO",
-        "descricao": "Regulariza\u00e7\u00e3o de valas com apiloamento do fundo",
-        "unidade": "m\u00b2",
+        "descricao": "Regularização de valas com apiloamento do fundo",
+        "unidade": "m²",
         "quantitativo": 2977.1,
         "predecessores": [
           {
@@ -372,8 +375,8 @@
         "item_id": "5.7",
         "ordem": 22,
         "cpu_id": "CPU-TERRA-ATI-022",
-        "descricao": "Regulariza\u00e7\u00e3o de bota-fora com espalhamento e compacta\u00e7\u00e3o",
-        "unidade": "m\u00b3",
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
+        "unidade": "m³",
         "quantitativo": 1732.48,
         "predecessores": [
           {
@@ -390,7 +393,7 @@
         "ordem": 23,
         "cpu_id": "CPU-TERRA-ATI-080",
         "descricao": "Hidrossemeadura para cobertura de taludes",
-        "unidade": "m\u00b2",
+        "unidade": "m²",
         "quantitativo": 2977.1,
         "predecessores": [
           {
@@ -493,6 +496,12 @@
           "2026-W04": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -511,6 +520,12 @@
           "2026-W08": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -529,6 +544,12 @@
           "2026-W12": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -547,6 +568,12 @@
           "2026-W16": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -565,6 +592,12 @@
           "2026-W20": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -583,6 +616,12 @@
           "2026-W24": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -601,6 +640,12 @@
           "2026-W28": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -619,6 +664,12 @@
           "2026-W32": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -637,6 +688,12 @@
           "2026-W36": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -655,6 +712,12 @@
           "2026-W40": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -673,6 +736,12 @@
           "2026-W44": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -691,6 +760,12 @@
           "2026-W48": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -709,6 +784,12 @@
           "2026-W52": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -727,6 +808,12 @@
           "2027-W03": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -745,6 +832,12 @@
           "2027-W07": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -763,6 +856,12 @@
           "2027-W11": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -781,6 +880,12 @@
           "2027-W15": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -799,6 +904,12 @@
           "2027-W19": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -817,6 +928,12 @@
           "2027-W23": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -835,6 +952,12 @@
           "2027-W27": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -853,6 +976,12 @@
           "2027-W31": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -871,6 +1000,12 @@
           "2027-W35": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -889,6 +1024,12 @@
           "2027-W39": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -907,6 +1048,12 @@
           "2027-W43": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       }
     ],
@@ -943,18 +1090,12 @@
       }
     ]
   },
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-01-01",
-      "fim": "2026-01-01"
-    },
-    "operacao": {
-      "inicio": "2026-01-01",
-      "fim": "2027-12-31"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-12-31",
-      "fim": "2027-12-31"
+  "resultado": {
+    "benchmark_confronto_referencia": {
+      "custo_indireto": 3341476.12,
+      "custo_direto": 13429755.69,
+      "preco_venda": 20651689.59,
+      "custo_total": 16771231.81
     }
   }
 }

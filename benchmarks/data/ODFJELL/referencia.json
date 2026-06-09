@@ -3,7 +3,10 @@
     "data_inicio": "2026-01-01",
     "data_termino": "2027-12-31",
     "projeto": "ODFJELL",
-    "localizacao": "Brasil",
+    "localizacao": {
+      "lat": -25.43278,
+      "lng": -49.27
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -15,7 +18,7 @@
         "item_id": "3.1",
         "ordem": 1,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
-        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,60 m - fornecimento, instala\u00e7\u00e3o, incluso escava\u00e7\u00e3o, reaterro e bota fora do material execedente",
+        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,60 m - fornecimento, instalação, incluso escavação, reaterro e bota fora do material execedente",
         "unidade": "m",
         "quantitativo": 24000.0,
         "predecessores": []
@@ -24,7 +27,7 @@
         "item_id": "3.2",
         "ordem": 2,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
-        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,40 m - fornecimento e instala\u00e7\u00e3o, incluso escava\u00e7\u00e3o, reaterro e bota fora do material execedente",
+        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,40 m - fornecimento e instalação, incluso escavação, reaterro e bota fora do material execedente",
         "unidade": "m",
         "quantitativo": 74100.0,
         "predecessores": []
@@ -33,7 +36,7 @@
         "item_id": "3.3",
         "ordem": 3,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
-        "descricao": "Canaleta retangular em concreto, 0,50x0,50m, com grelha met\u00e1lica, incluso escava\u00e7\u00e3o, reaterro e bota fora do material execedente",
+        "descricao": "Canaleta retangular em concreto, 0,50x0,50m, com grelha metálica, incluso escavação, reaterro e bota fora do material execedente",
         "unidade": "m",
         "quantitativo": 2100.0,
         "predecessores": []
@@ -42,7 +45,7 @@
         "item_id": "3.4",
         "ordem": 4,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Caixa de passagem em concreto armado, dimens\u00f5es 1,10x1,10m, com tamp\u00e3o de ferro di\u00e2metro de 0,60m, altura vari\u00e1vel",
+        "descricao": "Caixa de passagem em concreto armado, dimensões 1,10x1,10m, com tampão de ferro diâmetro de 0,60m, altura variável",
         "unidade": "und",
         "quantitativo": 2300.0,
         "predecessores": []
@@ -51,7 +54,7 @@
         "item_id": "3.5",
         "ordem": 5,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Po\u00e7o de Visita em concreto armado 1,10x1,10m, at\u00e9 2,00m de profundidade, rejuntados com argamassa, tra\u00e7o: 1:3, pintados interna e externamente com nata de cimento, com tamp\u00e3o de ferro di\u00e2metro de 0,60m",
+        "descricao": "Poço de Visita em concreto armado 1,10x1,10m, até 2,00m de profundidade, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
         "unidade": "und",
         "quantitativo": 1200.0,
         "predecessores": []
@@ -60,7 +63,7 @@
         "item_id": "3.6",
         "ordem": 6,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Po\u00e7o de Visita em concreto armado 1,10x1,10m, acima de 2,00m de profundidade,  rejuntados com argamassa, tra\u00e7o: 1:3, pintados interna e externamente com nata de cimento, com tamp\u00e3o de ferro di\u00e2metro de 0,60m",
+        "descricao": "Poço de Visita em concreto armado 1,10x1,10m, acima de 2,00m de profundidade,  rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
         "unidade": "und",
         "quantitativo": 700.0,
         "predecessores": []
@@ -69,7 +72,7 @@
         "item_id": "3.7",
         "ordem": 7,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Caixa de Ralo em concreto armado 0,90x0,30m, profundidade 0,90m, rejuntados com argamassa, tra\u00e7o: 1:3, pintados interna e externamente com nata de cimento",
+        "descricao": "Caixa de Ralo em concreto armado 0,90x0,30m, profundidade 0,90m, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
         "unidade": "und",
         "quantitativo": 1600.0,
         "predecessores": []
@@ -78,7 +81,7 @@
         "item_id": "3.8",
         "ordem": 8,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Boca de Lobo Simples em concreto armado 1,00x1,00m, , altura vari\u00e1vel, rejuntados com argamassa, tra\u00e7o: 1:3, pintados interna e externamente com nata de cimento",
+        "descricao": "Boca de Lobo Simples em concreto armado 1,00x1,00m, , altura variável, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
         "unidade": "und",
         "quantitativo": 900.0,
         "predecessores": []
@@ -87,7 +90,7 @@
         "item_id": "3.9",
         "ordem": 9,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
-        "descricao": "Tubo corrugado perfurado em PEAD, DN \u00d8100mm Kananet, Ref Kanaflex ou similar, incluso escava\u00e7\u00e3o, reaterro e bota fora do material execedente",
+        "descricao": "Tubo corrugado perfurado em PEAD, DN Ø100mm Kananet, Ref Kanaflex ou similar, incluso escavação, reaterro e bota fora do material execedente",
         "unidade": "m",
         "quantitativo": 66700.0,
         "predecessores": []
@@ -96,7 +99,7 @@
         "item_id": "3.11",
         "ordem": 10,
         "cpu_id": "CPU-TERRA-COMPAC-PN",
-        "descricao": "Brita n\u00b0 2",
+        "descricao": "Brita n° 2",
         "unidade": "m3",
         "quantitativo": 10200.0,
         "predecessores": []
@@ -105,7 +108,7 @@
         "item_id": "3.12",
         "ordem": 11,
         "cpu_id": "CPU-TERRA-COMPAC-PN",
-        "descricao": "Areia M\u00e9dia Lavada",
+        "descricao": "Areia Média Lavada",
         "unidade": "m3",
         "quantitativo": 13600.0,
         "predecessores": []
@@ -114,7 +117,7 @@
         "item_id": "3.15",
         "ordem": 12,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
-        "descricao": "Tubo corrugado PEAD, parede dupla, interna lisa, JEI, DN/DI 600 mm, para saneamento (drenagem/esgoto) - incluindo escava\u00e7\u00e3o, reaterro e bota-fora com DMT 500 m",
+        "descricao": "Tubo corrugado PEAD, parede dupla, interna lisa, JEI, DN/DI 600 mm, para saneamento (drenagem/esgoto) - incluindo escavação, reaterro e bota-fora com DMT 500 m",
         "unidade": "m",
         "quantitativo": 20222.0,
         "predecessores": []
@@ -123,7 +126,7 @@
         "item_id": "3.16",
         "ordem": 13,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Valeta trapezoidal com revestimento vegetal 120-40 - padr\u00e3o DNIT, incluindo fornecimento e aplica\u00e7\u00e3o de grama",
+        "descricao": "Valeta trapezoidal com revestimento vegetal 120-40 - padrão DNIT, incluindo fornecimento e aplicação de grama",
         "unidade": "m",
         "quantitativo": 38000.0,
         "predecessores": []
@@ -132,7 +135,7 @@
         "item_id": "3.17",
         "ordem": 14,
         "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
-        "descricao": "Canaleta retangular de concreto armado, com 0,60m de largura e altura vari\u00e1vel de 0,20 a 0,40m, inclusive escava\u00e7\u00e3o e reaterro.",
+        "descricao": "Canaleta retangular de concreto armado, com 0,60m de largura e altura variável de 0,20 a 0,40m, inclusive escavação e reaterro.",
         "unidade": "m",
         "quantitativo": 40625.0,
         "predecessores": []
@@ -141,7 +144,7 @@
         "item_id": "3.18",
         "ordem": 15,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Calha/Canaleta de concreto simples, tipo meia cana, diametro de 60 cm, para \u00e1gua pluvial.",
+        "descricao": "Calha/Canaleta de concreto simples, tipo meia cana, diametro de 60 cm, para água pluvial.",
         "unidade": "m",
         "quantitativo": 27000.0,
         "predecessores": []
@@ -150,7 +153,7 @@
         "item_id": "3.19",
         "ordem": 16,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Caixa de Liga\u00e7\u00e3o e Passagem - CLP 02 - \u00d8 600mm, sem dispositivo interno de queda",
+        "descricao": "Caixa de Ligação e Passagem - CLP 02 - Ø 600mm, sem dispositivo interno de queda",
         "unidade": "un",
         "quantitativo": 700.0,
         "predecessores": []
@@ -159,7 +162,7 @@
         "item_id": "3.21",
         "ordem": 17,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Dissipador de Energia DED 01 - Aplic\u00e1vel a Descidas DAR",
+        "descricao": "Dissipador de Energia DED 01 - Aplicável a Descidas DAR",
         "unidade": "un",
         "quantitativo": 200.0,
         "predecessores": []
@@ -168,7 +171,7 @@
         "item_id": "3.22",
         "ordem": 18,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Dissipador de Energia DEB 360-414 - Aplic\u00e1vel a Bueiros e Descidas",
+        "descricao": "Dissipador de Energia DEB 360-414 - Aplicável a Bueiros e Descidas",
         "unidade": "un",
         "quantitativo": 200.0,
         "predecessores": []
@@ -177,7 +180,7 @@
         "item_id": "3.23",
         "ordem": 19,
         "cpu_id": "CPU-DREN-BOCA-BTCC-350X350",
-        "descricao": "Bueiro Simples Tubular de Concreto CA1 - BSTC \u00d8 1.200mm - (CORPO)",
+        "descricao": "Bueiro Simples Tubular de Concreto CA1 - BSTC Ø 1.200mm - (CORPO)",
         "unidade": "m",
         "quantitativo": 3700.0,
         "predecessores": []
@@ -203,6 +206,12 @@
           "2026-W05": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -224,6 +233,12 @@
           "2026-W10": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -245,6 +260,12 @@
           "2026-W15": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -266,6 +287,12 @@
           "2026-W20": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -287,6 +314,12 @@
           "2026-W25": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -308,6 +341,12 @@
           "2026-W30": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -329,6 +368,12 @@
           "2026-W35": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -350,6 +395,12 @@
           "2026-W40": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -371,6 +422,12 @@
           "2026-W45": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -392,6 +449,12 @@
           "2026-W50": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -413,6 +476,12 @@
           "2027-W02": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -434,6 +503,12 @@
           "2027-W07": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -455,6 +530,12 @@
           "2027-W12": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -476,6 +557,12 @@
           "2027-W17": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -497,6 +584,12 @@
           "2027-W22": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -518,6 +611,12 @@
           "2027-W27": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -539,6 +638,12 @@
           "2027-W32": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -560,6 +665,12 @@
           "2027-W37": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       },
       {
@@ -581,6 +692,12 @@
           "2027-W42": {
             "num_equipes": 1
           }
+        },
+        "mob_params": {
+          "q_0": 1,
+          "q_max": 1,
+          "ramp_up_semanas": 0,
+          "ramp_down_semanas": 0
         }
       }
     ],
@@ -654,18 +771,13 @@
       }
     ]
   },
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-01-01",
-      "fim": "2026-01-01"
-    },
-    "operacao": {
-      "inicio": "2026-01-01",
-      "fim": "2027-12-31"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-12-31",
-      "fim": "2027-12-31"
+  "slug": "ODFJELL",
+  "resultado": {
+    "benchmark_confronto_referencia": {
+      "custo_indireto": 1813470.08,
+      "custo_direto": 2947287.54,
+      "preco_venda": 6299957.17,
+      "custo_total": 4760757.62
     }
   }
 }
