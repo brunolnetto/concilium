@@ -1,6 +1,6 @@
 # NEP-037: Migração dos Encargos Sociais do Custo Direto para a Camada BDI
 
-**Status:** Em Andamento  
+**Status:** Parcialmente Implementado ⚠️ _(Sprint S2 — 2026-06-09, revisão 2026-06-09)_  
 **Prioridade:** 🔴 Crítico  
 **Área:** Arquitetura e Skills  
 **Tipo:** Bug + Governança + Dados  

@@ -1,8 +1,18 @@
 # ADR-106: EquipeCustoEngine — Lifecycle Unificado para Equipes Diretas e Indiretas
 
-**Status:** Proposto  
+**Status:** Parcialmente Implementado ⚠️ _(auditado 2026-06-09)_  
 **Data:** 2026-06-08  
 **Autores:** Engenharia de Plataforma  
+
+> **Nota de implementação (2026-06-09):**
+> - ✅ `gap_pool_overhead` refeito para usar idle real das instâncias (não diferença custo),
+>   alinhando com a semântica correta: overhead = standby real, não custo de frentes.
+> - ✅ S1 (NEP-029): `_calibrar_custos_por_cref` implementado em skill-05 —
+>   base autoritativa para equipes diretas, eliminando divergência autônomo vs pool.
+> - ⚠️ `equipe_custo_engine.py` (F1-F3): NÃO implementado — engine unificado
+>   aguarda S2/S3 (NEP-031, NEP-037, ADR-105 completos).
+> - ⚠️ `IndirectTeamCostStrategy` (F4): NÃO implementado.
+> - ⚠️ Mob windows / early dismissal EQ (F5-F6): NÃO implementados.
 **Relacionados:** ADR-079, ADR-080, ADR-085, ADR-104, ADR-105, NEP-040, NEP-031
 
 ---

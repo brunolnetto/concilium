@@ -13,12 +13,21 @@ uma cadeia de débito técnico interligado. Este plano define a sequência míni
 de implementação, respeitando dependências e garantindo que cada sprint entregue valor
 observável nos benchmarks.
 
-**Situação atual (pós-sessão 2026-06-08):**
-- AGIS: pool Σ = 47.3M vs PUxQ 46.8M (+1%) após correção de `custo_hora_total_referencia`
-- Benchmarks verdes: AGIS, CTC, LUNDIN, MARA_ROSA
-- ROSH/PRIVATE_LOG INVIÁVEL por dois motivos legítimos:
-  1. `custo_hora_total_referencia = 0` nas CPUs (dado faltante no catálogo)
-  2. Schedule genuinamente ineficiente (gap de 210 semanas entre usos do mesmo recurso)
+**Situação atual (pós-sessão 2026-06-09 — Sprint S2 + S1 parcial):**
+
+| Item | Antes | Depois | Estado |
+|---|---|---|---|
+| NEP-031 L4 | Não implementado | SS/FF wiring para CP-SAT via ActivityDAG | ✅ Done |
+| NEP-037 F1-F4 | Não implementado | `custo_encargos_mensal` separado em canonical/skills | ✅ Done |
+| NEP-029 / S1 | Não implementado | `_calibrar_custos_por_cref` em skill-05 | ✅ Parcial (AGIS) |
+| painel_equilibrio | 14.4M overhead falso | 0M (idle real = 0; frentes = decisão de negócio) | ✅ Corrigido |
+| pool_economia | Economia negativa espúria | Correta (gap é custo de frentes paralelas) | ✅ Corrigido |
+| scurve_custo | Linha "Catálogo"; label errado | "Preço de venda" sem linha catálogo | ✅ Corrigido |
+
+**Benchmarks após S1:**
+- ✅ AGIS: APROVADO_COM_RESSALVAS — pool calibrado, painel limpo
+- ❌ CTC/LUNDIN/ROSH/PRIVATE_LOG: BLOQUEADOS — C_ref da planilha AGIS ≠ taxas horárias desses benchmarks
+  → Cada benchmark precisa de `custo_hora_total_referencia` calibrado da sua própria planilha (NEP-029 completo)
 
 ---
 
