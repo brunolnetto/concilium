@@ -23,8 +23,8 @@ permissions:
   id-token: write
   contents: read
 
-# ── Job 1: Build & Push ───────────────────────────────────────────────────────
 jobs:
+# ── Job 1: Build & Push ───────────────────────────────────────────────────────
   build:
     name: Build & Push → ACR
     runs-on: ubuntu-latest
