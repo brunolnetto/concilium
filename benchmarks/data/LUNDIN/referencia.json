@@ -137,7 +137,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 8000.0
+        "producao_diaria": 8000.0,
+        "descricao": "Supressão vegetal de fragmentos",
+        "unidade": "M2",
+        "quantitativo": 1400000.0,
+        "cpu_id": "CPU-DIVER-ATI-006"
       },
       {
         "item_id": "1.5",
@@ -147,7 +151,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 8000.0
+        "producao_diaria": 8000.0,
+        "descricao": "Remoção e transporte da camada orgânica (topsoil)",
+        "unidade": "M2",
+        "quantitativo": 1400000.0,
+        "cpu_id": "CPU-PAVIM-ATI-058"
       },
       {
         "item_id": "1.3",
@@ -157,7 +165,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 14457.14
+        "producao_diaria": 14457.14,
+        "descricao": "Execução de limpeza de áreas",
+        "unidade": "M2",
+        "quantitativo": 2530000.0,
+        "cpu_id": "CPU-TERRA-ATI-004"
       }
     ],
     "indiretos": [
@@ -165,13 +177,143 @@
         "categoria": "ADM",
         "driver": "mensal",
         "custo_fixo_mensal_total": 176183.99,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 7500.0,
+            "custo_unitario": 1200.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0006",
+            "funcao": "AUXILIAR ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 2625.0,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 14000.0,
+            "custo_unitario": 1200.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0020",
+            "funcao": "ENCARREGADO DE FRENTE",
+            "quantidade": 1,
+            "salario_base": 4600.0,
+            "custo_unitario": 1200.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0004",
+            "funcao": "APONTADOR",
+            "quantidade": 2,
+            "salario_base": 3300.0,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0027",
+            "funcao": "GERENTE DE CONTRATO",
+            "quantidade": 1,
+            "salario_base": 21000.0,
+            "custo_unitario": 1200.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0064",
+            "funcao": "ENGENHEIRO FLORESTAL",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 1200.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0072",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 1680.0,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0073",
+            "funcao": "MECÂNICO",
+            "quantidade": 1,
+            "salario_base": 4000.0,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 5696.6,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0033",
+            "funcao": "MOTORISTA DE CAMINHÃO PIPA",
+            "quantidade": 1,
+            "salario_base": 3391.5,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 1,
+            "salario_base": 3640.0,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 1,
+            "salario_base": 2436.0,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 2,
+            "salario_base": 1848.0,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "TOP",
         "driver": "projeto",
         "custo_fixo_total": 1339116.26,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0057",
+            "funcao": "TOPÓGRAFO",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 1200.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0010",
+            "funcao": "AUXILIAR DE TOPOGRAFIA",
+            "quantidade": 1,
+            "salario_base": 2231.08,
+            "custo_unitario": 1865.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "LAB",
@@ -183,13 +325,66 @@
         "categoria": "QSMS",
         "driver": "mensal",
         "custo_fixo_mensal_total": 36062.53,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 2,
+            "salario_base": 7500.0,
+            "custo_unitario": 1200.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       },
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 12245840.3,
-        "mao_obra": []
+        "custo_fixo_total": 1471255.59,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "GOIANIA",
+            "destino": "ALTO HORIZONTE",
+            "distancia_km": 700.0
+          },
+          "equipamentos": {
+            "quantidade_mob": 1,
+            "custo_km": 11.0,
+            "subtotal": 135000.0,
+            "distancia_km": 700.0
+          },
+          "pessoal": {
+            "quantidade_pessoas": 41,
+            "custo_por_pessoa": 1200.0,
+            "subtotal": 98400.0
+          },
+          "verbas": {
+            "subtotal": 1237855.59,
+            "itens": [
+              {
+                "descricao": "INTEGRAÇÃO EQUIPE DIRETA",
+                "unidade": "VB",
+                "quantidade": 1.0,
+                "preco_unitario": 126225.59,
+                "subtotal": 126225.59
+              },
+              {
+                "descricao": "MOBILIZAÇÃO DE EQUIPAMENTOS",
+                "unidade": "VB",
+                "quantidade": 1.0,
+                "preco_unitario": 366000.0,
+                "subtotal": 366000.0
+              },
+              {
+                "descricao": "ALIMENTAÇÃO, PLANO DE SAUDE E CESTA BÁSICA INTEGRAÇÃO",
+                "unidade": "VB",
+                "quantidade": 1.0,
+                "preco_unitario": 41030.0,
+                "subtotal": 41030.0
+              }
+            ]
+          }
+        }
       }
     ]
   },

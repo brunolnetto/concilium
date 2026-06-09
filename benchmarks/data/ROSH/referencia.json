@@ -320,7 +320,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 3142.86
+        "producao_diaria": 3142.86,
+        "descricao": "Limpeza da camada vegetal - 20 cm",
+        "unidade": "m²",
+        "quantitativo": 151400.0,
+        "cpu_id": "CPU-TERRA-ATI-002"
       },
       {
         "item_id": "1.2",
@@ -330,7 +334,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 3142.86
+        "producao_diaria": 3142.86,
+        "descricao": "Trasporte da camada vegetal para bota fora  - DMT até 1000 m",
+        "unidade": "m³",
+        "quantitativo": 30280.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "1.3",
@@ -340,7 +348,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 39.8
+        "producao_diaria": 39.8,
+        "descricao": "Regularização de bota fora com espalhamento",
+        "unidade": "m³",
+        "quantitativo": 30280.0,
+        "cpu_id": "CPU-TERRA-ATI-020"
       },
       {
         "item_id": "1.5",
@@ -440,7 +452,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 3300.0
+        "producao_diaria": 3300.0,
+        "descricao": "Escavação e carga de material 1º e 2º categoria",
+        "unidade": "m³",
+        "quantitativo": 216250.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "3.1",
@@ -450,7 +466,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 3300.0
+        "producao_diaria": 3300.0,
+        "descricao": "Plantio de Grama",
+        "unidade": "m²",
+        "quantitativo": 10977.26,
+        "cpu_id": "CPU-DIVER-ATI-069"
       }
     ],
     "indiretos": [
@@ -458,13 +478,175 @@
         "categoria": "ADM",
         "driver": "mensal",
         "custo_fixo_mensal_total": 34374.06,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 7000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0003",
+            "funcao": "ALMOXARIFE",
+            "quantidade": 1,
+            "salario_base": 2305.6,
+            "custo_unitario": 2185.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0024",
+            "funcao": "ENGENHEIRO CIVIL",
+            "quantidade": 1,
+            "salario_base": 18000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 15000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0073",
+            "funcao": "MECÂNICO",
+            "quantidade": 1,
+            "salario_base": 6000.0,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 3657.94,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0093",
+            "funcao": "PREFEITO DE ALOJAMENTO",
+            "quantidade": 1,
+            "salario_base": 4000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0063",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 1674.2,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0033",
+            "funcao": "MOTORISTA DE CAMINHÃO PIPA",
+            "quantidade": 1,
+            "salario_base": 2505.6,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 1,
+            "salario_base": 2813.18,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "TOP",
         "driver": "projeto",
         "custo_fixo_total": 261265.91,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 7000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0003",
+            "funcao": "ALMOXARIFE",
+            "quantidade": 1,
+            "salario_base": 2305.6,
+            "custo_unitario": 2185.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0024",
+            "funcao": "ENGENHEIRO CIVIL",
+            "quantidade": 1,
+            "salario_base": 18000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 15000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0073",
+            "funcao": "MECÂNICO",
+            "quantidade": 1,
+            "salario_base": 6000.0,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 3657.94,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0093",
+            "funcao": "PREFEITO DE ALOJAMENTO",
+            "quantidade": 1,
+            "salario_base": 4000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0063",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 1674.2,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0033",
+            "funcao": "MOTORISTA DE CAMINHÃO PIPA",
+            "quantidade": 1,
+            "salario_base": 2505.6,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 1,
+            "salario_base": 2813.18,
+            "custo_unitario": 2685.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "LAB",
@@ -476,13 +658,44 @@
         "categoria": "QSMS",
         "driver": "mensal",
         "custo_fixo_mensal_total": 7035.92,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 1,
+            "salario_base": 7000.0,
+            "custo_unitario": 1950.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       },
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 2389202.97,
-        "mao_obra": []
+        "custo_fixo_total": 439293.13,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "Natal",
+            "destino": "Parnamirim",
+            "distancia_km": 200.0
+          },
+          "equipamentos": {
+            "quantidade_mob": 10,
+            "custo_km": 13.0,
+            "subtotal": 65800.0,
+            "distancia_km": 200.0
+          },
+          "pessoal": {
+            "quantidade_pessoas": 32,
+            "custo_por_pessoa": 1200.0,
+            "subtotal": 76800.0
+          },
+          "verbas": {
+            "subtotal": 296693.13,
+            "itens": []
+          }
+        }
       }
     ]
   },

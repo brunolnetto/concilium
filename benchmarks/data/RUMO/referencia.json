@@ -483,7 +483,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 2600.0
+        "producao_diaria": 2600.0,
+        "descricao": "Limpeza mecanizada da camada vegetal (espessura média de 30 cm) - volume geométrico",
+        "unidade": "m2",
+        "quantitativo": 52000.0,
+        "cpu_id": "CPU-TERRA-ATI-002"
       },
       {
         "item_id": "1.3",
@@ -493,7 +497,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 780.0
+        "producao_diaria": 780.0,
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
+        "unidade": "m3",
+        "quantitativo": 15600.0,
+        "cpu_id": "CPU-DREN-REATERRO-COMPAC"
       },
       {
         "item_id": "2.1",
@@ -503,7 +511,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 59.73
+        "producao_diaria": 59.73,
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - dmt de 400 a 600 m - caminho de serviço em leito natural - com carregadeira e caminhão basculante de 14 m³ - volume geométrico",
+        "unidade": "m3",
+        "quantitativo": 1194.65,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "2.2",
@@ -513,7 +525,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 2567.69
+        "producao_diaria": 2567.69,
+        "descricao": "Escavação, carga e transporte de material de 1° cat. - dmt: 4700m (importação solo de jazida interna ao TBR070)",
+        "unidade": "m3",
+        "quantitativo": 51353.78,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "2.3",
@@ -523,7 +539,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 2021.09
+        "producao_diaria": 2021.09,
+        "descricao": "Compactação de aterros a 100% do proctor intermediário (camada final) - volume homogeneizado (vol. geométrico x 1,25)",
+        "unidade": "m3",
+        "quantitativo": 40421.87,
+        "cpu_id": "CPU-TERRA-COMPAC-PI"
       },
       {
         "item_id": "3.1",
@@ -533,7 +553,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 210.0
+        "producao_diaria": 210.0,
+        "descricao": "Demolição mecânica de pavimento",
+        "unidade": "m3",
+        "quantitativo": 4200.0,
+        "cpu_id": "CPU-PAVIM-ATI-060"
       },
       {
         "item_id": "3.3",
@@ -543,7 +567,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 315.0
+        "producao_diaria": 315.0,
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
+        "unidade": "m3",
+        "quantitativo": 6300.0,
+        "cpu_id": "CPU-DREN-REATERRO-COMPAC"
       },
       {
         "item_id": "4.1",
@@ -553,7 +581,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1875.45
+        "producao_diaria": 1875.45,
+        "descricao": "Regularização do subleito",
+        "unidade": "m2",
+        "quantitativo": 37509.04,
+        "cpu_id": "CPU-TERRA-ATI-019-M2"
       },
       {
         "item_id": "4.2",
@@ -563,7 +595,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1125.27
+        "producao_diaria": 1125.27,
+        "descricao": "Reforço de subleito com solo de jazida selecionada - volume geométrico",
+        "unidade": "m3",
+        "quantitativo": 22505.42,
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA"
       },
       {
         "item_id": "4.3",
@@ -573,7 +609,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 281.32
+        "producao_diaria": 281.32,
+        "descricao": "Sub-base estabilizada granulometricamente com mistura solo brita (70% - 30%) na pista com material de jazida e brita comercial - volume geométrico",
+        "unidade": "m3",
+        "quantitativo": 5626.36,
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA"
       },
       {
         "item_id": "4.4",
@@ -583,7 +623,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 275.07
+        "producao_diaria": 275.07,
+        "descricao": "Base ou sub-base de brita graduada executada com vibroacabadora - brita comercial",
+        "unidade": "m3",
+        "quantitativo": 5501.33,
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA"
       },
       {
         "item_id": "4.5",
@@ -593,7 +637,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1792.1
+        "producao_diaria": 1792.1,
+        "descricao": "Imprimação com asfalto diluído",
+        "unidade": "m2",
+        "quantitativo": 35842.04,
+        "cpu_id": "CPU-PAVIM-ATI-056"
       },
       {
         "item_id": "4.6",
@@ -603,7 +651,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 3584.2
+        "producao_diaria": 3584.2,
+        "descricao": "Pintura de ligação (RR1C)",
+        "unidade": "m2",
+        "quantitativo": 71684.08,
+        "cpu_id": "CPU-PAVIM-ATI-057"
       },
       {
         "item_id": "4.7",
@@ -613,7 +665,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 292.57
+        "producao_diaria": 292.57,
+        "descricao": "Binder - camada de ligação (FAIXA B)",
+        "unidade": "t",
+        "quantitativo": 5851.41,
+        "cpu_id": "CPU-PAVIM-ATI-057"
       },
       {
         "item_id": "4.8",
@@ -623,7 +679,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 270.06
+        "producao_diaria": 270.06,
+        "descricao": "Cbuq - concreto betuminoso usinado a quente",
+        "unidade": "t",
+        "quantitativo": 5401.3,
+        "cpu_id": "CPU-PAVIM-ATI-058"
       },
       {
         "item_id": "5.1",
@@ -633,7 +693,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 3.0
+        "producao_diaria": 3.0,
+        "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø600mm - areia e brita comerciais (incluso fornecimento e execução)",
+        "unidade": "m",
+        "quantitativo": 60.0,
+        "cpu_id": "CPU-DREN-CORPO-BDCC-100"
       },
       {
         "item_id": "5.2",
@@ -643,7 +707,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1.0
+        "producao_diaria": 1.0,
+        "descricao": "Tubulação em concreto armado, do tipo pa2 (nomenclatura abtc) ø1000mm - areia e brita comerciais (incluso fornecimento e execução)",
+        "unidade": "m",
+        "quantitativo": 20.0,
+        "cpu_id": "CPU-DREN-CORPO-BDCC-100"
       },
       {
         "item_id": "5.3",
@@ -653,7 +721,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 0.3
+        "producao_diaria": 0.3,
+        "descricao": "Boca de BSTC D = 0,60 m - esconsidade 0° - areia e brita comerciais - alas retas",
+        "unidade": "und",
+        "quantitativo": 6.0,
+        "cpu_id": "CPU-DREN-BOCA-BSTC-100"
       },
       {
         "item_id": "5.4",
@@ -663,7 +735,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 0.1
+        "producao_diaria": 0.1,
+        "descricao": "Boca de BSTC D = 1,00 m - esconsidade 0° - areia e brita comerciais - alas retas",
+        "unidade": "und",
+        "quantitativo": 2.0,
+        "cpu_id": "CPU-DREN-BOCA-BSTC-100"
       },
       {
         "item_id": "5.5",
@@ -673,7 +749,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 86.62
+        "producao_diaria": 86.62,
+        "descricao": "Escavação mecanizada de cavas ou valas de solo local - volume geométrico",
+        "unidade": "m³",
+        "quantitativo": 1732.48,
+        "cpu_id": "CPU-DREN-ESCAV-VALA-1CAT"
       },
       {
         "item_id": "5.6",
@@ -683,7 +763,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 148.85
+        "producao_diaria": 148.85,
+        "descricao": "Regularização de valas com apiloamento do fundo",
+        "unidade": "m²",
+        "quantitativo": 2977.1,
+        "cpu_id": "CPU-TERRA-REGULARIZACAO-SUBLEITO"
       },
       {
         "item_id": "5.7",
@@ -693,7 +777,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 86.62
+        "producao_diaria": 86.62,
+        "descricao": "Regularização de bota-fora com espalhamento e compactação",
+        "unidade": "m³",
+        "quantitativo": 1732.48,
+        "cpu_id": "CPU-DREN-REATERRO-COMPAC"
       },
       {
         "item_id": "5.8",
@@ -703,7 +791,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 148.85
+        "producao_diaria": 148.85,
+        "descricao": "Hidrossemeadura para cobertura de taludes",
+        "unidade": "m²",
+        "quantitativo": 2977.1,
+        "cpu_id": "CPU-TERRA-ATI-080"
       },
       {
         "item_id": "7.1",
@@ -713,7 +805,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 4273.78
+        "producao_diaria": 4273.78,
+        "descricao": "Hidrossemeadura para cobertura de taludes",
+        "unidade": "m2",
+        "quantitativo": 85475.66,
+        "cpu_id": "CPU-TERRA-ATI-080"
       }
     ],
     "indiretos": [
@@ -721,31 +817,216 @@
         "categoria": "ADM",
         "driver": "mensal",
         "custo_fixo_mensal_total": 37488.06,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 8000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 15000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0072",
+            "funcao": "APONTADOR",
+            "quantidade": 3,
+            "salario_base": 2543.2,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0027",
+            "funcao": "GERENTE DE CONTRATO",
+            "quantidade": 1,
+            "salario_base": 25000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0075",
+            "funcao": "TÉCNICO DE PLANEJAMENTO",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0063",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 2300.0,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0032",
+            "funcao": "MOTORISTA DE CAMINHÃO BASCULANTE",
+            "quantidade": 8,
+            "salario_base": 2530.0,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 4069.0,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0033",
+            "funcao": "MOTORISTA DE CAMINHÃO PIPA",
+            "quantidade": 1,
+            "salario_base": 2656.5,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 1,
+            "salario_base": 2656.5,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 4,
+            "salario_base": 1548.8,
+            "custo_unitario": 2320.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 1,
+            "salario_base": 2013.44,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "TOP",
         "driver": "projeto",
         "custo_fixo_total": 284934.37,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0057",
+            "funcao": "TOPÓGRAFO",
+            "quantidade": 1,
+            "salario_base": 14000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0010",
+            "funcao": "AUXILIAR DE TOPOGRAFIA",
+            "quantidade": 1,
+            "salario_base": 2798.4,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "LAB",
         "driver": "projeto",
         "custo_fixo_total": 195866.61,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0030",
+            "funcao": "LABORATORISTA",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0009",
+            "funcao": "AUXILIAR DE LABORATÓRIO",
+            "quantidade": 1,
+            "salario_base": 2798.4,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "QSMS",
         "driver": "mensal",
         "custo_fixo_mensal_total": 7673.31,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 2,
+            "salario_base": 8500.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0025",
+            "funcao": "ENGENHEIRO DE SEGURANÇA",
+            "quantidade": 1,
+            "salario_base": 14000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       },
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 2605644.4,
-        "mao_obra": []
+        "custo_fixo_total": 819636.54,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "GOIÂNIA",
+            "destino": "DOM AQUINO",
+            "distancia_km": 1372.0
+          },
+          "equipamentos": {
+            "quantidade_mob": 12,
+            "custo_km": 9.5,
+            "subtotal": 328516.0,
+            "distancia_km": 1372.0
+          },
+          "pessoal": {
+            "quantidade_pessoas": 56,
+            "custo_por_pessoa": 750.0,
+            "subtotal": 84600.0
+          },
+          "verbas": {
+            "subtotal": 406520.54,
+            "itens": [
+              {
+                "descricao": "MOBILIZAÇÃO EQUIPE DIRETA",
+                "unidade": "VB",
+                "quantidade": 0.42,
+                "preco_unitario": 281169.29,
+                "subtotal": 117153.87
+              },
+              {
+                "descricao": "MOBILIZAÇÃO DE EQUIPAMENTOS",
+                "unidade": "VB",
+                "quantidade": 0.21,
+                "preco_unitario": 836000.0,
+                "subtotal": 174166.67
+              }
+            ]
+          }
+        }
       }
     ]
   },

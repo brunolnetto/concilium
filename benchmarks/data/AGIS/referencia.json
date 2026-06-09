@@ -167,7 +167,9 @@
           "n_max": 6,
           "taxa_mobilizacao": 2.5,
           "taxa_desmobilizacao": 6.0
-        }
+        },
+        "descricao": "DESMATAMENTO, DESTOCAMENTO E LIMPEZA DE AREA COM ARVORES DE DIAMETRO ATÉ 15 CM",
+        "unidade": "M2"
       },
       {
         "item_id": "eap-1_1",
@@ -176,7 +178,9 @@
           "n_max": 1,
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
-        }
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_2",
@@ -185,7 +189,9 @@
           "n_max": 1,
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
-        }
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_3",
@@ -194,7 +200,9 @@
           "n_max": 2,
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 2.0
-        }
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT ATÉ 2000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_4",
@@ -203,7 +211,9 @@
           "n_max": 2,
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 2.0
-        }
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_5",
@@ -212,7 +222,9 @@
           "n_max": 3,
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 3.0
-        }
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT ATÉ 2000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_6",
@@ -221,7 +233,9 @@
           "n_max": 4,
           "taxa_mobilizacao": 0.1034,
           "taxa_desmobilizacao": 4.0
-        }
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_7",
@@ -230,7 +244,9 @@
           "n_max": 4,
           "taxa_mobilizacao": 0.4,
           "taxa_desmobilizacao": 1.3333
-        }
+        },
+        "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR NORMAL",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_8",
@@ -239,7 +255,9 @@
           "n_max": 2,
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 2.0
-        }
+        },
+        "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR INTERMEDIÁRIO",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_9",
@@ -248,7 +266,9 @@
           "n_max": 3,
           "taxa_mobilizacao": 0.2,
           "taxa_desmobilizacao": 3.0
-        }
+        },
+        "descricao": "CONSTRUÇÃO DE CORPO DE ATERRO COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_10",
@@ -257,7 +277,9 @@
           "n_max": 1,
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
-        }
+        },
+        "descricao": "COMPACTAÇÃO DE CAMADA FINAL DE ATERRO DE ROCHA",
+        "unidade": "M3"
       }
     ],
     "bdi": {

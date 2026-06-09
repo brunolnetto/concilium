@@ -116,7 +116,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 269.05
+        "producao_diaria": 269.05,
+        "descricao": "Escavação, carga e transporte de material  de 1ª categoria - DMT até 4 km",
+        "unidade": "m3",
+        "quantitativo": 69952.84,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "2.3",
@@ -126,7 +130,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 157.87
+        "producao_diaria": 157.87,
+        "descricao": "Aterro",
+        "unidade": "m3",
+        "quantitativo": 41045.38,
+        "cpu_id": "CPU-TERRA-ATI-017"
       }
     ],
     "indiretos": [
@@ -134,31 +142,209 @@
         "categoria": "ADM",
         "driver": "mensal",
         "custo_fixo_mensal_total": 106261.92,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 8000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0006",
+            "funcao": "AUXILIAR ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 4560.0,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 15000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0065",
+            "funcao": "ENCARREGADO DE FRENTE",
+            "quantidade": 3,
+            "salario_base": 5000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0072",
+            "funcao": "APONTADOR",
+            "quantidade": 4,
+            "salario_base": 2395.08,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0027",
+            "funcao": "GERENTE DE CONTRATO",
+            "quantidade": 1,
+            "salario_base": 25000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0075",
+            "funcao": "TÉCNICO DE PLANEJAMENTO",
+            "quantidade": 1,
+            "salario_base": 10000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0024",
+            "funcao": "ENGENHEIRO CIVIL",
+            "quantidade": 1,
+            "salario_base": 17000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0063",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 2300.0,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 4882.8,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0033",
+            "funcao": "MOTORISTA DE CAMINHÃO PIPA",
+            "quantidade": 1,
+            "salario_base": 3187.8,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 1,
+            "salario_base": 3187.8,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 1,
+            "salario_base": 2620.8,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "TOP",
         "driver": "projeto",
         "custo_fixo_total": 807661.72,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0057",
+            "funcao": "TOPÓGRAFO",
+            "quantidade": 1,
+            "salario_base": 14000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0010",
+            "funcao": "AUXILIAR DE TOPOGRAFIA",
+            "quantidade": 1,
+            "salario_base": 2677.3,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "LAB",
         "driver": "projeto",
         "custo_fixo_total": 555194.38,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0030",
+            "funcao": "LABORATORISTA",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0009",
+            "funcao": "AUXILIAR DE LABORATÓRIO",
+            "quantidade": 1,
+            "salario_base": 2677.3,
+            "custo_unitario": 2820.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "QSMS",
         "driver": "mensal",
         "custo_fixo_mensal_total": 21750.41,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 2,
+            "salario_base": 8500.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0025",
+            "funcao": "ENGENHEIRO DE SEGURANÇA",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       },
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 7385838.49,
-        "mao_obra": []
+        "custo_fixo_total": 2270128.0,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "BELO HORIZONTE",
+            "destino": "UBERLANDIA",
+            "distancia_km": 1080.0
+          },
+          "equipamentos": {
+            "quantidade_mob": 1,
+            "custo_km": 11.0,
+            "subtotal": 463360.0,
+            "distancia_km": 1080.0
+          },
+          "pessoal": {
+            "quantidade_pessoas": 54,
+            "custo_por_pessoa": 1500.0,
+            "subtotal": 160500.0
+          },
+          "verbas": {
+            "subtotal": 1646268.0,
+            "itens": []
+          }
+        }
       }
     ]
   },

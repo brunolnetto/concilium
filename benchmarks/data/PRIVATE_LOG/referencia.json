@@ -269,7 +269,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 10827.63
+        "producao_diaria": 10827.63,
+        "descricao": "Limpeza mecanizada de camada vegetal (20cm), incluso carga, transporte a um dt maximo de 1km e espalhamento",
+        "unidade": "m2",
+        "quantitativo": 487243.38,
+        "cpu_id": "CPU-TERRA-ATI-002"
       },
       {
         "item_id": "1.2",
@@ -279,7 +283,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1.78
+        "producao_diaria": 1.78,
+        "descricao": "Supressão de árvores isoladas",
+        "unidade": "un",
+        "quantitativo": 80.0,
+        "cpu_id": "CPU-SANEA-POCO-VISITA-PADRAO"
       },
       {
         "item_id": "1.3",
@@ -289,7 +297,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 13655.61
+        "producao_diaria": 13655.61,
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km",
+        "unidade": "m3",
+        "quantitativo": 614502.27,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "1.4",
@@ -299,7 +311,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 2550.92
+        "producao_diaria": 2550.92,
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA)",
+        "unidade": "m3",
+        "quantitativo": 114791.36,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "1.5",
@@ -309,7 +325,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 14733.2
+        "producao_diaria": 14733.2,
+        "descricao": "Aterro Compactado a 100% PN",
+        "unidade": "m3",
+        "quantitativo": 662994.21,
+        "cpu_id": "CPU-TERRA-ATI-017"
       },
       {
         "item_id": "1.6",
@@ -319,7 +339,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 266.67
+        "producao_diaria": 266.67,
+        "descricao": "Desmonte de rocha com escavadeira e rompedor hidráulico",
+        "unidade": "m3",
+        "quantitativo": 12000.0,
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA"
       },
       {
         "item_id": "1.8",
@@ -329,7 +353,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 555.56
+        "producao_diaria": 555.56,
+        "descricao": "Escavação de solo mole, incluso tranporte em ate 1km, e espalhamento",
+        "unidade": "m3",
+        "quantitativo": 25000.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "1.11",
@@ -339,7 +367,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 555.56
+        "producao_diaria": 555.56,
+        "descricao": "Escavação, carga e transporte de material de 1ª categoria - DMT 3,5km  - (JAZIDA) - substituição do solo mole",
+        "unidade": "m3",
+        "quantitativo": 25000.0,
+        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"
       },
       {
         "item_id": "1.12",
@@ -349,7 +381,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 555.56
+        "producao_diaria": 555.56,
+        "descricao": "Aterro Compactado a 100% PN",
+        "unidade": "m3",
+        "quantitativo": 25000.0,
+        "cpu_id": "CPU-TERRA-ATI-017"
       },
       {
         "item_id": "1.9",
@@ -359,7 +395,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 38.22
+        "producao_diaria": 38.22,
+        "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha dupla 150mm",
+        "unidade": "m",
+        "quantitativo": 1720.0,
+        "cpu_id": "CPU-PAVIM-ATI-059"
       },
       {
         "item_id": "1.10",
@@ -369,7 +409,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 38.67
+        "producao_diaria": 38.67,
+        "descricao": "Dreno provisorio tipo espinha de peixe, para correção de saturação do solo - linha simples 150mm",
+        "unidade": "m",
+        "quantitativo": 1740.0,
+        "cpu_id": "CPU-PAVIM-ATI-059"
       }
     ],
     "indiretos": [
@@ -377,31 +421,225 @@
         "categoria": "ADM",
         "driver": "mensal",
         "custo_fixo_mensal_total": 82483.22,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 6500.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0006",
+            "funcao": "AUXILIAR ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 2625.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 13000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0020",
+            "funcao": "ENCARREGADO DE FRENTE",
+            "quantidade": 1,
+            "salario_base": 3392.4,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0072",
+            "funcao": "APONTADOR",
+            "quantidade": 4,
+            "salario_base": 2100.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0004",
+            "funcao": "APONTADOR LIDER",
+            "quantidade": 1,
+            "salario_base": 3800.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0027",
+            "funcao": "GERENTE DE CONTRATO",
+            "quantidade": 1,
+            "salario_base": 21000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0024",
+            "funcao": "ENGENHEIRO CIVIL",
+            "quantidade": 1,
+            "salario_base": 17000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 3130.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0073",
+            "funcao": "MECÂNICO",
+            "quantidade": 1,
+            "salario_base": 7000.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 2,
+            "salario_base": 2656.5,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 1,
+            "salario_base": 2184.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0048",
+            "funcao": "OPERADOR DE TRATOR DE ESTEIRAS",
+            "quantidade": 0,
+            "salario_base": 4200.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0063",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 1680.0,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "TOP",
         "driver": "projeto",
         "custo_fixo_total": 626927.69,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0057",
+            "funcao": "TOPÓGRAFO",
+            "quantidade": 1,
+            "salario_base": 14000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0010",
+            "funcao": "AUXILIAR DE TOPOGRAFIA",
+            "quantidade": 1,
+            "salario_base": 2231.08,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0058",
+            "funcao": "SALA TÉCNICA",
+            "quantidade": 1,
+            "salario_base": 10000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       },
       {
         "categoria": "LAB",
         "driver": "projeto",
         "custo_fixo_total": 430956.08,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0030",
+            "funcao": "LABORATORISTA",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0009",
+            "funcao": "AUXILIAR DE LABORATÓRIO",
+            "quantidade": 1,
+            "salario_base": 2231.08,
+            "custo_unitario": 2300.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "QSMS",
         "driver": "mensal",
         "custo_fixo_mensal_total": 16883.22,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 1,
+            "salario_base": 8500.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       },
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 5733076.77,
-        "mao_obra": []
+        "custo_fixo_total": 1821488.32,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "BELO HORIZONTE",
+            "destino": "SERRA",
+            "distancia_km": 1080.0
+          },
+          "equipamentos": {
+            "quantidade_mob": 2,
+            "custo_km": 13.0,
+            "subtotal": 550320.0,
+            "distancia_km": 1080.0
+          },
+          "pessoal": {
+            "quantidade_pessoas": 50,
+            "custo_por_pessoa": 600.0,
+            "subtotal": 59700.0
+          },
+          "verbas": {
+            "subtotal": 1211468.32,
+            "itens": [
+              {
+                "descricao": "INTEGRAÇÃO EQUIPE",
+                "unidade": "VB",
+                "quantidade": 0.21,
+                "preco_unitario": 360306.39,
+                "subtotal": 75063.83
+              }
+            ]
+          }
+        }
       }
     ]
   },

@@ -245,7 +245,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 7671.85
+        "producao_diaria": 7671.85,
+        "descricao": "Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA",
+        "unidade": "M2",
+        "quantitativo": 383592.55,
+        "cpu_id": "CPU-TERRA-ATI-004"
       },
       {
         "item_id": "1.2",
@@ -255,7 +259,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 40730.25
+        "producao_diaria": 40730.25,
+        "descricao": "Supressão vegetal, destocamento e limpeza de árvores, arbustos, vegetação rasteira e entulhos com remoção para área de depósito - DMT até 350m",
+        "unidade": "M2",
+        "quantitativo": 2036512.35,
+        "cpu_id": "CPU-TERRA-ATI-004"
       },
       {
         "item_id": "3.1",
@@ -265,7 +273,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 902.05
+        "producao_diaria": 902.05,
+        "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria",
+        "unidade": "M",
+        "quantitativo": 45102.63,
+        "cpu_id": "CPU-DREN-CORPO-BDCC-100"
       },
       {
         "item_id": "3.2",
@@ -275,7 +287,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 11.5
+        "producao_diaria": 11.5,
+        "descricao": "Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos alagáveis",
+        "unidade": "M",
+        "quantitativo": 575.0,
+        "cpu_id": "CPU-DREN-CORPO-BDCC-100"
       },
       {
         "item_id": "3.3",
@@ -285,7 +301,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 295.12
+        "producao_diaria": 295.12,
+        "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+        "unidade": "M",
+        "quantitativo": 14755.9,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-150X200"
       },
       {
         "item_id": "3.4",
@@ -295,7 +315,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 14.0
+        "producao_diaria": 14.0,
+        "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria",
+        "unidade": "M",
+        "quantitativo": 700.0,
+        "cpu_id": "CPU-DREN-CORPO-BDCC-100"
       },
       {
         "item_id": "3.5",
@@ -305,7 +329,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 20.0
+        "producao_diaria": 20.0,
+        "descricao": "Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas",
+        "unidade": "M",
+        "quantitativo": 1000.0,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-150X200"
       },
       {
         "item_id": "3.6",
@@ -315,7 +343,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 487.89
+        "producao_diaria": 487.89,
+        "descricao": "Remoção de cerca de mourão de madeira",
+        "unidade": "M",
+        "quantitativo": 24394.3,
+        "cpu_id": "CPU-DIVER-ATI-067"
       },
       {
         "item_id": "5.1",
@@ -325,7 +357,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 369.8
+        "producao_diaria": 369.8,
+        "descricao": "Abertura de acesso para implantação de cerca",
+        "unidade": "M",
+        "quantitativo": 18490.0,
+        "cpu_id": "CPU-DIVER-ATI-067"
       },
       {
         "item_id": "4.1",
@@ -335,7 +371,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 0.37
+        "producao_diaria": 0.37,
+        "descricao": "Implantação do eixo",
+        "unidade": "KM",
+        "quantitativo": 18.49,
+        "cpu_id": "CPU-DIVER-ATI-070"
       }
     ],
     "indiretos": [
@@ -343,7 +383,128 @@
         "categoria": "ADM",
         "driver": "mensal",
         "custo_fixo_mensal_total": 60958.31,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 7500.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0006",
+            "funcao": "AUXILIAR ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 3150.0,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 2,
+            "salario_base": 9600.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0004",
+            "funcao": "APONTADOR",
+            "quantidade": 2,
+            "salario_base": 4620.0,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0027",
+            "funcao": "GERENTE DE CONTRATO",
+            "quantidade": 1,
+            "salario_base": 22000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0064",
+            "funcao": "ENGENHEIRO FLORESTAL",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0065",
+            "funcao": "TÉCNICO DE PLANEJAMENTO",
+            "quantidade": 1,
+            "salario_base": 7800.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0003",
+            "funcao": "ALMOXARIFE",
+            "quantidade": 1,
+            "salario_base": 2425.5,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0072",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 2016.0,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0073",
+            "funcao": "MECÂNICO",
+            "quantidade": 1,
+            "salario_base": 4800.0,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 5696.6,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0033",
+            "funcao": "MOTORISTA DE CAMINHÃO PIPA",
+            "quantidade": 1,
+            "salario_base": 4069.8,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 2,
+            "salario_base": 3640.0,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 1,
+            "salario_base": 2016.0,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0069",
+            "funcao": "PORTEIRO",
+            "quantidade": 1,
+            "salario_base": 2016.0,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "TOP",
@@ -361,13 +522,98 @@
         "categoria": "QSMS",
         "driver": "mensal",
         "custo_fixo_mensal_total": 12477.36,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 2,
+            "salario_base": 7800.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0025",
+            "funcao": "ENGENHEIRO DE SEGURANÇA",
+            "quantidade": 1,
+            "salario_base": 13000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0067",
+            "funcao": "TÉCNICO DE QUALIDADE",
+            "quantidade": 1,
+            "salario_base": 7800.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0068",
+            "funcao": "TÉCNICO DE MEIO AMBIENTE",
+            "quantidade": 1,
+            "salario_base": 7800.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0070",
+            "funcao": "TÉCNICO EM ENFERMAGEM",
+            "quantidade": 1,
+            "salario_base": 2395.12,
+            "custo_unitario": 2985.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 4236967.02,
-        "mao_obra": []
+        "custo_fixo_total": 1084194.08,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "GOIANIA",
+            "destino": "COCALINHO",
+            "distancia_km": 960.0
+          },
+          "equipamentos": {
+            "quantidade_mob": 1,
+            "custo_km": 11.0,
+            "subtotal": 269920.0,
+            "distancia_km": 960.0
+          },
+          "pessoal": {
+            "quantidade_pessoas": 100,
+            "custo_por_pessoa": 1200.0,
+            "subtotal": 238800.0
+          },
+          "verbas": {
+            "subtotal": 575474.08,
+            "itens": [
+              {
+                "descricao": "INTEGRAÇÃO EQUIPE DIRETA",
+                "unidade": "VB",
+                "quantidade": 0.3,
+                "preco_unitario": 423171.94,
+                "subtotal": 126951.58
+              },
+              {
+                "descricao": "MOBILIZAÇÃO DE EQUIPAMENTOS",
+                "unidade": "VB",
+                "quantidade": 0.3,
+                "preco_unitario": 389200.0,
+                "subtotal": 116760.0
+              },
+              {
+                "descricao": "ALIMENTAÇÃO, PLANO DE SAUDE E CESTA BÁSICA INTEGRAÇÃO",
+                "unidade": "VB",
+                "quantidade": 0.3,
+                "preco_unitario": 223875.0,
+                "subtotal": 67162.5
+              }
+            ]
+          }
+        }
       }
     ]
   },

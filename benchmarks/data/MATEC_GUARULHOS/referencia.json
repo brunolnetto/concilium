@@ -96,7 +96,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 36.92
+        "producao_diaria": 36.92,
+        "descricao": "Bueiro triplo celular de concreto",
+        "unidade": "m",
+        "quantitativo": 24.0,
+        "cpu_id": "CPU-DIVER-ATI-066"
       },
       {
         "item_id": "2.9",
@@ -106,67 +110,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 3.08
-      },
-      {
-        "item_id": "3.1",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "producao_diaria": 1.54
-      },
-      {
-        "item_id": "3.2",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "producao_diaria": 1.54
-      },
-      {
-        "item_id": "3.3",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "producao_diaria": 1.54
-      },
-      {
-        "item_id": "3.4",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "producao_diaria": 1.54
-      },
-      {
-        "item_id": "3.5",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "producao_diaria": 1.54
-      },
-      {
-        "item_id": "3.6",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "producao_diaria": 1.54
+        "producao_diaria": 3.08,
+        "descricao": "Alas do bueiro triplo",
+        "unidade": "und",
+        "quantitativo": 2.0,
+        "cpu_id": "CPU-MATGUR-DREN-ALAS-BUEIRO-TRIPLO"
       }
     ],
     "bdi": {
@@ -210,8 +158,257 @@
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 2453473,
-        "mao_obra": []
+        "custo_fixo_total": 2044560.87,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "SP",
+            "destino": "GUARULHOS",
+            "distancia_km": 200.0
+          },
+          "equipamentos": {
+            "quantidade_mob": 20,
+            "custo_km": 12.0,
+            "subtotal": 123200.0,
+            "distancia_km": 200.0
+          },
+          "pessoal": {
+            "quantidade_pessoas": 53,
+            "custo_por_pessoa": 1200.0,
+            "subtotal": 126000.0
+          },
+          "verbas": {
+            "subtotal": 1795360.87,
+            "itens": [
+              {
+                "descricao": "INTEGRAÇÃO EQUIPE DIRETA",
+                "unidade": "VB",
+                "quantidade": 0.2,
+                "preco_unitario": 484237.69,
+                "subtotal": 96847.54
+              },
+              {
+                "descricao": "MOBILIZAÇÃO DE EQUIPAMENTOS",
+                "unidade": "VB",
+                "quantidade": 0.2,
+                "preco_unitario": 1717700.0,
+                "subtotal": 343540.0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "categoria": "ADM",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 229693.42,
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 10000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0006",
+            "funcao": "AUXILIAR ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 3800.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 15000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0077",
+            "funcao": "APONTADOR LIDER",
+            "quantidade": 1,
+            "salario_base": 3800.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0004",
+            "funcao": "APONTADOR",
+            "quantidade": 5,
+            "salario_base": 3300.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0027",
+            "funcao": "GERENTE DE CONTRATO",
+            "quantidade": 1,
+            "salario_base": 27000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0024",
+            "funcao": "ENGENHEIRO CIVIL",
+            "quantidade": 1,
+            "salario_base": 18000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0065",
+            "funcao": "TÉCNICO DE PLANEJAMENTO",
+            "quantidade": 1,
+            "salario_base": 12000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0072",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+            "quantidade": 2,
+            "salario_base": 2300.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0073",
+            "funcao": "MECÂNICO",
+            "quantidade": 1,
+            "salario_base": 7000.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 3130.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0026",
+            "funcao": "ENGENHEIRO TREINEE - CONTROLE EQUIPAMENTOS E COMBUSTÍVEL",
+            "quantidade": 1,
+            "salario_base": 4000.0,
+            "custo_unitario": 2141.54,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0026",
+            "funcao": "ENGENHEIRO TREINEE - CONTROLE PRODUÇÃO E MAT.",
+            "quantidade": 1,
+            "salario_base": 4000.0,
+            "custo_unitario": 2765.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 1,
+            "salario_base": 2656.5,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0001",
+            "funcao": "AJUDANTE",
+            "quantidade": 1,
+            "salario_base": 2184.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0032",
+            "funcao": "MOTORISTA DE CAMINHÃO BASCULANTE",
+            "quantidade": 1,
+            "salario_base": 2530.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0048",
+            "funcao": "OPERADOR DE TRATOR DE ESTEIRAS",
+            "quantidade": 1,
+            "salario_base": 5000.0,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
+      },
+      {
+        "categoria": "TOP",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 43780.1,
+        "mao_obra": [
+          {
+            "codigo": "P0057",
+            "funcao": "TOPÓGRAFO",
+            "quantidade": 1,
+            "salario_base": 15000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0010",
+            "funcao": "AUXILIAR DE TOPOGRAFIA",
+            "quantidade": 2,
+            "salario_base": 2231.08,
+            "custo_unitario": 2800.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0058",
+            "funcao": "SALA TÉCNICA",
+            "quantidade": 1,
+            "salario_base": 10000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
+      },
+      {
+        "categoria": "LAB",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 29280.1,
+        "mao_obra": [
+          {
+            "codigo": "P0030",
+            "funcao": "LABORATORISTA",
+            "quantidade": 1,
+            "salario_base": 14000.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0009",
+            "funcao": "AUXILIAR DE LABORATÓRIO",
+            "quantidade": 2,
+            "salario_base": 2231.08,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
+      },
+      {
+        "categoria": "QSMS",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 21200.0,
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 2,
+            "salario_base": 8500.0,
+            "custo_unitario": 2100.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       }
     ]
   },

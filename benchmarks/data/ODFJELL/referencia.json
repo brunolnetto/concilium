@@ -196,7 +196,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 960.0
+        "producao_diaria": 960.0,
+        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,60 m - fornecimento, instalação, incluso escavação, reaterro e bota fora do material execedente",
+        "unidade": "m",
+        "quantitativo": 240.0,
+        "cpu_id": "CPU-DREN-CORPO-BDTC-100-PA2"
       },
       {
         "item_id": "3.2",
@@ -206,7 +210,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 2964.0
+        "producao_diaria": 2964.0,
+        "descricao": "Tubo de concreto PA2 comercial para drenagem - D = 0,40 m - fornecimento e instalação, incluso escavação, reaterro e bota fora do material execedente",
+        "unidade": "m",
+        "quantitativo": 741.0,
+        "cpu_id": "CPU-DREN-CORPO-BDTC-100-PA2"
       },
       {
         "item_id": "3.3",
@@ -216,7 +224,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 84.0
+        "producao_diaria": 84.0,
+        "descricao": "Canaleta retangular em concreto, 0,50x0,50m, com grelha metálica, incluso escavação, reaterro e bota fora do material execedente",
+        "unidade": "m",
+        "quantitativo": 21.0,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-150X200"
       },
       {
         "item_id": "3.4",
@@ -226,7 +238,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 92.0
+        "producao_diaria": 92.0,
+        "descricao": "Caixa de passagem em concreto armado, dimensões 1,10x1,10m, com tampão de ferro diâmetro de 0,60m, altura variável",
+        "unidade": "und",
+        "quantitativo": 23.0,
+        "cpu_id": "CPU-ODFJELL-CP-110X110"
       },
       {
         "item_id": "3.5",
@@ -236,7 +252,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 48.0
+        "producao_diaria": 48.0,
+        "descricao": "Poço de Visita em concreto armado 1,10x1,10m, até 2,00m de profundidade, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
+        "unidade": "und",
+        "quantitativo": 12.0,
+        "cpu_id": "CPU-ODFJELL-PV-H200"
       },
       {
         "item_id": "3.6",
@@ -246,7 +266,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 28.0
+        "producao_diaria": 28.0,
+        "descricao": "Poço de Visita em concreto armado 1,10x1,10m, acima de 2,00m de profundidade,  rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento, com tampão de ferro diâmetro de 0,60m",
+        "unidade": "und",
+        "quantitativo": 7.0,
+        "cpu_id": "CPU-ODFJELL-PV-H200-PROF"
       },
       {
         "item_id": "3.7",
@@ -256,7 +280,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 64.0
+        "producao_diaria": 64.0,
+        "descricao": "Caixa de Ralo em concreto armado 0,90x0,30m, profundidade 0,90m, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
+        "unidade": "und",
+        "quantitativo": 16.0,
+        "cpu_id": "CPU-ODFJELL-CR-090X030"
       },
       {
         "item_id": "3.8",
@@ -266,7 +294,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 36.0
+        "producao_diaria": 36.0,
+        "descricao": "Boca de Lobo Simples em concreto armado 1,00x1,00m, , altura variável, rejuntados com argamassa, traço: 1:3, pintados interna e externamente com nata de cimento",
+        "unidade": "und",
+        "quantitativo": 9.0,
+        "cpu_id": "CPU-ODFJELL-BL-100X100"
       },
       {
         "item_id": "3.9",
@@ -276,7 +308,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 2668.0
+        "producao_diaria": 2668.0,
+        "descricao": "Tubo corrugado perfurado em PEAD, DN Ø100mm Kananet, Ref Kanaflex ou similar, incluso escavação, reaterro e bota fora do material execedente",
+        "unidade": "m",
+        "quantitativo": 667.0,
+        "cpu_id": "CPU-ODFJELL-PEAD-DN100"
       },
       {
         "item_id": "3.11",
@@ -286,7 +322,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 408.0
+        "producao_diaria": 408.0,
+        "descricao": "Brita n° 2",
+        "unidade": "m3",
+        "quantitativo": 102.0,
+        "cpu_id": "CPU-TERRA-BASE-ESTABILIZADA"
       },
       {
         "item_id": "3.12",
@@ -296,7 +336,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 544.0
+        "producao_diaria": 544.0,
+        "descricao": "Areia Média Lavada",
+        "unidade": "m3",
+        "quantitativo": 136.0,
+        "cpu_id": "CPU-TERRA-ATI-020"
       },
       {
         "item_id": "3.15",
@@ -306,7 +350,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 808.88
+        "producao_diaria": 808.88,
+        "descricao": "Tubo corrugado PEAD, parede dupla, interna lisa, JEI, DN/DI 600 mm, para saneamento (drenagem/esgoto) - incluindo escavação, reaterro e bota-fora com DMT 500 m",
+        "unidade": "m",
+        "quantitativo": 202.22,
+        "cpu_id": "CPU-ODFJELL-PEAD-DN600"
       },
       {
         "item_id": "3.16",
@@ -316,7 +364,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1520.0
+        "producao_diaria": 1520.0,
+        "descricao": "Valeta trapezoidal com revestimento vegetal 120-40 - padrão DNIT, incluindo fornecimento e aplicação de grama",
+        "unidade": "m",
+        "quantitativo": 380.0,
+        "cpu_id": "CPU-DREN-CORPO-BDCAP-100"
       },
       {
         "item_id": "3.17",
@@ -326,7 +378,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1625.0
+        "producao_diaria": 1625.0,
+        "descricao": "Canaleta retangular de concreto armado, com 0,60m de largura e altura variável de 0,20 a 0,40m, inclusive escavação e reaterro.",
+        "unidade": "m",
+        "quantitativo": 406.25,
+        "cpu_id": "CPU-DREN-CORPO-BSCC-150X200"
       },
       {
         "item_id": "3.18",
@@ -336,7 +392,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 1080.0
+        "producao_diaria": 1080.0,
+        "descricao": "Calha/Canaleta de concreto simples, tipo meia cana, diametro de 60 cm, para água pluvial.",
+        "unidade": "m",
+        "quantitativo": 270.0,
+        "cpu_id": "CPU-DIVER-ATI-066"
       },
       {
         "item_id": "3.19",
@@ -346,7 +406,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 28.0
+        "producao_diaria": 28.0,
+        "descricao": "Caixa de Ligação e Passagem - CLP 02 - Ø 600mm, sem dispositivo interno de queda",
+        "unidade": "un",
+        "quantitativo": 7.0,
+        "cpu_id": "CPU-ODFJELL-CLP-600"
       },
       {
         "item_id": "3.21",
@@ -356,7 +420,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 8.0
+        "producao_diaria": 8.0,
+        "descricao": "Dissipador de Energia DED 01 - Aplicável a Descidas DAR",
+        "unidade": "un",
+        "quantitativo": 2.0,
+        "cpu_id": "CPU-SANEA-POCO-VISITA-PADRAO"
       },
       {
         "item_id": "3.22",
@@ -366,7 +434,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 8.0
+        "producao_diaria": 8.0,
+        "descricao": "Dissipador de Energia DEB 360-414 - Aplicável a Bueiros e Descidas",
+        "unidade": "un",
+        "quantitativo": 2.0,
+        "cpu_id": "CPU-ODFJELL-DISSIPADOR"
       },
       {
         "item_id": "3.23",
@@ -376,7 +448,11 @@
           "taxa_mobilizacao": 1.0,
           "taxa_desmobilizacao": 1.0
         },
-        "producao_diaria": 148.0
+        "producao_diaria": 148.0,
+        "descricao": "Bueiro Simples Tubular de Concreto CA1 - BSTC Ø 1.200mm - (CORPO)",
+        "unidade": "m",
+        "quantitativo": 37.0,
+        "cpu_id": "CPU-DREN-CORPO-BSTC-100-PA1"
       }
     ],
     "bdi": {
@@ -421,31 +497,161 @@
         "categoria": "ADM",
         "driver": "mensal",
         "custo_fixo_mensal_total": 15210.25,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0013",
+            "funcao": "ADMINISTRATIVO",
+            "quantidade": 1,
+            "salario_base": 6500.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0018",
+            "funcao": "ENCARREGADO GERAL",
+            "quantidade": 1,
+            "salario_base": 9000.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0024",
+            "funcao": "ENGENHEIRO CIVIL",
+            "quantidade": 1,
+            "salario_base": 15000.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0026",
+            "funcao": "ENGENHEIRO TRAINEE",
+            "quantidade": 2,
+            "salario_base": 7000.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0004",
+            "funcao": "APONTADOR",
+            "quantidade": 1,
+            "salario_base": 1918.99,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0036",
+            "funcao": "MOTORISTA DE ÔNIBUS",
+            "quantidade": 1,
+            "salario_base": 1918.99,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0033",
+            "funcao": "MOTORISTA DE CAMINHÃO PIPA",
+            "quantidade": 1,
+            "salario_base": 1918.99,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "CLT"
+          },
+          {
+            "codigo": "P0034",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+            "quantidade": 1,
+            "salario_base": 1918.99,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "TOP",
         "driver": "projeto",
         "custo_fixo_total": 120570,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0057",
+            "funcao": "TOPÓGRAFO",
+            "quantidade": 1,
+            "salario_base": 15500.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0010",
+            "funcao": "AUXILIAR DE TOPOGRAFIA",
+            "quantidade": 1,
+            "salario_base": 1918.99,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "LAB",
         "driver": "projeto",
         "custo_fixo_total": 82908,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0030",
+            "funcao": "LABORATORISTA",
+            "quantidade": 1,
+            "salario_base": 14000.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "PJ"
+          },
+          {
+            "codigo": "P0009",
+            "funcao": "AUXILIAR DE LABORATÓRIO",
+            "quantidade": 1,
+            "salario_base": 1500.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "CLT"
+          }
+        ]
       },
       {
         "categoria": "QSMS",
         "driver": "mensal",
         "custo_fixo_mensal_total": 3111.0,
-        "mao_obra": []
+        "mao_obra": [
+          {
+            "codigo": "P0056",
+            "funcao": "TÉCNICO DE SEGURANÇA",
+            "quantidade": 2,
+            "salario_base": 6500.0,
+            "custo_unitario": 1680.0,
+            "tipo_contratacao": "PJ"
+          }
+        ]
       },
       {
         "categoria": "MOB",
         "driver": "projeto",
-        "custo_fixo_total": 1102607,
-        "mao_obra": []
+        "custo_fixo_total": 246900.0,
+        "mao_obra": [],
+        "detalhamento": {
+          "rota": {
+            "origem": "RIO VERDE (GO)",
+            "destino": "SANTA HELENA (GO)",
+            "distancia_km": 98.4
+          },
+          "equipamentos": {
+            "quantidade_mob": 5,
+            "custo_km": 15.24,
+            "subtotal": 123500.0,
+            "distancia_km": 98.4
+          },
+          "pessoal": {
+            "quantidade_pessoas": 31,
+            "custo_por_pessoa": 500.0,
+            "subtotal": 31000.0
+          },
+          "verbas": {
+            "subtotal": 92400.0,
+            "itens": []
+          }
+        }
       }
     ]
   },
