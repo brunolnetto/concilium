@@ -419,6 +419,7 @@ def _build_pe_for_equipe(
     planejamento_por_item: dict | None = None,
     sched_por_item: dict | None = None,
     particao_por_item: dict | None = None,
+    idle_por_item: dict | None = None,
 ) -> PontoEquilibrio | None:
     """Constrói PontoEquilibrio para uma equipe. Retorna None se custo_fixo ≤ 0.
 
@@ -441,10 +442,17 @@ def _build_pe_for_equipe(
 
     # ── ADR-076 campos quantitativos ──────────────────────────────────────────
     custo_total_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
-    # Fallback: sem pool contract, usar custo_total como autonomo (sem gap overhead)
     if custo_total_autonomo <= 0 and custo_operacional_real > 0:
         custo_total_autonomo = custo_operacional_real
-    gap_pool_overhead = round(custo_operacional_real - custo_total_autonomo, 2)
+
+    # gap_pool_overhead = custo de tempo ocioso real das instâncias deste item.
+    # Com política de pool sob demanda (frentes por atividade), o overhead de
+    # n_frentes paralelas é uma DECISÃO de negócio (não ineficiência ajustável).
+    # O único overhead genuíno é o tempo em que recursos estão mobilizados mas
+    # improdutivos (idle_mo + idle_eq das instâncias do pool para este item).
+    # Se idle=0 (política de late hire / early dismissal ativa), gap_pool=0.
+    idle_item = (idle_por_item or {}).get(equipe.item_id, 0.0)
+    gap_pool_overhead = round(float(idle_item), 2)
 
     # fe_nec = custo_total_autonomo / (PU_sbdi × Q) = 1/η_p
     # NOTA: PU_sbdi JÁ inclui encargos no numerador (nota NEP-029: B_base×(1+enc)).
@@ -783,11 +791,12 @@ def _bpe_process_equipe(
     planejamento_por_item: dict | None = None,
     sched_por_item: dict | None = None,
     particao_por_item: dict | None = None,
+    idle_por_item: dict | None = None,
 ) -> PontoEquilibrio | None:
     """Builds and validates PE for a single equipe; returns None if skipped."""
     if not equipe.item_id:
         return None
-    pe = _build_pe_for_equipe(equipe, venda_por_item, planejamento_por_item, sched_por_item, particao_por_item)
+    pe = _build_pe_for_equipe(equipe, venda_por_item, planejamento_por_item, sched_por_item, particao_por_item, idle_por_item)
     if pe is None:
         return None
     _validate_pe_duplo_risco(pe, validacoes)
@@ -815,11 +824,22 @@ def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> l
     for contrato in canonical_in.contratos_recurso:
         for part in contrato.particao_por_item:
             particao_por_item[part.item_id] = part
+
+    # Idle real por item: Σ(custo_idle_mo + custo_idle_eq) das instâncias do pool.
+    # Quando a política de late hire / early dismissal está ativa e não há standby,
+    # esse valor é 0 — e o lever ResourcePool no painel_equilibrio desaparece.
+    idle_por_item: dict[str, float] = {}
+    for inst in canonical_in.instancias_recurso or []:
+        idle = float(getattr(inst, "custo_idle_mo", 0.0) or 0.0) + float(getattr(inst, "custo_idle_eq", 0.0) or 0.0)
+        if idle > 0:
+            for ativ in getattr(inst, "atividades_cobertas", []) or []:
+                idle_por_item[str(ativ)] = idle_por_item.get(str(ativ), 0.0) + idle
+
     pe_items = [
         pe
         for e in canonical_in.equipes_diretas
         for pe in [
-            _bpe_process_equipe(e, venda_por_item, validacoes, planejamento_por_item, sched_por_item, particao_por_item)
+            _bpe_process_equipe(e, venda_por_item, validacoes, planejamento_por_item, sched_por_item, particao_por_item, idle_por_item)
         ]
         if pe is not None
     ]
