@@ -6,25 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 12899,
+      "duration_ms": 1428,
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 2219,
+      "duration_ms": 78,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 889,
+      "duration_ms": 39,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 2410,
+      "duration_ms": 127,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -64,113 +64,117 @@
         "CPU CPU-DREN-CORPO-BSTC-120-PA3: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=2.29 vs P_original=0.75. PU_sbdi=619.5183 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-100-200X200: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.04 vs P_original=0.30. PU_sbdi=1257.1133 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BDTC-120-PA2: ratio P_can/P_orig=3.055 fora do intervalo aceitável [0.5,2.0]. P_canonico=1.15 vs P_original=0.38. PU_sbdi=1239.0366 implica custo=1419.3 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
-        "Item '1.1' sub-entrega: Σ q_ij = 92.2% de Q na janela agendada (49sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~54sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "Item '1.2' sub-entrega: Σ q_ij = 89.4% de Q na janela agendada (81sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~90sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "Item '1.3' sub-entrega: Σ q_ij = 97.1% de Q na janela agendada (30sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~34sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "Item '1.4' sub-entrega: Σ q_ij = 88.8% de Q na janela agendada (26sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~29sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "Item '1.5' sub-entrega: Σ q_ij = 90.6% de Q na janela agendada (95sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.91): ~105sem OU +equipes (decisão de prazo/pool — ADR-091)."
+        "Item '1.1' sub-entrega: Σ q_ij = 82.5% de Q na janela agendada (49sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.83): ~59sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item '1.2' sub-entrega: Σ q_ij = 82.2% de Q na janela agendada (81sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.83): ~98sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item '1.3' sub-entrega: Σ q_ij = 78.5% de Q na janela agendada (30sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.83): ~37sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item '1.4' sub-entrega: Σ q_ij = 84.1% de Q na janela agendada (26sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.83): ~32sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item '1.5' sub-entrega: Σ q_ij = 81.7% de Q na janela agendada (95sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.83): ~115sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item '1.6' sub-entrega: Σ q_ij = 67.8% de Q na janela agendada (4sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.83): ~5sem OU +equipes (decisão de prazo/pool — ADR-091)."
       ]
     },
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 1265,
+      "duration_ms": 116,
       "avisos": [
-        "ADR-077: Contrato EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000 — 3 instância(s) com standby >35%: EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-02: 105w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-03: 105w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-04: 105w idle. Taxa global: 72.0%. Custo standby: R$ 34,076,583.48."
+        "ADR-077: Contrato EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000 — 3 instância(s) com standby >35%: EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-02: 106w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-03: 106w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-04: 106w idle. Taxa global: 71.2%. Custo standby: R$ 35,385,263.06."
       ]
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 479,
+      "duration_ms": 41,
       "avisos": [
-        "Item '1.6': preço de venda (0.5957) abaixo do custo da equipe (0.7889). Margem=-32.43%. Revisar dimensionamento ou repassar ao cliente."
+        "Item '1.6': margem efetiva 0.52% abaixo do limiar 5%. Custo=0.5926, Venda=0.5957."
       ]
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 524,
-      "avisos": []
+      "duration_ms": 47,
+      "avisos": [
+        "Razão indireto/direto 50.2% fora da faixa [10.0%, 50.0%]"
+      ]
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 408,
+      "duration_ms": 45,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
-      "status": "ERRO",
-      "duration_ms": 1087,
+      "status": "OK",
+      "duration_ms": 119,
       "avisos": [
-        "Margem operacional 17.87% | status=VERMELHO | preço R$ 150,137,098 (operacional) vs R$ 162,058,379 (catálogo)",
-        "Item '1.1': custo autônomo 25.3% acima do PU de catálogo (1.25× frentes necessárias). PU calibrado: +25.3%.",
-        "Item '1.1': divergência de produtividade +14.1% não explicada por clima (fe_nec=1.25 × clima=0.91 = 1.14). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=22.834).",
-        "Item '1.2': divergência de produtividade -72.4% não explicada por clima (fe_nec=0.31 × clima=0.89 = 0.28). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
-        "Item '1.3': custo autônomo 25.4% acima do PU de catálogo (1.25× frentes necessárias). PU calibrado: +25.4%.",
-        "Item '1.3': divergência de produtividade +20.1% não explicada por clima (fe_nec=1.25 × clima=0.96 = 1.20). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=22.848).",
-        "Item '1.4': custo autônomo 26.9% acima do PU de catálogo (1.27× frentes necessárias). PU calibrado: +26.9%.",
-        "Item '1.5': divergência de produtividade -72.0% não explicada por clima (fe_nec=0.31 × clima=0.90 = 0.28). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
-        "Item '1.6': divergência de produtividade +69.4% não explicada por clima (fe_nec=1.69 × clima=1.00 = 1.69). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=0.466 vs calibrado=0.789).",
-        "Família 'CPU' com itens originalmente em ERRO (1.1, 1.3, 1.4, 1.6) mas saldo agregado positivo (Δfam = R$ 77,214,484.50). Criticidade rebaixada para AVISO."
-      ],
-      "erros": [
-        "Item '1.6': custo autônomo 69.4% acima do PU de catálogo (1.69× frentes necessárias). PU calibrado: +69.4%."
+        "Margem operacional 18.47% | status=VERMELHO | preço R$ 169,357,550 (operacional) vs R$ 182,919,447 (catálogo)",
+        "Item '1.1': divergência de produtividade -17.5% não explicada por clima (fe_nec=0.99 × clima=0.83 = 0.82). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
+        "Item '1.2': divergência de produtividade -79.4% não explicada por clima (fe_nec=0.25 × clima=0.83 = 0.21). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
+        "Item '1.3': divergência de produtividade -21.5% não explicada por clima (fe_nec=0.98 × clima=0.80 = 0.78). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
+        "Item '1.4': divergência de produtividade -15.8% não explicada por clima (fe_nec=0.99 × clima=0.85 = 0.84). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
+        "Item '1.5': divergência de produtividade -79.6% não explicada por clima (fe_nec=0.25 × clima=0.82 = 0.20). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
+        "Item '1.6': custo autônomo 27.2% acima do PU de catálogo (1.27× frentes necessárias). PU calibrado: +27.2%."
       ]
     },
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 263,
+      "duration_ms": 38,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 6072,
+      "duration_ms": 1184,
       "avisos": [
+        "Erro ao gerar Excel relatório: Cannot convert Coordenadas(lat=-29.68333, lng=-53.8) to Excel",
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
     },
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 127,
+      "duration_ms": 30,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 353,
+      "duration_ms": 363,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 390,
+      "duration_ms": 39,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 410,
+      "duration_ms": 41,
       "avisos": []
     }
   ],
   "referencia_disponivel": true,
   "confronto": {
+    "referencia": {
+      "custo_direto": 75180960.59,
+      "custo_indireto": 28286131.64,
+      "custo_total": 103467092.23,
+      "preco_venda": 142317761.88
+    },
     "ferramenta": {
-      "custo_direto": 99901233.61999999,
-      "custo_direto_equipes": 99901233.61999999,
+      "custo_direto": 99275044.93,
+      "custo_direto_equipes": 99275044.93,
       "custo_direto_pu_q": 99901233.61999999,
-      "custo_indireto": 33199565.15,
-      "custo_total": 133100798.77,
-      "preco_venda": 162058379.06,
-      "preco_venda_plus_eq": 150137098.33,
-      "preco_venda_catalogo": 162058379.06,
-      "preco_venda_operacional": 162058379.06,
-      "bdi_lucro_impostos": 0.2175612810561649
+      "custo_indireto": 49861054.54,
+      "custo_total": 149136099.47,
+      "preco_venda": 182919446.84,
+      "preco_venda_plus_eq": 169357550.46,
+      "preco_venda_catalogo": 182919446.84,
+      "preco_venda_operacional": 182919446.84,
+      "bdi_lucro_impostos": 0.22652696087707325
     },
     "ferramenta_breakdown_direto": {
       "base": "pu_q",
@@ -178,22 +182,72 @@
       "equipamentos_total": 71556714.56,
       "diesel_total": 14551713.11,
       "materiais_total": 0.0,
-      "direto_total": 99901233.62,
+      "direto_total": 99275044.93,
       "direto_total_pu_q": 99901233.62,
-      "direto_total_equipes": 363306400.69
+      "direto_total_equipes": 358942563.25
     },
     "ferramenta_breakdown_indireto": {
-      "adm": 8095936.08,
+      "adm": 21926493.55,
       "top": 0.0,
       "lab": 0.0,
-      "qsms": 1657130.88,
+      "qsms": 4488062.8,
       "mob": 23446498.19,
-      "total": 33199565.15
+      "total": 49861054.54
     },
     "actionable_insights": {
       "criticidade": "1 A, 2 B, 1 C",
-      "sensibilidade": "1 alavancas corretivas, 0 oportunidades",
+      "sensibilidade": "2 alavancas corretivas, 0 oportunidades",
       "intervencao": "Recomendacao Principal: Repair (AMARELO/VERMELHO->VERDE)"
+    },
+    "deltas": {
+      "custo_direto": {
+        "absoluto": 24094084.34,
+        "percentual": 32.05
+      },
+      "custo_indireto": {
+        "absoluto": 21574922.9,
+        "percentual": 76.27
+      },
+      "preco_venda": {
+        "absoluto": 40601684.96,
+        "percentual": 28.53
+      },
+      "custo_direto_pu_q_vs_ref": {
+        "absoluto": 24720273.03,
+        "percentual": 32.88
+      }
+    },
+    "composicao_final": {
+      "custo_direto": {
+        "referencia": 75180960.59,
+        "ferramenta": 99275044.93,
+        "delta_absoluto": 24094084.34,
+        "delta_percentual": 32.05
+      },
+      "custo_indireto": {
+        "referencia": 28286131.64,
+        "ferramenta": 49861054.54,
+        "delta_absoluto": 21574922.9,
+        "delta_percentual": 76.27
+      },
+      "custo_total": {
+        "referencia": 103467092.23,
+        "ferramenta": 149136099.47,
+        "delta_absoluto": 45669007.24,
+        "delta_percentual": 44.14
+      },
+      "preco_venda": {
+        "referencia": 142317761.88,
+        "ferramenta": 182919446.84,
+        "delta_absoluto": 40601684.96,
+        "delta_percentual": 28.53
+      },
+      "custo_direto_pu_q_vs_ref": {
+        "referencia": 75180960.59,
+        "ferramenta": 99901233.61999999,
+        "delta_absoluto": 24720273.03,
+        "delta_percentual": 32.88
+      }
     },
     "breakdown_por_fase": {
       "direto": {
@@ -202,28 +256,150 @@
         "equipamentos_total": 71556714.56,
         "diesel_total": 14551713.11,
         "materiais_total": 0.0,
-        "direto_total": 99901233.62,
+        "direto_total": 99275044.93,
         "direto_total_pu_q": 99901233.62,
-        "direto_total_equipes": 363306400.69
+        "direto_total_equipes": 358942563.25
       },
       "indireto": {
-        "adm": 8095936.08,
+        "adm": 21926493.55,
         "top": 0.0,
         "lab": 0.0,
-        "qsms": 1657130.88,
+        "qsms": 4488062.8,
         "mob": 23446498.19,
-        "total": 33199565.15
+        "total": 49861054.54
       }
     }
   },
   "quality_gates": {
-    "decision": "APROVADO",
-    "worst_severity": "S0",
-    "critical_metric_over_10pct": false,
-    "items": []
+    "decision": "BLOQUEADO",
+    "worst_severity": "S3",
+    "critical_metric_over_10pct": true,
+    "items": [
+      {
+        "metric": "custo_direto",
+        "fase": "06-consolidacao",
+        "valor_referencia": 75180960.59,
+        "valor_calculado": 99275044.93,
+        "delta_absoluto": 24094084.34,
+        "delta_percentual": 32.05,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "DERIVACAO_PIPELINE",
+        "acao_recomendada": "Bloquear pipeline e revalidar baseline de referencia",
+        "owner": "engenharia-benchmarks",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      },
+      {
+        "metric": "custo_indireto",
+        "fase": "07-custos-indiretos",
+        "valor_referencia": 28286131.64,
+        "valor_calculado": 49861054.54,
+        "delta_absoluto": 21574922.9,
+        "delta_percentual": 76.27,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "CONSOLIDACAO",
+        "acao_recomendada": "Bloquear pipeline e executar investigacao formal",
+        "owner": "engenharia-benchmarks",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      },
+      {
+        "metric": "preco_venda",
+        "fase": "06-precificacao-unitaria",
+        "valor_referencia": 142317761.88,
+        "valor_calculado": 182919446.84,
+        "delta_absoluto": 40601684.96,
+        "delta_percentual": 28.53,
+        "classe": "PREOCUPANTE",
+        "severidade": "S2",
+        "causa_categoria": "PARAMETRIZACAO_BDI",
+        "acao_recomendada": "Revalidar BDI, tributacao e consolidacao financeira",
+        "owner": "engenharia-bdi",
+        "sla_horas": 24,
+        "status_acao": "ABERTA"
+      },
+      {
+        "metric": "custo_direto_pu_q_vs_ref",
+        "fase": "06-consolidacao",
+        "valor_referencia": null,
+        "valor_calculado": null,
+        "delta_absoluto": 24720273.03,
+        "delta_percentual": 32.88,
+        "classe": "CRITICO",
+        "severidade": "S3",
+        "causa_categoria": "CATALOGO",
+        "acao_recomendada": "Bloquear pipeline e executar investigacao formal",
+        "owner": "engenharia-benchmarks",
+        "sla_horas": 0,
+        "status_acao": "ABERTA"
+      }
+    ]
   },
-  "action_report": [],
-  "status_final": "INVIAVEL",
+  "action_report": [
+    {
+      "metric": "custo_direto",
+      "fase": "06-consolidacao",
+      "valor_referencia": 75180960.59,
+      "valor_calculado": 99275044.93,
+      "delta_absoluto": 24094084.34,
+      "delta_percentual": 32.05,
+      "classe": "CRITICO",
+      "severidade": "S3",
+      "causa_categoria": "DERIVACAO_PIPELINE",
+      "acao_recomendada": "Bloquear pipeline e revalidar baseline de referencia",
+      "owner": "engenharia-benchmarks",
+      "sla_horas": 0,
+      "status_acao": "ABERTA"
+    },
+    {
+      "metric": "custo_indireto",
+      "fase": "07-custos-indiretos",
+      "valor_referencia": 28286131.64,
+      "valor_calculado": 49861054.54,
+      "delta_absoluto": 21574922.9,
+      "delta_percentual": 76.27,
+      "classe": "CRITICO",
+      "severidade": "S3",
+      "causa_categoria": "CONSOLIDACAO",
+      "acao_recomendada": "Bloquear pipeline e executar investigacao formal",
+      "owner": "engenharia-benchmarks",
+      "sla_horas": 0,
+      "status_acao": "ABERTA"
+    },
+    {
+      "metric": "preco_venda",
+      "fase": "06-precificacao-unitaria",
+      "valor_referencia": 142317761.88,
+      "valor_calculado": 182919446.84,
+      "delta_absoluto": 40601684.96,
+      "delta_percentual": 28.53,
+      "classe": "PREOCUPANTE",
+      "severidade": "S2",
+      "causa_categoria": "PARAMETRIZACAO_BDI",
+      "acao_recomendada": "Revalidar BDI, tributacao e consolidacao financeira",
+      "owner": "engenharia-bdi",
+      "sla_horas": 24,
+      "status_acao": "ABERTA"
+    },
+    {
+      "metric": "custo_direto_pu_q_vs_ref",
+      "fase": "06-consolidacao",
+      "valor_referencia": null,
+      "valor_calculado": null,
+      "delta_absoluto": 24720273.03,
+      "delta_percentual": 32.88,
+      "classe": "CRITICO",
+      "severidade": "S3",
+      "causa_categoria": "CATALOGO",
+      "acao_recomendada": "Bloquear pipeline e executar investigacao formal",
+      "owner": "engenharia-benchmarks",
+      "sla_horas": 0,
+      "status_acao": "ABERTA"
+    }
+  ],
+  "status_final": "BLOQUEADO",
   "rcpsp_schedule": {
     "algorithm": "CP-SAT",
     "makespan_weeks": 285,
@@ -234,32 +410,32 @@
     "atividades": {
       "1.1": {
         "start_week": 0,
-        "end_week": 48,
+        "end_week": 47,
         "duration_weeks": 49
       },
       "1.2": {
         "start_week": 49,
-        "end_week": 129,
+        "end_week": 128,
         "duration_weeks": 81
       },
       "1.3": {
         "start_week": 130,
-        "end_week": 159,
+        "end_week": 158,
         "duration_weeks": 30
       },
       "1.4": {
         "start_week": 160,
-        "end_week": 185,
+        "end_week": 184,
         "duration_weeks": 26
       },
       "1.5": {
         "start_week": 186,
-        "end_week": 280,
+        "end_week": 279,
         "duration_weeks": 95
       },
       "1.6": {
         "start_week": 281,
-        "end_week": 284,
+        "end_week": 283,
         "duration_weeks": 4
       }
     }

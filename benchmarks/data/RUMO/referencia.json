@@ -1,10 +1,5 @@
 {
   "slug": "RUMO",
-  "planejamento": {
-    "custo_direto_sem_bdi": 782342.16,
-    "custo_indireto": 4123507.52,
-    "total_projeto": 4905849.68
-  },
   "meta": {
     "data_inicio": "2026-01-01",
     "data_termino": "2027-12-31",

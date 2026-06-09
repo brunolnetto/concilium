@@ -371,11 +371,6 @@
       }
     ]
   },
-  "planejamento": {
-    "custo_direto_sem_bdi": 10965877.33,
-    "custo_indireto": 6705122.67,
-    "total_projeto": 17671000.0
-  },
   "resultado": {
     "benchmark_confronto_referencia": {
       "custo_indireto": 5887204.57,
