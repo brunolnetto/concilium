@@ -497,19 +497,5 @@
         "mao_obra": []
       }
     ]
-  },
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-01-01",
-      "fim": "2026-01-01"
-    },
-    "operacao": {
-      "inicio": "2026-01-01",
-      "fim": "2027-12-31"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-12-31",
-      "fim": "2027-12-31"
-    }
   }
 }
