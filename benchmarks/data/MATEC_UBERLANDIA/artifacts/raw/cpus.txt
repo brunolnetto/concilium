@@ -1,0 +1,507 @@
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	hidrossemeadura						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Caminhão Pipa 15.000 l			 1,00 	 1,00 	 -   	 125,00 	 125,00 	 125,00 	
+	ESCAVADEIRA HIDRÁULICA SOBRE ESTEIRA 22T			 0,50 	 0,25 	 0,75 	 190,00 	 190,00 	 95,00 	
+										
+										
+									 -   	
+								TOTAL	 220,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão pipa						 1,00 	 29,85 	 29,85 	
+	Ajudante						 8,00 	 18,88 	 151,02 	
+	Operador de escavadeira						 0,50 	 38,12 	 19,06 	
+										
+								TOTAL	 199,93 	
+										
+	PRODUÇÃO DA EQUIPE (C)			500,00	m2			CUSTO HORÁRIO TOTAL (A+B)     	 419,93 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Caminhão Pipa 15.000 l				Diesel S10	L	 6,70 	 7,00 	 46,90 	
+	ESCAVADEIRA HIDRÁULICA SOBRE ESTEIRA 22T				Diesel S10	L	 6,70 	 22,00 	 18,43 	
+										
+										
+								TOTAL	 65,33 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 0,97 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								0,97	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								0,97	
+										
+										
+										
+										
+						CUSTO UNITÁRIO				
+						ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Limpeza  (top soil)						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 265,00 	 265,00 	 265,00 	
+	Pá carregadeira			 1,00 	 1,00 	 -   	 150,00 	 150,00 	 150,00 	
+	Caminhão basculante 14 m³			 5,00 	 1,00 	 -   	 125,00 	 125,00 	 625,00 	
+										
+									 -   	
+								TOTAL	 1.040,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão basculante						 5,00 	 28,43 	 142,14 	
+	Operador de Trator de Esteiras						 1,00 	 47,19 	 47,19 	
+	Ajudante						 1,00 	 18,88 	 18,88 	
+	Operador de pá carregadeira						 1,00 	 22,87 	 22,87 	
+								TOTAL	 231,08 	
+										
+	PRODUÇÃO DA EQUIPE (C)			1.088,57	m2			CUSTO HORÁRIO TOTAL (A+B)     	 1.271,08 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20T				Diesel S10	L	 6,70 	 26,00 	 174,20 	
+	Pá carregadeira				Diesel S10	L	 6,70 	 16,00 	 107,20 	
+	Caminhão basculante 14 m³				Diesel S10	L	 6,70 	 2,50 	 83,75 	
+								TOTAL	 365,15 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 1,50 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								1,50	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								1,50	
+										
+										
+										
+										
+	AEROPORTO UBERLANDIA - MATEC					CUSTO UNITÁRIO				
+	UBERLANDIA					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Escavação, carga e trasnporte de material  de 1ª categoria 						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22t			 1,00 	 0,90 	 0,10 	 190,00 	 190,00 	 190,00 	
+	Caminhão basculante 14 m³			 4,00 	 0,90 	 0,10 	 125,00 	 125,00 	 500,00 	
+										
+										
+									 -   	
+								TOTAL	 690,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Escavadeira						 1,00 	 38,12 	 38,12 	
+	Ajudante						 1,00 	 18,88 	 18,88 	
+	Motorista de caminhão basculante						 4,00 	 28,43 	 113,71 	
+								TOTAL	 170,71 	
+										
+	PRODUÇÃO DA EQUIPE (C)			104,02	m3			CUSTO HORÁRIO TOTAL (A+B)     	 860,71 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22t				Diesel S10	L	 6,70 	 22,00 	 132,66 	
+	Caminhão basculante 14 m³				Diesel S10	L	 6,70 	 2,50 	 60,30 	
+										
+										
+										
+								TOTAL	 192,96 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 10,13 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								10,13	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								10,13	
+										
+										
+										
+										
+	AEROPORTO UBERLANDIA - MATEC					CUSTO UNITÁRIO				
+	UBERLANDIA					ESPECIFICAÇÃO				
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	preparo e melhoramento de subleito						m2	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 200,00 	 200,00 	 200,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Rolo compactador pé de carneiro 10T			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+	Caminhão Pipa 15.000 l			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+									 -   	
+									 -   	
+								TOTAL	 810,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de motoniveladora						 1,00 	 38,12 	 38,12 	
+	Operador de trator de esteiras						 1,00 	 47,19 	 47,19 	
+	Operador de rolo compactador						 2,00 	 22,87 	 45,73 	
+	Motorista de caminhão pipa						 2,00 	 29,85 	 59,70 	
+	Ajudante						 2,00 	 18,88 	 37,75 	
+	Gredista						 1,00 	 28,43 	 28,43 	
+								TOTAL	 256,92 	
+										
+	PRODUÇÃO DA EQUIPE (C)			180,00	m2			CUSTO HORÁRIO TOTAL (A+B)     	 1.066,92 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,70 	 22,00 	 147,40 	
+	Trator de pneus com grade				Diesel S10	L	 6,70 	 18,00 	 120,60 	
+	Rolo compactador pé de carneiro 10T				Diesel S10	L	 6,70 	 16,00 	 214,40 	
+	Caminhão Pipa 15.000 l				Diesel S10	L	 6,70 	 7,00 	 93,80 	
+									 -   	
+								TOTAL	 576,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 9,13 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Aquisição de Cimento					 0,03 	 M2 	 279,04 	 8,37 	
+									 -   	
+									 -   	
+								TOTAL	 8,37 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								17,50	
+										
+	BDI:								47,05%	
+										
+	CUSTO TOTAL UNITÁRIO: R$								22,21	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+		DATA BASE	SERVIÇO						UNIDADE	
+	4011533	junho, 2026	PAVIMENTO DE CONCRETO - APLICAÇÃO COM FORMAS DESLIZANTES						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Vibroacabadora de asfalto sobre esteiras - 82 kW			 1,00 	 1,00 	 -   	 1.122,00 	 1.122,00 	 1.122,00 	
+	Escavadeira hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 190,00 	 190,00 	 190,00 	
+	Maquina texturizadora e aplicadora 			 1,00 	 1,00 	 -   	 270,00 	 270,00 	 270,00 	
+										
+								TOTAL	 1.582,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de vibroacabadora						 1,00 	 38,12 	 38,12 	
+	Operador de escavadeira						 1,00 	 38,12 	 38,12 	
+	Armador						 1,00 	 22,87 	 22,87 	
+	Oficial						 4,00 	 28,32 	 113,26 	
+	Ajudante						 13,00 	 18,88 	 245,40 	
+								TOTAL	 457,77 	
+										
+	PRODUÇÃO DA EQUIPE (C)			62,50	m3			CUSTO HORÁRIO TOTAL (A+B)     	 2.039,77 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Vibroacabadora de asfalto sobre esteiras - 82 kW				Diesel S10	L	 6,70 	 17,22 	 115,37 	
+	Escavadeira hidráulica sobre esteira 22T				Diesel S10	L	 6,70 	 22,00 	 147,40 	
+										
+								TOTAL	 262,77 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 36,84 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Aditivo d cura para concreto					 -   	 kg 	 13,21 	 -   	
+	Barras de ttansferencia					 -   	 kg 	 11,95 	 -   	
+	Treliça nervurada eletrossoldada em aço ca60					 -   	 kg 	 12,65 	 -   	
+	Usinagem para pavimento de concreto com fôrmas deslizantes					 1,00 	 m3 	 448,49 	 448,49 	
+										
+										
+									 -   	
+								TOTAL	 448,49 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								485,33	
+										
+	BDI:								47,05%	
+										
+	CUSTO TOTAL UNITÁRIO: R$								525,09	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+		junho, 2026	Concreto asfáltico modificado s/ polímero						T	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador liso			 -   	 1,00 	 -   	 140,00 	 140,00 	 -   	
+	Vibroacabadora de asfalto sobre esteiras - 82 kW			 -   	 1,00 	 -   	 365,00 	 365,00 	 -   	
+										
+										
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de rolo compactador						 -   	 22,87 	 -   	
+	Operador de vibroacabadora						 -   	 38,12 	 -   	
+	Ajudante						 -   	 18,88 	 -   	
+	Rasteleiro						 -   	 22,65 	 -   	
+								TOTAL	 -   	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,00	T			CUSTO HORÁRIO TOTAL (A+B)     	 -   	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Rolo compactador liso				Diesel S10	L	 6,70 	 16,00 	 -   	
+	Vibroacabadora de asfalto sobre esteiras - 82 kW				Diesel S10	L	 6,70 	 17,22 	 -   	
+										
+										
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	APLICAÇÃO DA CAPA					 1,00 	 T 	 51,97 	 51,97 	
+										
+	TOTAL								 51,97 	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 51,97 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	USINAGEM DE CONCRETO ASFÁLTICO					 1,00 	 T 	 220,00 	 220,00 	
+	CAP 50/70					 0,05 	 T 	 5.255,00 	 286,40 	
+										
+										
+										
+								TOTAL	 506,40 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								558,37	
+										
+	BDI:								47,05%	
+										
+	CUSTO TOTAL UNITÁRIO: R$								608,14	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	4011466	junho, 2026	Concreto asfáltico modificado c/ polímero						t	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+								TOTAL	 -   	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,00	t			CUSTO HORÁRIO TOTAL (A+B)     	 -   	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	APLICAÇÃO DA CAPA					 1,00 	 T 	 51,97 	 51,97 	
+										
+	TOTAL								 51,97 	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 51,97 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	USINAGEM DE CONCRETO ASFÁLTICO					 1,00 	 T 	 220,00 	 220,00 	
+	CAP 55/75					 0,05 	 T 	 5.965,00 	 298,25 	
+										
+										
+										
+								TOTAL	 518,25 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								570,22	
+										
+	BDI:								47,05%	
+										
+	CUSTO TOTAL UNITÁRIO: R$								620,58	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Sub-base ou base brita grad. Simples						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 200,00 	 200,00 	 200,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Rolo compactador pé de carneiro 10T			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+	Caminhão Pipa 15.000 l			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+										
+										
+								TOTAL	 810,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de motoniveladora						 1,00 	 38,12 	 38,12 	
+	Operador de trator de pneu						 1,00 	 22,87 	 22,87 	
+	Operador de rolo compactador						 2,00 	 22,87 	 45,73 	
+	Motorista de caminhão pipa						 2,00 	 29,85 	 59,70 	
+	Ajudante						 2,00 	 18,88 	 37,75 	
+	Gredista						 1,00 	 28,43 	 28,43 	
+										
+										
+										
+								TOTAL	 232,60 	
+										
+	PRODUÇÃO DA EQUIPE (C)			100,00	M3			CUSTO HORÁRIO TOTAL (A+B)     	 1.042,60 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,70 	 22,00 	 147,40 	
+	Trator de pneus com grade				Diesel S10	L	 6,70 	 18,00 	 120,60 	
+	Rolo compactador pé de carneiro 10T				Diesel S10	L	 6,70 	 16,00 	 214,40 	
+	Caminhão Pipa 15.000 l				Diesel S10	L	 6,70 	 7,00 	 93,80 	
+										
+										
+								TOTAL	 576,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 16,19 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	BGS					 2,40 	 M3 	R$ 105,00	 252,00 	
+										
+										
+										
+								TOTAL	 252,00 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								268,19	
+										
+	BDI:								47,05%	
+										
+	CUSTO TOTAL UNITÁRIO: R$								288,40	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										

@@ -1,0 +1,74 @@
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 139.813,26					PERMANENCIA - MêS						CUSTO TOTAL	
+			R$ 363.272,55			EQUIPAMENTOS		R$ 88.699,05					30,00						 10.898.176,45 	
+						VERBAS		R$ 134.760,24												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$7.500,00 			 -   			J	 1.200,00 				 -   		 8.700,00 	
+P0006			AUXILIAR ADMINISTRATIVO	P0006	1	 R$2.625,00 		D	 656,25 			J	 1.865,00 				 2.001,56 		 7.147,81 	
+P0018	PJ		ENCARREGADO GERAL	P0018	1	 R$14.000,00 			 -   			J	 1.200,00 				 -   		 15.200,00 	
+P0020			ENCARREGADO DE FRENTE	P0020		 R$4.600,00 		D	 1.150,00 			J	 1.200,00 				 -   		 -   	
+P0004			APONTADOR	P0004	2	 R$3.300,00 		D	 825,00 			J	 1.865,00 				 2.516,25 		 8.506,25 	
+P0027	PJ		GERENTE DE CONTRATO	P0027	1	 R$21.000,00 			 -   			J	 1.200,00 				 -   		 22.200,00 	
+P0064	PJ		ENGENHEIRO FLORESTAL	P0064		 R$12.000,00 						J	 1.200,00 				 -   		 -   	
+P0072			AUXILIAR DE SERVIÇOS GERAIS	P0072	2	 R$1.680,00 		D	 420,00 			J	 1.865,00 				 1.281,00 		 5.246,00 	
+P0073			MECÂNICO	P0073	1	 R$4.000,00 		D	 1.000,00 			J	 1.865,00 				 3.050,00 		 9.915,00 	
+P0034			MOTORISTA DE CAMINHÃO COMBOIO	P0034	1	 R$5.696,60 		D	 1.424,15 			J	 1.865,00 				 4.343,66 		 13.329,41 	 PERICULOSIDADE 
+P0033			MOTORISTA DE CAMINHÃO PIPA	P0033	1	 R$3.391,50 		D	 847,88 			J	 1.865,00 				 2.586,02 		 8.690,39 	
+P0036			MOTORISTA DE ÔNIBUS	P0036	1	 R$3.640,00 		D	 910,00 			J	 1.865,00 				 2.775,50 		 9.190,50 	
+P0001			AJUDANTE	P0001	1	 R$2.436,00 		D	 609,00 			J	 1.865,00 				 1.857,45 		 6.767,45 	 COMBOIO 
+P0001			AJUDANTE	P0001	2	 R$1.848,00 		D	 462,00 			J	 1.865,00 				 1.409,10 		 5.584,10 	 AFUNGENTAMENTO 
+		TOTAL			15	 77.945,10 		 8.861,28 				 25.980,00 					 27.026,89 		 139.813,26 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0020			Ônibus com capacidade para 52 passageiros 	E0020	1	 12.000,00 			km		 6.000,00 			S1	 9,00 			 -   	 12.000,00 	 12.000,00 
+E0036			Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW	E0036	2	 9.000,00 			km		 4.000,00 			G	 6,00 			 906,67 	 9.906,67 	 19.813,33 
+E0035			Veículo leve 	E0035	1	 4.000,00 			km		 4.000,00 			G	 7,00 			 3.885,71 	 7.885,71 	 7.885,71 
+E0007			Caminhão comboio	E0007	1	 24.000,00 			H		 200,00 			S1	 4,00 			 -   	 24.000,00 	 24.000,00 
+E0010			Caminhão Pipa 15.000 l 	E0010	1	 25.000,00 			H		 200,00 			S1	 4,00 			 -   	 25.000,00 	 25.000,00 
+			TOTAL		6	 83.000,00 												 5.699,05 		 88.699,05 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		BANHEIRO QUÍMICO (higienização, deslocamento, descarte)			VB		 8,00 			 3.010,25 					 24.082,00 				REFEITORIO, SUPRESSAO	
+2		LAVATÓRIO			VB		 5,00 			 650,00 					 3.250,00 					
+3		ALUGUEL DE IMOVEL PARA CANTEIRO			UNID.		 1,00 			 9.700,00 					 9.700,00 				AGUA + ENERGIA	
+		ALUGUEL DE IMÓVEIS			UNID.		 7,00 			 4.500,00 					 31.500,00 					
+5		ENERGIA ELÉTRICA - ALOJAMENTO			VB		 7,00 			 1.000,00 					 7.000,00 					
+6		ÁGUA - ALOJAMENTO			VB		 7,00 			 600,00 					 4.200,00 					
+7		BEBEDOURO			VB		 1,00 			 2.500,00 					 2.500,00 					
+8		ÁGUA MINERAL 			L		 3.510,00 			 1,00 					 3.510,00 					
+9		MATERIAL DE LIMPEZA			VB		 1,00 			 900,00 					 900,00 					
+10		MATERIAL DE EXPEDIENTE			VB		 1,00 			 300,00 					 300,00 					
+11		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+12		LOCAÇÃO DE IMPRESSORA			VB		 1,00 			 900,00 					 900,00 					
+13		VISITA GERÊNCIA			VB		 2,00 			 2.000,00 					 4.000,00 					
+14		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 15,50 			 150,00 					 2.325,00 					
+15		RADIO DE COMUNICAÇÃO VEICULAR			UNID.		 5,00 			 250,00 					 1.250,00 					
+16		LOCAÇÃO DE REPETIDORA			UNID.		 2,00 			 1.300,00 					 2.600,00 					
+17		LOCAÇÃO DE TORRE			UNID.		 1,00 			 700,00 					 700,00 					
+18		GERADOR - DIESEL			UNID.		 1,00 			 9.792,00 					 9.792,00 					
+19		MANUTENÇAO DA CAIXA DÁGUA E DEDETIZAÇÃO			VB		 1,00 			 1.800,00 					 1.800,00 					
+		ALMOÇO ML			MÊS		 9,00 			 900,00 					 8.100,00 					
+		GERADOR 50KVA			UNID.		 1,00 			 6.000,00 					 6.000,00 					
+															 124.709,00 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕS PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 20.000,00 					 20.000,00 				ENERGIA/BRITA/MADEIRA/TELHA/CIMENTO/FOSSA/CASTELO DÁGUA 5000l	
+2		SEGURO GARANTIA			VB		 1,00 			 30.000,00 					 30.000,00 					
+3		ESTRUTURA DE VIVENCIA (TENDAS 5X5, CADEIRAS E MESAS)			VB		 2,00 			 9.464,00 					 18.928,00 					
+4		COMPUTADOR			UNID.		 6,00 			 3.500,00 					 21.000,00 					
+5		FERRAMENTAS			VB		 1,00 			 15.000,00 					 15.000,00 					
+6		EPI/EXAMES/TREINAMENTOS			VB		 1,00 			 151.609,11 					 151.609,11 					
+7		MOBILIA DE ESCRITORIO			VB		 1,00 			 5.000,00 					 5.000,00 					
+8		MOBILIA ALOJAMENTO			VB		 1,00 			 40.000,00 					 40.000,00 					
+		GT FROTAS			VB					 9.000,00 					 -   				JÁ TEMOS	
+															 10.051,24 					

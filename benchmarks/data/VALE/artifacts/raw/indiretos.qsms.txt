@@ -1,0 +1,23 @@
+EQUIPE:			QSMS																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 54.700,00					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 56.700,00			EQUIPAMENTOS		R$ 0,00					6,43						 364.770,00 	
+						VERBAS		R$ 2.000,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0056	PJ		Técnico de Segurança	P0056	2	 R$7.800,00 			 -   			J	 2.100,00 				 -   		 9.900,00 	
+P0025	PJ		Engenheiro de Segurança	P0025	1	 R$13.000,00 			 -   			J	 2.100,00 				 -   		 15.100,00 	 GERENTE DE QSMS 
+P0067	PJ		Técnico de Qualidade	P0067	1	 R$7.800,00 			 -   			J	 2.100,00 				 -   		 9.900,00 	
+P0068	PJ		Técnico de Meio ambiente	P0068	1	 R$7.800,00 			 -   			J	 2.100,00 				 -   		 9.900,00 	
+P0070			Técnico em enfermagem	P0070		 R$2.395,12 		D	 598,78 			J	 2.985,00 				 -   		 -   	
+		TOTAL			5	 44.200,00 		 -   				 10.500,00 					 -   		 54.700,00 	
+																				
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		MATERIAL DE SINALIZAÇÃO			MÊS		 1,00 			 2.000,00 					 2.000,00 					
+															 -   					
+															 2.000,00 					

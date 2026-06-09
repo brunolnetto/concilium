@@ -1,0 +1,178 @@
+EQUIPE:			SUPRESSÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 99.340,25					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 545.669,40			EQUIPAMENTOS		R$ 431.929,15					1,67						 909.449,01 	
+						VERBAS		R$ 14.400,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	2	 R$5.040,00 		D	 1.260,00 								 3.843,00 		 10.143,00 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	4	 R$3.036,00 		D	 759,00 								 2.314,95 		 6.109,95 	
+P0045			OPERADOR DE PÁ CARREGADEIRA	P0045	2	 R$2.442,00 		D	 610,50 								 1.862,03 		 4.914,53 	
+P0062			OPERADOR DE MOTOSSERRA	P0062	4	 R$3.547,40 		D	 886,85 								 2.704,90 		 7.139,15 	
+P0001			AJUDANTE	P0001	4	 R$2.016,00 		D	 504,00 								 1.537,20 		 4.057,20 	
+		TOTAL			16	 49.361,62 		 12.340,40 									 37.638,23 		 99.340,25 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0032			TRATOR DE ESTEIRAS 20t	E0032	2	 47.000,00 			h		 200,00 			s1	 26,00 			 33.976,80 	 80.976,80 	 161.953,60 
+E0003			Caminhão basculante 20 m³	E0003	4	 30.000,00 			km		 4.189,09 			s1	 2,50 			 10.948,61 	 40.948,61 	 163.794,43 
+E0021			PÁ CARREGADEIRA	E0021	2	 28.000,00 			h		 200,00 			s1	 16,00 			 19.863,36 	 47.863,36 	 95.726,72 
+E0015			MOTOSSERRA A GASOLINA	E0015	4				h		 200,00 			s1	 2,00 			 2.613,60 	 2.613,60 	 10.454,40 
+			TOTAL		12	 270.000,00 												 161.929,15 		 431.929,15 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+		AQUISIÇÃO DE MOTOSSERRA			UNID.		 4,00 			 6.000,00 					 24.000,00 					
+															 -   					
+															 14.400,00 					
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+5		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 1,67 		 16,00 			 2.140,00 					 57.066,67 					
+2		MATERIAL DE DESGASTE			 1,67 		 8,00 			 3.500,00 					 46.666,67 					
+3		EPIS			 1,67 		 16,00 			 632,28 					 16.860,73 					
+															 120.594,07 					
+																				
+																				
+EQUIPE:			LIMPEZA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 37.444,58					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 286.778,32			EQUIPAMENTOS		R$ 249.333,74					1,57						 450.389,03 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	1	 R$5.040,00 		D	 1.260,00 								 3.843,00 		 10.143,00 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	3	 R$3.036,00 		D	 759,00 								 2.314,95 		 6.109,95 	
+P0045			OPERADOR DE PÁ CARREGADEIRA	P0045	1	 R$2.442,00 		D	 610,50 								 1.862,03 		 4.914,53 	
+P0001			AJUDANTE	P0001	1	 R$2.016,00 		D	 504,00 								 1.537,20 		 4.057,20 	
+		TOTAL			6	 18.606,00 		 4.651,50 									 14.187,08 		 37.444,58 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0032			TRATOR DE ESTEIRAS 20t	E0032	1	 47.000,00 			h		 200,00 			s1	 26,00 			 30.579,12 	 77.579,12 	 77.579,12 
+E0003			Caminhão basculante 20 m³	E0003	3	 30.000,00 			km		 4.189,09 			s1	 2,50 			 10.948,61 	 40.948,61 	 122.845,82 
+E0021			PÁ CARREGADEIRA	E0021	1	 28.000,00 			h		 200,00 			s1	 16,00 			 20.908,80 	 48.908,80 	 48.908,80 
+			TOTAL		5	 165.000,00 												 84.333,74 		 249.333,74 
+																				
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 1,57 		 6,00 			 2.140,00 					 20.165,38 					
+2		MATERIAL DE DESGASTE			 1,57 		 2,00 			 3.500,00 					 10.993,59 					
+3		EPIS			 1,57 		 6,00 			 632,28 					 5.958,00 					
+															 37.116,97 					
+															 					
+																				
+EQUIPE:			ESCAVAÇÃO E1																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 146.818,48					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 1.057.312,52			EQUIPAMENTOS		R$ 910.494,04					5,73						 6.061.925,10 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0040			OPERADOR DE ESCAVADEIRA	P0040	6	 R$4.070,88 		D	 1.017,72 								 3.104,05 		 8.192,65 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	12	 R$3.036,00 		D	 759,00 								 2.314,95 		 6.109,95 	
+P0001			AJUDANTE	P0001	6	 R$2.016,00 		D	 504,00 								 1.537,20 		 4.057,20 	
+																				
+		TOTAL			24	 72.953,28 		 18.238,32 									 55.626,88 		 146.818,48 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0013			ESCAVADEIRA HIDRÁULICA SOBRE ESTEIRA 35T	E0013	6	 48.508,00 			h		 200,00 			s1	 26,00 			 33.976,80 	 82.484,80 	 494.908,80 
+E0003			Caminhão basculante 20 m³	E0003	12	 30.000,00 			KM		 1.772,31 			s1	 2,50 			 4.632,10 	 34.632,10 	 415.585,24 
+																				
+			TOTAL		18	 651.048,00 												 259.446,04 		 910.494,04 
+																				
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 5,73 		 24,00 			 2.140,00 					 294.464,00 					
+2		MATERIAL DE DESGASTE			 5,73 		 6,00 			 3.500,00 					 120.400,00 					
+3		EPIS			 5,73 		 24,00 			 197,67 					 27.198,93 					
+															 442.062,93 					
+																				
+																				
+EQUIPE:			ATERRO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 261.456,11					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 1.622.123,36			EQUIPAMENTOS		R$ 1.360.667,25					5,08						 8.240.386,65 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0043			OPERADOR DE MOTONIVELADORA	P0043	6	 R$4.070,88 		D	 1.017,72 								 3.104,05 		 8.192,65 	
+P0049			OPERADOR DE TRATOR DE PNEU	P0049	6	 R$2.442,00 		D	 610,50 								 1.862,03 		 4.914,53 	
+P0033			MOTORISTA DE CAMINHÃO PIPA	P0033	6	 R$3.187,80 		D	 796,95 								 2.430,70 		 6.415,45 	
+P0046			OPERADOR DE ROLO COMPACTADOR	P0046	12	 R$2.442,00 		D	 610,50 								 1.862,03 		 4.914,53 	
+P0001			AJUDANTE	P0001	12	 R$2.016,00 		D	 504,00 								 1.537,20 		 4.057,20 	
+P0029			GREDISTA	P0029	6	 R$3.036,00 		D	 759,00 								 2.314,95 		 6.109,95 	
+																				
+		TOTAL			48	 129.916,08 		 32.479,02 									 99.061,01 		 261.456,11 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0018			MOTONIVELADORA 140K	E0018	6	 45.000,00 			h		 200,00 			s1	 22,00 			 28.749,60 	 73.749,60 	 442.497,60 
+E0031			TRATOR DE PNEUS COM GRADE	E0031	6	 22.000,00 			h		 200,00 			s1	 18,00 			 23.522,40 	 45.522,40 	 273.134,40 
+E0011			CAMINHÃO PIPA 15.000 L	E0011	6	 25.000,00 			km		 2.880,00 			s1	 7,00 			 2.688,27 	 27.688,27 	 166.129,65 
+E0025			ROLO COMPACTADOR PÉ DE CARNEIRO 10T	E0025	12	 19.000,00 			h		 200,00 			s1	 16,00 			 20.908,80 	 39.908,80 	 478.905,60 
+																				
+			TOTAL		30	 780.000,00 												 580.667,25 		 1.360.667,25 
+																				
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 5,08 		 48,00 			 2.140,00 					 521.817,60 					
+2		MATERIAL DE DESGASTE			 5,08 		 24,00 			 3.500,00 					 426.720,00 					
+3		EPIS			 5,08 		 48,00 			 197,67 					 48.199,04 					
+															 996.736,64 					
+																				
+EQUIPE:			BOTA FORA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 81.517,84					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 687.512,92			EQUIPAMENTOS		R$ 605.995,08					3,41						 2.344.758,58 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0040			OPERADOR DE ESCAVADEIRA	P0040	2	 R$4.070,88 		D	 1.017,72 								 3.104,05 		 8.192,65 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	9	 R$3.036,00 		D	 759,00 								 2.314,95 		 6.109,95 	
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048	1	 R$5.040,00 		D	 1.260,00 								 3.843,00 		 10.143,00 	
+		TOTAL			12	 40.505,76 		 10.126,44 									 30.885,64 		 81.517,84 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0012			Escavadeira hidráulica sobre esteira 22T	E0012	2	 35.000,00 			h		 200,00 			s1	 22,00 			 28.749,60 	 63.749,60 	 127.499,20 
+E0003			Caminhão basculante 20 m³	E0003	9	 30.000,00 			KM		 5.421,18 			s1	 2,50 			 14.168,79 	 44.168,79 	 397.519,08 
+E0032			TRATOR DE ESTEIRAS 20T	E0032	1	 47.000,00 			H		 200,00 			S1	 26,00 			 33.976,80 	 80.976,80 	 80.976,80 
+			TOTAL		12	 387.000,00 												 218.995,08 		 605.995,08 
+																				
+																				
+ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA																				
+ITEM		DESCRIÇÃO			PERM		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ALIMENTAÇÃO/PLANO DE SAUDE/CESTA BÁSICA			 3,41 		 12,00 			 2.140,00 					 87.581,48 					
+2		MATERIAL DE DESGASTE			 3,41 		 3,00 			 3.500,00 					 35.810,19 					
+3		EPIS			 3,41 		 12,00 			 235,78 					 9.649,69 					
+															 133.041,36 					

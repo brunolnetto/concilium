@@ -83,15 +83,3 @@ ITEM	DISCRIMINAÇÃO DE SERVIÇOS	UNID	 QUANT. PROJETO 	 RESUMO DE CUSTO DE OBRA
 	Mobilização/Desmobilização de pessoas e equipamentos	VB	 1,00 				 819.636,54 	 IND 	 -   	 -   	 -   	 178.385,39 	 819.636,54 	 -   	 -   	 -   	 819.636,54 	 998.021,93 	 -   	 -   	 -   	 998.021,93 	 998.021,93 	24,2%
 								 IND 	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	 -   	0,0%
 														 5.108.904,36 	 6.770.970,89 	 498.813,65 	 4.442.480,24 		 6.645.465,01 	 7.956.724,69 	 589.570,24 	 5.459.929,65 	 20.651.689,59 	
-																 90.756,59 							 4.905.849,68 	
-																								
-B D I	APLICAÇÃO	SIGLA	 M.O 	 SERVIÇO 	 DIESEL 	 MATERIAL 																		
-	Limpeza e Desmatamento	LIM	26,36%	26,36%	18,19%	26,36%																		
-	Terraplenagem	TER	26,36%	26,36%	18,19%	26,36%																		
-	Drenagem Pluvial	DRN	26,36%	26,36%	18,19%	26,36%																		
-	Sistema de Água	SAA	26,36%	26,36%	18,19%	26,36%						 224.762,54 												
-	Sistema de Esgoto	SES	26,36%	26,36%	18,19%	26,36%																		
-	Pavimentação	PAV	26,36%	26,36%	18,19%	26,36%																		
-	Despesas Indiretas	IND	21,76%	21,76%	21,76%	21,76%																		
-	Serviços terceirizados	EMP	26,36%	31,36%	18,19%	5,00%																		
-	Obra Civil	CIV	26,36%	26,36%	18,19%	26,36%																		

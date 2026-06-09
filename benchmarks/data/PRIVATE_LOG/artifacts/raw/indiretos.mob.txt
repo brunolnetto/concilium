@@ -1,0 +1,59 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																					
+																																																								
+															EQUIPAMENTOS							R$ 550.320,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																									
+															MÃO DE OBRA							R$ 59.700,00									R$ 1.821.488,32																									
+															VERBAS							R$ 1.211.468,32																																		
+																																																								
+																																																								
+EQUIPAMENTOS																																																								
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES				
+																																																								
+1		MOBILIZAÇÃO DE EQUIPAMENTOS													VB		 19,00 							 BELO HORIZONTE 					 SERRA 					 1.080,00 						 13,00 						 266.760,00 										
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 19,00 							 SERRA 					 BELO HORIZONTE 					 1.080,00 						 13,00 						 266.760,00 										
+3		MOBILIZAÇÃO DE CONTAINER													VB		 8,00 																	 1,00 						 900,00 						 7.200,00 										
+4		DESMOBILIZAÇÃO DE CONTAINER 													VB		 8,00 																	 1,00 						 900,00 						 7.200,00 										
+5		MOBILIZAÇÃO DE BANHEIRO QUIMICO													VB		 2,00 																	 1,00 						 600,00 						 1.200,00 										
+6		DESMOBILIZAÇÃO DE BANHEIRO QUIMICO													VB		 2,00 																	 1,00 						 600,00 						 1.200,00 										
+																																														 550.320,00 										
+																																																								
+MÃO DE OBRA																																																								
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																		
+																																																								
+Equipe											50			 ES 						 SERRA 						 600,00 						29.850,00																								
+Equipe											50			 SERRA 						 ES 						600,00						29.850,00						  																		
+																																 59.700,00 																								
+																																																								
+VERBAS																																																								
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES										
+1		INTEGRAÇÃO EQUIPE																							VB			 0,21 						 360.306,39 						 75.063,83 						5 DIAS										
+																																								 -   																
+																																								 75.063,83 																
+																																																								
+DESPESAS COM VIAGEM																																																								
+							CUSTO UNITÁRIO		MÊS 1			MÊS 2			MÊS 3			MÊS 4			MÊS 5			MÊS 6			MÊS 7			MÊS 8			MÊS 9			MÊS 10			MÊS 11															CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 1.200,00 					X						X						X						x																								 4.800,00 		
+ENCARREGADO (60 dias)						1	 1.200,00 					X						X						X						x																								 4.800,00 		
+GERENTE DE CONTRATO (30 dias)						1	 1.200,00 					X			X			X			X			X			X			x																								 8.400,00 		
+EQUIPE DIRETA						77	 1.200,00 								x									x																														 184.800,00 		
+EQUIPE INDIRETA						17,5	 1.200,00 								x									X																														 42.000,00 		
+ 244.800,00 																																																								
+																																																								
+ALIMENTAÇÃO/SEGURO DE VIDA/CESTA BÁSICA																																																								
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																																
+Limpeza mecanizada de camada vegetal (20cm)						 9,00 			 2.300,00 									1,40						 28.980,00 																																
+TRANSPORTE DE MATERIAL DE LIMPEZA E ESPALHAMENTO (1KM)						 5,00 			 2.300,00 									2,46						 28.299,49 																																
+Escavação de solo mole, Transporte DT MAXIMO 1KM e espalhamento						 3,00 			 2.300,00 									2,08						 14.375,00 																																
+Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km						 13,00 			 2.300,00 									6,13						 183.137,50 																																
+JAZIDA						 12,00 			 2.300,00 									1,75						 48.300,00 																																
+Aterro Compactado a 100% PN						 27,00 			 2.300,00 									7,13						 442.462,50 																																
+Desmonte de rocha com escavadeira e rompedor hidráulico						 1,00 			 2.300,00 									3,83						 8.816,67 																																
+Tranporte de material de britagem, DMT 1KM e espalhamento						 2,00 			 2.300,00 									3,83						 17.633,33 																																
+Desmonte de rocha						 13,00 			 2.100,00 									3,83						 104.650,00 				SERVIÇO TERCEIRIZADO - FORNECIMENTO DE ALIMENTAÇÃO																												
+DRENOS						 5,00 			 2.300,00 									1,30						 14.950,00 																																
+ 891.604,49 																																																								

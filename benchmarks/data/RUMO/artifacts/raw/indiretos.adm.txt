@@ -1,0 +1,78 @@
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 201.049,03					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 875.248,94			EQUIPAMENTOS		R$ 324.771,16					2,50						 2.188.122,35 	
+						VERBAS		R$ 349.428,75												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$8.000,00 			 -   			J	 2.100,00 				 -   		 10.100,00 	
+P0018	PJ		ENCARREGADO GERAL	P0018	1	 R$15.000,00 			 -   			J	 2.100,00 				 -   		 17.100,00 	
+P0072			APONTADOR	P0072	3	 R$2.543,20 		D	 635,80 			J	 2.820,00 				 1.939,19 		 7.938,19 	
+P0027	PJ		GERENTE DE CONTRATO	P0027	1	 R$25.000,00 			 -   			J	 2.100,00 				 -   		 27.100,00 	
+P0075	PJ		TÉCNICO DE PLANEJAMENTO	P0075	1	 R$12.000,00 			 -   			J	 2.100,00 				 -   		 14.100,00 	
+P0063			AUXILIAR DE SERVIÇOS GERAIS	P0063	2	 R$2.300,00 		D	 575,00 			J	 2.820,00 				 1.753,75 		 7.448,75 	
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	8	 R$2.530,00 		D	 632,50 			J	 2.820,00 				 1.929,13 		 4.746,98 	 TRANSPORTE CBUQ 
+P0034			MOTORISTA DE CAMINHÃO COMBOIO	P0034	1	 R$4.069,00 		D	 1.017,25 			J	 2.820,00 				 3.102,61 		 11.008,86 	 PERICULOSIDADE 
+P0033			MOTORISTA DE CAMINHÃO PIPA	P0033	1	 R$2.656,50 		D	 664,13 			J	 2.820,00 				 2.025,58 		 8.166,21 	
+P0036			MOTORISTA DE ÔNIBUS	P0036	1	 R$2.656,50 		D	 664,13 			J	 2.820,00 				 2.025,58 		 8.166,21 	
+P0001			AJUDANTE	P0001	4	 R$1.548,80 		D	 387,20 			J	 2.320,00 				 1.180,96 		 5.436,96 	 PARE E SIGA 
+P0001			AJUDANTE	P0001	1	 R$2.013,44 		D	 503,36 			J	 2.820,00 				 1.535,25 		 6.872,05 	 COMBOIO 
+		TOTAL			25	 110.060,24 		 12.515,06 				 65.620,00 					 38.170,93 		 201.049,03 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0021			Ônibus com capacidade para 52 passageiros 	E0021	1	 28.000,00 			km		 2.400,00 			S1	 9,00 			 1.626,67 	 29.626,67 	 29.626,67 
+E0037			Veículo leve	E0037	2	 4.000,00 			km		 3.000,00 			S1	 9,00 			 2.033,33 	 6.033,33 	 12.066,67 
+E0003			Caminhão basculante 16 m³	E0003	8	 30.000,00 			km		 7.200,00 			S1	 2,50 			 17.568,00 	 47.568,00 	 228.326,40 
+E0007			Caminhão comboio	E0007	1	 24.000,00 			km		 2.400,00 			S1	 4,00 			 3.660,00 	 27.660,00 	 27.660,00 
+E0011			Caminhão Pipa 15.000 l	E0011	1	 25.000,00 			km		 2.400,00 			S1	 7,00 			 2.091,43 	 27.091,43 	 27.091,43 
+			TOTAL		13	 325.000,00 												 151.988,76 		 324.771,16 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		CONTEINER 6X2,4X2,6 PARA BANHEIRO			VB		 2,00 			 1.800,00 					 3.600,00 				6WC,01MIC,01LAV 	
+2		CONTEINER VESTIÁRIO			VB		 2,00 			 1.000,00 					 2.000,00 					
+3		BANHEIRO QUÍMICO (higienização, deslocamento, descarte)			VB		 2,00 			 1.800,00 					 3.600,00 					
+4		LAVATÓRIO			VB		 1,00 			 650,00 					 650,00 					
+5		ALUGUEL DE CONTEINER 			UNID.		 3,00 			 1.500,00 					 4.500,00 					
+6		ALOJAMENTO			UNID.		 14,00 			 4.000,00 					 56.000,00 					
+7		ENERGIA ELÉTRICA - ALOJAMENTO			UNID.		 14,00 			 1.200,00 					 16.800,00 					
+8		ÁGUA - ALOJAMENTO			UNID.		 14,00 			 800,00 					 11.200,00 					
+9		VIGILÂNCIA 			VB		 1,00 			 15.000,00 					 15.000,00 					
+10		ÁGUA MINERAL 			L		 8.460,00 			 1,00 					 8.460,00 					
+11		MATERIAL DE EXPEDIENTE			VB		 1,00 			 300,00 					 300,00 					
+12		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+13		STARLINK			VB		 3,00 			 600,00 					 1.800,00 					
+14		VISITA GERÊNCIA			VB		 1,00 			 2.000,00 					 2.000,00 					
+15		TORRE DE ILUMINAÇÃO			MÊS		 3,00 			 6.000,00 					 18.000,00 					
+16		RADIO DE COMUNICAÇÃO PORTÁTIL			VB		 10,00 			 600,00 					 6.000,00 					
+															 150.210,00 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕS PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 20.000,00 					 20.000,00 					
+2		IMPRESSORA			UNID.		 1,00 			 1.800,00 					 1.800,00 					
+3		FERRAMENTAS			VB		 1,00 			 10.000,00 					 10.000,00 					
+4		EPI/EXAMES/TREINAMENTOS			VB		 1,00 			 233.324,00 					 233.324,00 					
+5		SEGURO PERFOMANCE BOND			VB		 0,00 			 23.258.291,34 					 23.258,29 					
+6		SEGURO GARANTIA			VB		 0,00 			 23.258.291,34 					 15.814,57 					
+7		COMPUTADOR			UNID.		 6,00 			 4.000,00 					 24.000,00 					
+8		MOBILIA DE ESCRITORIO			VB		 3,00 			 5.000,00 					 15.000,00 					
+9		MOBILIA ALOJAMENTO			VB		 14,00 			 3.500,00 					 49.000,00 					
+															 156.878,75 					
+																				
+MATERIAL DE DESGASTE																				
+ITEM		DESCRIÇÃO			UNID.		QUANT	TEMPO		PREÇO UNITÁRIO					VALOR					
+		LIMPEZA					 2,00 	 0,37 		 1.500,00 					 1.100,00 					
+		ESCAVAÇÃO					 2,00 	 0,87 		 1.500,00 					 2.600,00 					
+		COMPACTAÇÃO E PAVIMENTAÇÃO					 8,00 	 1,53 		 1.500,00 					 18.400,00 					
+		ESPALHAMENTO					 2,00 	 0,50 		 1.500,00 					 1.500,00 					
+		DEMOLIÇÃO DE PAVIMENTO					 1,00 	 0,37 		 1.500,00 					 550,00 					
+		CANAL					 1,00 	 1,13 		 1.500,00 					 1.700,00 					
+		PROTEÇÃO DE CAÇAMBA					 8,00 	 1,00 		 10.000,00 					 80.000,00 					
+															 42.340,00 					

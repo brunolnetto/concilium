@@ -1,0 +1,83 @@
+
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 229.693,42					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 562.141,72			EQUIPAMENTOS		R$ 90.169,64					6,40						 3.597.707,01 	
+						VERBAS		R$ 242.278,66												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$10.000,00 			 -   			J	 2.100,00 				 -   		 12.100,00 	
+P0006			AUXILIAR ADMINISTRATIVO	P0006	1	 R$3.800,00 		D	 950,00 			J	 2.800,00 				 2.897,50 		 10.447,50 	
+P0018	PJ		ENCARREGADO GERAL	P0018	1	 R$15.000,00 			 -   			J	 2.100,00 				 -   		 17.100,00 	
+P0077			APONTADOR LIDER	P0077	1	 R$3.800,00 		D	 950,00 			J	 2.800,00 				 2.897,50 		 10.447,50 	
+P0004			APONTADOR	P0004	5	 R$3.300,00 		D	 825,00 			J	 2.800,00 				 2.516,25 		 9.441,25 	
+P0027	PJ		GERENTE DE CONTRATO	P0027	1	 R$27.000,00 			 -   			J	 2.100,00 				 -   		 29.100,00 	
+P0024	PJ		ENGENHEIRO CIVIL	P0024	1	 R$18.000,00 						J	 2.100,00 				 -   		 20.100,00 	
+P0065	PJ		TÉCNICO DE PLANEJAMENTO	P0065	1	 R$12.000,00 						J	 2.100,00 				 -   		 14.100,00 	
+P0072			AUXILIAR DE SERVIÇOS GERAIS	P0072	2	 R$2.300,00 		D	 575,00 			J	 2.800,00 				 1.753,75 		 7.428,75 	
+P0073			MECÂNICO	P0073	1	 R$7.000,00 		D	 1.750,00 			J	 2.800,00 				 5.337,50 		 16.887,50 	
+P0034			MOTORISTA DE CAMINHÃO COMBOIO	P0034	1	 R$3.130,00 		D	 782,50 			J	 2.800,00 				 2.386,63 		 9.099,13 	
+P0026	PJ		ENGENHEIRO TREINEE - controle equipamentos e combustível 	P0026	1	 R$4.000,00 			 -   			J	 2.141,54 				 -   		 6.141,54 	
+P0026	PJ		ENGENHEIRO TREINEE - controle produção e mat.	P0026	1	 R$4.000,00 			 -   			J	 2.765,00 				 -   		 6.765,00 	
+P0036			MOTORISTA DE ÔNIBUS	P0036	1	 R$2.656,50 		D	 664,13 			J	 2.800,00 				 2.025,58 		 8.146,21 	
+P0001			AJUDANTE	P0001	1	 R$2.184,00 		D	 546,00 			J	 2.800,00 				 1.665,30 		 7.195,30 	 COMBOIO 
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032		 R$2.530,00 		D	 632,50 			J	 2.800,00 				 -   		 -   	 MOVIMENTAÇÃO DE MATERIAL 
+P0048			OPERADOR DE TRATOR DE ESTEIRAS	P0048		 R$5.000,00 		D	 1.250,00 			J	 2.800,00 				 -   		 -   	 ESPALHAMENTO 
+		TOTAL			20	 133.670,50 		 10.917,63 				 51.806,54 					 33.298,76 		 229.693,42 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0041			Ônibus com capacidade para 52 passageiros 	E0041	1	 15.000,00 			km		 3.750,00 			S1	 9,00 			 2.725,00 	 17.725,00 	 17.725,00 
+E0007			Caminhão comboio	E0007	1	 25.000,00 			km		 2.500,00 			S1	 4,00 			 4.087,50 	 29.087,50 	 29.087,50 
+E0003			CAMINHÃO BASCULANTE 16 M³	E0003		 31.900,00 			H		 200,00 			S1	 2,50 			 1.962,00 	 33.862,00 	 -   
+E0032			TRATOR DE ESTEIRAS 20t	E0032		 44.000,00 			h		 200,00 			S1	 26,00 			 20.404,80 	 64.404,80 	 -   
+E0035			Veículo leve 	E0035	5	 4.000,00 			km		 5.000,00 			S1	 7,00 			 4.671,43 	 8.671,43 	 43.357,14 
+			TOTAL		7	 60.000,00 												 30.169,64 		 90.169,64 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+		CONTEINER VESTIÁRIO			VB					 1.000,00 					 -   				FORNECIMENTO CLIENTE	
+1		BANHEIRO QUÍMICO 			VB		 6,00 			 1.600,00 					 9.600,00 					
+2		LAVATÓRIO			VB		 3,00 			 650,00 					 1.950,00 					
+3		ALUGUEL DE CONTEINER ADM			UNID.		 5,00 			 3.500,00 					 17.500,00 				adm/eng/lab/top/almox	
+4		ALUGUEL DE IMÓVEIS			UNID.		 14,00 			 4.000,00 					 56.000,00 					
+5		ENERGIA ELÉTRICA - ALOJAMENTO			VB		 14,00 			 1.000,00 					 14.000,00 					
+6		ÁGUA - ALOJAMENTO			VB		 14,00 			 600,00 					 8.400,00 					
+		VIGILÂNCIA ARMADA			VB					 15.000,00 					 -   				FORNECIMENTO CLIENTE	
+7		BEBEDOURO			VB		 1,00 			 2.000,00 					 2.000,00 					
+8		ÁGUA MINERAL 			L		 -   			 1,00 					 -   				FORNECIMENTO CLIENTE	
+9		MATERIAL DE LIMPEZA			VB		 1,00 			 900,00 					 900,00 					
+10		MATERIAL DE EXPEDIENTE			VB		 1,00 			 300,00 					 300,00 					
+11		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+12		LOCAÇÃO DE IMPRESSORA			VB		 1,00 			 900,00 					 900,00 					
+13		VISITA GERÊNCIA			VB		 2,00 			 3.500,00 					 7.000,00 					
+14		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 79,00 			 150,00 					 11.850,00 					
+15		RADIO DE COMUNICAÇÃO VEICULAR			UNID.		 5,00 			 250,00 					 1.250,00 					
+		GERADOR 50KVA			UNID.					 6.000,00 					 -   				FORNECIMENTO CLIENTE	
+															 131.950,00 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕS PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 15.000,00 					 15.000,00 				ENERGIA/BRITA/MADEIRA/TELHA/CIMENTO/FOSSA/CASTELO DÁGUA 5000l	
+2		SEGURO GARANTIA/PERFOMANCE BOND			VB		 1,00 			 50.000,00 					 50.000,00 					
+3		ESTRUTURA DE VIVENCIA (TENDAS 5X5, CADEIRAS E MESAS)			VB		 3,00 			 9.464,00 					 28.392,00 					
+4		COMPUTADOR			UNID.		 9,00 			 4.000,00 					 36.000,00 					
+5		FERRAMENTAS			VB		 1,00 			 6.000,00 					 6.000,00 					
+6		EPI/EXAMES/TREINAMENTOS			VB		 1,00 			 261.561,40 					 261.561,40 					
+8		MOBILIA DE ESCRITORIO			VB		 1,00 			 8.000,00 					 8.000,00 					
+7		MOBILIA ALOJAMENTO			VB		 14,00 			 4.500,00 					 63.000,00 					
+																				
+															 73.117,72 					
+																				
+MATERIAL DE DESGASTE																				
+ITEM		DESCRIÇÃO			UNID.		QUANT	TEMPO		PREÇO UNITÁRIO					VALOR					
+1		Limpeza, carga e transporte			vb		 2,00 	 1,83 		 1.500,00 					 5.500,00 					
+2		Escavação de material de 1ª categoria, carga e transporte/solo mole			vb		 10,00 	 4,10 		 1.500,00 					 61.500,00 					
+3		Aterro compactado			vb		 21,00 	 5,43 		 1.500,00 					 171.150,00 					
+					vb			 -   							 -   					
+															 37.210,94 					

@@ -1,0 +1,58 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																				
+																																																							
+															EQUIPAMENTOS							R$ 1.272.600,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																								
+															MÃO DE OBRA							R$ 118.800,00									R$ 6.286.846,08																								
+															VERBAS							R$ 4.895.446,08																																	
+																																																							
+																																																							
+EQUIPAMENTOS																																																							
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES			
+																																																							
+1		MOBILIZAÇÃO DE EQUIPAMENTOS													VB		 23,00 							 LONDRINA 					 BARRA DO RIBEIRO 					 2.100,00 						 13,00 						 627.900,00 									
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 23,00 							 BARRA DO RIBEIRO 					 LONDRINA 					 2.100,00 						 13,00 						 627.900,00 									
+3		MOBILIZAÇÃO DE CONTAINER													VB		 8,00 																	 1,00 						 900,00 						 7.200,00 									
+4		DESMOBILIZAÇÃO DE CONTAINER 													VB		 8,00 																	 1,00 						 900,00 						 7.200,00 									
+5		MOBILIZAÇÃO DE BANHEIRO QUIMICO													VB		 2,00 																	 1,00 						 600,00 						 1.200,00 									
+6		DESMOBILIZAÇÃO DE BANHEIRO QUIMICO													VB		 2,00 																	 1,00 						 600,00 						 1.200,00 									
+																																														 1.272.600,00 									
+																																																							
+MÃO DE OBRA																																																							
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																	
+																																																							
+Equipe											99			 PORTO ALEGRE 						 BARRA DO RIBEIRO 						 600,00 						59.400,00																							
+Equipe											99			 BARRA DO RIBEIRO 						 PORTO ALEGRE 						600,00						59.400,00						  																	
+																																 118.800,00 																							
+																																																							
+VERBAS																																																							
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES									
+1		INTEGRAÇÃO EQUIPE																							VB			 0,21 						 526.769,25 						 109.743,59 						5 DIAS									
+																																								 -   															
+																																								 109.743,59 															
+																																																							
+DESPESAS COM VIAGEM																																																							
+							CUSTO UNITÁRIO		1		2		3		4		5		6		7		8		9		10		11		12		13		14		15		16		17		18										CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 1.200,00 						X						X						X						X						X						X										 7.200,00 		
+ENCARREGADO (60 dias)						1	 1.200,00 				X						X						X						X						X						X												 7.200,00 		
+GERENTE DE CONTRATO (30 dias)						2	 1.200,00 				X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X										 40.800,00 		
+EQUIPE DIRETA						165	 1.200,00 								X								X								X								X														 792.000,00 		
+EQUIPE INDIRETA						27	 1.200,00 				X						X						X						X						X						X												 194.400,00 		
+ 1.041.600,00 																																																							
+																																																							
+ALIMENTAÇÃO/SEGURO DE VIDA/CESTA BÁSICA/PLANO DE SAUDE																																																							
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																															
+REMOÇÃO DO SOLO VEGETAL, DESMATAMENTO, DESTOCAMENTO E LIMPEZA						 5,00 			 2.800,00 									1,70						 23.800,00 																															
+TRANSPORTE DE MATERIAL DE LIMPEZA E ESPALHAMENTO						 7,00 			 2.800,00 									2,20						 43.062,49 																															
+ESCAVAÇÃO DE MATERIAL DE 1ª  CATEGORIA, REGULARIZAÇÃO, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA - ETAPA 1						 16,00 			 2.800,00 									2,57						 114.986,67 																															
+ESCAVAÇÃO DE MATERIAL DE 1ª,  2ª E 3ª CATEGORIA, REGULARIZAÇÃO, CARGA E TRANSPORTE DE MATERIAL PARA BOTA FORA ESPECÍFICO E DESCARGA						 38,00 			 2.800,00 									13,00						 1.383.200,00 																															
+ESCAVAÇÃO DE MATERIAL DE 3ª CATEGORIA						 1,00 			 2.800,00 									5,33						 14.933,33 																															
+ESPALHAMENTO, REGULARIZAÇÃO, COMPACTAÇÃO DE MATERIAL EM BOTA FORA -ETAPA 1						 6,00 			 2.800,00 									2,53						 42.560,00 																															
+ESPALHAMENTO, REGULARIZAÇÃO, COMPACTAÇÃO DE MATERIAL EM BOTA FORA						 15,00 			 2.100,00 									12,80						 403.200,00 																															
+PROTEÇÃO DE TALUDE COM ENROCAMENTO DE PEDRA, ESPESSURA 05M SOBRE MANTA BIDIM RT-21, CONFORME ESPECIFICAÇÃO DER ET-DE-H00/011						 27,00 			 2.800,00 									9,77						 738.360,00 																															
+DRENAGEM + PAVIMENTAÇÃO						 50,00 			 2.800,00 									7,00						 980.000,00 																															
+ 3.744.102,49 																																																							

@@ -6,7 +6,7 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 4744,
+      "duration_ms": 1795,
       "avisos": [
         "2 EAP items referenciam CPUs inexistentes no catálogo: '1.10' (CPU-MOB-010), '3.1' (CPU-LIMP-001)"
       ]
@@ -14,19 +14,19 @@
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 266,
+      "duration_ms": 146,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 259,
+      "duration_ms": 127,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 682,
+      "duration_ms": 194,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -84,7 +84,7 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "ERRO",
-      "duration_ms": 224,
+      "duration_ms": 87,
       "avisos": [],
       "erros": [
         "ADR-077: Contrato EQUIPE-CPU-DIVER-ATI-069 — 1 instância(s) com standby >35%: EQUIPE-CPU-DIVER-ATI-069-01: 202w idle. Taxa global: 7.3%. Custo standby: R$ 1,739,139.91.",
@@ -94,7 +94,7 @@
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 82,
+      "duration_ms": 43,
       "avisos": [
         "CPU 'CPU-MOB-010' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
         "CPU 'CPU-LIMP-001' não encontrado em catálogo. Usando CPU sintético com producao_id_ref padrão.",
@@ -113,7 +113,7 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 83,
+      "duration_ms": 46,
       "avisos": [
         "Razão indireto/direto 151.3% fora da faixa [10.0%, 50.0%]"
       ]
@@ -121,13 +121,13 @@
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 139,
+      "duration_ms": 38,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "ERRO",
-      "duration_ms": 270,
+      "duration_ms": 87,
       "avisos": [
         "Margem operacional 18.97% | status=VERMELHO | preço R$ 6,825,394 (operacional) vs R$ 6,706,698 (catálogo)",
         "Item '1.1': divergência de produtividade -10.1% não explicada por clima (fe_nec=1.14 × clima=0.79 = 0.90). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=3.974 vs calibrado=4.534).",
@@ -153,13 +153,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 98,
+      "duration_ms": 43,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 20979,
+      "duration_ms": 4522,
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -167,25 +167,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 172,
+      "duration_ms": 60,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 101,
+      "duration_ms": 57,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 96,
+      "duration_ms": 56,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 86,
+      "duration_ms": 61,
       "avisos": []
     }
   ],

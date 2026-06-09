@@ -1,0 +1,59 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																					
+																																																								
+															EQUIPAMENTOS							R$ 328.516,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																									
+															MÃO DE OBRA							R$ 84.600,00									R$ 819.636,54																									
+															VERBAS							R$ 406.520,54																																		
+																																																								
+																																																								
+EQUIPAMENTOS																																																								
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES				
+																																																								
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 12,00 							 GOIÂNIA 					 DOM AQUINO 					 1.372,00 						 9,50 						 156.408,00 										
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 12,00 							 DOM AQUINO 					 GOIÂNIA 					 1.372,00 						 9,50 						 156.408,00 										
+3		MOB CONTEINER													VB		 7,00 																							 950,00 						 6.650,00 										
+4		DESMOB CONTEINER													VB		 7,00 																							 950,00 						 6.650,00 										
+5		MOB BANHEIRO QUIMICO													VB		 2,00 																							 600,00 						 1.200,00 										
+6		DESMOB BANHEIRO QUIMICO													VB		 2,00 																							 600,00 						 1.200,00 										
+																																																								
+																																																								
+																																														 328.516,00 										
+																																																								
+MÃO DE OBRA																																																								
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																		
+																																																								
+Equipe											56			 GOIÂNIA 						 DOM AQUINO 						 750,00 						42.300,00																								
+Equipe											56			 DOM AQUINO 						 GOIÂNIA 						750,00						42.300,00						  																		
+																																 84.600,00 																								
+																																																								
+VERBAS																																																								
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES										
+1		MOBILIZAÇÃO EQUIPE DIRETA																							VB			 0,42 						 281.169,29 						 117.153,87 						10 DIAS										
+2		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB			 0,21 						 836.000,00 						 174.166,67 						5 DIAS										
+																																								 291.320,54 																
+																																																								
+DESPESAS COM VIAGEM																																																								
+							CUSTO UNITÁRIO		MOB			mês 1			mês 2			mês 3																																				CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 1.200,00 								X																																							 1.200,00 		
+ENCARREGADO (60 dias)						1	 1.200,00 					X			X			x																																				 3.600,00 		
+ENGENHEIRO (30 dias) 						1	 1.200,00 					X			x			x																																				 3.600,00 		
+EQUIPE DIRETA						61	 1.200,00 											X																																				 73.200,00 		
+EQUIPE INDIRETA						28	 1.200,00 								X																																							 33.600,00 		
+ 115.200,00 																																																								
+																																																								
+ALIMENTAÇAO/CESTA BASICA/PLANO DE SAUDE/SEGURO DE VIDA																																																								
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																																
+LIMPEZA						 7,00 			 2.820,00 									0,37						 7.238,00 																																
+ESCAVAÇÃO						 13,00 			 2.820,00 									0,87						 31.772,00 																																
+COMPACTAÇÃO E PAVIMENTAÇÃO						 16,00 			 2.820,00 									1,53						 69.184,00 																																
+ESPALHAMENTO						 2,00 			 2.820,00 									0,50						 2.820,00 																																
+DEMOLIÇÃO DE PAVIMENTO						 3,00 			 2.820,00 									0,37						 3.102,00 																																
+BUEIRO						 8,00 			 2.820,00 									0,50						 11.280,00 																																
+CANAL						 13,00 			 2.820,00 									1,13						 41.548,00 																																
+																																																								
+																																																								

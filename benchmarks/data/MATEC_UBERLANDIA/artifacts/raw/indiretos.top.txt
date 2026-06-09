@@ -1,0 +1,22 @@
+EQUIPE:			TOPOGRAFIA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 24.308,06					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 30.094,72			EQUIPAMENTOS		R$ 5.786,67					9,00						 270.852,52 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0057	PJ		Topógrafo	P0057	1	 R$14.000,00 			 -   			j	 2.100,00 				 -   		 16.100,00 	
+P0010			Auxiliar de topografia	P0010	1	 R$2.677,30 		D	 669,32 			j	 2.820,00 				 2.041,44 		 8.208,06 	
+									 -   				 -   				 -   		 -   	
+		TOTAL			2	 16.677,30 		 669,32 				 4.920,00 					 2.041,44 		 24.308,06 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0036			Veículo leve 	E0036	1	 4.000,00 			km		 2.400,00 			S1	 9,00 			 1.786,67 	 5.786,67 	 5.786,67 
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 1.786,67 		 5.786,67 

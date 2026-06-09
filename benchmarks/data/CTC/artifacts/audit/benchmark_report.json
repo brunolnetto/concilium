@@ -6,25 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 7883,
+      "duration_ms": 1727,
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 650,
+      "duration_ms": 124,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 543,
+      "duration_ms": 85,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 570,
+      "duration_ms": 155,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -74,15 +74,15 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 276,
+      "duration_ms": 75,
       "avisos": [
-        "ADR-077: Contrato EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000 — 3 instância(s) com standby >35%: EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-02: 105w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-03: 105w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-04: 105w idle. Taxa global: 72.0%. Custo standby: R$ 11,585,568.71."
+        "ADR-077: Contrato EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000 — 3 instância(s) com standby >35%: EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-02: 105w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-03: 105w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-04: 105w idle. Taxa global: 72.0%. Custo standby: R$ 34,076,583.48."
       ]
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 200,
+      "duration_ms": 25,
       "avisos": [
         "Item '1.6': preço de venda (0.5957) abaixo do custo da equipe (0.6089). Margem=-2.22%. Revisar dimensionamento ou repassar ao cliente."
       ]
@@ -90,23 +90,21 @@
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 216,
-      "avisos": [
-        "Razão indireto/direto 97.0% fora da faixa [10.0%, 50.0%]"
-      ]
+      "duration_ms": 26,
+      "avisos": []
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 121,
+      "duration_ms": 24,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 299,
+      "duration_ms": 78,
       "avisos": [
-        "Margem operacional 17.87% | status=VERMELHO | preço R$ 78,505,116 (operacional) vs R$ 162,058,379 (catálogo)",
+        "Margem operacional 17.87% | status=VERMELHO | preço R$ 150,125,331 (operacional) vs R$ 162,058,379 (catálogo)",
         "Item '1.2': divergência de produtividade -78.1% não explicada por clima (fe_nec=0.25 × clima=0.89 = 0.22). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
         "Item '1.4': divergência de produtividade -13.1% não explicada por clima (fe_nec=1.00 × clima=0.87 = 0.87). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.294).",
         "Item '1.5': divergência de produtividade -77.8% não explicada por clima (fe_nec=0.25 × clima=0.90 = 0.22). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
@@ -118,13 +116,13 @@
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 96,
+      "duration_ms": 23,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 7234,
+      "duration_ms": 1335,
       "avisos": [
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
       ]
@@ -132,25 +130,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 124,
+      "duration_ms": 65,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 195,
+      "duration_ms": 55,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 212,
+      "duration_ms": 44,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 167,
+      "duration_ms": 82,
       "avisos": []
     }
   ],
@@ -163,7 +161,7 @@
       "custo_indireto": 33199565.15,
       "custo_total": 133100798.77,
       "preco_venda": 162058379.06,
-      "preco_venda_plus_eq": 78505116.09,
+      "preco_venda_plus_eq": 150125330.8,
       "preco_venda_catalogo": 162058379.06,
       "preco_venda_operacional": 162058379.06,
       "bdi_lucro_impostos": 0.2175612810561649
@@ -176,7 +174,7 @@
       "materiais_total": 0.0,
       "direto_total": 99901233.62,
       "direto_total_pu_q": 99901233.62,
-      "direto_total_equipes": 123538921.42
+      "direto_total_equipes": 363295963.81
     },
     "ferramenta_breakdown_indireto": {
       "adm": 8095936.08,
@@ -200,7 +198,7 @@
         "materiais_total": 0.0,
         "direto_total": 99901233.62,
         "direto_total_pu_q": 99901233.62,
-        "direto_total_equipes": 123538921.42
+        "direto_total_equipes": 363295963.81
       },
       "indireto": {
         "adm": 8095936.08,
