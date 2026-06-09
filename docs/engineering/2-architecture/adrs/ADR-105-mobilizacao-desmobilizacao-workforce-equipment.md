@@ -1,6 +1,8 @@
 # ADR-105 — Mobilização e Desmobilização de Mão-de-Obra e Equipamentos: Política Integrada Diretos+Indiretos
 
-**Status:** Proposto  
+**Status:** Parcialmente Implementado ⚠️ _(auditado 2026-06-09)_
+
+> **Nota:** `mob_schedule` inferido automaticamente via `infer_mob_windows` em skill-04; skill-07 consome `mob_schedule` do canônico. Janelas explícitas para equipes diretas (`leadtime_mob_semanas`) e lógica SS/FF completa aguardam Sprint S3 (ADR-106).  
 **Data:** 2026-06-08  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Depende de:** ADR-046, ADR-054, ADR-071, ADR-072, ADR-085, ADR-090  

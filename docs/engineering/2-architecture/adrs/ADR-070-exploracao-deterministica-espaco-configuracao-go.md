@@ -1,6 +1,8 @@
 # ADR-070: Exploracao Deterministica do Espaco de Configuracao Operacional para Viabilidade de GO
 
-**Status:** Proposta
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** `plan_space` e exploração determinística presentes no código.
 **Data:** 2026-05-23
 **Autor:** Engenheiro Senior
 **Relacionado:** ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061

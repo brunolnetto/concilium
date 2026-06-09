@@ -1,6 +1,8 @@
 # ADR-081: Precedência EAP com Derivação Automática e Threshold de Conclusão Parcial
 
-**Status:** Aceito  
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** `completion_threshold_pct` e `predecessores_tipados()` implementados. NEP-031 L4 adicionou SS/FF (Sprint S2).  
 **Data:** 2026-05-26  
 **Autores:** Bruno Peixoto / Concilium  
 **Dependências:** ADR-004, ADR-046, ADR-072, ADR-074

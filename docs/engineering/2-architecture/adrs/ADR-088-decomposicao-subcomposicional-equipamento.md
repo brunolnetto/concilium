@@ -1,6 +1,8 @@
 # ADR-088 — Decomposição Sub-composicional de Equipamento: Aluguel, Combustível e Manutenção como Sub-propriedades
 
-**Status:** Aceito
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** `custo_locacao_mensal`, `custo_manutencao_mensal`, `custo_locacao_idle_mensal` em `EquipamentoEquipeDireta`.
 **Data:** 2026-05-29
 **Autores:** Bruno Peixoto / Concilium
 **Dependências:** ADR-087, ADR-085, ADR-086, ADR-030, ADR-077, ADR-079

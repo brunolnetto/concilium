@@ -1,6 +1,8 @@
 # ADR-087 — Modelo Dimensional Hierárquico: {natureza}.{atividade}.{categoria_insumo}.{propriedade}
 
-**Status:** Aceito
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** `CelulaAnalitica` com hierarquia `{natureza}.{atividade}.{categoria_insumo}.{propriedade}` implementada.
 **Data:** 2026-05-29
 **Autores:** Bruno Peixoto / Concilium
 **Dependências:** ADR-069 (CuboAnalitico), ADR-086 (CuboPoolInstancial), ADR-085, ADR-023, ADR-030

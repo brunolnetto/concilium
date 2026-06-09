@@ -1,6 +1,8 @@
 # ADR-090 — BDI Sistemático: Diesel como Material e Decomposição de Indiretos por Categoria
 
-**Status:** Aceito
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** Diesel como `material.combustivel` implementado; decomposição de indiretos por categoria via ADR-090.
 **Data:** 2026-05-30
 **Autores:** Bruno Peixoto / Concilium
 **Amend:** ADR-087 (diesel move de equipamento.combustivel para material.combustivel),
