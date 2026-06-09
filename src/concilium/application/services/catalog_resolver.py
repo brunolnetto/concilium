@@ -69,6 +69,19 @@ class CatalogResolver:
         self._overlay_cache[key] = result
         return result
 
+    def _load_project_producao_overlay(self, project: ProjectHandle) -> dict[str, Any]:
+        """Carrega overlay de produções do projeto — calibra custo_hora_total_referencia por projeto."""
+        key = f"proj_producao:{project.meta.get('id', '')}"
+        if key in self._overlay_cache:
+            return self._overlay_cache[key]
+        try:
+            raw = project.read_json("overrides/producoes_overlay.json", {})
+            result = raw if isinstance(raw, dict) else {}
+        except Exception:
+            result = {}
+        self._overlay_cache[key] = result
+        return result
+
     def _load_jurisdiction_overlay(self, jurisdicao_id: str) -> dict[str, Any]:
         """Carrega overlay de jurisdição (ADR-066 §F6)."""
         key = f"jur:{jurisdicao_id}"
@@ -179,14 +192,22 @@ class CatalogResolver:
 
         proj_cpu_overlay = self._load_project_cpu_overlay(project)
         proj_insumo_overlay = self._load_project_insumo_overlay(project)
+        proj_producao_overlay = self._load_project_producao_overlay(project)
         jur_overlay = self._load_jurisdiction_overlay(jurisdicao_id or "")
         jur_cpus = jur_overlay.get("cpus", {})
         jur_insumos = jur_overlay.get("insumos", {})
+        jur_producoes = jur_overlay.get("producoes", {})
 
         resolved["cpus"] = _resolve_catalog_items(resolved.get("cpus", []), "codigo", jur_cpus, proj_cpu_overlay, trace)
         resolved["insumos"] = _resolve_catalog_items(
             resolved.get("insumos", []), None, jur_insumos, proj_insumo_overlay, trace
         )
+        # Producoes: override de custo_hora_total_referencia por projeto (NEP-029)
+        for key_field in ("producoes", "produtividades"):
+            if resolved.get(key_field):
+                resolved[key_field] = _resolve_catalog_items(
+                    resolved[key_field], "id", jur_producoes, proj_producao_overlay, trace
+                )
         return resolved, trace
 
     def build_resolved_catalog(
