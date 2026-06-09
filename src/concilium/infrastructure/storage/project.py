@@ -93,13 +93,16 @@ class ProjectStore:
         # This makes directory structure cleaner and more readable for benchmarks
         project_id = derivado_de_benchmark if derivado_de_benchmark else str(uuid4())
         proj_root = projetos_root / project_id
-        proj_root.mkdir(parents=True, exist_ok=False)
-        (proj_root / "snapshots").mkdir()
+        # exist_ok=True: suporta reset que preserva overrides/ (o dir pode já existir só com overrides)
+        proj_root.mkdir(parents=True, exist_ok=True)
+        (proj_root / "snapshots").mkdir(exist_ok=True)
 
         overrides_dir = proj_root / "overrides"
-        overrides_dir.mkdir()
+        overrides_dir.mkdir(exist_ok=True)
         for fname in ("cpus_overlay.json", "insumos_overlay.json"):
-            (overrides_dir / fname).write_text("{}", encoding="utf-8")
+            f = overrides_dir / fname
+            if not f.exists():
+                f.write_text("{}", encoding="utf-8")
 
         meta = {
             "id": project_id,

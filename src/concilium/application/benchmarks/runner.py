@@ -138,11 +138,22 @@ class BenchmarkRunner:
                 if meta.get("nome") == nome:
                     if reset:
                         print(f"  [DEL] Removendo projeto anterior: {project_dir.name}")
+                        # Preservar overrides/ — contém calibrações de projeto (cpus, insumos, producoes)
+                        overrides_dir = project_dir / "overrides"
+                        overrides_backup = {}
+                        if overrides_dir.exists():
+                            for f in overrides_dir.iterdir():
+                                overrides_backup[f.name] = f.read_bytes()
                         shutil.rmtree(project_dir, ignore_errors=True)
                         if project_dir.exists():
                             print(
                                 f"  [AVISO] Nao foi possivel remover completamente {project_dir.name}. Continuando..."
                             )
+                        # Restaurar overrides/
+                        if overrides_backup:
+                            overrides_dir.mkdir(parents=True, exist_ok=True)
+                            for fname, content in overrides_backup.items():
+                                (overrides_dir / fname).write_bytes(content)
                         break
                     print(f"  [OK]  Projeto existente: {project_dir.name}")
                     return ProjectStore(project_dir)
