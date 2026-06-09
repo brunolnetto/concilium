@@ -599,13 +599,16 @@ def _compute_ramp_profile(
     profile: list[float] = []
     for t in range(duration_weeks):
         if t < t_up:
-            val = min(float(n_pico), n_init + taxa_mob * (t + 1))
+            # Ramp-up: ceil garante que a semana tem equipes suficientes (ativa antes de plena)
+            val = min(n_pico, math.ceil(n_init + taxa_mob * (t + 1)))
         elif t < t_up + t_plateau:
-            val = float(n_pico)
+            val = n_pico
         else:
+            # Ramp-down: floor garante contagem inteira decrescente
             offset = t - t_up - t_plateau
-            val = max(0.0, n_pico - taxa_demob * (offset + 1))
-        profile.append(round(min(1.0, val / n_pico), 6))
+            val = max(0, math.floor(n_pico - taxa_demob * (offset + 1)))
+        # Fração exata: val é int → val/n_pico codifica num_equipes sem arredondamento duplo
+        profile.append(val / n_pico)
 
     return profile
 
@@ -1095,7 +1098,10 @@ def _infer_teams_from_resources(
         return 1
     peak = int(sum(assigned_resources.values()))
     if ramp_profile is not None and week_offset < len(ramp_profile):
-        return max(0, round(peak * ramp_profile[week_offset]))
+        # ramp_profile[t] = val/n_pico onde val é int → peak * (val/n_pico) = int exato
+        # quando peak == n_pico. int() é seguro aqui; round() como fallback para floats
+        # que não codificam inteiros perfeitos (specs legadas).
+        return max(0, int(round(peak * ramp_profile[week_offset])))
     return peak
 
 
