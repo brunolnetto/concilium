@@ -44,7 +44,6 @@ def render_financial_report_pdf(
         from reportlab.lib.units import mm
         from reportlab.platypus import (
             Image,
-            PageBreak,
             Paragraph,
             SimpleDocTemplate,
             Spacer,
@@ -121,9 +120,7 @@ def render_financial_report_pdf(
         local = _safe_text(resumo.get("localizacao", "-") or "-")
         story.append(
             Paragraph(
-                f"<b>Projeto:</b> {proj_nome}<br/>"
-                f"<b>Tipo de Obra:</b> {tipo}<br/>"
-                f"<b>Localização:</b> {local}",
+                f"<b>Projeto:</b> {proj_nome}<br/><b>Tipo de Obra:</b> {tipo}<br/><b>Localização:</b> {local}",
                 st_body,
             )
         )
@@ -216,9 +213,7 @@ def render_financial_report_pdf(
                     ]
                 )
 
-            plan_tbl = Table(
-                plan_data, colWidths=[usable_w * 0.12, usable_w * 0.55, usable_w * 0.33]
-            )
+            plan_tbl = Table(plan_data, colWidths=[usable_w * 0.12, usable_w * 0.55, usable_w * 0.33])
             plan_tbl.setStyle(
                 TableStyle(
                     [
@@ -276,7 +271,7 @@ def render_financial_report_pdf(
 
         doc.build(story, onFirstPage=_on_page, onLaterPages=_on_page)
         return buf.getvalue()
-    except Exception as exc:
+    except Exception:
         try:
             from reportlab.lib.pagesizes import A4
             from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -288,7 +283,7 @@ def render_financial_report_pdf(
             w, h = A4
 
             c.setFont("Helvetica-Bold", 16)
-            c.drawString(16 * mm, h - 20 * mm, _safe_text(f"Relatório Financeiro"))
+            c.drawString(16 * mm, h - 20 * mm, _safe_text("Relatório Financeiro"))
 
             c.setFont("Helvetica", 9)
             y = h - 30 * mm

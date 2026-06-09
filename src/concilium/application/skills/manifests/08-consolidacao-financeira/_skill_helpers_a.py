@@ -83,8 +83,10 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         if eq.item_id in contados:
             continue
         ct = float(eq.custo_total or 0.0)
+        # NEP-037: incluir encargos na fração de MO para decomposição (encargos ficam em mao_obra)
+        _mo_mais_enc = float(eq.custo_mao_obra_mensal or 0.0) + float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0)
         base = (
-            float(eq.custo_mao_obra_mensal or 0.0)
+            _mo_mais_enc
             + float(eq.custo_equipamentos_mensal or 0.0)
             + float(eq.custo_combustivel_total_mensal or 0.0)
             + float(eq.custo_material_mensal or 0.0)
@@ -92,7 +94,7 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         if base <= 0:
             cat["mao_obra"] += ct
             continue
-        _ct_mo = ct * float(eq.custo_mao_obra_mensal or 0.0) / base
+        _ct_mo = ct * _mo_mais_enc / base
         _ct_eq = ct * float(eq.custo_equipamentos_mensal or 0.0) / base
         _ct_comb = ct * float(eq.custo_combustivel_total_mensal or 0.0) / base
         _ct_mat = ct * float(eq.custo_material_mensal or 0.0) / base
@@ -184,7 +186,8 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
     out: list[AtividadeCustoCompleto] = []
     acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     for act in acts:
-        nome = eap_by_id.get(act.activity_id).descricao if eap_by_id.get(act.activity_id) else act.activity_id
+        eap_item = eap_by_id.get(act.activity_id)
+        nome = (eap_item.descricao or act.activity_id) if eap_item else act.activity_id
         out.append(
             AtividadeCustoCompleto(
                 atividade_id=act.activity_id,
@@ -200,7 +203,8 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
         for eq in canonical_in.equipes_diretas:
             if not eq.item_id:
                 continue
-            nome = eap_by_id.get(eq.item_id).descricao if eap_by_id.get(eq.item_id) else eq.item_id
+            eap_item = eap_by_id.get(eq.item_id)
+            nome = (eap_item.descricao or eq.item_id) if eap_item else eq.item_id
             out.append(
                 AtividadeCustoCompleto(
                     atividade_id=eq.item_id,
@@ -215,26 +219,32 @@ def _build_custos_atividades(canonical_in: CanonicalModel) -> list[AtividadeCust
 
 
 def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, float, float, float]:
-    """Returns (venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto).
+    """Returns (venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto_pool).
 
-    Fallback: Se planejamento está vazio (minimalista), usa custo_direto_equipe como base.
+    custo_direto_pool = custo real das equipes via pool (mob/demob/ociosidade incluídos).
+    venda_sem_bdi     = PU×Q de catálogo (referência de mercado para confronto).
+    Usar sempre o pool como base do custo operacional — o trunfo do pool é exatamente
+    executar abaixo do PU×Q de catálogo, e isso deve aparecer no resultado financeiro.
     """
     venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento)
     venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento)
-    # ADR-091: Multiplicar custo_total por num_equipes_base (equipes paralelas alocadas)
-    # Após ADR-091, cada EquipeDireta tem custo_total = custo_uma_equipe e
-    # num_equipes_base = quantas equipes paralelas representa
-    custo_direto_equipe = sum(e.custo_total * max(1, getattr(e, "num_equipes_base", 1) or 1) for e in canonical_in.equipes_diretas)
+    # Custo real de pool: soma custo_total de cada equipe.
+    # No modelo de pool (ADR-071), custo_total já é o custo total atribuído ao item
+    # (fração proporcional ao machine-weeks) — não multiplicar por num_equipes_base.
+    # No modo autônomo legado (sem pool), custo_total era por-frente × permanência,
+    # mas esse caminho está sendo eliminado (ADR-106).
+    custo_direto_equipe = sum(float(e.custo_total or 0.0) for e in canonical_in.equipes_diretas)
     custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
 
     # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
-    # (benchmarks minimalistas não têm planejamento de entrada)
     if not venda_sem_bdi and custo_direto_equipe > 0:
         venda_sem_bdi = custo_direto_equipe
     if not venda_com_bdi and custo_direto_equipe > 0:
         venda_com_bdi = custo_direto_equipe
 
-    return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, venda_sem_bdi
+    # custo_direto_pool: pool é SEMPRE a base do custo operacional real.
+    # Diferença vs venda_sem_bdi = economia (ou sobrepreço) capturado pelo pool.
+    return venda_sem_bdi, venda_com_bdi, custo_direto_equipe, custo_materiais, custo_direto_equipe
 
 
 def _build_resultado(
@@ -409,6 +419,7 @@ def _build_pe_for_equipe(
     planejamento_por_item: dict | None = None,
     sched_por_item: dict | None = None,
     particao_por_item: dict | None = None,
+    idle_por_item: dict | None = None,
 ) -> PontoEquilibrio | None:
     """Constrói PontoEquilibrio para uma equipe. Retorna None se custo_fixo ≤ 0.
 
@@ -431,7 +442,23 @@ def _build_pe_for_equipe(
 
     # ── ADR-076 campos quantitativos ──────────────────────────────────────────
     custo_total_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
-    gap_pool_overhead = round(custo_operacional_real - custo_total_autonomo, 2)
+    if custo_total_autonomo <= 0 and custo_operacional_real > 0:
+        custo_total_autonomo = custo_operacional_real
+
+    # gap_pool_overhead = custo de tempo ocioso real das instâncias deste item.
+    # Com política de pool sob demanda (frentes por atividade), o overhead de
+    # n_frentes paralelas é uma DECISÃO de negócio (não ineficiência ajustável).
+    # O único overhead genuíno é o tempo em que recursos estão mobilizados mas
+    # improdutivos (idle_mo + idle_eq das instâncias do pool para este item).
+    # Se idle=0 (política de late hire / early dismissal ativa), gap_pool=0.
+    idle_item = (idle_por_item or {}).get(equipe.item_id, 0.0)
+    gap_pool_overhead = round(float(idle_item), 2)
+
+    # fe_nec = custo_total_autonomo / (PU_sbdi × Q) = 1/η_p
+    # NOTA: PU_sbdi JÁ inclui encargos no numerador (nota NEP-029: B_base×(1+enc)).
+    # Portanto fe_nec usa custo_total (com encargos) — não remover encargos aqui.
+    # custo_encargos_mensal serve para decomposição interna (ADR-104, cubo, memorial),
+    # não para calibração de fe_nec. Ver investigação de invariantes 2026-06-09.
 
     pu_catalogo_unitario: float = 0.0
     pu_calibrado_unitario: float = 0.0
@@ -450,6 +477,10 @@ def _build_pe_for_equipe(
             frentes_nec = round(custo_total_autonomo / venda_sem_bdi, 4)
         elif custo_total_autonomo <= 0 and custo_venda_total > 0:
             frentes_nec = round(custo_operacional_real / custo_venda_total, 4)
+
+        # ADR-076 Fallback: se frentes_nec >> 10 (absurdo), usar 1 como conservador
+        if frentes_nec > 10.0:
+            frentes_nec = 1.0
 
         pu_aut_unit = custo_total_autonomo / Q if custo_total_autonomo > 0 else 0.0
         pu_calibrado_unitario = round(max(pu_catalogo_unitario, pu_aut_unit), 4)
@@ -760,11 +791,12 @@ def _bpe_process_equipe(
     planejamento_por_item: dict | None = None,
     sched_por_item: dict | None = None,
     particao_por_item: dict | None = None,
+    idle_por_item: dict | None = None,
 ) -> PontoEquilibrio | None:
     """Builds and validates PE for a single equipe; returns None if skipped."""
     if not equipe.item_id:
         return None
-    pe = _build_pe_for_equipe(equipe, venda_por_item, planejamento_por_item, sched_por_item, particao_por_item)
+    pe = _build_pe_for_equipe(equipe, venda_por_item, planejamento_por_item, sched_por_item, particao_por_item, idle_por_item)
     if pe is None:
         return None
     _validate_pe_duplo_risco(pe, validacoes)
@@ -792,11 +824,22 @@ def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> l
     for contrato in canonical_in.contratos_recurso:
         for part in contrato.particao_por_item:
             particao_por_item[part.item_id] = part
+
+    # Idle real por item: Σ(custo_idle_mo + custo_idle_eq) das instâncias do pool.
+    # Quando a política de late hire / early dismissal está ativa e não há standby,
+    # esse valor é 0 — e o lever ResourcePool no painel_equilibrio desaparece.
+    idle_por_item: dict[str, float] = {}
+    for inst in canonical_in.instancias_recurso or []:
+        idle = float(getattr(inst, "custo_idle_mo", 0.0) or 0.0) + float(getattr(inst, "custo_idle_eq", 0.0) or 0.0)
+        if idle > 0:
+            for ativ in getattr(inst, "atividades_cobertas", []) or []:
+                idle_por_item[str(ativ)] = idle_por_item.get(str(ativ), 0.0) + idle
+
     pe_items = [
         pe
         for e in canonical_in.equipes_diretas
         for pe in [
-            _bpe_process_equipe(e, venda_por_item, validacoes, planejamento_por_item, sched_por_item, particao_por_item)
+            _bpe_process_equipe(e, venda_por_item, validacoes, planejamento_por_item, sched_por_item, particao_por_item, idle_por_item)
         ]
         if pe is not None
     ]

@@ -122,9 +122,7 @@ class CpuValidator:
         # Step 4: Check composicao_padrao_equipe
         comp = prod.get("composicao_padrao_equipe") or {}
         if not comp:
-            result["errors"].append(
-                f"Produção '{prod_ref}' não tem composicao_padrao_equipe definida"
-            )
+            result["errors"].append(f"Produção '{prod_ref}' não tem composicao_padrao_equipe definida")
             return result
 
         funcoes = comp.get("funcoes", [])
@@ -186,16 +184,16 @@ class CpuValidator:
         valid = validation["valid"]
         invalid = validation["invalid"]
 
-        print(f"\n{'='*70}")
-        print(f"VALIDAÇÃO DE MAPEAMENTO DE CPUs")
-        print(f"{'='*70}")
-        print(f"\nResumo:")
+        print(f"\n{'=' * 70}")
+        print("VALIDAÇÃO DE MAPEAMENTO DE CPUs")
+        print(f"{'=' * 70}")
+        print("\nResumo:")
         print(f"  Total items: {total}")
-        print(f"  ✓ Válidos: {valid} ({valid/total*100:.1f}%)")
-        print(f"  ✗ Inválidos: {invalid} ({invalid/total*100:.1f}%)")
+        print(f"  ✓ Válidos: {valid} ({valid / total * 100:.1f}%)")
+        print(f"  ✗ Inválidos: {invalid} ({invalid / total * 100:.1f}%)")
 
         if invalid > 0:
-            print(f"\nDetalhes dos inválidos:")
+            print("\nDetalhes dos inválidos:")
             for item_id, item_val in validation["items"].items():
                 cpu_val = item_val["validation"]
                 if cpu_val["errors"]:

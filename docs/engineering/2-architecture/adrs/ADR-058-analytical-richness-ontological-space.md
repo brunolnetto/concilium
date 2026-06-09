@@ -1,6 +1,8 @@
 # ADR-058: Analiticidade do Espaço Ontológico — Decomposição Granular de Custos e Curva ABC
 
-**Status:** Aceito  
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** SCurveBuilder, CurvaABC, decomposição por atividade implementados.  
 **Data:** 2026-05-16  
 **Autor:** Engenheiro Sênior  
 **Relacionado:** ADR-010 (Activity Cost Breakdown), ADR-023 (BDI), ADR-027 (CPU Sensitivity), ADR-039 (The Bridge), ADR-056 (Debt Remediation), ADR-057 (Memorial BDI)

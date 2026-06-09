@@ -1,10 +1,15 @@
 # ADR-104: Centralização de Cálculos de Custo em EquipeDireta
 
-**Status:** Proposto  
+**Status:** Implementado ✅ _(auditado 2026-06-08)_  
 **Data Proposta:** 2026-06-07  
 **Autor:** Engenharia de Plataforma  
 **Categoria:** Arquitetura de Dados / Modelos Canônicos  
 **Relacionado:** NEP-040, Auditoria de Divergências de Custo (2026-06-07)
+
+> **Nota de auditoria (2026-06-08):** 5 campos `custo_inst_*` presentes em `EquipeDireta`
+> (canonical.py linhas 428–432) com invariante documentado. `_enrich_equipes_com_decomposicao_instancial`
+> implementado em skill-05 `_skill_helpers_a.py`. Métricas de sucesso verificadas no AGIS.
+> Próxima evolução: ADR-106 (engine unificado para diretas e indiretas).
 
 ---
 

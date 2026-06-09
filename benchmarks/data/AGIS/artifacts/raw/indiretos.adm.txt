@@ -1,0 +1,83 @@
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 415.101,27					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 1.064.439,47			EQUIPAMENTOS		R$ 271.467,37					12,93						 13.766.750,43 	
+						VERBAS		R$ 377.870,83												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$10.000,00 			 -   			J	 1.350,00 				 -   		 11.350,00 	
+P0006			AUXILIAR ADMINISTRATIVO	P0006	3	 R$2.254,79 		D	 563,70 			J	 1.847,25 				 1.719,28 		 6.385,02 	 1 RH/1 FIN 
+P0003			ALMOXARIFE	P0003	1	 R$3.129,86 		D	 782,47 			J	 1.350,00 				 2.386,52 		 7.648,85 	
+P0027	PJ		GERENTE DE CONTRATO	P0027	1	 R$30.000,00 			 -   			J	 1.350,00 				 -   		 31.350,00 	
+P0075	PJ		TÉCNICO DE PLANEJAMENTO	P0075	1	 R$12.000,00 			 -   			J	 1.350,00 				 -   		 13.350,00 	
+P0018	PJ		ENCARREGADO GERAL	P0018	2	 R$15.000,00 			 -   			J	 1.350,00 				 -   		 16.350,00 	
+P0024	PJ		ENGENHEIRO CIVIL	P0024	1	 R$22.000,00 			 -   			J	 1.350,00 				 -   		 23.350,00 	
+P0073			MECÂNICO	P0073	1	 R$4.069,36 		D	 1.017,34 			J	 1.847,25 				 3.102,89 		 10.036,84 	 PARA CADA 30EQP -1  
+P0011			AUXILIAR MECÂNICO	P0011	1	 R$2.254,79 		D	 563,70 			J	 1.847,25 				 1.719,28 		 6.385,02 	
+P0086			ENCARREGADO DE MECÂNICA	P0086	1	 R$4.485,36 		D	 1.121,34 			J	 1.847,25 				 3.420,09 		 10.874,04 	
+P0014			BORRACHEIRO	P0014	1	 R$3.129,86 		D	 782,47 			J	 1.847,25 				 2.386,52 		 8.146,10 	
+P0088			AUXILIAR DE BORRACHEIRO	P0088	1	 R$2.254,79 		D	 563,70 			J	 1.847,25 				 1.719,28 		 6.385,02 	
+P0087			CONTROLADOR	P0087	1	 R$4.494,60 		D	 1.123,65 			J	 1.847,25 				 3.427,13 		 10.892,63 	
+P0034			MOTORISTA DE CAMINHÃO COMBOIO	P0034	2	 R$4.068,51 		D	 1.017,13 			J	 1.847,25 				 3.102,24 		 10.035,13 	
+P0001			AJUDANTE	P0001	1	 R$2.700,92 		D	 675,23 			J	 1.847,25 				 2.059,45 		 7.282,85 	 COMBOIO 
+			PREFEITO DE ALOJAMENTO		2	 R$4.000,00 		D	 1.000,00 			J	 1.847,25 				 3.050,00 		 9.897,25 	
+P0031			LUBRIFICADOR	P0031	1	 R$4.541,94 		D	 1.135,49 			J	 1.847,25 				 3.463,23 		 10.987,91 	
+P0063			AUXILIAR DE SERVIÇOS GERAIS	P0063	6	 R$2.077,63 		D	 519,41 			J	 1.847,25 				 1.584,19 		 6.028,48 	
+P0072			APONTADOR	P0072	6	 R$3.129,86 		D	 782,47 			J	 1.847,25 				 2.386,52 		 8.146,10 	
+P0035			MOTORISTA DE CAMINHÃO	P0035	6	 R$4.069,36 		D	 1.017,34 			J	 1.847,25 				 3.102,89 		 10.036,84 	
+P0089			MOTORISTA DE CAMINHÃO PRANCHA	P0089	1	 R$4.069,36 		D	 1.017,34 			J	 1.847,25 				 3.102,89 		 10.036,84 	
+P0036			MOTORISTA DE ÔNIBUS	P0036	1	 R$4.069,36 		D	 1.017,34 			J	 1.847,25 				 3.102,89 		 10.036,84 	
+																	 -   			
+		TOTAL			42	 221.762,74 		 29.440,69 				 74.103,75 					 89.794,09 		 415.101,27 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0023			Ônibus com capacidade para 52 passageiros 	E0023	1	 26.000,00 			km		 3.600,00 			S1	 9,00 			 2.796,00 	 28.796,00 	 28.796,00 
+E0008			Caminhão comboio	E0008	2	 25.000,00 			km		 3.600,00 			S1	 4,00 			 6.291,00 	 31.291,00 	 62.582,00 
+E0040			Veículo picape 4 x 4	E0040	1	 9.000,00 			km		 4.800,00 			S1	 9,00 			 3.728,00 	 12.728,00 	 12.728,00 
+E0006			Caminhão carroceria	E0006	6	 10.000,00 			km		 3.600,00 			S1	 5,00 			 5.032,80 	 15.032,80 	 90.196,80 
+E0009			Caminhão prancha	E0009	1	 30.000,00 			km		 2.400,00 			S1	 7,00 			 2.396,57 	 32.396,57 	 32.396,57 
+E0039			Veículo leve	E0039	6	 4.000,00 			km		 4.800,00 			G	 9,00 			 3.461,33 	 7.461,33 	 44.768,00 
+																				
+			TOTAL		17	 199.000,00 												 72.467,37 		 271.467,37 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		CONTEINER 6X2,4X2,6 PARA BANHEIRO			VB		 2,00 			 1.800,00 					 3.600,00 					
+2		CONTEINER VESTIÁRIO			VB		 2,00 			 1.000,00 					 2.000,00 					
+3		BANHEIRO QUÍMICO (higienização, deslocamento, descarte)			VB		 6,00 			 1.800,00 					 10.800,00 					
+4		LAVATÓRIO			VB		 2,00 			 650,00 					 1.300,00 					
+5		ALUGUEL DE CONTEINER 			UNID.		 5,00 			 1.650,00 					 8.250,00 				FERRAMENTARIA/ADM/ TOP/QSMS	
+6		ALOJAMENTO			UNID.		 25,00 			 4.500,00 					 112.500,00 					
+7		ENERGIA ELÉTRICA - ALOJAMENTO			UNID.		 25,00 			 1.200,00 					 30.000,00 					
+8		ÁGUA - ALOJAMENTO			UNID.		 25,00 			 600,00 					 15.000,00 					
+9		VIGILÂNCIA ARMADA			VB		 2,00 			 30.000,00 					 60.000,00 					
+10		ÁGUA MINERAL 			L		 13.725,00 			 2,00 					 27.450,00 					
+11		MATERIAL DE EXPEDIENTE			VB		 1,00 			 200,00 					 200,00 					
+12		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+13		STARLINK			VB		 6,00 			 600,00 					 3.600,00 					
+14		VISITA GERÊNCIA			VB		 4,00 			 3.000,00 					 12.000,00 					
+15		GERADOR - DIESEL			UNID.		 1,00 			 16.104,96 					 16.104,96 					
+16		GERADOR 50KVA			UNID.		 1,00 			 8.000,00 					 8.000,00 					
+17		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 27,00 			 200,00 					 5.400,00 					
+															 316.504,96 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕES PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 55.000,00 					 55.000,00 					
+2		COMPUTADOR			VB		 9,00 			 4.500,00 					 40.500,00 					
+3		ESTRUTURA DE VIVENCIA (TENDA 6x6/MESAS E CADEIRAS)			UNID.		 4,00 			 8.740,00 					 34.960,00 					
+4		BEBEDOURO 40l			VB		 2,00 			 2.260,00 					 4.520,00 					
+5		FERRAMENTAS			VB		 1,00 			 20.000,00 					 20.000,00 					
+6		EPIS			UNID.		 1,00 			 352.800,00 					 352.800,00 					
+7		EXAMES/TREINAMENTOS			VB		 1,00 			 186.985,20 					 186.985,20 					
+8		IMPRESSORA			VB		 1,00 			 1.800,00 					 1.800,00 				LASER MONOCROMÁTICA	
+9		MOBILIA DE ESCRITORIO			VB		 5,00 			 1.200,00 					 6.000,00 					
+10		PLACA DE OBRA			M2		 4,00 			 900,00 					 3.600,00 					
+11		MOBILIA ALOJAMENTO			VB		 25,00 			 3.500,00 					 87.500,00 					
+															 61.365,87 					

@@ -184,7 +184,7 @@ def empacotar_outputs(
 
     # Define destino do ZIP
     if output_path is None:
-        outputs_dir = bench_dir / "outputs"
+        outputs_dir = bench_dir / "artifacts" / "outputs"
         outputs_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(UTC).strftime("%Y%m%d_%H%M")
         output_path = outputs_dir / f"benchmark_{slug.upper()}_{ts}.zip"

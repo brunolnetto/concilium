@@ -1,11 +1,23 @@
 # NEP-029: Divergência estrutural na precificação unitária — dois caminhos incompatíveis e ausência de fonte canônica
 
-**Status:** Em Andamento  
+**Status:** Parcialmente Implementado ⚠️ _(S1 parcial — 2026-06-09)_  
 **Prioridade:** 🔴 Crítico  
 **Área:** Arquitetura e Skills  
 **Tipo:** Bug + Governança + Dados  
 **Esforço:** XL  
 **Identificado em:** 2026-05-24
+
+> **Nota de implementação (2026-06-09 — Sprint S1 parcial):**
+> - ✅ `_calibrar_custos_por_cref` em skill-05 `_build_dimensionamento`: usa
+>   `custo_hora_total_referencia × h_sem × SEMANAS_POR_MES` como base, com frações
+>   de `precos_unitarios_sbdi.{mo,eq,diesel}` — garante consistência com pool.
+> - ✅ `gap_pool_overhead` no ponto de equilíbrio usa idle real das instâncias
+>   (não mais diferença pool vs autônomo, que era falso positivo de n_frentes).
+> - ✅ AGIS: autônomo e pool convergem; painel_equilibrio mostra apenas
+>   praticabilidade (0.81M) — sem artefato de "overhead de pool".
+> - ⚠️ CTC/LUNDIN/ROSH/PRIVATE_LOG: BLOQUEADOS porque `custo_hora_total_referencia`
+>   foi calibrado da planilha AGIS; outros benchmarks precisam de C_ref próprio.
+>   Cada benchmark requer calibração NEP-029 independente — trabalho de curadoria.
 
 ---
 

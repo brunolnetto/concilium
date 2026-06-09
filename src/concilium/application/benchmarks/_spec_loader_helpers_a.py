@@ -36,9 +36,13 @@ def _norm_ref_projeto_block(out: dict[str, Any], projeto_block: dict[str, Any]) 
     nome = projeto_block.get("nome") or projeto_block.get("projeto")
     if nome and not isinstance(out.get("projeto"), str):
         out["projeto"] = nome
-    if projeto_block.get("localizacao") and not out.get("localizacao"):
-        out["localizacao"] = projeto_block.get("localizacao")
-    if projeto_block.get("coordenadas") and not out.get("coordenadas"):
+    loc = projeto_block.get("localizacao")
+    if loc and not out.get("localizacao"):
+        out["localizacao"] = loc
+    # Se localizacao já é {lat, lng}, propagar como coordenadas também (retrocompat)
+    if isinstance(loc, dict) and "lat" in loc and not out.get("coordenadas"):
+        out["coordenadas"] = loc
+    elif projeto_block.get("coordenadas") and not out.get("coordenadas"):
         out["coordenadas"] = projeto_block.get("coordenadas")
 
 
@@ -105,9 +109,24 @@ def _norm_ref_parse_atividade_duration(atividade: dict[str, Any], weeks: list[st
 def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> list[dict[str, Any]]:
     atividades = out.get("atividades") if isinstance(out.get("atividades"), list) else []
 
-    # If no atividades but EAP exists, build from EAP (skill-01 will create detailed activities later)
+    # If no atividades but EAP exists, build from EAP using spec.cronograma when available
     if not atividades:
         eap = out.get("eap") if isinstance(out.get("eap"), list) else []
+
+        # Índice spec.cronograma compacto → {item_id: {equipes}}
+        # duration_weeks é derivado de Q/P em skill-04 (_enrich_spec_resources_from_catalog)
+        # e não deve ser armazenado na spec (seria redundante e poderia divergir).
+        cron_index: dict[str, dict] = {}
+        for c in (out.get("cronograma_compacto") or []):
+            if isinstance(c, dict) and c.get("item_id"):
+                cron_index[str(c["item_id"])] = c
+        # fallback: atividades legadas
+        if not cron_index:
+            cron_legacy = (out.get("cronograma") or {})
+            for c in (cron_legacy.get("atividades") if isinstance(cron_legacy, dict) else []) or []:
+                if isinstance(c, dict) and c.get("item_id"):
+                    cron_index[str(c["item_id"])] = c
+
         activities: list[dict[str, Any]] = []
         for item in eap:
             if not isinstance(item, dict):
@@ -115,16 +134,29 @@ def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> l
             item_id = item.get("item_id")
             if not item_id:
                 continue
-            # Build minimal activity from EAP item
-            # Duration defaults to 1 week, will be refined by skill-04
-            activities.append(
-                {
-                    "item_id": str(item_id),
-                    "descricao": str(item.get("descricao") or item_id),
-                    "duration_weeks": 1,  # Default; skill-04 will compute actual
-                    "required_resources": {},
+
+            cron_item = cron_index.get(str(item_id), {})
+
+            act: dict[str, Any] = {
+                "item_id": str(item_id),
+                "descricao": str(item.get("descricao") or item_id),
+                # duration_weeks=1 é placeholder; _enrich_spec_resources_from_catalog
+                # substitui pelo valor real ceil(Q / (P × n_frentes × h_sem))
+                "duration_weeks": 1,
+                "required_resources": {},
+            }
+
+            # Injetar ramp_params quando spec.cronograma tem equipes compacto
+            eq = cron_item.get("equipes")
+            if isinstance(eq, dict) and eq.get("n_max", 0) > 0:
+                act["ramp_params"] = {
+                    "n_inicial":           eq.get("n_inicial", 1),
+                    "n_max":               eq["n_max"],  # necessário para _compute_ramp_profile
+                    "taxa_mobilizacao":    eq.get("taxa_mobilizacao", float(eq["n_max"])),
+                    "taxa_desmobilizacao": eq.get("taxa_desmobilizacao", float(eq["n_max"])),
                 }
-            )
+
+            activities.append(act)
         return activities
 
     # Otherwise build from explicit atividades

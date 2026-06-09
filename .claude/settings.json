@@ -46,7 +46,16 @@
       "Bash(cat /home/pingu/.local/bin/concilium | head -20)",
       "Read(//home/pingu/.local/bin/**)",
       "Bash(python3 -m json.tool)",
-      "Bash(git commit -m 'feat: adicionar análise inteligente com LLM para reconciliação *)"
+      "Bash(git commit -m 'feat: adicionar análise inteligente com LLM para reconciliação *)",
+      "Bash(python3 -c ' *)",
+      "Bash(awk -F'\\\\t' '{print $1\"\\\\t\"$2\"\\\\t\"$3}')",
+      "Bash(awk -F'\\\\t' '{print $2\"\\\\t\"$4\"\\\\t\"$8}')",
+      "Bash(awk -F'\\\\t' 'NF>3 && $2~/[A-Z0-9]/ {print $2\"\\\\t\"$4}')",
+      "Bash(awk -F'\\\\t' '{print $1\"\\\\t\"$2}')",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; cat {} | python3 -m json.tool 2>/dev/null | head -20')",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\"; python3 -m json.tool {} 2>/dev/null | head -15')",
+      "Bash(xargs '-I{}' python3 -c ' *)",
+      "Bash(git rm *)"
     ]
   }
 }

@@ -1,0 +1,1706 @@
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO DE CONCRETO D= 400MM, h de 0 a 1,5m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 135,00 	 135,00 	 135,00 	
+	Sapo compactador			 1,00 	 1,00 		 10,00 	 10,00 	 10,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 		 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 255,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 31,77 	 31,77 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+	Oficial						 2,00 	 23,60 	 47,19 	
+	Ajudante						 6,00 	 15,73 	 94,39 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 211,45 	
+										
+	PRODUÇÃO DA EQUIPE (C)			9,00	m			CUSTO HORÁRIO TOTAL (A+B)     	 466,45 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 138,60 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+									 -   	
+								TOTAL	 259,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 80,66 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de concreto pa2 400mm					 1,03 	 m 	R$ 205,51	 211,67 	
+	AREIA					 0,06 	 m3 	R$ 105,00	 6,30 	
+	Argamassa de cimento e areia 1:4					 0,00 	 m3 	 525,00 	 0,87 	
+								TOTAL	 218,84 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								299,50	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								299,50	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO DE CONCRETO D= 400MM, h de 1,51 a 3,0 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 135,00 	 135,00 	 135,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 255,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 31,77 	 31,77 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+	Oficial						 2,00 	 23,60 	 47,19 	
+	Ajudante						 6,00 	 15,73 	 94,39 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 211,45 	
+										
+	PRODUÇÃO DA EQUIPE (C)			7,20	m			CUSTO HORÁRIO TOTAL (A+B)     	 466,45 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 138,60 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+										
+								TOTAL	 259,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 100,83 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de concreto pa2 400mm					 1,03 	 m 	R$ 205,51	 211,67 	
+	AREIA					 0,06 	 m3 	R$ 105,00	 6,30 	
+	Argamassa de cimento e areia 1:4					 0,00 	 m3 	 525,00 	 0,87 	
+								TOTAL	 218,84 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								319,66	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								319,66	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO DE CONCRETO D= 600MM, h de 1,51 a 3,0 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 135,00 	 135,00 	 135,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 255,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 31,77 	 31,77 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+	Oficial						 2,00 	 23,60 	 47,19 	
+	Ajudante						 6,00 	 15,73 	 94,39 	
+	Montador						 1,00 	 19,06 	 19,06 	
+										
+									 -   	
+								TOTAL	 211,45 	
+										
+	PRODUÇÃO DA EQUIPE (C)			6,80	m			CUSTO HORÁRIO TOTAL (A+B)     	 466,45 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 138,60 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+									 -   	
+								TOTAL	 259,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 106,76 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de concreto pa2 600mm					 1,03 	 m 	R$ 365,71	 376,68 	
+	AREIA					 0,08 	 m3 	R$ 105,00	 8,40 	
+	Argamassa de cimento e areia 1:4					 0,00 	 m3 	 525,00 	 2,26 	
+								TOTAL	 387,34 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								494,10	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								494,10	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO DE CONCRETO D= 800MM, h de 1,51 a 3,0 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 135,00 	 135,00 	 135,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 255,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 31,77 	 31,77 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+	Oficial						 2,00 	 23,60 	 47,19 	
+	Ajudante						 6,00 	 15,73 	 94,39 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 211,45 	
+										
+	PRODUÇÃO DA EQUIPE (C)			5,70	m			CUSTO HORÁRIO TOTAL (A+B)     	 466,45 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 138,60 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+									 -   	
+								TOTAL	 259,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 127,36 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de concreto pa2 800mm					 1,03 	 m 	R$ 570,99	 588,12 	
+	AREIA					 0,10 	 m3 	R$ 105,00	 10,50 	
+	Argamassa de cimento e areia 1:4					 0,01 	 m3 	 525,00 	 2,89 	
+								TOTAL	 601,50 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								728,86	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								728,86	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO DE CONCRETO D= 1000MM, h de 1,51 a 3,0 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 135,00 	 135,00 	 135,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 255,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 31,77 	 31,77 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+	Oficial						 2,00 	 23,60 	 47,19 	
+	Ajudante						 6,00 	 15,73 	 94,39 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 211,45 	
+										
+	PRODUÇÃO DA EQUIPE (C)			4,60	m			CUSTO HORÁRIO TOTAL (A+B)     	 466,45 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 138,60 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+									 -   	
+								TOTAL	 259,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 157,82 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de concreto pa2 1000mm					 1,03 	 m 	R$ 914,41	 941,84 	
+	AREIA					 0,12 	 m3 	R$ 105,00	 12,60 	
+	Argamassa de cimento e areia 1:4					 0,01 	 m3 	 525,00 	 3,86 	
+								TOTAL	 958,30 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								1.116,12	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								1.116,12	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO DE CONCRETO D= 1000MM, h de 3,01 a 4,5 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 135,00 	 135,00 	 135,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 255,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 31,77 	 31,77 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+	Oficial						 2,00 	 23,60 	 47,19 	
+	Ajudante						 6,00 	 15,73 	 94,39 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 211,45 	
+										
+	PRODUÇÃO DA EQUIPE (C)			3,68	m			CUSTO HORÁRIO TOTAL (A+B)     	 466,45 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 138,60 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+									 -   	
+									 -   	
+								TOTAL	 259,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 197,27 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de concreto pa2 1000mm					 1,03 	 m 	R$ 914,41	 941,84 	
+	AREIA					 0,12 	 m3 	R$ 105,00	 12,60 	
+	Argamassa de cimento e areia 1:4					 0,01 	 m3 	 525,00 	 3,86 	
+								TOTAL	 958,30 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								1.155,57	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								1.155,57	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO DE CONCRETO D= 1500MM, h de 3,01 a 4,5 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T			 1,00 	 1,00 	 -   	 135,00 	 135,00 	 135,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 255,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de escavadeira						 1,00 	 31,77 	 31,77 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+	Oficial						 2,00 	 23,60 	 47,19 	
+	Ajudante						 6,00 	 15,73 	 94,39 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 211,45 	
+										
+	PRODUÇÃO DA EQUIPE (C)			3,00	m			CUSTO HORÁRIO TOTAL (A+B)     	 466,45 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira Hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 138,60 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+									 -   	
+									 -   	
+								TOTAL	 259,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 241,98 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de concreto pa2 1500mm					 1,03 	 m 	R$ 1.881,64	 1.938,09 	
+	AREIA					 0,17 	 m3 	R$ 105,00	 17,85 	
+	Argamassa de cimento e areia 1:4					 0,02 	 m3 	 525,00 	 11,11 	
+								TOTAL	 1.967,05 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								2.209,04	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								2.209,04	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO PVC RÍGIDO DN200MM, h de 0 a 1,5m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 100,00 	 100,00 	 100,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 110,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de retro escavadeira						 1,00 	 28,36 	 28,36 	
+	Ajudante						 3,00 	 15,73 	 47,19 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 94,61 	
+										
+	PRODUÇÃO DA EQUIPE (C)			10,97	m			CUSTO HORÁRIO TOTAL (A+B)     	 204,61 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+									 -   	
+									 -   	
+								TOTAL	 120,90 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 29,69 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de PVC RIGIDO 200MM					 1,05 	 m 	R$ 116,64	 122,47 	
+	AREIA					 0,04 	 m3 	R$ 105,00	 4,20 	
+	Argamassa de cimento e areia 1:3					 0,00 	 m3 	 677,00 	 0,54 	
+								TOTAL	 127,21 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								156,90	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								156,90	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO PVC RÍGIDO DN250MM, h de 0 a 1,5m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 100,00 	 100,00 	 100,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 110,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de retro escavadeira						 1,00 	 28,36 	 28,36 	
+	Ajudante						 3,00 	 15,73 	 47,19 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 94,61 	
+										
+	PRODUÇÃO DA EQUIPE (C)			10,42	m			CUSTO HORÁRIO TOTAL (A+B)     	 204,61 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+									 -   	
+									 -   	
+								TOTAL	 120,90 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 31,24 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de PVC RIGIDO 250MM					 1,05 	 m 	R$ 261,48	 274,55 	
+	AREIA					 0,05 	 m3 	R$ 105,00	 4,73 	
+	Argamassa de cimento e areia 1:3					 0,00 	 m3 	 677,00 	 0,54 	
+								TOTAL	 279,82 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								311,06	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								311,06	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO PVC RÍGIDO DN250MM, h de 1,51 a 3,00 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 100,00 	 100,00 	 100,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 110,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de retro escavadeira						 1,00 	 28,36 	 28,36 	
+	Ajudante						 3,00 	 15,73 	 47,19 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 94,61 	
+										
+	PRODUÇÃO DA EQUIPE (C)			8,34	m			CUSTO HORÁRIO TOTAL (A+B)     	 204,61 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+									 -   	
+									 -   	
+								TOTAL	 120,90 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 39,05 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de PVC RIGIDO 250MM					 1,05 	 m 	R$ 261,48	 274,55 	
+	AREIA					 0,05 	 m3 	R$ 105,00	 4,73 	
+	Argamassa de cimento e areia 1:3					 0,00 	 m3 	 677,00 	 0,54 	
+								TOTAL	 279,82 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								318,87	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								318,87	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO PVC RÍGIDO DN250MM, h de 3,01 a 4,50 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 100,00 	 100,00 	 100,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 110,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de retro escavadeira						 1,00 	 28,36 	 28,36 	
+	Ajudante						 3,00 	 15,73 	 47,19 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 94,61 	
+										
+	PRODUÇÃO DA EQUIPE (C)			6,67	m			CUSTO HORÁRIO TOTAL (A+B)     	 204,61 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+									 -   	
+									 -   	
+								TOTAL	 120,90 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 48,81 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de PVC RIGIDO 250MM					 1,05 	 m 	R$ 261,48	 274,55 	
+	AREIA					 0,05 	 m3 	R$ 105,00	 4,73 	
+	Argamassa de cimento e areia 1:3					 0,00 	 m3 	 677,00 	 0,54 	
+								TOTAL	 279,82 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								328,63	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								328,63	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	TUBO PVC RÍGIDO DN300MM, h de 3,01 a 4,50 m de profundidade						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 100,00 	 100,00 	 100,00 	
+	Sapo compactador			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 110,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de retro escavadeira						 1,00 	 28,36 	 28,36 	
+	Ajudante						 3,00 	 15,73 	 47,19 	
+	Montador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 94,61 	
+										
+	PRODUÇÃO DA EQUIPE (C)			5,34	m			CUSTO HORÁRIO TOTAL (A+B)     	 204,61 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+	Sapo compactador				Gasolina	L	 6,70 	 3,00 	 20,10 	
+									 -   	
+									 -   	
+								TOTAL	 120,90 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 61,01 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Tubo de PVC RIGIDO 300MM					 1,05 	 m 	R$ 387,86	 407,25 	
+	AREIA					 0,05 	 m3 	R$ 105,00	 5,25 	
+	Argamassa de cimento e areia 1:3					 0,00 	 m3 	 677,00 	 0,54 	
+								TOTAL	 413,04 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								474,06	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								474,06	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Reforço do subleito com solo selecionado - Norma DNIT 138/2010-ES GC>=100% P.M. - esp=40cm 						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Rolo compactador pé de carneiro 10t			 2,00 	 1,00 	 -   	 110,00 	 110,00 	 220,00 	
+	Caminhão Pipa 15.000 l			 2,00 	 1,00 	 -   	 122,46 	 122,46 	 244,92 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 814,92 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 31,77 	 31,77 	
+	Operador de trator de pneu						 1,00 	 19,06 	 19,06 	
+	Operador de rolo compactador						 2,00 	 19,06 	 38,11 	
+	Motorista de caminhão pipa						 2,00 	 24,87 	 49,75 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Gredista						 1,00 	 23,69 	 23,69 	
+										
+									 -   	
+								TOTAL	 193,83 	
+										
+	PRODUÇÃO DA EQUIPE (C)			120,00	m³			CUSTO HORÁRIO TOTAL (A+B)     	 1.008,75 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,30 	 34,00 	 214,20 	
+	Trator de pneus com grade				Diesel S10	L	 6,30 	 14,00 	 88,20 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 201,60 	
+	Caminhão Pipa 15.000 l				Diesel S10	L	 6,30 	 4,00 	 50,40 	
+									 -   	
+									 -   	
+								TOTAL	 554,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 13,03 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Aquisição de Cascalho					 1,30 	 m³ 	 23,33 	 30,33 	
+									 -   	
+								TOTAL	 30,33 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Transporte de Cascalho				 1,30 	 27,00 	 1,00 	 1,00 	 35,10 	
+	Escavação e Carga de Jazida				 0,01 	 1,00 	 135,00 	 1,30 	 1,10 	
+	Oléo Diesel para escavadeira				 0,01 	 1,00 	 6,30 	 22,00 	 0,87 	
+								TOTAL	 37,06 	
+										
+	CUSTO DIRETO TOTAL: R$								80,42	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								80,42	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	REGULARIZAÇÃO DE SUBLEITO						M2	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Rolo compactador pé de carneiro 10t			 2,00 	 1,00 	 -   	 110,00 	 110,00 	 220,00 	
+	Caminhão Pipa 15.000 l			 2,00 	 1,00 	 -   	 122,46 	 122,46 	 244,92 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 814,92 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 31,77 	 31,77 	
+	Operador de trator de pneu						 1,00 	 19,06 	 19,06 	
+	Operador de rolo compactador						 2,00 	 19,06 	 38,11 	
+	Motorista de caminhão pipa						 2,00 	 24,87 	 49,75 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Gredista						 1,00 	 23,69 	 23,69 	
+										
+									 -   	
+								TOTAL	 193,83 	
+										
+	PRODUÇÃO DA EQUIPE (C)			220,00	M2			CUSTO HORÁRIO TOTAL (A+B)     	 1.008,75 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,30 	 34,00 	 214,20 	
+	Trator de pneus com grade				Diesel S10	L	 6,30 	 14,00 	 88,20 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 201,60 	
+	Caminhão Pipa 15.000 l				Diesel S10	L	 6,30 	 4,00 	 50,40 	
+									 -   	
+									 -   	
+								TOTAL	 554,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 7,11 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								7,11	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								7,11	
+										
+										
+										
+										
+	1					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	SB - base de Solo Brita (30/70) GC>=100% P.M. - esp=20cm - Norma DNIT 141/2022 – ES/ET-DE-P00/006 (DER)						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Rolo compactador pé de carneiro 10t			 2,00 	 1,00 	 -   	 110,00 	 110,00 	 220,00 	
+	Caminhão Pipa 15.000 l			 2,00 	 1,00 	 -   	 122,46 	 122,46 	 244,92 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 814,92 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 31,77 	 31,77 	
+	Operador de trator de pneu						 1,00 	 19,06 	 19,06 	
+	Operador de rolo compactador						 2,00 	 19,06 	 38,11 	
+	Motorista de caminhão pipa						 2,00 	 24,87 	 49,75 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Gredista						 1,00 	 23,69 	 23,69 	
+										
+										
+									 -   	
+								TOTAL	 193,83 	
+										
+	PRODUÇÃO DA EQUIPE (C)			55,00	m³			CUSTO HORÁRIO TOTAL (A+B)     	 1.008,75 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,30 	 34,00 	 214,20 	
+	Trator de pneus com grade				Diesel S10	L	 6,30 	 14,00 	 88,20 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 201,60 	
+	Caminhão Pipa 15.000 l				Diesel S10	L	 6,30 	 4,00 	 50,40 	
+									 -   	
+									 -   	
+								TOTAL	 554,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 28,42 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Aquisição de BRITA					 0,77 	 m³ 	R$ 105,00	 80,85 	
+									 -   	
+								TOTAL	 80,85 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								109,27	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								109,27	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	sinapi 92395	junho, 2026	Blocos de Concreto Articulados Intertravados 16 faces esp=10cm, conf. NBR 9781 e resistência característica a compressão de 50MPa, com rejunte de areia fina seca vassourada, Conf. DNIT 066/2004-ES						m2	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	PLACA VIBRATÓRIA			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+										
+										
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 10,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Oficial						 1,00 	 23,60 	 23,60 	
+	Ajudante						 4,00 	 15,73 	 62,92 	
+										
+										
+									 -   	
+								TOTAL	 86,52 	
+										
+	PRODUÇÃO DA EQUIPE (C)			8,00	m2			CUSTO HORÁRIO TOTAL (A+B)     	 96,52 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	PLACA VIBRATÓRIA				Gasolina	L	 6,70 	 3,00 	 20,10 	
+										
+										
+									 -   	
+								TOTAL	 20,10 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 14,58 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	INTERTRAVADO PESADO H=10cm 16 faces fck50MPA					 1,03 	 m2 	R$ 94,30	 97,13 	
+	Areia					 0,03 	 m3 	R$ 105,00	 3,15 	
+										
+									 -   	
+								TOTAL	 100,28 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								114,86	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								114,86	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	DNIT	DATA BASE	SERVIÇO						UNIDADE	
+	2003767	junho, 2026	Coxim de areia - esp=4,0cm						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+										
+										
+										
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Ajudante						 1,00 	 15,73 	 15,73 	
+										
+										
+									 -   	
+								TOTAL	 15,73 	
+										
+	PRODUÇÃO DA EQUIPE (C)			6,25	m3			CUSTO HORÁRIO TOTAL (A+B)     	 15,73 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+										
+										
+									 -   	
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 2,52 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Areia					 1,10 	 m3 	R$ 105,00	 115,50 	
+										
+									 -   	
+								TOTAL	 115,50 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								118,02	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								118,02	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	REMOÇÃO DO SOLO VEGETAL, DESMATAMENTO, DESTOCAMENTO E LIMPEZA, INCLUINDO CARGA, TRANSPORTE PARA BOTA FORA LICENCIADO, DESCARGA E ESPALHAMENTO NO BOTA FORA						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20T			 2,00 	 1,00 	 -   	 250,00 	 250,00 	 500,00 	
+	Pá Carregadeira			 1,00 	 1,00 	 -   	 150,00 	 150,00 	 150,00 	
+	Caminhão basculante 16 m³			 4,00 	 1,00 	 -   	 130,00 	 130,00 	 520,00 	
+	Motosserra a gasolina			 2,00 	 1,00 	 -   	 30,00 	 30,00 	 60,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 1.230,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão basculante						 4,00 	 23,69 	 94,76 	
+	Operador de Trator de Esteiras						 2,00 	 39,33 	 78,65 	
+	Operador de Pá Carregadeira						 1,00 	 19,06 	 19,06 	
+	Ajudante						 3,00 	 15,73 	 47,19 	
+	Operador de motosserra						 2,00 	 27,68 	 55,36 	
+										
+								TOTAL	 295,02 	
+										
+	PRODUÇÃO DA EQUIPE (C)			799,00	m²			CUSTO HORÁRIO TOTAL (A+B)     	 1.525,02 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20T				Diesel S10	L	 6,30 	 24,00 	 302,40 	
+	Pá Carregadeira				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+	Caminhão basculante 16 m³				Diesel S10	L	 6,30 	 4,00 	 100,80 	
+	Motosserra a gasolina				Gasolina	L	 6,70 	 4,00 	 53,60 	
+										
+									 -   	
+								TOTAL	 557,60 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 2,61 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								2,61	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								2,61	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Compactação de aterro 						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Motoniveladora 140K			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Rolo compactador pé de carneiro 10T			 2,00 	 1,00 	 -   	 110,00 	 110,00 	 220,00 	
+	Caminhão Pipa 15.000 l			 2,00 	 1,00 	 -   	 122,46 	 122,46 	 244,92 	
+									 -   	
+									 -   	
+								TOTAL	 814,92 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de motoniveladora						 1,00 	 31,77 	 31,77 	
+	Operador de trator de pneu						 1,00 	 19,06 	 19,06 	
+	Operador de rolo compactador						 2,00 	 19,06 	 38,11 	
+	Motorista de caminhão pipa						 2,00 	 24,87 	 49,75 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Gredista						 1,00 	 23,69 	 23,69 	
+										
+									 -   	
+								TOTAL	 193,83 	
+										
+	PRODUÇÃO DA EQUIPE (C)			160,00	m³			CUSTO HORÁRIO TOTAL (A+B)     	 1.008,75 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Motoniveladora 140K				Diesel S10	L	 6,30 	 34,00 	 214,20 	
+	Trator de pneus com grade				Diesel S10	L	 6,30 	 14,00 	 88,20 	
+	Rolo compactador pé de carneiro 10T				Diesel S10	L	 6,30 	 16,00 	 201,60 	
+	Caminhão Pipa 15.000 l				Diesel S10	L	 6,30 	 4,00 	 50,40 	
+									 -   	
+								TOTAL	 554,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 9,77 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								9,77	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								9,77	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Espalhamento						m³	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20t			 1,00 	 1,00 	 -   	 250,00 	 250,00 	 250,00 	
+	Rolo compactador pé de carneiro 10t			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+									 -   	
+									 -   	
+								TOTAL	 360,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de trator de esteiras						 1,00 	 39,33 	 39,33 	
+	Ajudante						 1,00 	 15,73 	 15,73 	
+	Operador de rolo compactador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 74,11 	
+										
+	PRODUÇÃO DA EQUIPE (C)			195,78	m³			CUSTO HORÁRIO TOTAL (A+B)     	 434,11 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20t				Diesel S10	L	 6,30 	 24,00 	 151,20 	
+	Rolo compactador pé de carneiro 10t				Diesel S10	L	 6,30 	 16,00 	 100,80 	
+									 -   	
+									 -   	
+								TOTAL	 252,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 3,50 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								3,50	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								3,50	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	PROTEÇÃO DE TALUDE COM ENROCAMENTO DE PEDRA, ESPESSURA 05M SOBRE MANTA BIDIM RT-21, CONFORME ESPECIFICAÇÃO DER ET-DE-H00/011						m3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Escavadeira hidráulica sobre esteira 22T			 0,50 	 1,00 	 -   	 135,00 	 135,00 	 67,50 	
+	Caminhão basculante 16 m³			 1,00 	 0,50 	 0,50 	 130,00 	 130,00 	 130,00 	
+										
+										
+									 -   	
+								TOTAL	 197,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de escavadeira						 0,50 	 31,77 	 15,88 	
+	Motorista de caminhão basculante						 1,00 	 23,69 	 23,69 	
+	Ajudante						 4,00 	 15,73 	 62,92 	
+										
+									 -   	
+								TOTAL	 102,50 	
+										
+	PRODUÇÃO DA EQUIPE (C)			6,00	m3			CUSTO HORÁRIO TOTAL (A+B)     	 300,00 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Escavadeira hidráulica sobre esteira 22T				Diesel S10	L	 6,30 	 22,00 	 69,30 	
+	Caminhão basculante 16 m³				Diesel S10	L	 6,30 	 4,00 	 12,60 	
+										
+										
+								TOTAL	 81,90 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 63,65 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	PEDRA DE MÃO					 1,20 	 M3 	R$ 180,00	 216,00 	
+	MANTA GEOTEXTIL					 1,10 	 M2 	 9,50 	 10,45 	
+									 -   	
+									 -   	
+								TOTAL	 226,45 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								290,10	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								290,10	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Imprimação						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de pneus com grade			 1,00 	 1,00 	 -   	 110,00 	 110,00 	 110,00 	
+	Vassoura Mecânica			 1,00 	 1,00 	 -   	 17,50 	 17,50 	 17,50 	
+	Tanque de estocagem de material betuminoso			 1,00 	 1,00 	 -   	 10,00 	 10,00 	 10,00 	
+	Caminhão espargidor			 1,00 	 1,00 	 -   	 263,00 	 263,00 	 263,00 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 400,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de trator de pneu						 1,00 	 19,06 	 19,06 	
+	Operador de Espargidor						 1,00 	 19,06 	 19,06 	
+	Motorista de caminhão						 1,00 	 23,69 	 23,69 	
+	Ajudante						 1,00 	 15,73 	 15,73 	
+	Gredista						 1,00 	 23,69 	 23,69 	
+										
+									 -   	
+								TOTAL	 101,22 	
+										
+	PRODUÇÃO DA EQUIPE (C)			900,00	m²			CUSTO HORÁRIO TOTAL (A+B)     	 501,72 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de pneus com grade				Diesel S10	L	 6,30 	 14,00 	 88,20 	
+	Caminhão espargidor				Diesel S10	L	 6,30 	 8,00 	 50,40 	
+									 -   	
+									 -   	
+								TOTAL	 138,60 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 0,71 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Aquisição de EAI					 1,20 	 m² 	 3,81 	 4,57 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 4,57 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								5,28	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								5,28	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	DNIT 2003343	junho, 2026	Canal Trapezoidal Revestido em Concreto (CTR) - revestido em concreto fck>=20MPa com adição de microfibra de polipropileno de 12mm na proporção de 0,6kg/m3 de concreto, espessura de 8cm, taludes com inclinação H1:V1 e junta serrada a cada 5m, L=0,8 HMÉDIO=2,00						M	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 0,50 	 1,00 	 -   	 100,00 	 100,00 	 50,00 	
+										
+									 -   	
+								TOTAL	 50,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 0,50 	 28,36 	 14,18 	
+	oficial						 1,00 	 23,60 	 23,60 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Carpinteiro						 1,00 	 19,06 	 19,06 	
+										
+									 -   	
+								TOTAL	 88,29 	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,25	M			CUSTO HORÁRIO TOTAL (A+B)     	 138,29 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 50,40 	
+										
+										
+										
+								TOTAL	 50,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 150,95 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	ARGAMASSA TRAÇO 1:3					 0,00 	 M3 	 675,00 	 0,07 	
+	CONCRETO 20MPA					 0,13 	 M3 	R$ 469,00	 62,42 	
+	GUIA DE MADEIRA 2,5X7,0 					 0,76 	 M3 	 3,09 	 2,34 	
+	MICROFIBRA DE POLIPROPILENO DE 12MM					 0,08 	 KG 	 90,00 	 7,19 	
+								TOTAL	 72,02 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								222,97	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								222,97	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Canaleta Retangular com Grelha (CRG) em concreto armado fck>=30MPa, inclusive juntas a cada 15,00m, grelha ref.: Selmec GS-A2-302 ou equivalente, L=0,8 HMÉDIO= 1,00						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 0,50 	 1,00 	 -   	 100,00 	 100,00 	 50,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 50,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 0,50 	 28,36 	 14,18 	
+	Oficial						 1,00 	 23,60 	 23,60 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Carpinteiro						 1,00 	 19,06 	 19,06 	
+	Armador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 107,35 	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,25	m			CUSTO HORÁRIO TOTAL (A+B)     	 157,35 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 50,40 	
+										
+									 -   	
+									 -   	
+								TOTAL	 50,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 166,20 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Concreto 30mpa					 0,26 	 m3 	R$ 537,00	 139,62 	
+	AÇO CA50					 7,80 	 KG 	 8,50 	 66,30 	
+	Grelha 					 1,00 	 m 	R$ 960,00	 960,00 	
+	Forma					 3,60 	 m2 	 45,00 	 162,00 	
+								TOTAL	 1.327,92 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								1.494,12	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								1.494,12	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Canaleta Retangular com Tampa de Concreto (CRT) em concreto armado fck>=30MPa, inclusive juntas a cada 15,00m, L=0,8 HMÉDIO=1,00						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 0,50 	 1,00 	 -   	 100,00 	 100,00 	 50,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 50,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 0,50 	 28,36 	 14,18 	
+	Oficial						 1,00 	 23,60 	 23,60 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Carpinteiro						 1,00 	 19,06 	 19,06 	
+	Armador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 107,35 	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,25	m			CUSTO HORÁRIO TOTAL (A+B)     	 157,35 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 50,40 	
+										
+									 -   	
+									 -   	
+								TOTAL	 50,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 166,20 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Concreto 30mpa					 0,26 	 m3 	R$ 537,00	 139,62 	
+	AÇO CA50					 7,80 	 KG 	 8,50 	 66,30 	
+	Tampa de concreto					 1,00 	 m 	 200,00 	 200,00 	
+	Forma					 3,60 	 m2 	 45,00 	 162,00 	
+								TOTAL	 567,92 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								734,12	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								734,12	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	dnit 2003817	junho, 2026	Canaleta Retangular Tipo SC (comprimento médio=3,00m), conforme DC2-219						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 0,50 	 1,00 	 -   	 100,00 	 100,00 	 50,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 50,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Operador de retro escavadeira						 0,50 	 28,36 	 14,18 	
+	Oficial						 1,00 	 23,60 	 23,60 	
+	Ajudante						 2,00 	 15,73 	 31,46 	
+	Carpinteiro						 1,00 	 19,06 	 19,06 	
+	Armador						 1,00 	 19,06 	 19,06 	
+									 -   	
+								TOTAL	 107,35 	
+										
+	PRODUÇÃO DA EQUIPE (C)			1,25	m			CUSTO HORÁRIO TOTAL (A+B)     	 157,35 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,30 	 16,00 	 50,40 	
+										
+									 -   	
+									 -   	
+								TOTAL	 50,40 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 166,20 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	Concreto 30mpa					 0,20 	 m3 	R$ 537,00	 107,40 	
+	AÇO CA50					 7,24 	 KG 	 8,50 	 61,52 	
+	Forma					 2,60 	 m2 	 45,00 	 117,00 	
+								TOTAL	 285,92 	
+										
+	TRANSPORTE 					QUANTIDADE	CUSTO		CUSTO UNITÁRIO	
+										
+										
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								452,12	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								452,12	
+										
+										
+										
+										
+	CMPC - CTC					CUSTO UNITÁRIO				
+	RIO GRANDE DO SUL					ESPECIFICAÇÃO				
+										
+										
+										
+

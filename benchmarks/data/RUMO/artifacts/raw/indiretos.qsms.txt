@@ -1,0 +1,28 @@
+EQUIPE:			QSMS																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 37.300,00					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 74.994,44			EQUIPAMENTOS		R$ 5.694,44					2,50						 187.486,11 	
+						VERBAS		R$ 32.000,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0056	PJ		Técnico de Segurança	P0056	2	 R$8.500,00 			 -   			J	 2.100,00 				 -   		 10.600,00 	
+P0025	PJ		Engenheiro de Segurança	P0025	1	 R$14.000,00 			 -   			J	 2.100,00 				 -   		 16.100,00 	 GERENTE DE QSMS 
+		TOTAL			3	 31.000,00 		 -   				 6.300,00 					 -   		 37.300,00 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0037			Veículo leve	E0037	1	 4.000,00 			KM		 2.500,00 			s1	 9,00 			 1.694,44 	 5.694,44 	 5.694,44 
+																		  	 -   	 -   
+																		  	 -   	
+			TOTAL		1	 4.000,00 												 1.694,44 		 5.694,44 
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		MATERIAL DE SINALIZAÇÃO			MÊS		 1,00 			 80.000,00 					 80.000,00 					
+															 -   					
+															 32.000,00 					

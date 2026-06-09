@@ -52,6 +52,22 @@ def _iso_week_key(d: date) -> str:
     return f"{iso.year}-W{iso.week:02d}"
 
 
+def _week_offset(semana_key: str, semanas_obra: list[str], data_inicio: date) -> int:
+    """Offset (0-based) de uma chave ISO-week relativo a data_inicio.
+
+    Usa o índice em semanas_obra quando presente; caso a semana exceda o prazo
+    nominal (cronograma com makespan > deadline), calcula via aritmética de data
+    a partir da segunda-feira da semana ISO. Tolerante a overflow.
+    """
+    try:
+        return semanas_obra.index(semana_key)
+    except ValueError:
+        year_str, week_str = semana_key.split("-W", 1)
+        monday = date.fromisocalendar(int(year_str), int(week_str), 1)
+        inicio_monday = data_inicio - timedelta(days=data_inicio.weekday())
+        return max(0, (monday - inicio_monday).days // 7)
+
+
 def _semanas_entre(inicio: date, fim: date) -> list[str]:
     """Lista de chaves 'AAAA-Www' das semanas ISO que cobrem o intervalo [inicio, fim]."""
     semanas: list[str] = []
@@ -416,44 +432,101 @@ def _weeks_between(start: date, end: date) -> int:
     return max(1, ((end - start).days // 7) + 1)
 
 
-def _extract_activities(canonical: CanonicalModel) -> list[Activity]:
-    """Extrai atividades do canônico (atividades ou EAP)."""
+def _extract_activities(
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict | None = None,
+    producao_lookup: dict | None = None,
+    validacoes: list | None = None,
+) -> list[Activity]:
+    """Extrai atividades do canônico (atividades ou EAP).
+
+    Calcula duração produtiva de cada atividade baseada em ADR-072:
+      duration_weeks = ceil(quantitativo / (produtividade × horas_dia × dias_semana × n_equipes))
+
+    Se cpu_lookup/producao_lookup não fornecidos, usa duration_weeks=1 como default.
+    """
     activities: list[Activity] = []
-    if canonical.atividades:
-        for act in canonical.atividades:
+    if canonical_in.atividades:
+        for act in canonical_in.atividades:
             activities.append(
                 Activity(
                     activity_id=act.atividade_id,
                     description=act.descricao,
-                    duration_weeks=1,
+                    duration_weeks=1,  # TODO: calcular duração produtiva de atividades diretas
                     required_resources={},
                 )
             )
         return activities
 
-    # Fallback to EAP: must use activity_id format "item_id-atv-1" to match DAG edges
-    for item in canonical.eap:
-        activity_id = f"{item.item_id}-atv-1"
+    # Fallback to EAP: activity_id is item_id (without "-atv-1" suffix)
+    # Matches DAG precedence keys which use item_id directly (ADR-081)
+    # ADR-072 Direção A: calcular duração produtiva se catálogos disponíveis
+    validacoes = validacoes or []
+    for item in canonical_in.eap:
+        activity_id = item.item_id
+
+        # Calcular duração produtiva se catálogos disponíveis
+        duration_weeks = 1  # default
+        if cpu_lookup and producao_lookup:
+            # Usar 1 equipe como default se não especificado
+            computed = _compute_productive_weeks(item.item_id, 1, canonical_in, cpu_lookup, producao_lookup, validacoes)
+            if computed:
+                duration_weeks = computed
+
         activities.append(
             Activity(
                 activity_id=activity_id,
-                description=item.descricao,
-                duration_weeks=1,
+                description=item.descricao or f"Item {item.item_id}",
+                duration_weeks=duration_weeks,
                 required_resources={},
             )
         )
     return activities
 
 
-def _extract_dag(canonical: CanonicalModel, activity_ids: list[str]) -> ActivityDAG:
-    """Extrai DAG do canônico ou infere sequência linear."""
-    if canonical.activity_dag and canonical.activity_dag.arestas:
-        precedence = [(edge.de, edge.para) for edge in canonical.activity_dag.arestas]
-    else:
-        precedence = [(activity_ids[i], activity_ids[i + 1]) for i in range(len(activity_ids) - 1)]
+def _extract_dag(
+    canonical: CanonicalModel,
+    activity_ids: list[str],
+    activities: list[Activity] | None = None,
+) -> ActivityDAG:
+    """Extrai DAG do canônico ou infere sequência linear.
 
-    acts = _extract_activities(canonical)
-    return ActivityDAG(activities=acts, precedence=precedence)
+    Se activities for None, extrai do canônico (legacy path).
+    Caso contrário, usa as activities fornecidas (com duração produtiva já calculada).
+
+    ADR-081: Extrai completion_threshold_pct da EAP (predecessores).
+    """
+    # ── Extrair arestas e thresholds ──────────────────────────────────────────
+    edge_thresholds: dict[tuple[str, str], float] = {}
+    from concilium.application.scheduling.cpsat_scheduler import ExtendedPrecedence as _EP
+    extended: list[_EP] = []
+
+    if canonical.eap:
+        for item in canonical.eap:
+            for pred in item.predecessores_tipados():
+                key = (pred.item_id, item.item_id)
+                tipo = str(getattr(pred, "tipo", "FS") or "FS").upper()
+                lag = int(getattr(pred, "lag", 0) or 0)
+                if tipo == "FS":
+                    edge_thresholds[key] = float(pred.completion_threshold_pct)
+                elif tipo in ("SS", "FF"):
+                    edge_thresholds[key] = 1.0  # sentinela topológico
+                    extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo=tipo, lag=lag))
+
+    # Se não há predecessores na EAP, inferir sequência linear
+    if not edge_thresholds:
+        if canonical.activity_dag and canonical.activity_dag.arestas:
+            for edge in canonical.activity_dag.arestas:
+                edge_thresholds[(edge.de, edge.para)] = 1.0
+        else:
+            for i in range(len(activity_ids) - 1):
+                edge_thresholds[(activity_ids[i], activity_ids[i + 1])] = 1.0
+
+    precedence = list(edge_thresholds.keys())
+
+    # ADR-072: Use pre-computed activities if provided, otherwise extract from canonical
+    acts = activities if activities is not None else _extract_activities(canonical)
+    return ActivityDAG(activities=acts, precedence=precedence, thresholds=edge_thresholds, extended_precedences=extended)
 
 
 def _extract_pool(canonical: CanonicalModel) -> ResourcePool:
@@ -526,13 +599,16 @@ def _compute_ramp_profile(
     profile: list[float] = []
     for t in range(duration_weeks):
         if t < t_up:
-            val = min(float(n_pico), n_init + taxa_mob * (t + 1))
+            # Ramp-up: ceil garante que a semana tem equipes suficientes (ativa antes de plena)
+            val = min(n_pico, math.ceil(n_init + taxa_mob * (t + 1)))
         elif t < t_up + t_plateau:
-            val = float(n_pico)
+            val = n_pico
         else:
+            # Ramp-down: floor garante contagem inteira decrescente
             offset = t - t_up - t_plateau
-            val = max(0.0, n_pico - taxa_demob * (offset + 1))
-        profile.append(round(min(1.0, val / n_pico), 6))
+            val = max(0, math.floor(n_pico - taxa_demob * (offset + 1)))
+        # Fração exata: val é int → val/n_pico codifica num_equipes sem arredondamento duplo
+        profile.append(val / n_pico)
 
     return profile
 
@@ -585,13 +661,111 @@ def _compute_productive_weeks(
     if not cpu:
         return None
     P = _resolve_productivity(cpu, producao_lookup, validacoes)
-    if P <= 0:
+    if not P or P <= 0:
         return None
     regime = canonical_in.projeto.regime_trabalho
     prod_per_week = P * regime.horas_dia * regime.dias_semana * n_resources
     if prod_per_week <= 0:
         return None
     return max(1, math.ceil(Q / prod_per_week))
+
+
+def _enrich_spec_resources_from_catalog(
+    spec: dict,
+    canonical_in: CanonicalModel,
+    cpu_lookup: dict,
+    producao_lookup: dict,
+    deadline_weeks: int,
+    validacoes: list,
+) -> None:
+    """Constrói required_resources + resource_pool + duração a partir do catálogo.
+
+    Modelo (pool renovável fungível): a composicao_padrao_equipe da PRODUÇÃO
+    (CPU.producao_id_ref → producao) é a receita de UMA frente. Cada equip_id e
+    funcao_id é um tipo de recurso renovável; a atividade consome
+    ``composição × n_frentes`` enquanto ativa e libera ao terminar.
+
+    Dimensionamento de frentes para caber no prazo (ADR-072 + ADR-091):
+        dur_1frente = ceil(Q / (P × horas_semana))
+        n_frentes   = max(1, ceil(dur_1frente / deadline_weeks))
+        duration    = ceil(dur_1frente / n_frentes)
+        required_r  = ceil(qtd_composição × n_frentes) por tipo
+
+    Só atua quando a spec não traz required_resources/resource_pool explícitos
+    (preserva specs explícitas). Grava de volta em ``spec`` para que
+    _extract_activities_from_spec e _extract_pool_from_spec consumam.
+    """
+    activities = spec.get("activities") or []
+    if not activities:
+        return
+
+    # Não sobrescreve required_resources/resource_pool quando já explícitos
+    if spec.get("resource_pool") or any(a.get("required_resources") for a in activities):
+        return
+
+    regime = canonical_in.projeto.regime_trabalho
+    horas_semana = regime.horas_dia * regime.dias_semana
+    if horas_semana <= 0 or deadline_weeks <= 0:
+        return
+
+    eap_by_id = {item.item_id: item for item in (canonical_in.eap or [])}
+    enriquecidas = 0
+
+    for a in activities:
+        item = eap_by_id.get(a.get("item_id"))
+        if item is None:
+            continue
+        Q = float(getattr(item, "quantitativo", 0) or 0)
+        cpu = cpu_lookup.get(getattr(item, "cpu_id", "") or "")
+        if not cpu or Q <= 0:
+            continue
+        prod = producao_lookup.get(cpu.get("producao_id_ref") or "")
+        if not prod:
+            continue
+        P = float(prod.get("valor_horario") or 0)
+        comp = prod.get("composicao_padrao_equipe") or {}
+        if P <= 0 or not comp:
+            continue
+
+        dur_1frente = max(1, math.ceil(Q / (P * horas_semana)))
+        n_frentes = max(1, math.ceil(dur_1frente / deadline_weeks))
+        duration = max(1, math.ceil(dur_1frente / n_frentes))
+
+        # Granularidade do pool: UMA equipe-tipo por CPU. Equipes da mesma CPU são
+        # fungíveis (compartilham o pool). A composicao_padrao_equipe (funções +
+        # equipamentos) alimenta o breakdown de custo da equipe (skill-05), não
+        # dimensões separadas de pool — evita double-counting do custo do item por
+        # tipo de recurso. required_resources = nº de frentes paralelas.
+        if not (comp.get("equipamentos") or comp.get("funcoes")):
+            continue
+        tipo = f"EQUIPE-{item.cpu_id}"
+        rr = {tipo: n_frentes}
+
+        a["required_resources"] = rr
+        a["duration_weeks"] = duration
+        a["n_frentes"] = n_frentes
+        a["_catalog_resources"] = True
+
+        # ramp_params com duration final → propagado via ramp_lookup em _build_scheduled_activities
+        rp = a.get("ramp_params")
+        if isinstance(rp, dict) and rp.get("n_max", 0) > 0:
+            a["ramp_profile_computed"] = _compute_ramp_profile(duration, rp, int(rp["n_max"]))
+
+        enriquecidas += 1
+
+    if enriquecidas:
+        # resource_pool deixado para inferir_pool_minimo_from_spec (pico concorrente,
+        # não soma) via _extract_pool_from_spec — evita super-provisionar contratos.
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-CRON-CATALOGO-RES",
+                status="OK",
+                mensagem=(
+                    f"rcpsp_spec enriquecido do catálogo: {enriquecidas} atividades "
+                    f"com required_resources (composicao_padrao_equipe)."
+                ),
+            )
+        )
 
 
 def _extract_activities_from_spec(
@@ -617,7 +791,11 @@ def _extract_activities_from_spec(
     for a in spec["activities"]:
         window_w = int(a["duration_weeks"])
         productive_w = window_w  # fallback: sem alteração
-        if use_productive:
+        if a.get("_catalog_resources"):
+            # Duração já dimensionada por _enrich_spec_resources_from_catalog
+            # (productive com n_frentes). Usar direto — sem recompute.
+            productive_w = window_w
+        elif use_productive:
             n_res = max(1, sum(a.get("required_resources", {}).values()))
             computed = _compute_productive_weeks(
                 a["item_id"],
@@ -629,14 +807,20 @@ def _extract_activities_from_spec(
             )
             if computed is not None and computed < window_w:
                 productive_w = computed
+            # else: keep productive_w = window_w (fallback)
 
-        # ADR-074: derive ramp_profile from ramp_params if present
-        ramp_profile: list[float] | None = None
-        ramp_params = a.get("ramp_params")
-        if ramp_params and isinstance(ramp_params, dict) and productive_w > 0:
-            req = dict(a.get("required_resources", {}))
-            n_pico = max(req.values()) if req else 1
-            ramp_profile = _compute_ramp_profile(productive_w, ramp_params, n_pico)
+        # ADR-074: derive ramp_profile from ramp_params if present.
+        # Prioridade: ramp_profile_computed (calculado no _enrich com duration final).
+        # Fallback: calcular com productive_w (specs sem enriquecimento de catálogo).
+        ramp_profile: list[float] | None = a.get("ramp_profile_computed") or None
+        if ramp_profile is None:
+            ramp_params = a.get("ramp_params")
+            if ramp_params and isinstance(ramp_params, dict) and productive_w > 0:
+                n_pico = int(ramp_params.get("n_max") or 1)
+                if n_pico > 0:
+                    ramp_profile = _compute_ramp_profile(productive_w, ramp_params, n_pico)
+        # Limpar campo temporário para não poluir o dict serializado
+        a.pop("ramp_profile_computed", None)
 
         activities.append(
             Activity(
@@ -911,10 +1095,13 @@ def _infer_teams_from_resources(
     heurística padrão que representa "1 equipe típica para essa atividade".
     """
     if not assigned_resources:
-        return 0
+        return 1
     peak = int(sum(assigned_resources.values()))
     if ramp_profile is not None and week_offset < len(ramp_profile):
-        return max(0, round(peak * ramp_profile[week_offset]))
+        # ramp_profile[t] = val/n_pico onde val é int → peak * (val/n_pico) = int exato
+        # quando peak == n_pico. int() é seguro aqui; round() como fallback para floats
+        # que não codificam inteiros perfeitos (specs legadas).
+        return max(0, int(round(peak * ramp_profile[week_offset])))
     return peak
 
 
@@ -1080,6 +1267,17 @@ def _rasfc_extract_inputs(
         pool_config_in = inputs.get("pool_config")
         if isinstance(pool_config_in, dict) and "pool_config" not in rcpsp_spec:
             rcpsp_spec["pool_config"] = pool_config_in
+        # Construir required_resources + resource_pool + duração do catálogo
+        # (composicao_padrao_equipe). Pré-requisito para o pool não degenerar.
+        if cpu_lookup and producao_lookup:
+            _deadline = int(
+                inputs.get("deadline_weeks")
+                or rcpsp_spec.get("deadline_weeks")
+                or _weeks_between(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
+            )
+            _enrich_spec_resources_from_catalog(
+                rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, _deadline, validacoes
+            )
         # ADR-072: pass lookups so productive duration is computed
         activities = _extract_activities_from_spec(rcpsp_spec, canonical_in, cpu_lookup, producao_lookup, validacoes)
         if not activities:
@@ -1106,11 +1304,12 @@ def _rasfc_extract_inputs(
         # ADR-081: passa eap_items para derivar precedência com thresholds
         dag = _extract_dag_from_spec(rcpsp_spec, activities, eap_items=canonical_in.eap or [])
     else:
-        activities = _extract_activities(canonical_in)
+        activities = _extract_activities(canonical_in, cpu_lookup, producao_lookup, validacoes)
         if not activities:
             validacoes.append(ValidacaoItem(codigo="VAL-SCHED-01", status="ERRO", mensagem="Sem atividades."))
             return None
-        dag = _extract_dag(canonical_in, [a.activity_id for a in activities])
+        # ADR-072: pass pre-computed activities to preserve duration_weeks calculation
+        dag = _extract_dag(canonical_in, [a.activity_id for a in activities], activities=activities)
         pool = _extract_pool(canonical_in)
 
     if not pool.resources:
@@ -1191,6 +1390,13 @@ def _run_auto_schedule_fallback_chain(
     """
     extracted = _rasfc_extract_inputs(canonical_in, inputs, validacoes, cpu_lookup, producao_lookup)
     if extracted is None:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-SCHED-EXTRACT-FAIL",
+                status="ERRO",
+                mensagem="Falha ao extrair inputs de cronograma (atividades, DAG, pool ou deadline inválidos)."
+            )
+        )
         return [], None
     activities, dag, pool, deadline_weeks = extracted
 
@@ -1630,7 +1836,7 @@ def _determine_mode_and_distribuicao(
     """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed)."""
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
-        mode = "AUTO_SCHEDULE"
+        mode = "AUTO_SCHEDULE (rcpsp_spec)"
         validacoes.append(ValidacaoItem(codigo="VAL-CRON-MODE", status="OK", mensagem="Modo AUTO (rcpsp_spec)."))
         # ADR-072: pass lookups for productive-duration derivation
         schedule_candidates, schedule_selected = _run_auto_schedule_fallback_chain(
@@ -1725,23 +1931,52 @@ def _build_scheduled_activities(
                 assigned_lookup[sa.activity_id] = dict(ar)
 
     scheduled_activities_out = []
+
+    # ADR-072: Preservar duração original do scheduler em vez de recalcular
+    # Constrói mapa de item_id → duration_weeks do schedule_selected
+    # (activity_id do scheduler tem formato "item_id-atv-1", need to extract item_id)
+    duration_lookup: dict[str, int] = {}
+    ramp_lookup: dict[str, list[float] | None] = {}
+    if schedule_selected is not None and getattr(schedule_selected, "scheduled_activities", None):
+        for sa in schedule_selected.scheduled_activities:
+            activity_id = getattr(sa, "activity_id", None)
+            duration = getattr(sa, "duration_weeks", None)
+            if activity_id and duration:
+                if "-atv-" in activity_id:
+                    item_id = activity_id.rsplit("-atv-", 1)[0]
+                else:
+                    item_id = activity_id
+                duration_lookup[item_id] = duration
+                ramp_lookup[item_id] = getattr(sa, "ramp_profile", None)
+
     for item in canonical_in.eap:  # type: ignore[union-attr]
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
         semanas_com_producao = [s for s, d in distribuicao_semanal.items() if d.qtd_executada > 0]
-        start_week = semanas_obra.index(semanas_com_producao[0]) if semanas_com_producao else 0
-        end_week = semanas_obra.index(semanas_com_producao[-1]) if semanas_com_producao else 0
+        _di = canonical_in.projeto.data_inicio  # type: ignore[union-attr]
+        start_week = _week_offset(semanas_com_producao[0], semanas_obra, _di) if semanas_com_producao else 0
+        end_week = _week_offset(semanas_com_producao[-1], semanas_obra, _di) if semanas_com_producao else 0
         data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)  # type: ignore[union-attr]
         data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)  # type: ignore[union-attr]
+
+        # ADR-072: Use original duration from scheduler if available
+        duration_from_scheduler = duration_lookup.get(item.item_id, None)
+        if duration_from_scheduler is not None:
+            duration_weeks = duration_from_scheduler
+        else:
+            # Fallback: calculate from scheduled weeks if no scheduler duration
+            duration_weeks = max(1, end_week - start_week + 1)
+
         scheduled_activities_out.append(
             ScheduledActivityCanonical(
                 activity_id=item.item_id,
                 start_week=start_week,
                 end_week=end_week,
-                duration_weeks=max(1, end_week - start_week + 1),
+                duration_weeks=duration_weeks,
                 data_inicio=data_inicio,
                 data_fim=data_fim,
                 distribuicao_semanal=distribuicao_semanal,
                 assigned_resources=assigned_lookup.get(item.item_id, {}),
+                ramp_profile=ramp_lookup.get(item.item_id),
             )
         )
     return scheduled_activities_out
@@ -1943,9 +2178,7 @@ def run_cronograma(
         eap_list = [
             {
                 "item_id": item.item_id,
-                "predecessores": [
-                    {"item_id": p.item_id} for p in item.predecessores
-                ] if item.predecessores else []
+                "predecessores": [{"item_id": p.item_id} for p in item.predecessores] if item.predecessores else [],
             }
             for item in canonical_in.eap
         ]

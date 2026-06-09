@@ -1,7 +1,11 @@
 # ADR-101 — MCP Apps: Interface Interativa de Relatórios e Formulários no Chat
 
-**Status:** Parcialmente Implementado
+**Status:** Parcialmente Implementado — Fases 1–2 ✅ | Fases 3–5 🔴 Proposta _(auditado 2026-06-08)_
 **Data:** 2026-06-03
+
+> **Nota de auditoria (2026-06-08):** Apps MCP confirmados em
+> `src/concilium/presentation/mcp/apps/`: `formulario-qqp/`, `dashboard-resultado/`,
+> `diagnostico-pe/`, `artefatos/`. Status já estava correto; confirmado via filesystem.
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-092 (Formulário QQP/EAP), ADR-093 (Artefatos MCP), ADR-096 (Deploy Azure), ADR-099 (RBAC)
 

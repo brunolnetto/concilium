@@ -90,18 +90,77 @@ def _topological_levels(tasks: list, adj: dict[str, set[str]]) -> dict[str, int]
     return _bfs_levels(nodes, adj, pred_count)
 
 
+def _barycenter_order(layer: list[str], prev_pos: dict[str, float], pred_adj: dict[str, set[str]]) -> list[str]:
+    """Ordena nós de uma camada pelo baricentro dos predecessores na camada anterior.
+
+    Algoritmo de barycenter (Sugiyama Fase 3): cada nó recebe como chave de ordenação
+    a média das posições y dos seus predecessores no nível anterior. Nós sem predecessores
+    mantêm a posição relativa original. Minimiza cruzamentos de arestas entre camadas.
+    """
+    scores: dict[str, float] = {}
+    for n in layer:
+        preds = [p for p in pred_adj.get(n, set()) if p in prev_pos]
+        scores[n] = sum(prev_pos[p] for p in preds) / len(preds) if preds else float("inf")
+    # Score alto = predecessores no topo (y alto) → nó deve ficar no topo também.
+    # Nós sem predecessores (score=inf) ficam no final.
+    return sorted(layer, key=lambda n: (scores[n] == float("inf"), -scores[n], n))
+
+
 def _assign_positions(tasks: list) -> tuple[dict, dict]:
-    """Retorna {item_id: (x, y)} para layout hierárquico esquerda-direita."""
+    """Retorna {item_id: (x, y)} para layout hierárquico esquerda-direita.
+
+    Usa o algoritmo de barycenter (Sugiyama) para ordenar nós dentro de cada nível
+    de forma a minimizar cruzamentos de arestas. Faz uma passagem para frente
+    (predecessor → successor) e uma para trás para convergir.
+    """
     adj = _build_adj(tasks)
+    # adj reverso: sucessor → predecessores (necessário para barycenter)
+    pred_adj: dict[str, set[str]] = {n: set() for n in adj}
+    for p, succs in adj.items():
+        for s in succs:
+            pred_adj.setdefault(s, set()).add(p)
+
     levels = _topological_levels(tasks, adj)
-    # Agrupar por nível
     by_level: dict[int, list[str]] = {}
     for node, lv in levels.items():
         by_level.setdefault(lv, []).append(node)
-    # Posicionar: x = nível × H_SPACING, y = índice × V_SPACING (centrado)
+
+    # Passagem inicial: ordenação alfabética no nível 0 (sem predecessores)
+    max_lv = max(by_level.keys(), default=0)
+    ordered: dict[int, list[str]] = {0: sorted(by_level.get(0, []))}
+
+    # Passagem para frente: cada nível é ordenado pelo baricentro do nível anterior
+    prev_y: dict[str, float] = {}
+    for n in ordered[0]:
+        i = ordered[0].index(n)
+        prev_y[n] = -(i - (len(ordered[0]) - 1) / 2.0)
+
+    for lv in range(1, max_lv + 1):
+        layer = by_level.get(lv, [])
+        ordered[lv] = _barycenter_order(layer, prev_y, pred_adj)
+        for n in ordered[lv]:
+            i = ordered[lv].index(n)
+            prev_y[n] = -(i - (len(ordered[lv]) - 1) / 2.0)
+
+    # Passagem para trás: refinar com baricentro dos sucessores
+    succ_adj = adj  # adj já é pred → {succs}
+    next_y: dict[str, float] = dict(prev_y)
+    for lv in range(max_lv - 1, -1, -1):
+        layer = ordered[lv]
+        # Baricentro reverso: posição média dos sucessores
+        scores: dict[str, float] = {}
+        for n in layer:
+            succs = [s for s in succ_adj.get(n, set()) if s in next_y]
+            scores[n] = sum(next_y[s] for s in succs) / len(succs) if succs else float("inf")
+        ordered[lv] = sorted(layer, key=lambda n: (scores[n] == float("inf"), -scores[n], n))
+        for n in ordered[lv]:
+            i = ordered[lv].index(n)
+            next_y[n] = -(i - (len(ordered[lv]) - 1) / 2.0)
+
+    # Construir posições finais
     pos: dict[str, tuple[float, float]] = {}
-    for lv, nodes in by_level.items():
-        for i, n in enumerate(sorted(nodes)):
+    for lv, nodes in ordered.items():
+        for i, n in enumerate(nodes):
             x = lv * _H_SPACING
             y = -(i - (len(nodes) - 1) / 2.0) * _V_SPACING
             pos[n] = (x, y)

@@ -1,0 +1,55 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																					
+																																																								
+															EQUIPAMENTOS							R$ 269.920,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																									
+															MÃO DE OBRA							R$ 238.800,00									R$ 1.084.194,08																									
+															VERBAS							R$ 575.474,08																																		
+																																																								
+																																																								
+EQUIPAMENTOS																																																								
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES				
+																																																								
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 4,00 							 GOIANIA 					 COCALINHO 					 960,00 						 10,00 						 38.400,00 										
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 4,00 							 COCALINHO 					 GOIANIA 					 960,00 						 10,00 						 38.400,00 										
+3		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 4,00 							 GOIANIA 					 COCALINHO 					 400,00 						 11,00 						 17.600,00 										
+4		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 4,00 							 COCALINHO 					 GOIANIA 					 400,00 						 11,00 						 17.600,00 										
+5		MOB PA COM MANDIBULA													VB		 1,00 							 BELEM 					 COCALINHO 					 400,00 						 10,00 						 4.000,00 										
+6		DESMOB PA COM MAND													VB		 1,00 							 COCALINHO 					 BELEM 					 3.600,00 						 10,00 						 36.000,00 										
+7		MOB CONTEINER													VB		 10,00 																							 4.000,00 						 40.000,00 										
+8		DESMOB CONTEINER													VB		 10,00 																							 4.000,00 						 40.000,00 										
+9		MOB BANHEIRO QUIMICO													VB		 14,00 																							 600,00 						 8.400,00 										
+10		DESMOB BANHEIRO QUIMICO													VB		 14,00 																							 600,00 						 8.400,00 										
+11		MOBILIZAÇÃO DE GERADOR													VB		 1,00 							 GOIANIA 					 COCALINHO 					 960,00 						 11,00 						 10.560,00 										
+12		DESMOBILIZAÇÃO DE GERADOR													VB		 1,00 							 COCALINHO 					 GOIANIA 					 960,00 						 11,00 						 10.560,00 										
+																																																								
+																																																								
+																																														 269.920,00 										
+																																																								
+MÃO DE OBRA																																																								
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																		
+																																																								
+Equipe											100			 GOIANIA 						 COCALINHO 						 1.200,00 						119.400,00																								
+Equipe											100			 COCALINHO 						 GOIANIA 						1.200,00						119.400,00						  																		
+																																 238.800,00 																								
+																																																								
+VERBAS																																																								
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES										
+1		INTEGRAÇÃO EQUIPE DIRETA																							VB			 0,30 						 423.171,94 						 126.951,58 																
+2		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB			 0,30 						 389.200,00 						 116.760,00 																
+3		ALIMENTAÇÃO, PLANO DE SAUDE E CESTA BÁSICA INTEGRAÇÃO																							VB			 0,30 						 223.875,00 						 67.162,50 																
+																																								 310.874,08 																
+																																																								
+DESPESAS COM VIAGEM																																																								
+							CUSTO UNITÁRIO		MOB			MÊS 1			MÊS 2			MÊS 3			MÊS 4			MÊS 5			DESMOB																											CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 1.200,00 								X						X																																	 2.400,00 		
+ENCARREGADO (60 dias)						2	 1.200,00 								X						X																																	 4.800,00 		
+GERENTE DE CONTRATO (30 dias) E FLORESTAL						2	 1.200,00 								X			X			X																																	 7.200,00 		
+GERENTE DE QSMS						1	 1.200,00 								X			X			X																																	 3.600,00 		
+EQUIPE DIRETA						75	 1.200,00 								X						X																																	 180.000,00 		
+EQUIPE INDIRETA						18,5	 1.200,00 								X			X			X																																	 66.600,00 		
+ 264.600,00 																																																								

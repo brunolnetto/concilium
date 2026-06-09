@@ -53,10 +53,7 @@ def _create_synthetic_cpu(cpu_id: str, validacoes: list) -> dict | None:
         "codigo": cpu_id,
         "descricao": f"CPU Sintético {cpu_id} (fallback TERRA-ATI-003)",
         "producao_id_ref": "CPU-TERRA-ATI-003-PROD-001",  # Generic fallback: demolition/cleanup
-        "composicao_padrao_equipe": {
-            "funcoes": [],
-            "equipamentos": []
-        }
+        "composicao_padrao_equipe": {"funcoes": [], "equipamentos": []},
     }
 
 

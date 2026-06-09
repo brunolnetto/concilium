@@ -105,7 +105,13 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
             ax_saldo.set_visible(False)
             ax2.set_visible(False)
         fig.suptitle("Analise Financeira", fontsize=13, fontweight="bold")
-        fig.tight_layout()
+        # tight_layout emite UserWarning (não levanta) quando as margens não
+        # cabem; suprimimos via catch_warnings em vez de try/except.
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            fig.tight_layout()
         return fig_to_bytes(fig)
     except Exception:
         plt.close("all")

@@ -1,6 +1,6 @@
 [skill]
 id = "14-explorador-cenarios"
-phase = "Decisão"
+phase = "Análise"
 version = "1.0.0"
 descricao = "Explora o espaço combinatorial de planos: repair greedy (AMARELO/VERMELHO→VERDE) e scan de oportunidades (VERDE). ADR-021."
 

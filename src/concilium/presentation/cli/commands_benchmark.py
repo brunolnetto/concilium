@@ -78,9 +78,10 @@ def run_benchmarks_batch(
     pack: bool = typer.Option(False, "--pack", help="Empacota artefatos ao final (requer slug)."),
 ) -> None:
     """Executa todos os benchmarks em modo batch silencioso e eficiente."""
+    from datetime import UTC, datetime
+
     from concilium.application.benchmarks import BenchmarkBatchRunner
     from concilium.presentation.cli.shared import _tools_root, benchmark_projects_root, config_root
-    from datetime import datetime, UTC
 
     root = _tools_root()
     batch_runner = BenchmarkBatchRunner(
@@ -130,7 +131,9 @@ def run_benchmarks_batch(
             "meta": {"timestamp": datetime.now(UTC).isoformat(), "total": len(reports)},
             "summary": summary,
         }
-        summary_file.write_text(json.dumps(summary_artifact, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+        summary_file.write_text(
+            json.dumps(summary_artifact, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
+        )
         rprint(f"\n✓ Resumo salvo em: {summary_file}")
 
 

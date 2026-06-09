@@ -82,10 +82,7 @@ class CpuMapper:
 
         # Sort by relevance and limit results
         matches.sort(key=lambda x: x["_score"], reverse=True)
-        return [
-            {k: v for k, v in m.items() if not k.startswith("_")}
-            for m in matches[:limit]
-        ]
+        return [{k: v for k, v in m.items() if not k.startswith("_")} for m in matches[:limit]]
 
     def map_item_to_cpu(self, item_id: str, descricao: str) -> str | None:
         """Map a cronograma item to best matching CPU in catalog.
@@ -122,9 +119,7 @@ class CpuMapper:
         # No match found
         return None
 
-    def map_items_batch(
-        self, items: list[dict[str, Any]]
-    ) -> dict[str, str | None]:
+    def map_items_batch(self, items: list[dict[str, Any]]) -> dict[str, str | None]:
         """Map multiple items to CPUs.
 
         Args:

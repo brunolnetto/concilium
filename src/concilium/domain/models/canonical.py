@@ -112,7 +112,8 @@ class Projeto(BaseModel):
     id: UUID | str
     nome: str
     tipo_obra: Literal["terraplenagem", "pavimentacao", "saneamento"]
-    localizacao: str
+    # localizacao aceita string legada ("Brasil") ou Coordenadas {lat, lng} (normalizado)
+    localizacao: str | Coordenadas
     coordenadas: Coordenadas
     regime_trabalho: RegimeTrabalho
     data_inicio: date
@@ -186,10 +187,10 @@ class EapItem(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     item_id: str
-    ordem: int = Field(ge=1)
+    ordem: int | None = Field(default=None, ge=1)  # Opcional — inferido do catálogo se não fornecido
     cpu_id: str
-    descricao: str
-    unidade: str
+    descricao: str | None = None  # Opcional — inferido do catálogo se não fornecido
+    unidade: str | None = None  # Opcional — inferido do catálogo se não fornecido
     quantitativo: float = Field(gt=0)
     # NEP-031 L4: predecessores com tipo de relação (FS/SS/FF) e lag.
     # Aceita str (legado, tratado como FS lag=0) ou PrecedenciaItem.
@@ -358,6 +359,10 @@ class FuncaoEquipeDireta(BaseModel):
     percentual_encargos: float = 0.0
     horas_extras_pct: float = 0.0
     custo_mensal_unitario: float = 0.0
+    # NEP-037 D1: encargos separados do salário base para reconciliar com PU_sbdi
+    # custo_mensal_unitario = salario_base × (1 + percentual_encargos) × (1 + horas_extras_pct)
+    # custo_encargos_mensal_unitario = salario_base × percentual_encargos × num_pessoas
+    custo_encargos_mensal_unitario: float = 0.0
     # Papel contabilizável herdado de FuncaoEquipe.papel (propaga do catálogo via skill 03)
     papel: PapelFuncao = "direto"
 
@@ -399,7 +404,11 @@ class EquipeDireta(BaseModel):
     num_equipes_base: int = 1
     funcoes: list[FuncaoEquipeDireta] = Field(default_factory=list)
     equipamentos: list[EquipamentoEquipeDireta] = Field(default_factory=list)
-    custo_mao_obra_mensal: float = 0.0
+    custo_mao_obra_mensal: float = 0.0  # salário base × num_pessoas (sem encargos)
+    # NEP-037 D1: encargos sociais separados do salário base para reconciliar fe_nec com PU_sbdi.
+    # Invariante: custo_total inclui encargos (= custo_mao_obra_mensal + custo_encargos_mensal + ...)
+    # fe_nec = (custo_mao_obra_mensal + custo_equip + diesel) / (PU_sbdi × Q) → 1/η_p
+    custo_encargos_mensal: float = 0.0  # Σ salario_base × percentual_encargos × num_pessoas
     # ADR-030 D3 / ADR-088: separação aluguel | combustivel | manutencao
     custo_equipamentos_mensal: float = 0.0  # aluguel + manutencao (sem combustivel)
     custo_combustivel_total_mensal: float = 0.0  # combustivel total da equipe
@@ -536,7 +545,9 @@ class Indireto(BaseModel):
     # Permite BDI diferenciado por natureza (MO ≈ 30%, EQ ≈ 30%, material/comb = 4%, verba ≈ 25%).
     # Invariante: custo_total ≈ custo_mao_obra + custo_equipamentos + custo_combustivel
     #                          + custo_verba + custo_mobilizacao
-    custo_mao_obra: float = 0.0  # funcoes — BDI_mao_obra
+    custo_mao_obra: float = 0.0  # funcoes base (sem encargos) — BDI_mao_obra
+    # NEP-037 D4: encargos sociais separados do salário base, mesmo para indiretos.
+    custo_encargos: float = 0.0  # encargos sobre MO indireta — BDI_mao_obra (mesmo rate)
     custo_equipamentos: float = 0.0  # equipamentos (aluguel+manut, sem comb) — BDI_servicos
     custo_combustivel: float = 0.0  # combustivel de equipamentos indiretos — BDI_material
     custo_verba: float = 0.0  # verbas_mensais + verbas_fixas — BDI_indireto

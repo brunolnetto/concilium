@@ -1,9 +1,13 @@
 {
+  "slug": "AGIS",
   "meta": {
     "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
     "data_inicio": "2026-06-01",
     "data_termino": "2027-06-27",
-    "localizacao": "Ceara, Brasil",
+    "localizacao": {
+      "lat": -7.3875,
+      "lng": -39.85
+    },
     "regime_trabalho": {
       "horas_dia": 8,
       "dias_semana": 6
@@ -158,952 +162,124 @@
     "cronograma": [
       {
         "item_id": "eap-1_0",
-        "semanas": {
-          "2026-W23": {
-            "num_equipes": 1
-          },
-          "2026-W24": {
-            "num_equipes": 3
-          },
-          "2026-W25": {
-            "num_equipes": 6
-          },
-          "2026-W26": {
-            "num_equipes": 6
-          },
-          "2026-W27": {
-            "num_equipes": 6
-          },
-          "2026-W28": {
-            "num_equipes": 6
-          },
-          "2026-W29": {
-            "num_equipes": 6
-          },
-          "2026-W30": {
-            "num_equipes": 6
-          },
-          "2026-W31": {
-            "num_equipes": 6
-          },
-          "2026-W32": {
-            "num_equipes": 6
-          },
-          "2026-W33": {
-            "num_equipes": 6
-          },
-          "2026-W34": {
-            "num_equipes": 6
-          },
-          "2026-W35": {
-            "num_equipes": 6
-          },
-          "2026-W36": {
-            "num_equipes": 6
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 6,
+          "taxa_mobilizacao": 2.5,
+          "taxa_desmobilizacao": 6.0
+        },
+        "descricao": "DESMATAMENTO, DESTOCAMENTO E LIMPEZA DE AREA COM ARVORES DE DIAMETRO ATÉ 15 CM",
+        "unidade": "M2"
       },
       {
         "item_id": "eap-1_1",
-        "semanas": {
-          "2026-W28": {
-            "num_equipes": 1
-          },
-          "2026-W29": {
-            "num_equipes": 1
-          },
-          "2026-W30": {
-            "num_equipes": 1
-          },
-          "2026-W31": {
-            "num_equipes": 1
-          },
-          "2026-W32": {
-            "num_equipes": 1
-          },
-          "2026-W33": {
-            "num_equipes": 1
-          },
-          "2026-W34": {
-            "num_equipes": 1
-          },
-          "2026-W35": {
-            "num_equipes": 1
-          },
-          "2026-W36": {
-            "num_equipes": 1
-          },
-          "2026-W37": {
-            "num_equipes": 1
-          },
-          "2026-W38": {
-            "num_equipes": 1
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_2",
-        "semanas": {
-          "2026-W28": {
-            "num_equipes": 1
-          },
-          "2026-W29": {
-            "num_equipes": 1
-          },
-          "2026-W30": {
-            "num_equipes": 1
-          },
-          "2026-W31": {
-            "num_equipes": 1
-          },
-          "2026-W32": {
-            "num_equipes": 1
-          },
-          "2026-W33": {
-            "num_equipes": 1
-          },
-          "2026-W34": {
-            "num_equipes": 1
-          },
-          "2026-W35": {
-            "num_equipes": 1
-          },
-          "2026-W36": {
-            "num_equipes": 1
-          },
-          "2026-W37": {
-            "num_equipes": 1
-          },
-          "2026-W38": {
-            "num_equipes": 1
-          },
-          "2026-W39": {
-            "num_equipes": 1
-          },
-          "2026-W40": {
-            "num_equipes": 1
-          },
-          "2026-W41": {
-            "num_equipes": 1
-          },
-          "2026-W42": {
-            "num_equipes": 1
-          },
-          "2026-W43": {
-            "num_equipes": 1
-          },
-          "2026-W44": {
-            "num_equipes": 1
-          },
-          "2026-W45": {
-            "num_equipes": 1
-          },
-          "2026-W46": {
-            "num_equipes": 1
-          },
-          "2026-W47": {
-            "num_equipes": 1
-          },
-          "2026-W48": {
-            "num_equipes": 1
-          },
-          "2026-W49": {
-            "num_equipes": 1
-          },
-          "2026-W50": {
-            "num_equipes": 1
-          },
-          "2026-W51": {
-            "num_equipes": 1
-          },
-          "2026-W52": {
-            "num_equipes": 1
-          },
-          "2027-W01": {
-            "num_equipes": 1
-          },
-          "2027-W02": {
-            "num_equipes": 1
-          },
-          "2027-W03": {
-            "num_equipes": 1
-          },
-          "2027-W04": {
-            "num_equipes": 1
-          },
-          "2027-W05": {
-            "num_equipes": 1
-          },
-          "2027-W06": {
-            "num_equipes": 1
-          },
-          "2027-W07": {
-            "num_equipes": 1
-          },
-          "2027-W08": {
-            "num_equipes": 1
-          },
-          "2027-W09": {
-            "num_equipes": 1
-          },
-          "2027-W10": {
-            "num_equipes": 1
-          },
-          "2027-W11": {
-            "num_equipes": 1
-          },
-          "2027-W12": {
-            "num_equipes": 1
-          },
-          "2027-W13": {
-            "num_equipes": 1
-          },
-          "2027-W14": {
-            "num_equipes": 1
-          },
-          "2027-W15": {
-            "num_equipes": 1
-          },
-          "2027-W16": {
-            "num_equipes": 1
-          },
-          "2027-W17": {
-            "num_equipes": 1
-          },
-          "2027-W18": {
-            "num_equipes": 1
-          },
-          "2027-W19": {
-            "num_equipes": 1
-          },
-          "2026-W53": {
-            "num_equipes": 1
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_3",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 2
-          },
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 2
-          },
-          "2026-W30": {
-            "num_equipes": 2
-          },
-          "2026-W31": {
-            "num_equipes": 2
-          },
-          "2026-W32": {
-            "num_equipes": 2
-          },
-          "2026-W33": {
-            "num_equipes": 2
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 2,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 2.0
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT ATÉ 2000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_4",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 2
-          },
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 2
-          },
-          "2026-W30": {
-            "num_equipes": 2
-          },
-          "2026-W31": {
-            "num_equipes": 2
-          },
-          "2026-W32": {
-            "num_equipes": 2
-          },
-          "2026-W33": {
-            "num_equipes": 2
-          },
-          "2026-W34": {
-            "num_equipes": 2
-          },
-          "2026-W35": {
-            "num_equipes": 2
-          },
-          "2026-W36": {
-            "num_equipes": 2
-          },
-          "2026-W37": {
-            "num_equipes": 2
-          },
-          "2026-W38": {
-            "num_equipes": 2
-          },
-          "2026-W39": {
-            "num_equipes": 2
-          },
-          "2026-W40": {
-            "num_equipes": 2
-          },
-          "2026-W41": {
-            "num_equipes": 2
-          },
-          "2026-W42": {
-            "num_equipes": 2
-          },
-          "2026-W43": {
-            "num_equipes": 2
-          },
-          "2026-W44": {
-            "num_equipes": 2
-          },
-          "2026-W45": {
-            "num_equipes": 2
-          },
-          "2026-W46": {
-            "num_equipes": 2
-          },
-          "2026-W47": {
-            "num_equipes": 2
-          },
-          "2026-W48": {
-            "num_equipes": 2
-          },
-          "2026-W49": {
-            "num_equipes": 2
-          },
-          "2026-W50": {
-            "num_equipes": 2
-          },
-          "2026-W51": {
-            "num_equipes": 2
-          },
-          "2026-W52": {
-            "num_equipes": 2
-          },
-          "2027-W01": {
-            "num_equipes": 2
-          },
-          "2027-W02": {
-            "num_equipes": 2
-          },
-          "2027-W03": {
-            "num_equipes": 2
-          },
-          "2027-W04": {
-            "num_equipes": 2
-          },
-          "2027-W05": {
-            "num_equipes": 2
-          },
-          "2027-W06": {
-            "num_equipes": 2
-          },
-          "2027-W07": {
-            "num_equipes": 2
-          },
-          "2027-W08": {
-            "num_equipes": 2
-          },
-          "2027-W09": {
-            "num_equipes": 2
-          },
-          "2027-W10": {
-            "num_equipes": 2
-          },
-          "2027-W11": {
-            "num_equipes": 2
-          },
-          "2027-W12": {
-            "num_equipes": 2
-          },
-          "2027-W13": {
-            "num_equipes": 2
-          },
-          "2027-W14": {
-            "num_equipes": 2
-          },
-          "2027-W15": {
-            "num_equipes": 2
-          },
-          "2027-W16": {
-            "num_equipes": 2
-          },
-          "2027-W17": {
-            "num_equipes": 2
-          },
-          "2027-W18": {
-            "num_equipes": 2
-          },
-          "2027-W19": {
-            "num_equipes": 2
-          },
-          "2027-W20": {
-            "num_equipes": 2
-          },
-          "2027-W21": {
-            "num_equipes": 2
-          },
-          "2027-W22": {
-            "num_equipes": 2
-          },
-          "2026-W53": {
-            "num_equipes": 2
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 2,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 2.0
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_5",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 3
-          },
-          "2026-W28": {
-            "num_equipes": 3
-          },
-          "2026-W29": {
-            "num_equipes": 3
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 3
-          },
-          "2026-W34": {
-            "num_equipes": 3
-          },
-          "2026-W35": {
-            "num_equipes": 3
-          },
-          "2026-W36": {
-            "num_equipes": 3
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          },
-          "2026-W38": {
-            "num_equipes": 3
-          },
-          "2026-W39": {
-            "num_equipes": 3
-          },
-          "2026-W40": {
-            "num_equipes": 3
-          },
-          "2026-W41": {
-            "num_equipes": 3
-          },
-          "2026-W42": {
-            "num_equipes": 3
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 3,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 3.0
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT ATÉ 2000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_6",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 3
-          },
-          "2026-W28": {
-            "num_equipes": 3
-          },
-          "2026-W29": {
-            "num_equipes": 3
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 3
-          },
-          "2026-W34": {
-            "num_equipes": 3
-          },
-          "2026-W35": {
-            "num_equipes": 3
-          },
-          "2026-W36": {
-            "num_equipes": 3
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          },
-          "2026-W38": {
-            "num_equipes": 3
-          },
-          "2026-W39": {
-            "num_equipes": 3
-          },
-          "2026-W40": {
-            "num_equipes": 3
-          },
-          "2026-W41": {
-            "num_equipes": 3
-          },
-          "2026-W42": {
-            "num_equipes": 3
-          },
-          "2026-W43": {
-            "num_equipes": 3
-          },
-          "2026-W44": {
-            "num_equipes": 3
-          },
-          "2026-W45": {
-            "num_equipes": 3
-          },
-          "2026-W46": {
-            "num_equipes": 3
-          },
-          "2026-W47": {
-            "num_equipes": 3
-          },
-          "2026-W48": {
-            "num_equipes": 3
-          },
-          "2026-W49": {
-            "num_equipes": 3
-          },
-          "2026-W50": {
-            "num_equipes": 3
-          },
-          "2026-W51": {
-            "num_equipes": 3
-          },
-          "2026-W52": {
-            "num_equipes": 3
-          },
-          "2027-W01": {
-            "num_equipes": 4
-          },
-          "2027-W02": {
-            "num_equipes": 4
-          },
-          "2027-W03": {
-            "num_equipes": 4
-          },
-          "2027-W04": {
-            "num_equipes": 4
-          },
-          "2027-W05": {
-            "num_equipes": 4
-          },
-          "2027-W06": {
-            "num_equipes": 4
-          },
-          "2027-W07": {
-            "num_equipes": 4
-          },
-          "2027-W08": {
-            "num_equipes": 4
-          },
-          "2026-W53": {
-            "num_equipes": 3
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 4,
+          "taxa_mobilizacao": 0.1034,
+          "taxa_desmobilizacao": 4.0
+        },
+        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_7",
-        "semanas": {
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 3
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 4
-          },
-          "2026-W34": {
-            "num_equipes": 4
-          },
-          "2026-W35": {
-            "num_equipes": 4
-          },
-          "2026-W36": {
-            "num_equipes": 4
-          },
-          "2026-W37": {
-            "num_equipes": 4
-          },
-          "2026-W38": {
-            "num_equipes": 4
-          },
-          "2026-W39": {
-            "num_equipes": 4
-          },
-          "2026-W40": {
-            "num_equipes": 4
-          },
-          "2026-W41": {
-            "num_equipes": 4
-          },
-          "2026-W42": {
-            "num_equipes": 4
-          },
-          "2026-W43": {
-            "num_equipes": 4
-          },
-          "2026-W44": {
-            "num_equipes": 4
-          },
-          "2026-W45": {
-            "num_equipes": 4
-          },
-          "2026-W46": {
-            "num_equipes": 4
-          },
-          "2026-W47": {
-            "num_equipes": 4
-          },
-          "2026-W48": {
-            "num_equipes": 4
-          },
-          "2026-W49": {
-            "num_equipes": 4
-          },
-          "2026-W50": {
-            "num_equipes": 4
-          },
-          "2026-W51": {
-            "num_equipes": 4
-          },
-          "2026-W52": {
-            "num_equipes": 4
-          },
-          "2027-W01": {
-            "num_equipes": 4
-          },
-          "2027-W02": {
-            "num_equipes": 4
-          },
-          "2027-W03": {
-            "num_equipes": 4
-          },
-          "2027-W04": {
-            "num_equipes": 4
-          },
-          "2027-W05": {
-            "num_equipes": 4
-          },
-          "2027-W06": {
-            "num_equipes": 4
-          },
-          "2027-W07": {
-            "num_equipes": 4
-          },
-          "2027-W08": {
-            "num_equipes": 4
-          },
-          "2027-W09": {
-            "num_equipes": 4
-          },
-          "2027-W10": {
-            "num_equipes": 4
-          },
-          "2027-W11": {
-            "num_equipes": 4
-          },
-          "2027-W12": {
-            "num_equipes": 4
-          },
-          "2027-W13": {
-            "num_equipes": 4
-          },
-          "2027-W14": {
-            "num_equipes": 4
-          },
-          "2027-W15": {
-            "num_equipes": 4
-          },
-          "2027-W16": {
-            "num_equipes": 4
-          },
-          "2027-W17": {
-            "num_equipes": 4
-          },
-          "2027-W18": {
-            "num_equipes": 4
-          },
-          "2027-W19": {
-            "num_equipes": 4
-          },
-          "2027-W20": {
-            "num_equipes": 4
-          },
-          "2027-W21": {
-            "num_equipes": 4
-          },
-          "2027-W22": {
-            "num_equipes": 4
-          },
-          "2027-W23": {
-            "num_equipes": 3
-          },
-          "2027-W24": {
-            "num_equipes": 2
-          },
-          "2027-W25": {
-            "num_equipes": 3
-          },
-          "2026-W53": {
-            "num_equipes": 4
-          }
-        }
+        "equipes": {
+          "n_inicial": 2,
+          "n_max": 4,
+          "taxa_mobilizacao": 0.4,
+          "taxa_desmobilizacao": 1.3333
+        },
+        "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR NORMAL",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_8",
-        "semanas": {
-          "2027-W23": {
-            "num_equipes": 1
-          },
-          "2027-W24": {
-            "num_equipes": 2
-          },
-          "2027-W25": {
-            "num_equipes": 1
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 2,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 2.0
+        },
+        "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR INTERMEDIÁRIO",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_9",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 2
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 2
-          },
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 2
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 3
-          },
-          "2026-W34": {
-            "num_equipes": 3
-          },
-          "2026-W35": {
-            "num_equipes": 3
-          },
-          "2026-W36": {
-            "num_equipes": 3
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          },
-          "2026-W38": {
-            "num_equipes": 3
-          },
-          "2026-W39": {
-            "num_equipes": 3
-          },
-          "2026-W40": {
-            "num_equipes": 3
-          },
-          "2026-W41": {
-            "num_equipes": 3
-          },
-          "2026-W42": {
-            "num_equipes": 3
-          },
-          "2026-W43": {
-            "num_equipes": 3
-          },
-          "2026-W44": {
-            "num_equipes": 3
-          },
-          "2026-W45": {
-            "num_equipes": 3
-          },
-          "2026-W46": {
-            "num_equipes": 3
-          },
-          "2026-W47": {
-            "num_equipes": 3
-          },
-          "2026-W48": {
-            "num_equipes": 3
-          },
-          "2026-W49": {
-            "num_equipes": 3
-          },
-          "2026-W50": {
-            "num_equipes": 3
-          },
-          "2026-W51": {
-            "num_equipes": 3
-          },
-          "2026-W52": {
-            "num_equipes": 3
-          },
-          "2027-W01": {
-            "num_equipes": 3
-          },
-          "2027-W02": {
-            "num_equipes": 3
-          },
-          "2027-W03": {
-            "num_equipes": 3
-          },
-          "2027-W04": {
-            "num_equipes": 3
-          },
-          "2027-W05": {
-            "num_equipes": 3
-          },
-          "2027-W06": {
-            "num_equipes": 3
-          },
-          "2027-W07": {
-            "num_equipes": 3
-          },
-          "2027-W08": {
-            "num_equipes": 3
-          },
-          "2027-W09": {
-            "num_equipes": 3
-          },
-          "2027-W10": {
-            "num_equipes": 3
-          },
-          "2027-W11": {
-            "num_equipes": 3
-          },
-          "2027-W12": {
-            "num_equipes": 3
-          },
-          "2027-W13": {
-            "num_equipes": 3
-          },
-          "2027-W14": {
-            "num_equipes": 3
-          },
-          "2027-W15": {
-            "num_equipes": 3
-          },
-          "2027-W16": {
-            "num_equipes": 3
-          },
-          "2027-W17": {
-            "num_equipes": 3
-          },
-          "2027-W18": {
-            "num_equipes": 3
-          },
-          "2027-W19": {
-            "num_equipes": 3
-          },
-          "2027-W20": {
-            "num_equipes": 3
-          },
-          "2027-W21": {
-            "num_equipes": 3
-          },
-          "2027-W22": {
-            "num_equipes": 3
-          },
-          "2027-W23": {
-            "num_equipes": 3
-          },
-          "2026-W53": {
-            "num_equipes": 3
-          }
-        }
+        "equipes": {
+          "n_inicial": 2,
+          "n_max": 3,
+          "taxa_mobilizacao": 0.2,
+          "taxa_desmobilizacao": 3.0
+        },
+        "descricao": "CONSTRUÇÃO DE CORPO DE ATERRO COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE",
+        "unidade": "M3"
       },
       {
         "item_id": "eap-1_10",
-        "semanas": {
-          "2027-W18": {
-            "num_equipes": 1
-          },
-          "2027-W19": {
-            "num_equipes": 1
-          },
-          "2027-W20": {
-            "num_equipes": 1
-          },
-          "2027-W21": {
-            "num_equipes": 1
-          },
-          "2027-W22": {
-            "num_equipes": 1
-          },
-          "2027-W23": {
-            "num_equipes": 1
-          }
-        }
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
+        },
+        "descricao": "COMPACTAÇÃO DE CAMADA FINAL DE ATERRO DE ROCHA",
+        "unidade": "M3"
       }
     ],
     "bdi": {
@@ -1213,7 +389,7 @@
           },
           {
             "codigo": "P0075",
-            "funcao": "T\u00c9CNICO DE PLANEJAMENTO",
+            "funcao": "TÉCNICO DE PLANEJAMENTO",
             "quantidade": 1,
             "salario_base": 14000.0,
             "custo_unitario": 14000.0,
@@ -1237,21 +413,21 @@
           },
           {
             "codigo": "P0073",
-            "funcao": "MEC\u00c2NICO",
+            "funcao": "MECÂNICO",
             "quantidade": 2,
             "salario_base": 7200.0,
             "custo_unitario": 14493.6
           },
           {
             "codigo": "P0011",
-            "funcao": "AUXILIAR MEC\u00c2NICO",
+            "funcao": "AUXILIAR MECÂNICO",
             "quantidade": 2,
             "salario_base": 2217.6,
             "custo_unitario": 4463.06
           },
           {
             "codigo": "P0086",
-            "funcao": "ENCARREGADO DE MEC\u00c2NICA",
+            "funcao": "ENCARREGADO DE MECÂNICA",
             "quantidade": 1,
             "salario_base": 4485.36,
             "custo_unitario": 9027.16
@@ -1279,7 +455,7 @@
           },
           {
             "codigo": "P0034",
-            "funcao": "MOTORISTA DE CAMINH\u00c3O COMBOIO",
+            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
             "quantidade": 2,
             "salario_base": 4001.71,
             "custo_unitario": 8053.44
@@ -1300,7 +476,7 @@
           },
           {
             "codigo": "P0063",
-            "funcao": "AUXILIAR DE SERVI\u00c7OS GERAIS",
+            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
             "quantidade": 2,
             "salario_base": 2043.36,
             "custo_unitario": 4112.26
@@ -1314,14 +490,14 @@
           },
           {
             "codigo": "P0089",
-            "funcao": "MOTORISTA DE CAMINH\u00c3O PRANCHA",
+            "funcao": "MOTORISTA DE CAMINHÃO PRANCHA",
             "quantidade": 1,
             "salario_base": 4002.24,
             "custo_unitario": 8054.51
           },
           {
             "codigo": "P0036",
-            "funcao": "MOTORISTA DE \u00d4NIBUS",
+            "funcao": "MOTORISTA DE ÔNIBUS",
             "quantidade": 4,
             "salario_base": 2656.5,
             "custo_unitario": 5346.71
@@ -1342,7 +518,7 @@
         "mao_obra": [
           {
             "codigo": "P0057",
-            "funcao": "TOP\u00d3GRAFO",
+            "funcao": "TOPÓGRAFO",
             "quantidade": 2,
             "salario_base": 18000.0,
             "custo_unitario": 18000.0,
@@ -1357,7 +533,7 @@
           },
           {
             "codigo": "P0058",
-            "funcao": "SALA T\u00c9CNICA",
+            "funcao": "SALA TÉCNICA",
             "quantidade": 1,
             "salario_base": 12000.0,
             "custo_unitario": 12000.0,
@@ -1387,7 +563,7 @@
           },
           {
             "codigo": "P0009",
-            "funcao": "AUXILIAR DE LABORAT\u00d3RIO",
+            "funcao": "AUXILIAR DE LABORATÓRIO",
             "quantidade": 1,
             "salario_base": 2217.6,
             "custo_unitario": 4463.06,
@@ -1402,7 +578,7 @@
         "mao_obra": [
           {
             "codigo": "P0056",
-            "funcao": "T\u00c9CNICO DE SEGURAN\u00c7A DO TRABALHO",
+            "funcao": "TÉCNICO DE SEGURANÇA DO TRABALHO",
             "quantidade": 2,
             "salario_base": 7500.0,
             "custo_unitario": 7500.0,
@@ -1425,7 +601,7 @@
           },
           {
             "codigo": "MO-BIOLOGO",
-            "funcao": "BI\u00d3LOGO DE CAMPO",
+            "funcao": "BIÓLOGO DE CAMPO",
             "quantidade": 1,
             "salario_base": 7500.0,
             "custo_unitario": 7500.0,
@@ -1433,7 +609,7 @@
           },
           {
             "codigo": "MO-BOTANICO",
-            "funcao": "BOT\u00c2NICO DE CAMPO",
+            "funcao": "BOTÂNICO DE CAMPO",
             "quantidade": 1,
             "salario_base": 7500.0,
             "custo_unitario": 7500.0,
@@ -1455,23 +631,8 @@
       "custo_indireto": 19584539.37,
       "custo_total": 66451872.72,
       "preco_venda": 76961261.88
-    },
-    "bdi_lucro_impostos": 0.29974983
+    }
   },
   "_schema_version": "v3",
-  "_schema_upgraded_from": "v2",
-  "mob_schedule": {
-    "mobilizacao": {
-      "inicio": "2026-06-01",
-      "fim": "2026-06-01"
-    },
-    "operacao": {
-      "inicio": "2026-06-01",
-      "fim": "2027-06-27"
-    },
-    "desmobilizacao": {
-      "inicio": "2027-06-27",
-      "fim": "2027-06-27"
-    }
-  }
+  "_schema_upgraded_from": "v2"
 }

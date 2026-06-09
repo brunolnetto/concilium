@@ -102,6 +102,7 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     out["projeto"] = meta.get("projeto", "")
     out["data_inicio"] = meta.get("data_inicio", "")
     out["data_termino"] = meta.get("data_termino", "")
+    # localizacao aceita string ("Brasil") ou {lat, lng} — ambos propagados downstream
     out["localizacao"] = meta.get("localizacao", "")
     out["regime_trabalho"] = meta.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6})
     out["mode"] = meta.get("mode", "benchmark_config")
@@ -113,20 +114,32 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     # 3. rcpsp_spec (inalterado)
     out["rcpsp_spec"] = spec.get("rcpsp_spec") or {}
 
-    # 4. cronograma: itens v2 → atividades v1 (+ quantitativo da eap, necessário para escala)
+    # 4. cronograma: propaga formato compacto E constrói atividades v1 (retrocompat)
+    # Formato compacto: {item_id, equipes: {n_inicial, n_max, taxa_mob, taxa_demob}}
+    # duration_weeks é calculado em skill-04 a partir de Q/P — não armazenado na spec.
     atividades = []
+    cron_compacto = []
     for item in spec.get("cronograma") or []:
         item_id = item["item_id"]
         eap_item = eap_by_id.get(item_id, {})
+        compact: dict[str, Any] = {"item_id": item_id}
+        if "equipes" in item:
+            compact["equipes"] = item["equipes"]
+        if "producao_diaria" in item:
+            compact["producao_diaria"] = item["producao_diaria"]
+        cron_compacto.append(compact)
         atividades.append(
             {
                 "item_id": item_id,
                 "producao_diaria": item.get("producao_diaria", 0.0),
                 "quantitativo": eap_item.get("quantitativo", 0.0),
                 "semanas": item.get("semanas") or {},
+                "equipes": item.get("equipes"),
             }
         )
     out["cronograma"] = {"atividades": atividades}
+    # Expõe a lista compacta direta para _norm_ref_build_rcpsp_activities
+    out["cronograma_compacto"] = cron_compacto
 
     # 5. planejamento: flat v2 → subtotal aninhado v1
     planejamento_detalhado = []
@@ -351,8 +364,14 @@ class BenchmarkSpecLoader:
             inputs_escopo={
                 "nome": ref.get("projeto", slug),
                 "tipo_obra": "terraplenagem",
+                # localizacao: string legada OU {lat, lng} normalizado. coordenadas é
+                # alias retrocompat — se localizacao já é {lat,lng}, reusa o mesmo dict.
                 "localizacao": ref.get("localizacao", "Brasil"),
-                "coordenadas": ref.get("coordenadas", {"lat": 0, "lng": 0}),
+                "coordenadas": (
+                    ref.get("localizacao")
+                    if isinstance(ref.get("localizacao"), dict)
+                    else ref.get("coordenadas", {"lat": 0.0, "lng": 0.0})
+                ),
                 "regime_trabalho": ref.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6}),
                 "data_inicio": data_ini,
                 "data_termino": data_fim,

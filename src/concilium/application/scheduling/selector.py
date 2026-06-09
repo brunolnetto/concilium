@@ -119,7 +119,12 @@ def explore_schedules(
             from .cpsat_scheduler import CpSatScheduler  # lazy — avoids import cost
 
             timeout = float(strategy.timeout_seconds) if strategy and strategy.timeout_seconds else 60.0
-            cpsat = CpSatScheduler(timeout_seconds=timeout, horizon_weeks=deadline_weeks)
+            # Horizonte generoso: deadline é META (avaliada via quality_score), não
+            # restrição rígida. Σ durações garante viabilidade para qualquer DAG;
+            # caminho crítico que excede o deadline é reportado, não causa INFEASIBLE.
+            _sum_dur = sum(int(getattr(a, "duration_weeks", 0) or 0) for a in dag.activities)
+            horizon = max(deadline_weeks, _sum_dur + deadline_weeks)
+            cpsat = CpSatScheduler(timeout_seconds=timeout, horizon_weeks=horizon)
             sched = cpsat.schedule(dag=dag, pool=pool)
             if sched.feasible:
                 score = sched.metrics.quality_score(deadline_weeks=score_deadline)

@@ -1,11 +1,15 @@
 # NEP-035: Decomposição Causal da Eficiência η_s × η_p × η_w e Hierarquia de Observabilidade
 
-**Status:** Em Andamento  
+**Status:** Implementado ✅ _(auditado 2026-06-08)_  
 **Prioridade:** 🔴 Crítico  
 **Área:** Arquitetura e Skills  
 **Tipo:** Bug + Feature + Governança  
 **Esforço:** XL  
 **Identificado em:** 2026-06-01
+
+> **Nota de auditoria (2026-06-08):** Modelo de dados implementado — `DistribuicaoSemanal` contém
+> `eta_s`, `eta_p`, `eta_w`, `q_max_celula`, `perda_fisica` em `canonical.py`. Documentação
+> desatualizada em relação ao código.
 
 ---
 

@@ -1,0 +1,40 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																					
+																																																								
+															EQUIPAMENTOS							R$ 123.500,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																									
+															MÃO DE OBRA							R$ 31.000,00									R$ 246.900,00																									
+															VERBAS							R$ 92.400,00																																		
+																																																								
+																																																								
+EQUIPAMENTOS																																																								
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSP					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES				
+																																																								
+1		MOBILIZAÇÃO DE EQUIPAMENTOS PARTE 1													VB		 10,00 							 GOIANIA  					 SANTA HELENA (GO) 					 434,00 						 12,50 						 54.250,00 										
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS PARTE 1													VB		 10,00 							 SANTA HELENA (GO) 					 GOIANIA  					 434,00 						 12,50 						 54.250,00 										
+3		MOBILIZAÇÃO DE CONTAINER													VB		 5,00 							 RIO VERDE (GO) 					 SANTA HELENA (GO) 					 98,40 						 15,24 						 7.500,00 										
+4		DESMOBILIZAÇÃO DE CONTAINER													VB		 5,00 							 SANTA HELENA (GO) 					 RIO VERDE (GO) 					 98,40 						 15,24 						 7.500,00 										
+																																														 123.500,00 										
+																																																								
+MÃO DE OBRA																																																								
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																		
+																																																								
+Equipe											31			GOIANIA						SANTA HELENA (GO)						 500 						15.500,00																								
+Equipe											31			SANTA HELENA (GO)						GOIANIA						 500 						15.500,00						  																		
+																																																								
+																																 31.000,00 																								
+																																																								
+DESPESAS COM VIAGEM																																																								
+						QUANT	CUSTO UNIT		MÊS 1			MÊS 2			MÊS 3			MÊS 4			MÊS 5			MÊS 6			MÊS 7			MÊS 8			MÊS 9			MÊS 10			MÊS 11			MÊS 12			MÊS 13			MÊS 14			MÊS 15			CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						 2,00 	 1.500,00 					x																																										 3.000,00 		
+ENCARREGADO (60 dias)						 1,00 	 1.500,00 					x																																										 1.500,00 		
+ENGENHEIRO (30 dias)						 3,00 	 1.500,00 		x			x			x																																							 13.500,00 		
+EQUIPE INDIRETA (30 dias)						 6,00 	 800,00 		x			x			x																																							 14.400,00 		
+EQUIPE DIRETA (60 dias)						 37,50 	 800,00 					x						x																																				 60.000,00 		
+																																																						 -   		
+ 92.400,00 																																																								
+

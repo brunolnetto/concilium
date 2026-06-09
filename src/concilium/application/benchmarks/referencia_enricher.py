@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .cronograma_parser import CronogramaParser
 from .cpu_mapper import CpuMapper
+from .cronograma_parser import CronogramaParser
 
 
 def _infer_cpu_from_section(section_id: str, item_num: int) -> str:
@@ -29,10 +29,7 @@ def _infer_cpu_from_section(section_id: str, item_num: int) -> str:
     return f"CPU-{section_name}-{item_num:03d}"
 
 
-def _enrich_eap_with_produtividade(
-    eap_items: list[dict],
-    produtividade_path: Path
-) -> None:
+def _enrich_eap_with_produtividade(eap_items: list[dict], produtividade_path: Path) -> None:
     """Enrich EAP items with productivity data from produtividade.txt.
 
     Updates CPU to include productivity information when available.
@@ -50,7 +47,7 @@ def _enrich_eap_with_produtividade(
             if not line:
                 continue
 
-            parts = [p.strip() for p in line.split('\t')]
+            parts = [p.strip() for p in line.split("\t")]
             if len(parts) < 4:
                 continue
 
@@ -59,7 +56,7 @@ def _enrich_eap_with_produtividade(
                 continue
 
             try:
-                prod_str = parts[3].replace('.', '').replace(',', '.')
+                prod_str = parts[3].replace(".", "").replace(",", ".")
                 produtividade_map[item_id] = float(prod_str)
             except (ValueError, IndexError):
                 pass
@@ -80,7 +77,7 @@ def enrich_referencia_with_eap(
     referencia: dict[str, Any],
     cronograma_path: Path,
     project_meta: dict[str, Any] | None = None,
-    contexto_id: str = "mendeslobo"
+    contexto_id: str = "mendeslobo",
 ) -> dict[str, Any]:
     """Enrich referencia with EAP structure from cronograma.txt.
 
@@ -177,15 +174,17 @@ def enrich_referencia_with_eap(
     if cpu_mapper:
         stats = cpu_mapper.get_mapping_stats()
         if stats["total_items_processed"] > 0:
-            print(f"CPU mapping: {stats['successfully_mapped']}/{stats['total_items_processed']} items mapped "
-                  f"({stats['success_rate']:.1f}% success rate)")
+            print(
+                f"CPU mapping: {stats['successfully_mapped']}/{stats['total_items_processed']} items mapped "
+                f"({stats['success_rate']:.1f}% success rate)"
+            )
 
     # Build cronograma in spec format (list of items with scheduling data)
     cronograma = [
         {
             "item_id": item["item_id"],
             "producao_diaria": item.get("producao_diaria", 0.0),
-            "semanas": {}  # Could be enriched with actual week data from cronograma
+            "semanas": {},  # Could be enriched with actual week data from cronograma
         }
         for item in final_eap
         if "." in item["item_id"]  # Only leaf items, not section headers
@@ -274,12 +273,14 @@ def _extract_eap_from_cpus_txt(cpus_path: Path) -> list[dict[str, Any]]:
                     if item_num > 1:
                         prev_id = f"{item_id.split('.')[0]}.{item_num - 1}"
                         if prev_id in seen_ids:
-                            eap_item["predecessores"].append({
-                                "item_id": prev_id,
-                                "tipo": "FS",
-                                "lag": 0,
-                                "completion_threshold_pct": 1.0,
-                            })
+                            eap_item["predecessores"].append(
+                                {
+                                    "item_id": prev_id,
+                                    "tipo": "FS",
+                                    "lag": 0,
+                                    "completion_threshold_pct": 1.0,
+                                }
+                            )
 
                 eap_items.append(eap_item)
                 ordem += 1
@@ -317,10 +318,7 @@ def enrich_benchmark_referencia(benchmark_dir: Path) -> bool:
     if cronograma_path.exists() and cronograma_path.stat().st_size > 0:
         try:
             referencia = enrich_referencia_with_eap(referencia, cronograma_path)
-            referencia_path.write_text(
-                json.dumps(referencia, indent=2, ensure_ascii=False),
-                encoding="utf-8"
-            )
+            referencia_path.write_text(json.dumps(referencia, indent=2, ensure_ascii=False), encoding="utf-8")
             print(f"✓ Enriched {benchmark_dir.name} with {len(referencia['spec']['eap'])} EAP items (cronograma)")
             return True
         except Exception as e:
@@ -351,15 +349,11 @@ def enrich_benchmark_referencia(benchmark_dir: Path) -> bool:
 
                 referencia["spec"]["eap"] = eap_items
                 referencia["spec"]["cronograma"] = [
-                    {"item_id": item["item_id"], "producao_diaria": 0.0, "semanas": {}}
-                    for item in eap_items
+                    {"item_id": item["item_id"], "producao_diaria": 0.0, "semanas": {}} for item in eap_items
                 ]
                 referencia["spec"]["rcpsp_spec"] = {}
 
-                referencia_path.write_text(
-                    json.dumps(referencia, indent=2, ensure_ascii=False),
-                    encoding="utf-8"
-                )
+                referencia_path.write_text(json.dumps(referencia, indent=2, ensure_ascii=False), encoding="utf-8")
                 print(f"✓ Enriched {benchmark_dir.name} with {len(eap_items)} EAP items (cpus.txt)")
                 return True
 

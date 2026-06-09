@@ -146,6 +146,8 @@ class CpSatScheduler:
         # ── FS precedences from ActivityDAG (ADR-081: completion_threshold_pct) ──
         for pred_id, succ_id in dag.precedence:
             theta = dag.get_threshold(pred_id, succ_id)
+            if pred_id not in acts or succ_id not in acts:
+                continue
             if theta >= 1.0:
                 model.add(starts[succ_id] >= ends[pred_id])
             else:
@@ -153,7 +155,11 @@ class CpSatScheduler:
                 model.add(starts[succ_id] >= starts[pred_id] + lag)
 
         # ── extended precedences (SS, FF, FS+lag) ────────────────────────
-        for ep in extended_precedences or []:
+        # NEP-031 L4: inclui extended_precedences do DAG (SS/FF da EAP) e
+        # quaisquer precedências extra passadas diretamente pelo chamador.
+        all_extended = list(getattr(dag, "extended_precedences", None) or [])
+        all_extended.extend(extended_precedences or [])
+        for ep in all_extended:
             pred_id, succ_id = ep.pred, ep.succ
             lag = ep.lag
             if ep.tipo == "FS":

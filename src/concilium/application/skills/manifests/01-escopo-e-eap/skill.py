@@ -102,7 +102,7 @@ def _build_atividades_for_item(eap_item: EapItem, raw_ativs: list | None, valida
             Atividade(
                 atividade_id=f"{eap_item.item_id}-atv-1",
                 eap_item_id=eap_item.item_id,
-                descricao=eap_item.descricao,
+                descricao=eap_item.descricao or f"Atividade {eap_item.item_id}",
                 fracao_quantitativo=1.0,
                 quantitativo_atividade=eap_item.quantitativo,
                 cpu_id=eap_item.cpu_id,

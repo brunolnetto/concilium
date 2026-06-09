@@ -1,0 +1,51 @@
+EQUIPE:			ESCAVAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 36.689,65					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 252.253,53			EQUIPAMENTOS		R$ 215.563,88					2,88						 726.490,16 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0032			MOTORISTA DE CAMINHÃO BASCULANTE	P0032	4	 R$3.036,00 		D	 759,00 								 2.314,95 		 6.109,95 	
+P0040			OPERADOR DE ESCAVADEIRA	P0040	1	 R$4.070,88 		D	 1.017,72 								 3.104,05 		 8.192,65 	
+P0001			AJUDANTE	P0001	1	 R$2.016,00 		D	 504,00 								 1.537,20 		 4.057,20 	
+		TOTAL			6	 18.230,88 		 4.557,72 									 13.901,05 		 36.689,65 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0002			Caminhão basculante 14 m³	E0002	4	 25.000,00 			km		 4.485,44 			s1	 2,50 			 12.020,97 	 37.020,97 	 148.083,88 
+E0012			ESCAVADEIRA HIDRÁULICA SOBRE ESTEIRA 22T	E0012	1	 38.000,00 			h		 200,00 			s1	 22,00 			 29.480,00 	 67.480,00 	 67.480,00 
+			TOTAL		5	 138.000,00 												 77.563,88 		 215.563,88 
+																				
+																				
+EQUIPE:			ATERRO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 49.991,47					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 313.065,75			EQUIPAMENTOS		R$ 263.074,29					1,68						 525.950,46 	
+						VERBAS														
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0043			OPERADOR DE MOTONIVELADORA	P0043	1	 R$4.070,88 		D	 1.017,72 								 3.104,05 		 8.192,65 	
+P0049			OPERADOR DE TRATOR DE PNEU	P0049	1	 R$2.442,00 		D	 610,50 								 1.862,03 		 4.914,53 	
+P0033			MOTORISTA DE CAMINHÃO PIPA	P0033	2	 R$3.187,80 		D	 796,95 								 2.430,70 		 6.415,45 	
+P0046			OPERADOR DE ROLO COMPACTADOR	P0046	2	 R$2.442,00 		D	 610,50 								 1.862,03 		 4.914,53 	
+P0029			GREDISTA	P0029	1	 R$3.036,00 		D	 759,00 								 2.314,95 		 6.109,95 	
+P0001			AJUDANTE	P0001	2	 R$2.016,00 		D	 504,00 								 1.537,20 		 4.057,20 	
+		TOTAL			9	 24.840,48 		 6.210,12 									 18.940,87 		 49.991,47 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0018			MOTONIVELADORA 140K	E0018	1	 40.000,00 			h		 200,00 			s1	 22,00 			 29.480,00 	 69.480,00 	 69.480,00 
+E0031			TRATOR DE PNEUS COM GRADE	E0031	1	 22.000,00 			h		 200,00 			s1	 18,00 			 24.120,00 	 46.120,00 	 46.120,00 
+E0011			CAMINHÃO PIPA 15.000 L	E0011	2	 25.000,00 			KM		 2.400,00 			s1	 7,00 			 2.297,14 	 27.297,14 	 54.594,29 
+E0025			ROLO COMPACTADOR PÉ DE CARNEIRO 10T	E0025	2	 25.000,00 			h		 200,00 			s1	 16,00 			 21.440,00 	 46.440,00 	 92.880,00 
+			TOTAL		6	 162.000,00 												 101.074,29 		 263.074,29 

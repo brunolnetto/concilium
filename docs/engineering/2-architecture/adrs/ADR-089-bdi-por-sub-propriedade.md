@@ -1,6 +1,8 @@
 # ADR-089 — BDI por Sub-propriedade de Insumo: Diesel como Propriedade de Equipamento com Taxa Própria
 
-**Status:** Aceito
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** BDI diferenciado por `(categoria_insumo, propriedade)` implementado em `CuboAnaliticoBuilder`.
 **Data:** 2026-05-29
 **Autores:** Bruno Peixoto / Concilium
 **Amend:** ADR-023 (BDI Diferenciado por Categoria) — mantém as taxas, refatora o mapeamento

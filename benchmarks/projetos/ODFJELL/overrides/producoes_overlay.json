@@ -1,0 +1,105 @@
+{
+  "CPU-DREN-BOCA-BTCC-350X350-PROD-001": {
+    "custo_hora_total_referencia": 169.34,
+    "valor_horario": 16.07
+  },
+  "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000-PROD-001": {
+    "custo_hora_total_referencia": 445.77
+  },
+  "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001": {
+    "custo_hora_total_referencia": 564.17
+  },
+  "CPU-TERRA-COMPAC-PN-PROD-001": {
+    "custo_hora_total_referencia": 564.17
+  },
+  "CPU-ODFJELL-CP-110X110-PROD-001": {
+    "valor_horario": 11.5,
+    "custo_hora_total_referencia": 169.34,
+    "id": "CPU-ODFJELL-CP-110X110-PROD-001",
+    "codigo": "CPU-ODFJELL-CP-110X110-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-PV-H200-PROD-001": {
+    "valor_horario": 6.0,
+    "custo_hora_total_referencia": 169.34,
+    "id": "CPU-ODFJELL-PV-H200-PROD-001",
+    "codigo": "CPU-ODFJELL-PV-H200-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-PV-H200-PROF-PROD-001": {
+    "valor_horario": 3.5,
+    "custo_hora_total_referencia": 169.34,
+    "id": "CPU-ODFJELL-PV-H200-PROF-PROD-001",
+    "codigo": "CPU-ODFJELL-PV-H200-PROF-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-CR-090X030-PROD-001": {
+    "valor_horario": 8.0,
+    "custo_hora_total_referencia": 169.34,
+    "id": "CPU-ODFJELL-CR-090X030-PROD-001",
+    "codigo": "CPU-ODFJELL-CR-090X030-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-BL-100X100-PROD-001": {
+    "valor_horario": 4.5,
+    "custo_hora_total_referencia": 169.34,
+    "id": "CPU-ODFJELL-BL-100X100-PROD-001",
+    "codigo": "CPU-ODFJELL-BL-100X100-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-PEAD-DN100-PROD-001": {
+    "valor_horario": 333.5,
+    "custo_hora_total_referencia": 169.34,
+    "id": "CPU-ODFJELL-PEAD-DN100-PROD-001",
+    "codigo": "CPU-ODFJELL-PEAD-DN100-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-PEAD-DN600-PROD-001": {
+    "valor_horario": 3.3,
+    "custo_hora_total_referencia": 285.52,
+    "id": "CPU-ODFJELL-PEAD-DN600-PROD-001",
+    "codigo": "CPU-ODFJELL-PEAD-DN600-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-CLP-600-PROD-001": {
+    "valor_horario": 0.24,
+    "custo_hora_total_referencia": 169.34,
+    "id": "CPU-ODFJELL-CLP-600-PROD-001",
+    "codigo": "CPU-ODFJELL-CLP-600-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  },
+  "CPU-ODFJELL-DISSIPADOR-PROD-001": {
+    "valor_horario": 0.24,
+    "custo_hora_total_referencia": 151.37,
+    "id": "CPU-ODFJELL-DISSIPADOR-PROD-001",
+    "codigo": "CPU-ODFJELL-DISSIPADOR-PROD-001",
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
+  }
+}

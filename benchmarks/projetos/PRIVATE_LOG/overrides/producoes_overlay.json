@@ -1,0 +1,14 @@
+{
+  "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-PROD-001": {
+    "custo_hora_total_referencia": 731.74
+  },
+  "CPU-DIVER-ATI-007-PROD-001": {
+    "custo_hora_total_referencia": 426.88
+  },
+  "CPU-TERRA-ATI-017-PROD-001": {
+    "custo_hora_total_referencia": 800.5
+  },
+  "CPU-SANEA-ATI-048-PROD-001": {
+    "custo_hora_total_referencia": 209.15
+  }
+}

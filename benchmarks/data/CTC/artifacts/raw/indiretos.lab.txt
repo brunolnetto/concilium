@@ -1,0 +1,13 @@
+EQUIPE:			LABORATORIO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 21.083,28					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 21.083,28			EQUIPAMENTOS		R$ 0,00					4,00						 84.333,10 	
+						VERBAS		R$ 0,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0030	PJ		Laboratorista	P0030	1	 R$12.000,00 			 -   			J	 2.100,00 				 -   		 14.100,00 	
+P0009			Auxiliar de laboratório	P0009	1	 R$2.231,08 		D	 557,77 			J	 2.800,00 				 1.394,43 		 6.983,28 	
+		TOTAL			2	 14.231,08 		 557,77 				 4.900,00 					 1.394,43 		 21.083,28 	

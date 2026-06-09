@@ -167,7 +167,9 @@ def _accumulate_equipes(equipes_diretas: list) -> dict[str, float]:
                 totals["materiais"] += getattr(equipe, "custo_material_mensal", 0.0) * fator
 
     # ADR-091: Multiplicar custo_total por num_equipes_base para agregação correta
-    totals["total"] = sum(equipe.custo_total * max(1, getattr(equipe, "num_equipes_base", 1) or 1) for equipe in equipes_diretas)
+    totals["total"] = sum(
+        equipe.custo_total * max(1, getattr(equipe, "num_equipes_base", 1) or 1) for equipe in equipes_diretas
+    )
     return totals
 
 

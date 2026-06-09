@@ -1,0 +1,86 @@
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 144.935,00					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 530.325,90			EQUIPAMENTOS		R$ 151.690,00					8,30						 4.401.705,00 	
+						VERBAS		R$ 233.700,90												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		Administrativo	P0013	1	 R$6.500,00 			 -   			J	 2.100,00 				 -   		 8.600,00 	
+P0006			Auxiliar administrativo	P0006	1	 R$2.625,00 		D	 656,25 			J	 2.300,00 				 1.640,63 		 7.221,88 	
+P0018	PJ		Encarregado Geral	P0018	1	 R$13.000,00 			 -   			J	 2.100,00 				 -   		 15.100,00 	
+P0020			Encarregado de frente	P0020		 R$3.392,40 		D	 848,10 			J	 2.300,00 				 -   		 -   	
+P0072			Apontador	P0072	4	 R$2.100,00 		D	 525,00 			J	 2.300,00 				 1.312,50 		 6.237,50 	
+P0004			Apontador lider	P0004	1	 R$3.800,00 		D	 950,00 			J	 2.300,00 				 2.375,00 		 9.425,00 	
+P0027	PJ		Gerente de contrato	P0027		 R$21.000,00 			 -   			J	 2.100,00 				 -   		 -   	
+P0024	PJ		Engenheiro Civil	P0024	1	 R$17.000,00 			 -   			J	 2.100,00 				 -   		 19.100,00 	
+P0034			Motorista de Caminhão Comboio	P0034	1	 R$3.130,00 		D	 782,50 			J	 2.300,00 				 1.956,25 		 8.168,75 	
+P0073			Mecânico	P0073	1	 R$7.000,00 		D	 1.750,00 			J	 2.300,00 				 4.375,00 		 15.425,00 	
+P0036			Motorista de ônibus	P0036	2	 R$2.656,50 		D	 664,13 			J	 2.300,00 				 1.660,31 		 7.280,94 	
+P0001			Ajudante	P0001	1	 R$2.184,00 		D	 546,00 			J	 2.300,00 				 1.365,00 		 6.395,00 	 COMBOIO 
+P0048			Operador de trator de esteiras	P0048	0,5	 R$4.200,00 		D	 1.050,00 			J	 2.300,00 				 2.625,00 		 10.175,00 	 PARA ESPALHAMENTO 
+P0063			Auxiliar de Serviços Gerais	P0063	2	 R$1.680,00 		D	 420,00 			J	 2.300,00 				 1.050,00 		 5.450,00 	
+		TOTAL			16,5	 74.412,00 		 9.478,00 				 37.350,00 					 23.695,00 		 144.935,00 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0020			Ônibus com capacidade para 52 passageiros 	E0020	2	 30.000,00 			km		 3.600,00 			S1	 9,00 			 2.468,00 	 32.468,00 	 64.936,00 
+E0035			Veículo leve 	E0035	3	 3.500,00 			km		 3.600,00 			S1	 9,00 			 2.468,00 	 5.968,00 	 17.904,00 
+E0007			Caminhão comboio	E0007	1	 25.989,00 			km		 3.600,00 			S1	 4,00 			 5.553,00 	 31.542,00 	 31.542,00 
+E0032			TRATOR DE ESTEIRAS 20T	E0032	0,5	 45.000,00 			H		 200,00 			s1	 24,00 			 29.616,00 	 74.616,00 	 37.308,00 
+E0011			Caminhão Pipa 15.000 l	E0011		 24.492,00 			km		 3.600,00 			S1	 4,00 			 5.553,00 	 30.045,00 	 -   
+			TOTAL		6,5	 118.989,00 												 32.701,00 		 151.690,00 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		CONTEINER 6X2,4X2,6 PARA BANHEIRO			VB		 2,00 			 2.300,00 					 4.600,00 				3WC,03CH,01MIC,02LAV (COM LIMPEZA SEMANAL)	
+2		CONTEINER VESTIÁRIO			VB		 2,00 			 1.800,00 					 3.600,00 					
+3		BANHEIRO QUÍMICO (higienização, deslocamento, descarte)			VB		 2,00 			 2.000,00 					 4.000,00 					
+4		VIGILÂNCIA ARMADA			VB		 1,00 			 15.000,00 					 15.000,00 					
+5		BEBEDOURO			VB		 1,00 			 1.100,00 					 1.100,00 					
+6		ÁGUA MINERAL 20L			VB		 7.164,00 			 1,00 					 7.164,00 					
+7		ALUGUEL DE CONTAINER 			VB		 4,00 			 1.800,00 					 7.200,00 				ADM, LAB, TOP, QSMS	
+8		MATERIAL DE LIMPEZA			VB		 1,00 			 900,00 					 900,00 					
+9		MATERIAL DE EXPEDIENTE			VB		 1,00 			 300,00 					 300,00 					
+10		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+11		LOCAÇÃO DE IMPRESSORA			VB		 1,00 			 900,00 					 900,00 					
+12		VISITA GERÊNCIA			VB		 1,00 			 2.500,00 					 2.500,00 					
+13		ENERGIA ELÉTRICA - ALOJAMENTO			VB		 13,00 			 1.000,00 					 13.000,00 					
+14		ÁGUA - ALOJAMENTO			VB		 13,00 			 600,00 					 7.800,00 					
+15		ALUGUEL DE IMÓVEIS			VB		 13,00 			 5.000,00 					 65.000,00 					
+16		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 51,00 			 120,00 					 6.120,00 					
+17		ALUGUEL GERADOR			UNID.		 1,00 			 6.000,00 					 6.000,00 				Gerador DCCOGG889 53KVA	
+18		GERADOR - DIESEL			UNID.		 1.680,00 			 6,17 					 10.365,60 					
+															 155.849,60 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕS PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 20.000,00 					 20.000,00 				ENERGIA/BRITA/MADEIRA/TELHA/CIMENTO/FOSSA/CASTELO DÁGUA	
+2		SEGURO GARANTIA			VB		 1,00 			 5.000,00 					 5.000,00 					
+3		OUTORGA DE AGUA			VB		 1,00 			 7.000,00 					 7.000,00 				Orçamos 3000	
+4		ESTRUTURA DE CAPTAÇÃO DE AGUA (POÇO ARTESIANO)			VB		 1,00 			 20.000,00 					 20.000,00 				Ebenezer Perfuraçao de Poços Artesiano - Serviços de purificação de água em Serra, ES - 7.000,00	
+5		ESTRUTURA DE VIVENCIA (TENDAS 6x6, CADEIRAS)			VB		 1,00 			 6.000,00 					 6.000,00 					
+6		COMPUTADOR			UNID.		 8,00 			 4.000,00 					 32.000,00 					
+7		FERRAMENTAS			VB		 1,00 			 15.000,00 					 15.000,00 					
+8		EPI			VB		 1,00 			 211.724,58 					 211.724,58 					
+9		EXAMES/TREINAMENTOS			VB		 1,00 			 77.000,00 					 77.000,00 					
+10		MOBILIA ALOJAMENTO			VB		 13,00 			 4.500,00 					 58.500,00 					
+11		MOBILIA ESCRITORIO			VB		 4,00 			 2.000,00 					 8.000,00 					
+															 55.448,74 					
+																				
+MATERIAL DE DESGASTE																				
+ITEM		DESCRIÇÃO			UNID.		QUANT	TEMPO		PREÇO UNITÁRIO					VALOR					
+1		Limpeza mecanizada de camada vegetal (20cm)			VB		 8,00 	 1,40 		 1.500,00 					 16.800,00 					
+2		TRANSPORTE DE MATERIAL DE LIMPEZA E ESPALHAMENTO (1KM)			VB		 1,00 	 2,46 		 1.500,00 					 3.691,24 					
+3		Escavação de solo mole, Transporte DT MAXIMO 1KM e espalhamento			VB		 1,00 	 2,08 		 1.500,00 					 3.125,00 					
+4		Escavação, carga e transporte de material de 1ª categoria - DT Máximo de 1km			VB		 4,00 	 6,13 		 1.500,00 					 36.750,00 					
+5		JAZIDA			VB		 2,00 	 1,75 		 1.500,00 					 5.250,00 					
+6		Aterro Compactado a 100% PN			VB		 10,00 	 7,13 		 1.500,00 					 106.875,00 					
+7		Desmonte de rocha com escavadeira e rompedor hidráulico			VB		 1,00 	 3,83 		 1.500,00 					 5.750,00 					
+8		Tranporte de material de britagem, DMT 1KM e espalhamento			VB		 1,00 	 3,83 		 1.500,00 					 5.750,00 					
+9		DRENOS			VB		 1,00 	 1,30 		 1.500,00 					 1.950,00 					
+															 22.402,56 					

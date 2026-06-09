@@ -13,9 +13,9 @@ usar raciocínio e compreensão para identificar insights.
 
 from __future__ import annotations
 
-import anthropic
 from dataclasses import dataclass
-from typing import Any
+
+import anthropic
 
 
 @dataclass
@@ -41,14 +41,10 @@ Custos curados diretamente do planejamento Excel original:
 """
 
     total_plan_sem_bdi = sum(
-        item.get("total_sem_bdi", 0)
-        for item in dados_planejamento.values()
-        if isinstance(item, dict)
+        item.get("total_sem_bdi", 0) for item in dados_planejamento.values() if isinstance(item, dict)
     )
     total_plan_com_bdi = sum(
-        item.get("total_com_bdi", 0)
-        for item in dados_planejamento.values()
-        if isinstance(item, dict)
+        item.get("total_com_bdi", 0) for item in dados_planejamento.values() if isinstance(item, dict)
     )
 
     contexto += f"""
@@ -245,10 +241,12 @@ def gerar_relatorio_llm(analise: AnaliseLLMReconciliacao) -> str:
     else:
         linhas.append("  (Análise em progresso)")
 
-    linhas.extend([
-        "",
-        "[PADRÕES IDENTIFICADOS]",
-    ])
+    linhas.extend(
+        [
+            "",
+            "[PADRÕES IDENTIFICADOS]",
+        ]
+    )
 
     if analise.padroes_identificados:
         for padrao in analise.padroes_identificados:
@@ -256,10 +254,12 @@ def gerar_relatorio_llm(analise: AnaliseLLMReconciliacao) -> str:
     else:
         linhas.append("  (Nenhum padrão significativo)")
 
-    linhas.extend([
-        "",
-        "[ANOMALIAS]",
-    ])
+    linhas.extend(
+        [
+            "",
+            "[ANOMALIAS]",
+        ]
+    )
 
     if analise.anomalias:
         for anomalia in analise.anomalias:
@@ -267,10 +267,12 @@ def gerar_relatorio_llm(analise: AnaliseLLMReconciliacao) -> str:
     else:
         linhas.append("  (Nenhuma anomalia detectada)")
 
-    linhas.extend([
-        "",
-        "[HIPÓTESES EXPLICATIVAS]",
-    ])
+    linhas.extend(
+        [
+            "",
+            "[HIPÓTESES EXPLICATIVAS]",
+        ]
+    )
 
     if analise.hipoteses:
         for i, hipotese in enumerate(analise.hipoteses, 1):
@@ -278,10 +280,12 @@ def gerar_relatorio_llm(analise: AnaliseLLMReconciliacao) -> str:
     else:
         linhas.append("  (Nenhuma hipótese gerada)")
 
-    linhas.extend([
-        "",
-        "[RECOMENDAÇÕES]",
-    ])
+    linhas.extend(
+        [
+            "",
+            "[RECOMENDAÇÕES]",
+        ]
+    )
 
     if analise.recomendacoes:
         for i, rec in enumerate(analise.recomendacoes, 1):
@@ -289,19 +293,23 @@ def gerar_relatorio_llm(analise: AnaliseLLMReconciliacao) -> str:
     else:
         linhas.append("  (Nenhuma recomendação)")
 
-    linhas.extend([
-        "",
-        "[ANÁLISE DETALHADA]",
-    ])
+    linhas.extend(
+        [
+            "",
+            "[ANÁLISE DETALHADA]",
+        ]
+    )
 
     if analise.analise_detalhada:
         for paragrafo in analise.analise_detalhada.split("\n"):
             if paragrafo.strip():
                 linhas.append(f"  {paragrafo.strip()}")
 
-    linhas.extend([
-        "",
-        "=" * 100,
-    ])
+    linhas.extend(
+        [
+            "",
+            "=" * 100,
+        ]
+    )
 
     return "\n".join(linhas)

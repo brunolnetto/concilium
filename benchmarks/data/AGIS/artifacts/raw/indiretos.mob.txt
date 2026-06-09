@@ -1,0 +1,62 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																					
+																																																								
+															EQUIPAMENTOS							R$ 341.580,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																									
+															MÃO DE OBRA							R$ 248.880,00									R$ 4.054.600,43																									
+															VERBAS							R$ 3.464.140,43																																		
+																																																								
+																																																								
+EQUIPAMENTOS																																																								
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES				
+																																																								
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 50,00 							 FORTALEZA 					 BATURITE 					 240,00 						 13,00 						 156.000,00 										
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 50,00 							 BATURITE 					 FORTALEZA 					 240,00 						 13,00 						 156.000,00 										
+3		MOB CONTEINER													VB		 9,00 																							 950,00 						 8.550,00 										
+4		DESMOB CONTEINER													VB		 9,00 																							 950,00 						 8.550,00 										
+5		MOB BANHEIRO QUIMICO													VB		 6,00 																							 600,00 						 3.600,00 										
+6		DESMOB BANHEIRO QUIMICO													VB		 6,00 																							 600,00 						 3.600,00 										
+7		MOBILIZAÇÃO DE GERADOR													VB		 1,00 							 FORTALEZA 					 BATURITE 					 240,00 						 11,00 						 2.640,00 										
+8		DESMOBILIZAÇÃO DE GERADOR													VB		 1,00 							 BATURITE 					 FORTALEZA 					 240,00 						 11,00 						 2.640,00 										
+																																																								
+																																																								
+																																														 341.580,00 										
+																																																								
+MÃO DE OBRA																																																								
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																		
+																																																								
+Equipe											146			 FORTALEZA 						 BATURITE 						 850,00 						124.440,00																								
+Equipe											146			 BATURITE 						 FORTALEZA 						850,00						124.440,00						  																		
+																																 248.880,00 																								
+																																																								
+VERBAS																																																								
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES										
+1		INTEGRAÇÃO EQUIPE DIRETA																							VB			 0,17 						 733.355,33 						 122.225,89 						5 DIAS										
+2		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB			 0,10 						 2.632.404,00 						 263.240,40 						3 DIAS										
+																																								 385.466,29 																
+																																																								
+DESPESAS COM VIAGEM																																																								
+							CUSTO UNITÁRIO		MOB			mês 1			mês 2			mês 3			mês 4			mês 5			mês 6			mês 7			mês 8			mês 9			mês 10			mês 11			mês 12			mês 13			mês 14			CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 2.200,00 											x									x									x									X									 8.800,00 		
+ENCARREGADO (60 dias)						2	 4.000,00 								x						x						x						x						x									X						 48.000,00 		
+GERENTE DE CONTRATO (30 dias) 						1	 2.500,00 					X			x			x			x			x			x			x			x			x			x			x			x			X						 32.500,00 		
+EQUIPE DIRETA						92,4	 1.300,00 														X									X									X									X						 480.480,00 		
+EQUIPE INDIRETA						41	 2.000,00 											x									x									x									X									 328.000,00 		
+																																																						 897.780,00 		
+																																																								
+ALIMENTAÇÃO/ SEGURO DE VIDA/CESTA BASICA																																																								
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																																
+EQUIPE 0  - LIMPEZA						 27,00 			 1.847,25 									3,00						 149.627,25 																																
+EQUIPE 1 - ESCAVAÇÃO MAT 1ª CAT						 10,00 			 1.847,25 									10,40						 192.114,00 																																
+EQUIPE 2 - ESCAVAÇÃO MAT 2ª CAT						 16,00 			 1.847,25 									11,70						 345.805,20 																																
+EQUIPE 3 - CARGA DE MAT 3ª CAT						 33,00 			 1.847,25 									10,25						 624.832,31 																																
+EQUIPE 4 - ATERRO						 26,00 			 1.847,25 									11,73						 563.534,40 																																
+EQUIPE 5 - CONSTRUÇÃO DE ATERRO						 13,00 			 1.847,25 									12,00						 288.171,00 																																
+EQUIPE 6 - CAMADA FINAL DE ATERRO DE ROCHA						 7,00 			 1.847,25 									1,30						 16.809,98 																																
+																																																								
+ 2.180.894,14 																																																								
+

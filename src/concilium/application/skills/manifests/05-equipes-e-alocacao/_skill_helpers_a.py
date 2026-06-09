@@ -352,9 +352,16 @@ def _processar_funcoes_item(
     perc_mensalista: float,
     validacoes: list,
 ) -> tuple:
-    """Processa funcoes da composicao e retorna (funcoes_mod, custo_mo)."""
+    """Processa funcoes da composicao.
+
+    Retorna (funcoes_mod, custo_mo_base, custo_encargos) onde:
+    - custo_mo_base   = Σ salario_base × num_pessoas (sem encargos)
+    - custo_encargos  = Σ salario_base × percentual_encargos × num_pessoas
+    NEP-037 D1: separação para reconciliar fe_nec com PU_sbdi (que não inclui encargos).
+    """
     funcoes_mod: list[FuncaoEquipeDireta] = []
-    custo_mo = 0.0
+    custo_mo_base = 0.0
+    custo_encargos = 0.0
     for f in comp.get("funcoes", []):
         insumo = ctx.repo.obter_insumo(f["funcao_id"])
         if not insumo:
@@ -387,6 +394,9 @@ def _processar_funcoes_item(
         )
         enc_field = float(enc_override) if enc_override is not None else perc_horista
         num_p_raw = float(f.get("num_pessoas", 1) or 1)
+        # NEP-037: custo base (sem encargos) e encargos separados por função
+        sal_base_unit = round(sal * (1.0 + float(he or 0.0)), 2)  # salário + HE, sem encargos
+        enc_unit = round(sal * enc_field * (1.0 + float(he or 0.0)), 2)
         # Canônico representa equipe física → int (ex: 0.5 encarregado compartilhado = 1).
         # Custo calculado usa o coeficiente original (float) para precisão financeira.
         funcoes_mod.append(
@@ -398,10 +408,12 @@ def _processar_funcoes_item(
                 percentual_encargos=enc_field,
                 horas_extras_pct=he,
                 custo_mensal_unitario=unit,
+                custo_encargos_mensal_unitario=enc_unit,
             )
         )
-        custo_mo += unit * num_p_raw  # usa float original para custo preciso
-    return funcoes_mod, custo_mo
+        custo_mo_base += sal_base_unit * num_p_raw
+        custo_encargos += enc_unit * num_p_raw
+    return funcoes_mod, custo_mo_base, custo_encargos
 
 
 def _build_comb_validacao(equip_id: str, val_comb_code: str) -> ValidacaoItem:
@@ -643,6 +655,69 @@ def _resolve_prod_lookup(catalogo: dict) -> dict:
     return {p.get("id"): p for p in fonte if p.get("id")}
 
 
+def _calibrar_custos_por_cref(
+    cpu: dict,
+    prod_lookup: dict,
+    horas_dia: float,
+    custo_mo: float,
+    custo_encargos: float,
+    custo_mo_base: float,
+    custo_eq: float,
+    custo_comb: float,
+) -> tuple[float, float, float, float, float]:
+    """NEP-029/S1: recalibra custos mensais usando custo_hora_total_referencia do catálogo.
+
+    Os preços individuais de insumos do catálogo divergem do custo calibrado pela planilha
+    (custo_hora_total_referencia), gerando custo autônomo inconsistente com o pool.
+    Usando precos_unitarios_sbdi como frações e C_ref como base, a equipe autônoma
+    fica alinhada com o pool (mesmo custo_unit_semanal).
+
+    Retorna (custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb) calibrados.
+    Sem alteração quando C_ref ausente ou insumos zerados (fallback silencioso).
+    """
+    prod_id = cpu.get("producao_id_ref") or ""
+    prod = prod_lookup.get(prod_id) or {}
+    C_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
+    if C_ref <= 0.0:
+        return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+
+    sbdi = cpu.get("precos_unitarios_sbdi") or {}
+    pu_mo     = float(sbdi.get("mo",          0.0) or 0.0)
+    pu_eq     = float(sbdi.get("equipamentos", 0.0) or 0.0)
+    pu_diesel = float(sbdi.get("diesel",       0.0) or 0.0)
+    pu_total  = pu_mo + pu_eq + pu_diesel
+    if pu_total <= 0.0:
+        return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+
+    # Custo total por mês calibrado = C_ref × horas_semana × SEMANAS_POR_MES
+    horas_semana = horas_dia * 6  # dias_semana fixo via regime
+    custo_mes_ref = C_ref * horas_semana * SEMANAS_POR_MES
+
+    # Decompor pelas frações do PU_sbdi
+    frac_mo     = pu_mo     / pu_total
+    frac_eq     = pu_eq     / pu_total
+    frac_diesel = pu_diesel / pu_total
+
+    # O PU_sbdi de MO já inclui encargos (B_base × (1+enc)) — manter enc proporcional
+    custo_mo_cal     = custo_mes_ref * frac_mo      # inclui encargos
+    custo_eq_cal     = custo_mes_ref * frac_eq
+    custo_comb_cal   = custo_mes_ref * frac_diesel
+
+    # Derivar custo_mo_base e custo_encargos mantendo a proporção original
+    mo_total_orig = custo_mo if custo_mo > 0 else custo_mo_cal
+    frac_enc = custo_encargos / mo_total_orig if mo_total_orig > 0 else 0.0
+    custo_mo_base_cal   = round(custo_mo_cal * (1.0 - frac_enc), 2)
+    custo_encargos_cal  = round(custo_mo_cal * frac_enc, 2)
+
+    return (
+        round(custo_mo_cal, 2),
+        custo_encargos_cal,
+        custo_mo_base_cal,
+        round(custo_eq_cal, 2),
+        round(custo_comb_cal, 2),
+    )
+
+
 def _setup_dimensionamento_context(
     canonical_in: CanonicalModel,
     inputs: dict,
@@ -683,15 +758,26 @@ def _build_dimensionamento(
             continue
         comp = _build_comp_para_item(cpu, prod_lookup, validacoes)
         item_custom = composicao_customizada.get(item.item_id, {})
-        funcoes_mod, custo_mo = _processar_funcoes_item(
+        funcoes_mod, custo_mo_base, custo_encargos = _processar_funcoes_item(
             comp, item.item_id, item_custom, ctx, perc_horista, perc_mensalista, validacoes
         )
+        # NEP-037: custo_mo para cron = base + encargos (custo_total inalterado)
+        custo_mo = custo_mo_base + custo_encargos
         equips_mod, custo_eq, custo_comb, modo_est = _processar_equipamentos_item(
             comp, item.item_id, item_custom, cpu, horas_dia, dias_uteis, preco_diesel, ctx, validacoes
         )
         _validar_materiais_item(comp, cpu, validacoes)
         # NEP-029 D4: custo de material mensal (MaterialEquipe ou composicao_itens MATERIAL)
         custo_mat = _calc_custo_material_item(comp, cpu, prod_lookup, ctx, horas_dia, dias_uteis)
+
+        # NEP-029/S1: calibrar custos mensais pelo custo_hora_total_referencia do catálogo.
+        # precos_unitarios_sbdi fornece as frações mo/eq/diesel já calculadas pela planilha.
+        # Sem esta calibração, os insumos individuais divergem do C_ref e o custo autônomo
+        # fica ~2.5× menor que o pool, gerando "economia negativa" espúria no painel.
+        custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb = _calibrar_custos_por_cref(
+            cpu, prod_lookup, horas_dia, custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+        )
+
         # NEP-031 L3: custo de mob/desmob por evento de transição de recursos
         custo_mob_desmob = _calc_custo_mob_desmob(comp, cron)
         custo_total, ativos, custo_comb_efetivo, fixo_mensal, team_weeks, custo_ocioso = _calc_custo_cron(
@@ -723,9 +809,7 @@ def _build_dimensionamento(
 
         team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
         permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
-        # Recalcular custo_total com team_weeks ajustado: custo_total original usa team_weeks inflacionado
-        # Fórmula original: custo_total = (fixo_sem_comb + comb_nominal*eff) * team_weeks
-        # Ajustar: custo_total_ajustado = custo_total / num_equipes_paralelas (para casos com múltiplas equipes)
+        # custo_total_ajustado = custo total / n_frentes = custo de 1 frente (ADR-091)
         custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
         custo_total_final = round(custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
         fixo_mensal_total = round(fixo_mensal + custo_mat, 2)
@@ -738,7 +822,8 @@ def _build_dimensionamento(
                 num_equipes_base=num_equipes_paralelas,
                 funcoes=funcoes_mod,
                 equipamentos=equips_mod,
-                custo_mao_obra_mensal=round(custo_mo, 2),
+                custo_mao_obra_mensal=round(custo_mo_base, 2),
+                custo_encargos_mensal=round(custo_encargos, 2),
                 custo_equipamentos_mensal=round(custo_eq, 2),
                 custo_combustivel_total_mensal=round(custo_comb_efetivo, 2),
                 custo_material_mensal=round(custo_mat, 2),
@@ -830,6 +915,7 @@ def _add_tipo_item_demand(
     dist: dict,
     tipo_items: dict,
     tipo_week_demand: dict,
+    custo_hora_ref_sem: float = 0.0,
 ) -> None:
     """Appends item entry and week demand for a single tipo."""
     actual_mw = sum(
@@ -853,6 +939,10 @@ def _add_tipo_item_demand(
             "comp_eq": comp_eq,
             "comp_comb": comp_comb,
             "comp_mat": comp_mat,
+            # Custo de 1 equipe por 1 semana de trabalho ativo (custo_hora_total_referencia × horas).
+            # Quando disponível (via catálogo), sobrepõe custo_total_item/machine_weeks que pode ser
+            # afetado por distorções do schedule (n_frentes × durações ainda não convergidas).
+            "custo_hora_ref_sem": custo_hora_ref_sem,
         }
     )
     _accum_week_demand(tipo_week_demand, tipo, active_weeks, dist, required, total_required_peak)
@@ -864,6 +954,24 @@ def _get_active_weeks(sa) -> list:
     return sorted([w for w, d in dist.items() if (getattr(d, "num_equipes", 0) or 0) > 0], key=_week_idx)
 
 
+def _resolve_custo_hora_ref_sem(eq, cpu_lookup: dict | None, prod_lookup: dict | None, horas_semana: float) -> float:
+    """Resolve custo_hora_total_referencia × horas_semana do catálogo para a equipe.
+
+    Retorna 0.0 quando o lookup não está disponível ou o campo está ausente —
+    nesse caso _compute_custo_unit_fracs usa o fallback (custo_total_item/machine_weeks).
+    """
+    if not cpu_lookup or not prod_lookup:
+        return 0.0
+    cpu = cpu_lookup.get(getattr(eq, "cpu_id", "") or "")
+    if not cpu:
+        return 0.0
+    prod = prod_lookup.get(cpu.get("producao_id_ref") or "")
+    if not prod:
+        return 0.0
+    c_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
+    return round(c_ref * horas_semana, 4) if c_ref > 0.0 else 0.0
+
+
 def _process_item_tipo_map(
     iid: str,
     tipo_map: dict,
@@ -873,6 +981,9 @@ def _process_item_tipo_map(
     tipo_items: dict,
     tipo_week_demand: dict,
     validacoes: list,
+    cpu_lookup: dict | None = None,
+    prod_lookup: dict | None = None,
+    horas_semana: float = 48.0,
 ) -> None:
     """Processes one iid from item_tipo_map, appending to tipo_items/tipo_week_demand."""
     eq = equipe_map.get(iid)
@@ -891,11 +1002,13 @@ def _process_item_tipo_map(
         return
     dist = getattr(sa, "distribuicao_semanal", None) or {}
     total_required_peak = sum(tipo_map.values()) or 1
+    custo_hora_ref_sem = _resolve_custo_hora_ref_sem(eq, cpu_lookup, prod_lookup, horas_semana)
     for tipo, required in tipo_map.items():
         if tipo not in pool:
             continue
         _add_tipo_item_demand(
-            tipo, iid, required, total_required_peak, active_weeks, eq, dist, tipo_items, tipo_week_demand
+            tipo, iid, required, total_required_peak, active_weeks, eq, dist, tipo_items, tipo_week_demand,
+            custo_hora_ref_sem=custo_hora_ref_sem,
         )
 
 
@@ -905,21 +1018,40 @@ def _collect_tipo_items_and_demands(
     pool: dict,
     sched_lookup: dict,
     validacoes: list,
+    cpu_lookup: dict | None = None,
+    prod_lookup: dict | None = None,
+    horas_semana: float = 48.0,
 ) -> tuple[dict, dict]:
     """Itera items e constrói tipo_items / tipo_week_demand."""
     tipo_items: dict[str, list[dict]] = {}
     tipo_week_demand: dict[str, dict[str, int]] = {}
     for iid, tipo_map in item_tipo_map.items():
-        _process_item_tipo_map(iid, tipo_map, equipe_map, pool, sched_lookup, tipo_items, tipo_week_demand, validacoes)
+        _process_item_tipo_map(
+            iid, tipo_map, equipe_map, pool, sched_lookup, tipo_items, tipo_week_demand, validacoes,
+            cpu_lookup=cpu_lookup, prod_lookup=prod_lookup, horas_semana=horas_semana,
+        )
     return tipo_items, tipo_week_demand
 
 
 def _compute_custo_unit_fracs(mw_list: list) -> tuple:
-    """Retorna (custo_unit_semanal, frac_mo, frac_eq, frac_comb, frac_mat) via média ponderada."""
+    """Retorna (custo_unit_semanal, frac_mo, frac_eq, frac_comb, frac_mat) via média ponderada.
+
+    custo_unit_semanal é o custo de 1 recurso-tipo por 1 semana de trabalho ativo.
+    Quando ``custo_hora_ref_sem`` está disponível (derivado de producao.custo_hora_total_referencia),
+    usa esse valor autoritativo de catálogo — garante que o pool usa o mesmo preço base do PUxQ,
+    independente de distorções do schedule em equipe.custo_total.
+    Fallback: custo_total_item / machine_weeks (estimativa a partir da equipe dimensionada).
+    """
     total_mw = sum(mw for _, mw, _ in mw_list)
+    # Preferir custo_hora_ref_sem (catálogo) quando disponível
     custo_unit_semanal = (
-        sum((it["custo_total_item"] / it["machine_weeks"]) * mw for _, mw, it in mw_list if it["machine_weeks"] > 0)
+        sum(
+            (it.get("custo_hora_ref_sem") or (it["custo_total_item"] / it["machine_weeks"] if it["machine_weeks"] > 0 else 0.0)) * mw
+            for _, mw, it in mw_list
+        )
         / total_mw
+        if total_mw > 0
+        else 0.0
     )
     _acc = {"mo": 0.0, "eq": 0.0, "comb": 0.0, "mat": 0.0}
     for _, mw, it in mw_list:
@@ -1001,6 +1133,15 @@ def _build_contrato_entry(
     c_mob = float(tipo_costs.get("custo_mob_unit", 0.0))
     c_demob = float(tipo_costs.get("custo_demob_unit", 0.0))
     c_idle = float(tipo_costs.get("custo_idle_semanal_unit", 0.0))
+    # ADR-085: quando resource_costs não fornece a taxa ociosa (ex: rcpsp_spec
+    # construído do catálogo), deriva do custo fixo da própria composição: locação
+    # (aluguel de equipamento) + mão de obra (equipe na folha) continuam quando o
+    # recurso está mobilizado mas parado; combustível e manutenção (uso) cessam.
+    # Sem isso, adr085_active=False e o custo é cobrado cheio por todo o contrato.
+    if c_idle <= 0.0:
+        _c_idle_fallback = round(cus_mo + cus_locacao, 4)
+        if _c_idle_fallback > 0.0:
+            c_idle = _c_idle_fallback
     gap_max = int(_math.ceil((c_mob + c_demob) / c_idle) - 1) if c_idle > 0 else 9999
     cadeias = _build_perpetuation_chains(
         tipo_id=tipo,
@@ -1134,6 +1275,9 @@ def _build_contratos_recurso(
     rcpsp_spec: dict,
     sched_lookup: dict,
     validacoes: list,
+    cpu_lookup: dict | None = None,
+    prod_lookup: dict | None = None,
+    horas_semana: float = 48.0,
 ) -> tuple[list[RecursoContrato], dict[str, tuple[float, str, float]], list[CadeiaPerpetuacao]]:
     """Calcula contratos de pool e retorna (contratos, atribuicao_por_item, cadeias).
 
@@ -1168,7 +1312,8 @@ def _build_contratos_recurso(
         return [], {}, []
 
     tipo_items, tipo_week_demand = _collect_tipo_items_and_demands(
-        item_tipo_map, equipe_map, pool, sched_lookup, validacoes
+        item_tipo_map, equipe_map, pool, sched_lookup, validacoes,
+        cpu_lookup=cpu_lookup, prod_lookup=prod_lookup, horas_semana=horas_semana,
     )
 
     contratos: list[RecursoContrato] = []

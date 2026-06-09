@@ -1,10 +1,14 @@
 # ADR-105 — Mobilização e Desmobilização de Mão-de-Obra e Equipamentos: Política Integrada Diretos+Indiretos
 
-**Status:** Proposto  
+**Status:** Parcialmente Implementado ⚠️ _(auditado 2026-06-09)_
+
+> **Nota:** `mob_schedule` inferido automaticamente via `infer_mob_windows` em skill-04; skill-07 consome `mob_schedule` do canônico. `detalhamento` interno do evento MOB extraído de `indiretos.mob.txt` para 11 benchmarks (§2.5). Desdobramento em três fases, janelas de equipes diretas e lógica SS/FF aguardam Sprint S3 (ADR-106).  
 **Data:** 2026-06-08  
+**Atualizado:** 2026-06-09 (§1.2 dados empíricos expandidos; §2.5 estrutura interna do evento MOB)  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Depende de:** ADR-046, ADR-054, ADR-071, ADR-072, ADR-085, ADR-090  
 **Substitui parcialmente:** ADR-054 (política refinada)  
+**Incorpora:** ADR-107 (supersedido — conteúdo integrado aqui)  
 
 ---
 
@@ -35,32 +39,46 @@
 
 ### 1.2 Contexto Adicional
 
-**Dados empíricos de 12 benchmarks (2026-06-08):**
+**Dados empíricos de 11 benchmarks (2026-06-09) — análise de `indiretos.mob.txt`:**
 
-MATEC_GUARULHOS (planejamento.txt):
-```
-3.5: Mobilização e desmobilização     R$ 2.044.560,87  (9.7%)
-3.6: Desmobilização                   R$   408.912,17  (3.0%)
-```
+Os arquivos `indiretos.mob.txt` de todos os benchmarks têm estrutura consistente em três camadas:
 
-ODFJELL (planejamento.txt):
 ```
-INDML5: Mobilização/Desmobilização equipamentos        R$   246.900,00
-INDML6: Implantação de Canteiro                        R$   204.241,87
-INDML7: Equipamentos de Uso Geral                      R$   391.551,66
-INDML8: Despesas Gerais (operação canteiro)           (mensal durante projeto)
+EQUIPAMENTOS  R$ X   ← transporte de frota: n_eq × distância × R$/km (ida+volta)
+MÃO DE OBRA   R$ Y   ← transporte de equipe: n_pessoas × custo/pessoa
+VERBAS        R$ Z   ← setup logístico: contêineres, banheiros, mob. equipe direta
+              ─────
+TOTAL         R$ T   (T = X + Y + Z, invariante verificado com Δ=0% nos 11 benchmarks)
 ```
 
-**Estrutura de `spec.indiretos` existente (minimalista v2):**
+| Benchmark | Total (T) | Equipamentos | Pessoal (n) | Distância | Rota |
+|---|---|---|---|---|---|
+| RUMO | R$820k | R$329k (12eq) | R$85k (56p) | 1.372km | Goiânia→Dom Aquino |
+| PRIVATE_LOG | R$1,8M | R$550k (19eq) | R$60k (50p) | 1.080km | BH→Serra |
+| VALE | R$1,1M | R$270k (4eq) | R$239k (100p) | 960km | Goiânia→Cocalinho |
+| CTC | R$6,3M | R$1,3M (23eq) | R$119k (99p) | 2.100km | Londrina→Barra do Ribeiro |
+| LUNDIN | R$1,5M | R$135k (4eq) | R$98k (41p) | 700km | Goiânia→Alto Horizonte |
+| ODFJELL | R$247k | R$124k (5eq) | R$31k (31p) | 98km | Rio Verde→Santa Helena |
+| MATEC_GUARULHOS | R$2,0M | R$123k (20eq) | R$126k (53p) | ~200km | SP→Guarulhos |
+| MARA_ROSA | R$439k | R$66k (10eq) | R$77k (32p) | 200km | Natal→Parnamirim |
+| ROSH | R$439k | R$66k (10eq) | R$77k (32p) | 200km | Natal→Parnamirim |
+| MATEC_HINES | R$1,5M | R$113k (17eq) | R$85k (66p) | 200km | SP→Guarulhos |
+| MATEC_UBERLANDIA | R$2,3M | R$463k (1eq) | R$161k (54p) | 1.080km | BH→Uberlândia |
+
+**Observação crítica:** Os arquivos `indiretos.mob.txt` cobrem **somente** o evento de transporte (mobilização + desmobilização combinados). A fase `operacao` do modelo abaixo — custos mensais de canteiro (veículos de suporte, geradores, combustível recorrente) — **não está no mob.txt**: está na seção EQUIPAMENTOS de `indiretos.adm.txt`. Isso implica que a extração da fase `operacao` requer parsing adicional do ADM.
+
+**Estrutura de `spec.indiretos` existente nos benchmarks (estado atual):**
 ```json
 "indiretos": [
-  {"tipo": "ADM", "driver": "mensal", "custo_fixo_mensal": 384000},
-  {"tipo": "TOP", "driver": "mensal", "custo_fixo_mensal": 863205},
-  {"tipo": "LAB", "driver": "projeto", "custo_fixo_total": 140291},
-  {"tipo": "QSMS", "driver": "mensal", "custo_fixo_mensal": 759691},
-  {"tipo": "MOB", "driver": "mensal", "custo_fixo_mensal": 242200}
+  {"categoria": "ADM", "driver": "mensal", "custo_fixo_mensal_total": 875249, "mao_obra": [...]},
+  {"categoria": "TOP", "driver": "mensal", "custo_fixo_mensal_total": 284934, "mao_obra": [...]},
+  {"categoria": "LAB", "driver": "mensal", "custo_fixo_mensal_total": 195867, "mao_obra": [...]},
+  {"categoria": "QSMS", "driver": "mensal", "custo_fixo_mensal_total": 7673,   "mao_obra": [...]},
+  {"categoria": "MOB", "driver": "projeto", "custo_fixo_total": 819637, "detalhamento": {...}}
 ]
 ```
+
+> **Nota de campo:** Os benchmarks usam `categoria` (não `tipo` como este ADR originalmente propôs). O alinhamento do nome de campo para `tipo` será feito quando o desdobramento em fases for implementado (Sprint S3).
 
 ---
 
@@ -152,6 +170,48 @@ def infer_mob_schedule(meta, spec_eap):
 | **Equipes Diretas** | (não MOB) | — | Mão-de-obra alocada a EAP | Direto | Operadores, Pedreiros (alocados a atividades) |
 
 **Nota importante:** Mão-de-obra em MOB é **indireto** (não alocada a atividades específicas). Mão-de-obra direta vem de `spec.cronograma[].num_equipes` (via skill-05).
+
+### 2.5 Estrutura Interna do Evento MOB (implementado em 2026-06-09)
+
+As fases `mobilizacao` e `desmobilizacao` (ambas `driver: "projeto"`) têm estrutura interna em **três camadas de custo**, extraídas de `indiretos.mob.txt`:
+
+**Camada A — Transporte de frota** (`equipamentos`): `n_eq × distancia_km × custo_km`  
+**Camada B — Transporte de pessoal** (`pessoal`): `n_pessoas × custo_por_pessoa`  
+**Camada C — Setup logístico** (`verbas`): contêineres, banheiros, mob. equipe direta
+
+Estrutura de dados atual (enquanto MOB permanece entrada única antes do desdobramento em §2.1):
+
+```json
+{
+  "categoria": "MOB",
+  "driver": "projeto",
+  "custo_fixo_total": 819636.54,
+  "detalhamento": {
+    "rota": { "origem": "GOIÂNIA", "destino": "DOM AQUINO", "distancia_km": 1372 },
+    "equipamentos": { "quantidade_mob": 12, "custo_km": 9.50, "distancia_km": 1372, "subtotal": 328516.0 },
+    "pessoal":      { "quantidade_pessoas": 56, "custo_por_pessoa": 750.0, "subtotal": 84600.0 },
+    "verbas":       {
+      "subtotal": 406520.54,
+      "itens": [
+        {"descricao": "MOBILIZAÇÃO EQUIPE DIRETA", "quantidade": 0.42, "preco_unitario": 281169.29, "subtotal": 117153.87},
+        {"descricao": "MOBILIZAÇÃO DE EQUIPAMENTOS", "quantidade": 0.21, "preco_unitario": 836000.0, "subtotal": 174166.67}
+      ]
+    }
+  }
+}
+```
+
+**Invariante:** `custo_fixo_total = equipamentos.subtotal + pessoal.subtotal + verbas.subtotal` (verificado Δ=0% em 11 benchmarks).
+
+Quando o desdobramento em §2.1 for implementado (Sprint S3), o `detalhamento` migra integralmente para a fase `mobilizacao`. A fase `desmobilizacao` reutiliza os mesmos parâmetros de rota com simetria de custo (mesmo custo de transporte de retorno). A fase `operacao` será extraída da seção EQUIPAMENTOS de `indiretos.adm.txt`.
+
+**Roadmap paramétrico** (integrado ao plano de Sprint S3):
+
+- **F1** — Derivar `n_equipamentos` do pool RCPSP (não declarar manualmente)
+- **F2** — Derivar `distancia_km` de `localizacao.{lat,lng}` → depósito base via geocodificação
+- **F3** — Sensibilidade de escopo: redução do pool → recalculo automático do custo MOB
+- **F4** — Extrair fase `operacao` dos equipamentos de `indiretos.adm.txt`
+- **F5** — Desdobrar entrada única MOB nas três entradas de fase do §2.1 + alinhar `categoria`→`tipo`
 
 ### 2.4 Eliminação de rcpsp_spec
 

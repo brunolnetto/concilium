@@ -1,0 +1,53 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																					
+																																																								
+															EQUIPAMENTOS							R$ 123.200,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																									
+															MÃO DE OBRA							R$ 126.000,00									R$ 2.044.560,87																									
+															VERBAS							R$ 1.795.360,87																																		
+																																																								
+																																																								
+EQUIPAMENTOS																																																								
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES				
+																																																								
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 20,00 							 SP 					 GUARULHOS 					 200,00 						 12,00 						 48.000,00 										
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 20,00 							 GUARULHOS 					 SP 					 200,00 						 12,00 						 48.000,00 										
+3		MOB CONTEINER													VB		 5,00 																	 200,00 						 10,00 						 10.000,00 										
+4		DESMOB CONTEINER													VB		 5,00 																	 200,00 						 10,00 						 10.000,00 										
+5		MOB BANHEIRO QUIMICO													VB		 6,00 																							 600,00 						 3.600,00 										
+6		DESMOB BANHEIRO QUIMICO													VB		 6,00 																							 600,00 						 3.600,00 										
+																																														 123.200,00 										
+																																																								
+MÃO DE OBRA																																																								
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																		
+																																																								
+Equipe											53			 GOIANIA 						 GUARULHOS 						 1.200,00 						63.000,00																								
+Equipe											53			 GUARULHOS 						 GOIANIA 						1.200,00						63.000,00						  																		
+																																 126.000,00 																								
+																																																								
+VERBAS																																																								
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES										
+1		INTEGRAÇÃO EQUIPE DIRETA																							VB			 0,20 						 484.237,69 						 96.847,54 						6 dias										
+2		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB			 0,20 						 1.717.700,00 						 343.540,00 																
+																																								 440.387,54 																
+																																																								
+DESPESAS COM VIAGEM																																																								
+							CUSTO UNITÁRIO		MOB			MÊS1			MÊS2			MÊS3			MÊS4			MÊS5			MÊS6			MÊS 7			MÊS 8			MÊS 9			MÊS 10			MÊS 11			MÊS 12			MÊS 13			MÊS 14			CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 1.200,00 								x			x						x																														 3.600,00 		
+ENCARREGADO (60 dias)						1	 1.200,00 								x			x									x																											 3.600,00 		
+GERENTE DE CONTRATO (30 dias) 						1	 1.200,00 					x			x			x			x			x			x																											 7.200,00 		
+EQUIPE DIRETA						79	 1.200,00 								x									x																														 189.600,00 		
+EQUIPE INDIRETA						23	 1.200,00 								x			x			x						x																											 110.400,00 		
+ 314.400,00 																																																								
+																																																								
+ALIMENTAÇÃO/SEGURO DE VIDA/CESTA BÁSICA/PLANO DE SAUDE																																																								
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																																
+Limpeza, carga e transporte						 6,00 			 2.800,00 									1,83						 30.800,00 																																
+Escavação de material de 1ª categoria, carga e transporte/solo mole						 27,00 			 2.800,00 									4,10						 309.960,00 																																
+Aterro compactado						 46,00 			 2.800,00 									5,43						 699.813,33 																																
+0																																																								
+ 1.040.573,33 																																																								

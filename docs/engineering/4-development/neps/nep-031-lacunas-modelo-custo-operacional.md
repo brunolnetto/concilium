@@ -1,6 +1,6 @@
 # NEP-031: Lacunas do modelo de custo operacional frente ao enunciado de planejamento
 
-**Status:** Em Andamento (Fase 1/4 conclu?da)  
+**Status:** Parcialmente Implementado ⚠️ _(Sprint S2 — 2026-06-09)_  
 **Prioridade:** 🟠 Alto  
 **Área:** Domínio + Skills  
 **Tipo:** Feature + Bug + Dados  

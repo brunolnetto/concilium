@@ -1,0 +1,766 @@
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Supressão vegetal com ou sem destocamento de vegetação com Ø =< 30cm, assim como remoção de arbustos, vegetação rasteira e limpeza para a área de depósito - DMT até 350m - ALTA						m²	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20T			 2,00 	 1,00 	 -   	 205,00 	 205,00 	 410,00 	
+	Escavadeira Hidráulica sobre esteira 22t			 0,50 	 1,00 	 -   	 105,00 	 105,00 	 52,50 	
+	Motoniveladora 140k				 1,00 	 -   	 175,00 	 175,00 	 -   	
+	Motosserra a gasolina			 2,00 	 1,00 	 -   	 30,00 	 30,00 	 60,00 	
+										
+										
+									 -   	
+								TOTAL	 522,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Motoniveladora						 -   	 38,12 	 -   	
+	Operador de Trator de Esteiras						 2,00 	 47,19 	 94,39 	
+	Operador de Escavadeira						 0,50 	 38,12 	 19,06 	
+	Ajudante						 4,00 	 18,88 	 75,51 	
+	Operador de motosserra						 2,00 	 33,22 	 66,43 	
+								TOTAL	 255,39 	
+										
+	PRODUÇÃO DA EQUIPE (C)			497,14	m2			CUSTO HORÁRIO TOTAL (A+B)     	 777,89 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20T				Diesel S10	L	 6,80 	 24,00 	 326,40 	
+	Escavadeira Hidráulica sobre esteira 22t				Diesel S10	L	 6,80 	 22,00 	 74,80 	
+	Motoniveladora 140k				Diesel S10	L	 6,80 	 34,00 	 -   	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 39,00 	
+										
+								TOTAL	 440,20 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 2,45 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								2,45	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								2,45	
+										
+										
+										
+										
+	LOTE 7 E 8					CUSTO UNITÁRIO				
+	VALE - MT					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Supressão vegetal, destocamento e limpeza de árvores, arbustos, vegetação rasteira e entulhos com remoção para área de depósito - DMT até 350m						m2	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20T			 0,50 	 1,00 	 -   	 205,00 	 205,00 	 102,50 	
+	Escavadeira Hidráulica sobre esteira 22t			 0,50 	 1,00 	 -   	 105,00 	 105,00 	 52,50 	
+	Motoniveladora 140k			 0,50 	 1,00 	 -   	 175,00 	 175,00 	 87,50 	
+	Motosserra a gasolina			 1,00 	 1,00 	 -   	 30,00 	 30,00 	 30,00 	
+										
+									 -   	
+								TOTAL	 272,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Motoniveladora						 0,50 	 38,12 	 19,06 	
+	Operador de Trator de Esteiras						 0,50 	 47,19 	 23,60 	
+	Operador de Escavadeira						 0,50 	 38,12 	 19,06 	
+	Ajudante						 2,00 	 18,88 	 37,75 	
+	Operador de motosserra						 1,00 	 33,22 	 33,22 	
+								TOTAL	 147,41 	
+										
+	PRODUÇÃO DA EQUIPE (C)			1.307,14	m2			CUSTO HORÁRIO TOTAL (A+B)     	 419,91 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20T				Diesel S10	L	 6,80 	 24,00 	 81,60 	
+	Escavadeira Hidráulica sobre esteira 22t				Diesel S10	L	 6,80 	 22,00 	 74,80 	
+	Motoniveladora 140k				Diesel S10	L	 6,80 	 34,00 	 115,60 	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 19,50 	
+										
+										
+								TOTAL	 291,50 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 0,54 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								0,54	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								0,54	
+										
+										
+										
+										
+	LOTE 7 E 8					CUSTO UNITÁRIO				
+	VALE - MT					ESPECIFICAÇÃO				
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Corte com destocamento de árvores com Ø > 30cm e remoção para a área de depósito - DMT até 1000m						unid	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Pá carregadeira com mandibula			 1,00 	 1,00 	 -   	 180,00 	 180,00 	 180,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 180,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de pá carregadeira						 1,00 	 29,44 	 29,44 	
+	Ajudante						 2,00 	 18,88 	 37,75 	
+										
+									 -   	
+								TOTAL	 67,19 	
+										
+	PRODUÇÃO DA EQUIPE (C)			13,00	unid			CUSTO HORÁRIO TOTAL (A+B)     	 247,19 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Pá carregadeira com mandibula				Diesel S10	L	 6,50 	 16,00 	 104,00 	
+										
+									 -   	
+									 -   	
+								TOTAL	 104,00 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 27,01 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								27,01	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								27,01	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+		DATA BASE	SERVIÇO						UNIDADE	
+		junho, 2026	Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos compostos por material de 1ª e 2ª categoria						M	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 95,00 	 95,00 	 95,00 	
+	Trado a motor			 1,00 	 1,00 	 -   	 9,00 	 9,00 	 9,00 	
+	Caminhão carroceria com guindauto			 0,50 	 0,50 	 0,50 	 150,00 	 150,00 	 75,00 	
+	Trator de esteiras 20T			 0,50 	 0,50 	 0,50 	 205,00 	 205,00 	 102,50 	
+	Motosserra a gasolina			 0,50 	 0,50 	 0,50 	 30,00 	 30,00 	 15,00 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW			 1,00 	 1,00 	 -   	 38,00 	 38,00 	 38,00 	
+								TOTAL	 334,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão munck						 0,50 	 44,46 	 22,23 	
+	Operador de Retro escavadeira						 1,00 	 37,75 	 37,75 	
+	Cerqueiro						 2,00 	 22,43 	 44,85 	
+	Ajudante						 7,50 	 18,88 	 141,58 	
+	Pedreiro						 1,00 	 28,32 	 28,32 	
+	Operador de trator de esteiras						 0,50 	 47,19 	 23,60 	
+	Operador de motosserra						 0,50 	 33,22 	 16,61 	
+	Topógrafo						 1,00 	 60,00 	 60,00 	
+	Auxiliar de topografia						 1,50 	 25,07 	 37,60 	
+								TOTAL	 412,54 	
+										
+	PRODUÇÃO DA EQUIPE (C)			28,57	M			CUSTO HORÁRIO TOTAL (A+B)     	 747,04 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,80 	 16,00 	 108,80 	
+	Trado a motor				Gasolina	L	 6,80 	 0,62 	 4,22 	
+	Caminhão carroceria com guindauto				Diesel S10	L	 6,80 	 21,00 	 35,70 	
+	Trator de esteiras 20T				Diesel S10	L	 6,80 	 24,00 	 40,80 	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 4,88 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW				Diesel S10	L	 6,80 	 6,00 	 40,80 	
+								TOTAL	 235,19 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 34,38 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	MOURÃO CONCRETO - SUPORTE 2,15X0,10X0,10 FERRO 6,3MM					 0,38 	 un 	R$ 84,77	 32,39 	
+	MOURÃO CONCRETO - ESCORA/ESTICADOR 2,55X0,15X0,15 FERRO 10MM					 0,02 	 un 	R$ 184,39	 3,87 	
+	TRAVESSA CONCRETO 0,86X0,10X0,10 FERRO 6,3MM					 0,02 	 un 	R$ 46,58	 0,98 	
+	Arame liso em aço galvanizado - D = 1,60 mm					 6,00 	 m 	R$ 0,28	 1,68 	
+	Arame liso em aço galvanizado - D = 1,24 mm (18 BWG)					 0,01 	 kg 	R$ 18,14	 0,21 	
+									 -   	
+									 -   	
+								TOTAL	 39,13 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								73,51	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								73,51	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	4413984	junho, 2026	Cerca arame liso (5 fios) com mourões de concreto, seção quadrada 10 x 10 cm (padrão VALEC) executada em solos alagáveis						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 95,00 	 95,00 	 95,00 	
+	Trado a motor			 1,00 	 1,00 	 -   	 9,00 	 9,00 	 9,00 	
+	Caminhão carroceria com guindauto			 0,50 	 0,50 	 0,50 	 150,00 	 150,00 	 75,00 	
+	Trator de esteiras 20T			 0,50 	 0,50 	 0,50 	 205,00 	 205,00 	 102,50 	
+	Motosserra a gasolina			 0,50 	 0,50 	 0,50 	 30,00 	 30,00 	 15,00 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW			 1,00 	 1,00 	 -   	 38,00 	 38,00 	 38,00 	
+								TOTAL	 334,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão munck						 0,50 	 44,46 	 22,23 	
+	Operador de Retro escavadeira						 1,00 	 37,75 	 37,75 	
+	Cerqueiro						 3,00 	 22,43 	 67,28 	
+	Ajudante						 7,50 	 18,88 	 141,58 	
+	Pedreiro						 1,00 	 28,32 	 28,32 	
+	Operador de trator de esteiras						 0,50 	 47,19 	 23,60 	
+	Operador de motosserra						 0,50 	 33,22 	 16,61 	
+	Topógrafo						 1,00 	 60,00 	 60,00 	
+	Auxiliar de topografia						 1,00 	 25,07 	 25,07 	
+								TOTAL	 337,36 	
+										
+	PRODUÇÃO DA EQUIPE (C)			28,57	m			CUSTO HORÁRIO TOTAL (A+B)     	 671,86 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,80 	 16,00 	 108,80 	
+	Trado a motor				Gasolina	L	 6,50 	 0,62 	 4,03 	
+	Caminhão carroceria com guindauto				Diesel S10	L	 6,80 	 21,00 	 35,70 	
+	Trator de esteiras 20T				Diesel S10	L	 6,80 	 24,00 	 40,80 	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 4,88 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW				Diesel S10	L	 6,80 	 6,00 	 40,80 	
+								TOTAL	 235,01 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 31,74 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	MOURÃO CONCRETO - SUPORTE 2,15X0,10X0,10 FERRO 6,3MM					 0,38 	 UND 	 84,77 	 32,39 	
+	MOURÃO CONCRETO - ESCORA/ESTICADOR 2,55X0,15X0,15 FERRO 10MM					 0,02 	 UND 	 184,39 	 3,87 	
+	TRAVESSA CONCRETO 0,86X0,10X0,10 FERRO 6,3MM					 0,02 	 UND 	 46,58 	 0,98 	
+	Arame liso em aço galvanizado - D = 1,60 mm					 8,00 	 m 	 0,28 	 2,24 	
+	Arame liso em aço galvanizado - D = 1,24 mm (18 BWG)					 0,06 	 kg 	 18,14 	 1,04 	
+								TOTAL	 40,52 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								72,26	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								72,26	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 2,5 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 95,00 	 95,00 	 95,00 	
+	Trado a motor			 1,00 	 1,00 	 -   	 9,00 	 9,00 	 9,00 	
+	Caminhão carroceria com guindauto			 0,50 	 0,50 	 0,50 	 150,00 	 150,00 	 75,00 	
+	Trator de esteiras 20T			 0,50 	 0,50 	 0,50 	 205,00 	 205,00 	 102,50 	
+	Motosserra a gasolina			 0,50 	 0,50 	 0,50 	 30,00 	 30,00 	 15,00 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW			 1,00 	 1,00 	 -   	 38,00 	 38,00 	 38,00 	
+								TOTAL	 334,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão munck						 0,50 	 44,46 	 22,23 	
+	Operador de Retro escavadeira						 1,00 	 37,75 	 37,75 	
+	Cerqueiro						 3,00 	 22,43 	 67,28 	
+	Ajudante						 8,00 	 18,88 	 151,02 	
+	Pedreiro						 1,00 	 28,32 	 28,32 	
+	Operador de trator de esteiras						 0,50 	 47,19 	 23,60 	
+	Operador de motosserra						 1,00 	 33,22 	 33,22 	
+	Topógrafo						 1,00 	 60,00 	 60,00 	
+	Auxiliar de topografia						 1,00 	 25,07 	 25,07 	
+								TOTAL	 448,48 	
+										
+	PRODUÇÃO DA EQUIPE (C)			42,86	m			CUSTO HORÁRIO TOTAL (A+B)     	 782,98 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,80 	 16,00 	 108,80 	
+	Trado a motor				Gasolina	L	 6,50 	 0,62 	 4,03 	
+	Caminhão carroceria com guindauto				Diesel S10	L	 6,80 	 21,00 	 35,70 	
+	Trator de esteiras 20T				Diesel S10	L	 6,80 	 24,00 	 40,80 	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 4,88 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW				Diesel S10	L	 6,80 	 6,00 	 40,80 	
+								TOTAL	 235,01 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 23,75 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	MOURÃO EUCALIPTO - SUPORTE 2,15X0,10X0,10					 0,40 	 UND 	R$ 27,00	 10,80 	
+	MOURÃO EUCALIPTO - ESCORA/ESTICADOR 2,55X0,15X0,15					 0,04 	 UND 	R$ 71,00	 2,84 	
+	TRAVESSA EUCALIPTO 0,86X0,10X0,10 FERRO					 0,04 	 UND 	R$ 13,40	 0,54 	
+	Arame liso em aço galvanizado - D = 1,60 mm					 5,00 	 m 	R$ 0,28	 1,40 	
+								TOTAL	 15,58 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								39,33	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								39,33	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos alagadas						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 95,00 	 95,00 	 95,00 	
+	Trado a motor			 1,00 	 1,00 	 -   	 9,00 	 9,00 	 9,00 	
+	Caminhão carroceria com guindauto			 0,50 	 0,50 	 0,50 	 150,00 	 150,00 	 75,00 	
+	Trator de esteiras 20T			 0,50 	 0,50 	 0,50 	 205,00 	 205,00 	 102,50 	
+	Motosserra a gasolina			 0,50 	 0,50 	 0,50 	 30,00 	 30,00 	 15,00 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW			 1,00 	 1,00 	 -   	 38,00 	 38,00 	 38,00 	
+								TOTAL	 334,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão munck						 0,50 	 44,46 	 22,23 	
+	Operador de Retro escavadeira						 1,00 	 37,75 	 37,75 	
+	Cerqueiro						 3,00 	 22,43 	 67,28 	
+	Ajudante						 8,00 	 18,88 	 151,02 	
+	Pedreiro						 1,00 	 28,32 	 28,32 	
+	Operador de trator de esteiras						 0,50 	 47,19 	 23,60 	
+	Operador de motosserra						 1,00 	 33,22 	 33,22 	
+	Topógrafo						 1,00 	 60,00 	 60,00 	
+	Auxiliar de topografia						 1,00 	 25,07 	 25,07 	
+								TOTAL	 448,48 	
+										
+	PRODUÇÃO DA EQUIPE (C)			42,86	m			CUSTO HORÁRIO TOTAL (A+B)     	 782,98 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,80 	 16,00 	 108,80 	
+	Trado a motor				Gasolina	L	 6,80 	 0,62 	 4,22 	
+	Caminhão carroceria com guindauto				Diesel S10	L	 6,80 	 21,00 	 35,70 	
+	Trator de esteiras 20T				Diesel S10	L	 6,80 	 24,00 	 40,80 	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 4,88 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW				Diesel S10	L	 6,80 	 6,00 	 40,80 	
+								TOTAL	 235,19 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 23,76 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	MOURÃO EUCALIPTO - SUPORTE 2,15X0,10X0,10					 0,25 	 UND 	R$ 27,00	 6,75 	
+	MOURÃO EUCALIPTO - ESCORA/ESTICADOR 2,55X0,15X0,15					 0,04 	 UND 	R$ 71,00	 2,84 	
+	TRAVESSA EUCALIPTO 0,86X0,10X0,10 FERRO					 0,04 	 UND 	R$ 13,40	 0,54 	
+	Arame liso em aço galvanizado - D = 1,60 mm					 5,00 	 m 	R$ 0,28	 1,40 	
+								TOTAL	 11,53 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								35,28	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								35,28	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Cerca arame liso (5 fios) com mourão de eucalipto e mourão de madeira a cada 4,0 m e esticador a cada 50 m executada em solos compostos por material de 1ª e 2ª categoria						m	
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 95,00 	 95,00 	 95,00 	
+	Trado a motor			 1,00 	 1,00 	 -   	 9,00 	 9,00 	 9,00 	
+	Caminhão carroceria com guindauto			 0,50 	 0,50 	 0,50 	 150,00 	 150,00 	 75,00 	
+	Trator de esteiras 20T			 0,50 	 0,50 	 0,50 	 205,00 	 205,00 	 102,50 	
+	Motosserra a gasolina			 0,50 	 0,50 	 0,50 	 30,00 	 30,00 	 15,00 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW			 1,00 	 1,00 	 -   	 38,00 	 38,00 	 38,00 	
+								TOTAL	 334,50 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Motorista de caminhão munck						 0,50 	 44,46 	 22,23 	
+	Operador de Retro escavadeira						 1,00 	 37,75 	 37,75 	
+	Cerqueiro						 3,00 	 22,43 	 67,28 	
+	Ajudante						 8,00 	 18,88 	 151,02 	
+	Pedreiro						 1,00 	 28,32 	 28,32 	
+	Operador de trator de esteiras						 0,50 	 47,19 	 23,60 	
+	Operador de motosserra						 0,50 	 33,22 	 16,61 	
+	Topógrafo						 1,00 	 60,00 	 60,00 	
+	Auxiliar de topografia						 1,00 	 25,07 	 25,07 	
+								TOTAL	 431,87 	
+										
+	PRODUÇÃO DA EQUIPE (C)			42,86	m			CUSTO HORÁRIO TOTAL (A+B)     	 766,37 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,80 	 16,00 	 108,80 	
+	Trado a motor				Gasolina	L	 6,50 	 0,62 	 4,03 	
+	Caminhão carroceria com guindauto				Diesel S10	L	 6,80 	 21,00 	 35,70 	
+	Trator de esteiras 20T				Diesel S10	L	 6,80 	 24,00 	 40,80 	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 4,88 	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW				Diesel S10	L	 6,80 	 6,00 	 40,80 	
+								TOTAL	 235,01 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 23,37 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+	MOURÃO EUCALIPTO - SUPORTE 2,15X0,10X0,10					 0,25 	 UND 	R$ 27,00	 6,75 	
+	MOURÃO EUCALIPTO - ESCORA/ESTICADOR 2,55X0,15X0,15					 0,04 	 UND 	R$ 71,00	 2,84 	
+	TRAVESSA EUCALIPTO 0,86X0,10X0,10 FERRO					 0,04 	 UND 	R$ 13,40	 0,54 	
+	Arame liso em aço galvanizado - D = 1,60 mm					 5,00 	 m 	R$ 0,28	 1,40 	
+								TOTAL	 11,53 	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								34,89	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								34,89	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Remoção de cerca de mourão de madeira						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trado cavadeira de 12”			 1,00 	 1,00 	 -   	 0,09 	 0,09 	 0,09 	
+	Retroescavadeira			 1,00 	 1,00 	 -   	 95,00 	 95,00 	 95,00 	
+										
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 95,09 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de retro escavadeira						 1,00 	 37,75 	 37,75 	
+	Ajudante						 2,00 	 18,88 	 37,75 	
+										
+									 -   	
+								TOTAL	 75,51 	
+										
+	PRODUÇÃO DA EQUIPE (C)			42,86	m			CUSTO HORÁRIO TOTAL (A+B)     	 170,60 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Retroescavadeira				Diesel S10	L	 6,80 	 16,00 	 108,80 	
+										
+									 -   	
+								TOTAL	 108,80 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 6,52 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								6,52	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								6,52	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	Abertura de acesso para implantação de cerca						m	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Trator de esteiras 20t			 1,00 	 1,00 	 -   	 205,00 	 205,00 	 205,00 	
+	Motosserra a gasolina			 1,00 	 1,00 	 -   	 30,00 	 30,00 	 30,00 	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 235,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de trator de esteiras						 1,00 	 47,19 	 47,19 	
+	Ajudante						 2,00 	 18,88 	 37,75 	
+	Operador de motosserra						 1,00 	 33,22 	 33,22 	
+									 -   	
+								TOTAL	 118,16 	
+										
+	PRODUÇÃO DA EQUIPE (C)			90,00	m			CUSTO HORÁRIO TOTAL (A+B)     	 353,16 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Trator de esteiras 20t				Diesel S10	L	 6,80 	 24,00 	 163,20 	
+	Motosserra a gasolina				Gasolina	L	 6,50 	 3,00 	 19,50 	
+									 -   	
+									 -   	
+								TOTAL	 182,70 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 5,95 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								5,95	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								5,95	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	-	junho, 2026	IMPLANTAÇÃO DE EIXO						KM	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW		 -   	 1,00 	 1,00 	 -   	 38,00 	 38,00 	 38,00 	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 38,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+										
+	Topógrafo						 1,00 	 60,00 	 60,00 	
+	Auxiliar de topografia						 2,00 	 25,07 	 50,14 	
+								TOTAL	 110,14 	
+										
+	PRODUÇÃO DA EQUIPE (C)			0,09	KM			CUSTO HORÁRIO TOTAL (A+B)     	 148,14 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Veículo leve picape 4 x 4 com capacidade de 1,10 t - 147 kW				Diesel S10	L	 6,80 	 6,00 	 40,80 	
+										
+										
+									 -   	
+								TOTAL	 40,80 	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 2.204,28 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+									 -   	
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   		 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								2.204,28	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								2.204,28	
+										
+										
+										
+										
+	0					CUSTO UNITÁRIO				
+	0					ESPECIFICAÇÃO				
+										
+										

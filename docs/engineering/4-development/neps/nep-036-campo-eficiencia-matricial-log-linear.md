@@ -1,12 +1,16 @@
 # NEP-036: Campo de Eficiência Matricial E ∈ ℝ^{I×T} e Decomposição Log-Linear
 
-**Status:** Em Andamento  
+**Status:** Implementado ✅ _(auditado 2026-06-08)_  
 **Prioridade:** 🟠 Alto  
 **Área:** Arquitetura e Skills  
 **Tipo:** Feature + Dados  
 **Esforço:** XL  
 **Identificado em:** 2026-06-01  
 **Depende de:** NEP-035
+
+> **Nota de auditoria (2026-06-08):** `eficiencia_field_builder.py` com `CampoEficiencia`
+> implementado em `src/concilium/domain/services/`. Visualizações `eta_obra.py`,
+> `waterfall_causal.py`, `pareto_perdas.py`, `heatmap_top_n.py` presentes.
 
 ---
 

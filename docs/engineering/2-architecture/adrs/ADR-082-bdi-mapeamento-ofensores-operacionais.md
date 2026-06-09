@@ -1,6 +1,8 @@
 # ADR-082 — Painel de Ajuste de Ponto de Equilíbrio: Ofensores de Produtividade, Levers de Ação e Cobertura BDI
 
-**Status:** 🔴 Aceito  
+**Status:** Implementado ✅ _(auditado 2026-06-09)_
+
+> **Nota:** `PontoEquilibrio`, `gap_praticabilidade_abs`, `gap_pool_overhead` e levers implementados.  
 **Data:** 2026-05-28  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-040, ADR-053, ADR-060, ADR-074, ADR-076, NEP-032

@@ -1,7 +1,7 @@
 """Fixtures para testes de integração ADR-104."""
 
+
 import pytest
-from pathlib import Path
 
 
 @pytest.fixture(scope="session")
@@ -29,6 +29,7 @@ def agis_benchmark(config_root):
         raise FileNotFoundError(f"AGIS project not found at {agis_store_root} after benchmark run")
 
     from concilium.infrastructure.storage.project import ProjectStore
+
     store = ProjectStore(root=agis_store_root)
     canonical = store.load_canonical()
     return BenchmarkWrapper(canonical)

@@ -214,15 +214,13 @@ def run_diagnostico_criticidade(
             ValidacaoItem(
                 codigo="VAL-CC-01",
                 status="AVISO",
-                mensagem="Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)"
+                mensagem="Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)",
             )
         )
         equipes_disponivel = False  # Degrade gracefully
 
     if not canonical_in.cronograma:
-        validacoes.append(
-            ValidacaoItem(codigo="VAL-DIAG-PRE", status="ERRO", mensagem="Cronograma necessário.")
-        )
+        validacoes.append(ValidacaoItem(codigo="VAL-DIAG-PRE", status="ERRO", mensagem="Cronograma necessário."))
         return SkillResult(canonical_in, validacoes)
 
     timings, proj_end_m, proj_start_m, proj_dur, critical_set = _analyze_schedule_timings(
@@ -246,9 +244,7 @@ def run_diagnostico_criticidade(
         )
     else:
         # Graceful degradation: empty criticality report when equipes unavailable
-        report = CostCriticalityResult(
-            atividades=[], n_pareto_frontier=0, n_atividades=0, criterio_primario="custo"
-        )
+        report = CostCriticalityResult(atividades=[], n_pareto_frontier=0, n_atividades=0, criterio_primario="custo")
 
     novo = canonical_in.model_copy(
         update={
