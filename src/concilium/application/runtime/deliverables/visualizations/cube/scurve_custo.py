@@ -101,14 +101,21 @@ def build(canonical, cubo) -> bytes | None:
         ax_line.plot(x, acc_total_bdi, color="#333", linewidth=1.8, alpha=0.9, zorder=5)
 
         resultado = getattr(canonical, "resultado", None)
-        venda_total = float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0)
-        custo_op    = float(getattr(getattr(resultado, "custo", None), "total", 0.0) or 0.0)
-        if venda_total > 0:
-            ax_line.axhline(venda_total / scale, color="#e74c3c", linewidth=1.5, linestyle=":",
-                            alpha=0.9, label=f"Preço de venda: {venda_total/scale:.1f} Mi")
+        # Preço pool+BDI = soma acumulada das 5 camadas (convergência natural da curva)
+        preco_pool_bdi = acc_total_bdi[-1] if acc_total_bdi else 0.0
+        # Preço de contrato (PUxQ) = referência de mercado
+        preco_catalogo = float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) / scale
+        custo_op       = float(getattr(getattr(resultado, "custo", None), "total", 0.0) or 0.0) / scale
+
+        if preco_pool_bdi > 0:
+            ax_line.axhline(preco_pool_bdi, color="#e74c3c", linewidth=1.8, linestyle="-",
+                            alpha=0.9, label=f"Preço pool+BDI: {preco_pool_bdi:.1f} Mi")
+        if preco_catalogo > 0 and abs(preco_catalogo - preco_pool_bdi) > 0.1:
+            ax_line.axhline(preco_catalogo, color="#9b59b6", linewidth=1.2, linestyle=":",
+                            alpha=0.7, label=f"Catálogo (PUxQ×BDI): {preco_catalogo:.1f} Mi")
         if custo_op > 0:
-            ax_line.axhline(custo_op / scale, color="#27ae60", linewidth=1.2, linestyle="--",
-                            alpha=0.7, label=f"Custo s/BDI (ref.): {custo_op/scale:.1f} Mi")
+            ax_line.axhline(custo_op, color="#27ae60", linewidth=1.2, linestyle="--",
+                            alpha=0.6, label=f"Custo s/BDI: {custo_op:.1f} Mi")
 
         ax_line.set_ylabel("R$ (Mi) Acumulado", fontsize=9)
         ax_line.set_xlabel("Mês", fontsize=9)
