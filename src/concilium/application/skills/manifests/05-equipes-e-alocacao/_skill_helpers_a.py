@@ -352,9 +352,16 @@ def _processar_funcoes_item(
     perc_mensalista: float,
     validacoes: list,
 ) -> tuple:
-    """Processa funcoes da composicao e retorna (funcoes_mod, custo_mo)."""
+    """Processa funcoes da composicao.
+
+    Retorna (funcoes_mod, custo_mo_base, custo_encargos) onde:
+    - custo_mo_base   = Σ salario_base × num_pessoas (sem encargos)
+    - custo_encargos  = Σ salario_base × percentual_encargos × num_pessoas
+    NEP-037 D1: separação para reconciliar fe_nec com PU_sbdi (que não inclui encargos).
+    """
     funcoes_mod: list[FuncaoEquipeDireta] = []
-    custo_mo = 0.0
+    custo_mo_base = 0.0
+    custo_encargos = 0.0
     for f in comp.get("funcoes", []):
         insumo = ctx.repo.obter_insumo(f["funcao_id"])
         if not insumo:
@@ -387,6 +394,9 @@ def _processar_funcoes_item(
         )
         enc_field = float(enc_override) if enc_override is not None else perc_horista
         num_p_raw = float(f.get("num_pessoas", 1) or 1)
+        # NEP-037: custo base (sem encargos) e encargos separados por função
+        sal_base_unit = round(sal * (1.0 + float(he or 0.0)), 2)  # salário + HE, sem encargos
+        enc_unit = round(sal * enc_field * (1.0 + float(he or 0.0)), 2)
         # Canônico representa equipe física → int (ex: 0.5 encarregado compartilhado = 1).
         # Custo calculado usa o coeficiente original (float) para precisão financeira.
         funcoes_mod.append(
@@ -398,10 +408,12 @@ def _processar_funcoes_item(
                 percentual_encargos=enc_field,
                 horas_extras_pct=he,
                 custo_mensal_unitario=unit,
+                custo_encargos_mensal_unitario=enc_unit,
             )
         )
-        custo_mo += unit * num_p_raw  # usa float original para custo preciso
-    return funcoes_mod, custo_mo
+        custo_mo_base += sal_base_unit * num_p_raw
+        custo_encargos += enc_unit * num_p_raw
+    return funcoes_mod, custo_mo_base, custo_encargos
 
 
 def _build_comb_validacao(equip_id: str, val_comb_code: str) -> ValidacaoItem:
@@ -683,9 +695,11 @@ def _build_dimensionamento(
             continue
         comp = _build_comp_para_item(cpu, prod_lookup, validacoes)
         item_custom = composicao_customizada.get(item.item_id, {})
-        funcoes_mod, custo_mo = _processar_funcoes_item(
+        funcoes_mod, custo_mo_base, custo_encargos = _processar_funcoes_item(
             comp, item.item_id, item_custom, ctx, perc_horista, perc_mensalista, validacoes
         )
+        # NEP-037: custo_mo para cron = base + encargos (custo_total inalterado)
+        custo_mo = custo_mo_base + custo_encargos
         equips_mod, custo_eq, custo_comb, modo_est = _processar_equipamentos_item(
             comp, item.item_id, item_custom, cpu, horas_dia, dias_uteis, preco_diesel, ctx, validacoes
         )
@@ -738,7 +752,8 @@ def _build_dimensionamento(
                 num_equipes_base=num_equipes_paralelas,
                 funcoes=funcoes_mod,
                 equipamentos=equips_mod,
-                custo_mao_obra_mensal=round(custo_mo, 2),
+                custo_mao_obra_mensal=round(custo_mo_base, 2),
+                custo_encargos_mensal=round(custo_encargos, 2),
                 custo_equipamentos_mensal=round(custo_eq, 2),
                 custo_combustivel_total_mensal=round(custo_comb_efetivo, 2),
                 custo_material_mensal=round(custo_mat, 2),

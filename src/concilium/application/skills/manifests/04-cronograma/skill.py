@@ -498,14 +498,20 @@ def _extract_dag(
     """
     # ── Extrair arestas e thresholds ──────────────────────────────────────────
     edge_thresholds: dict[tuple[str, str], float] = {}
+    from concilium.application.scheduling.cpsat_scheduler import ExtendedPrecedence as _EP
+    extended: list[_EP] = []
 
     if canonical.eap:
         for item in canonical.eap:
             for pred in item.predecessores_tipados():
-                # activity_id é item_id direto (não "item_id-atv-1")
-                # ver: ScheduledActivityCanonical.activity_id = item.item_id
                 key = (pred.item_id, item.item_id)
-                edge_thresholds[key] = float(pred.completion_threshold_pct)
+                tipo = str(getattr(pred, "tipo", "FS") or "FS").upper()
+                lag = int(getattr(pred, "lag", 0) or 0)
+                if tipo == "FS":
+                    edge_thresholds[key] = float(pred.completion_threshold_pct)
+                elif tipo in ("SS", "FF"):
+                    edge_thresholds[key] = 1.0  # sentinela topológico
+                    extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo=tipo, lag=lag))
 
     # Se não há predecessores na EAP, inferir sequência linear
     if not edge_thresholds:
@@ -520,7 +526,7 @@ def _extract_dag(
 
     # ADR-072: Use pre-computed activities if provided, otherwise extract from canonical
     acts = activities if activities is not None else _extract_activities(canonical)
-    return ActivityDAG(activities=acts, precedence=precedence, thresholds=edge_thresholds)
+    return ActivityDAG(activities=acts, precedence=precedence, thresholds=edge_thresholds, extended_precedences=extended)
 
 
 def _extract_pool(canonical: CanonicalModel) -> ResourcePool:

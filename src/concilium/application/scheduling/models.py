@@ -58,12 +58,18 @@ class ActivityDAG:
     Semântica de threshold para FS:
         start_j ≥ start_i + ceil(θ × duration_i)
     θ=1.0 → comportamento clássico FS.  θ=0.0 → equivalente a SS.
+
+    NEP-031 L4: ``extended_precedences`` transporta relações SS/FF com lag derivadas
+    de EapItem.predecessores ou rcpsp_spec. O CP-SAT scheduler as aplica diretamente.
+    Compatível com SerialScheduler (que as ignora graciosamente).
     """
 
     activities: list[Activity]
     precedence: list[tuple[str, str]] = field(default_factory=list)
     # ADR-081: per-edge completion threshold. Missing pair → 1.0 (FS strict).
     thresholds: dict[tuple[str, str], float] = field(default_factory=dict)
+    # NEP-031 L4: relações SS/FF com lag (além do FS codificado em thresholds).
+    extended_precedences: list = field(default_factory=list)
 
     def _activity_map(self) -> dict[str, Activity]:
         return {a.activity_id: a for a in self.activities}

@@ -337,7 +337,7 @@ def _apply_dv4_scale_to_categoria(
     return custo, cat_obj
 
 
-def _sub_custos_indireto(cat_obj: IndirectoCategoria, custo_total: float) -> dict[str, float]:
+def _sub_custos_indireto(cat_obj: IndirectoCategoria, custo_total: float, perc_encargos: float = 0.0) -> dict[str, float]:
     """ADR-090: calcula sub-custos por categoria_insumo para BDI diferenciado.
 
     Se os componentes de cat_obj têm custo explícito, usa-os diretamente.
@@ -358,8 +358,15 @@ def _sub_custos_indireto(cat_obj: IndirectoCategoria, custo_total: float) -> dic
 
     if c_base > 0 and custo_total > 0:
         scale = custo_total / c_base
+        c_mo_scaled = round(c_mo * scale, 2)
+        # NEP-037 D4: separar base e encargos na MO indireta.
+        # c_mo_scaled = base × (1 + enc) → base = c_mo_scaled / (1 + enc)
+        frac_enc = perc_encargos / (1.0 + perc_encargos) if perc_encargos > 0 else 0.0
+        c_enc_scaled = round(c_mo_scaled * frac_enc, 2)
+        c_mo_base_scaled = c_mo_scaled - c_enc_scaled
         return {
-            "custo_mao_obra": round(c_mo * scale, 2),
+            "custo_mao_obra": c_mo_base_scaled,
+            "custo_encargos": c_enc_scaled,
             "custo_equipamentos": round(c_eq * scale, 2),
             "custo_verba": round(c_verba * scale, 2),
             "custo_combustivel": 0.0,
@@ -368,6 +375,7 @@ def _sub_custos_indireto(cat_obj: IndirectoCategoria, custo_total: float) -> dic
     # Fallback: sem dados de composição → tudo como verba (taxa mais conservadora)
     return {
         "custo_mao_obra": 0.0,
+        "custo_encargos": 0.0,
         "custo_equipamentos": 0.0,
         "custo_verba": round(custo_total, 2),
         "custo_combustivel": 0.0,
@@ -394,7 +402,9 @@ def _build_indireto_from_cat_obj(
         permanencia_meses=permanencia_meses,
         custo_total=custo,
         # ADR-090: sub-custos para BDI diferenciado por categoria_insumo
+        # NEP-037 D4: custo_mao_obra = base sem encargos; custo_encargos = encargos sociais
         custo_mao_obra=subs["custo_mao_obra"],
+        custo_encargos=subs.get("custo_encargos", 0.0),
         custo_equipamentos=subs["custo_equipamentos"],
         custo_combustivel=subs["custo_combustivel"],
         custo_verba=subs["custo_verba"],

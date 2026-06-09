@@ -155,7 +155,11 @@ class CpSatScheduler:
                 model.add(starts[succ_id] >= starts[pred_id] + lag)
 
         # ── extended precedences (SS, FF, FS+lag) ────────────────────────
-        for ep in extended_precedences or []:
+        # NEP-031 L4: inclui extended_precedences do DAG (SS/FF da EAP) e
+        # quaisquer precedências extra passadas diretamente pelo chamador.
+        all_extended = list(getattr(dag, "extended_precedences", None) or [])
+        all_extended.extend(extended_precedences or [])
+        for ep in all_extended:
             pred_id, succ_id = ep.pred, ep.succ
             lag = ep.lag
             if ep.tipo == "FS":

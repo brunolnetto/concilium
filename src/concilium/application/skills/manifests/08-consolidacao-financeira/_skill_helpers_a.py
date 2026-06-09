@@ -83,8 +83,10 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         if eq.item_id in contados:
             continue
         ct = float(eq.custo_total or 0.0)
+        # NEP-037: incluir encargos na fração de MO para decomposição (encargos ficam em mao_obra)
+        _mo_mais_enc = float(eq.custo_mao_obra_mensal or 0.0) + float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0)
         base = (
-            float(eq.custo_mao_obra_mensal or 0.0)
+            _mo_mais_enc
             + float(eq.custo_equipamentos_mensal or 0.0)
             + float(eq.custo_combustivel_total_mensal or 0.0)
             + float(eq.custo_material_mensal or 0.0)
@@ -92,7 +94,7 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         if base <= 0:
             cat["mao_obra"] += ct
             continue
-        _ct_mo = ct * float(eq.custo_mao_obra_mensal or 0.0) / base
+        _ct_mo = ct * _mo_mais_enc / base
         _ct_eq = ct * float(eq.custo_equipamentos_mensal or 0.0) / base
         _ct_comb = ct * float(eq.custo_combustivel_total_mensal or 0.0) / base
         _ct_mat = ct * float(eq.custo_material_mensal or 0.0) / base
@@ -440,6 +442,19 @@ def _build_pe_for_equipe(
         custo_total_autonomo = custo_operacional_real
     gap_pool_overhead = round(custo_operacional_real - custo_total_autonomo, 2)
 
+    # NEP-037 D3: fe_nec calculado sobre custo base (sem encargos) para reconciliar com PU_sbdi.
+    # PU_sbdi exclui encargos do numerador: PU = (A_equip + B_base + diesel) / C
+    # Fe_nec = custo_base_autonomo / (PU_sbdi × Q) → 1/η_p quando modelo correto
+    # custo_encargos_mensal (campo novo) presente → deriva proporção de encargos no total.
+    _custo_mo_mensal = float(getattr(equipe, "custo_mao_obra_mensal", 0.0) or 0.0)
+    _custo_enc_mensal = float(getattr(equipe, "custo_encargos_mensal", 0.0) or 0.0)
+    _custo_fixo_total = float(getattr(equipe, "custo_fixo_mensal", 0.0) or 0.0)
+    if _custo_fixo_total > 0 and _custo_enc_mensal > 0:
+        _frac_enc = _custo_enc_mensal / _custo_fixo_total
+        custo_base_autonomo = round(custo_total_autonomo * (1.0 - _frac_enc), 2)
+    else:
+        custo_base_autonomo = custo_total_autonomo
+
     pu_catalogo_unitario: float = 0.0
     pu_calibrado_unitario: float = 0.0
     ajuste_minimo_pct: float = 0.0
@@ -453,14 +468,13 @@ def _build_pe_for_equipe(
         venda_sem_bdi = float(plan.subtotal.sem_bdi.total if (plan.subtotal and plan.subtotal.sem_bdi) else 0.0)
         pu_catalogo_unitario = round(venda_sem_bdi / Q, 4) if Q > 0 else 0.0
 
-        if venda_sem_bdi > 0 and custo_total_autonomo > 0:
-            frentes_nec = round(custo_total_autonomo / venda_sem_bdi, 4)
-        elif custo_total_autonomo <= 0 and custo_venda_total > 0:
+        # NEP-037 D3: usar custo_base_autonomo (sem encargos) para fe_nec → reconcilia com PU_sbdi
+        if venda_sem_bdi > 0 and custo_base_autonomo > 0:
+            frentes_nec = round(custo_base_autonomo / venda_sem_bdi, 4)
+        elif custo_base_autonomo <= 0 and custo_venda_total > 0:
             frentes_nec = round(custo_operacional_real / custo_venda_total, 4)
 
         # ADR-076 Fallback: se frentes_nec >> 10 (absurdo), usar 1 como conservador
-        # Isso ocorre quando há discrepância entre escala de custo_total e venda_sem_bdi por item.
-        # Requer investigação de particionamento de custos por item (ADR-083).
         if frentes_nec > 10.0:
             frentes_nec = 1.0
 
