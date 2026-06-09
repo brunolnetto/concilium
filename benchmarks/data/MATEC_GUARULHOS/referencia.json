@@ -90,7 +90,6 @@
     "cronograma": [
       {
         "item_id": "2.8",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -101,7 +100,6 @@
       },
       {
         "item_id": "2.9",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -112,7 +110,6 @@
       },
       {
         "item_id": "3.1",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -123,7 +120,6 @@
       },
       {
         "item_id": "3.2",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -134,7 +130,6 @@
       },
       {
         "item_id": "3.3",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -145,7 +140,6 @@
       },
       {
         "item_id": "3.4",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -156,7 +150,6 @@
       },
       {
         "item_id": "3.5",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -167,7 +160,6 @@
       },
       {
         "item_id": "3.6",
-        "duration_weeks": 13,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,

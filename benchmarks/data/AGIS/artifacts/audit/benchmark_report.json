@@ -6,25 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 4388,
+      "duration_ms": 7470,
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 295,
+      "duration_ms": 1026,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 213,
+      "duration_ms": 424,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 589,
+      "duration_ms": 1054,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -70,45 +70,43 @@
         "Item 'eap-1_3' sub-entrega: Σ q_ij = 88.7% de Q na janela agendada (14sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~15sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item 'eap-1_4' sub-entrega: Σ q_ij = 96.3% de Q na janela agendada (39sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~41sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item 'eap-1_5' sub-entrega: Σ q_ij = 95.0% de Q na janela agendada (45sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~47sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "Item 'eap-1_6' sub-entrega: Σ q_ij = 77.2% de Q na janela agendada (50sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~52sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "Item 'eap-1_7' sub-entrega: Σ q_ij = 88.8% de Q na janela agendada (46sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~48sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item 'eap-1_6' sub-entrega: Σ q_ij = 86.7% de Q na janela agendada (50sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~52sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item 'eap-1_7' sub-entrega: Σ q_ij = 89.5% de Q na janela agendada (46sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~48sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item 'eap-1_8' sub-entrega: Σ q_ij = 85.7% de Q na janela agendada (5sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~6sem OU +equipes (decisão de prazo/pool — ADR-091).",
-        "Item 'eap-1_9' sub-entrega: Σ q_ij = 94.4% de Q na janela agendada (48sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~50sem OU +equipes (decisão de prazo/pool — ADR-091).",
+        "Item 'eap-1_9' sub-entrega: Σ q_ij = 95.4% de Q na janela agendada (48sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~50sem OU +equipes (decisão de prazo/pool — ADR-091).",
         "Item 'eap-1_10' sub-entrega: Σ q_ij = 96.5% de Q na janela agendada (6sem). Clima reduz a produção semanal além da capacidade da janela. Para entregar Q (p̄=0.97): ~7sem OU +equipes (decisão de prazo/pool — ADR-091)."
       ]
     },
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 631,
-      "avisos": [
-        "ADR-077: Contrato EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000 — 1 instância(s) com standby >35%: EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-02: 19w idle. Taxa global: 80.6%. Custo standby: R$ 2,055,412.97."
-      ]
+      "duration_ms": 758,
+      "avisos": []
     },
     {
       "skill": "06-precificacao-unitaria",
       "status": "OK",
-      "duration_ms": 395,
+      "duration_ms": 292,
       "avisos": []
     },
     {
       "skill": "07-custos-indiretos",
       "status": "OK",
-      "duration_ms": 262,
+      "duration_ms": 500,
       "avisos": []
     },
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 251,
+      "duration_ms": 281,
       "avisos": []
     },
     {
       "skill": "08-consolidacao-financeira",
       "status": "OK",
-      "duration_ms": 746,
+      "duration_ms": 442,
       "avisos": [
-        "Margem operacional 18.09% | status=VERMELHO | preço R$ 71,902,046 (operacional) vs R$ 81,098,987 (catálogo)",
+        "Margem operacional 18.09% | status=VERMELHO | preço R$ 73,391,955 (operacional) vs R$ 81,098,987 (catálogo)",
         "Item 'eap-1_0': divergência de produtividade -35.5% não explicada por clima (fe_nec=0.66 × clima=0.98 = 0.64). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=0.877 vs calibrado=0.877).",
         "Item 'eap-1_1': custo autônomo 25.4% acima do PU de catálogo (1.25× frentes necessárias). PU calibrado: +25.4%.",
         "Item 'eap-1_1': divergência de produtividade +23.5% não explicada por clima (fe_nec=1.25 × clima=0.99 = 1.24). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=7.658 vs calibrado=9.599).",
@@ -118,24 +116,24 @@
         "Item 'eap-1_3': divergência de produtividade +18.8% não explicada por clima (fe_nec=1.26 × clima=0.95 = 1.19). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=10.094 vs calibrado=12.682).",
         "Item 'eap-1_4': divergência de produtividade -35.4% não explicada por clima (fe_nec=0.66 × clima=0.97 = 0.65). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=10.757 vs calibrado=10.757).",
         "Item 'eap-1_5': divergência de produtividade +17.3% não explicada por clima (fe_nec=1.22 × clima=0.96 = 1.17). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=14.871 vs calibrado=18.087).",
-        "Item 'eap-1_6': divergência de produtividade -52.2% não explicada por clima (fe_nec=0.49 × clima=0.97 = 0.48). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
-        "Item 'eap-1_7': divergência de produtividade -61.6% não explicada por clima (fe_nec=0.40 × clima=0.96 = 0.38). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=9.131 vs calibrado=9.131).",
+        "Item 'eap-1_6': divergência de produtividade -46.4% não explicada por clima (fe_nec=0.56 × clima=0.97 = 0.54). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=18.225 vs calibrado=18.225).",
+        "Item 'eap-1_7': divergência de produtividade -61.3% não explicada por clima (fe_nec=0.40 × clima=0.96 = 0.39). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=9.131 vs calibrado=9.131).",
         "Item 'eap-1_8': divergência de produtividade +11.1% não explicada por clima (fe_nec=1.12 × clima=0.99 = 1.11). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=11.939 vs calibrado=13.375).",
-        "Item 'eap-1_9': divergência de produtividade -40.5% não explicada por clima (fe_nec=0.62 × clima=0.96 = 0.59). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=5.873 vs calibrado=5.873).",
+        "Item 'eap-1_9': divergência de produtividade -39.9% não explicada por clima (fe_nec=0.62 × clima=0.97 = 0.60). P_engine < P_catálogo (operacional mais barato). Reconciliar valor_horario (producao) com o PU de catálogo (cat=5.873 vs calibrado=5.873).",
         "Item 'eap-1_10': divergência de produtividade +21.2% não explicada por clima (fe_nec=1.22 × clima=0.99 = 1.21). P_engine > P_catálogo (operacional mais caro). Reconciliar valor_horario (producao) com o PU de catálogo (cat=14.437 vs calibrado=17.613).",
-        "Família 'CPU' com itens originalmente em ERRO (eap-1_1, eap-1_2, eap-1_3, eap-1_5, eap-1_10) mas saldo agregado positivo (Δfam = R$ 24,007,246.14). Criticidade rebaixada para AVISO."
+        "Família 'CPU' com itens originalmente em ERRO (eap-1_1, eap-1_2, eap-1_3, eap-1_5, eap-1_10) mas saldo agregado positivo (Δfam = R$ 23,167,040.67). Criticidade rebaixada para AVISO."
       ]
     },
     {
       "skill": "11-avaliacao-intervencoes",
       "status": "OK",
-      "duration_ms": 166,
+      "duration_ms": 89,
       "avisos": []
     },
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 2109,
+      "duration_ms": 1057,
       "avisos": [
         "Erro ao gerar Excel relatório: '<' not supported between instances of 'NoneType' and 'NoneType'",
         "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
@@ -144,25 +142,25 @@
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 52,
+      "duration_ms": 217,
       "avisos": []
     },
     {
       "skill": "13-assessor-replanejamento",
       "status": "OK",
-      "duration_ms": 48,
+      "duration_ms": 146,
       "avisos": []
     },
     {
       "skill": "14-explorador-cenarios",
       "status": "OK",
-      "duration_ms": 56,
+      "duration_ms": 143,
       "avisos": []
     },
     {
       "skill": "15-relatorio-executivo",
       "status": "OK",
-      "duration_ms": 56,
+      "duration_ms": 172,
       "avisos": []
     }
   ],
@@ -181,7 +179,7 @@
       "custo_indireto": 19584539.27,
       "custo_total": 66428330.76,
       "preco_venda": 81098986.57,
-      "preco_venda_plus_eq": 71902046.43,
+      "preco_venda_plus_eq": 73391955.23,
       "preco_venda_catalogo": 81098986.57,
       "preco_venda_operacional": 81098986.57,
       "bdi_lucro_impostos": 0.22084938221620898
@@ -194,7 +192,7 @@
       "materiais_total": 0.0,
       "direto_total": 46843791.49,
       "direto_total_pu_q": 46843791.49,
-      "direto_total_equipes": 85626363.84
+      "direto_total_equipes": 88462268.64
     },
     "ferramenta_breakdown_indireto": {
       "adm": 13766750.4,
@@ -268,7 +266,7 @@
         "materiais_total": 0.0,
         "direto_total": 46843791.49,
         "direto_total_pu_q": 46843791.49,
-        "direto_total_equipes": 85626363.84
+        "direto_total_equipes": 88462268.64
       },
       "indireto": {
         "adm": 13766750.4,

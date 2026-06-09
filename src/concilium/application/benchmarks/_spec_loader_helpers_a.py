@@ -113,13 +113,14 @@ def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> l
     if not atividades:
         eap = out.get("eap") if isinstance(out.get("eap"), list) else []
 
-        # Índice spec.cronograma compacto → {item_id: {duration_weeks, equipes}}
-        # Prioridade: cronograma_compacto (novo) > cronograma.atividades (legado)
+        # Índice spec.cronograma compacto → {item_id: {equipes}}
+        # duration_weeks é derivado de Q/P em skill-04 (_enrich_spec_resources_from_catalog)
+        # e não deve ser armazenado na spec (seria redundante e poderia divergir).
         cron_index: dict[str, dict] = {}
         for c in (out.get("cronograma_compacto") or []):
             if isinstance(c, dict) and c.get("item_id"):
                 cron_index[str(c["item_id"])] = c
-        # fallback: atividades legadas que já carregam os campos compactos
+        # fallback: atividades legadas
         if not cron_index:
             cron_legacy = (out.get("cronograma") or {})
             for c in (cron_legacy.get("atividades") if isinstance(cron_legacy, dict) else []) or []:
@@ -135,12 +136,13 @@ def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> l
                 continue
 
             cron_item = cron_index.get(str(item_id), {})
-            dur = int(cron_item.get("duration_weeks") or 1)
 
             act: dict[str, Any] = {
                 "item_id": str(item_id),
                 "descricao": str(item.get("descricao") or item_id),
-                "duration_weeks": dur,
+                # duration_weeks=1 é placeholder; _enrich_spec_resources_from_catalog
+                # substitui pelo valor real ceil(Q / (P × n_frentes × h_sem))
+                "duration_weeks": 1,
                 "required_resources": {},
             }
 

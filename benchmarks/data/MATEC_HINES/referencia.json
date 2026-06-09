@@ -137,7 +137,6 @@
     "cronograma": [
       {
         "item_id": "1.0",
-        "duration_weeks": 26,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -148,7 +147,6 @@
       },
       {
         "item_id": "1.1",
-        "duration_weeks": 26,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -159,7 +157,6 @@
       },
       {
         "item_id": "1.2",
-        "duration_weeks": 26,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -170,7 +167,6 @@
       },
       {
         "item_id": "1.3",
-        "duration_weeks": 26,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,

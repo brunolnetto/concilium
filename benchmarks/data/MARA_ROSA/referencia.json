@@ -280,7 +280,6 @@
     "cronograma": [
       {
         "item_id": "2.1",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -291,7 +290,6 @@
       },
       {
         "item_id": "2.2",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -302,7 +300,6 @@
       },
       {
         "item_id": "2.3",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -313,7 +310,6 @@
       },
       {
         "item_id": "2.4",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -324,7 +320,6 @@
       },
       {
         "item_id": "2.5",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -335,7 +330,6 @@
       },
       {
         "item_id": "3.1",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -346,7 +340,6 @@
       },
       {
         "item_id": "3.2",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -357,7 +350,6 @@
       },
       {
         "item_id": "4.1",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -368,7 +360,6 @@
       },
       {
         "item_id": "4.2",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -379,7 +370,6 @@
       },
       {
         "item_id": "4.3",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -390,7 +380,6 @@
       },
       {
         "item_id": "4.4",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -401,7 +390,6 @@
       },
       {
         "item_id": "4.5",
-        "duration_weeks": 8,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,

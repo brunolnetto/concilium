@@ -115,31 +115,25 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
     out["rcpsp_spec"] = spec.get("rcpsp_spec") or {}
 
     # 4. cronograma: propaga formato compacto E constrói atividades v1 (retrocompat)
-    # Formato compacto: {item_id, duration_weeks, equipes: {n_inicial, n_max, taxa_mob, taxa_demob}}
-    # Formato legado:   {item_id, producao_diaria, quantitativo, semanas}
+    # Formato compacto: {item_id, equipes: {n_inicial, n_max, taxa_mob, taxa_demob}}
+    # duration_weeks é calculado em skill-04 a partir de Q/P — não armazenado na spec.
     atividades = []
     cron_compacto = []
     for item in spec.get("cronograma") or []:
         item_id = item["item_id"]
         eap_item = eap_by_id.get(item_id, {})
-        # Formato compacto (novo) — preserva equipes e duration_weeks
         compact: dict[str, Any] = {"item_id": item_id}
-        if "duration_weeks" in item:
-            compact["duration_weeks"] = item["duration_weeks"]
         if "equipes" in item:
             compact["equipes"] = item["equipes"]
         if "producao_diaria" in item:
             compact["producao_diaria"] = item["producao_diaria"]
         cron_compacto.append(compact)
-        # Legado: mantém compatibilidade com input_deriver e demais consumidores
         atividades.append(
             {
                 "item_id": item_id,
                 "producao_diaria": item.get("producao_diaria", 0.0),
                 "quantitativo": eap_item.get("quantitativo", 0.0),
                 "semanas": item.get("semanas") or {},
-                # Propaga campos compactos para consumers que os conhecem
-                "duration_weeks": item.get("duration_weeks"),
                 "equipes": item.get("equipes"),
             }
         )

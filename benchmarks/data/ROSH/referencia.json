@@ -314,7 +314,6 @@
     "cronograma": [
       {
         "item_id": "1.1",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -325,7 +324,6 @@
       },
       {
         "item_id": "1.2",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -336,7 +334,6 @@
       },
       {
         "item_id": "1.3",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -347,7 +344,6 @@
       },
       {
         "item_id": "1.5",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -358,7 +354,6 @@
       },
       {
         "item_id": "1.10",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -369,7 +364,6 @@
       },
       {
         "item_id": "1.14",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -380,7 +374,6 @@
       },
       {
         "item_id": "1.17",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -391,7 +384,6 @@
       },
       {
         "item_id": "1.21",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -402,7 +394,6 @@
       },
       {
         "item_id": "1.25",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -413,7 +404,6 @@
       },
       {
         "item_id": "1.29",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -424,7 +414,6 @@
       },
       {
         "item_id": "1.33",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -435,7 +424,6 @@
       },
       {
         "item_id": "1.34",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -446,7 +434,6 @@
       },
       {
         "item_id": "2.1",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
@@ -457,7 +444,6 @@
       },
       {
         "item_id": "3.1",
-        "duration_weeks": 7,
         "equipes": {
           "n_inicial": 1,
           "n_max": 1,
