@@ -109,9 +109,23 @@ def _norm_ref_parse_atividade_duration(atividade: dict[str, Any], weeks: list[st
 def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> list[dict[str, Any]]:
     atividades = out.get("atividades") if isinstance(out.get("atividades"), list) else []
 
-    # If no atividades but EAP exists, build from EAP (skill-01 will create detailed activities later)
+    # If no atividades but EAP exists, build from EAP using spec.cronograma when available
     if not atividades:
         eap = out.get("eap") if isinstance(out.get("eap"), list) else []
+
+        # Índice spec.cronograma compacto → {item_id: {duration_weeks, equipes}}
+        # Prioridade: cronograma_compacto (novo) > cronograma.atividades (legado)
+        cron_index: dict[str, dict] = {}
+        for c in (out.get("cronograma_compacto") or []):
+            if isinstance(c, dict) and c.get("item_id"):
+                cron_index[str(c["item_id"])] = c
+        # fallback: atividades legadas que já carregam os campos compactos
+        if not cron_index:
+            cron_legacy = (out.get("cronograma") or {})
+            for c in (cron_legacy.get("atividades") if isinstance(cron_legacy, dict) else []) or []:
+                if isinstance(c, dict) and c.get("item_id"):
+                    cron_index[str(c["item_id"])] = c
+
         activities: list[dict[str, Any]] = []
         for item in eap:
             if not isinstance(item, dict):
@@ -119,16 +133,28 @@ def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> l
             item_id = item.get("item_id")
             if not item_id:
                 continue
-            # Build minimal activity from EAP item
-            # Duration defaults to 1 week, will be refined by skill-04
-            activities.append(
-                {
-                    "item_id": str(item_id),
-                    "descricao": str(item.get("descricao") or item_id),
-                    "duration_weeks": 1,  # Default; skill-04 will compute actual
-                    "required_resources": {},
+
+            cron_item = cron_index.get(str(item_id), {})
+            dur = int(cron_item.get("duration_weeks") or 1)
+
+            act: dict[str, Any] = {
+                "item_id": str(item_id),
+                "descricao": str(item.get("descricao") or item_id),
+                "duration_weeks": dur,
+                "required_resources": {},
+            }
+
+            # Injetar ramp_params quando spec.cronograma tem equipes compacto
+            eq = cron_item.get("equipes")
+            if isinstance(eq, dict) and eq.get("n_max", 0) > 0:
+                act["ramp_params"] = {
+                    "n_inicial":           eq.get("n_inicial", 1),
+                    "n_max":               eq["n_max"],  # necessário para _compute_ramp_profile
+                    "taxa_mobilizacao":    eq.get("taxa_mobilizacao", float(eq["n_max"])),
+                    "taxa_desmobilizacao": eq.get("taxa_desmobilizacao", float(eq["n_max"])),
                 }
-            )
+
+            activities.append(act)
         return activities
 
     # Otherwise build from explicit atividades

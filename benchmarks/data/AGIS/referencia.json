@@ -1,4 +1,5 @@
 {
+  "slug": "AGIS",
   "meta": {
     "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
     "data_inicio": "2026-06-01",
@@ -161,1017 +162,112 @@
     "cronograma": [
       {
         "item_id": "eap-1_0",
-        "semanas": {
-          "2026-W23": {
-            "num_equipes": 1
-          },
-          "2026-W24": {
-            "num_equipes": 3
-          },
-          "2026-W25": {
-            "num_equipes": 6
-          },
-          "2026-W26": {
-            "num_equipes": 6
-          },
-          "2026-W27": {
-            "num_equipes": 6
-          },
-          "2026-W28": {
-            "num_equipes": 6
-          },
-          "2026-W29": {
-            "num_equipes": 6
-          },
-          "2026-W30": {
-            "num_equipes": 6
-          },
-          "2026-W31": {
-            "num_equipes": 6
-          },
-          "2026-W32": {
-            "num_equipes": 6
-          },
-          "2026-W33": {
-            "num_equipes": 6
-          },
-          "2026-W34": {
-            "num_equipes": 6
-          },
-          "2026-W35": {
-            "num_equipes": 6
-          },
-          "2026-W36": {
-            "num_equipes": 6
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 6,
-          "ramp_up_semanas": 2,
-          "ramp_down_semanas": 1
+        "duration_weeks": 15,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 6,
+          "taxa_mobilizacao": 2.5,
+          "taxa_desmobilizacao": 6.0
         }
       },
       {
         "item_id": "eap-1_1",
-        "semanas": {
-          "2026-W28": {
-            "num_equipes": 1
-          },
-          "2026-W29": {
-            "num_equipes": 1
-          },
-          "2026-W30": {
-            "num_equipes": 1
-          },
-          "2026-W31": {
-            "num_equipes": 1
-          },
-          "2026-W32": {
-            "num_equipes": 1
-          },
-          "2026-W33": {
-            "num_equipes": 1
-          },
-          "2026-W34": {
-            "num_equipes": 1
-          },
-          "2026-W35": {
-            "num_equipes": 1
-          },
-          "2026-W36": {
-            "num_equipes": 1
-          },
-          "2026-W37": {
-            "num_equipes": 1
-          },
-          "2026-W38": {
-            "num_equipes": 1
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
+        "duration_weeks": 11,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         }
       },
       {
         "item_id": "eap-1_2",
-        "semanas": {
-          "2026-W28": {
-            "num_equipes": 1
-          },
-          "2026-W29": {
-            "num_equipes": 1
-          },
-          "2026-W30": {
-            "num_equipes": 1
-          },
-          "2026-W31": {
-            "num_equipes": 1
-          },
-          "2026-W32": {
-            "num_equipes": 1
-          },
-          "2026-W33": {
-            "num_equipes": 1
-          },
-          "2026-W34": {
-            "num_equipes": 1
-          },
-          "2026-W35": {
-            "num_equipes": 1
-          },
-          "2026-W36": {
-            "num_equipes": 1
-          },
-          "2026-W37": {
-            "num_equipes": 1
-          },
-          "2026-W38": {
-            "num_equipes": 1
-          },
-          "2026-W39": {
-            "num_equipes": 1
-          },
-          "2026-W40": {
-            "num_equipes": 1
-          },
-          "2026-W41": {
-            "num_equipes": 1
-          },
-          "2026-W42": {
-            "num_equipes": 1
-          },
-          "2026-W43": {
-            "num_equipes": 1
-          },
-          "2026-W44": {
-            "num_equipes": 1
-          },
-          "2026-W45": {
-            "num_equipes": 1
-          },
-          "2026-W46": {
-            "num_equipes": 1
-          },
-          "2026-W47": {
-            "num_equipes": 1
-          },
-          "2026-W48": {
-            "num_equipes": 1
-          },
-          "2026-W49": {
-            "num_equipes": 1
-          },
-          "2026-W50": {
-            "num_equipes": 1
-          },
-          "2026-W51": {
-            "num_equipes": 1
-          },
-          "2026-W52": {
-            "num_equipes": 1
-          },
-          "2027-W01": {
-            "num_equipes": 1
-          },
-          "2027-W02": {
-            "num_equipes": 1
-          },
-          "2027-W03": {
-            "num_equipes": 1
-          },
-          "2027-W04": {
-            "num_equipes": 1
-          },
-          "2027-W05": {
-            "num_equipes": 1
-          },
-          "2027-W06": {
-            "num_equipes": 1
-          },
-          "2027-W07": {
-            "num_equipes": 1
-          },
-          "2027-W08": {
-            "num_equipes": 1
-          },
-          "2027-W09": {
-            "num_equipes": 1
-          },
-          "2027-W10": {
-            "num_equipes": 1
-          },
-          "2027-W11": {
-            "num_equipes": 1
-          },
-          "2027-W12": {
-            "num_equipes": 1
-          },
-          "2027-W13": {
-            "num_equipes": 1
-          },
-          "2027-W14": {
-            "num_equipes": 1
-          },
-          "2027-W15": {
-            "num_equipes": 1
-          },
-          "2027-W16": {
-            "num_equipes": 1
-          },
-          "2027-W17": {
-            "num_equipes": 1
-          },
-          "2027-W18": {
-            "num_equipes": 1
-          },
-          "2027-W19": {
-            "num_equipes": 1
-          },
-          "2026-W53": {
-            "num_equipes": 1
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
+        "duration_weeks": 45,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         }
       },
       {
         "item_id": "eap-1_3",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 2
-          },
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 2
-          },
-          "2026-W30": {
-            "num_equipes": 2
-          },
-          "2026-W31": {
-            "num_equipes": 2
-          },
-          "2026-W32": {
-            "num_equipes": 2
-          },
-          "2026-W33": {
-            "num_equipes": 2
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 2,
-          "ramp_up_semanas": 1,
-          "ramp_down_semanas": 0
+        "duration_weeks": 9,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 2,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 2.0
         }
       },
       {
         "item_id": "eap-1_4",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 2
-          },
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 2
-          },
-          "2026-W30": {
-            "num_equipes": 2
-          },
-          "2026-W31": {
-            "num_equipes": 2
-          },
-          "2026-W32": {
-            "num_equipes": 2
-          },
-          "2026-W33": {
-            "num_equipes": 2
-          },
-          "2026-W34": {
-            "num_equipes": 2
-          },
-          "2026-W35": {
-            "num_equipes": 2
-          },
-          "2026-W36": {
-            "num_equipes": 2
-          },
-          "2026-W37": {
-            "num_equipes": 2
-          },
-          "2026-W38": {
-            "num_equipes": 2
-          },
-          "2026-W39": {
-            "num_equipes": 2
-          },
-          "2026-W40": {
-            "num_equipes": 2
-          },
-          "2026-W41": {
-            "num_equipes": 2
-          },
-          "2026-W42": {
-            "num_equipes": 2
-          },
-          "2026-W43": {
-            "num_equipes": 2
-          },
-          "2026-W44": {
-            "num_equipes": 2
-          },
-          "2026-W45": {
-            "num_equipes": 2
-          },
-          "2026-W46": {
-            "num_equipes": 2
-          },
-          "2026-W47": {
-            "num_equipes": 2
-          },
-          "2026-W48": {
-            "num_equipes": 2
-          },
-          "2026-W49": {
-            "num_equipes": 2
-          },
-          "2026-W50": {
-            "num_equipes": 2
-          },
-          "2026-W51": {
-            "num_equipes": 2
-          },
-          "2026-W52": {
-            "num_equipes": 2
-          },
-          "2027-W01": {
-            "num_equipes": 2
-          },
-          "2027-W02": {
-            "num_equipes": 2
-          },
-          "2027-W03": {
-            "num_equipes": 2
-          },
-          "2027-W04": {
-            "num_equipes": 2
-          },
-          "2027-W05": {
-            "num_equipes": 2
-          },
-          "2027-W06": {
-            "num_equipes": 2
-          },
-          "2027-W07": {
-            "num_equipes": 2
-          },
-          "2027-W08": {
-            "num_equipes": 2
-          },
-          "2027-W09": {
-            "num_equipes": 2
-          },
-          "2027-W10": {
-            "num_equipes": 2
-          },
-          "2027-W11": {
-            "num_equipes": 2
-          },
-          "2027-W12": {
-            "num_equipes": 2
-          },
-          "2027-W13": {
-            "num_equipes": 2
-          },
-          "2027-W14": {
-            "num_equipes": 2
-          },
-          "2027-W15": {
-            "num_equipes": 2
-          },
-          "2027-W16": {
-            "num_equipes": 2
-          },
-          "2027-W17": {
-            "num_equipes": 2
-          },
-          "2027-W18": {
-            "num_equipes": 2
-          },
-          "2027-W19": {
-            "num_equipes": 2
-          },
-          "2027-W20": {
-            "num_equipes": 2
-          },
-          "2027-W21": {
-            "num_equipes": 2
-          },
-          "2027-W22": {
-            "num_equipes": 2
-          },
-          "2026-W53": {
-            "num_equipes": 2
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 2,
-          "ramp_up_semanas": 1,
-          "ramp_down_semanas": 0
+        "duration_weeks": 51,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 2,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 2.0
         }
       },
       {
         "item_id": "eap-1_5",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 3
-          },
-          "2026-W28": {
-            "num_equipes": 3
-          },
-          "2026-W29": {
-            "num_equipes": 3
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 3
-          },
-          "2026-W34": {
-            "num_equipes": 3
-          },
-          "2026-W35": {
-            "num_equipes": 3
-          },
-          "2026-W36": {
-            "num_equipes": 3
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          },
-          "2026-W38": {
-            "num_equipes": 3
-          },
-          "2026-W39": {
-            "num_equipes": 3
-          },
-          "2026-W40": {
-            "num_equipes": 3
-          },
-          "2026-W41": {
-            "num_equipes": 3
-          },
-          "2026-W42": {
-            "num_equipes": 3
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 3,
-          "ramp_up_semanas": 2,
-          "ramp_down_semanas": 0
+        "duration_weeks": 18,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 3,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 3.0
         }
       },
       {
         "item_id": "eap-1_6",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 3
-          },
-          "2026-W28": {
-            "num_equipes": 3
-          },
-          "2026-W29": {
-            "num_equipes": 3
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 3
-          },
-          "2026-W34": {
-            "num_equipes": 3
-          },
-          "2026-W35": {
-            "num_equipes": 3
-          },
-          "2026-W36": {
-            "num_equipes": 3
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          },
-          "2026-W38": {
-            "num_equipes": 3
-          },
-          "2026-W39": {
-            "num_equipes": 3
-          },
-          "2026-W40": {
-            "num_equipes": 3
-          },
-          "2026-W41": {
-            "num_equipes": 3
-          },
-          "2026-W42": {
-            "num_equipes": 3
-          },
-          "2026-W43": {
-            "num_equipes": 3
-          },
-          "2026-W44": {
-            "num_equipes": 3
-          },
-          "2026-W45": {
-            "num_equipes": 3
-          },
-          "2026-W46": {
-            "num_equipes": 3
-          },
-          "2026-W47": {
-            "num_equipes": 3
-          },
-          "2026-W48": {
-            "num_equipes": 3
-          },
-          "2026-W49": {
-            "num_equipes": 3
-          },
-          "2026-W50": {
-            "num_equipes": 3
-          },
-          "2026-W51": {
-            "num_equipes": 3
-          },
-          "2026-W52": {
-            "num_equipes": 3
-          },
-          "2027-W01": {
-            "num_equipes": 4
-          },
-          "2027-W02": {
-            "num_equipes": 4
-          },
-          "2027-W03": {
-            "num_equipes": 4
-          },
-          "2027-W04": {
-            "num_equipes": 4
-          },
-          "2027-W05": {
-            "num_equipes": 4
-          },
-          "2027-W06": {
-            "num_equipes": 4
-          },
-          "2027-W07": {
-            "num_equipes": 4
-          },
-          "2027-W08": {
-            "num_equipes": 4
-          },
-          "2026-W53": {
-            "num_equipes": 3
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 4,
-          "ramp_up_semanas": 29,
-          "ramp_down_semanas": 0
+        "duration_weeks": 37,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 4,
+          "taxa_mobilizacao": 0.1034,
+          "taxa_desmobilizacao": 4.0
         }
       },
       {
         "item_id": "eap-1_7",
-        "semanas": {
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 3
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 4
-          },
-          "2026-W34": {
-            "num_equipes": 4
-          },
-          "2026-W35": {
-            "num_equipes": 4
-          },
-          "2026-W36": {
-            "num_equipes": 4
-          },
-          "2026-W37": {
-            "num_equipes": 4
-          },
-          "2026-W38": {
-            "num_equipes": 4
-          },
-          "2026-W39": {
-            "num_equipes": 4
-          },
-          "2026-W40": {
-            "num_equipes": 4
-          },
-          "2026-W41": {
-            "num_equipes": 4
-          },
-          "2026-W42": {
-            "num_equipes": 4
-          },
-          "2026-W43": {
-            "num_equipes": 4
-          },
-          "2026-W44": {
-            "num_equipes": 4
-          },
-          "2026-W45": {
-            "num_equipes": 4
-          },
-          "2026-W46": {
-            "num_equipes": 4
-          },
-          "2026-W47": {
-            "num_equipes": 4
-          },
-          "2026-W48": {
-            "num_equipes": 4
-          },
-          "2026-W49": {
-            "num_equipes": 4
-          },
-          "2026-W50": {
-            "num_equipes": 4
-          },
-          "2026-W51": {
-            "num_equipes": 4
-          },
-          "2026-W52": {
-            "num_equipes": 4
-          },
-          "2027-W01": {
-            "num_equipes": 4
-          },
-          "2027-W02": {
-            "num_equipes": 4
-          },
-          "2027-W03": {
-            "num_equipes": 4
-          },
-          "2027-W04": {
-            "num_equipes": 4
-          },
-          "2027-W05": {
-            "num_equipes": 4
-          },
-          "2027-W06": {
-            "num_equipes": 4
-          },
-          "2027-W07": {
-            "num_equipes": 4
-          },
-          "2027-W08": {
-            "num_equipes": 4
-          },
-          "2027-W09": {
-            "num_equipes": 4
-          },
-          "2027-W10": {
-            "num_equipes": 4
-          },
-          "2027-W11": {
-            "num_equipes": 4
-          },
-          "2027-W12": {
-            "num_equipes": 4
-          },
-          "2027-W13": {
-            "num_equipes": 4
-          },
-          "2027-W14": {
-            "num_equipes": 4
-          },
-          "2027-W15": {
-            "num_equipes": 4
-          },
-          "2027-W16": {
-            "num_equipes": 4
-          },
-          "2027-W17": {
-            "num_equipes": 4
-          },
-          "2027-W18": {
-            "num_equipes": 4
-          },
-          "2027-W19": {
-            "num_equipes": 4
-          },
-          "2027-W20": {
-            "num_equipes": 4
-          },
-          "2027-W21": {
-            "num_equipes": 4
-          },
-          "2027-W22": {
-            "num_equipes": 4
-          },
-          "2027-W23": {
-            "num_equipes": 3
-          },
-          "2027-W24": {
-            "num_equipes": 2
-          },
-          "2027-W25": {
-            "num_equipes": 3
-          },
-          "2026-W53": {
-            "num_equipes": 4
-          }
-        },
-        "mob_params": {
-          "q_0": 2,
-          "q_max": 4,
-          "ramp_up_semanas": 5,
-          "ramp_down_semanas": 3
+        "duration_weeks": 51,
+        "equipes": {
+          "n_inicial": 2,
+          "n_max": 4,
+          "taxa_mobilizacao": 0.4,
+          "taxa_desmobilizacao": 1.3333
         }
       },
       {
         "item_id": "eap-1_8",
-        "semanas": {
-          "2027-W23": {
-            "num_equipes": 1
-          },
-          "2027-W24": {
-            "num_equipes": 2
-          },
-          "2027-W25": {
-            "num_equipes": 1
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 2,
-          "ramp_up_semanas": 1,
-          "ramp_down_semanas": 1
+        "duration_weeks": 3,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 2,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 2.0
         }
       },
       {
         "item_id": "eap-1_9",
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 2
-          },
-          "2026-W26": {
-            "num_equipes": 2
-          },
-          "2026-W27": {
-            "num_equipes": 2
-          },
-          "2026-W28": {
-            "num_equipes": 2
-          },
-          "2026-W29": {
-            "num_equipes": 2
-          },
-          "2026-W30": {
-            "num_equipes": 3
-          },
-          "2026-W31": {
-            "num_equipes": 3
-          },
-          "2026-W32": {
-            "num_equipes": 3
-          },
-          "2026-W33": {
-            "num_equipes": 3
-          },
-          "2026-W34": {
-            "num_equipes": 3
-          },
-          "2026-W35": {
-            "num_equipes": 3
-          },
-          "2026-W36": {
-            "num_equipes": 3
-          },
-          "2026-W37": {
-            "num_equipes": 3
-          },
-          "2026-W38": {
-            "num_equipes": 3
-          },
-          "2026-W39": {
-            "num_equipes": 3
-          },
-          "2026-W40": {
-            "num_equipes": 3
-          },
-          "2026-W41": {
-            "num_equipes": 3
-          },
-          "2026-W42": {
-            "num_equipes": 3
-          },
-          "2026-W43": {
-            "num_equipes": 3
-          },
-          "2026-W44": {
-            "num_equipes": 3
-          },
-          "2026-W45": {
-            "num_equipes": 3
-          },
-          "2026-W46": {
-            "num_equipes": 3
-          },
-          "2026-W47": {
-            "num_equipes": 3
-          },
-          "2026-W48": {
-            "num_equipes": 3
-          },
-          "2026-W49": {
-            "num_equipes": 3
-          },
-          "2026-W50": {
-            "num_equipes": 3
-          },
-          "2026-W51": {
-            "num_equipes": 3
-          },
-          "2026-W52": {
-            "num_equipes": 3
-          },
-          "2027-W01": {
-            "num_equipes": 3
-          },
-          "2027-W02": {
-            "num_equipes": 3
-          },
-          "2027-W03": {
-            "num_equipes": 3
-          },
-          "2027-W04": {
-            "num_equipes": 3
-          },
-          "2027-W05": {
-            "num_equipes": 3
-          },
-          "2027-W06": {
-            "num_equipes": 3
-          },
-          "2027-W07": {
-            "num_equipes": 3
-          },
-          "2027-W08": {
-            "num_equipes": 3
-          },
-          "2027-W09": {
-            "num_equipes": 3
-          },
-          "2027-W10": {
-            "num_equipes": 3
-          },
-          "2027-W11": {
-            "num_equipes": 3
-          },
-          "2027-W12": {
-            "num_equipes": 3
-          },
-          "2027-W13": {
-            "num_equipes": 3
-          },
-          "2027-W14": {
-            "num_equipes": 3
-          },
-          "2027-W15": {
-            "num_equipes": 3
-          },
-          "2027-W16": {
-            "num_equipes": 3
-          },
-          "2027-W17": {
-            "num_equipes": 3
-          },
-          "2027-W18": {
-            "num_equipes": 3
-          },
-          "2027-W19": {
-            "num_equipes": 3
-          },
-          "2027-W20": {
-            "num_equipes": 3
-          },
-          "2027-W21": {
-            "num_equipes": 3
-          },
-          "2027-W22": {
-            "num_equipes": 3
-          },
-          "2027-W23": {
-            "num_equipes": 3
-          },
-          "2026-W53": {
-            "num_equipes": 3
-          }
-        },
-        "mob_params": {
-          "q_0": 2,
-          "q_max": 3,
-          "ramp_up_semanas": 5,
-          "ramp_down_semanas": 0
+        "duration_weeks": 52,
+        "equipes": {
+          "n_inicial": 2,
+          "n_max": 3,
+          "taxa_mobilizacao": 0.2,
+          "taxa_desmobilizacao": 3.0
         }
       },
       {
         "item_id": "eap-1_10",
-        "semanas": {
-          "2027-W18": {
-            "num_equipes": 1
-          },
-          "2027-W19": {
-            "num_equipes": 1
-          },
-          "2027-W20": {
-            "num_equipes": 1
-          },
-          "2027-W21": {
-            "num_equipes": 1
-          },
-          "2027-W22": {
-            "num_equipes": 1
-          },
-          "2027-W23": {
-            "num_equipes": 1
-          }
-        },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
+        "duration_weeks": 6,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         }
       }
     ],
@@ -1527,6 +623,5 @@
     }
   },
   "_schema_version": "v3",
-  "_schema_upgraded_from": "v2",
-  "slug": "AGIS"
+  "_schema_upgraded_from": "v2"
 }

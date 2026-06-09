@@ -482,579 +482,267 @@
     "cronograma": [
       {
         "item_id": "1.1",
-        "producao_diaria": 2600.0,
-        "semanas": {
-          "2026-W01": {
-            "num_equipes": 1
-          },
-          "2026-W02": {
-            "num_equipes": 1
-          },
-          "2026-W03": {
-            "num_equipes": 1
-          },
-          "2026-W04": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 2600.0
       },
       {
         "item_id": "1.3",
-        "producao_diaria": 780.0,
-        "semanas": {
-          "2026-W05": {
-            "num_equipes": 1
-          },
-          "2026-W06": {
-            "num_equipes": 1
-          },
-          "2026-W07": {
-            "num_equipes": 1
-          },
-          "2026-W08": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 780.0
       },
       {
         "item_id": "2.1",
-        "producao_diaria": 59.73,
-        "semanas": {
-          "2026-W09": {
-            "num_equipes": 1
-          },
-          "2026-W10": {
-            "num_equipes": 1
-          },
-          "2026-W11": {
-            "num_equipes": 1
-          },
-          "2026-W12": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 59.73
       },
       {
         "item_id": "2.2",
-        "producao_diaria": 2567.69,
-        "semanas": {
-          "2026-W13": {
-            "num_equipes": 1
-          },
-          "2026-W14": {
-            "num_equipes": 1
-          },
-          "2026-W15": {
-            "num_equipes": 1
-          },
-          "2026-W16": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 2567.69
       },
       {
         "item_id": "2.3",
-        "producao_diaria": 2021.09,
-        "semanas": {
-          "2026-W17": {
-            "num_equipes": 1
-          },
-          "2026-W18": {
-            "num_equipes": 1
-          },
-          "2026-W19": {
-            "num_equipes": 1
-          },
-          "2026-W20": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 2021.09
       },
       {
         "item_id": "3.1",
-        "producao_diaria": 210.0,
-        "semanas": {
-          "2026-W21": {
-            "num_equipes": 1
-          },
-          "2026-W22": {
-            "num_equipes": 1
-          },
-          "2026-W23": {
-            "num_equipes": 1
-          },
-          "2026-W24": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 210.0
       },
       {
         "item_id": "3.3",
-        "producao_diaria": 315.0,
-        "semanas": {
-          "2026-W25": {
-            "num_equipes": 1
-          },
-          "2026-W26": {
-            "num_equipes": 1
-          },
-          "2026-W27": {
-            "num_equipes": 1
-          },
-          "2026-W28": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 315.0
       },
       {
         "item_id": "4.1",
-        "producao_diaria": 1875.45,
-        "semanas": {
-          "2026-W29": {
-            "num_equipes": 1
-          },
-          "2026-W30": {
-            "num_equipes": 1
-          },
-          "2026-W31": {
-            "num_equipes": 1
-          },
-          "2026-W32": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 1875.45
       },
       {
         "item_id": "4.2",
-        "producao_diaria": 1125.27,
-        "semanas": {
-          "2026-W33": {
-            "num_equipes": 1
-          },
-          "2026-W34": {
-            "num_equipes": 1
-          },
-          "2026-W35": {
-            "num_equipes": 1
-          },
-          "2026-W36": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 1125.27
       },
       {
         "item_id": "4.3",
-        "producao_diaria": 281.32,
-        "semanas": {
-          "2026-W37": {
-            "num_equipes": 1
-          },
-          "2026-W38": {
-            "num_equipes": 1
-          },
-          "2026-W39": {
-            "num_equipes": 1
-          },
-          "2026-W40": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 281.32
       },
       {
         "item_id": "4.4",
-        "producao_diaria": 275.07,
-        "semanas": {
-          "2026-W41": {
-            "num_equipes": 1
-          },
-          "2026-W42": {
-            "num_equipes": 1
-          },
-          "2026-W43": {
-            "num_equipes": 1
-          },
-          "2026-W44": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 275.07
       },
       {
         "item_id": "4.5",
-        "producao_diaria": 1792.1,
-        "semanas": {
-          "2026-W45": {
-            "num_equipes": 1
-          },
-          "2026-W46": {
-            "num_equipes": 1
-          },
-          "2026-W47": {
-            "num_equipes": 1
-          },
-          "2026-W48": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 1792.1
       },
       {
         "item_id": "4.6",
-        "producao_diaria": 3584.2,
-        "semanas": {
-          "2026-W49": {
-            "num_equipes": 1
-          },
-          "2026-W50": {
-            "num_equipes": 1
-          },
-          "2026-W51": {
-            "num_equipes": 1
-          },
-          "2026-W52": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 3584.2
       },
       {
         "item_id": "4.7",
-        "producao_diaria": 292.57,
-        "semanas": {
-          "2026-W53": {
-            "num_equipes": 1
-          },
-          "2027-W01": {
-            "num_equipes": 1
-          },
-          "2027-W02": {
-            "num_equipes": 1
-          },
-          "2027-W03": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 292.57
       },
       {
         "item_id": "4.8",
-        "producao_diaria": 270.06,
-        "semanas": {
-          "2027-W04": {
-            "num_equipes": 1
-          },
-          "2027-W05": {
-            "num_equipes": 1
-          },
-          "2027-W06": {
-            "num_equipes": 1
-          },
-          "2027-W07": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 270.06
       },
       {
         "item_id": "5.1",
-        "producao_diaria": 3.0,
-        "semanas": {
-          "2027-W08": {
-            "num_equipes": 1
-          },
-          "2027-W09": {
-            "num_equipes": 1
-          },
-          "2027-W10": {
-            "num_equipes": 1
-          },
-          "2027-W11": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 3.0
       },
       {
         "item_id": "5.2",
-        "producao_diaria": 1.0,
-        "semanas": {
-          "2027-W12": {
-            "num_equipes": 1
-          },
-          "2027-W13": {
-            "num_equipes": 1
-          },
-          "2027-W14": {
-            "num_equipes": 1
-          },
-          "2027-W15": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 1.0
       },
       {
         "item_id": "5.3",
-        "producao_diaria": 0.3,
-        "semanas": {
-          "2027-W16": {
-            "num_equipes": 1
-          },
-          "2027-W17": {
-            "num_equipes": 1
-          },
-          "2027-W18": {
-            "num_equipes": 1
-          },
-          "2027-W19": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 0.3
       },
       {
         "item_id": "5.4",
-        "producao_diaria": 0.1,
-        "semanas": {
-          "2027-W20": {
-            "num_equipes": 1
-          },
-          "2027-W21": {
-            "num_equipes": 1
-          },
-          "2027-W22": {
-            "num_equipes": 1
-          },
-          "2027-W23": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 0.1
       },
       {
         "item_id": "5.5",
-        "producao_diaria": 86.62,
-        "semanas": {
-          "2027-W24": {
-            "num_equipes": 1
-          },
-          "2027-W25": {
-            "num_equipes": 1
-          },
-          "2027-W26": {
-            "num_equipes": 1
-          },
-          "2027-W27": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 86.62
       },
       {
         "item_id": "5.6",
-        "producao_diaria": 148.85,
-        "semanas": {
-          "2027-W28": {
-            "num_equipes": 1
-          },
-          "2027-W29": {
-            "num_equipes": 1
-          },
-          "2027-W30": {
-            "num_equipes": 1
-          },
-          "2027-W31": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 148.85
       },
       {
         "item_id": "5.7",
-        "producao_diaria": 86.62,
-        "semanas": {
-          "2027-W32": {
-            "num_equipes": 1
-          },
-          "2027-W33": {
-            "num_equipes": 1
-          },
-          "2027-W34": {
-            "num_equipes": 1
-          },
-          "2027-W35": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 86.62
       },
       {
         "item_id": "5.8",
-        "producao_diaria": 148.85,
-        "semanas": {
-          "2027-W36": {
-            "num_equipes": 1
-          },
-          "2027-W37": {
-            "num_equipes": 1
-          },
-          "2027-W38": {
-            "num_equipes": 1
-          },
-          "2027-W39": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 148.85
       },
       {
         "item_id": "7.1",
-        "producao_diaria": 4273.78,
-        "semanas": {
-          "2027-W40": {
-            "num_equipes": 1
-          },
-          "2027-W41": {
-            "num_equipes": 1
-          },
-          "2027-W42": {
-            "num_equipes": 1
-          },
-          "2027-W43": {
-            "num_equipes": 1
-          }
+        "duration_weeks": 4,
+        "equipes": {
+          "n_inicial": 1,
+          "n_max": 1,
+          "taxa_mobilizacao": 1.0,
+          "taxa_desmobilizacao": 1.0
         },
-        "mob_params": {
-          "q_0": 1,
-          "q_max": 1,
-          "ramp_up_semanas": 0,
-          "ramp_down_semanas": 0
-        }
+        "producao_diaria": 4273.78
       }
     ],
     "indiretos": [

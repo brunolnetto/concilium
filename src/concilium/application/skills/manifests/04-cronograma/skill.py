@@ -695,7 +695,8 @@ def _enrich_spec_resources_from_catalog(
     activities = spec.get("activities") or []
     if not activities:
         return
-    # Não sobrescreve spec explícita
+
+    # Não sobrescreve required_resources/resource_pool quando já explícitos
     if spec.get("resource_pool") or any(a.get("required_resources") for a in activities):
         return
 
@@ -741,6 +742,12 @@ def _enrich_spec_resources_from_catalog(
         a["duration_weeks"] = duration
         a["n_frentes"] = n_frentes
         a["_catalog_resources"] = True
+
+        # ramp_params com duration final → propagado via ramp_lookup em _build_scheduled_activities
+        rp = a.get("ramp_params")
+        if isinstance(rp, dict) and rp.get("n_max", 0) > 0:
+            a["ramp_profile_computed"] = _compute_ramp_profile(duration, rp, int(rp["n_max"]))
+
         enriquecidas += 1
 
     if enriquecidas:
@@ -799,13 +806,18 @@ def _extract_activities_from_spec(
                 productive_w = computed
             # else: keep productive_w = window_w (fallback)
 
-        # ADR-074: derive ramp_profile from ramp_params if present
-        ramp_profile: list[float] | None = None
-        ramp_params = a.get("ramp_params")
-        if ramp_params and isinstance(ramp_params, dict) and productive_w > 0:
-            req = dict(a.get("required_resources", {}))
-            n_pico = max(req.values()) if req else 1
-            ramp_profile = _compute_ramp_profile(productive_w, ramp_params, n_pico)
+        # ADR-074: derive ramp_profile from ramp_params if present.
+        # Prioridade: ramp_profile_computed (calculado no _enrich com duration final).
+        # Fallback: calcular com productive_w (specs sem enriquecimento de catálogo).
+        ramp_profile: list[float] | None = a.get("ramp_profile_computed") or None
+        if ramp_profile is None:
+            ramp_params = a.get("ramp_params")
+            if ramp_params and isinstance(ramp_params, dict) and productive_w > 0:
+                n_pico = int(ramp_params.get("n_max") or 1)
+                if n_pico > 0:
+                    ramp_profile = _compute_ramp_profile(productive_w, ramp_params, n_pico)
+        # Limpar campo temporário para não poluir o dict serializado
+        a.pop("ramp_profile_computed", None)
 
         activities.append(
             Activity(
@@ -1917,19 +1929,19 @@ def _build_scheduled_activities(
     # ADR-072: Preservar duração original do scheduler em vez de recalcular
     # Constrói mapa de item_id → duration_weeks do schedule_selected
     # (activity_id do scheduler tem formato "item_id-atv-1", need to extract item_id)
-    duration_lookup = {}
+    duration_lookup: dict[str, int] = {}
+    ramp_lookup: dict[str, list[float] | None] = {}
     if schedule_selected is not None and getattr(schedule_selected, "scheduled_activities", None):
         for sa in schedule_selected.scheduled_activities:
             activity_id = getattr(sa, "activity_id", None)
             duration = getattr(sa, "duration_weeks", None)
             if activity_id and duration:
-                # Extract item_id from activity_id (format: "item_id-atv-1")
-                # activity_id pode ser "eap-1_0-atv-1" ou simplesmente "eap-1_0"
                 if "-atv-" in activity_id:
                     item_id = activity_id.rsplit("-atv-", 1)[0]
                 else:
                     item_id = activity_id
                 duration_lookup[item_id] = duration
+                ramp_lookup[item_id] = getattr(sa, "ramp_profile", None)
 
     for item in canonical_in.eap:  # type: ignore[union-attr]
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
@@ -1958,6 +1970,7 @@ def _build_scheduled_activities(
                 data_fim=data_fim,
                 distribuicao_semanal=distribuicao_semanal,
                 assigned_resources=assigned_lookup.get(item.item_id, {}),
+                ramp_profile=ramp_lookup.get(item.item_id),
             )
         )
     return scheduled_activities_out
