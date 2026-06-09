@@ -655,6 +655,69 @@ def _resolve_prod_lookup(catalogo: dict) -> dict:
     return {p.get("id"): p for p in fonte if p.get("id")}
 
 
+def _calibrar_custos_por_cref(
+    cpu: dict,
+    prod_lookup: dict,
+    horas_dia: float,
+    custo_mo: float,
+    custo_encargos: float,
+    custo_mo_base: float,
+    custo_eq: float,
+    custo_comb: float,
+) -> tuple[float, float, float, float, float]:
+    """NEP-029/S1: recalibra custos mensais usando custo_hora_total_referencia do catálogo.
+
+    Os preços individuais de insumos do catálogo divergem do custo calibrado pela planilha
+    (custo_hora_total_referencia), gerando custo autônomo inconsistente com o pool.
+    Usando precos_unitarios_sbdi como frações e C_ref como base, a equipe autônoma
+    fica alinhada com o pool (mesmo custo_unit_semanal).
+
+    Retorna (custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb) calibrados.
+    Sem alteração quando C_ref ausente ou insumos zerados (fallback silencioso).
+    """
+    prod_id = cpu.get("producao_id_ref") or ""
+    prod = prod_lookup.get(prod_id) or {}
+    C_ref = float(prod.get("custo_hora_total_referencia") or 0.0)
+    if C_ref <= 0.0:
+        return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+
+    sbdi = cpu.get("precos_unitarios_sbdi") or {}
+    pu_mo     = float(sbdi.get("mo",          0.0) or 0.0)
+    pu_eq     = float(sbdi.get("equipamentos", 0.0) or 0.0)
+    pu_diesel = float(sbdi.get("diesel",       0.0) or 0.0)
+    pu_total  = pu_mo + pu_eq + pu_diesel
+    if pu_total <= 0.0:
+        return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+
+    # Custo total por mês calibrado = C_ref × horas_semana × SEMANAS_POR_MES
+    horas_semana = horas_dia * 6  # dias_semana fixo via regime
+    custo_mes_ref = C_ref * horas_semana * SEMANAS_POR_MES
+
+    # Decompor pelas frações do PU_sbdi
+    frac_mo     = pu_mo     / pu_total
+    frac_eq     = pu_eq     / pu_total
+    frac_diesel = pu_diesel / pu_total
+
+    # O PU_sbdi de MO já inclui encargos (B_base × (1+enc)) — manter enc proporcional
+    custo_mo_cal     = custo_mes_ref * frac_mo      # inclui encargos
+    custo_eq_cal     = custo_mes_ref * frac_eq
+    custo_comb_cal   = custo_mes_ref * frac_diesel
+
+    # Derivar custo_mo_base e custo_encargos mantendo a proporção original
+    mo_total_orig = custo_mo if custo_mo > 0 else custo_mo_cal
+    frac_enc = custo_encargos / mo_total_orig if mo_total_orig > 0 else 0.0
+    custo_mo_base_cal   = round(custo_mo_cal * (1.0 - frac_enc), 2)
+    custo_encargos_cal  = round(custo_mo_cal * frac_enc, 2)
+
+    return (
+        round(custo_mo_cal, 2),
+        custo_encargos_cal,
+        custo_mo_base_cal,
+        round(custo_eq_cal, 2),
+        round(custo_comb_cal, 2),
+    )
+
+
 def _setup_dimensionamento_context(
     canonical_in: CanonicalModel,
     inputs: dict,
@@ -706,6 +769,15 @@ def _build_dimensionamento(
         _validar_materiais_item(comp, cpu, validacoes)
         # NEP-029 D4: custo de material mensal (MaterialEquipe ou composicao_itens MATERIAL)
         custo_mat = _calc_custo_material_item(comp, cpu, prod_lookup, ctx, horas_dia, dias_uteis)
+
+        # NEP-029/S1: calibrar custos mensais pelo custo_hora_total_referencia do catálogo.
+        # precos_unitarios_sbdi fornece as frações mo/eq/diesel já calculadas pela planilha.
+        # Sem esta calibração, os insumos individuais divergem do C_ref e o custo autônomo
+        # fica ~2.5× menor que o pool, gerando "economia negativa" espúria no painel.
+        custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb = _calibrar_custos_por_cref(
+            cpu, prod_lookup, horas_dia, custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
+        )
+
         # NEP-031 L3: custo de mob/desmob por evento de transição de recursos
         custo_mob_desmob = _calc_custo_mob_desmob(comp, cron)
         custo_total, ativos, custo_comb_efetivo, fixo_mensal, team_weeks, custo_ocioso = _calc_custo_cron(
@@ -737,9 +809,7 @@ def _build_dimensionamento(
 
         team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
         permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
-        # Recalcular custo_total com team_weeks ajustado: custo_total original usa team_weeks inflacionado
-        # Fórmula original: custo_total = (fixo_sem_comb + comb_nominal*eff) * team_weeks
-        # Ajustar: custo_total_ajustado = custo_total / num_equipes_paralelas (para casos com múltiplas equipes)
+        # custo_total_ajustado = custo total / n_frentes = custo de 1 frente (ADR-091)
         custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
         custo_total_final = round(custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
         fixo_mensal_total = round(fixo_mensal + custo_mat, 2)
