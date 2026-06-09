@@ -101,8 +101,9 @@ def _barycenter_order(layer: list[str], prev_pos: dict[str, float], pred_adj: di
     for n in layer:
         preds = [p for p in pred_adj.get(n, set()) if p in prev_pos]
         scores[n] = sum(prev_pos[p] for p in preds) / len(preds) if preds else float("inf")
-    # Nós sem predecessores ficam no final; entre si, ordenação estável (alfabética)
-    return sorted(layer, key=lambda n: (scores[n] == float("inf"), scores[n], n))
+    # Score alto = predecessores no topo (y alto) → nó deve ficar no topo também.
+    # Nós sem predecessores (score=inf) ficam no final.
+    return sorted(layer, key=lambda n: (scores[n] == float("inf"), -scores[n], n))
 
 
 def _assign_positions(tasks: list) -> tuple[dict, dict]:
@@ -151,7 +152,7 @@ def _assign_positions(tasks: list) -> tuple[dict, dict]:
         for n in layer:
             succs = [s for s in succ_adj.get(n, set()) if s in next_y]
             scores[n] = sum(next_y[s] for s in succs) / len(succs) if succs else float("inf")
-        ordered[lv] = sorted(layer, key=lambda n: (scores[n] == float("inf"), scores[n], n))
+        ordered[lv] = sorted(layer, key=lambda n: (scores[n] == float("inf"), -scores[n], n))
         for n in ordered[lv]:
             i = ordered[lv].index(n)
             next_y[n] = -(i - (len(ordered[lv]) - 1) / 2.0)
