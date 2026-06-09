@@ -1,5 +1,15 @@
 {
   "CPU-TERRA-ATI-003-PROD-001": {
-    "custo_hora_total_referencia": 283.0
+    "custo_hora_total_referencia": 282.55
+  },
+  "CPU-MATGUR-DREN-ALAS-PROD-001": {
+    "id": "CPU-MATGUR-DREN-ALAS-PROD-001",
+    "codigo": "CPU-MATGUR-DREN-ALAS-PROD-001",
+    "valor_horario": 0.385,
+    "custo_hora_total_referencia": 1279.49,
+    "composicao_padrao_equipe": {
+      "funcoes": [],
+      "equipamentos": []
+    }
   }
 }

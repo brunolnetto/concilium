@@ -1,1 +1,32 @@
-{}
+{
+  "MA-DIESEL-S10": {
+    "preco_unitario": 6.15
+  },
+  "AGIS-FN-OPER-ESCAV": {
+    "preco_unitario": 21.96
+  },
+  "AGIS-FN-OPER-MOTON": {
+    "preco_unitario": 34.68
+  },
+  "AGIS-FN-OPER-TRAT-EST": {
+    "preco_unitario": 26.61
+  },
+  "AGIS-FN-OPER-TRAT-PNEU": {
+    "preco_unitario": 17.97
+  },
+  "AGIS-FN-OPER-ROLO": {
+    "preco_unitario": 17.97
+  },
+  "AGIS-FN-MOTOR-BASC": {
+    "preco_unitario": 17.97
+  },
+  "AGIS-FN-MOTOR-PIPA": {
+    "preco_unitario": 17.97
+  },
+  "AGIS-FN-GREDISTA": {
+    "preco_unitario": 19.13
+  },
+  "AGIS-FN-AJUD": {
+    "preco_unitario": 13.22
+  }
+}

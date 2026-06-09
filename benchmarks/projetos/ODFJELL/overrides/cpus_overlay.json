@@ -1,1 +1,56 @@
-{}
+{
+  "CPU-ODFJELL-CP-110X110": {
+    "codigo": "CPU-ODFJELL-CP-110X110",
+    "descricao": "Caixa de passagem em concreto armado 1,10x1,10m com tampão Ø0,60m",
+    "unidade": "und",
+    "producao_id_ref": "CPU-ODFJELL-CP-110X110-PROD-001"
+  },
+  "CPU-ODFJELL-PV-H200": {
+    "codigo": "CPU-ODFJELL-PV-H200",
+    "descricao": "Poço de Visita em concreto armado 1,10x1,10m, h ≤ 2,00m",
+    "unidade": "und",
+    "producao_id_ref": "CPU-ODFJELL-PV-H200-PROD-001"
+  },
+  "CPU-ODFJELL-PV-H200-PROF": {
+    "codigo": "CPU-ODFJELL-PV-H200-PROF",
+    "descricao": "Poço de Visita em concreto armado 1,10x1,10m, h > 2,00m",
+    "unidade": "und",
+    "producao_id_ref": "CPU-ODFJELL-PV-H200-PROF-PROD-001"
+  },
+  "CPU-ODFJELL-CR-090X030": {
+    "codigo": "CPU-ODFJELL-CR-090X030",
+    "descricao": "Caixa de Ralo em concreto armado 0,90x0,30m, prof 0,90m",
+    "unidade": "und",
+    "producao_id_ref": "CPU-ODFJELL-CR-090X030-PROD-001"
+  },
+  "CPU-ODFJELL-BL-100X100": {
+    "codigo": "CPU-ODFJELL-BL-100X100",
+    "descricao": "Boca de Lobo Simples em concreto armado 1,00x1,00m",
+    "unidade": "und",
+    "producao_id_ref": "CPU-ODFJELL-BL-100X100-PROD-001"
+  },
+  "CPU-ODFJELL-PEAD-DN100": {
+    "codigo": "CPU-ODFJELL-PEAD-DN100",
+    "descricao": "Tubo corrugado perfurado PEAD DN Ø100mm — instalação",
+    "unidade": "m",
+    "producao_id_ref": "CPU-ODFJELL-PEAD-DN100-PROD-001"
+  },
+  "CPU-ODFJELL-PEAD-DN600": {
+    "codigo": "CPU-ODFJELL-PEAD-DN600",
+    "descricao": "Tubo corrugado PEAD parede dupla DN/DI 600mm, JEI — instalação",
+    "unidade": "m",
+    "producao_id_ref": "CPU-ODFJELL-PEAD-DN600-PROD-001"
+  },
+  "CPU-ODFJELL-CLP-600": {
+    "codigo": "CPU-ODFJELL-CLP-600",
+    "descricao": "Caixa de Ligação e Passagem CLP 02 Ø600mm",
+    "unidade": "un",
+    "producao_id_ref": "CPU-ODFJELL-CLP-600-PROD-001"
+  },
+  "CPU-ODFJELL-DISSIPADOR": {
+    "codigo": "CPU-ODFJELL-DISSIPADOR",
+    "descricao": "Dissipador de Energia — Aplicável a Bueiros e Descidas",
+    "unidade": "un",
+    "producao_id_ref": "CPU-ODFJELL-DISSIPADOR-PROD-001"
+  }
+}
