@@ -15,10 +15,10 @@
         "Sem auth — adequado para desenvolvimento."
       ],
       "command": "wsl",
-      "args": ["-e", "bash", "-c", "cd /home/pingu/github/agente_engenheiro_senior/concilium && source .venv/bin/activate && python -m concilium.presentation.mcp.server"],
+      "args": ["-e", "bash", "-c", "cd /home/pingu/github/agente-gerente-de-engenharia/src && source .venv/bin/activate && python -m concilium.presentation.mcp.server"],
       "env": {
-        "CONCILIUM__CONFIG_ROOT":    "/home/pingu/github/agente_engenheiro_senior/concilium/config",
-        "CONCILIUM__PROJECTS_ROOT":  "/home/pingu/github/agente_engenheiro_senior/concilium/projetos"
+        "CONCILIUM__CONFIG_ROOT":    "/home/pingu/github/agente-gerente-de-engenharia/config",
+        "CONCILIUM__PROJECTS_ROOT":  "/home/pingu/github/agente-gerente-de-engenharia/projetos"
       }
     },
 
