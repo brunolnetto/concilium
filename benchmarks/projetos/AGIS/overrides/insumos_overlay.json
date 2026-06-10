@@ -1,0 +1,44 @@
+{
+  "MA-DIESEL-S10": {
+    "preco_unitario": 6.99
+  },
+  "AGIS-FN-OPER-ESCAV": {
+    "preco_unitario": 42.70
+  },
+  "AGIS-FN-OPER-MOTON": {
+    "preco_unitario": 42.70
+  },
+  "AGIS-FN-OPER-TRAT-EST": {
+    "preco_unitario": 42.70
+  },
+  "AGIS-FN-OPER-TRAT-PNEU": {
+    "preco_unitario": 42.70
+  },
+  "AGIS-FN-OPER-ROLO": {
+    "preco_unitario": 38.10
+  },
+  "AGIS-FN-OPER-MOTOSSERRA": {
+    "preco_unitario": 42.70
+  },
+  "AGIS-FN-MOTOR-BASC": {
+    "preco_unitario": 38.10
+  },
+  "AGIS-FN-MOTOR-PIPA": {
+    "preco_unitario": 38.10
+  },
+  "AGIS-FN-GREDISTA": {
+    "preco_unitario": 29.31
+  },
+  "AGIS-FN-ENCAR": {
+    "preco_unitario": 34.09
+  },
+  "AGIS-FN-AJUD": {
+    "preco_unitario": 19.45
+  },
+  "AGIS-FN-APONTADOR": {
+    "preco_unitario": 29.31
+  },
+  "AGIS-FN-SINALEIRO": {
+    "preco_unitario": 19.45
+  }
+}
