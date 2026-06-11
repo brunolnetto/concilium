@@ -18,7 +18,11 @@
           "type": "string",
           "enum": ["terraplenagem", "pavimentacao", "saneamento", "drenagem", "obras_arte", "diversos"]
         },
-        "localizacao": { "type": "string", "minLength": 1, "description": "Cidade, UF (ex: Aracoiaba, CE)" },
+        "localizacao": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Cidade, UF (ex: Aracoiaba, CE)"
+        },
         "coordenadas": {
           "type": "object",
           "additionalProperties": false,
@@ -35,25 +39,76 @@
           "additionalProperties": false,
           "properties": {
             "dias_semana": { "type": "integer", "minimum": 1, "maximum": 7, "default": 6 },
-            "horas_dia": { "type": "integer", "minimum": 1, "maximum": 24, "default": 8 }
+            "horas_dia":   { "type": "integer", "minimum": 1, "maximum": 24, "default": 8 }
           }
         },
         "regime_tributario": {
-          "description": "Alíquotas BDI por componente. Se omitido, deriva da jurisdição do contexto.",
+          "description": "Regime tributário e alíquotas BDI. Se omitido, deriva da jurisdição do contexto.",
           "type": "object",
           "additionalProperties": false,
           "properties": {
+            "regime": {
+              "type": "string",
+              "enum": ["lucro_presumido", "simples_nacional", "lucro_real"],
+              "default": "lucro_presumido"
+            },
+            "regime_version": {
+              "type": "string",
+              "enum": ["PRE_REFORMA", "CBS_IBS_2026"],
+              "default": "PRE_REFORMA",
+              "description": "ADR-055: versão da reforma tributária. CBS_IBS_2026 usa créditos integrais."
+            },
             "jurisdicao_id": {
               "type": "string",
-              "description": "Código IBGE/ISO da jurisdição (ex: BR-CE). Usado para derivar alíquotas padrão."
+              "description": "Código IBGE/ISO (ex: BR-CE) — determina ISS municipal padrão."
             },
-            "iss":   { "type": "number", "minimum": 0, "maximum": 1 },
+            "iss":   { "type": "number", "minimum": 0, "maximum": 0.05, "description": "ISS — 0–5% (máximo legal)" },
             "pis":   { "type": "number", "minimum": 0, "maximum": 1 },
             "cofins":{ "type": "number", "minimum": 0, "maximum": 1 },
             "cprb":  { "type": "number", "minimum": 0, "maximum": 1 }
           }
+        },
+        "bdi_lucro": {
+          "description": "Margem de lucro objetivo por categoria BDI. Se omitido, usa perfil padrão do contexto.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mao_obra": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.09 },
+            "material":  { "type": "number", "minimum": 0, "maximum": 1, "default": 0.04 },
+            "servicos":  { "type": "number", "minimum": 0, "maximum": 1, "default": 0.09 },
+            "indireto":  { "type": "number", "minimum": 0, "maximum": 1, "default": 0.05 },
+            "diesel":    { "type": "number", "minimum": 0, "maximum": 1, "default": 0.04 }
+          }
+        },
+        "objetivo_pool": {
+          "type": "string",
+          "enum": ["balanceado", "minimizar_prazo", "minimizar_custo"],
+          "default": "balanceado",
+          "description": "Critério de otimização do pool de recursos no RCPSP (ADR-091)."
         }
       }
+    },
+    "indiretos": {
+      "description": "Custos indiretos por categoria. Se omitido, usa defaults do contexto derivados de benchmarks calibrados.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ADM": { "$ref": "#/$defs/indiretoCategoriaSimples" },
+        "TOP": { "$ref": "#/$defs/indiretoCategoriaSimples" },
+        "LAB": { "$ref": "#/$defs/indiretoCategoriaSimples" },
+        "QSMS": { "$ref": "#/$defs/indiretoCategoriaSimples" },
+        "MOB": {
+          "description": "Mobilização em fases (ADR-105 F4-F5): mobilizacao, operacao, desmobilizacao.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/indiretoCategoriaFase" }
+        }
+      }
+    },
+    "restricoes_mercado": {
+      "description": "Disponibilidade máxima de recursos no mercado local. Default {} = irrestrito (ADR-091). Formato: {tipo_recurso: N_max}.",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 1 },
+      "default": {}
     },
     "escopos": {
       "type": "array",
@@ -74,7 +129,7 @@
               "required": ["item_id", "cpu_id", "quantitativo"],
               "properties": {
                 "item_id": { "type": "string", "minLength": 1 },
-                "cpu_id": { "type": "string", "minLength": 1 },
+                "cpu_id":  { "type": "string", "minLength": 1 },
                 "quantitativo": { "type": "number", "exclusiveMinimum": 0 },
                 "predecessores": {
                   "type": "array",
@@ -88,7 +143,8 @@
                       "tipo": { "type": "string", "enum": ["FS", "SS", "FF"], "default": "FS" },
                       "lag": { "type": "integer", "minimum": 0, "default": 0 },
                       "completion_threshold_pct": {
-                        "type": "number", "minimum": 0, "maximum": 1, "default": 1.0
+                        "type": "number", "minimum": 0, "maximum": 1, "default": 1.0,
+                        "description": "Fração de produção do predecessor necessária para o sucessor iniciar (ADR-081)."
                       }
                     }
                   }
@@ -97,7 +153,7 @@
             }
           },
           "cronograma": {
-            "description": "Intenção de cronograma por item. Se omitido, skill 04 usa AUTO_SCHEDULE.",
+            "description": "Hints de cronograma por item. Se omitido, skill-04 usa AUTO_SCHEDULE.",
             "type": "array",
             "items": {
               "type": "object",
@@ -110,13 +166,72 @@
                   "additionalProperties": false,
                   "properties": {
                     "n_inicial": { "type": "integer", "minimum": 1, "default": 1 },
-                    "n_max":     { "type": "integer", "minimum": 1, "default": 1 }
+                    "n_max":     {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 1,
+                      "description": "Pico de frentes simultâneas — determina o pool (ADR-091). Irrestrito quando não especificado."
+                    }
                   }
                 },
-                "producao_diaria": { "type": "number", "exclusiveMinimum": 0 }
+                "producao_diaria": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "description": "Override de produtividade do catálogo (unidade/dia)."
+                },
+                "leadtime_mob_semanas": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 2,
+                  "description": "Semanas de mobilização antes da produção efetiva (ADR-106 F5). Hierarquia: item > catálogo > DEFAULT_LEADTIME_MOB_SEMANAS=2."
+                },
+                "lag_demob_semanas": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 1,
+                  "description": "Semanas de desmobilização após última produção (ADR-106 F5). Hierarquia: item > catálogo > DEFAULT_LAG_DEMOB_SEMANAS=1."
+                }
               }
             }
           }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "indiretoCategoriaSimples": {
+      "description": "Custo indireto mensal de categoria não-MOB. Forneça sub-campos OU custo_fixo_mensal total.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mao_obra_mensal":   { "type": "number", "minimum": 0, "description": "Salários + encargos CLT/PJ do time indireto." },
+        "equipamentos_mensal": { "type": "number", "minimum": 0, "description": "Locação de veículos, geradores, equipamentos de escritório." },
+        "verbas_mensais":    { "type": "number", "minimum": 0, "description": "Alimentação, telecom, energia, água, vigilância (recorrentes)." },
+        "verbas_unicas":     { "type": "number", "minimum": 0, "default": 0, "description": "Setup inicial: containers, EPIs, mobiliário (one-time, amortizado no mês 1)." },
+        "custo_fixo_mensal": { "type": "number", "minimum": 0, "description": "Override total mensal — quando sub-campos não estão disponíveis." }
+      }
+    },
+    "indiretoCategoriaFase": {
+      "description": "Fase de custo MOB: mobilizacao (one-time), operacao (mensal), desmobilizacao (one-time).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fase", "driver"],
+      "properties": {
+        "fase": {
+          "type": "string",
+          "enum": ["mobilizacao", "operacao", "desmobilizacao"]
+        },
+        "driver": {
+          "type": "string",
+          "enum": ["projeto", "mensal"],
+          "description": "projeto = incorre uma vez (1ª ou última semana). mensal = distribuído pelas semanas de operação."
+        },
+        "custo_fixo_total":  { "type": "number", "minimum": 0, "description": "Para driver=projeto (one-time)." },
+        "custo_fixo_mensal": { "type": "number", "minimum": 0, "description": "Para driver=mensal (recorrente)." },
+        "descricao": { "type": "string" },
+        "categorias": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["equipamentos", "mao_obra", "verbas"] }
         }
       }
     }
