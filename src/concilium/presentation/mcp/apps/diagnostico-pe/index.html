@@ -11,9 +11,14 @@
     .header h1 { font-size: 15px; font-weight: 600; }
     .status-bar { padding: 6px 16px; font-size: 11px; background: #fefce8; border-bottom: 1px solid #fef08a; color: #854d0e; }
     .status-bar.connected { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
-    .content { padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid #e2e8f0; background: white; padding: 0 16px; }
+    .tab { padding: 8px 14px; font-size: 12px; font-weight: 500; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: #7c3aed; border-bottom-color: #7c3aed; }
+    .panel { display: none; padding: 12px 16px; }
+    .panel.active { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .panel.active.single { display: block; }
     .card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 12px; }
-    .card-title { font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-title { font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; }
     .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
     .metric-row:last-child { border: none; }
     .metric-label { color: #64748b; }
@@ -29,15 +34,41 @@
     .badge-ok { background: #dcfce7; color: #16a34a; }
     .badge-warn { background: #fef9c3; color: #a16207; }
     .badge-crit { background: #fee2e2; color: #dc2626; }
+
+    /* Sliders */
+    .levers { grid-column: 1 / -1; }
+    .lever-row { display: grid; grid-template-columns: 140px 1fr 60px 80px; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f1f5f9; }
+    .lever-row:last-of-type { border: none; }
+    .lever-label { font-size: 11px; color: #475569; }
+    input[type=range] { width: 100%; accent-color: #7c3aed; }
+    .lever-val { font-size: 12px; font-weight: 600; color: #1e293b; text-align: right; }
+    .lever-delta { font-size: 11px; text-align: right; }
+    .lever-delta.pos { color: #16a34a; }
+    .lever-delta.neg { color: #dc2626; }
+    .lever-delta.neu { color: #94a3b8; }
+    .sim-impact { grid-column: 1 / -1; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 12px; }
+    .sim-impact .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
+    .sim-impact .row strong { color: #4c1d95; }
+    .btn-apply { margin-top: 10px; padding: 7px 16px; background: #7c3aed; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-apply:hover { background: #6d28d9; }
+    .btn-apply:disabled { background: #a78bfa; cursor: not-allowed; }
+    .btn-reset { margin-top: 10px; margin-left: 8px; padding: 7px 12px; background: white; color: #64748b; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="header">
     <span>⚖️</span><h1>Diagnóstico de Ponto de Equilíbrio</h1>
-    <span style="margin-left:auto;font-size:11px;opacity:.7">ADR-101 F4</span>
+    <span style="margin-left:auto;font-size:11px;opacity:.7">ADR-101 F3+F4</span>
   </div>
   <div class="status-bar" id="status-bar">⏳ Aguardando dados do pipeline...</div>
-  <div class="content">
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('diagnostico')">Diagnóstico</div>
+    <div class="tab" onclick="switchTab('levers')">⚙️ Levers</div>
+  </div>
+
+  <!-- Tab 1: Diagnóstico -->
+  <div class="panel active" id="tab-diagnostico">
     <div class="card">
       <div class="card-title">Resumo Financeiro</div>
       <div class="metric-row"><span class="metric-label">Custo operacional real</span><span class="metric-value" id="m-custo-op">—</span></div>
@@ -64,17 +95,83 @@
       </div>
     </div>
   </div>
+
+  <!-- Tab 2: Levers -->
+  <div class="panel single" id="tab-levers" style="display:none">
+    <div class="card levers">
+      <div class="card-title">
+        Levers de Replanejamento
+        <span style="font-size:10px;color:#94a3b8;font-weight:400">Estimativa linear — sem re-execução do pipeline</span>
+      </div>
+
+      <div class="lever-row">
+        <span class="lever-label">Fator de equipes</span>
+        <input type="range" id="l-equipes" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateLevers()">
+        <span class="lever-val" id="lv-equipes">1.0×</span>
+        <span class="lever-delta neu" id="ld-equipes">—</span>
+      </div>
+      <div class="lever-row">
+        <span class="lever-label">Horas/dia</span>
+        <input type="range" id="l-horas" min="6" max="12" step="1" value="8" oninput="updateLevers()">
+        <span class="lever-val" id="lv-horas">8 h</span>
+        <span class="lever-delta neu" id="ld-horas">—</span>
+      </div>
+      <div class="lever-row">
+        <span class="lever-label">Dias/semana</span>
+        <input type="range" id="l-dias" min="5" max="7" step="1" value="6" oninput="updateLevers()">
+        <span class="lever-val" id="lv-dias">6 d</span>
+        <span class="lever-delta neu" id="ld-dias">—</span>
+      </div>
+      <div class="lever-row">
+        <span class="lever-label">Meta margem</span>
+        <input type="range" id="l-margem" min="5" max="30" step="1" value="10" oninput="updateLevers()">
+        <span class="lever-val" id="lv-margem">10%</span>
+        <span class="lever-delta neu" id="ld-margem">—</span>
+      </div>
+
+      <div class="sim-impact" id="sim-impact" style="display:none">
+        <div class="card-title" style="margin-bottom:8px">Impacto Estimado</div>
+        <div class="row"><span>fe_nec médio atual</span><strong id="si-fe-atual">—</strong></div>
+        <div class="row"><span>fe_nec médio estimado</span><strong id="si-fe-novo">—</strong></div>
+        <div class="row"><span>Itens acima da meta (atual)</span><strong id="si-items-crit">—</strong></div>
+        <div class="row"><span>Itens acima da meta (estimado)</span><strong id="si-items-novo">—</strong></div>
+        <div class="row"><span>Δ Custo estimado</span><strong id="si-delta-custo">—</strong></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <button class="btn-apply" id="btn-apply" onclick="aplicarSimulacao()" disabled>Aplicar via Pipeline</button>
+        <button class="btn-reset" onclick="resetLevers()">Resetar</button>
+        <span id="sim-msg" style="font-size:11px;color:#64748b;margin-left:8px"></span>
+      </div>
+    </div>
+  </div>
+
   <script>
     const fmt = (v,d=0) => v==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:d}).format(v);
     const pct = v => v==null?'—':`${(v*100).toFixed(1)}%`;
     const num = (v,d=2) => v==null?'—':Number(v).toFixed(d);
+
+    let _canonical = null;
+    let _projectId = null;
+    const BASE = {equipes:1.0, horas:8, dias:6, margem:10};
+
+    function switchTab(t) {
+      document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['diagnostico','levers'][i]===t));
+      document.getElementById('tab-diagnostico').style.display = t==='diagnostico' ? '' : 'none';
+      document.getElementById('tab-diagnostico').className = t==='diagnostico' ? 'panel active' : 'panel';
+      document.getElementById('tab-levers').style.display = t==='levers' ? '' : 'none';
+      if (t==='levers') updateLevers();
+    }
+
     function render(data) {
+      _canonical = data;
+      _projectId = data?.projeto?.id ?? data?.meta?.contexto_id ?? null;
       const r = data?.resultado;
       if (r) {
         document.getElementById('m-custo-op').textContent = fmt(r.custo?.total);
         document.getElementById('m-venda').textContent = fmt(r.venda?.total_com_bdi??r.venda?.total_custo_plus);
         document.getElementById('m-resultado').textContent = fmt(r.resultado_financeiro);
-        const mg = r.margem_operacional??r.margem_liquida??null;
+        const mg = r.margem_pct??r.margem_operacional??r.margem_liquida??null;
         const mgEl = document.getElementById('m-margem');
         mgEl.textContent = pct(mg); mgEl.className = 'metric-value '+(mg==null?'':mg>=0.08?'ok':mg>=0.04?'warn':'crit');
         document.getElementById('m-status').textContent = r.status_margem??'—';
@@ -94,12 +191,119 @@
           const cls = fn==null?'':fn<=1.25?'badge-ok':fn<=1.5?'badge-warn':'badge-crit';
           return `<tr><td><strong>${p.item_id}</strong></td><td>${fmt(p.custo_operacional_real)}</td><td>${fmt(p.custo_venda_cpu)}</td><td><span class="badge ${cls}">${num(fn)}</span></td><td>${p.status_frentes??'—'}</td><td>${fmt(p.gap_escala_abs)}</td></tr>`;
         }).join('');
+        document.getElementById('btn-apply').disabled = false;
+        BASE.horas = data?.projeto?.regime_trabalho?.horas_dia ?? 8;
+        BASE.dias  = data?.projeto?.regime_trabalho?.dias_semana ?? 6;
+        document.getElementById('l-horas').value = BASE.horas;
+        document.getElementById('l-dias').value  = BASE.dias;
+        document.getElementById('lv-horas').textContent = BASE.horas+' h';
+        document.getElementById('lv-dias').textContent  = BASE.dias+' d';
       }
     }
+
+    function updateLevers() {
+      const eq  = parseFloat(document.getElementById('l-equipes').value);
+      const hor = parseInt(document.getElementById('l-horas').value);
+      const dia = parseInt(document.getElementById('l-dias').value);
+      const mar = parseInt(document.getElementById('l-margem').value);
+
+      document.getElementById('lv-equipes').textContent = eq.toFixed(1)+'×';
+      document.getElementById('lv-horas').textContent   = hor+' h';
+      document.getElementById('lv-dias').textContent    = dia+' d';
+      document.getElementById('lv-margem').textContent  = mar+'%';
+
+      const prodFactor = (eq * hor * dia) / (BASE.equipes * BASE.horas * BASE.dias);
+      setDelta('ld-equipes', eq, BASE.equipes, '×');
+      setDelta('ld-horas',   hor, BASE.horas, ' h');
+      setDelta('ld-dias',    dia, BASE.dias, ' d');
+
+      const pes = _canonical?.ponto_equilibrio??[];
+      if (!pes.length) { document.getElementById('sim-impact').style.display='none'; return; }
+
+      const feList = pes.map(p => p.frentes_equivalentes_necessarias??1);
+      const feMed  = feList.reduce((a,b)=>a+b,0)/feList.length;
+      const feNovo = feList.map(f => f/prodFactor);
+      const feNovMed = feNovo.reduce((a,b)=>a+b,0)/feNovo.length;
+
+      const metaFe = 1.0 + (mar/100);
+      const critAtual = feList.filter(f=>f>1.25).length;
+      const critNovo  = feNovo.filter(f=>f>1.25).length;
+
+      const custoAtual = pes.reduce((s,p)=>s+(p.custo_operacional_real??0),0);
+      const custoNovo  = custoAtual * prodFactor;
+      const deltaCusto = custoNovo - custoAtual;
+
+      document.getElementById('si-fe-atual').textContent   = feMed.toFixed(2);
+      document.getElementById('si-fe-novo').textContent    = feNovMed.toFixed(2);
+      document.getElementById('si-items-crit').textContent = critAtual;
+      document.getElementById('si-items-novo').textContent = critNovo;
+      document.getElementById('si-delta-custo').textContent= (deltaCusto>=0?'+':'')+fmt(deltaCusto);
+      document.getElementById('si-delta-custo').className  = 'strong '+(deltaCusto<0?'ok':deltaCusto>0?'crit':'neu');
+      document.getElementById('sim-impact').style.display='';
+
+      const metaDelta = mar - BASE.margem;
+      setDelta('ld-margem', mar, BASE.margem, '%');
+      BASE.margem = mar;
+    }
+
+    function setDelta(id, val, base, unit) {
+      const el = document.getElementById(id);
+      const d = val - base;
+      if (Math.abs(d) < 0.001) { el.textContent='—'; el.className='lever-delta neu'; return; }
+      el.textContent = (d>0?'+':'')+d.toFixed(d%1===0?0:1)+unit;
+      el.className = 'lever-delta '+(d>0?'pos':'neg');
+    }
+
+    function resetLevers() {
+      document.getElementById('l-equipes').value = 1.0;
+      document.getElementById('l-horas').value   = BASE.horas;
+      document.getElementById('l-dias').value    = BASE.dias;
+      document.getElementById('l-margem').value  = 10;
+      BASE.equipes=1.0; BASE.margem=10;
+      updateLevers();
+    }
+
+    function aplicarSimulacao() {
+      if (!_projectId) { document.getElementById('sim-msg').textContent='❌ project_id não disponível'; return; }
+      const eq  = parseFloat(document.getElementById('l-equipes').value);
+      const hor = parseInt(document.getElementById('l-horas').value);
+      const dia = parseInt(document.getElementById('l-dias').value);
+      const mar = parseInt(document.getElementById('l-margem').value);
+      document.getElementById('sim-msg').textContent = '⏳ Enviando para pipeline...';
+      document.getElementById('btn-apply').disabled = true;
+      window.parent.postMessage({
+        jsonrpc:'2.0', id:99, method:'ui/callTool',
+        params:{
+          name:'simular_cenario_replan',
+          arguments:{
+            project_id: _projectId,
+            tipo:'lever_adjust',
+            parametros:{
+              fator_equipes:eq, horas_dia:hor, dias_semana:dia, meta_margem_pct:mar/100
+            }
+          }
+        }
+      },'*');
+      setTimeout(()=>{ document.getElementById('btn-apply').disabled=false; document.getElementById('sim-msg').textContent=''; },3000);
+    }
+
     window.addEventListener('message', e => {
       const msg = e.data; if (!msg||msg.jsonrpc!=='2.0') return;
-      if (msg.id===1&&msg.result) { document.getElementById('status-bar').textContent='✅ Conectado'; document.getElementById('status-bar').className='status-bar connected'; }
-      if (msg.method==='ui/toolResult') { const r=msg.params?.result; if(r?.canonical)render(r.canonical); else if(r)render(r); document.getElementById('status-bar').textContent=`✅ Atualizado — ${new Date().toLocaleTimeString('pt-BR')}`; document.getElementById('status-bar').className='status-bar connected'; }
+      if (msg.id===1&&msg.result) {
+        document.getElementById('status-bar').textContent='✅ Conectado';
+        document.getElementById('status-bar').className='status-bar connected';
+      }
+      if (msg.method==='ui/toolResult') {
+        const r=msg.params?.result;
+        const data = r?.canonical ?? r;
+        if (data?.ponto_equilibrio || data?.resultado) render(data);
+        if (msg.params?.toolName==='simular_cenario_replan') {
+          document.getElementById('sim-msg').textContent='✅ Simulação recebida';
+          if (data) render(data);
+        }
+        document.getElementById('status-bar').textContent=`✅ Atualizado — ${new Date().toLocaleTimeString('pt-BR')}`;
+        document.getElementById('status-bar').className='status-bar connected';
+      }
     });
     window.parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{protocolVersion:'2026-01-26',capabilities:{push:true}}},'*');
   </script>

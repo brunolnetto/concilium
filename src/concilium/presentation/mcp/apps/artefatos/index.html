@@ -19,8 +19,8 @@
     .art-item.active { background: #eff6ff; color: #2563eb; }
     .art-icon { font-size: 14px; flex-shrink: 0; }
     .art-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .viewer { flex: 1; display: flex; flex-direction: column; }
-    .viewer-toolbar { padding: 6px 12px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+    .viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .viewer-toolbar { padding: 6px 12px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .viewer-toolbar span { font-size: 11px; color: #64748b; }
     .viewer-content { flex: 1; overflow: auto; }
     iframe.pdf-frame { width: 100%; height: 100%; border: none; }
@@ -28,6 +28,17 @@
     .empty-viewer .icon { font-size: 32px; }
     pre.text-viewer { padding: 12px; font-size: 11px; white-space: pre-wrap; overflow: auto; height: 100%; background: white; }
     .no-artifacts { padding: 24px; text-align: center; color: #94a3b8; font-size: 12px; }
+    .art-group { padding: 4px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; background: #f8fafc; border-bottom: 1px solid #f1f5f9; border-top: 1px solid #f1f5f9; margin-top: 4px; }
+
+    /* Gantt chart */
+    .gantt-wrap { padding: 12px; overflow: auto; height: 100%; }
+    .gantt-title { font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 12px; }
+    .gantt-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .gantt-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #64748b; }
+    .gantt-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+    .gantt-svg-wrap { overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: white; }
+    .gantt-tooltip { position: fixed; background: #1e293b; color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; pointer-events: none; display: none; z-index: 999; max-width: 220px; }
+    .gantt-tooltip strong { display: block; margin-bottom: 2px; }
   </style>
 </head>
 <body>
@@ -50,34 +61,47 @@
       </div>
     </div>
   </div>
+  <div class="gantt-tooltip" id="gantt-tooltip"></div>
 
   <script>
     let artifacts = {};
+    let _schedule = null;
     const ICONS = { pdf: '📄', md: '📝', json: '🗂️', xlsx: '📊', png: '🖼️', default: '📁' };
+    const COLORS = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316','#ec4899','#14b8a6','#a78bfa'];
 
     function iconFor(name) {
-      const ext = name.split('.').pop().toLowerCase();
+      const ext = (name||'').split('.').pop().toLowerCase();
       return ICONS[ext] || ICONS.default;
     }
 
-    function renderArtList(arts) {
+    function renderArtList(arts, hasGantt) {
       const list = document.getElementById('art-list');
-      if (!arts || !arts.length) { list.innerHTML = '<div class="no-artifacts">Nenhum artefato disponível</div>'; return; }
-      list.innerHTML = arts.map((a, i) => `<div class="art-item" data-idx="${i}" onclick="openArt(${i})"><span class="art-icon">${iconFor(a.name)}</span><span class="art-name">${a.name}</span></div>`).join('');
+      let html = '';
+      if (hasGantt) {
+        html += '<div class="art-group">Cronograma</div>';
+        html += `<div class="art-item" data-type="gantt" onclick="openGantt()"><span class="art-icon">📅</span><span class="art-name">Gantt interativo</span></div>`;
+      }
+      if (arts && arts.length) {
+        html += '<div class="art-group">Arquivos</div>';
+        html += arts.map((a, i) => `<div class="art-item" data-idx="${i}" onclick="openArt(${i})"><span class="art-icon">${iconFor(a.name)}</span><span class="art-name">${a.name}</span></div>`).join('');
+      }
+      if (!html) html = '<div class="no-artifacts">Nenhum artefato disponível</div>';
+      list.innerHTML = html;
+    }
+
+    function setActive(selector) {
+      document.querySelectorAll('.art-item').forEach(el => el.classList.remove('active'));
+      const el = document.querySelector(selector);
+      if (el) el.classList.add('active');
     }
 
     function openArt(idx) {
-      document.querySelectorAll('.art-item').forEach(el => el.classList.remove('active'));
-      const el = document.querySelector(`[data-idx="${idx}"]`);
-      if (el) el.classList.add('active');
-
+      setActive(`[data-idx="${idx}"]`);
       const art = artifacts[idx];
       if (!art) return;
-
       document.getElementById('viewer-label').textContent = art.name;
       const content = document.getElementById('viewer-content');
-      const ext = art.name.split('.').pop().toLowerCase();
-
+      const ext = (art.name||'').split('.').pop().toLowerCase();
       if (ext === 'pdf' && art.data_base64) {
         const url = `data:application/pdf;base64,${art.data_base64}`;
         content.innerHTML = `<iframe class="pdf-frame" src="${url}#toolbar=1&navpanes=0"></iframe>`;
@@ -92,11 +116,108 @@
       }
     }
 
-    function processArtifacts(data) {
+    function openGantt() {
+      setActive('[data-type="gantt"]');
+      document.getElementById('viewer-label').textContent = 'Cronograma — Gantt Interativo';
+      document.getElementById('viewer-content').innerHTML = buildGanttHTML(_schedule);
+    }
+
+    function buildGanttHTML(cron) {
+      if (!cron) return '<div class="empty-viewer"><div class="icon">📅</div><span>Dados de cronograma não disponíveis</span></div>';
+      const acts = cron.scheduled_activities || [];
+      if (!acts.length) return '<div class="empty-viewer"><div class="icon">📅</div><span>Nenhuma atividade agendada</span></div>';
+
+      const minW = Math.min(...acts.map(a => a.start_week));
+      const maxW = Math.max(...acts.map(a => a.end_week));
+      const totalW = maxW - minW;
+
+      const ROW_H = 32, LABEL_W = 160, COL_W = 28, HEADER_H = 40, PAD = 8;
+      const svgW = LABEL_W + totalW * COL_W + PAD * 2;
+      const svgH = HEADER_H + acts.length * ROW_H + PAD;
+
+      // Collect unique resource types for colors
+      const resTypes = [...new Set(acts.flatMap(a => Object.keys(a.assigned_resources || {})))];
+      const colorMap = {};
+      resTypes.forEach((r, i) => { colorMap[r] = COLORS[i % COLORS.length]; });
+
+      let rows = '';
+      acts.forEach((a, i) => {
+        const y = HEADER_H + i * ROW_H;
+        const x = LABEL_W + (a.start_week - minW) * COL_W;
+        const w = Math.max(a.duration_weeks * COL_W, 4);
+        const res = Object.keys(a.assigned_resources || {})[0] || '';
+        const color = colorMap[res] || '#94a3b8';
+        const n = Object.values(a.assigned_resources || {})[0] || 0;
+        const bg = i%2===0?'#fafafa':'#ffffff';
+        const label = (a.activity_id||'').replace('eap-','').substring(0,12);
+        const cpu = res.replace('EQUIPE-CPU-TERRA-','').replace(/-PROD-001/,'').substring(0,18);
+        const tooltip = `${a.activity_id}|${a.data_inicio||''}→${a.data_fim||''}|${a.duration_weeks}sem|${n}×${cpu}`;
+
+        rows += `<rect x="0" y="${y}" width="${svgW}" height="${ROW_H}" fill="${bg}"/>`;
+        rows += `<text x="4" y="${y+ROW_H/2+4}" font-size="10" fill="#475569" dominant-baseline="middle">${label}</text>`;
+        rows += `<rect x="${x}" y="${y+4}" width="${w}" height="${ROW_H-8}" rx="3" fill="${color}" opacity="0.85" class="gantt-bar" data-tip="${tooltip}" onmousemove="showTip(event,this)" onmouseleave="hideTip()"/>`;
+        if (w > 20) {
+          rows += `<text x="${x+4}" y="${y+ROW_H/2+4}" font-size="9" fill="white" dominant-baseline="middle" pointer-events="none">${a.duration_weeks}s${n>1?' ×'+n:''}</text>`;
+        }
+      });
+
+      // Week header
+      let headers = '';
+      for (let w = minW; w <= maxW; w++) {
+        const x = LABEL_W + (w - minW) * COL_W;
+        headers += `<line x1="${x}" y1="${HEADER_H}" x2="${x}" y2="${svgH}" stroke="#e2e8f0" stroke-width="1"/>`;
+        if ((w - minW) % 4 === 0) {
+          headers += `<text x="${x+2}" y="${HEADER_H-6}" font-size="9" fill="#94a3b8">S${w}</text>`;
+        }
+      }
+
+      // Legend
+      const legendItems = resTypes.slice(0,6).map((r,i) => {
+        const short = r.replace('EQUIPE-CPU-TERRA-','').substring(0,12);
+        return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#64748b;margin-right:10px"><span style="width:10px;height:10px;background:${COLORS[i%COLORS.length]};border-radius:2px;flex-shrink:0"></span>${short}</span>`;
+      }).join('');
+
+      return `<div class="gantt-wrap">
+        <div class="gantt-title">Cronograma de Atividades — ${acts.length} atividades | ${totalW} semanas</div>
+        <div style="margin-bottom:10px">${legendItems}</div>
+        <div class="gantt-svg-wrap">
+          <svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">
+            <rect width="${svgW}" height="${svgH}" fill="white"/>
+            <rect width="${LABEL_W}" height="${svgH}" fill="#f8fafc"/>
+            <line x1="${LABEL_W}" y1="0" x2="${LABEL_W}" y2="${svgH}" stroke="#e2e8f0" stroke-width="1"/>
+            <rect width="${svgW}" height="${HEADER_H}" fill="#f1f5f9"/>
+            <text x="4" y="${HEADER_H/2+4}" font-size="10" font-weight="600" fill="#475569" dominant-baseline="middle">Atividade</text>
+            ${headers}
+            ${rows}
+          </svg>
+        </div>
+        <div style="margin-top:6px;font-size:10px;color:#94a3b8">Passe o mouse sobre as barras para detalhes · Largura proporcional à duração em semanas</div>
+      </div>`;
+    }
+
+    function showTip(e, el) {
+      const tip = document.getElementById('gantt-tooltip');
+      const parts = (el.dataset.tip || '').split('|');
+      tip.innerHTML = `<strong>${parts[0]}</strong>${parts[1]}<br>${parts[2]} &nbsp;·&nbsp; ${parts[3]}`;
+      tip.style.display = 'block';
+      tip.style.left = (e.clientX+12)+'px';
+      tip.style.top  = (e.clientY-10)+'px';
+    }
+    function hideTip() { document.getElementById('gantt-tooltip').style.display='none'; }
+
+    function processData(data) {
+      // Artifacts list
       const arts = data?.artifacts ?? data?.artefatos ?? [];
       artifacts = {};
       arts.forEach((a, i) => { artifacts[i] = a; });
-      renderArtList(arts);
+
+      // Schedule (canonical or top-level)
+      const cron = data?.canonical?.cronograma ?? data?.cronograma ?? null;
+      _schedule = (cron?.scheduled_activities?.length > 0) ? cron : null;
+
+      renderArtList(arts, !!_schedule);
+      // Auto-open Gantt if no files and schedule available
+      if (_schedule && !arts.length) openGantt();
     }
 
     window.addEventListener('message', e => {
@@ -107,8 +228,9 @@
       }
       if (msg.method === 'ui/toolResult') {
         const r = msg.params?.result;
-        if (r) processArtifacts(r);
-        document.getElementById('status-bar').textContent = `✅ ${Object.keys(artifacts).length} artefato(s) — ${new Date().toLocaleTimeString('pt-BR')}`;
+        if (r) processData(r);
+        const n = Object.keys(artifacts).length + (_schedule ? 1 : 0);
+        document.getElementById('status-bar').textContent = `✅ ${n} item(s) — ${new Date().toLocaleTimeString('pt-BR')}`;
         document.getElementById('status-bar').className = 'status-bar connected';
       }
     });
