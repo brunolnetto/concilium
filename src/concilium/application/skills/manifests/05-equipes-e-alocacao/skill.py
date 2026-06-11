@@ -26,11 +26,12 @@ from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 try:
     from ._skill_helpers_a import (
-        _aplicar_custo_instancial_adr085,
+        _aplicar_custo_instancial,
         _build_contratos_recurso,
         _build_dimensionamento,
         _build_instancias_recurso,
         _calcular_permanencia_e_custo_total,
+        _derive_rcpsp_from_canonical,
         _enrich_equipes_com_decomposicao_instancial,
         _enrich_particao_overhead,
         particionar_contrato,
@@ -60,8 +61,9 @@ except ImportError:
     _build_dimensionamento = _mod_a._build_dimensionamento
     _build_contratos_recurso = _mod_a._build_contratos_recurso
     _build_instancias_recurso = _mod_a._build_instancias_recurso
+    _derive_rcpsp_from_canonical = _mod_a._derive_rcpsp_from_canonical
     _calcular_permanencia_e_custo_total = _mod_a._calcular_permanencia_e_custo_total
-    _aplicar_custo_instancial_adr085 = _mod_a._aplicar_custo_instancial_adr085
+    _aplicar_custo_instancial = _mod_a._aplicar_custo_instancial
     _enrich_equipes_com_decomposicao_instancial = _mod_a._enrich_equipes_com_decomposicao_instancial
     _enrich_particao_overhead = _mod_a._enrich_particao_overhead
     particionar_contrato = _mod_a.particionar_contrato
@@ -137,10 +139,19 @@ def run_equipes_e_alocacao(
     _horas_semana = float(_regime.horas_dia * _regime.dias_semana)
 
     rcpsp_spec = inputs.get("rcpsp_spec") if isinstance(inputs.get("rcpsp_spec"), dict) else None
+    _rcpsp_derivado = False
+    if rcpsp_spec is None:
+        rcpsp_spec = _derive_rcpsp_from_canonical(canonical_in, catalogo)
+        _rcpsp_derivado = rcpsp_spec is not None
     if rcpsp_spec:
         contratos_recurso, atribuicao, cadeias_perpetuacao = _build_contratos_recurso(
-            equipes, rcpsp_spec, cron_lookup, validacoes,
-            cpu_lookup=_cpu_lookup, prod_lookup=_prod_lookup, horas_semana=_horas_semana,
+            equipes,
+            rcpsp_spec,
+            cron_lookup,
+            validacoes,
+            cpu_lookup=_cpu_lookup,
+            prod_lookup=_prod_lookup,
+            horas_semana=_horas_semana,
         )
         # Atualiza custo_total de cada equipe coberta pelo pool contract
         for eq in equipes:
@@ -154,6 +165,18 @@ def run_equipes_e_alocacao(
             tipos_ids = ", ".join(c.tipo_id for c in contratos_recurso)
             total_contratos = sum(c.custo_total_contrato for c in contratos_recurso)
             n_cadeias = sum(c.n_cadeias for c in contratos_recurso)
+            if _rcpsp_derivado:
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-POOL-SPEC-DERIVADO",
+                        status="OK",
+                        mensagem=(
+                            "rcpsp_spec não fornecido — derivado automaticamente do canônico "
+                            f"(EAP+catálogo). {len(rcpsp_spec.get('activities', []))} atividades, "
+                            f"{len(rcpsp_spec.get('resource_pool', {}))} tipos de recurso."
+                        ),
+                    )
+                )
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-POOL-CONTRATO-OK",
@@ -224,7 +247,7 @@ def run_equipes_e_alocacao(
         # Executado por último: reescala atribuição/partição preservando a invariante
         # Σ custo_total_particionado == custo_total_contrato e atualiza eq.custo_total (N4).
         if instancias_recurso:
-            _aplicar_custo_instancial_adr085(contratos_recurso, instancias_recurso, equipes, validacoes)
+            _aplicar_custo_instancial(contratos_recurso, instancias_recurso, equipes, validacoes)
             _enrich_equipes_com_decomposicao_instancial(equipes, contratos_recurso, validacoes)
 
             # ADR-104 Checkpoint 3: Estágio 4 — custo_inst_* deve estar preenchido para items em contratos
@@ -238,6 +261,14 @@ def run_equipes_e_alocacao(
                             mensagem=f"Item {eq.item_id}: custo_inst_* deve estar preenchido no Estágio 4",
                         )
                     )
+
+    # ADR-106 F3: preenche custo_inst_* para equipes sem pool contract (NEP-040 Fase 4 completa)
+    try:
+        from concilium.domain.services.equipe_custo_engine import _fill_custo_inst_sem_pool
+
+        _fill_custo_inst_sem_pool(equipes)
+    except Exception:
+        pass  # F3 é best-effort; não bloqueia o pipeline
 
     # ADR-078: pré-processamento estrutural de compartilhamento
     relatorio_oportunidades = None

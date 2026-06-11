@@ -11,6 +11,8 @@ Objetivo: Reduzir fragmentação e garantir consistência atômica entre dimensi
 
 from __future__ import annotations
 
+import math
+
 from concilium.application.skills.manifests._05_equipes_custo_helpers import (
     calcular_custo_instancia_composicional,
 )
@@ -114,13 +116,10 @@ def _resolve_salario(preco, unidade: str, salario_override) -> float:
 def _resolve_encargo_funcao(
     atrib: dict, encargo_override, enc_horista: float, enc_mensalista: float, categoria: str
 ) -> float:
-    """Resolve percentual de encargo a aplicar (ADR-034)."""
-    if encargo_override is not None:
-        return float(encargo_override)
-    enc_local = atrib.get("percentual_encargos_local")
-    if enc_local is not None:
-        return float(enc_local)
-    return enc_horista if categoria.startswith("horista") else (enc_mensalista or enc_horista)
+    """Resolve percentual de encargo a aplicar (ADR-034). Delega para encargo_resolver."""
+    from concilium.domain.services.encargo_resolver import resolver_encargo
+
+    return resolver_encargo(atrib, enc_horista, enc_mensalista, encargo_override=encargo_override)
 
 
 def _resolve_custo_unit_funcao(categoria: str, salario: float, atrib: dict, enc: float, he_pct: float) -> float:
@@ -130,10 +129,10 @@ def _resolve_custo_unit_funcao(categoria: str, salario: float, atrib: dict, enc:
     custo_com_encargos = atrib.get("custo_com_encargos")
     if custo_com_encargos and custo_com_encargos > 0:
         return custo_com_encargos * (1 + he_pct)
-    # ADR-097 §D3: taxa horária all-in (convencional/planilha, e.g. AGIS-FN-*)
-    # embute encargos (~80% estatutário implícito). Aplicar enc adicional = dupla contagem.
-    nota = str(atrib.get("nota", "")).lower()
-    if "inclui encargos" in nota:  # substring sem acentos para robustez de encoding
+    # ADR-097 §D3 / NEP-043: taxa horária all-in embute encargos — aplicar enc adicional = dupla contagem.
+    # Checa tanto "nota" quanto "nota_encargos" para robustez de naming entre catálogos.
+    nota = " ".join(str(atrib.get(k) or "") for k in ("nota", "nota_encargos")).lower()
+    if "inclui encargos" in nota:
         return salario * (1 + he_pct)
     return salario * (1 + enc) * (1 + he_pct)
 
@@ -394,9 +393,15 @@ def _processar_funcoes_item(
         )
         enc_field = float(enc_override) if enc_override is not None else perc_horista
         num_p_raw = float(f.get("num_pessoas", 1) or 1)
-        # NEP-037: custo base (sem encargos) e encargos separados por função
-        sal_base_unit = round(sal * (1.0 + float(he or 0.0)), 2)  # salário + HE, sem encargos
-        enc_unit = round(sal * enc_field * (1.0 + float(he or 0.0)), 2)
+        # Taxa horária all-in (preco_unitario já inclui encargos — convenção planilha AGIS e similares).
+        # Checar tanto "nota" quanto "nota_encargos" para robustez de naming.
+        _atrib_f = insumo_f.get("atributos_especificos") or {}
+        _nota = " ".join(str(_atrib_f.get(k) or "") for k in ("nota", "nota_encargos")).lower()
+        _taxa_allin = "inclui encargos" in _nota
+        # NEP-037 / NEP-043: custo base (sem encargos) e encargos separados por função.
+        # Quando taxa já é all-in, enc_unit = 0 — evitar dupla contagem.
+        sal_base_unit = round(sal * (1.0 + float(he or 0.0)), 2)
+        enc_unit = 0.0 if _taxa_allin else round(sal * enc_field * (1.0 + float(he or 0.0)), 2)
         # Canônico representa equipe física → int (ex: 0.5 encarregado compartilhado = 1).
         # Custo calculado usa o coeficiente original (float) para precisão financeira.
         funcoes_mod.append(
@@ -701,10 +706,10 @@ def _calibrar_custos_por_cref(
         return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
 
     sbdi = cpu.get("precos_unitarios_sbdi") or {}
-    pu_mo     = float(sbdi.get("mo",          0.0) or 0.0)
-    pu_eq     = float(sbdi.get("equipamentos", 0.0) or 0.0)
-    pu_diesel = float(sbdi.get("diesel",       0.0) or 0.0)
-    pu_total  = pu_mo + pu_eq + pu_diesel
+    pu_mo = float(sbdi.get("mo", 0.0) or 0.0)
+    pu_eq = float(sbdi.get("equipamentos", 0.0) or 0.0)
+    pu_diesel = float(sbdi.get("diesel", 0.0) or 0.0)
+    pu_total = pu_mo + pu_eq + pu_diesel
     if pu_total <= 0.0:
         return custo_mo, custo_encargos, custo_mo_base, custo_eq, custo_comb
 
@@ -713,20 +718,20 @@ def _calibrar_custos_por_cref(
     custo_mes_ref = C_ref * horas_semana * SEMANAS_POR_MES
 
     # Decompor pelas frações do PU_sbdi
-    frac_mo     = pu_mo     / pu_total
-    frac_eq     = pu_eq     / pu_total
+    frac_mo = pu_mo / pu_total
+    frac_eq = pu_eq / pu_total
     frac_diesel = pu_diesel / pu_total
 
     # O PU_sbdi de MO já inclui encargos (B_base × (1+enc)) — manter enc proporcional
-    custo_mo_cal     = custo_mes_ref * frac_mo      # inclui encargos
-    custo_eq_cal     = custo_mes_ref * frac_eq
-    custo_comb_cal   = custo_mes_ref * frac_diesel
+    custo_mo_cal = custo_mes_ref * frac_mo  # inclui encargos
+    custo_eq_cal = custo_mes_ref * frac_eq
+    custo_comb_cal = custo_mes_ref * frac_diesel
 
     # Derivar custo_mo_base e custo_encargos mantendo a proporção original
     mo_total_orig = custo_mo if custo_mo > 0 else custo_mo_cal
     frac_enc = custo_encargos / mo_total_orig if mo_total_orig > 0 else 0.0
-    custo_mo_base_cal   = round(custo_mo_cal * (1.0 - frac_enc), 2)
-    custo_encargos_cal  = round(custo_mo_cal * frac_enc, 2)
+    custo_mo_base_cal = round(custo_mo_cal * (1.0 - frac_enc), 2)
+    custo_encargos_cal = round(custo_mo_cal * frac_enc, 2)
 
     return (
         round(custo_mo_cal, 2),
@@ -806,15 +811,15 @@ def _build_dimensionamento(
         # ADR-091: Dividir permanência pelo número de equipes paralelas alocadas para evitar duplicação de custos
         # assigned_resources é propagado por skill-04 em modo AUTO; em MANUAL_ALLOCATION fica vazio.
         # Para ambos os casos, inferimos o número de equipes paralelas do cronograma: max(num_equipes) na distribuição semanal
-        assigned_resources = getattr(cron, 'assigned_resources', None) or {}
+        assigned_resources = getattr(cron, "assigned_resources", None) or {}
         num_equipes_paralelas = sum(assigned_resources.values()) if assigned_resources else 1
 
         # Se assigned_resources está vazio, deduzir do cronograma (MANUAL_ALLOCATION case)
         if not num_equipes_paralelas or num_equipes_paralelas == 1:
-            dist_semanal = getattr(cron, 'distribuicao_semanal', {}) or {}
+            dist_semanal = getattr(cron, "distribuicao_semanal", {}) or {}
             if dist_semanal and isinstance(dist_semanal, dict):
                 values_list = list(dist_semanal.values())
-                max_num_eq = max((getattr(d, 'num_equipes', 0) for d in values_list), default=1)
+                max_num_eq = max((getattr(d, "num_equipes", 0) for d in values_list), default=1)
                 if max_num_eq > 1:
                     num_equipes_paralelas = max_num_eq
 
@@ -822,16 +827,13 @@ def _build_dimensionamento(
         # Então se há 3 equipes × 32 semanas, vem como 96 weeks
         # Precisamos dividir por num_equipes para obter a permanência de UMA equipe
 
-        # DEBUG MARKER: Se num_equipes_paralelas > 1, esperamos ver permanencia reduzida
-        if num_equipes_paralelas > 1:
-            # Registro para DEBUG: salvamos em variável para poder debugar depois
-            _debug_marker_adr091 = f"APPLIED_to_{item.item_id}_div_by_{num_equipes_paralelas}"
-
         team_weeks_ajustado = team_weeks / max(num_equipes_paralelas, 1)
         permanencia_efetiva = round(team_weeks_ajustado / SEMANAS_POR_MES, 4)
         # custo_total_ajustado = custo total / n_frentes = custo de 1 frente (ADR-091)
         custo_total_ajustado = custo_total / max(num_equipes_paralelas, 1) if num_equipes_paralelas > 1 else custo_total
-        custo_total_final = round(custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2)
+        custo_total_final = round(
+            custo_total_ajustado + custo_mat * permanencia_efetiva + custo_ocioso + custo_mob_desmob, 2
+        )
         # NEP-037: custo_fixo_mensal usa custo_mo_base (sem encargos) — encargos ficam em custo_encargos_mensal.
         fixo_mensal_total = round(custo_mo_base + custo_eq + custo_comb_efetivo + custo_mat, 2)
         equipes.append(
@@ -922,7 +924,8 @@ def _accum_week_demand(
     """Accumulates week demand entries into tipo_week_demand[tipo]."""
     week_demand = tipo_week_demand.setdefault(tipo, {})
     for w in active_weeks:
-        demand_w = max(0, round((getattr(dist[w], "num_equipes", 0) or 0) * required / total_required_peak))
+        raw = (getattr(dist[w], "num_equipes", 0) or 0) * required / total_required_peak
+        demand_w = max(0, math.ceil(raw))
         week_demand[w] = week_demand.get(w, 0) + demand_w
 
 
@@ -1028,7 +1031,15 @@ def _process_item_tipo_map(
         if tipo not in pool:
             continue
         _add_tipo_item_demand(
-            tipo, iid, required, total_required_peak, active_weeks, eq, dist, tipo_items, tipo_week_demand,
+            tipo,
+            iid,
+            required,
+            total_required_peak,
+            active_weeks,
+            eq,
+            dist,
+            tipo_items,
+            tipo_week_demand,
             custo_hora_ref_sem=custo_hora_ref_sem,
         )
 
@@ -1048,8 +1059,17 @@ def _collect_tipo_items_and_demands(
     tipo_week_demand: dict[str, dict[str, int]] = {}
     for iid, tipo_map in item_tipo_map.items():
         _process_item_tipo_map(
-            iid, tipo_map, equipe_map, pool, sched_lookup, tipo_items, tipo_week_demand, validacoes,
-            cpu_lookup=cpu_lookup, prod_lookup=prod_lookup, horas_semana=horas_semana,
+            iid,
+            tipo_map,
+            equipe_map,
+            pool,
+            sched_lookup,
+            tipo_items,
+            tipo_week_demand,
+            validacoes,
+            cpu_lookup=cpu_lookup,
+            prod_lookup=prod_lookup,
+            horas_semana=horas_semana,
         )
     return tipo_items, tipo_week_demand
 
@@ -1067,7 +1087,11 @@ def _compute_custo_unit_fracs(mw_list: list) -> tuple:
     # Preferir custo_hora_ref_sem (catálogo) quando disponível
     custo_unit_semanal = (
         sum(
-            (it.get("custo_hora_ref_sem") or (it["custo_total_item"] / it["machine_weeks"] if it["machine_weeks"] > 0 else 0.0)) * mw
+            (
+                it.get("custo_hora_ref_sem")
+                or (it["custo_total_item"] / it["machine_weeks"] if it["machine_weeks"] > 0 else 0.0)
+            )
+            * mw
             for _, mw, it in mw_list
         )
         / total_mw
@@ -1112,7 +1136,11 @@ def _compute_fracs_locacao_manut(mw_list: list, equipe_map: dict, cus_eq: float)
 
 
 def _fill_atribuicao(atribuicao: dict, mw_list: list, custo_total_contrato: float, tipo: str) -> None:
-    """Fills atribuicao[iid] = (cost, tipo, frac) for each (iid, mw, _) in mw_list."""
+    """Fills atribuicao[iid] = (cost, tipo, frac) para este contrato específico.
+
+    IMPORTANTE: sobrescreve a entrada anterior — o acumulado multi-contrato é feito em
+    _build_contratos_recurso após todos os contratos serem construídos (TD-1 fix).
+    """
     total_mw = sum(mw for _, mw, _ in mw_list) or 1
     for iid, mw, _ in mw_list:
         frac = round(mw / total_mw, 6)
@@ -1276,6 +1304,85 @@ def _build_item_tipo_map(activities: list) -> dict:
     return item_tipo_map
 
 
+def _derive_rcpsp_from_canonical(canonical_in: object, catalogo: dict) -> dict | None:
+    """Deriva rcpsp_spec a partir do canônico quando não fornecido nos inputs.
+
+    Convenção de tipo_id: equip_id da composicao_padrao_equipe.equipamentos da producao
+    associada ao cpu_id do item da EAP. Quando a producao não tiver equipamentos,
+    usa o cpu_id como tipo escalar (ex.: serviços sem frotas próprias).
+
+    resource_costs é omitido propositalmente → custo_unit_semanal derivado de
+    custo_hora_total_referencia do catálogo via _resolve_custo_hora_ref_sem.
+
+    Capacidades declaradas explicitamente em canonical_in.recurso_pool (skill 03) são
+    respeitadas quando o tipo_id coincide com o equip_id (convenção natural).
+
+    Retorna None quando não há cronograma ou EAP suficientes para derivar o spec.
+    """
+    sched_acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []  # type: ignore[union-attr]
+    if not sched_acts:
+        return None
+
+    eap_items = canonical_in.eap  # type: ignore[union-attr]
+    if not eap_items:
+        return None
+
+    sched_ids = {sa.activity_id for sa in sched_acts}
+
+    cpu_lookup: dict = {c["codigo"]: c for c in catalogo.get("cpus", []) if c.get("codigo")}
+    prod_lookup: dict = {
+        p.get("id") or p.get("codigo", ""): p
+        for p in (catalogo.get("producoes") or catalogo.get("produtividades") or [])
+    }
+
+    # Capacidades declaradas explicitamente pelo usuário em skill 03
+    canonical_capacities: dict[str, int] = {
+        rp.tipo_id: rp.quantidade_total
+        for rp in (canonical_in.recurso_pool or [])  # type: ignore[union-attr]
+    }
+
+    item_equip_ids: dict[str, list[tuple[str, int]]] = {}
+    all_equip_ids: dict[str, int] = {}  # equip_id → max num_unidades
+
+    for item in eap_items:
+        if item.item_id not in sched_ids:
+            continue
+        cpu = cpu_lookup.get(item.cpu_id, {})
+        prod_id = cpu.get("producao_id_ref")
+        prod = prod_lookup.get(prod_id or "", {})
+        equipe = prod.get("composicao_padrao_equipe", {}) if prod else {}
+        equip_entries = [
+            (e.get("equip_id"), max(1, int(e.get("num_unidades") or 1)))
+            for e in equipe.get("equipamentos", [])
+            if e.get("equip_id")
+        ]
+        if not equip_entries:
+            equip_entries = [(item.cpu_id, 1)]
+        item_equip_ids[item.item_id] = equip_entries
+        for eid, n_units in equip_entries:
+            all_equip_ids[eid] = max(all_equip_ids.get(eid, 0), n_units)
+
+    if not all_equip_ids:
+        return None
+
+    # Pool capacity: máximo de unidades declarado explicitamente (skill 03) ou
+    # derivado de num_unidades do catálogo
+    resource_pool = {eid: canonical_capacities.get(eid) or max_units for eid, max_units in all_equip_ids.items()}
+    activities = [
+        {
+            "item_id": iid,
+            "required_resources": {eid: n_units for eid, n_units in equip_entries},
+        }
+        for iid, equip_entries in item_equip_ids.items()
+        if equip_entries
+    ]
+
+    if not activities:
+        return None
+
+    return {"resource_pool": resource_pool, "activities": activities}
+
+
 def _setup_contratos_context(equipes: list, rcpsp_spec: dict) -> tuple:
     """Extracts pool/activities/item_tipo_map/equipe_map/delta_max/resource_costs from rcpsp_spec."""
     pool = rcpsp_spec.get("resource_pool", {})
@@ -1331,15 +1438,21 @@ def _build_contratos_recurso(
     atribuicao   : {item_id: (custo_atribuido, tipo_id, fracao)} — por item coberto
     cadeias      : list[CadeiaPerpetuacao] — cadeias de perpetuação ADR-073
     """
-    pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs, resource_costs_absent = _setup_contratos_context(
-        equipes, rcpsp_spec
+    pool, activities, item_tipo_map, equipe_map, delta_max, resource_costs, resource_costs_absent = (
+        _setup_contratos_context(equipes, rcpsp_spec)
     )
     if not pool or not activities:
         return [], {}, []
 
     tipo_items, tipo_week_demand = _collect_tipo_items_and_demands(
-        item_tipo_map, equipe_map, pool, sched_lookup, validacoes,
-        cpu_lookup=cpu_lookup, prod_lookup=prod_lookup, horas_semana=horas_semana,
+        item_tipo_map,
+        equipe_map,
+        pool,
+        sched_lookup,
+        validacoes,
+        cpu_lookup=cpu_lookup,
+        prod_lookup=prod_lookup,
+        horas_semana=horas_semana,
     )
 
     contratos: list[RecursoContrato] = []
@@ -1375,7 +1488,23 @@ def _build_contratos_recurso(
             )
         )
 
-    return contratos, atribuicao, todas_cadeias
+    # TD-1: acumular atribuição total por item sobre todos os contratos.
+    # _fill_atribuicao sobrescreve por contrato (correto para particao_por_item).
+    # Aqui somamos as contribuições de cada contrato para cada item.
+    atribuicao_total: dict[str, tuple[float, str, float]] = {}
+    for contrato in contratos:
+        for part in contrato.particao_por_item:
+            iid = part.item_id
+            custo_part = float(getattr(part, "custo_total_particionado", 0.0) or 0.0)
+            prev_custo, prev_tipo, prev_frac = atribuicao_total.get(iid, (0.0, contrato.tipo_id, 0.0))
+            novo_tipo = contrato.tipo_id if custo_part >= prev_custo else prev_tipo
+            atribuicao_total[iid] = (
+                round(prev_custo + custo_part, 2),
+                novo_tipo,
+                round(prev_frac, 6),
+            )
+
+    return contratos, atribuicao_total, todas_cadeias
 
 
 # ---------------------------------------------------------------------------
@@ -1867,7 +1996,7 @@ def _compress_to_segments(week_map: dict) -> list:
     return segs
 
 
-def _compute_adr085_gaps(
+def _compute_instancia_idle_gaps(
     aw: list,
     contract_start_idx: int,
     contract_end_idx: int,
@@ -1918,7 +2047,7 @@ def _compute_instancia_lifecycle(
     contrato,
     contract_start_idx: int,
     contract_end_idx: int,
-    adr085_active: bool,
+    apply_idle_gaps: bool,
     c_mo: float,
     c_eq: float,
     c_comb: float,
@@ -1935,7 +2064,7 @@ def _compute_instancia_lifecycle(
     ca_mo = ca_eq = ca_comb = ca_mat = ci_mo = ci_eq = c_demob_i = custo_inst_total = 0.0
     desmob_aplicada = False
     idle_segs: list[SegmentoAtividade] = []
-    if not (adr085_active and instance_week_map[i]):
+    if not (apply_idle_gaps and instance_week_map[i]):
         return (
             sm_mob,
             sm_demob,
@@ -1952,7 +2081,7 @@ def _compute_instancia_lifecycle(
             idle_segs,
         )
     aw = sorted(instance_week_map[i].keys(), key=_week_idx)
-    idle_w, semanas_off, desmob_aplicada, idle_segs = _compute_adr085_gaps(
+    idle_w, semanas_off, desmob_aplicada, idle_segs = _compute_instancia_idle_gaps(
         aw, contract_start_idx, contract_end_idx, c_mo, c_idle_unit, c_mob_unit, c_demob_unit
     )
     cc = calcular_custo_instancia_composicional(
@@ -2236,7 +2365,7 @@ def _build_instancia_slot(
     instance_week_map: dict,
     custo_standby_rate: float,
     c_idle_unit: float,
-    adr085_active: bool,
+    apply_idle_gaps: bool,
     contract_start_idx: int,
     contract_end_idx: int,
     _c_mo: float,
@@ -2277,7 +2406,7 @@ def _build_instancia_slot(
         contrato,
         contract_start_idx,
         contract_end_idx,
-        adr085_active,
+        apply_idle_gaps,
         _c_mo,
         _c_eq,
         _c_comb,
@@ -2362,7 +2491,7 @@ def _build_instancias_for_tipo(
     c_idle_unit = contrato.custo_idle_semanal_unit
     custo_standby_rate = c_idle_unit if c_idle_unit > 0 else contrato.custo_unit_semanal
     contract_end_idx = _week_idx(contrato.semana_fim)
-    adr085_active = c_idle_unit > 0
+    apply_idle_gaps = c_idle_unit > 0
     contract_start_idx = _week_idx(contrato.semana_inicio)
     _c_mo = contrato.custo_unit_semanal_mo
     _c_eq = contrato.custo_unit_semanal_eq
@@ -2384,7 +2513,7 @@ def _build_instancias_for_tipo(
             instance_week_map,
             custo_standby_rate,
             c_idle_unit,
-            adr085_active,
+            apply_idle_gaps,
             contract_start_idx,
             contract_end_idx,
             _c_mo,
@@ -2569,7 +2698,7 @@ def _apply_instancial_to_contrato(contrato, instancias: list, eq_by_item: dict, 
     )
 
 
-def _aplicar_custo_instancial_adr085(
+def _aplicar_custo_instancial(
     contratos: list[RecursoContrato],
     instancias: list[InstanciaRecurso],
     equipes: list[EquipeDireta],
@@ -2593,6 +2722,21 @@ def _aplicar_custo_instancial_adr085(
     for contrato in contratos:
         _apply_instancial_to_contrato(contrato, instancias, eq_by_item, validacoes)
 
+    # TD-1: recomputa eq.custo_total como Σ_r custo_total_particionado_ir após ADR-085.
+    # Necessário porque _reescalar_particao sobrescreve em vez de acumular (por design —
+    # ADR-085 reescala cada contrato independentemente). O acumulado correto é a soma de
+    # todas as partições, já reescaladas ou monolíticas.
+    pool_total_por_item: dict[str, float] = {}
+    for c in contratos:
+        for part in c.particao_por_item:
+            pool_total_por_item[part.item_id] = pool_total_por_item.get(part.item_id, 0.0) + float(
+                getattr(part, "custo_total_particionado", 0.0) or 0.0
+            )
+    for item_id, total in pool_total_por_item.items():
+        eq = eq_by_item.get(item_id)
+        if eq is not None and total > 0:
+            eq.custo_total = round(total, 2)
+
 
 # ---------------------------------------------------------------------------
 # ADR-104: Enriquecimento de EquipeDireta com decomposição instancial
@@ -2612,6 +2756,16 @@ def _enrich_equipes_com_decomposicao_instancial(
     Mutação in-place de `equipes`. Apenas items em contratos receberão decomposição.
     """
     eq_by_id = {eq.item_id: eq for eq in equipes}
+    # TD-1: reset custo_inst_* para items em contratos antes de acumular
+    items_em_contratos = {part.item_id for c in contratos for part in c.particao_por_item}
+    for item_id in items_em_contratos:
+        eq = eq_by_id.get(item_id)
+        if eq is not None:
+            eq.custo_inst_mo = 0.0
+            eq.custo_inst_eq = 0.0
+            eq.custo_inst_comb = 0.0
+            eq.custo_inst_mat = 0.0
+            eq.custo_inst_mob_demob = 0.0
 
     for contrato in contratos:
         for part in contrato.particao_por_item:
@@ -2619,25 +2773,20 @@ def _enrich_equipes_com_decomposicao_instancial(
             if eq is None:
                 continue
 
-            # Copiar decomposição de CustoParticionadoItem
-            eq.custo_inst_mo = part.custo_inst_mo
-            eq.custo_inst_eq = part.custo_inst_eq
-            eq.custo_inst_comb = part.custo_inst_comb
-            eq.custo_inst_mat = part.custo_inst_mat
+            # TD-1: acumular custo_inst_* sobre todos os contratos (não sobrescrever)
+            eq.custo_inst_mo = round((eq.custo_inst_mo or 0.0) + (part.custo_inst_mo or 0.0), 2)
+            eq.custo_inst_eq = round((eq.custo_inst_eq or 0.0) + (part.custo_inst_eq or 0.0), 2)
+            eq.custo_inst_comb = round((eq.custo_inst_comb or 0.0) + (part.custo_inst_comb or 0.0), 2)
+            eq.custo_inst_mat = round((eq.custo_inst_mat or 0.0) + (part.custo_inst_mat or 0.0), 2)
             eq.custo_inst_mob_demob = round(
-                part.custo_mob_imputado + part.custo_demob_imputado,
+                (eq.custo_inst_mob_demob or 0.0) + part.custo_mob_imputado + part.custo_demob_imputado,
                 2,
             )
 
             # Validar invariante (detecção precoce de bugs)
             # ADR-085: custo_total_particionado = custo_inst_mo + eq + comb + mat
             # (mob_demob já está incluído em custo_inst_mo como resíduo)
-            soma = (
-                eq.custo_inst_mo
-                + eq.custo_inst_eq
-                + eq.custo_inst_comb
-                + eq.custo_inst_mat
-            )
+            soma = eq.custo_inst_mo + eq.custo_inst_eq + eq.custo_inst_comb + eq.custo_inst_mat
             desvio = abs(soma - eq.custo_total)
 
             # ADR-106: Se há desvio significativo, reescalar proporcionalmente para garantir invariante
