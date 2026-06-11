@@ -61,6 +61,72 @@ O comando `concilium benchmark plan-space` opera sobre alternativas de `referenc
 
 ### D1–D8 originais: mantidos
 
+### D2b — Inventário de Levers de Exploração (elaboração de D2)
+
+Os levers são os parâmetros variados em cada cenário da campanha. Estão todos disponíveis no `ProjetoSpec` (schema v2.0) e classificados por risco semântico e espaço de impacto.
+
+#### Classe 1 — Levers de Frota (risco baixo, impacto O-space)
+
+| Lever | Campo no spec | Range sugerido | Impacto |
+|---|---|---|---|
+| **Tamanho máximo de equipe** | `cronograma[i].n_equipes.n_max` | `[1, n_max_cat]` (inteiros) | Prazo, custo_mob_window, pool |
+| **Frentes na mobilização** | `cronograma[i].n_equipes.n_inicial` | `[1, n_max]` (inteiros) | Custo de ramp, prazo |
+| **Janela de mobilização** | `cronograma[i].leadtime_mob_semanas` | `[1, 4]` semanas | custo_mob_window, prazo |
+| **Lag de desmobilização** | `cronograma[i].lag_demob_semanas` | `[0, 2]` semanas | custo_mob_window |
+
+Constraint automático: `n_inicial ≤ n_max`. Variação de `n_max` → re-execução do RCPSP (ADR-091 garante uso como pool irrestrito).
+
+#### Classe 2 — Levers de Produtividade (risco médio, impacto O + EF)
+
+| Lever | Campo no spec | Range sugerido | Impacto |
+|---|---|---|---|
+| **Override de produtividade** | `cronograma[i].producao_diaria` | `[0.8×P_cat, 1.2×P_cat]` | Prazo, custo_direto |
+| **Horas por dia** | `meta.regime_trabalho.horas_dia` | `{6, 8, 9, 10}` | Prazo, `C_r^{sem}`, custo |
+| **Dias por semana** | `meta.regime_trabalho.dias_semana` | `{5, 6, 7}` | Prazo, `C_r^{sem}`, custo |
+
+Nota: `horas_dia × dias_semana` afeta `C_r^{sem}` (custo semanal de todos os recursos) e `horas_semana` (produção por semana). Um cenário com 6d×10h tem o mesmo custo por semana que 6d×8h escalado por 10/8 — mas o prazo cai mais rápido que o custo sobe.
+
+#### Classe 3 — Levers de Estratégia de Pool (risco baixo, impacto O + EF)
+
+| Lever | Campo no spec | Valores | Impacto |
+|---|---|---|---|
+| **Objetivo do pool** | `meta.objetivo_pool` | `{balanceado, minimizar_prazo, minimizar_custo}` | Prazo vs custo direto |
+| **Restrições de mercado** | `restricoes_mercado` | `{tipo: [1,2,3]}` | Prazo se vinculante |
+
+`objetivo_pool = minimizar_prazo` aumenta o pool ao pico de demanda concorrente; `minimizar_custo` usa o mínimo serial. Diferença de makespan pode ser significativa em obras com atividades concorrentes.
+
+#### Classe 4 — Levers de Composição de CPU (risco médio, requer catálogo — D3/F4)
+
+| Lever | Mecanismo | Valores | Impacto |
+|---|---|---|---|
+| **CPU alternativo por item** | `eap[i].cpu_id` substituto | CPUs do mesmo tipo de serviço | PU_cat, produtividade, custo de equipe |
+
+Exemplo: escavação 2ª cat. → `CPU-TERRA-ESCO-CARGA-2CAT-DMT2000` vs `CPU-TERRA-ESCO-CARGA-2CAT-DMT3000`. O CPU com DMT menor tem custo menor mas demanda mais equipamento de transporte. Impacto em O e EF/F simultaneamente.
+
+Requer catálogo de CPUs substitutos por tipo de serviço (F4 — não implementado).
+
+#### Classe 5 — Levers Financeiros (risco alto, decisão humana — não sweepear automaticamente)
+
+| Lever | Campo | Por que não sweepear |
+|---|---|---|
+| `bdi_lucro.*` | `meta.bdi_lucro` | É objetivo de negócio, não variável operacional |
+| `regime_tributario.iss` | `meta.regime_tributario.iss` | Determinado pela jurisdição, não pela obra |
+| `regime_tributario.regime` | `meta.regime_tributario.regime` | Decisão jurídico-contábil |
+
+Estes parâmetros podem compor um `perfil_expectativas` da campanha (quanto lucro é esperado), mas não devem ser variados no sweep — eles definem o contexto dentro do qual o sweep opera.
+
+#### Resumo: prioridade de implementação
+
+```
+Campanha v1 (F1–F3):
+  Classe 1 (frota): n_max, n_inicial, leadtime, lag
+  Classe 3 (pool):  objetivo_pool, restricoes_mercado
+
+Campanha v2 (F4):
+  Classe 2 (produtividade): horas_dia, dias_semana, producao_diaria
+  Classe 4 (CPU alternativo): cpu_id por item — requer catálogo enriquecido
+```
+
 ### D9 — Ancorar a campanha no ProjetoSpec (novo)
 
 `GoResearchCampaignBundle` não inventa contratos próprios. Uma campanha é:
