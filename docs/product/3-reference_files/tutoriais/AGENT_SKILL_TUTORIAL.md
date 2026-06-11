@@ -158,22 +158,47 @@ Se `status == "DEGRADADO"` ou `erros_criticos > 0`, investigue antes de prossegu
 
 Dois caminhos disponíveis dependendo do nível de estruturação da entrada.
 
+### Regra fundamental: falar a língua da obra
+
+O usuário do Concilium é um engenheiro civil. Nunca exponha parâmetros técnicos do sistema na conversa. O agente é o intérprete entre a linguagem de obra e o schema interno.
+
+| ❌ Não perguntar | ✅ Perguntar assim |
+|---|---|
+| "Qual o `cpu_id`?" | "Escavação 1ª categoria ou 3ª? Com carga ou só escavação?" |
+| "Qual o `completion_threshold_pct`?" | (não perguntar — default 1.0) |
+| "Qual o `n_max`?" | "Quantas máquinas desse tipo no pico?" |
+| "Qual o `leadtime_mob_semanas`?" | "Quantas semanas para montar o canteiro antes de começar?" |
+| "Quer `restricoes_mercado`?" | "Tem restrição de equipamento na região?" |
+| "Informe `bdi_lucro.mao_obra`" | "Qual o lucro objetivo da obra? (um número, ex: 8%)" |
+
 ### 1A — Via QQP (forma recomendada para novos projetos)
 
-Quando o usuário tem uma lista de serviços em linguagem natural:
+Conduzir conversa em 7 blocos, pulando os que têm defaults aceitáveis:
 
+**Bloco 1 — Identificação** (sempre perguntar)
 ```python
-# Passo 1: confirmar contextos disponíveis
-listar_contextos()
-# → [{id: "mendeslobo-ce", perfil_id: "...", catalogo_id: "..."}]
+# Coletar na conversa: nome, tipo_obra, localizacao, data_inicio, data_termino
+# Geocoding de localizacao → coordenadas (fazer internamente, não expor)
+```
 
-# Passo 2: criar a partir da QQP
+**Bloco 2 — Regime de trabalho** (só se diferente do padrão 6×8)
+```python
+# Default mendeslobo: dias_semana=6, horas_dia=8
+# Perguntar: "A obra roda em regime diferente de 6 dias × 8 horas?"
+```
+
+**Bloco 3 — Serviços** (sempre)
+```python
+# Coletar lista em linguagem natural → criar_projeto_formulario resolve CPUs
+listar_contextos()  # → confirmar contexto_id disponível
+
 criar_projeto_formulario(
     nome="Rodovia CE-040 — Lote 09/10",
-    contexto_id="mendeslobo-ce",
+    contexto_id="mendeslobo",
     tipo_obra="terraplenagem",
     localizacao="Aracoiaba, CE",
     data_inicio="2026-09-01",
+    data_termino="2027-09-01",
     servicos=[
         {"descricao": "Supressão vegetal",            "quantidade": 8,      "unidade": "ha"},
         {"descricao": "Escavação de material 3ª cat", "quantidade": 450000, "unidade": "m³"},
@@ -185,25 +210,78 @@ criar_projeto_formulario(
 
 **Resposta A — todos mapeados:**
 ```json
-{"status": "criado", "project_id": "rodovia-ce040-lote09", "version": "v1",
+{"status": "criado", "project_id": "rodovia-ce040-lote09",
  "eap_preview": [...], "proxima_skill_sugerida": "02-produtividade-climatica"}
 ```
 
 **Resposta B — itens sem CPU:**
 ```json
 {"status": "pendente_mapeamento",
- "nao_mapeados": [{"descricao": "Carga e transporte DMT 3km", "item_id": "eap-1_4"}],
- "instrucoes": "Use pesquisar_catalogo() para encontrar o cpu_id correto..."}
+ "nao_mapeados": [{"descricao": "Carga e transporte DMT 3km", "item_id": "eap-1_4"}]}
 ```
 
-Se B, pesquise o CPU — o tool correto é `pesquisar_catalogo`, não `buscar_cpu`:
-
+Se B, pesquisar e apresentar opções ao usuário em linguagem natural:
 ```python
-pesquisar_catalogo(contexto_id="mendeslobo-ce", query="carga transporte terraplenagem")
-# → [{cpu_id: "CPU-TERRA-CARGA-01", descricao: "Carga e transporte..."}, ...]
+pesquisar_catalogo(contexto_id="mendeslobo", query="carga transporte terraplenagem")
+# → [{cpu_id: "CPU-TERRA-CARGA-01", descricao: "Carga e transporte 1ª cat. DMT ≤ 2km"}...]
+
+# Dizer ao usuário: "Para 'Carga e transporte DMT 3km' encontrei:
+#   (1) Escavação com carga e transporte até 3km — R$ XX/m³
+#   (2) Transporte puro DMT 3km — R$ XX/m³
+#   Qual se encaixa melhor?"
 ```
 
-Repita `criar_projeto_formulario` com `cpu_id` preenchido nos itens pendentes.
+Repetir `criar_projeto_formulario` com `cpu_id` preenchido.
+
+**Bloco 4 — Custos de canteiro** (perguntar; aceita "não sei")
+
+Perguntar: "Você tem os custos mensais do canteiro (ADM, supervisão, segurança, mobilização)?"
+
+- Se sim: coletar valores em R$/mês por categoria
+- Se não (ou "use o padrão"): usar defaults derivados dos benchmarks MendesLobo
+
+Ao usar defaults, informar: "Usarei os padrões MendesLobo: ADM ~R$1M/mês, supervisão ~R$67k/mês, lab ~R$11k, QSMS ~R$59k. Posso ajustar depois."
+
+**Bloco 5 — Regime e lucro** (perguntar; aceita "padrão")
+
+Pergunta única: "Qual o regime tributário (Lucro Presumido/Simples/Lucro Real) e qual o lucro objetivo da obra?"
+
+Tradução de "8% de lucro" → `bdi_lucro`:
+```python
+# Regra interna — nunca expor ao usuário:
+L = 0.08
+bdi_lucro = {
+    "mao_obra": L, "servicos": L,
+    "material": min(L, 0.04),  # isenção fiscal caps em 4%
+    "diesel":   min(L, 0.04),
+    "indireto": min(L, 0.05),  # convenção TCU cap em 5%
+}
+```
+
+**Bloco 6 — Mobilização** (perguntar se obra > 3 meses)
+
+"Quantas semanas para montar o canteiro antes de começar a produção?"
+
+Tradução interna (nunca expor o nome do campo):
+```python
+# "3 semanas" → cronograma[*].leadtime_mob_semanas = 3
+# "1 semana para devolver os equipamentos" → cronograma[*].lag_demob_semanas = 1
+```
+
+Sugestão do agente baseada no porte:
+- Obra ≤ R$20M ou ≤ 6 meses → sugerir 1–2 semanas mob, 1 semana demob
+- Obra > R$50M ou > 12 meses → sugerir 3–4 semanas mob, 2 semanas demob
+
+**Bloco 7 — Equipamento na região** (só se localização remota)
+
+"A região tem restrição de disponibilidade de equipamentos pesados?"
+
+Tradução interna (após `disparar_pipeline("03-catalogo")` que confirma os tipos):
+```python
+# "Só tem 2 escavadeiras grandes disponíveis" →
+# restricoes_mercado = {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2}
+# Default: restricoes_mercado = {} (irrestrito)
+```
 
 ### 1B — Via EAP estruturada (`iniciar_orcamento`)
 

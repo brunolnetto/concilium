@@ -1,502 +1,211 @@
 # Especificação: Formulário de Criação de Projeto (QQP/EAP)
 
-**Versão:** 2.0  
+**Versão:** 3.0  
 **Data:** 2026-06-11  
-**Relacionado:** ADR-092, ADR-091, ADR-101, ADR-055, ADR-090, ADR-105, ADR-106  
 **Schema canônico:** `config/schemas/projeto_spec.schema.json`  
-**Ponto de entrada MCP:** `criar_projeto_formulario` em `mcp/tools/formulario.py`  
+**Ponto de entrada MCP:** `criar_projeto_formulario`  
 **App interativo:** `mcp/apps/formulario-qqp/index.html`
 
 ---
 
-## Visão Geral
+## Princípio de Design
 
-O formulário traduz a linguagem natural do engenheiro de campo (QQP) em uma estrutura canônica (EAP com CPUs) pronta para o pipeline de planejamento.
+O formulário serve um engenheiro civil que conhece obras mas não conhece o sistema. Ele sabe o que é EAP, BDI e custo indireto; não sabe o que é `completion_threshold_pct`, `n_max` ou `tipo_recurso`.
+
+O agente age como **intérprete**: transforma respostas em linguagem de obra em campos técnicos. Nenhum parâmetro técnico de implementação deve aparecer na conversa.
 
 ```
-Engenheiro digita          →  Formulário QQP   →  ProjetoSpec          →  Pipeline 01→...→09
-"Escavar 380k m³ 1ª cat."  →  Busca semântica  →  {cpu_id, quantity}  
+Engenheiro fala           →  Agente interpreta  →  Schema interno
+"2 semanas de mobilização" → leadtime_mob = 2   → cronograma[].leadtime_mob_semanas
+"Só tem 2 escavadeiras    → restricoes_mercado  → {EQUIPE-CPU-TERRA-...: 2}
+ disponíveis aqui"           = {tipo: 2}
+"Lucro de 8%"             → bdi_lucro.todos = 8% → bdi_lucro.{mao_obra:0.08,...}
 ```
-
-O formulário tem **7 seções** (2 novas vs v1.0) mais uma etapa de mapeamento de CPUs.
 
 ---
 
-## Seção 1 — Identificação do Projeto
+## Interface do Engenheiro: Perguntas do Formulário
 
-Todos obrigatórios exceto `coordenadas`, `data_termino` e `regime_tributario`.
+O agente conduz uma conversa com estas perguntas — em ordem, pulando as que têm defaults aceitáveis para o contexto da obra.
 
-| Campo | Tipo | Obrigatório | Restrições | Exemplo |
-|---|---|---|---|---|
-| `meta.nome` | string | ✅ | minLength: 1 | `"Ferrovia Transnordestina — Lote 09/10"` |
-| `meta.contexto_id` | string | ✅ | minLength: 1 | `"mendeslobo"` |
-| `meta.tipo_obra` | enum | ✅ | §Enums | `"terraplenagem"` |
-| `meta.localizacao` | string | ✅ | "Cidade, UF" | `"Quixadá, CE"` |
-| `meta.data_inicio` | date | ✅ | ISO 8601 | `"2026-08-01"` |
-| `meta.data_termino` | date | — | ISO 8601 | `"2027-04-30"` |
-| `meta.coordenadas.lat` | number | ✅* | −90 ≤ lat ≤ 90 | `−4.98` |
-| `meta.coordenadas.lng` | number | ✅* | −180 ≤ lng ≤ 180 | `−39.02` |
+### Bloco 1 — Identificação (obrigatório, sem default)
 
-> \* `{lat: 0, lng: 0}` é aceito como default. Com coordenadas reais, skill-02 consulta Open-Meteo para fator climático semanal; sem elas, `fator_clima = 1.0` em todas as semanas.
+| Pergunta | Campo interno | Exemplo de resposta |
+|---|---|---|
+| "Qual o nome da obra?" | `meta.nome` | "Rodovia CE-040 Lote 09/10" |
+| "Que tipo de obra é?" | `meta.tipo_obra` | "Terraplenagem" → `"terraplenagem"` |
+| "Onde fica? (Cidade, UF)" | `meta.localizacao` | "Aracoiaba, CE" |
+| "Quando começa?" | `meta.data_inicio` | "setembro de 2026" → `"2026-09-01"` |
+| "Qual o prazo contratual?" | `meta.data_termino` | "12 meses" → `"2027-09-01"` |
 
-### Enums: `tipo_obra`
+### Bloco 2 — Regime de trabalho (perguntar só se diferente do padrão)
 
-| Valor | Quando usar |
+Padrão MendesLobo: **6 dias/semana, 8h/dia**. Perguntar apenas se a obra tiver regime diferente.
+
+| Pergunta | Campo interno | Default |
+|---|---|---|
+| "A obra roda em regime diferente de 6×8?" | `regime_trabalho.dias_semana` / `horas_dia` | 6 dias, 8h |
+
+### Bloco 3 — Serviços (obrigatório, sem default)
+
+"Quais são os serviços do escopo? Me informe descrição, quantidade e unidade."
+
+O engenheiro lista em linguagem natural. O agente resolve `cpu_id` via busca semântica. Se não encontrar, pergunta com opções — nunca expõe o código CPU diretamente.
+
+> **Regra do agente:** Nunca perguntar "qual o cpu_id?". Perguntar "o serviço 'Carga e transporte 3km' se encaixa melhor em escavação com carga ou em transporte puro?"
+
+### Bloco 4 — Custos de canteiro (perguntar se disponível; aceita "não sei")
+
+"Você tem os custos mensais do canteiro? (ADM, supervisão, laboratório, segurança, mobilização)"
+
+Se sim: coleta em R$/mês por categoria. Se não: usa defaults derivados dos benchmarks da MendesLobo.
+
+| O que o engenheiro informa | Campo interno |
 |---|---|
-| `"terraplenagem"` | Escavação, compactação, supressão, terraplenagem geral |
-| `"pavimentacao"` | Base, sub-base, CBUQ, concreto de cimento |
-| `"saneamento"` | Água, esgoto, drenagem pluvial urbana |
-| `"drenagem"` | Canais, bueiros, galerias fluviais |
-| `"obras_arte"` | Pontes, viadutos, muros de arrimo, fundações |
-| `"diversos"` | Combinação de tipos ou não classificado |
+| "ADM custa ~R$ 1M/mês" | `indiretos.ADM.custo_fixo_mensal` |
+| "Supervisão R$ 70k/mês" | `indiretos.TOP.custo_fixo_mensal` |
+| "Mobilização total R$ 3.5M" | `indiretos.MOB[fase=mobilizacao].custo_fixo_total` |
+| "Não tenho esse dado" | Agente usa defaults do contexto mendeslobo |
 
----
+### Bloco 5 — Regime e lucro (perguntar; aceita "padrão")
 
-## Seção 2 — Regime de Trabalho
-
-| Campo | Tipo | Obrigatório | Range | Default |
-|---|---|---|---|---|
-| `meta.regime_trabalho.dias_semana` | int | — | 1–7 | **6** |
-| `meta.regime_trabalho.horas_dia` | int | — | 1–24 | **8** |
-
-> `horas_semana = dias_semana × horas_dia` determina `C_r^{sem}` (custo semanal de todos os recursos) e a duração de cada atividade. Uma mudança de 8→10 h/dia reduz duração em 20% e aumenta custo semanal em 25%.
-
-### Objetivo de Otimização do Pool
-
-| Campo | Valores | Default | Descrição |
+| Pergunta | Campo interno | Default | Tradução |
 |---|---|---|---|
-| `objetivo_pool` | `"balanceado"` · `"minimizar_prazo"` · `"minimizar_custo"` | `"balanceado"` | Critério do RCPSP solver |
+| "A empresa está no Lucro Presumido, Simples ou Lucro Real?" | `meta.regime_tributario.regime` | `"lucro_presumido"` | — |
+| "Qual o lucro objetivo da obra?" | `meta.bdi_lucro.*` (todos) | 9% (direto), 5% (indireto) | um número → todos os sub-campos |
+| "O ISS é diferente de 2% no município?" | `meta.regime_tributario.iss` | jurisdição/default | só perguntar se cidade fora do padrão |
 
-- **`minimizar_prazo`** → pool = pico de demanda concorrente (máximo paralelismo, maior custo)
-- **`minimizar_custo`** → pool = mínimo serial (menor custo, maior makespan)
-- **`balanceado`** → bissecção entre os dois extremos, respeitando `data_termino − data_inicio` como prazo máximo
+> **Regra do agente:** "Lucro de 8%" → `bdi_lucro = {mao_obra: 0.08, servicos: 0.08, material: 0.04, diesel: 0.04, indireto: 0.05}`. Material e diesel mantêm 4% (impostos isentos); indireto mantém 5% (convenção TCU).
 
----
+### Bloco 6 — Ritmo e mobilização (perguntar; aceita "padrão")
 
-## Seção 3 — BDI e Regime Tributário _(elaborado)_
-
-O BDI (Benefícios e Despesas Indiretas) é calculado pela fórmula TCU (Acórdão 2622/2013):
-
-```
-BDI_categoria = [(1+AC)(1+DF)(1+R)(1+CR)(1+L)] / (1 − T) − 1
-```
-
-onde `AC` = administração central, `DF` = despesas financeiras, `R` = risco, `CR` = canteiro/residencial, `L` = lucro, `T` = soma das alíquotas tributárias.
-
-### 3.1 Regime Tributário
-
-| Campo | Tipo | Default | Notas |
-|---|---|---|---|
-| `meta.regime_tributario.regime` | enum | `"lucro_presumido"` | `"lucro_presumido"` · `"simples_nacional"` · `"lucro_real"` |
-| `meta.regime_tributario.jurisdicao_id` | string | derivado de `localizacao` | código IBGE/ISO ex: `"BR-CE"` — determina ISS municipal |
-| `meta.regime_tributario.iss` | float | jurisdição | 0–0.05 (max legal 5%) — varia por município |
-| `meta.regime_tributario.pis` | float | regime | 0–1 — `lucro_presumido`: 0.65%; `simples`: 0% |
-| `meta.regime_tributario.cofins` | float | regime | 0–1 — `lucro_presumido`: 3.0%; `simples`: 0% |
-| `meta.regime_tributario.cprb` | float | regime | 0–1 — varia por atividade; padrão: 0% |
-
-**Impacto no BDI por categoria:**
-
-| Categoria | T padrão (lucro_presumido, ISS=5%) | BDI padrão |
+| Pergunta | Campo interno | Default |
 |---|---|---|
-| `mao_obra` | ISS=5%, CSSL=1.99%, IR=2.74% ← MO isenta COFINS/PIS | ~29.97% |
-| `servicos` | ISS=5%, CSSL=1.99%, IR=2.74% | ~29.97% |
-| `material` | isento (ADR-090: diesel = material, BDI=4%) | 4.00% |
-| `diesel` | isento (SV-31: locação → material, não serviço) | 4.00% |
-| `indireto` | ISS=5%, CSSL=1.99%, IR=2.74% | ~25.21% |
+| "Quantas semanas para montar o canteiro antes de começar a produção?" | `cronograma[].leadtime_mob_semanas` | 2 semanas |
+| "Quanto tempo para encerrar e devolver equipamentos após a última semana de produção?" | `cronograma[].lag_demob_semanas` | 1 semana |
 
-> ISS não incide sobre locação de equipamentos (SV-31/STF) — apenas sobre serviços de operação.
+> **Regra do agente:** Se a obra é grande (>R$50M ou >24 meses), sugerir leadtime=3, lag=2. Se é pequena, manter defaults.
 
-### 3.2 Lucro Objetivo por Categoria
+### Bloco 7 — Disponibilidade de equipamentos (perguntar só se relevante)
 
-Se omitido, o sistema usa os defaults do perfil do contexto (mendeslobo: 9% direto, 5% indireto).
+Perguntar apenas se a localização for remota ou de difícil acesso:
 
-| Campo | Tipo | Range | Default |
-|---|---|---|---|
-| `meta.bdi_lucro.mao_obra` | float | 0–1 | 0.09 |
-| `meta.bdi_lucro.material` | float | 0–1 | 0.04 |
-| `meta.bdi_lucro.servicos` | float | 0–1 | 0.09 |
-| `meta.bdi_lucro.indireto` | float | 0–1 | 0.05 |
-| `meta.bdi_lucro.diesel` | float | 0–1 | 0.04 |
+"Tem alguma restrição de equipamento na região? Por exemplo, só consegue mobilizar 2 escavadeiras?"
 
-### 3.3 Reforma Tributária CBS/IBS (ADR-055)
-
-Para projetos com previsão de vigência pós-reforma (2026+):
-
-| Campo | Tipo | Default | Notas |
-|---|---|---|---|
-| `meta.regime_tributario.regime_version` | enum | `"PRE_REFORMA"` | `"PRE_REFORMA"` · `"CBS_IBS_2026"` |
-
-Em `"CBS_IBS_2026"`, o sistema usa `resolver_bdi_cbs_ibs()` que aplica créditos de CBS/IBS e recalcula a componente `DF`. A alíquota efetiva líquida é menor para empresas que aproveitam créditos integrais.
-
----
-
-## Seção 4 — Custos Indiretos _(novo — padrão mendeslobo)_
-
-Os custos indiretos cobrem a infraestrutura de canteiro, supervisão, mobilização e segurança da obra. São **monetizados por permanência**: `custo_total = custo_mensal × permanencia_meses` (exceto MOB, que tem estrutura de fases).
-
-**Padrão mendeslobo derivado dos benchmarks AGIS, MARA_ROSA e ROSH:**
-
-| Categoria | O que cobre | Driver | Padrão/mês (ref. AGIS 12.93m) |
-|---|---|---|---|
-| **ADM** | Gerência, engenharia, infra de escritório, geradores, veículos leves | mensal | R$ 1.06M/mês |
-| **TOP** | Topografia, técnicos de campo, veículo de levantamento | mensal | R$ 67k/mês |
-| **LAB** | Laboratorista de solos/materiais | mensal | R$ 11k/mês |
-| **QSMS** | Técnico de segurança, sinalização, programa PGR | mensal | R$ 59k/mês |
-| **MOB** | Transporte de máquinas + mobilização de mão-de-obra | fases | R$ 4.05M (total único) |
-
-### 4.1 Estrutura por Categoria ADM / TOP / LAB / QSMS
-
-Cada categoria aceita decomposição em três componentes mensais:
-
-| Campo | Tipo | Default | Notas |
-|---|---|---|---|
-| `indiretos.{CAT}.mao_obra_mensal` | number | benchmark | Salários + encargos CLT/PJ do time indireto |
-| `indiretos.{CAT}.equipamentos_mensal` | number | benchmark | Locação de veículos, geradores, computadores |
-| `indiretos.{CAT}.verbas_mensais` | number | benchmark | Alimentação, hospedagem, telecom, energia, água |
-| `indiretos.{CAT}.verbas_unicas` | number | 0 | Setup inicial: containers, EPIs, mobiliário (amortizado no primeiro mês) |
-| `indiretos.{CAT}.custo_fixo_mensal` | number | Σ acima | Override total — quando os sub-campos não estão disponíveis |
-
-> `custo_fixo_mensal = mao_obra_mensal + equipamentos_mensal + verbas_mensais` é derivado automaticamente quando sub-campos fornecidos. Ou informar diretamente `custo_fixo_mensal` como total.
-
-### 4.2 Estrutura MOB — Fases (ADR-105 F4-F5)
-
-MOB tem três fases com semântica distinta:
-
-```json
-"indiretos": {
-  "MOB": [
-    {
-      "fase": "mobilizacao",
-      "driver": "projeto",
-      "custo_fixo_total": 4054600.43,
-      "descricao": "Transporte de equipamentos + mobilização de mão-de-obra + alimentação estadia inicial",
-      "categorias": ["equipamentos", "mao_obra", "verbas"]
-    },
-    {
-      "fase": "operacao",
-      "driver": "mensal",
-      "custo_fixo_mensal": 0.0,
-      "descricao": "Canteiro de obras permanente — quando não classificado em ADM"
-    },
-    {
-      "fase": "desmobilizacao",
-      "driver": "projeto",
-      "custo_fixo_total": 0.0,
-      "descricao": "Retorno de equipamentos e encerramento do canteiro"
-    }
-  ]
-}
-```
-
-| Campo | Tipo | Notas |
-|---|---|---|
-| `fase` | enum | `"mobilizacao"` · `"operacao"` · `"desmobilizacao"` |
-| `driver` | enum | `"projeto"` (one-time) · `"mensal"` (recorrente) |
-| `custo_fixo_total` | number | Para `driver="projeto"` — incorre na 1ª / última semana |
-| `custo_fixo_mensal` | number | Para `driver="mensal"` — distribuído pelas semanas de operação |
-
-### 4.3 Defaults do Contexto Mendeslobo
-
-Quando `indiretos` é omitido, o sistema usa os defaults derivados dos benchmarks calibrados:
-
-| Categoria | Default por mês | Base empírica |
-|---|---|---|
-| ADM | proporcional ao porte da obra | média AGIS + MARA_ROSA |
-| TOP | 6.3% do ADM | padrão observado |
-| LAB | 1.0% do ADM | padrão observado |
-| QSMS | 5.5% do ADM | padrão observado |
-| MOB | 38% da soma ADM × permanência | padrão observado |
-
-> Os defaults são substituídos integralmente quando qualquer campo de `indiretos` é fornecido.
-
----
-
-## Seção 5 — QQP / Serviços (EAP)
-
-Mínimo de **1 item** por escopo; mínimo de **1 escopo**.
-
-### 5.1 Escopo
-
-| Campo | Tipo | Obrigatório | Notas |
-|---|---|---|---|
-| `escopos[].escopo_id` | string | ✅ | ex: `"esc-lote09-10"` |
-| `escopos[].nome` | string | ✅ | ex: `"Supressão e Terraplenagem"` |
-| `escopos[].eap` | array | ✅ | minItems: 1 |
-
-### 5.2 Item EAP
-
-| Campo | Tipo | Obrigatório | Restrições | Notas |
-|---|---|---|---|---|
-| `item_id` | string | ✅ | minLength: 1 | ex: `"eap-1_1"` |
-| `cpu_id` | string | ✅ | código válido no catálogo | ex: `"CPU-TERRA-ESCO-CARGA-1CAT-DMT2000"` |
-| `quantitativo` | number | ✅ | > 0 | ex: `380000.0` |
-| `predecessores` | array | — | default `[]` | ver §5.3 |
-
-### 5.3 Predecessores
-
-| Campo | Tipo | Default | Valores / Range |
-|---|---|---|---|
-| `predecessores[].item_id` | string | — | item_id de outro item EAP |
-| `predecessores[].tipo` | enum | `"FS"` | `"FS"` · `"SS"` · `"FF"` |
-| `predecessores[].lag` | int | `0` | ≥ 0 (dias) |
-| `predecessores[].completion_threshold_pct` | float | `1.0` | 0–1 |
-
-**`completion_threshold_pct`:** fração de produção do predecessor necessária para o sucessor iniciar. Ex: `0.35` = B pode começar quando A atingir 35% de sua produção (ADR-081 threshold parcial).
-
----
-
-## Seção 6 — Cronograma por Item (hints + parâmetros de mob)
-
-Se omitida, skill-04 usa `AUTO_SCHEDULE` derivando `n_max` do catálogo.
-
-| Campo | Tipo | Range | Default | Notas |
-|---|---|---|---|---|
-| `cronograma[].item_id` | string | ref EAP | — | |
-| `cronograma[].n_equipes.n_inicial` | int | ≥ 1 | `1` | Frentes na abertura do ramp (mobilização) |
-| `cronograma[].n_equipes.n_max` | int | ≥ 1 | catálogo | Pico de frentes simultâneas — **determina o pool** |
-| `cronograma[].producao_diaria` | number | > 0 | catálogo | Override de produtividade do catálogo |
-| `cronograma[].leadtime_mob_semanas` | int | ≥ 0 | `2` | Semanas de mobilização antes da produção (§6.1) |
-| `cronograma[].lag_demob_semanas` | int | ≥ 0 | `1` | Semanas de desmobilização após última produção (§6.1) |
-
-### 6.1 Leadtime de Mobilização e Lag de Desmobilização _(elaborado — ADR-106 F5)_
-
-**`leadtime_mob_semanas`** = semanas entre a mobilização da equipe/equipamento e o início da produção efetiva. Cobre: transporte de máquinas, chegada da equipe, treinamentos, regularizações de segurança.
-
-**`lag_demob_semanas`** = semanas entre a última semana produtiva e o encerramento completo do contrato de locação. Cobre: retorno de equipamentos, limpeza final do sítio, inspeções de devolução.
-
-**Custo da janela de mob (ADR-106 F5):**
-```
-custo_mob_window  = (C_r_mo + C_r_locacao) × leadtime_mob_semanas
-custo_demob_window = (C_r_mo + C_r_locacao) × lag_demob_semanas
-```
-Combustível **não** entra na janela — não há produção (e portanto não há consumo de combustível) durante mobilização/desmobilização.
-
-**Hierarquia de resolução:**
-
-```
-1. spec.cronograma[item].leadtime_mob_semanas  ← override por item (este campo)
-2. CPU.mob_policy.leadtime_mob_semanas         ← catálogo por tipo de CPU
-3. DEFAULT_LEADTIME_MOB_SEMANAS = 2            ← constante global
-```
-
-**Defaults calibrados pelo porte de obra:**
-
-| Tipo de obra | `leadtime_mob` sugerido | `lag_demob` sugerido |
-|---|---|---|
-| Terraplenagem ferrovia (grande porte) | 3–4 semanas | 2 semanas |
-| Terraplenagem urbana (médio porte) | 1–2 semanas | 1 semana |
-| Drenagem / obra arte (pequeno porte) | 1 semana | 1 semana |
-
-> Quando omitido: `leadtime=2, lag=1` (constantes `DEFAULT_LEADTIME_MOB_SEMANAS` e `DEFAULT_LAG_DEMOB_SEMANAS` em `constants.py`).
-
----
-
-## Seção 7 — Restrições de Mercado de Recursos _(elaborado — ADR-091)_
-
-**Default: `{}` (irrestrito)** — o pool pode alocar tantos recursos quanto necessário para cumprir o prazo. Esta é a postura correta para que o solver RCPSP possa branch-prune pela heurística de pool mínimo (ADR-091).
-
-Quando especificadas, as restrições **cap** a disponibilidade máxima de um tipo de recurso, modelando escassez regional de equipamentos ou mão-de-obra especializada.
-
-```json
-"restricoes_mercado": {
-  "EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2,
-  "EQUIPE-CPU-TERRA-ATI-003": 3
-}
-```
-
-| Campo | Tipo | Default | Notas |
-|---|---|---|---|
-| `restricoes_mercado` | dict `{string: int}` | `{}` | Chave = `tipo_recurso`; Valor = máximo disponível no mercado local |
-
-### Semântica e Impacto
-
-| Situação | Comportamento |
+| O que o engenheiro diz | Campo interno |
 |---|---|
-| `restricoes_mercado = {}` | Pool irrestrito — solver usa peak demand ou n_max, sem cap |
-| `restricao[r] ≥ pool_inferido[r]` | Sem impacto — restrição não vincula |
-| `restricao[r] < pool_inferido[r]` | Pool capiado em `restricao[r]` → makespan aumenta |
-| `restricao[r] < serial_min[r]` | Projeto **inviável** com essa restrição — sinalizado em `diagnostico.notas` |
+| "Só tem 2 escavadeiras grandes aqui" | `restricoes_mercado: {EQUIPE-CPU-TERRA-ESCO-*: 2}` |
+| "Sem restrição" ou não perguntado | `restricoes_mercado: {}` (irrestrito) |
 
-### Como o tipo_recurso é formado
-
-O `tipo_recurso` é o campo `EQUIPE-{cpu_id}` gerado pelo catálogo para cada CPU. Pode ser verificado via `listar_recursos_pool(project_id)` após executar skill-03.
-
-### Quando usar
-
-| Contexto | Exemplo |
-|---|---|
-| Equipamento escasso na região | Somente 1 escavadeira 48T disponível em Quixadá |
-| Mão-de-obra especializada limitada | Máximo 3 operadores de motoniveladora na praça |
-| Compartilhamento entre lotes | 2 escavadeiras compartilhadas com obra adjacente |
-| Demo / análise de sensibilidade | Simular impacto de restrição de mercado no prazo |
+> **Regra do agente:** Traduzir a restrição para o tipo de recurso correto consultando o catálogo após skill-03. Por padrão, `restricoes_mercado = {}` (irrestrito) — nunca tornar restrito sem confirmação do engenheiro.
 
 ---
 
-## Mapeamento CPU (Resolução de cpu_id)
+## Mapeamento Técnico (Referência para o Agente)
 
-O formulário resolve `descricao → cpu_id` em dois níveis:
+Esta seção é interna — o engenheiro nunca vê estes campos diretamente.
 
-| Nível | Score | Mecanismo | Confiança |
-|---|---|---|---|
-| 1 | 2 — "alta" | Todas as palavras-chave de `cpu_mapping_rules.json` coincidem | Automático |
-| 2 | 1 — "media" | ≥ 2 palavras (>3 chars) coincidem com descrição do catálogo | Requer confirmação |
-| 3 | 0 — "nenhuma" | Sem correspondência | Requer `cpu_id` explícito |
+### Parâmetros com defaults fixos (o agente nunca pergunta)
 
-Quando há itens com confiança `< alta`, o sistema retorna `status: "pendente_mapeamento"` com sugestões.
-
----
-
-## Fluxo de Criação
-
-```
-1. Seções 1–3: Identificação + Regime + BDI/Tributação
-2. Seção 4: Indiretos (ou aceitar defaults do contexto mendeslobo)
-3. Seção 5: QQP em linguagem natural → busca semântica de CPUs
-4. Confirmar/corrigir mapeamentos → status: "pendente_mapeamento" se incompleto
-5. Seção 6: Cronograma (n_max, leadtime, lag) — opcional
-6. Seção 7: Restrições de mercado — opcional, default irrestrito
-7. Criar projeto → status: "criado" → project_id + escopo_id + plano_id
-   → skill-01 executada automaticamente
-```
-
----
-
-## Exemplos
-
-### Mínimo (só obrigatórios)
-
-```json
-{
-  "meta": {
-    "nome": "Estrada Vicinal AL-112",
-    "contexto_id": "mendeslobo",
-    "tipo_obra": "terraplenagem",
-    "localizacao": "Arapiraca, AL",
-    "coordenadas": { "lat": -9.75, "lng": -36.66 },
-    "data_inicio": "2026-09-01",
-    "data_termino": "2027-03-31"
-  },
-  "escopos": [{
-    "escopo_id": "esc-al112",
-    "nome": "Lote Único",
-    "eap": [
-      { "item_id": "eap-1_1", "cpu_id": "CPU-TERRA-ATI-003",                 "quantitativo": 180000 },
-      { "item_id": "eap-1_2", "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000", "quantitativo": 95000 },
-      { "item_id": "eap-1_3", "cpu_id": "CPU-TERRA-COMPAC-PN",               "quantitativo": 85000 }
-    ]
-  }]
-}
-```
-
-### Completo (todos os parâmetros)
-
-```json
-{
-  "meta": {
-    "nome": "Ferrovia Transnordestina — Lote 09/10",
-    "contexto_id": "mendeslobo",
-    "tipo_obra": "terraplenagem",
-    "localizacao": "Quixadá, CE",
-    "coordenadas": { "lat": -4.98, "lng": -39.02 },
-    "data_inicio": "2026-08-01",
-    "data_termino": "2027-04-30",
-    "regime_trabalho": { "dias_semana": 6, "horas_dia": 8 },
-    "regime_tributario": {
-      "regime": "lucro_presumido",
-      "jurisdicao_id": "BR-CE",
-      "iss": 0.02
-    },
-    "bdi_lucro": {
-      "mao_obra": 0.09,
-      "material": 0.04,
-      "servicos": 0.09,
-      "indireto": 0.05,
-      "diesel": 0.04
-    }
-  },
-  "indiretos": {
-    "ADM": {
-      "mao_obra_mensal": 415101.27,
-      "equipamentos_mensal": 271467.37,
-      "verbas_mensais": 316504.96,
-      "verbas_unicas": 113165.87
-    },
-    "TOP": {
-      "custo_fixo_mensal": 66742.70
-    },
-    "LAB": {
-      "custo_fixo_mensal": 10847.25
-    },
-    "QSMS": {
-      "custo_fixo_mensal": 58739.06
-    },
-    "MOB": [
-      { "fase": "mobilizacao",    "driver": "projeto", "custo_fixo_total": 3646088.26 },
-      { "fase": "operacao",       "driver": "mensal",  "custo_fixo_mensal": 0.0 },
-      { "fase": "desmobilizacao", "driver": "projeto", "custo_fixo_total": 408512.17 }
-    ]
-  },
-  "escopos": [{
-    "escopo_id": "esc-lote09-10",
-    "nome": "Supressão e Terraplenagem",
-    "eap": [
-      {
-        "item_id": "eap-1_0",
-        "cpu_id": "CPU-TERRA-ATI-003",
-        "quantitativo": 2400000,
-        "predecessores": []
-      },
-      {
-        "item_id": "eap-1_1",
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
-        "quantitativo": 107463,
-        "predecessores": [
-          { "item_id": "eap-1_0", "tipo": "FS", "completion_threshold_pct": 0.05 }
-        ]
-      }
-    ],
-    "cronograma": [
-      {
-        "item_id": "eap-1_0",
-        "n_equipes": { "n_inicial": 1, "n_max": 6 },
-        "leadtime_mob_semanas": 3,
-        "lag_demob_semanas": 2
-      },
-      {
-        "item_id": "eap-1_1",
-        "n_equipes": { "n_inicial": 1, "n_max": 1 },
-        "leadtime_mob_semanas": 2,
-        "lag_demob_semanas": 1
-      }
-    ]
-  }],
-  "restricoes_mercado": {}
-}
-```
-
----
-
-## Gaps Residuais (v2.0)
-
-| Campo | Status | Quando resolver |
+| Campo | Default fixo | Razão |
 |---|---|---|
-| `perfil_bdi_id` override por referência | Não exposto | Quando houver biblioteca de perfis BDI pré-cadastrados por tipo_obra |
-| Itemização de verbas de indiretos | Não exposto | Quando integrar parsing de indiretos.*.txt no formulário (NEP-029) |
-| `CPU.mob_policy.leadtime_mob_semanas` | Ausente no catálogo | Quando enriquecer o catálogo por CPU (permite defaults por tipo de máquina) |
-| Faseamento de indiretos por semana | Parcial (só via ADR-105 driver) | Quando o formulário tiver editor de timeline |
+| `objetivo_pool` | `"balanceado"` | Bissecção ótima para obras com prazo definido |
+| `completion_threshold_pct` (predecessores) | `1.0` | FS clássico — suficiente para 95% dos casos |
+| `meta.regime_tributario.regime_version` | `"PRE_REFORMA"` | Contrato atual; CBS/IBS muda sob orientação jurídica |
+| `coordenadas` | geocoding de `localizacao` | Agente resolve via geocoding antes de criar |
+
+### Parâmetros que o agente resolve automaticamente
+
+| Campo | Como o agente resolve |
+|---|---|
+| `cpu_id` | busca semântica + confirmação se confiança < alta |
+| `tipo_recurso` em `restricoes_mercado` | consulta catálogo após skill-03 |
+| `meta.regime_tributario.iss` | lookup em tabela de ISS municipal por jurisdicao |
+| `indiretos.*` (defaults) | benchmark AGIS/MARA_ROSA proporcional ao porte estimado |
+
+### bdi_lucro: tradução de "X% de lucro"
+
+Quando o engenheiro diz um único número de lucro `L`:
+
+```python
+bdi_lucro = {
+    "mao_obra": L,          # lucro total sobre MO
+    "servicos": L,          # lucro total sobre serviços
+    "material": min(L, 0.04),  # material e diesel: cap em 4% (isenção fiscal)
+    "diesel":   min(L, 0.04),
+    "indireto": min(L, 0.05),  # indireto: cap em 5% (convenção TCU)
+}
+```
+
+### Indiretos: defaults por porte da obra
+
+Quando o engenheiro não informa (ou diz "não sei"):
+
+| Porte estimado | Base para defaults |
+|---|---|
+| < 6 meses / < R$20M | MARA_ROSA (4 meses): ADM ~R$308k/mês |
+| 6–18 meses / R$20M–R$100M | AGIS (13 meses): ADM ~R$1.06M/mês |
+| > 18 meses / > R$100M | AGIS × fator de escala |
+
+O agente informa ao engenheiro qual base usará e confirma antes de criar o projeto.
 
 ---
 
-## Referências
+## Schema Interno (v2.0 — preservado para referência)
 
-- `config/schemas/projeto_spec.schema.json` — JSON Schema canônico
-- `src/concilium/domain/models/bdi/_profiles.py` — PerfilBdiProjeto, TabelaBdi
-- `src/concilium/domain/models/bdi/_components.py` — ComponentesBdi, fórmula TCU
-- `src/concilium/domain/constants.py` — DEFAULT_LEADTIME_MOB_SEMANAS, DEFAULT_LAG_DEMOB_SEMANAS
-- `src/concilium/application/scheduling/pool_inference.py` — restricoes_mercado
-- ADR-055 — Reforma tributária CBS/IBS
-- ADR-081 — Predecessência com completion_threshold_pct
-- ADR-090 — Diesel como material (SV-31/STF)
-- ADR-091 — Pool mínimo como variável de otimização
-- ADR-105 — Mobilização/Desmobilização fases
-- ADR-106 F5 — mob_window + lag_demob
+Ver `config/schemas/projeto_spec.schema.json`. Os campos abaixo são todos os parâmetros que o schema aceita — o formulário expõe apenas os do Bloco 1-7 acima.
+
+| Seção | Campos | Expostos ao usuário |
+|---|---|---|
+| `meta` | nome, contexto_id, tipo_obra, localizacao, coordenadas, datas, regime_trabalho, regime_tributario, bdi_lucro, objetivo_pool | Blocos 1, 2, 5 (simplificados) |
+| `indiretos` | ADM/TOP/LAB/QSMS/MOB com sub-campos | Bloco 4 (em R$, sem sub-campos) |
+| `restricoes_mercado` | {tipo_recurso: N_max} | Bloco 7 (em linguagem natural) |
+| `escopos[].eap` | item_id, cpu_id, quantitativo, predecessores | Bloco 3 (linguagem natural → cpu) |
+| `escopos[].cronograma` | n_equipes, leadtime_mob_semanas, lag_demob_semanas, producao_diaria | Bloco 6 (em semanas) |
+
+---
+
+## Fluxo de Conversa Esperado
+
+```
+Agente: "Vou criar o projeto. Me fala o nome da obra e onde fica."
+Eng:    "Rodovia CE-040, Aracoiaba/CE, terraplenagem"
+
+Agente: "Qual o período? Começa quando e qual o prazo?"
+Eng:    "Setembro de 2026, 12 meses"
+
+Agente: "Regime padrão MendesLobo (6 dias × 8h). Confirma ou é diferente?"
+Eng:    "Confirma"
+
+Agente: "Me passa os serviços do escopo com quantidade e unidade."
+Eng:    "Supressão 8ha, escavação 3ª cat 450k m³, aterro compactado 120k m³"
+        → agente mapeia CPUs, confirma com o engenheiro
+
+Agente: "Tem os custos do canteiro ou uso os padrões da MendesLobo
+         (base AGIS, ~R$1,2M/mês entre ADM+TOP+LAB+QSMS)?"
+Eng:    "Usa o padrão"
+
+Agente: "Lucro objetivo da obra? Regime tributário?"
+Eng:    "8%, Lucro Presumido"
+
+Agente: "Mobilização: quantas semanas para montar o canteiro?"
+Eng:    "3 semanas"
+
+Agente: "Tem restrição de equipamento na região?"
+Eng:    "Não"
+
+Agente: "Criando projeto... [executa criar_projeto_formulario]"
+        "Projeto criado ✅ ID: ce040-lote09 | 3 atividades | EAP confirmada."
+        "Posso iniciar o pipeline agora ou prefere revisar a EAP primeiro?"
+```
+
+---
+
+## Gaps Residuais
+
+| Gap | Quando resolver |
+|---|---|
+| `perfil_bdi_id` como referência a perfil pré-cadastrado | Quando existir biblioteca de perfis por tipo_obra |
+| `completion_threshold_pct` customizável | Quando engenheiro solicitar sobreposição parcial de atividades |
+| `CPU.mob_policy.leadtime_mob_semanas` no catálogo | Quando catálogo for enriquecido por tipo de máquina |
+| CBS/IBS_2026 exposto ao engenheiro | Quando reforma tributária entrar em vigor (estimado 2027) |
