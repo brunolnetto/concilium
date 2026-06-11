@@ -1,0 +1,78 @@
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 105.539,32					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 308.458,99			EQUIPAMENTOS		R$ 86.920,00					4,00						 1.233.835,96 	
+						VERBAS		R$ 115.999,67												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$7.000,00 			 -   			j	 1.950,00 				 -   		 8.950,00 	
+P0003			ALMOXARIFE	P0003	1	 R$2.305,60 		D	 576,40 			j	 2.185,00 				 1.758,02 		 6.825,02 	
+P0024	PJ		Engenheiro Civil	P0024	1	 R$18.000,00 			 -   			J	 1.950,00 				 -   		 19.950,00 	
+P0018	PJ		ENCARREGADO GERAL	P0018	1	 R$15.000,00 			 -   			J	 1.950,00 				 -   		 16.950,00 	
+P0073	PJ		MECÂNICO	P0073	1	 R$6.000,00 			 -   			J	 2.685,00 				 -   		 8.685,00 	
+P0034			MOTORISTA DE CAMINHÃO COMBOIO	P0034	1	 R$3.657,94 		D	 914,49 			j	 2.685,00 				 2.789,18 		 10.046,60 	
+P0093	PJ		PREFEITO DE ALOJAMENTO	P0093	1	 R$4.000,00 			 -   			J	 1.950,00 				 -   		 5.950,00 	
+P0063			AUXILIAR DE SERVIÇOS GERAIS	P0063	2	 R$1.674,20 		D	 418,55 			j	 2.685,00 				 1.276,58 		 6.054,33 	
+P0033			MOTORISTA DE CAMINHÃO PIPA	P0033	1	 R$2.505,60 		D	 626,40 			j	 2.685,00 				 1.910,52 		 7.727,52 	
+P0036			MOTORISTA DE ÔNIBUS	P0036	1	 R$2.813,18 		D	 703,30 			j	 2.685,00 				 2.145,05 		 8.346,52 	
+																	 -   			
+		TOTAL			11	 64.630,72 		 3.657,68 				 26.095,00 					 11.155,92 		 105.539,32 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0022			Micro onibus 32 pessoas	E0022	1	 25.000,00 			km		 3.600,00 			S1	 9,00 			 2.800,00 	 27.800,00 	 27.800,00 
+E0008			Caminhão comboio	E0008	1	 24.000,00 			km		 1.920,00 			S1	 4,00 			 3.360,00 	 27.360,00 	 27.360,00 
+E0039			Veículo leve	E0039	1	 4.000,00 			km		 2.400,00 			G	 9,00 			 1.840,00 	 5.840,00 	 5.840,00 
+E0013			Caminhão Pipa 18.000 l	E0013	1	 24.000,00 			km		 1.920,00 			S1	 7,00 			 1.920,00 	 25.920,00 	 25.920,00 
+																				
+			TOTAL		4	 77.000,00 												 9.920,00 		 86.920,00 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		CONTEINER 6X2,4X2,6 PARA BANHEIRO			VB		 2,00 			 1.800,00 					 3.600,00 					
+2		CONTEINER VESTIÁRIO			VB		 2,00 			 1.000,00 					 2.000,00 					
+3		BANHEIRO QUÍMICO (higienização, deslocamento, descarte)			VB		 2,00 			 1.800,00 					 3.600,00 					
+4		LAVATÓRIO			VB		 2,00 			 650,00 					 1.300,00 					
+5		ALUGUEL DE CONTEINER 			UNID.		 2,00 			 1.650,00 					 3.300,00 					
+6		ALOJAMENTO			UNID.		 5,00 			 4.000,00 					 20.000,00 					
+7		ENERGIA ELÉTRICA - ALOJAMENTO			UNID.		 5,00 			 1.000,00 					 5.000,00 					
+8		ÁGUA - ALOJAMENTO			UNID.		 5,00 			 300,00 					 1.500,00 					
+9		VIGILÂNCIA ARMADA			VB		 1,00 			 25.000,00 					 25.000,00 					
+10		ÁGUA MINERAL 			L		 500,00 			 2,00 					 1.000,00 					
+11		MATERIAL DE EXPEDIENTE			VB		 4,00 			 100,00 					 400,00 					
+12		DESPESAS COM MALOTE			VB		 1,00 			 100,00 					 100,00 					
+13		STARLINK			VB		 1,00 			 600,00 					 600,00 					
+14		VISITA GERÊNCIA			VB		 1,00 			 3.000,00 					 3.000,00 					
+15		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 5,00 			 200,00 					 1.000,00 					
+															 -   					
+															 71.400,00 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕES PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 8.000,00 					 8.000,00 					
+2		COMPUTADOR			VB		 3,00 			 4.500,00 					 13.500,00 					
+3		ESTRUTURA DE VIVENCIA (TENDA 6x6/MESAS E CADEIRAS)			UNID.		 1,00 			 8.740,00 					 8.740,00 					
+4		BEBEDOURO 40l			VB		 1,00 			 2.260,00 					 2.260,00 					
+5		FERRAMENTAS			VB		 1,00 			 5.000,00 					 5.000,00 					
+6		EPIS			UNID.		 1,00 			 45.560,00 					 45.560,00 					
+7		EXAMES/TREINAMENTOS			VB		 1,00 			 53.522,00 					 53.522,00 					
+8		IMPRESSORA			VB		 1,00 			 1.800,00 					 1.800,00 					
+9		MOBILIA DE ESCRITORIO			VB		 2,00 			 1.200,00 					 2.400,00 					
+10		PLACA DE OBRA			M2		 1,00 			 900,00 					 900,00 					
+11		GERADOR BETONEIRA 15KVA			VB		 1,00 			 7.800,00 					 7.800,00 					
+12		MOBILIA ALOJAMENTO			VB		 5,00 			 3.500,00 					 17.500,00 					
+															 41.745,50 					
+																				
+MATERIAL DE DESGASTE																				
+ITEM		DESCRIÇÃO			UNID.		QUANT	TEMPO		PREÇO UNITÁRIO					VALOR					
+		EQUIPE 1 - LIMPEZA CAMADA VEGETATIVA			VB		 2,00 	 0,58 		 1.000,00 					 1.166,67 					
+		EQUIPE 2 - TRANSPORTE DA CAMADA VEGETATIVA			VB		 4,00 	 1,00 		 1.000,00 					 4.000,00 					
+		EQUIPE 3 - ESPALHAMENTO CAMADA VEGETAL			VB		 1,00 	 1,00 		 1.000,00 					 1.000,00 					
+		EQUIPE 4 - ESCAVAÇÃO E CARGA MATERIAL 1º E 2º CATEGORIA			VB		 1,00 	 3,50 		 500,00 					 1.750,00 					
+		EQUIPE 5 - TRANSPORTE MATERIAL 1º E 2º CATEGORIA			VB		 2,00 	 3,50 		 500,00 					 3.500,00 					
+															 2.854,17 					

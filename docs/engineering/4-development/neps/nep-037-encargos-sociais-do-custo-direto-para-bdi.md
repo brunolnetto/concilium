@@ -1,6 +1,6 @@
 # NEP-037: Migração dos Encargos Sociais do Custo Direto para a Camada BDI
 
-**Status:** Parcialmente Implementado ⚠️ _(Sprint S2 — 2026-06-09, revisão 2026-06-09)_  
+**Status:** Implementado ✅ _(Sprint S2 — 2026-06-09, concluído 2026-06-10)_  
 **Prioridade:** 🔴 Crítico  
 **Área:** Arquitetura e Skills  
 **Tipo:** Bug + Governança + Dados  
@@ -137,14 +137,19 @@ BDI do indireto aplicado sobre `base + encargos` (invariante de venda mantido).
 
 ## Plano de Implementação
 
-| Fase | Entregas | Verificação |
+| Fase | Entregas | Status |
 |---|---|---|
-| 1 | `canonical.py`: novos campos com `default=0.0` | nenhuma regressão esperada |
-| 2 | skill-05: split MO/encargos | `custo_total` = soma anterior |
-| 3 | skill-07: split Indireto | custo_indireto inalterado |
-| 4 | skill-08: categorizer + venda + fe_nec | venda_plus inalterado; `fe_nec×clima≈1.0` |
-| 5 | memorial: linha encargos | visual somente |
-| 6 | Testes + AGIS | suite verde + gate AGIS ≤ 0.1% |
+| 1 | `canonical.py`: `custo_encargos_mensal` em `EquipeDireta`, `custo_encargos` em `Indireto` | ✅ (já existia) |
+| 2 | skill-05: `custo_mao_obra_mensal` (base) + `custo_encargos_mensal` separados | ✅ (já implementado) |
+| 3 | skill-07: `Indireto.custo_mao_obra` (base) + `custo_encargos` separados | ✅ (já implementado) |
+| 4 | skill-08: fe_nec com encargos (decisão 2026-06-09: usar `custo_total` não altera convergência) | ✅ (decisão documentada — não modificado) |
+| 5 | memorial: "Encargos Sociais" como componente separado em `_componentes_operacionais` | ✅ (2026-06-10) |
+| 6 | Testes + AGIS | ✅ 2247 passando |
+
+**Nota sobre D3 (fe_nec sem encargos):** investigação de 2026-06-09 mostrou que
+remover encargos do `fe_nec` não é necessário para convergência a `1/η_p`, pois
+`custo_total_autonomo` e `PU_sbdi × Q` já capturam o mesmo fator de encargos.
+A documentação D3 do NEP foi mantida como contexto histórico.
 
 ---
 
@@ -165,3 +170,24 @@ BDI do indireto aplicado sobre `base + encargos` (invariante de venda mantido).
 - `src/concilium/application/skills/manifests/07-custos-indiretos/_skill_helpers_a.py`
 - `src/concilium/application/skills/manifests/08-consolidacao-financeira/_skill_helpers_a.py`
 - `src/concilium/application/runtime/deliverables/reports/memorial_bdi_markdown.py`
+
+### Pré-requisito de refatoração (2026-06-10)
+
+As Fases 2 (skill-05 split) e 3 (skill-07 split) tocam duas funções de resolução de encargo
+que duplicam a mesma lógica `categoria_sindical → ENCARGOS_CLT / ENCARGOS_MENSALISTA`:
+
+- **skill-05:** `_resolve_encargo_funcao()` em `_skill_helpers_a.py:116`
+- **skill-07:** `_bcfd_apply_encargos()` em `_skill_helpers_a.py:206`
+
+A migração de D1 (EquipeDireta) e D4 (Indireto) é a oportunidade natural para unificar estas
+duas funções em `domain/services/encargo_resolver.py`, evitando que a separação base/encargos
+seja implementada com lógica ligeiramente diferente em cada skill.
+
+**Sequência recomendada dentro desta NEP:**
+1. Extrair `resolver_encargo()` compartilhado (zero mudança de comportamento)
+2. Implementar D1–D4 usando a função unificada
+3. Verificar invariante `custo_total = base + encargos + equip + diesel` nas duas skills
+
+Desta forma, o resultado auditável de skill-05 e skill-07 usa a mesma função, garantindo que
+o `custo_encargos_mensal` (direto) e o `custo_encargos` (indireto) são calculados com
+exatamente os mesmos critérios de categoria e as mesmas alíquotas.

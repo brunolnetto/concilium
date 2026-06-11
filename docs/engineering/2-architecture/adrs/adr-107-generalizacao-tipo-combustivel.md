@@ -1,6 +1,6 @@
 # ADR-107 — Generalização do Tipo de Combustível: DIESEL → COMBUSTIVEL com tipo_combustivel
 
-**Status:** Proposto 💡  
+**Status:** Implementado ✅ _(D1–D4, D6 concluídos 2026-06-10; D5 analytics aguarda ADR-106)_  
 **Data:** 2026-06-09  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Depende de:** ADR-030, ADR-082, ADR-085, ADR-090, ADR-092  

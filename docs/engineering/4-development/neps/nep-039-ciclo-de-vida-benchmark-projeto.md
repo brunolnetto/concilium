@@ -1,16 +1,17 @@
 # NEP-039: Ciclo de vida benchmark-projeto e governança de reutilização
 
-**Status:** Parcialmente Implementado ⚠️ _(auditado 2026-06-08)_  
-**Prioridade:** 🟠 Alto  
-**Área:** Arquitetura e Skills  
-**Tipo:** Governança + Feature  
-**Esforço:** L  
+**Status:** Implementado ✅ _(Fases 1-4 concluídas; atualizado 2026-06-10)_
+**Prioridade:** 🟠 Alto
+**Área:** Arquitetura e Skills
+**Tipo:** Governança + Feature
+**Esforço:** L
 **Identificado em:** 2026-06-03
 
-> **Nota de auditoria (2026-06-08):** `BenchmarkMetadata` e `BenchmarkExecution` implementados em
-> `src/concilium/domain/benchmark/models.py`; `benchmark_nep039.py` MCP tool presente.
-> Pendente: MCP tools de edição controlada, migração de benchmarks existentes, campos
-> `derivado_de_benchmark`/`benchmark_versao` em `ProjectMetadata`.
+> **Nota de auditoria (2026-06-10):** Todas as fases concluídas.
+> - Fase 1: `BenchmarkMetadata`/`BenchmarkExecution` em `domain/benchmark/models.py`; `FileSystemBenchmarkStore`.
+> - Fase 2: MCP tools `consultar_benchmark`, `listar_benchmarks_nep039`, `executar_benchmark_nep039`, `editar_benchmark`, `marcar_benchmark_imutavel`.
+> - Fase 3 (D4): campos `derivado_de_benchmark`/`benchmark_versao`/`benchmark_execution_id` em `ProjectStore.init` + canonical `Projeto`; populados pelo `BenchmarkRunner`; expostos via `consultar_status` (2026-06-10).
+> - Fase 4: `BenchmarkDiffService` + `comparar_execucoes_benchmark`.
 
 ---
 

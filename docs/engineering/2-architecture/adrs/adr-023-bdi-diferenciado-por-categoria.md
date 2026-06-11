@@ -3,7 +3,7 @@
 **Status:** Implementado  
 **Data:** 2026-05-04  
 **Data Implementado:** 2026-05-04  
-**Implementadores:** models/bdi.py (TabelaBdi, ComponentesBdi, IndiretoComBdi, DEFAULT_BDI_TABELA), skills/04-planejamento-bdi/skill.py (_resolve_bdi via TabelaBdi), skills/05-indiretos/skill.py (IndiretoComBdi por categoria), models/canonical.py (indiretos_com_bdi)  
+**Implementadores:** models/bdi/_components.py (TabelaBdi, ComponentesBdi, IndiretoComBdi, DEFAULT_BDI_TABELA), skills/06-precificacao-unitaria/skill.py (_resolve_bdi), skills/07-custos-indiretos/_skill_helpers_b.py (_apply_bdi_to_indiretos), skills/08-consolidacao-financeira/_skill_helpers_a.py (_resolve_bdi_full), models/canonical.py (indiretos_com_bdi, tabela_bdi_efetiva)  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Fonte de Dados:** `rfi_catalog.xlsm` — abas `BDI`, `ENCARGOS`, `BENCHMARK_INDIRETOS` (referência abril/2026)
 
@@ -259,9 +259,24 @@ class DecomposicaoEquipamento(BaseModel):
     custo_capital_h:   float  # depreciação + remuneração capital → BDI MAO_OBRA ou INDIRETO
 ```
 
-> Para a fase inicial, uma simplificação aceitável é aplicar BDI EQUIPAMENTO = média
+> ~~Para a fase inicial, uma simplificação aceitável é aplicar BDI EQUIPAMENTO = média
 > ponderada de MAO_OBRA (70%) e DIESEL (30%), a ser parametrizada por tipo de
-> equipamento no catálogo.
+> equipamento no catálogo.~~
+>
+> **REVISADO (2026-06-11):** o placeholder 70/30 foi removido. Ele havia sido desenhado
+> quando EQUIPAMENTO era um bucket completo (operador + manutenção + combustível +
+> capital). Pós ADR-088/ADR-090, o combustível e o operador são categorias próprias —
+> o bucket contém apenas **locação + manutenção**, e o blend aplicava markup de
+> MO/diesel a uma base que não os contém.
+>
+> **Regra vigente:** `equip_bdi = frac_locacao × bdi_material + (1 − frac_locacao) × bdi_mao_obra`
+> - `frac_locacao` derivada da composição real ADR-088 (`Σ custo_locacao / Σ (locacao + manutencao)`
+>   das equipes diretas); default 1.0 (locação pura).
+> - **Base legal:** Súmula Vinculante 31/STF — ISS não incide sobre locação de bens
+>   móveis → locação recebe a taxa de MATERIAL (4%). Manutenção é serviço → taxa de MO.
+> - Alinha a precificação à consolidação (que já tratava equipamento como material) e
+>   à prática da planilha AGIS. **Impacto no benchmark AGIS:** delta de preco_venda
+>   caiu de +12,26% para +5,50% (venda 86,40M → 81,20M; referência 76,96M).
 
 ---
 
@@ -584,8 +599,8 @@ def resolver_componentes_bdi(
 - [x] `DEFAULT_BDI_TABELA` populated from `rfi_catalog.xlsm` (abril/2026): MO=35,45% | MAT=5,00% | SERV=35,45% | INDIR=22,47% | DIESEL=26,07%
 - [x] `IndiretoComBdi` model: `categoria`, `custo_sem_bdi`, `bdi_aplicado`, `custo_com_bdi`
 - [x] `indiretos_com_bdi` field in `CanonicalModel`
-- [x] Skill `04-planejamento-bdi` uses `TabelaBdi` via `_resolve_bdi` (replaces flat-rate `BdiCategorias`)
-- [x] Skill `05-indiretos` applies `IndiretoComBdi` per category (TOP, ADM, LAB, QSMS, MOB)
+- [x] Skill `06-precificacao-unitaria` usa `TabelaBdi` via `_resolve_bdi` (substitui `BdiCategorias` flat)
+- [x] Skill `07-custos-indiretos` aplica `IndiretoComBdi` por categoria (TOP, ADM, LAB, QSMS, MOB)
 - [x] `PerfilTributarioProjeto` / `CheckboxTributo` / `AplicacaoTributaria` models (Phase 1B §D6)
 - [x] `PerfilLucroProjeto` / `PadraoLucroConstrutora` with negotiation floors (Phase 1B §D7)
 - [x] `PerfilBdiProjeto` snapshot (versioned, immutable, with `content_hash`) (Phase 1B)
@@ -593,3 +608,24 @@ def resolver_componentes_bdi(
 - [x] `bdi-review` HiL form integrated in `concilium project create` and MCP `create_project` (Phase 1C)
 - [x] `BdiPerfilDiff` artifact and `concilium bdi-update` command (Phase 1C)
 - [x] Equipment cost decomposition enrichment in catalog (`custo_mao_obra_h`, `custo_diesel_h`, `custo_material_h`) (Phase 5 §D3)
+
+## Dívida Técnica (2026-06-10)
+
+### Padrão de resolução triplicado
+
+O padrão `inputs["bdi_aplicado"] → inputs["tabela_bdi"] → DEFAULT_BDI_TABELA` está implementado
+de forma independente em três skills:
+
+| Função | Arquivo | Escopo |
+|---|---|---|
+| `_resolve_bdi()` | skill-06:75 | PU unitário (4 categorias flat) |
+| `_apply_bdi_to_indiretos()` | skill-07:461 | Custo indireto total |
+| `_resolve_bdi_full()` | skill-08:210 | Consolidação + cenário fiscal |
+
+Skills 06 e 07 são cópias funcionais da mesma precedência. A centralização correta é extrair
+`resolve_bdi_inputs(inputs, default=DEFAULT_BDI_TABELA) → TabelaBdi` para
+`domain/models/bdi/_profiles.py` e fazer skills 06 e 07 importarem a mesma função.
+Skill-08 mantém `_resolve_bdi_full` separada pois adiciona lógica de cenário fiscal.
+
+**Risco:** se `DEFAULT_BDI_TABELA` mudar (atualização anual de tabelas), os três caminhos
+precisam ser testados de forma independente — sem garantia de paridade.

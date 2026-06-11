@@ -1,0 +1,55 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																											
+																																																														
+															EQUIPAMENTOS							R$ 65.800,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																															
+															MÃO DE OBRA							R$ 76.800,00									R$ 439.293,13																															
+															VERBAS							R$ 296.693,13																																								
+																																																														
+																																																														
+EQUIPAMENTOS																																																														
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES										
+																																																														
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 10,00 							 Natal 					 Parnamirim 					 200,00 						 13,00 						 26.000,00 																
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 10,00 							 Parnamirim 					 Natal 					 200,00 						 13,00 						 26.000,00 																
+3		MOB CONTEINER													VB		 6,00 							 Natal 					 Parnamirim 					 200,00 						 950,00 						 5.700,00 																
+4		DESMOB CONTEINER													VB		 6,00 							 Parnamirim 					 Natal 					 200,00 						 950,00 						 5.700,00 																
+																																																														
+																																																														
+																																														 65.800,00 																
+																																																														
+MÃO DE OBRA																																																														
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																								
+																																																														
+Equipe											32			 Natal 						 Parnamirim 						 1.200,00 						38.400,00																														
+Equipe											32			 Parnamirim 						 Natal 						1.200,00						38.400,00						  																								
+																																 76.800,00 																														
+																																																														
+VERBAS																																																														
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES																
+		INTEGRAÇÃO EQUIPE DIRETA																							VB									 56.355,64 						 -   																						
+		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB									 216.000,00 						 -   																						
+																																								 -   																						
+																																																														
+DESPESAS COM VIAGEM																																																														
+							CUSTO UNITÁRIO		MOB			mês 1		mês 2		mês 3		mês 4		mês 5		mês 6		mês 7		mês 8		mês 9		mês 10		mês 11		mês 12		mês 13		mês 14		mês 15		mês 16		mês 17		mês 18		mês 19		mês 20		mês 21		mês 22		mês 23		mês 24		CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 2.500,00 											x																																										 2.500,00 		
+ENCARREGADO (60 dias)						1	 4.000,00 											x																																										 4.000,00 		
+ENGENHEIRO(30 dias) 						1	 2.500,00 					x		x		x		x																																										 10.000,00 		
+EQUIPE DIRETA						19	 1.500,00 											x																																										 28.500,00 		
+EQUIPE INDIRETA						10	 2.000,00 											x																																										 20.000,00 		
+																																																												 65.000,00 		
+																																																														
+ALIMENTAÇÃO/ SEGURO DE VIDA/CESTA BASICA																																																														
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																																						
+EQUIPE 1 - LIMPEZA CAMADA VEGETATIVA						 4,00 			 2.685,00 									0,58						 6.265,00 																																						
+EQUIPE 2 - TRANSPORTE DA CAMADA VEGETATIVA						 4,00 			 2.685,00 									1,00						 10.740,00 																																						
+EQUIPE 3 - ESPALHAMENTO CAMADA VEGETAL						 1,00 			 2.685,00 									1,00						 2.685,00 																																						
+EQUIPE 4 - ESCAVAÇÃO E CARGA MATERIAL 1º E 2º CATEGORIA						 6,00 			 2.685,00 									3,50						 56.385,00 																																						
+EQUIPE 5 - TRANSPORTE MATERIAL 1º E 2º CATEGORIA						 7,00 			 2.685,00 									3,50						 65.782,50 																																						
+EQUIPE 6 - COMPACTAÇÃO 						 11,00 			 2.685,00 									3,04						 89.835,63 																																						
+																																																												 231.693,13 		

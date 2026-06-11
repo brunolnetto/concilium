@@ -1,6 +1,6 @@
 # ADR-097 — Modelagem de Tributação Social sobre Salário Base (Brasil, 2026)
 
-**Status:** Aceito
+**Status:** Implementado ✅ _(F1-F5 completos; F6 People & Finance MCP 💡)_
 **Data:** 2026-06-01
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-056 (constantes de domínio), ADR-009 (custos indiretos), ADR-023 (BDI)
@@ -173,9 +173,25 @@ Verificado contra `constants.py` + `pu_calculator.py` em jun/2026:
 | Regime tributário | Assume Lucro Presumido embutido no Grupo A | `TaxRegime` enum (D4) | 🔴 Pendente (Fase 4) |
 | RAT variável por grau | Fixo 3% (grau 2) no Grupo A | `rat_grade` 1/2/3 + `fap_factor` | 🔴 Pendente (Fase 4) |
 
-**Dívida técnica:** `_calcular_custo_funcao` existe em duplicata (`skill.py:107` e
+**Dívida técnica — nível função:** `_calcular_custo_funcao` existe em duplicata (`skill.py:107` e
 `_skill_helpers_a.py:134`). Ambas corrigidas com o mesmo check `"inclui encargos"`.
 Consolidar em refactor futuro para evitar drift.
+
+**Resolvido (2026-06-10) — centralização de resolução:** `domain/services/encargo_resolver.py`
+criado com `resolver_encargo(atrib, enc_horista, enc_mensalista, encargo_override=None) → float`.
+Ambas as funções delegam para ela:
+- `_resolve_encargo_funcao()` (skill-05) → wrapper fino
+- `_bcfd_apply_encargos()` (skill-07) → usa para obter a taxa, aplica sobre salário_base
+
+**Resolvido (2026-06-10) — `MotorEncargosSociais`:** campos `percentual_horista`,
+`percentual_mensalista` e `percentual_pj` adicionados ao modelo em `jurisdicao.py`.
+Runtime `mixins/inputs.py` atualizado para injetar os valores separados em skills
+`05-equipes-e-alocacao` além de `03-equipes-diretas`.
+
+**`TabelaEncargos` espelha `constants.py`:** o modelo Pydantic em `bdi/_components.py:413`
+declara os mesmos percentuais que `constants.py:112-133`. Na atualização anual (jan/ano),
+ambos precisam ser sincronizados manualmente — risco de drift. Resolver depois do ADR-097
+Fase 3: `constants.py` vira a fonte e `TabelaEncargos` é construída a partir dele.
 
 **Bug corrigido:** `pu_calculator.py` + ambas as instâncias de `_calcular_custo_funcao`
 detectam `"inclui encargos"` e usam a taxa sem multiplicador adicional → elimina dupla
@@ -189,9 +205,9 @@ contagem de 2,777× sobre taxas horárias all-in.
 |---|---|---|
 | 1 | Validação e documentação do `ENCARGOS_CLT = 1.777` (Grupos A–F+Judicial) | ✅ Feito (constants.py com tabela comentada) |
 | 2 | `pu_calculator.py`: `(1 + alpha)` como multiplicador total correto | ✅ Feito (NEP-029 D2) |
-| 3 | Tabelas progressivas INSS/IRRF 2026 (`constants.py` + `TabelaEncargos`) | 🔴 Pendente |
-| 4 | `TaxRegime` enum e cálculo diferenciado por regime | 🔴 Pendente |
-| 5 | Simulação People & Finance: `calculate_employer_clt`, `calculate_irrf` | 🔴 Pendente |
+| 3 | Tabelas progressivas INSS/IRRF 2026 (`constants.py` + `TabelaEncargos`) | ✅ Feito (2026-06-10): `INSS_BRACKETS_2026`, `IRRF_BRACKETS_2026` + constantes de isenção |
+| 4 | `TaxRegime` enum e `MotorEncargosSociais` completo | ✅ Feito (2026-06-10): `TaxRegime` class + `percentual_horista/mensalista/pj` + runtime injection |
+| 5 | Simulação People & Finance: `calculate_employer_clt`, `calculate_irrf` | ✅ Feito (2026-06-10): `domain/services/tributacao.py` |
 
 ## Definition of Done
 
@@ -200,15 +216,24 @@ contagem de 2,777× sobre taxas horárias all-in.
 - [x] `pu_calculator.py` usa `(1 + alpha_clt) = 2.777` para multiplicador total
 - [x] Teste unitário verifica `fe_nec → 1/η_p` com encargos incluídos
 
-### Fase 3
-- [ ] `INSS_BRACKETS_2026` e `IRRF_BRACKETS_2026` em `constants.py` ou módulo dedicado
-- [ ] `SALARIO_MINIMO_MENSAL` atualizado para R$ 1.621,00 (2026)
-- [ ] Teste: `calculate_inss_employee(3000.00)` ≈ R$ 248,61
+### Fase 3 (✅ Completa — 2026-06-10)
+- [x] `INSS_BRACKETS_2026` e `IRRF_BRACKETS_2026` em `constants.py`
+- [x] `IRRF_ISENCAO_EFETIVA_2026`, `IRRF_DESCONTO_PROGRESSIVO_A/B` em `constants.py`
+- [x] `SALARIO_MINIMO_MENSAL = 1.621,00` (já estava)
+- [x] Teste: `calculate_inss_employee(3000.00)` ≈ R$ 248,59 ✓ (tabela exata; ADR citava ≈ 248,61)
 
-### Fases 4–5
-- [ ] `TaxRegime` enum implementado
-- [ ] `calculate_employer_clt(salary)` retorna `TaxationResult` auditável
-- [ ] Relatório People & Finance usa `ChargeItem` para rastreabilidade
+### Fase 4 (✅ Completa — 2026-06-10)
+- [x] `TaxRegime` class em `constants.py` com `SIMPLES_I_III_V`, `SIMPLES_IV`, `LUCRO_PRESUMIDO`, `LUCRO_REAL`
+- [x] `TAX_REGIME_PADRAO = TaxRegime.LUCRO_PRESUMIDO`
+- [x] `MotorEncargosSociais.percentual_horista/mensalista/pj/tax_regime` em `jurisdicao.py`
+- [x] Runtime `mixins/inputs.py` injeta `percentual_encargos/mensalista/pj` para skills 03 e 05
+
+### Fase 5 (✅ Completa — 2026-06-10)
+- [x] `calculate_inss_employee(salary)` — tabela progressiva 2026
+- [x] `calculate_irrf(base_calculo)` — isenção efetiva Lei 15.270/2025
+- [x] `calculate_employer_clt(salary, categoria)` → `TaxationResult` com `ChargeItem` por Grupo A–F+Judicial
+- [x] 18 testes unitários em `tests/unit/test_adr097_f5_tributacao_calculos.py`
+- [ ] Relatório People & Finance exposto via MCP/CLI — pendente (Fase 6)
 
 ---
 

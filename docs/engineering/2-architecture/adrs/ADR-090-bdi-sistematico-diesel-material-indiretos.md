@@ -156,6 +156,36 @@ O `CuboAnalitico.consumo_diesel_temporal()` e `is_diesel()` continuam funcionand
 | R2 | BDI_diesel separado de BDI_material (taxas diferentes) | Fiscalmente idênticos (4%); separação cria complexidade sem valor |
 | R3 | Mobilizações de indireto com BDI_servicos | Mobilizações internas não são serviço terceirizado; ADM correto |
 
+## Correção — resíduo não-decomposto vai para verba (2026-06-11)
+
+Auditoria do benchmark AGIS (indiretos.txt vs canonical) revelou que
+`_sub_custos_indireto` escalava o `custo_total` inteiro pelas frações dos
+componentes **presentes** na composição. Quando o spec decompõe apenas
+`mao_obra[]` (caso AGIS: MO ≈ 35% do mensal de ADM), os 65% restantes
+(equipamentos + verbas da planilha) herdavam a classificação de MO →
+BDI de MO (30%) sobre massa que na planilha leva 25,2%.
+
+**Regra corrigida:** se `Σ componentes mensais < custo_fixo_mensal` da categoria,
+o resíduo mensal é classificado como **verba** (taxa de indireto — conservadora,
+consistente com o fallback de composição ausente).
+
+**Impacto AGIS:** ADM passou de mo=15,88M/verba=0 para mo=5,55M/verba=10,34M;
+delta de preco_venda caiu de +5,50% para +4,85%.
+
+**Complemento (mesma auditoria):** o spec_loader também descartava os componentes
+`equipamentos`/`verbas` do spec (normalize lia apenas `mao_obra[]`). Corrigido:
+`spec.indiretos[]` aceita `equipamentos_mensal_total`/`verbas_mensal_total` e o
+loader os converte em `IndirectoCostComponent`. O `referencia.json` do AGIS foi
+enriquecido com os valores auditados dos raw (`indiretos.adm.txt`: EQ 271.467,37 +
+VB 377.870,83/mês; `indiretos.top.txt`: EQ 14.922,67 + VB 3.000,00/mês).
+ADM final: mo=5,55M / eq=4,07M (taxa 4%, fiel à coluna DIESEL da planilha) /
+verba=6,27M. Delta de preco_venda: **+3,66%** (79.781.486,37 vs ref 76.961.261,88).
+
+**Nota da auditoria sobre permanência:** o delta de base dos indiretos
+(21,97M vs 19,58M = ×15/12,93 meses) **não é bug dos indiretos** — vem da regra
+deliberada "indiretos acompanham o makespan real" (69 semanas computadas vs 56
+contratuais). O desvio raiz é o cronograma estendido — tema de schedule/pool.
+
 ## 5. Relacionados
 
 [[adr087-modelo-dimensional-hierarquico]] [[adr088-decomposicao-subcomposicional-equipamento]]

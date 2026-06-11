@@ -1,11 +1,52 @@
 # NEP-041: Consolidação de Skills de Análise, Saída e Financeiro
 
-**Status:** Proposta 🟡  
-**Data:** 2026-06-09  
-**Autor:** Engenharia de Implementação  
-**Categoria:** Refatoração de Skills / Pipeline de Análise e Financeiro  
-**Relacionado:** ADR-070, ADR-021, ADR-026  
+**Status:** Implementado ✅ _(Fases 1-4 concluídas 2026-06-11; Fase 5 re-enumeração deferida — cosmética)_
+**Data:** 2026-06-09
+**Autor:** Engenharia de Implementação
+**Categoria:** Refatoração de Skills / Pipeline de Análise e Financeiro
+**Relacionado:** ADR-070, ADR-021, ADR-026
 **Tipo:** Refactor estrutural
+
+> **Progresso (2026-06-11):**
+> - **Fase 1 ✅** — `15-relatorio-executivo` absorvido em `09-relatorio-e-artefatos`.
+>   Lógica movida para `09/_skill_helpers_executivo.py` (`build_relatorio_executivo`),
+>   computada como estágio interno antes de montar o relatório. Manifest de 15 deletado.
+>   Bridge VERMELHO rebaixado de ERRO→AVISO no nó terminal (não bloqueia geração).
+>   Testes atualizados (`test_adr026`, `test_adr022_taint_clearing`). Suite verde.
+> - **Fase 2 ✅** — `13-assessor-replanejamento` + `14-explorador-cenarios` unificados em
+>   `13-replanejamento-e-cenarios`. Lógica preservada em `_assessor.py` e `_explorador.py`;
+>   `skill.py` orquestra os dois estágios (explorador → assessor, seções disjuntas).
+>   Compat shim em `skills/__init__.py.__getattr__` mantém `run_assessor_replanejamento`
+>   e `run_explorador_cenarios` acessíveis (testes granulares preservados). 13 skills no total.
+> - **Fase 3 ✅** — `11-avaliacao-intervencoes` e `12-registro-decisoes` marcadas
+>   `status="dormante"` no skill.toml. Mecanismo de enforcement: `_discover_manifest_meta`
+>   captura `status`; `phase_classifier` exclui dormantes de `CANONICAL_SKILL_ORDER`
+>   (permanecem em `SKILLS`, invocáveis explicitamente — sementes ADR-070). 11 removida
+>   de `ANALYSIS_SKILLS`. Side effect `decision_log.json` mantido (feature testada).
+> - **Fase 4 ✅** — merge 06+07+08 → `06-resultado-financeiro` (gate). Estratégia de
+>   **sub-pacotes** para evitar colisão de helpers: `_precificacao/`, `_indiretos/`,
+>   `_consolidacao/` (cópias fiéis das skills originais). Orquestrador executa os 3
+>   estágios em sequência; falha de gate no estágio 1 aborta antes de consolidar
+>   (semântica ADR-022 preservada). `Runtime._normalize_financeiro_inputs` mescla
+>   inputs keyed pelos IDs legados na chave unificada (benchmark referencia.json e
+>   callers externos preservados). Compat shims para `run_precificacao_unitaria`,
+>   `run_custos_indiretos` e `run_consolidacao_financeira` no `__getattr__`.
+>   **Gate AGIS validado com paridade exata centavo a centavo:** custo_direto
+>   35.255.483,25 | custo_indireto 21.973.760,63 | preco_venda 86.399.633,77 |
+>   venda_plus_eq 66.704.194,97. Pipeline: 15 → **11 skills** (9 ativas + 2 dormantes).
+> - **Limpeza pós-merge (2026-06-11)** — shims e aliasing removidos integralmente:
+>   - `_ABSORVIDOS` (compat mágico no `__getattr__`) substituído pela API explícita
+>     `load_skill_stage(skill_id, stage, func_name)` — callers declaram a dependência.
+>   - `Runtime._normalize_financeiro_inputs` removido; todos os produtores de inputs
+>     (benchmark runner, project_input_builder, algorithm_comparison, spec_loader,
+>     _project_service_helpers, UI layout) usam a chave `06-resultado-financeiro`.
+>   - **Lição do gate:** a primeira tentativa causou drift no AGIS (custo_indireto
+>     21,9M → 3,7M) porque `inputs_indiretos` e `consolidacao_inputs` agora compartilham
+>     a mesma chave e `skill_inputs.update(extra_inputs)` substituía o dict inteiro.
+>     Corrigido com merge (`setdefault().update()`) após `extra_inputs`. Gate re-validado: PASS.
+>   - Testes-guarda em `test_nep041_f4` asseguram que shims/aliasing não retornem.
+> - **Fase 5 ⏸️ deferida** — re-enumeração sequencial (~100 referências). Puramente
+>   cosmética (legibilidade); avaliar custo/benefício em sessão futura.
 
 ---
 

@@ -1,11 +1,12 @@
 # NEP-028: Governanca de precedencia causal e isolamento de catalogo por projeto
 
-**Status:** Em Andamento  
-**Prioridade:** 🔴 Critico  
-**Area:** Arquitetura e Skills  
-**Tipo:** Governanca + Refactor  
-**Esforco:** XL  
+**Status:** Implementado ✅ _(A1-A4 + D4 concluídos 2026-06-10; modo estrito de catálogo como evolução futura)_
+**Prioridade:** 🔴 Crítico
+**Área:** Arquitetura e Skills
+**Tipo:** Governança + Refactor
+**Esforço:** XL
 **Identificado em:** 2026-05-23
+**Dependências upstream:** ADR-035 (LifecycleCoordinator), ADR-031 (Escopos/Planos), ADR-066 (Catalog Overlay)
 
 ---
 
@@ -166,18 +167,93 @@ Cada run deve registrar no minimo:
 2. Feature flag para fallback controlado durante transicao.
 3. Auditoria de diferencas por snapshot antes de hard cutover.
 
-## Evidencias tecnicas (estado atual)
+## Estado atual (2026-06-10)
 
-1. src/concilium/application/runtime.py
-2. src/concilium/application/services/pipeline_service.py
-3. src/concilium/presentation/api/routes/runs.py
-4. src/concilium/presentation/api/schemas.py
-5. src/concilium/application/services/concilium_service.py
-6. src/concilium/application/pipeline_strategy.py
-7. src/concilium/application/services/_project_service_helpers.py
-8. src/concilium/application/services/project_input_builder.py
-9. src/concilium/infrastructure/storage/file_project_repository.py
+### Resolvido desde a identificação
+
+| Problema | Resolução |
+|---|---|
+| A3: `pipeline_strategy` não era fonte de verdade da ordem | ✅ `pipeline_strategy.py` agora usa `CANONICAL_SKILL_ORDER` derivado dos manifests TOML |
+| `runtime.py` legacy com implementação duplicada | ✅ Deletado (1877 linhas removidas) — `runtime/__init__.py` é o único Runtime |
+| `run_skill` com lógica duplicada vs `run_skill_on_plano` | ✅ `run_skill` delega para `run_skill_on_plano` via `FlatVersionStore` |
+| `avancar_projeto` com lógica paralela | ✅ Deletado — `avancar_plano` é o caminho único |
+
+### Pendente
+
+| Problema | Status |
+|---|---|
+| A1: Snapshot de catálogo não é fonte primária obrigatória | ✅ `_load_resolved_catalogo` marca `_catalog_source` ("project_reference" vs "master"); propagado para `normalized["_catalog_source"]` — observabilidade sem modo estrito (2026-06-10) |
+| A2: `use_mobilizacao_policy` não propagado end-to-end | ✅ `pipeline_service.py:215-221` lê o toggle e injeta/omite `mobilizacao_policies` em skill-04 — funcionando end-to-end |
+| A4: Serviços auxiliares ainda podem consultar catálogos candidatos | ✅ Não aplicável — padrão de candidatos estava em `runtime.py` (deletado). Atual `catalog_resolver.py` não tem listas de candidatos |
+| Auditoria de proveniência por run | ✅ `catalog_source` persistido em invocations.log em ambos os caminhos (`run_skill_on_plano` via `_build_log_entry`; `run_pipeline` via `_oas_log_invocation`) — 2026-06-10 |
+
+## Evidências técnicas (estado atual)
+
+1. `src/concilium/application/runtime/__init__.py` — Runtime canônico (único)
+2. `src/concilium/application/runtime/mixins/execution.py` — `run_skill` → `run_skill_on_plano` (caminho único)
+3. `src/concilium/presentation/api/routes/runs.py` — rota de execução
+4. `src/concilium/presentation/api/schemas.py` — schema de request (inclui `use_mobilizacao_policy`)
+5. `src/concilium/application/pipeline_strategy.py` — `CANONICAL_SKILL_ORDER` como fonte única
+6. `src/concilium/infrastructure/storage/flat_version_store.py` — adaptador para projetos legados
+
+---
+
+## Invariantes Causais para ADR-106 (EquipeCustoEngine)
+
+Esta seção define os contratos que o `LifecycleEngine` (ADR-106 F1) deve honrar.
+São derivados da cadeia causal de skills e não podem ser violados sem regressão observável.
+
+### IC-1 — Pré-condição de estado por fase de skill
+
+Cada fase do engine pressupõe que as skills anteriores já popularam o canônico:
+
+| Fase engine | Requer que skill-0X tenha rodado | Campo obrigatório no canônico |
+|---|---|---|
+| `DirectTeamCostStrategy` | skill-05 concluída | `equipes_diretas[*].custo_mao_obra_mensal` |
+| `IndirectTeamCostStrategy` | skill-07 concluída | `indiretos[*].custo_mao_obra` |
+| Decomposição instancial | ADR-085 (dentro de skill-05) | `equipes_diretas[*].custo_inst_mo is not None` |
+| `fe_nec` / `gap_escala` | skill-06 concluída | `planejamento[*].subtotal.sem_bdi.total > 0` |
+
+Violação de IC-1 resulta em divisão por zero silenciosa ou valores de `fe_nec` absurdos (> 10).
+
+### IC-2 — Invariante de decomposição instancial
+
+Para toda `EquipeDireta` com `custo_inst_mo is not None`:
+
+```
+|custo_inst_mo + custo_inst_eq + custo_inst_comb + custo_inst_mat + custo_inst_mob_demob
+ − custo_total| < 0.05
+```
+
+Este invariante é validado em ADR-104 Checkpoint 3. O engine não pode reescrever
+`custo_inst_*` sem atualizar `custo_total` correspondentemente.
+
+### IC-3 — Monotonicidade de custo com encargos
+
+`custo_total = custo_mao_obra_mensal + custo_encargos_mensal + custo_equipamentos_mensal
+              + custo_combustivel_total_mensal + custo_material_mensal + custo_mob_desmob`
+
+(NEP-037 D1). O engine deve preservar esta soma; qualquer redistribuição interna deve
+ser neutra no total.
+
+### IC-4 — Isolamento de catálogo por run
+
+O engine deve receber o catálogo já resolvido pelo `_providers_factory` do runtime —
+nunca carregar o catálogo master diretamente. Violação cria dependência de estado global
+que compromete a reprodutibilidade (NEP-028 D1).
+
+### IC-5 — Idempotência
+
+`engine.calcular(equipe, catalogo) == engine.calcular(equipe, catalogo)` para o mesmo
+estado de entrada. O engine não pode usar estado interno mutável entre chamadas.
+
+### IC-6 — Não-interferência entre estratégias
+
+`DirectTeamCostStrategy` e `IndirectTeamCostStrategy` operam sobre partições disjuntas
+do canônico (`equipes_diretas` vs `indiretos`). Uma não pode alterar campos da outra.
 
 ## Resultado esperado
 
-Ao final da NEP-028, a execucao por projeto deixa de depender de fallback emergente e passa a obedecer um contrato causal unico, com baseline rastreavel e reproducivel.
+Ao final da NEP-028, a execução por projeto obedece um contrato causal único, com
+baseline rastreável e reproduzível. O ADR-106 LifecycleEngine é a primeira implementação
+que deve demonstrar conformidade com IC-1 a IC-6.

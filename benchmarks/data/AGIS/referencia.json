@@ -1,638 +1,642 @@
 {
-  "slug": "AGIS",
-  "meta": {
-    "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
-    "data_inicio": "2026-06-01",
-    "data_termino": "2027-06-27",
-    "localizacao": {
-      "lat": -7.3875,
-      "lng": -39.85
-    },
-    "regime_trabalho": {
-      "horas_dia": 8,
-      "dias_semana": 6
-    },
-    "mode": "benchmark_config"
+ "slug": "AGIS",
+ "meta": {
+  "projeto": "AGIS - Ferrovia Nova Transnordestina (Supressao e Terraplanagem)",
+  "data_inicio": "2026-06-01",
+  "data_termino": "2027-06-27",
+  "localizacao": {
+   "lat": -7.3875,
+   "lng": -39.85
   },
-  "spec": {
-    "eap": [
-      {
-        "item_id": "eap-1_0",
-        "cpu_id": "CPU-TERRA-ATI-003",
-        "quantitativo": 2400000.0,
-        "predecessores": []
-      },
-      {
-        "item_id": "eap-1_1",
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
-        "quantitativo": 107463.1053,
-        "predecessores": [
-          {
-            "item_id": "eap-1_0",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.35
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_2",
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000",
-        "quantitativo": 336915.0947,
-        "predecessores": [
-          {
-            "item_id": "eap-1_0",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.35
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_3",
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
-        "quantitativo": 105311.3323,
-        "predecessores": [
-          {
-            "item_id": "eap-1_0",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.05
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_4",
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT3000",
-        "quantitativo": 585945.7677,
-        "predecessores": [
-          {
-            "item_id": "eap-1_0",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.05
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_5",
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000",
-        "quantitativo": 304634.4556,
-        "predecessores": [
-          {
-            "item_id": "eap-1_0",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.05
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_6",
-        "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
-        "quantitativo": 676519.0444,
-        "predecessores": [
-          {
-            "item_id": "eap-1_0",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.05
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_7",
-        "cpu_id": "CPU-TERRA-COMPAC-PN",
-        "quantitativo": 1135635.3,
-        "predecessores": [
-          {
-            "item_id": "eap-1_1",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.05
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_8",
-        "cpu_id": "CPU-TERRA-COMPAC-PI",
-        "quantitativo": 29411.0,
-        "predecessores": [
-          {
-            "item_id": "eap-1_3",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 1.0
-          },
-          {
-            "item_id": "eap-1_4",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 1.0
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_9",
-        "cpu_id": "CPU-TERRA-CORPO-ATERRO-3CAT",
-        "quantitativo": 981153.5,
-        "predecessores": [
-          {
-            "item_id": "eap-1_0",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.6
-          }
-        ]
-      },
-      {
-        "item_id": "eap-1_10",
-        "cpu_id": "CPU-TERRA-COMPAC-FINAL-ROCHA",
-        "quantitativo": 24721.17,
-        "predecessores": [
-          {
-            "item_id": "eap-1_9",
-            "tipo": "FS",
-            "lag": 0,
-            "completion_threshold_pct": 0.85
-          }
-        ]
-      }
-    ],
-    "cronograma": [
-      {
-        "item_id": "eap-1_0",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 6,
-          "taxa_mobilizacao": 2.5,
-          "taxa_desmobilizacao": 6.0
-        },
-        "descricao": "DESMATAMENTO, DESTOCAMENTO E LIMPEZA DE AREA COM ARVORES DE DIAMETRO ATÉ 15 CM",
-        "unidade": "M2"
-      },
-      {
-        "item_id": "eap-1_1",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_2",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_3",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 2,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 2.0
-        },
-        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT ATÉ 2000M",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_4",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 2,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 2.0
-        },
-        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_5",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 3,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 3.0
-        },
-        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT ATÉ 2000M",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_6",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 4,
-          "taxa_mobilizacao": 0.1034,
-          "taxa_desmobilizacao": 4.0
-        },
-        "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_7",
-        "equipes": {
-          "n_inicial": 2,
-          "n_max": 4,
-          "taxa_mobilizacao": 0.4,
-          "taxa_desmobilizacao": 1.3333
-        },
-        "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR NORMAL",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_8",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 2,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 2.0
-        },
-        "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR INTERMEDIÁRIO",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_9",
-        "equipes": {
-          "n_inicial": 2,
-          "n_max": 3,
-          "taxa_mobilizacao": 0.2,
-          "taxa_desmobilizacao": 3.0
-        },
-        "descricao": "CONSTRUÇÃO DE CORPO DE ATERRO COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE",
-        "unidade": "M3"
-      },
-      {
-        "item_id": "eap-1_10",
-        "equipes": {
-          "n_inicial": 1,
-          "n_max": 1,
-          "taxa_mobilizacao": 1.0,
-          "taxa_desmobilizacao": 1.0
-        },
-        "descricao": "COMPACTAÇÃO DE CAMADA FINAL DE ATERRO DE ROCHA",
-        "unidade": "M3"
-      }
-    ],
-    "bdi": {
-      "mao_obra": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "material": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      },
-      "servicos": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.09,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "indireto": {
-        "ac": 0.05,
-        "df": 0.015,
-        "r": 0.01,
-        "cr": 0.0,
-        "lucro": 0.05,
-        "cofins": 0.0,
-        "iss": 0.05,
-        "pis": 0.0,
-        "cssl": 0.0199,
-        "ir": 0.0274
-      },
-      "diesel": {
-        "ac": 0.0,
-        "df": 0.0,
-        "r": 0.0,
-        "cr": 0.0,
-        "lucro": 0.04,
-        "cofins": 0.0,
-        "iss": 0.0,
-        "pis": 0.0,
-        "cssl": 0.0,
-        "ir": 0.0
-      }
-    },
-    "indiretos": [
-      {
-        "categoria": "ADM",
-        "custo_fixo_mensal_total": 1058980.8,
-        "driver": "mensal",
-        "mao_obra": [
-          {
-            "codigo": "P0013",
-            "funcao": "ADMINISTRATIVO",
-            "quantidade": 1,
-            "salario_base": 10000.0,
-            "custo_unitario": 10000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0006",
-            "funcao": "AUXILIAR ADMINISTRATIVO",
-            "quantidade": 3,
-            "salario_base": 3358.08,
-            "custo_unitario": 6759.12
-          },
-          {
-            "codigo": "P0003",
-            "funcao": "ALMOXARIFE",
-            "quantidade": 1,
-            "salario_base": 3078.24,
-            "custo_unitario": 6194.96
-          },
-          {
-            "codigo": "P0007",
-            "funcao": "AUXILIAR DE ALMOXARIFE",
-            "quantidade": 1,
-            "salario_base": 2217.6,
-            "custo_unitario": 4463.06
-          },
-          {
-            "codigo": "P0027",
-            "funcao": "GERENTE DE CONTRATO",
-            "quantidade": 1,
-            "salario_base": 30000.0,
-            "custo_unitario": 30000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0075",
-            "funcao": "TÉCNICO DE PLANEJAMENTO",
-            "quantidade": 1,
-            "salario_base": 14000.0,
-            "custo_unitario": 14000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0018",
-            "funcao": "ENCARREGADO GERAL",
-            "quantidade": 2,
-            "salario_base": 18000.0,
-            "custo_unitario": 18000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0024",
-            "funcao": "ENGENHEIRO CIVIL",
-            "quantidade": 1,
-            "salario_base": 22000.0,
-            "custo_unitario": 22000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0073",
-            "funcao": "MECÂNICO",
-            "quantidade": 2,
-            "salario_base": 7200.0,
-            "custo_unitario": 14493.6
-          },
-          {
-            "codigo": "P0011",
-            "funcao": "AUXILIAR MECÂNICO",
-            "quantidade": 2,
-            "salario_base": 2217.6,
-            "custo_unitario": 4463.06
-          },
-          {
-            "codigo": "P0086",
-            "funcao": "ENCARREGADO DE MECÂNICA",
-            "quantidade": 1,
-            "salario_base": 4485.36,
-            "custo_unitario": 9027.16
-          },
-          {
-            "codigo": "P0014",
-            "funcao": "BORRACHEIRO",
-            "quantidade": 2,
-            "salario_base": 3078.24,
-            "custo_unitario": 6194.96
-          },
-          {
-            "codigo": "P0088",
-            "funcao": "AUXILIAR DE BORRACHEIRO",
-            "quantidade": 2,
-            "salario_base": 2217.6,
-            "custo_unitario": 4463.06
-          },
-          {
-            "codigo": "P0087",
-            "funcao": "CONTROLADOR",
-            "quantidade": 1,
-            "salario_base": 3960.0,
-            "custo_unitario": 7970.4
-          },
-          {
-            "codigo": "P0034",
-            "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
-            "quantidade": 2,
-            "salario_base": 4001.71,
-            "custo_unitario": 8053.44
-          },
-          {
-            "codigo": "P0001",
-            "funcao": "AJUDANTE",
-            "quantidade": 2,
-            "salario_base": 2656.37,
-            "custo_unitario": 5346.58
-          },
-          {
-            "codigo": "P0052",
-            "funcao": "OFICIAL",
-            "quantidade": 1,
-            "salario_base": 3078.24,
-            "custo_unitario": 6194.96
-          },
-          {
-            "codigo": "P0063",
-            "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
-            "quantidade": 2,
-            "salario_base": 2043.36,
-            "custo_unitario": 4112.26
-          },
-          {
-            "codigo": "P0072",
-            "funcao": "APONTADOR",
-            "quantidade": 9,
-            "salario_base": 3078.24,
-            "custo_unitario": 6194.96
-          },
-          {
-            "codigo": "P0089",
-            "funcao": "MOTORISTA DE CAMINHÃO PRANCHA",
-            "quantidade": 1,
-            "salario_base": 4002.24,
-            "custo_unitario": 8054.51
-          },
-          {
-            "codigo": "P0036",
-            "funcao": "MOTORISTA DE ÔNIBUS",
-            "quantidade": 4,
-            "salario_base": 2656.5,
-            "custo_unitario": 5346.71
-          },
-          {
-            "codigo": "PREFEITO",
-            "funcao": "PREFEITO DE ALOJAMENTO",
-            "quantidade": 3,
-            "salario_base": 4000.0,
-            "custo_unitario": 8051.0
-          }
-        ]
-      },
-      {
-        "categoria": "TOP",
-        "custo_fixo_mensal_total": 66400.43,
-        "driver": "mensal",
-        "mao_obra": [
-          {
-            "codigo": "P0057",
-            "funcao": "TOPÓGRAFO",
-            "quantidade": 2,
-            "salario_base": 18000.0,
-            "custo_unitario": 18000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0010",
-            "funcao": "AUXILIAR DE TOPOGRAFIA",
-            "quantidade": 2,
-            "salario_base": 2217.6,
-            "custo_unitario": 4463.06
-          },
-          {
-            "codigo": "P0058",
-            "funcao": "SALA TÉCNICA",
-            "quantidade": 1,
-            "salario_base": 12000.0,
-            "custo_unitario": 12000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0001",
-            "funcao": "AJUDANTE",
-            "quantidade": 1,
-            "salario_base": 2043.36,
-            "custo_unitario": 4112.26
-          }
-        ]
-      },
-      {
-        "categoria": "LAB",
-        "custo_fixo_mensal_total": 10791.62,
-        "driver": "mensal",
-        "mao_obra": [
-          {
-            "codigo": "P0030",
-            "funcao": "LABORATORISTA",
-            "quantidade": 1,
-            "salario_base": 9000.0,
-            "custo_unitario": 9000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0009",
-            "funcao": "AUXILIAR DE LABORATÓRIO",
-            "quantidade": 1,
-            "salario_base": 2217.6,
-            "custo_unitario": 4463.06,
-            "tipo_contratacao": "CLT"
-          }
-        ]
-      },
-      {
-        "categoria": "QSMS",
-        "custo_fixo_mensal_total": 58437.83,
-        "driver": "mensal",
-        "mao_obra": [
-          {
-            "codigo": "P0056",
-            "funcao": "TÉCNICO DE SEGURANÇA DO TRABALHO",
-            "quantidade": 2,
-            "salario_base": 7500.0,
-            "custo_unitario": 7500.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "P0002",
-            "funcao": "AJUDANTE ESPECIALIZADO",
-            "quantidade": 1,
-            "salario_base": 2217.6,
-            "custo_unitario": 4463.06
-          },
-          {
-            "codigo": "MO-GERENTE-QSMS",
-            "funcao": "GERENTE DE QSMS",
-            "quantidade": 1,
-            "salario_base": 15000.0,
-            "custo_unitario": 15000.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "MO-BIOLOGO",
-            "funcao": "BIÓLOGO DE CAMPO",
-            "quantidade": 1,
-            "salario_base": 7500.0,
-            "custo_unitario": 7500.0,
-            "tipo_contratacao": "PJ"
-          },
-          {
-            "codigo": "MO-BOTANICO",
-            "funcao": "BOTÂNICO DE CAMPO",
-            "quantidade": 1,
-            "salario_base": 7500.0,
-            "custo_unitario": 7500.0,
-            "tipo_contratacao": "PJ"
-          }
-        ]
-      },
-      {
-        "categoria": "MOB",
-        "custo_fixo_total": 4054600.43,
-        "driver": "projeto",
-        "mao_obra": []
-      }
+  "regime_trabalho": {
+   "horas_dia": 8,
+   "dias_semana": 6
+  },
+  "mode": "benchmark_config"
+ },
+ "spec": {
+  "eap": [
+   {
+    "item_id": "eap-1_0",
+    "cpu_id": "CPU-TERRA-ATI-003",
+    "quantitativo": 2400000.0,
+    "predecessores": []
+   },
+   {
+    "item_id": "eap-1_1",
+    "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+    "quantitativo": 107463.1053,
+    "predecessores": [
+     {
+      "item_id": "eap-1_0",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.35
+     }
     ]
+   },
+   {
+    "item_id": "eap-1_2",
+    "cpu_id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000",
+    "quantitativo": 336915.0947,
+    "predecessores": [
+     {
+      "item_id": "eap-1_0",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.35
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_3",
+    "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
+    "quantitativo": 105311.3323,
+    "predecessores": [
+     {
+      "item_id": "eap-1_0",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.05
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_4",
+    "cpu_id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT3000",
+    "quantitativo": 585945.7677,
+    "predecessores": [
+     {
+      "item_id": "eap-1_0",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.05
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_5",
+    "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000",
+    "quantitativo": 304634.4556,
+    "predecessores": [
+     {
+      "item_id": "eap-1_0",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.05
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_6",
+    "cpu_id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000",
+    "quantitativo": 676519.0444,
+    "predecessores": [
+     {
+      "item_id": "eap-1_0",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.05
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_7",
+    "cpu_id": "CPU-TERRA-COMPAC-PN",
+    "quantitativo": 1135635.3,
+    "predecessores": [
+     {
+      "item_id": "eap-1_1",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.05
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_8",
+    "cpu_id": "CPU-TERRA-COMPAC-PI",
+    "quantitativo": 29411.0,
+    "predecessores": [
+     {
+      "item_id": "eap-1_3",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 1.0
+     },
+     {
+      "item_id": "eap-1_4",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 1.0
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_9",
+    "cpu_id": "CPU-TERRA-CORPO-ATERRO-3CAT",
+    "quantitativo": 981153.5,
+    "predecessores": [
+     {
+      "item_id": "eap-1_0",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.6
+     }
+    ]
+   },
+   {
+    "item_id": "eap-1_10",
+    "cpu_id": "CPU-TERRA-COMPAC-FINAL-ROCHA",
+    "quantitativo": 24721.17,
+    "predecessores": [
+     {
+      "item_id": "eap-1_9",
+      "tipo": "FS",
+      "lag": 0,
+      "completion_threshold_pct": 0.85
+     }
+    ]
+   }
+  ],
+  "cronograma": [
+   {
+    "item_id": "eap-1_0",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 6,
+     "taxa_mobilizacao": 2.5,
+     "taxa_desmobilizacao": 6.0
+    },
+    "descricao": "DESMATAMENTO, DESTOCAMENTO E LIMPEZA DE AREA COM ARVORES DE DIAMETRO ATÉ 15 CM",
+    "unidade": "M2"
+   },
+   {
+    "item_id": "eap-1_1",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 1,
+     "taxa_mobilizacao": 1.0,
+     "taxa_desmobilizacao": 1.0
+    },
+    "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT ATÉ 2000M",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_2",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 1,
+     "taxa_mobilizacao": 1.0,
+     "taxa_desmobilizacao": 1.0
+    },
+    "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 1ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_3",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 2,
+     "taxa_mobilizacao": 1.0,
+     "taxa_desmobilizacao": 2.0
+    },
+    "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT ATÉ 2000M",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_4",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 2,
+     "taxa_mobilizacao": 1.0,
+     "taxa_desmobilizacao": 2.0
+    },
+    "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 2ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_5",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 3,
+     "taxa_mobilizacao": 1.0,
+     "taxa_desmobilizacao": 3.0
+    },
+    "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT ATÉ 2000M",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_6",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 4,
+     "taxa_mobilizacao": 0.1034,
+     "taxa_desmobilizacao": 4.0
+    },
+    "descricao": "ESCAVAÇÃO, CARGA, TRANSPORTE, DESCARGA E ESPALHAMENTO DE MATERIAL DE 3ª CATEGORIA - DMT DE 2000 ATÉ 3000M",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_7",
+    "equipes": {
+     "n_inicial": 2,
+     "n_max": 4,
+     "taxa_mobilizacao": 0.4,
+     "taxa_desmobilizacao": 1.3333
+    },
+    "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR NORMAL",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_8",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 2,
+     "taxa_mobilizacao": 1.0,
+     "taxa_desmobilizacao": 2.0
+    },
+    "descricao": "COMPACTAÇÃO DE ATERROS A 100% DO PROCTOR INTERMEDIÁRIO",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_9",
+    "equipes": {
+     "n_inicial": 2,
+     "n_max": 3,
+     "taxa_mobilizacao": 0.2,
+     "taxa_desmobilizacao": 3.0
+    },
+    "descricao": "CONSTRUÇÃO DE CORPO DE ATERRO COM MATERIAL DE 3ª CATEGORIA ORIUNDO DE CORTE",
+    "unidade": "M3"
+   },
+   {
+    "item_id": "eap-1_10",
+    "equipes": {
+     "n_inicial": 1,
+     "n_max": 1,
+     "taxa_mobilizacao": 1.0,
+     "taxa_desmobilizacao": 1.0
+    },
+    "descricao": "COMPACTAÇÃO DE CAMADA FINAL DE ATERRO DE ROCHA",
+    "unidade": "M3"
+   }
+  ],
+  "bdi": {
+   "mao_obra": {
+    "ac": 0.05,
+    "df": 0.015,
+    "r": 0.01,
+    "cr": 0.0,
+    "lucro": 0.09,
+    "cofins": 0.0,
+    "iss": 0.05,
+    "pis": 0.0,
+    "cssl": 0.0199,
+    "ir": 0.0274
+   },
+   "material": {
+    "ac": 0.0,
+    "df": 0.0,
+    "r": 0.0,
+    "cr": 0.0,
+    "lucro": 0.04,
+    "cofins": 0.0,
+    "iss": 0.0,
+    "pis": 0.0,
+    "cssl": 0.0,
+    "ir": 0.0
+   },
+   "servicos": {
+    "ac": 0.05,
+    "df": 0.015,
+    "r": 0.01,
+    "cr": 0.0,
+    "lucro": 0.09,
+    "cofins": 0.0,
+    "iss": 0.05,
+    "pis": 0.0,
+    "cssl": 0.0199,
+    "ir": 0.0274
+   },
+   "indireto": {
+    "ac": 0.05,
+    "df": 0.015,
+    "r": 0.01,
+    "cr": 0.0,
+    "lucro": 0.05,
+    "cofins": 0.0,
+    "iss": 0.05,
+    "pis": 0.0,
+    "cssl": 0.0199,
+    "ir": 0.0274
+   },
+   "diesel": {
+    "ac": 0.0,
+    "df": 0.0,
+    "r": 0.0,
+    "cr": 0.0,
+    "lucro": 0.04,
+    "cofins": 0.0,
+    "iss": 0.0,
+    "pis": 0.0,
+    "cssl": 0.0,
+    "ir": 0.0
+   }
   },
-  "resultado": {
-    "benchmark_confronto_referencia": {
-      "custo_direto": 46867333.35,
-      "custo_indireto": 19584539.37,
-      "custo_total": 66451872.72,
-      "preco_venda": 76961261.88
-    }
-  },
-  "_schema_version": "v3",
-  "_schema_upgraded_from": "v2"
+  "indiretos": [
+   {
+    "categoria": "ADM",
+    "custo_fixo_mensal_total": 1058980.8,
+    "driver": "mensal",
+    "mao_obra": [
+     {
+      "codigo": "P0013",
+      "funcao": "ADMINISTRATIVO",
+      "quantidade": 1,
+      "salario_base": 10000.0,
+      "custo_unitario": 10000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0006",
+      "funcao": "AUXILIAR ADMINISTRATIVO",
+      "quantidade": 3,
+      "salario_base": 3358.08,
+      "custo_unitario": 6759.12
+     },
+     {
+      "codigo": "P0003",
+      "funcao": "ALMOXARIFE",
+      "quantidade": 1,
+      "salario_base": 3078.24,
+      "custo_unitario": 6194.96
+     },
+     {
+      "codigo": "P0007",
+      "funcao": "AUXILIAR DE ALMOXARIFE",
+      "quantidade": 1,
+      "salario_base": 2217.6,
+      "custo_unitario": 4463.06
+     },
+     {
+      "codigo": "P0027",
+      "funcao": "GERENTE DE CONTRATO",
+      "quantidade": 1,
+      "salario_base": 30000.0,
+      "custo_unitario": 30000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0075",
+      "funcao": "TÉCNICO DE PLANEJAMENTO",
+      "quantidade": 1,
+      "salario_base": 14000.0,
+      "custo_unitario": 14000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0018",
+      "funcao": "ENCARREGADO GERAL",
+      "quantidade": 2,
+      "salario_base": 18000.0,
+      "custo_unitario": 18000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0024",
+      "funcao": "ENGENHEIRO CIVIL",
+      "quantidade": 1,
+      "salario_base": 22000.0,
+      "custo_unitario": 22000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0073",
+      "funcao": "MECÂNICO",
+      "quantidade": 2,
+      "salario_base": 7200.0,
+      "custo_unitario": 14493.6
+     },
+     {
+      "codigo": "P0011",
+      "funcao": "AUXILIAR MECÂNICO",
+      "quantidade": 2,
+      "salario_base": 2217.6,
+      "custo_unitario": 4463.06
+     },
+     {
+      "codigo": "P0086",
+      "funcao": "ENCARREGADO DE MECÂNICA",
+      "quantidade": 1,
+      "salario_base": 4485.36,
+      "custo_unitario": 9027.16
+     },
+     {
+      "codigo": "P0014",
+      "funcao": "BORRACHEIRO",
+      "quantidade": 2,
+      "salario_base": 3078.24,
+      "custo_unitario": 6194.96
+     },
+     {
+      "codigo": "P0088",
+      "funcao": "AUXILIAR DE BORRACHEIRO",
+      "quantidade": 2,
+      "salario_base": 2217.6,
+      "custo_unitario": 4463.06
+     },
+     {
+      "codigo": "P0087",
+      "funcao": "CONTROLADOR",
+      "quantidade": 1,
+      "salario_base": 3960.0,
+      "custo_unitario": 7970.4
+     },
+     {
+      "codigo": "P0034",
+      "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",
+      "quantidade": 2,
+      "salario_base": 4001.71,
+      "custo_unitario": 8053.44
+     },
+     {
+      "codigo": "P0001",
+      "funcao": "AJUDANTE",
+      "quantidade": 2,
+      "salario_base": 2656.37,
+      "custo_unitario": 5346.58
+     },
+     {
+      "codigo": "P0052",
+      "funcao": "OFICIAL",
+      "quantidade": 1,
+      "salario_base": 3078.24,
+      "custo_unitario": 6194.96
+     },
+     {
+      "codigo": "P0063",
+      "funcao": "AUXILIAR DE SERVIÇOS GERAIS",
+      "quantidade": 2,
+      "salario_base": 2043.36,
+      "custo_unitario": 4112.26
+     },
+     {
+      "codigo": "P0072",
+      "funcao": "APONTADOR",
+      "quantidade": 9,
+      "salario_base": 3078.24,
+      "custo_unitario": 6194.96
+     },
+     {
+      "codigo": "P0089",
+      "funcao": "MOTORISTA DE CAMINHÃO PRANCHA",
+      "quantidade": 1,
+      "salario_base": 4002.24,
+      "custo_unitario": 8054.51
+     },
+     {
+      "codigo": "P0036",
+      "funcao": "MOTORISTA DE ÔNIBUS",
+      "quantidade": 4,
+      "salario_base": 2656.5,
+      "custo_unitario": 5346.71
+     },
+     {
+      "codigo": "PREFEITO",
+      "funcao": "PREFEITO DE ALOJAMENTO",
+      "quantidade": 3,
+      "salario_base": 4000.0,
+      "custo_unitario": 8051.0
+     }
+    ],
+    "equipamentos_mensal_total": 271467.37,
+    "verbas_mensal_total": 377870.83
+   },
+   {
+    "categoria": "TOP",
+    "custo_fixo_mensal_total": 66400.43,
+    "driver": "mensal",
+    "mao_obra": [
+     {
+      "codigo": "P0057",
+      "funcao": "TOPÓGRAFO",
+      "quantidade": 2,
+      "salario_base": 18000.0,
+      "custo_unitario": 18000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0010",
+      "funcao": "AUXILIAR DE TOPOGRAFIA",
+      "quantidade": 2,
+      "salario_base": 2217.6,
+      "custo_unitario": 4463.06
+     },
+     {
+      "codigo": "P0058",
+      "funcao": "SALA TÉCNICA",
+      "quantidade": 1,
+      "salario_base": 12000.0,
+      "custo_unitario": 12000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0001",
+      "funcao": "AJUDANTE",
+      "quantidade": 1,
+      "salario_base": 2043.36,
+      "custo_unitario": 4112.26
+     }
+    ],
+    "equipamentos_mensal_total": 14922.67,
+    "verbas_mensal_total": 3000.0
+   },
+   {
+    "categoria": "LAB",
+    "custo_fixo_mensal_total": 10791.62,
+    "driver": "mensal",
+    "mao_obra": [
+     {
+      "codigo": "P0030",
+      "funcao": "LABORATORISTA",
+      "quantidade": 1,
+      "salario_base": 9000.0,
+      "custo_unitario": 9000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0009",
+      "funcao": "AUXILIAR DE LABORATÓRIO",
+      "quantidade": 1,
+      "salario_base": 2217.6,
+      "custo_unitario": 4463.06,
+      "tipo_contratacao": "CLT"
+     }
+    ]
+   },
+   {
+    "categoria": "QSMS",
+    "custo_fixo_mensal_total": 58437.83,
+    "driver": "mensal",
+    "mao_obra": [
+     {
+      "codigo": "P0056",
+      "funcao": "TÉCNICO DE SEGURANÇA DO TRABALHO",
+      "quantidade": 2,
+      "salario_base": 7500.0,
+      "custo_unitario": 7500.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "P0002",
+      "funcao": "AJUDANTE ESPECIALIZADO",
+      "quantidade": 1,
+      "salario_base": 2217.6,
+      "custo_unitario": 4463.06
+     },
+     {
+      "codigo": "MO-GERENTE-QSMS",
+      "funcao": "GERENTE DE QSMS",
+      "quantidade": 1,
+      "salario_base": 15000.0,
+      "custo_unitario": 15000.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "MO-BIOLOGO",
+      "funcao": "BIÓLOGO DE CAMPO",
+      "quantidade": 1,
+      "salario_base": 7500.0,
+      "custo_unitario": 7500.0,
+      "tipo_contratacao": "PJ"
+     },
+     {
+      "codigo": "MO-BOTANICO",
+      "funcao": "BOTÂNICO DE CAMPO",
+      "quantidade": 1,
+      "salario_base": 7500.0,
+      "custo_unitario": 7500.0,
+      "tipo_contratacao": "PJ"
+     }
+    ]
+   },
+   {
+    "categoria": "MOB",
+    "custo_fixo_total": 4054600.43,
+    "driver": "projeto",
+    "mao_obra": []
+   }
+  ]
+ },
+ "resultado": {
+  "benchmark_confronto_referencia": {
+   "custo_direto": 46867333.35,
+   "custo_indireto": 19584539.37,
+   "custo_total": 66451872.72,
+   "preco_venda": 76961261.88
+  }
+ },
+ "_schema_version": "v3",
+ "_schema_upgraded_from": "v2"
 }

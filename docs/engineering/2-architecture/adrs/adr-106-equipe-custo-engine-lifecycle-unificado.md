@@ -1,6 +1,6 @@
 # ADR-106: EquipeCustoEngine — Lifecycle Unificado para Equipes Diretas e Indiretas
 
-**Status:** Parcialmente Implementado ⚠️ _(auditado 2026-06-09)_  
+**Status:** Parcialmente Implementado ⚠️ _(F1-F4, F7 ✅ 2026-06-10; F5-F6 deferred; F8 pendente)_  
 **Data:** 2026-06-08  
 **Autores:** Engenharia de Plataforma  
 
@@ -251,14 +251,14 @@ Rejeitado porque: indiretos são configurados por categoria de projeto, não por
 
 | Fase | Escopo | Pré-requisito |
 |---|---|---|
-| **F1** | Criar `equipe_custo_engine.py` com `calcular_custo_instancia_composicional` e `LifecycleEngine` | — |
-| **F2** | `DirectTeamCostStrategy`: refatorar `_build_dimensionamento` para usar engine | F1 |
-| **F3** | Preencher `custo_inst_*` para equipes sem pool (resolve NEP-040 Fase 4) | F2 |
-| **F4** | `IndirectTeamCostStrategy`: refatorar skill-07 para usar engine | F1 |
-| **F5** | Mob window: adicionar `leadtime_mob_semanas` e `lag_demob_semanas` no catálogo e CPU | F2 |
-| **F6** | Early dismissal para EQ de equipes diretas | F2, F5 |
-| **F7** | Skill-08 usa `custo_inst_*` sem heurística (elimina fallback) | F3 |
-| **F8** | Cubo do pool: face de ocupação de recursos (timeline mob/demob/utilização) | F4 |
+| **F1** | Criar `equipe_custo_engine.py` com `LifecycleEngine` e `CustoEquipeDecomposicao` | ✅ 2026-06-10 |
+| **F2** | `DirectTeamCostStrategy`: converte campos mensais de EquipeDireta para taxa semanal e delega para engine | ✅ 2026-06-10 |
+| **F3** | `_fill_custo_inst_sem_pool`: preenche `custo_inst_*` para equipes sem pool; integrado em skill-05 | ✅ 2026-06-10 |
+| **F4** | `IndirectTeamCostStrategy`: parameteriza indiretos para engine (custo_mobilizacao como mob/demob) | ✅ 2026-06-10 |
+| **F5** | Mob window: adicionar `leadtime_mob_semanas` e `lag_demob_semanas` no catálogo e CPU | ⏳ Deferred — aguarda dados de catálogo |
+| **F6** | Early dismissal para EQ de equipes diretas | ⏳ Deferred — aguarda F5 |
+| **F7** | Skill-08 usa `custo_inst_*` diretamente (elimina fallback proporcional) | ✅ 2026-06-10 |
+| **F8** | Cubo do pool: face de ocupação de recursos (timeline mob/demob/utilização) | 💡 Pendente — aguarda ADR-086 extensão |
 
 **F1–F3 são o caminho crítico** para reconciliação direta com PUxQ.  
 **F4** pode ser paralelo a F2/F3.  

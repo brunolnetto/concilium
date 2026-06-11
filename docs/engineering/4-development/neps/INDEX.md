@@ -1,8 +1,8 @@
 # NEPs — Notas de Evolução de Produto
 
 **Projeto:** Concilium — MendesLobo Construtora  
-**Última atualização:** 2026-06-09  
-**Total:** 41 NEPs | ✅ 27 Concluídas · ⚠️ 8 Parcial/Em Andamento · 💡 1 Proposta · 📄 5 Doc atualizada
+**Última atualização:** 2026-06-10  
+**Total:** 43 NEPs | ✅ 31 Concluídas · ⚠️ 4 Parcial/Em Andamento · 💡 3 Proposta · 📄 5 Doc atualizada
 
 ---
 
@@ -56,20 +56,22 @@
 
 | NEP | Título | Status | Prioridade | Nota |
 |---|---|---|---|---|
-| [028](nep-028-governanca-precedencia-causal-e-isolamento-catalogo-projeto.md) | Governança de precedência causal e isolamento de catálogo | 🔵 Em Andamento | 🔴 Crítico | — |
+| [028](nep-028-governanca-precedencia-causal-e-isolamento-catalogo-projeto.md) | Governança de precedência causal e isolamento de catálogo | ✅ Implementado | 🔴 Crítico | A1-A4 + D4 ✅ (2026-06-10); modo estrito de catálogo = evolução futura |
 | [029](nep-029-divergencia-caminhos-precificacao-unitaria.md) | Divergência na precificação unitária — ausência de fonte canônica | ⚠️ Parcial | 🔴 Crítico | S1 parcial — AGIS calibrado; outros pendentes |
 | [030](nep-030-injecao-minima-honesta-benchmark.md) | Injeção mínima honesta na validação de benchmark | 🔵 Em Andamento | 🔴 Crítico | Sprint S4 |
-| [031](nep-031-lacunas-modelo-custo-operacional.md) | Lacunas do modelo de custo operacional | ⚠️ Parcial | 🟠 Alto | S2: L4 SS/FF feito; L2/L3 pendentes |
-| [032](nep-032-expurgo-precos-unitarios-sbdi-precificacao-bottom-up.md) | Expurgo de `precos_unitarios_sbdi` — precificação bottom-up | 🔵 Em Andamento | 🔴 Crítico | Sprint S1 |
-| [033](nep-033-migracao-pdf-renderer-reportlab.md) | Migração PDF renderer: fpdf2 → ReportLab | ⚠️ Parcial | 🟡 Baixo | Cleanup pendente; funcional |
-| [034](nep-034-convencao-prefixo-xx-helpers-module-level.md) | Convenção de prefixo `_xx_` em helpers | ⚠️ Parcial | 🟡 Baixo | Manutenção incremental |
+| [031](nep-031-lacunas-modelo-custo-operacional.md) | Lacunas do modelo de custo operacional | ✅ Implementado | 🟠 Alto | L2 diesel ✅; L3 manutenção equipamentos ✅ (auditado 2026-06-10) |
+| [032](nep-032-expurgo-precos-unitarios-sbdi-precificacao-bottom-up.md) | Expurgo de `precos_unitarios_sbdi` — precificação bottom-up | ✅ Implementado | 🔴 Crítico | `_compute_preco_cat_from_production()` é rota primária; sbdi emite `VAL-PLAN-SBDI-LEGADO` (auditado 2026-06-10) |
+| [033](nep-033-migracao-pdf-renderer-reportlab.md) | Migração PDF renderer: fpdf2 → ReportLab | ✅ Implementado | 🟡 Baixo | RL default desde antes; docstring e docs atualizados (2026-06-10) |
+| [034](nep-034-convencao-prefixo-xx-helpers-module-level.md) | Convenção de prefixo `_xx_` em helpers | ✅ Implementado | 🟡 Baixo | Single underscore uniforme em 93+ helpers de skill-05 (auditado 2026-06-10) |
 | [035](nep-035-decomposicao-eficiencia-eta-s-p-w-observabilidade.md) | Decomposição Causal da Eficiência η_s × η_p × η_w | 📄 Implementado | 🔴 Crítico | Auditado 2026-06-08 |
 | [036](nep-036-campo-eficiencia-matricial-log-linear.md) | Campo de Eficiência Matricial E ∈ ℝ^{I×T} | 📄 Implementado | 🟠 Alto | Auditado 2026-06-08 |
-| [037](nep-037-encargos-sociais-do-custo-direto-para-bdi.md) | Migração dos Encargos Sociais para a Camada BDI | ⚠️ Parcial | 🔴 Crítico | S2: D1-D4 feitos; fe_nec revisado |
+| [037](nep-037-encargos-sociais-do-custo-direto-para-bdi.md) | Migração dos Encargos Sociais para a Camada BDI | ✅ Implementado | 🔴 Crítico | F1-F3 já existiam; F5 memorial adicionado 2026-06-10; F4 mantido por decisão deliberada |
 | [038](nep-038-criticidade-rcpsp-compressao-cronograma.md) | Criticidade RCPSP e Teoria de Compressão de Cronograma | 📄 Implementado | 🟡 Alta | Auditado 2026-06-08 |
-| [039](nep-039-ciclo-de-vida-benchmark-projeto.md) | Ciclo de vida benchmark-projeto e governança | ⚠️ Parcial | 🟠 Alto | Modelos presentes; MCP tools pendentes |
+| [039](nep-039-ciclo-de-vida-benchmark-projeto.md) | Ciclo de vida benchmark-projeto e governança | ✅ Implementado | 🟠 Alto | Fases 1-4 completas; proveniência exposta via consultar_status (2026-06-10) |
 | [040](nep-040-implementacao-decomposicao-instancial-custos.md) | Implementação da Decomposição Instancial (`custo_inst_*`) | 📄 Implementado | 🔴 Crítico | Auditado 2026-06-08 |
-| [041](nep-041-consolidacao-skills-analise-saida.md) | Consolidação de Skills de Análise, Saída e Financeiro (09+15, 13+14, 06+07+08, freeze 11+12) | 💡 Proposta | 🟠 Alto | Aguarda implementação |
+| [041](nep-041-consolidacao-skills-analise-saida.md) | Consolidação de Skills de Análise, Saída e Financeiro (09+15, 13+14, 06+07+08, freeze 11+12) | ✅ Implementado | 🟠 Alto | Fases 1-4 ✅ (2026-06-11): pipeline 15→11 skills; gate AGIS paridade exata; Fase 5 (re-enumeração cosmética) deferida |
+| [042](nep-042-modelo-tres-camadas-precificacao.md) | Modelo de Três Camadas de Precificação — PU_cat, PU_op_autonomo, burden_pool | ✅ Implementado | 🟠 Alto | D1-D3 campos no PontoEquilibrio; D4 view PRECO_UNITARIO_TRES_CAMADAS no relatório (2026-06-10) |
+| [043](nep-043-reconciliacao-cr-custo-operacional-pu-catalogo.md) | Reconciliação C_r: custo operacional de equipe deve ser idêntico ao PU de catálogo | 💡 Proposta | 🔴 Crítico | 3 bugs: ADR-091 n_frentes sem compensar, encargos ausentes em skill-06, custo_hora_total_referencia ambíguo. Usar encargo_resolver.py como fonte única. |
 
 ---
 
@@ -77,9 +79,9 @@
 
 | Sprint | NEPs / ADRs | Entregável | Estado |
 |---|---|---|---|
-| **S1** | NEP-032 + NEP-029 | Base de preço correta em toda a pipeline | 🔵 Em andamento |
-| **S2** | NEP-031 + NEP-037 | Modelo de custo completo + encargos separados | ✅ Parcialmente concluído |
-| **S3** | ADR-105 + ADR-106 F1-F4 | Engine unificado + janelas de mobilização | 💡 Aguarda S1 |
-| **S4** | ADR-106 F5-F6 + NEP-030 | Early dismissal EQ + benchmark limpo | 💡 Aguarda S3 |
+| **S1** | NEP-032 ✅ + NEP-029 ⚠️ | Base de preço correta em toda a pipeline | ⚠️ NEP-032 concluído; NEP-029 parcial (falta overlay AGIS) |
+| **S2** | NEP-031 ✅ + NEP-037 ✅ + ADR-097 F1-F4 ✅ | Modelo de custo completo + encargos separados + centralizações | ✅ Concluído (2026-06-10) |
+| **S3** | ADR-105 F1-F3 ✅ + ADR-106 F1-F4/F7 ✅ + ADR-105 F4-F5 + ADR-106 F5-F6 | Engine unificado + fases mob/op/demob | ⚠️ F1-F4/F7 implementados; F5-F6 deferred (catálogo); ADR-105 F4-F5 aguardam dados |
+| **S4** | NEP-030 + NEP-039 | Injeção honesta benchmark + ciclo de vida | 💡 Aguarda S3 |
 
 Ver [plano completo](../implementation_plan/plano_engine_custo_sprint_roadmap.md).

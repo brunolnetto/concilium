@@ -213,6 +213,17 @@ Quando o desdobramento em §2.1 for implementado (Sprint S3), o `detalhamento` m
 - **F4** — Extrair fase `operacao` dos equipamentos de `indiretos.adm.txt`
 - **F5** — Desdobrar entrada única MOB nas três entradas de fase do §2.1 + alinhar `categoria`→`tipo`
 
+**Pré-requisito estrutural implementado (2026-06-10 — precede Sprint S3):**
+
+`EquipeDireta` agora tem os campos receptores das fases, todos com `default=0.0`:
+- `custo_mobilizacao_mensal` — custo de transporte + montagem na chegada
+- `custo_operacao_mensal` — custos fixos recorrentes de canteiro (≠ mob/demob)
+- `custo_desmobilizacao_mensal` — custo de desmontagem + transporte de retorno
+
+Invariante documentado: `custo_mobilizacao_mensal + custo_desmobilizacao_mensal ≈ custo_mob_desmob`.
+`custo_operacao_mensal` é independente — captura canteiro em `indiretos.adm` (F4).
+8 testes em `tests/unit/test_adr105_f1f3_mob_fases.py` validam os campos e retrocompatibilidade.
+
 ### 2.4 Eliminação de rcpsp_spec
 
 Com esta política, `spec.rcpsp_spec` pode ser eliminado completamente:

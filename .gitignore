@@ -50,7 +50,11 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 
-# ADR-100: DuckDB catalog cache (gerado localmente, não versionado)
+# Projetos criados localmente pelo CLI (artefatos de runtime, não versionados)
+projetos/
+
+# ADR-100: DuckDB catalog cache + diretório de cache local do CLI
+.concilium/
 catalog.duckdb
 catalog.duckdb.timestamp
 *.duckdb

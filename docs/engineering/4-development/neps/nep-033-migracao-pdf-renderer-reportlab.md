@@ -1,6 +1,6 @@
 # ADR-083 — Migração do Renderizador PDF para ReportLab
 
-**Status:** Proposto  
+**Status:** Implementado ✅ _(2026-06-10: pdf_renderer_rl.py ativo por default; fpdf2 como fallback via CONCILIUM__PDF_RENDERER=fpdf2)_  
 **Autor:** Engenharia de Produto  
 **Data:** 2025  
 **Categoria:** Infraestrutura de Deliverables  

@@ -1,6 +1,6 @@
 # ADR-101 — MCP Apps: Interface Interativa de Relatórios e Formulários no Chat
 
-**Status:** Parcialmente Implementado — Fases 1–2 ✅ | Fases 3–5 🔴 Proposta _(auditado 2026-06-08)_
+**Status:** Parcialmente Implementado ⚠️ — Fases 1–5 ✅ implementadas (2026-06-10) | Fases 3–5 funcionais (dados reais via push); sliders de replan F4 e Gantt/Excel F5 ficam como evolução futura
 **Data:** 2026-06-03
 
 > **Nota de auditoria (2026-06-08):** Apps MCP confirmados em

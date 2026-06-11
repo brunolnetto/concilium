@@ -131,7 +131,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [065](ADR-065-tema-visual-entity.md) | `TemaVisual` como Entidade de Primeira Classe — Separação de Identidade Visual | ✅ Implementado | ADR-062, ADR-064, ADR-048 |
 | [066](ADR-066-catalog-overlay-model-single-source-of-truth.md) | Catálogo com Fonte Única de Verdade + Composição por Overlay | ✅ Implementado | ADR-040, ADR-032, ADR-041, ADR-018, ADR-043 |
 | [067](ADR-067-master-catalog-write-api.md) | API de Escrita no Catálogo Mestre | ✅ Implementado | ADR-040, ADR-066, ADR-064, ADR-041 |
-| [068](ADR-068-calendario-operacional-feriados-recesso.md) | Calendario Operacional de Producao (Feriados e Recesso) | 🔴 Proposto | ADR-007, ADR-038, ADR-046, ADR-058, ADR-060, ADR-061 |
+| [068](ADR-068-calendario-operacional-feriados-recesso.md) | Calendario Operacional de Producao (Feriados e Recesso) | ✅ Implementado _(loader com precedência Projeto>Jurisdição>Global; fator_calendario em η_p; render Excel + rotas API; auditado 2026-06-10)_ | ADR-007, ADR-038, ADR-046, ADR-058, ADR-060, ADR-061 |
 | [069](ADR-069-cubo-analitico-faces-granularidades-ux.md) | Cubo Analitico Navegavel por Faces, Medidas e Granularidades para UX Analitica | ✅ Implementado | ADR-058, ADR-059, ADR-060, ADR-061, ADR-068, NEP-024 |
 | [070](ADR-070-exploracao-deterministica-espaco-configuracao-go.md) | Exploracao Deterministica do Espaco de Configuracao Operacional para Viabilidade de GO | 🔴 Proposto | ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061 |
 | [071](ADR-071-resource-contract-model.md) | Resource Contract Model — Custo de Pool de Recursos por Contrato | ✅ Implementado | ADR-046, ADR-016, ADR-030, ADR-072 |
@@ -195,7 +195,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 
 | # | Título | Status | Dependências |
 |---|---|---|---|
-| [097](ADR-097-tributacao-social.md) | Modelagem de Tributação Social sobre Salário Base — Encargos SINTRACON, INSS Progressivo e IRRF 2026 | 🔄 Parcialmente Implementado | ADR-056, ADR-009, ADR-023 |
+| [097](ADR-097-tributacao-social.md) | Modelagem de Tributação Social sobre Salário Base — Encargos SINTRACON, INSS Progressivo e IRRF 2026 | ✅ Implementado _(F1-F5 ✅ 2026-06-10; F6 MCP People&Finance 💡)_ | ADR-056, ADR-009, ADR-023 |
 
 ### ADRs de Segurança e Resiliência (098–099)
 
@@ -209,13 +209,13 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | # | Título | Status | Dependências |
 |---|---|---|---|
 | [100](ADR-100-catalog-query-engine-duckdb.md) | Catalog Query Engine: DuckDB para Performance | ✅ Implementado | ADR-012, ADR-066 |
-| [101](ADR-101-mcp-apps-interface-interativa.md) | MCP Apps — Interface Interativa no Chat | ⚠️ Parcial _(Fases 1-2 ✅, 3-5 💡)_ | ADR-092, ADR-093, ADR-099 |
+| [101](ADR-101-mcp-apps-interface-interativa.md) | MCP Apps — Interface Interativa no Chat | ⚠️ Parcial _(F1-5 ✅ 2026-06-10; sliders replan + Gantt/Excel como evolução futura)_ | ADR-092, ADR-093, ADR-099 |
 | [102](ADR-102-pipeline-jobs-async-execution.md) | Pipeline Jobs: Execução Assíncrona | ✅ Implementado | ADR-036, ADR-050 |
-| [103](ADR-103-mcp-apps-interface-interativa.md) | _(ver ADR-101 — possível duplicata)_ | ? | — |
+| [103](ADR-103-jobs-application-layer.md) | Pipeline Jobs na Camada de Aplicação — refatoração de jobs assíncronos para `application/` (Clean Architecture) | ✅ Implementado | ADR-102 |
 | [104](adr-104-centralizacao-calculo-custos-equipedireta.md) | Centralização de Cálculos de Custo em EquipeDireta | ✅ Implementado _(auditado 2026-06-08)_ | ADR-085, ADR-071, NEP-040 |
-| [105](ADR-105-mobilizacao-desmobilizacao-workforce-equipment.md) | Mobilização e Desmobilização de MO e Equipamentos | ⚠️ Parcial _(mob_schedule inferido; detalhamento MOB §2.5 extraído; desdobramento fases + operação aguardam S3)_ | ADR-046, ADR-071, ADR-085 |
-| [106](adr-106-equipe-custo-engine-lifecycle-unificado.md) | EquipeCustoEngine — Lifecycle Unificado Diretas e Indiretas | ⚠️ Parcial _(gap_pool corrigido; engine F1-F8 pendente)_ | ADR-085, ADR-104, NEP-029, NEP-031, NEP-037 |
-| [107](adr-107-generalizacao-tipo-combustivel.md) | Generalização do Tipo de Combustível: DIESEL → COMBUSTIVEL + tipo_combustivel | 💡 Proposta | ADR-030, ADR-082, ADR-085, ADR-090, ADR-092 |
+| [105](ADR-105-mobilizacao-desmobilizacao-workforce-equipment.md) | Mobilização e Desmobilização de MO e Equipamentos | ⚠️ Parcial _(campos custo_mobilizacao/operacao/desmobilizacao_mensal adicionados ✅ 2026-06-10; desdobramento fases F1-F5 aguarda S3)_ | ADR-046, ADR-071, ADR-085 |
+| [106](adr-106-equipe-custo-engine-lifecycle-unificado.md) | EquipeCustoEngine — Lifecycle Unificado Diretas e Indiretas | ⚠️ Parcial _(F1-F4, F7 ✅ 2026-06-10; F5-F6 deferred; F8 💡)_ | ADR-085, ADR-104, NEP-029, NEP-031, NEP-037 |
+| [107](adr-107-generalizacao-tipo-combustivel.md) | Generalização do Tipo de Combustível: DIESEL → COMBUSTIVEL + tipo_combustivel | ✅ Implementado _(D1-D4, D6 ✅ 2026-06-10; D5 analytics aguarda ADR-106)_ | ADR-030, ADR-082, ADR-085, ADR-090, ADR-092 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 
