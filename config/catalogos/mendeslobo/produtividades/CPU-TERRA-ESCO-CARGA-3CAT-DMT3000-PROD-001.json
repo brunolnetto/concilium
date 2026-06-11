@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-PROD-001",
   "codigo": "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-PROD-001",
   "descricao": "ESCO Carga 3aCat DMT 2000-3000m — Planilha AGIS 2026-05",
-  "origem": "PLANILHA_AGIS_2026_05",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "PLANILHA_AGIS_2026_05",
+    "data_calibracao": "2026-05-01T00:00:00Z",
+    "referencia": "Planilha AGIS 2026-05"
+  },
   "valor_horario": 142.16,
   "composicao_padrao_equipe": {
     "funcoes": [
@@ -12,7 +17,7 @@
       },
       {
         "funcao_id": "AGIS-FN-AJUD",
-        "num_pessoas": 0.5
+        "num_pessoas": 1
       },
       {
         "funcao_id": "AGIS-FN-MOTOR-BASC",
@@ -23,14 +28,13 @@
       {
         "equip_id": "AGIS-E0016",
         "num_unidades": 1,
-        "consumo_litros_hora": 30.0
+        "consumo_litros_hora_estimado": 30.0
       },
       {
         "equip_id": "AGIS-E0004",
         "num_unidades": 8,
-        "consumo_litros_hora": 3.0
+        "consumo_litros_hora_estimado": 3.0
       }
     ]
-  },
-  "custo_hora_total_referencia": 2590.87
+  }
 }

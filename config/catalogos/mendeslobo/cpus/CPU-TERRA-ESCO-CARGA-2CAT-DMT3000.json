@@ -20,6 +20,6 @@
     "total": 14.039583
   },
   "producao_id_ref": "CPU-TERRA-ESCO-CARGA-2CAT-DMT3000-PROD-001",
-  "custo_direto_unitario_planilha_engine": 14.039583,
-  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=1079.2 + B_base=331.4×(1+1.777) + diesel_SICRO=229.6) / C=158.78 = 14.0396 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L."
+  "_nota_pu_engine": "NEP-029 recalibrado: PU = (A_equip=1079.2 + B_base=331.4×(1+1.777) + diesel_SICRO=229.6) / C=158.78 = 14.0396 R$/un. Encargos CLT horista 177.7% incluídos. Diesel SICRO BR-CE 5.397 R$/L.",
+  "_custo_direto_unitario_planilha_engine": 14.039583
 }

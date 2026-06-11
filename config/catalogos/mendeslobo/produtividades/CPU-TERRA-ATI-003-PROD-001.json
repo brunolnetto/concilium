@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-ATI-003-PROD-001",
   "codigo": "CPU-TERRA-ATI-003-PROD-001",
   "descricao": "Desmatamento e Limpeza área vegetada — Planilha AGIS 2026-05",
-  "origem": "PLANILHA_AGIS_2026_05",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "PLANILHA_AGIS_2026_05",
+    "data_calibracao": "2026-05-01T00:00:00Z",
+    "referencia": "Planilha AGIS 2026-05"
+  },
   "valor_horario": 738.0,
   "composicao_padrao_equipe": {
     "funcoes": [
@@ -12,7 +17,7 @@
       },
       {
         "funcao_id": "AGIS-FN-OPER-ESCAV",
-        "num_pessoas": 0.17
+        "num_pessoas": 1
       },
       {
         "funcao_id": "AGIS-FN-OPER-MOTOSSERRA",
@@ -24,11 +29,11 @@
       },
       {
         "funcao_id": "AGIS-FN-ENCAR",
-        "num_pessoas": 0.17
+        "num_pessoas": 1
       },
       {
         "funcao_id": "AGIS-FN-APONTADOR",
-        "num_pessoas": 0.17
+        "num_pessoas": 1
       },
       {
         "funcao_id": "AGIS-FN-SINALEIRO",
@@ -39,20 +44,18 @@
       {
         "equip_id": "AGIS-TRAT-EST-20T",
         "num_unidades": 1,
-        "consumo_litros_hora": 26.0
+        "consumo_litros_hora_estimado": 26.0
       },
       {
         "equip_id": "AGIS-ESCAV-22T",
-        "num_unidades": 0.17,
-        "consumo_litros_hora": 22.0
+        "num_unidades": 1,
+        "consumo_litros_hora_estimado": 22.0
       },
       {
         "equip_id": "AGIS-MOTOSSERRA",
         "num_unidades": 1,
-        "combustivel": "gasolina",
-        "consumo_litros_hora": 1.5
+        "consumo_litros_hora_estimado": 1.5
       }
     ]
-  },
-  "custo_hora_total_referencia": 644.74
+  }
 }

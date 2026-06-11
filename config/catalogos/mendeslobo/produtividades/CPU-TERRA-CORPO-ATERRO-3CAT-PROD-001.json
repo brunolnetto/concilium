@@ -2,7 +2,12 @@
   "id": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
   "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
   "descricao": "Construção Corpo Aterro 3aCat — Planilha AGIS 2026-05",
-  "origem": "PLANILHA_AGIS_2026_05",
+  "origem": {
+    "tipo": "estimado",
+    "fonte_id": "PLANILHA_AGIS_2026_05",
+    "data_calibracao": "2026-05-01T00:00:00Z",
+    "referencia": "Planilha AGIS 2026-05"
+  },
   "valor_horario": 214.92,
   "composicao_padrao_equipe": {
     "funcoes": [
@@ -24,21 +29,20 @@
       },
       {
         "funcao_id": "AGIS-FN-ENCAR",
-        "num_pessoas": 0.5
+        "num_pessoas": 1
       }
     ],
     "equipamentos": [
       {
         "equip_id": "AGIS-ROLO-PC-10T",
         "num_unidades": 2,
-        "consumo_litros_hora": 16.0
+        "consumo_litros_hora_estimado": 16.0
       },
       {
         "equip_id": "AGIS-TRAT-EST-40T",
         "num_unidades": 1,
-        "consumo_litros_hora": 32.0
+        "consumo_litros_hora_estimado": 32.0
       }
     ]
-  },
-  "custo_hora_total_referencia": 1262.23
+  }
 }

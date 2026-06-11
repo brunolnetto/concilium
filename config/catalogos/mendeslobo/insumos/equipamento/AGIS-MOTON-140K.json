@@ -1,1 +1,15 @@
-{"codigo":"AGIS-MOTON-140K","tipo":"EQUIPAMENTO","descricao":"Motoniveladora 140K","unidade":"h","preco_unitario":254.64,"fonte_preco":"PLANILHA_AGIS_2026_05","data_referencia_preco":"2026-05-01","categoria":"TERRAPLENAGEM","atributos_especificos":{"consumo_litros_hora":22.0,"horas_mes":200,"rental_unit":"hora_produtiva"}}
+{
+  "codigo": "AGIS-MOTON-140K",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Motoniveladora 140K",
+  "unidade": "h",
+  "preco_unitario": 254.64,
+  "fonte_preco": "PLANILHA_AGIS_2026_05",
+  "data_referencia_preco": "2026-05-01",
+  "categoria": "TERRAPLENAGEM",
+  "atributos_especificos": {
+    "consumo_litros_hora": 22.0,
+    "horas_mes": 200,
+    "_rental_unit": "hora_produtiva"
+  }
+}
