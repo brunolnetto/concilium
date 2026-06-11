@@ -1068,3 +1068,57 @@ def _build_diagnostico_pe(
 
         logging.getLogger(__name__).warning("DiagnosticoPE falhou (best-effort): %s", exc)
         return None, None
+
+
+# ---------------------------------------------------------------------------
+# ADR-106 F8 — Pool occupancy face builder (stub)
+# ---------------------------------------------------------------------------
+
+
+def _build_cubo_pool_face(
+    equipes_diretas: list,
+    cronograma: list,
+    projeto_id: str = "",
+) -> "Any":
+    """Constrói a face de ocupação do pool por semana e tipo de recurso (ADR-106 F8 stub).
+
+    Esta função é um stub para a implementação futura (ADR-106 F8).
+    Retorna um ``CuboPoolFace`` com as células de ocupação derivadas das equipes
+    diretas e do cronograma.
+
+    Dimensões da face:
+      - ``item_id``: atividade EAP que gerou a demanda
+      - ``semana``: semana ISO ou sequencial
+      - ``tipo_recurso``: tipo de recurso (EQUIP-* ou FUNC-*)
+
+    Medidas:
+      - ``horas_ativas``: horas produtivas do recurso na semana
+      - ``horas_idle``: horas ociosas (mobilizado, sem atividade)
+      - ``custo_ativo``: custo do componente produtivo (MO + EQ em prod)
+      - ``custo_idle``: custo ocioso (MO integral + EQ reduzida em idle)
+      - ``estado``: "mobilizando" | "ativo" | "idle" | "desmobilizando" | "off"
+
+    Args:
+        equipes_diretas: lista de EquipeDireta com custo_inst_* preenchidos.
+        cronograma: lista de itens do cronograma (atividades com datas/semanas).
+        projeto_id: identificador do projeto (para rastreabilidade).
+
+    Returns:
+        CuboPoolFace com células de ocupação. Retorna face vazia se inputs
+        insuficientes (equipes sem dados de pool ou cronograma vazio).
+
+    Note:
+        ADR-106 F8 está marcado como pendente — aguarda ADR-086 extensão.
+        Esta stub retorna apenas estrutura vazia, garantindo que o contrato
+        de tipo está correto e os consumidores podem ser escritos e testados.
+    """
+    import datetime
+
+    from concilium.domain.models.cubo_pool import CuboPoolFace
+
+    gerado_em = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    return CuboPoolFace(
+        projeto_id=projeto_id,
+        gerado_em=gerado_em,
+        celulas=(),
+    )

@@ -258,6 +258,9 @@ class LifecycleEngine:
         mob_window: float = 0.0,
         demob_window: float = 0.0,
         semanas_off: int = 0,
+        leadtime_mob_semanas: int = 0,
+        lag_demob_semanas: int = 0,
+        trailing_weeks_eq: int = 0,
     ) -> CustoEquipeDecomposicao:
         """Calcula decomposição de custo para um ciclo de vida de equipe.
 
@@ -272,9 +275,20 @@ class LifecycleEngine:
             c_mob: custo de mobilização (evento de entrada).
             c_demob: custo de desmobilização normal (evento de saída).
             c_demob_efetivo: custo de desmob antecipada (early dismissal EQ).
-            mob_window: custo da janela de mobilização (ADR-106 F5 — default=0).
-            demob_window: custo da janela de desmob (ADR-106 F5 — default=0).
+            mob_window: custo pré-calculado da janela de mobilização (ADR-106 F5).
+                Se leadtime_mob_semanas > 0, este valor é ignorado e recalculado.
+            demob_window: custo pré-calculado da janela de desmob (ADR-106 F5).
+                Se lag_demob_semanas > 0, este valor é ignorado e recalculado.
             semanas_off: semanas fora do ciclo (custo zero — informativo).
+            leadtime_mob_semanas: semanas de pré-ativação (ADR-106 F5).
+                Custo da janela: (c_mo + c_eq) × leadtime_mob_semanas.
+                0 = sem janela (backward compat).
+            lag_demob_semanas: semanas pós-atividade (ADR-106 F5).
+                Custo da janela: (c_mo + c_eq) × lag_demob_semanas.
+                0 = sem janela (backward compat).
+            trailing_weeks_eq: semanas de EQ trailing (ADR-106 F6 — early dismissal EQ).
+                Se economia_eq = c_idle_eq × trailing_weeks_eq - c_demob > 0, EQ é
+                devolvida antecipadamente. MO não é afetada (CLT).
 
         Returns:
             CustoEquipeDecomposicao com decomposição completa e total auditável.
@@ -286,6 +300,24 @@ class LifecycleEngine:
 
         idle_mo = round(c_mo * idle_weeks, 2)  # MO integral durante ociosidade (CLT)
         idle_eq = round(c_idle_eq * idle_weeks, 2)  # EQ à taxa de locação reduzida
+
+        # ADR-106 F5 — Mob window: custo (c_mo + c_eq) × leadtime/lag semanas.
+        # Sem combustível nem material (recursos transitando, sem produção).
+        if leadtime_mob_semanas > 0:
+            mob_window = round((c_mo + c_eq) * leadtime_mob_semanas, 2)
+        if lag_demob_semanas > 0:
+            demob_window = round((c_mo + c_eq) * lag_demob_semanas, 2)
+
+        # ADR-106 F6 — Early dismissal para EQ (CLT protege MO).
+        # Se devolução antecipada economiza mais que o custo de c_demob_eq,
+        # substitui c_demob_efetivo pelo custo de devolução antecipada (c_demob).
+        # MO continua sendo paga (aviso prévio — não modelado aqui).
+        if trailing_weeks_eq > 0 and c_idle_eq > 0:
+            economia_eq = round(c_idle_eq * trailing_weeks_eq - c_demob, 2)
+            if economia_eq > 0:
+                # Devolver EQ antecipadamente: custo = c_demob (evento de saída EQ)
+                # c_demob_efetivo recebe o custo de desmob efetivo da EQ
+                c_demob_efetivo = c_demob if c_demob_efetivo == 0.0 else c_demob_efetivo
 
         mob = round(c_mob, 2)
         demob = round(c_demob + c_demob_efetivo, 2)

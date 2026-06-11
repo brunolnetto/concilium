@@ -284,3 +284,15 @@ class TaxRegime:  # não é StrEnum para evitar dependência de importação em 
 
 
 TAX_REGIME_PADRAO: str = TaxRegime.LUCRO_PRESUMIDO
+
+
+# ── ADR-106 F5 — Janelas de mobilização/desmobilização (mob window) ────────────
+#
+# Padrões para equipes diretas em obras de terraplenagem (categoria default).
+# Podem ser sobrescritos por CPU.mob_policy.leadtime_mob_semanas no catálogo.
+#
+# leadtime_mob_semanas: semanas de pré-ativação (EQ chegando, MO treinando).
+# lag_demob_semanas: semanas pós-atividade (EQ sendo devolvida, desmontagem).
+# Custo da janela: (c_mo + c_eq_locacao) × n_semanas (sem combustível nem material).
+DEFAULT_LEADTIME_MOB_SEMANAS: int = 2  # 2 semanas de leadtime de mob (padrão terraplenagem)
+DEFAULT_LAG_DEMOB_SEMANAS: int = 1  # 1 semana de lag de demob (padrão terraplenagem)

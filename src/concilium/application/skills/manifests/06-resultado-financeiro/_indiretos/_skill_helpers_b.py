@@ -525,3 +525,94 @@ def _apply_bdi_to_indiretos(
             )
         )
     return indiretos_com_bdi_out
+
+
+# ---------------------------------------------------------------------------
+# ADR-105 F4/F5 — Distribuição de fases MOB: mobilizacao / operacao / desmobilizacao
+# ---------------------------------------------------------------------------
+
+
+def _distribuir_mob_fases(
+    mob_items: list[dict],
+    duracao_semanas: int,
+) -> dict:
+    """Distribui itens MOB com fases explícitas em custos por semana (ADR-105 F4/F5).
+
+    Suporta três fases tipificadas para itens com campo ``fase``:
+
+    - ``driver="projeto", fase="mobilizacao"``: custo único na semana 0 (início).
+    - ``driver="mensal", fase="operacao"``: custo distribuído proporcionalmente
+      ao longo de todas as semanas (custo_fixo_mensal × duracao_meses).
+    - ``driver="projeto", fase="desmobilizacao"``: custo único na semana final
+      (semana duracao_semanas - 1).
+
+    Itens sem campo ``fase`` (legado) são passados adiante sem processamento
+    — backward compat: não alteram o resultado.
+
+    Args:
+        mob_items: lista de dicts com chaves ``tipo``, ``fase``, ``driver``,
+            ``custo_fixo_total`` ou ``custo_fixo_mensal``.
+        duracao_semanas: duração total do projeto em semanas (>= 1).
+
+    Returns:
+        Dict com:
+          - ``total_mob``: soma dos ``custo_fixo_total`` de fase=mobilizacao
+          - ``total_operacao``: custo total de fase=operacao (mensal × meses)
+          - ``total_demob``: soma dos ``custo_fixo_total`` de fase=desmobilizacao
+          - ``semanal``: Dict[int, float] → custo por semana (0-indexed)
+    """
+    from concilium.domain.constants import SEMANAS_POR_MES as _SEM_MES
+
+    total_mob = 0.0
+    total_operacao = 0.0
+    total_demob = 0.0
+
+    # Semana última do projeto (0-indexed)
+    semana_final = max(duracao_semanas - 1, 0)
+    duracao_meses = duracao_semanas / _SEM_MES
+
+    # semanal[s] acumula custo de todos os itens na semana s
+    semanal: dict[int, float] = {s: 0.0 for s in range(duracao_semanas)}
+
+    for item in mob_items:
+        fase = item.get("fase")
+        driver = item.get("driver", "")
+
+        if fase is None:
+            # Legado: item sem fase — sem modificação, backward compat
+            continue
+
+        if fase == "mobilizacao" and driver == "projeto":
+            custo = float(item.get("custo_fixo_total", 0.0) or 0.0)
+            total_mob += custo
+            if duracao_semanas > 0:
+                semanal[0] = round(semanal[0] + custo, 2)
+
+        elif fase == "operacao" and driver == "mensal":
+            custo_mensal = float(item.get("custo_fixo_mensal", 0.0) or 0.0)
+            custo_total_op = custo_mensal * duracao_meses
+            total_operacao += custo_total_op
+            if duracao_semanas > 0:
+                custo_por_semana = custo_total_op / duracao_semanas
+                acumulado = 0.0
+                for s in range(duracao_semanas):
+                    if s < duracao_semanas - 1:
+                        parcela = round(custo_por_semana, 2)
+                    else:
+                        # última semana recebe o resíduo para preservar conservação
+                        parcela = round(custo_total_op - acumulado, 2)
+                    semanal[s] = round(semanal[s] + parcela, 2)
+                    acumulado += parcela
+
+        elif fase == "desmobilizacao" and driver == "projeto":
+            custo = float(item.get("custo_fixo_total", 0.0) or 0.0)
+            total_demob += custo
+            if duracao_semanas > 0:
+                semanal[semana_final] = round(semanal[semana_final] + custo, 2)
+
+    return {
+        "total_mob": round(total_mob, 2),
+        "total_operacao": round(total_operacao, 2),
+        "total_demob": round(total_demob, 2),
+        "semanal": semanal,
+    }

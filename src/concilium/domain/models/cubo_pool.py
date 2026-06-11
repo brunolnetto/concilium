@@ -241,3 +241,129 @@ def _measure_value(c: CelulaPoolInstancial, measure: str) -> float:
     if measure in ("custo_mo", "custo_eq", "custo_comb", "custo_mat"):
         return getattr(c, measure)
     return c.custo_total
+
+
+# ---------------------------------------------------------------------------
+# ADR-106 F8 — CuboPoolFace: face de ocupação de recursos do pool
+# ---------------------------------------------------------------------------
+
+EstadoOcupacao = Literal["mobilizando", "ativo", "idle", "desmobilizando", "off"]
+
+
+@dataclass(frozen=True)
+class CelulaOcupacaoPool:
+    """Grão da face de ocupação do pool (ADR-106 F8).
+
+    Dimensões: item_id × semana × tipo_recurso.
+    Medidas: horas_ativas, horas_idle, custo_ativo, custo_idle, estado.
+    """
+
+    item_id: str           # atividade ou contrato que gera a demanda
+    semana: str            # semana ISO ou sequencial (S001, S002, ...)
+    tipo_recurso: str      # tipo_id do recurso (ex: EQUIP-ESCAV-22T, FUNC-OPER)
+    horas_ativas: float = 0.0
+    horas_idle: float = 0.0
+    custo_ativo: float = 0.0
+    custo_idle: float = 0.0
+    estado: EstadoOcupacao = "ativo"
+
+    @property
+    def utilizacao(self) -> float:
+        """Fração de horas ativas em relação ao total disponível. Range [0, 1]."""
+        total = self.horas_ativas + self.horas_idle
+        return round(self.horas_ativas / total, 4) if total > 0 else 0.0
+
+    @property
+    def custo_total(self) -> float:
+        return round(self.custo_ativo + self.custo_idle, 2)
+
+
+@dataclass(frozen=True)
+class CuboPoolFace:
+    """Face de ocupação do pool por semana e tipo de recurso (ADR-106 F8).
+
+    Dimensões: item_id × semana × tipo_recurso.
+    Medidas: horas_ativas, horas_idle, custo_ativo, custo_idle, estado.
+
+    É uma face complementar ao ``CuboPoolInstancial`` (ADR-086): enquanto
+    o cubo instancial rastreia o estado físico de cada slot individualmente,
+    esta face agrega por tipo de recurso e atividade — mais adequada para
+    relatórios de ocupação e análise de gargalos.
+    """
+
+    projeto_id: str
+    gerado_em: str
+    celulas: tuple[CelulaOcupacaoPool, ...] = field(default_factory=tuple)
+
+    def por_semana(self) -> dict[str, list[CelulaOcupacaoPool]]:
+        """Agrupa células por semana."""
+        out: dict[str, list[CelulaOcupacaoPool]] = {}
+        for c in self.celulas:
+            out.setdefault(c.semana, []).append(c)
+        return out
+
+    def por_tipo_recurso(self) -> dict[str, list[CelulaOcupacaoPool]]:
+        """Agrupa células por tipo_recurso."""
+        out: dict[str, list[CelulaOcupacaoPool]] = {}
+        for c in self.celulas:
+            out.setdefault(c.tipo_recurso, []).append(c)
+        return out
+
+    def custo_total_ativo(self) -> float:
+        return round(sum(c.custo_ativo for c in self.celulas), 2)
+
+    def custo_total_idle(self) -> float:
+        return round(sum(c.custo_idle for c in self.celulas), 2)
+
+    def semanas(self) -> list[str]:
+        """Lista ordenada de semanas presentes."""
+        return sorted({c.semana for c in self.celulas})
+
+    def tipos_recurso(self) -> list[str]:
+        """Lista ordenada de tipos de recurso presentes."""
+        return sorted({c.tipo_recurso for c in self.celulas})
+
+
+# ---------------------------------------------------------------------------
+# ADR-107 D5 — Dimensão tipo_combustivel no cubo analítico
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CelulaCombustivel:
+    """Célula de breakdown de combustível por tipo (ADR-107 D5).
+
+    Permite drill-down por tipo_combustivel no cubo analítico.
+    Dimensões: item_id × semana × tipo_combustivel.
+    """
+
+    item_id: str           # atividade EAP ou equipe
+    semana: str
+    tipo_combustivel: str  # TipoCombustivel value (ex: "diesel_s10", "eletrico", "cng")
+    custo: float = 0.0
+    volume_litros: float = 0.0  # volume consumido (L, kWh, kg — unidade por tipo)
+
+
+@dataclass(frozen=True)
+class CuboCombustivelFace:
+    """Face de combustível do cubo analítico (ADR-107 D5).
+
+    Permite consultas como:
+      - Qual o custo por tipo de combustível neste projeto?
+      - Como mudaria a margem se o diesel subisse 15%?
+    """
+
+    projeto_id: str
+    gerado_em: str
+    celulas: tuple[CelulaCombustivel, ...] = field(default_factory=tuple)
+
+    def custo_por_tipo(self) -> dict[str, float]:
+        """Agrega custo total por tipo de combustível."""
+        out: dict[str, float] = {}
+        for c in self.celulas:
+            out[c.tipo_combustivel] = out.get(c.tipo_combustivel, 0.0) + c.custo
+        return {k: round(v, 2) for k, v in out.items()}
+
+    def tipos_presentes(self) -> list[str]:
+        """Lista de tipos de combustível presentes no projeto."""
+        return sorted({c.tipo_combustivel for c in self.celulas})
