@@ -66,8 +66,11 @@ def _build_planejamento_rows(
 ) -> list[dict]:
     rows: list[dict] = []
     eap_by_item_id = {e.item_id: e for e in canonical_in.eap}
+    # NEP-042: join com ponto_equilibrio para expor as três camadas de precificação
+    pe_by_item = {pe.item_id: pe for pe in (canonical_in.ponto_equilibrio or []) if pe.item_id}
     for p in canonical_in.planejamento:
         eap_item = eap_by_item_id.get(p.item_id)
+        pe = pe_by_item.get(p.item_id)
         row = {
             "item_id": p.item_id,
             "cpu_id": p.cpu_id,
@@ -80,12 +83,62 @@ def _build_planejamento_rows(
             "subtotal_sem_bdi_mat": p.subtotal.sem_bdi.material,
             "subtotal_sem_bdi": p.subtotal.sem_bdi.total,
             "subtotal_com_bdi": p.subtotal.com_bdi.total,
+            # Camada 1 — catálogo
             "pu_total_sem_bdi": p.preco_unitario.total,
             "pu_total_com_bdi": p.preco_unitario_com_bdi.total,
+            # NEP-042: Camada 2 — operacional autônomo
+            "pu_op_autonomo": float(getattr(pe, "pu_operacional_autonomo", 0.0) or 0.0) if pe else 0.0,
+            "frentes_necessarias": float(getattr(pe, "frentes_equivalentes_necessarias", 1.0) or 1.0) if pe else 1.0,
+            "eta_real": float(getattr(pe, "eta_real", 1.0) or 1.0) if pe else 1.0,
+            # NEP-042: Camada 3 — burden de permanência instancial
+            "burden_pool": float(getattr(pe, "custo_pool_total", 0.0) or 0.0) if pe else 0.0,
+            "economia_pool_abs": float(getattr(pe, "economia_pool_abs", 0.0) or 0.0) if pe else 0.0,
         }
         if has_criticidade:
             row["criticidade"] = criticidade_lookup.get(p.item_id, "-")
         rows.append(row)
+    return rows
+
+
+def _build_tres_camadas_rows(canonical_in: CanonicalModel) -> list[dict]:
+    """NEP-042 D4 — view consolidada das três camadas de precificação por item.
+
+    Apresenta lado a lado: PU_cat (catálogo), PU_op_autonomo (operacional),
+    PU_pool (burden instancial), + frentes_necessarias, eta_real e economia de pool.
+    Cada linha é um item da EAP com planejamento; itens sem ponto_equilibrio
+    expõem apenas a camada de catálogo.
+    """
+    rows: list[dict] = []
+    eap_by_item = {e.item_id: e for e in canonical_in.eap}
+    pe_by_item = {pe.item_id: pe for pe in (canonical_in.ponto_equilibrio or []) if pe.item_id}
+    for p in canonical_in.planejamento:
+        eap_item = eap_by_item.get(p.item_id)
+        pe = pe_by_item.get(p.item_id)
+        pu_op = float(getattr(pe, "pu_operacional_autonomo", 0.0) or 0.0) if pe else 0.0
+        economia = float(getattr(pe, "economia_pool_abs", 0.0) or 0.0) if pe else 0.0
+        custo_autonomo = pu_op * p.quantitativo if p.quantitativo else 0.0
+        economia_pct = (economia / custo_autonomo) if custo_autonomo > 0 else 0.0
+        rows.append(
+            {
+                "item_id": p.item_id,
+                "cpu_id": p.cpu_id,
+                "descricao": eap_item.descricao if eap_item else "",
+                "unidade": eap_item.unidade if eap_item else "",
+                "quantitativo": p.quantitativo,
+                # Camada 1 — catálogo
+                "pu_cat": float(p.preco_unitario.total or 0.0),
+                # Camada 2 — operacional autônomo
+                "pu_op_autonomo": pu_op,
+                "frentes_necessarias": float(getattr(pe, "frentes_equivalentes_necessarias", 1.0) or 1.0)
+                if pe
+                else 1.0,
+                "eta_real": float(getattr(pe, "eta_real", 1.0) or 1.0) if pe else 1.0,
+                # Camada 3 — burden de permanência instancial
+                "pu_pool": float(getattr(pe, "custo_pool_por_unidade", 0.0) or 0.0) if pe else 0.0,
+                "economia_pool_abs": economia,
+                "economia_pool_pct": round(economia_pct, 4),
+            }
+        )
     return rows
 
 
@@ -111,6 +164,7 @@ def _build_equipe_rows(canonical_in: CanonicalModel) -> tuple[list[dict], list[d
     def _componentes_operacionais(eq: Any, custo_operacional: float) -> dict[str, float]:
         mensal = {
             "Mão de Obra": float(eq.custo_mao_obra_mensal or 0.0),
+            "Encargos Sociais": float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0),
             "Equipamentos": float(eq.custo_equipamentos_mensal or 0.0),
             "Materiais": float(eq.custo_material_mensal or 0.0),
             "Diesel": float(eq.custo_combustivel_total_mensal or 0.0),
@@ -630,6 +684,15 @@ def _rra_build_pe_rows(canonical_in: CanonicalModel, resultado_section: dict[str
                 "custo_produtivo_particionado": round(custo_produtivo, 2),
                 "custo_mob_demob_particionado": round(custo_mob_demob, 2),
                 "custo_ociosidade_particionado": round(custo_ociosidade, 2),
+                # NEP-042: três camadas de precificação
+                "pu_cat": _f(getattr(pe, "pu_catalogo_unitario", 0.0)),
+                "pu_op_autonomo": _f(getattr(pe, "pu_operacional_autonomo", 0.0)),
+                "frentes_necessarias": _f(getattr(pe, "frentes_equivalentes_necessarias", 1.0)),
+                "eta_real": _f(getattr(pe, "eta_real", 1.0)),
+                "machine_weeks_brutas": _f(getattr(pe, "machine_weeks_brutas", 0.0)),
+                "machine_weeks_efetivas": _f(getattr(pe, "machine_weeks_efetivas", 0.0)),
+                "burden_pool": _f(getattr(pe, "custo_pool_total", 0.0)),
+                "economia_pool_abs": _f(getattr(pe, "economia_pool_abs", 0.0)),
             }
         )
     return rows
@@ -771,6 +834,8 @@ def _rra_build_relatorio(
         "RESULTADO": resultado_section,
         "GRAFICOS": graficos,
         "ponto_equilibrio": _rra_build_pe_rows(canonical_in, resultado_section),
+        # NEP-042 D4: view consolidada das três camadas de precificação por item
+        "PRECO_UNITARIO_TRES_CAMADAS": _build_tres_camadas_rows(canonical_in),
         "ACTIONABLE_INSIGHTS": _rra_build_actionable_insights(canonical_in),
         "validacoes_pipeline": validacoes_pipeline,
         # ADR-077: mapa instancial de utilização

@@ -1,0 +1,23 @@
+[skill]
+id = "13-replanejamento-e-cenarios"
+phase = "Análise"
+version = "1.0.0"
+descricao = "Assessor de replanejamento e exploração do espaço de planos. Unifica 13 (assessor) + 14 (explorador). NEP-041 Fase 2."
+
+[depends_on]
+skills = ["06-resultado-financeiro", "10-diagnostico-criticidade", "05-equipes-e-alocacao"]
+canonical_sections = [
+  "resultado", "resultado_reconciliado", "cost_criticality_report",
+  "conflitos_pico", "indiretos", "equipes_diretas", "cronograma", "ponto_equilibrio"
+]
+
+[produces]
+canonical_section = "replan_e_cenarios"
+validations = ["VAL-REPLAN-01", "VAL-REPLAN-02", "VAL-PSE-01", "VAL-PSE-02", "VAL-PSE-PRECONDICAO"]
+
+[inputs]
+required = []
+optional = ["meta_margem_alvo", "semanas_reducao_alvo", "faixa_duracao_min_pct"]
+
+[snapshots]
+consumed = ["perfil"]

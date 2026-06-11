@@ -337,7 +337,9 @@ def _apply_dv4_scale_to_categoria(
     return custo, cat_obj
 
 
-def _sub_custos_indireto(cat_obj: IndirectoCategoria, custo_total: float, perc_encargos: float = 0.0) -> dict[str, float]:
+def _sub_custos_indireto(
+    cat_obj: IndirectoCategoria, custo_total: float, perc_encargos: float = 0.0
+) -> dict[str, float]:
     """ADR-090: calcula sub-custos por categoria_insumo para BDI diferenciado.
 
     Se os componentes de cat_obj têm custo explícito, usa-os diretamente.
@@ -354,6 +356,17 @@ def _sub_custos_indireto(cat_obj: IndirectoCategoria, custo_total: float, perc_e
     c_mo = _comp_custo(cat_obj.mao_de_obra)
     c_eq = _comp_custo(cat_obj.equipamentos)
     c_verba = _comp_custo(cat_obj.verbas)
+
+    # ADR-090 (correção 2026-06-11): quando a composição explica só PARTE do custo
+    # mensal da categoria (ex.: spec decompõe apenas mao_obra), o resíduo
+    # não-decomposto vai para verba (taxa de indireto — conservadora, igual ao
+    # fallback de composição ausente). Sem isto, o resíduo herdava a classificação
+    # dos componentes presentes (no AGIS: 65% do ADM virava MO → BDI de MO sobre
+    # equipamentos+verbas da planilha).
+    mensal_total = float(getattr(cat_obj, "custo_fixo_mensal", 0.0) or 0.0)
+    c_explicado = c_mo + c_eq + c_verba
+    if mensal_total > c_explicado > 0:
+        c_verba += mensal_total - c_explicado
     c_base = c_mo + c_eq + c_verba
 
     if c_base > 0 and custo_total > 0:
@@ -463,20 +476,19 @@ def _apply_bdi_to_indiretos(
     indiretos_out: list,
     validacoes: list,
 ) -> list[IndiretoComBdi]:
-    tabela_bdi: TabelaBdi = DEFAULT_BDI_TABELA
-    if tabela_bdi_raw is not None:
-        try:
-            tabela_bdi = (
-                TabelaBdi.model_validate(tabela_bdi_raw) if isinstance(tabela_bdi_raw, dict) else tabela_bdi_raw
+    from concilium.domain.models.bdi import resolve_bdi_tabela
+
+    try:
+        tabela_bdi: TabelaBdi = resolve_bdi_tabela(tabela_bdi_raw)
+    except Exception as e:
+        validacoes.append(
+            ValidacaoItem(
+                codigo="VAL-INDIR-BDI-PARSE",
+                status="AVISO",
+                mensagem=f"Falha ao parsear inputs.tabela_bdi: {e}. Usando DEFAULT_BDI_TABELA.",
             )
-        except Exception as e:
-            validacoes.append(
-                ValidacaoItem(
-                    codigo="VAL-INDIR-BDI-PARSE",
-                    status="AVISO",
-                    mensagem=f"Falha ao parsear inputs.tabela_bdi: {e}. Usando DEFAULT_BDI_TABELA.",
-                )
-            )
+        )
+        tabela_bdi = DEFAULT_BDI_TABELA
     bdi_indir = tabela_bdi.indireto.bdi_total
     indiretos_com_bdi_out: list[IndiretoComBdi] = []
     for ind in indiretos_out:

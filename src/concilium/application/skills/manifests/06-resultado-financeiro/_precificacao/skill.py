@@ -72,7 +72,26 @@ def _extract_overrides(inputs: dict[str, Any]) -> dict | None:
     return None
 
 
-def _resolve_bdi(inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> dict[str, float]:
+def _frac_locacao_equipamentos(canonical_in: Any) -> float:
+    """Fração do bucket 'equipamentos' que é locação (vs manutenção), das equipes diretas.
+
+    ADR-088 separa custo_locacao_mensal e custo_manutencao_mensal; o combustível e o
+    operador já estão fora do bucket. Default 1.0 (locação pura) quando não computável —
+    consistente com o catálogo MendesLobo, onde equipamento é modelado como aluguel.
+    """
+    loc = man = 0.0
+    for eq in getattr(canonical_in, "equipes_diretas", None) or []:
+        loc += float(getattr(eq, "custo_locacao_mensal", 0.0) or 0.0)
+        man += float(getattr(eq, "custo_manutencao_mensal", 0.0) or 0.0)
+    total = loc + man
+    return loc / total if total > 0 else 1.0
+
+
+def _resolve_bdi(
+    inputs: dict[str, Any],
+    validacoes: list[ValidacaoItem],
+    frac_locacao: float = 1.0,
+) -> dict[str, float]:
     def _to_flat_bdi(base: dict[str, Any]) -> dict[str, float]:
         material = float(base.get("material", 0.0) or 0.0)
         diesel = float(base.get("diesel", 0.0) or 0.0)
@@ -80,8 +99,13 @@ def _resolve_bdi(inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> dic
         equipamentos_raw = base.get("equipamentos")
 
         if equipamentos_raw is None:
-            # ADR-023 §D3: EQUIP BDI = 70% MAO_OBRA + 30% DIESEL
-            equip = round((0.70 * mao_obra) + (0.30 * diesel), 6)
+            # ADR-023 §D3 (revisado): o bucket equipamentos contém apenas locação +
+            # manutenção (ADR-088 — combustível e operador são categorias próprias).
+            # Locação de bens móveis não sofre ISS (Súmula Vinculante 31/STF) → taxa
+            # de material; manutenção é serviço → taxa de MO. O placeholder 70/30
+            # original aplicava markup de MO/diesel a uma base que não os contém.
+            f = min(max(float(frac_locacao), 0.0), 1.0)
+            equip = round(f * material + (1.0 - f) * mao_obra, 6)
         else:
             equip = float(equipamentos_raw or 0.0)
 
@@ -112,11 +136,13 @@ def _resolve_bdi(inputs: dict[str, Any], validacoes: list[ValidacaoItem]) -> dic
         )
         return resolved
 
-    tabela = None
     tabela_raw = inputs.get("tabela_bdi")
-    if TabelaBdi is not None and tabela_raw is not None:
+    tabela = None
+    if tabela_raw is not None:
         try:
-            tabela = TabelaBdi.model_validate(tabela_raw) if isinstance(tabela_raw, dict) else tabela_raw
+            from concilium.domain.models.bdi import resolve_bdi_tabela
+
+            tabela = resolve_bdi_tabela(tabela_raw)
         except Exception as exc:
             validacoes.append(
                 ValidacaoItem(
@@ -204,24 +230,9 @@ def run_precificacao_unitaria(
     alpha_clt = float(inputs.get("percentual_encargos", ENCARGOS_CLT))
     alpha_mensalista = float(inputs.get("percentual_encargos_mensalista", ENCARGOS_MENSALISTA))
 
-    bdi_aplicado = _resolve_bdi(inputs, validacoes)
+    bdi_aplicado = _resolve_bdi(inputs, validacoes, frac_locacao=_frac_locacao_equipamentos(canonical_in))
     planejamento_item_overrides = inputs.get("planejamento_item_overrides", {})
     benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
-    # NEP-029 D3: ADR-038 removido — compensação produzia cancelamento algébrico da quantidade.
-    # Implementação depreciada; tentativa de ativação gera erro de validação.
-    if inputs.get("apply_adr038_compensation") is not None:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-PLAN-ADR038-BLOCKED",
-                status="ERRO",
-                mensagem=(
-                    "apply_adr038_compensation foi depreciado (NEP-029 D3). "
-                    "ADR-038 produzia cancelamento algébrico: (custo_equipe/Q) × Q = custo_equipe (independente de Q). "
-                    "Use precificação bottom-up canônica via pu_calculator."
-                ),
-            )
-        )
-    apply_compensation = False  # Permanentemente desabilitado
 
     violacoes_bdi = _validar_bdi_dentro_da_faixa(bdi_aplicado)
     if violacoes_bdi:

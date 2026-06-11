@@ -1,0 +1,21 @@
+[skill]
+id = "06-resultado-financeiro"
+phase = "Planejamento"
+gate = true  # ADR-022 / NEP-041 F4: falha em qualquer estágio bloqueia downstream (sem receita não há margem)
+version = "1.0.0"
+descricao = "Precificação unitária, custos indiretos e consolidação financeira. Unifica 06+07+08 (NEP-041 Fase 4)."
+
+[depends_on]
+skills = ["05-equipes-e-alocacao"]
+canonical_sections = ["eap", "equipes_diretas", "projeto"]
+
+[produces]
+canonical_section = "resultado"
+validations = ["VAL-POL-BDI", "VAL-CONSOL-OK"]
+
+[inputs]
+required = []
+optional = ["bdi_aplicado", "composicoes_indireto", "dados_mobilizacao", "perc_encargos", "tabela_bdi"]
+
+[snapshots]
+consumed = ["catalogo", "perfil"]

@@ -204,8 +204,8 @@ def _bcfd_resolve_salario_base(preco: float, unidade: str) -> float:
 
 
 def _bcfd_apply_encargos(salario_base: float, atrib: dict) -> float:
-    """Applies social charges based on categoria_sindical attribute."""
-    from concilium.domain.constants import ENCARGOS_CLT, ENCARGOS_MENSALISTA
+    """Aplica encargos sociais sobre salário-base conforme categoria_sindical."""
+    from concilium.domain.services.encargo_resolver import resolver_encargo
 
     cat_sind = (atrib.get("categoria_sindical") or "").lower()
     if cat_sind.startswith("pj"):
@@ -213,7 +213,7 @@ def _bcfd_apply_encargos(salario_base: float, atrib: dict) -> float:
     override_val = atrib.get("custo_com_encargos")
     if override_val and override_val > 0:
         return float(override_val)
-    enc = ENCARGOS_CLT if cat_sind.startswith("horista") else ENCARGOS_MENSALISTA
+    enc = resolver_encargo(atrib)
     return salario_base * (1 + enc)
 
 

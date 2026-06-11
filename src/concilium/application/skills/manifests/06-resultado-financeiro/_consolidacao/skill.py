@@ -22,7 +22,7 @@ from concilium.domain.models.canonical import (
 
 try:
     from ._skill_helpers_a import (
-        _build_bridge,
+        _build_bridge_from_pe,
         _build_custos_atividades,
         _build_diagnostico_pe,
         _build_ponto_equilibrio,
@@ -46,7 +46,7 @@ except ImportError:
     _mod_b = importlib.util.module_from_spec(_spec_b)  # type: ignore[arg-type]
     _spec_b.loader.exec_module(_mod_b)  # type: ignore[union-attr]
 
-    _build_bridge = _mod_a._build_bridge
+    _build_bridge_from_pe = _mod_a._build_bridge_from_pe
     _build_custos_atividades = _mod_a._build_custos_atividades
     _build_diagnostico_pe = _mod_a._build_diagnostico_pe
     _build_ponto_equilibrio = _mod_a._build_ponto_equilibrio
@@ -95,9 +95,9 @@ def run_consolidacao_financeira(
         margem_reconciliada_pct=margem,
         status_margem_reconciliado=status_margem,
     )
-    bridge_dict = _build_bridge(inputs, venda_sem_bdi, custo_direto_equipe, validacoes)
+    bridge_dict = _build_bridge_from_pe(ponto_equilibrio_items, venda_sem_bdi, custo_direto_equipe, inputs, validacoes)
     custos_atividades = _build_custos_atividades(canonical_in)
-    _diag_pe, _back_pe = _build_diagnostico_pe(canonical_in, custos_atividades, validacoes)
+    _diag_pe, _back_pe = _build_diagnostico_pe(canonical_in, custos_atividades, ponto_equilibrio_items, validacoes)
     curva_abc, s_curve, cubo_analitico = _build_abc_analytics(
         canonical_in, inputs, _bdi_tabela, _bdi_regime, validacoes
     )

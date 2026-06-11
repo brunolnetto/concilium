@@ -52,6 +52,20 @@ except ImportError:
     _rra_build_relatorio = _mod._rra_build_relatorio
     _week_to_month = _mod._week_to_month
 
+# NEP-041 Fase 1: relatório executivo absorvido de skill-15
+try:
+    from ._skill_helpers_executivo import build_relatorio_executivo
+except ImportError:
+    import importlib.util as _ilu
+    from pathlib import Path as _Path
+
+    _spec_ex = _ilu.spec_from_file_location(
+        "skill09_helpers_executivo", _Path(__file__).resolve().parent / "_skill_helpers_executivo.py"
+    )
+    _mod_ex = _ilu.module_from_spec(_spec_ex)  # type: ignore[arg-type]
+    _spec_ex.loader.exec_module(_mod_ex)  # type: ignore[union-attr]
+    build_relatorio_executivo = _mod_ex.build_relatorio_executivo
+
 _MESES_PT = {
     1: "Jan",
     2: "Fev",
@@ -109,6 +123,11 @@ def run_relatorio_e_artefatos(
     proj = canonical_in.projeto
     res = canonical_in.resultado
 
+    # NEP-041 Fase 1: computa relatórios executivos (absorvido de skill-15) e aplica ao canônico
+    _exec_update, _exec_artifacts, _exec_validacoes = build_relatorio_executivo(canonical_in)
+    canonical_in = canonical_in.model_copy(update=_exec_update)
+    validacoes.extend(_exec_validacoes)
+
     criticidade_lookup = _rra_build_criticidade_lookup(canonical_in)
     has_criticidade = bool(criticidade_lookup)
     _add_criticidade_validacoes(canonical_in, has_criticidade, criticidade_lookup, validacoes)
@@ -155,7 +174,8 @@ def run_relatorio_e_artefatos(
     live_bytes = _gerar_live_model(canonical_in, validacoes, gerar_modelo_vivo)
     memorial_json_bytes = _gerar_memorial_json_bytes(canonical_in)
 
-    result = SkillResult(novo, validacoes)
+    # NEP-041 Fase 1: artefatos executivos (criticidade, sensibilidade, intervenção, bridge)
+    result = SkillResult(novo, validacoes, artifacts=_exec_artifacts)
     result.relatorio = relatorio  # type: ignore[attr-defined]
     result.excel_bytes = excel_bytes  # type: ignore[attr-defined]
     result.excel_live_bytes = live_bytes  # type: ignore[attr-defined]

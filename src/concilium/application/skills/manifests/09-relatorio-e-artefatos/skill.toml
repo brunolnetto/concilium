@@ -5,7 +5,7 @@ version = "1.0.0"
 descricao = "Renderiza canônico final em planilha Excel auditável (.xlsm) e incorpora insights executivos quando disponíveis."
 
 [depends_on]
-skills = ["08-consolidacao-financeira"]
+skills = ["06-resultado-financeiro"]
 canonical_sections = ["resultado_reconciliado", "resultado", "planejamento", "equipes_diretas", "indiretos", "relatorio_criticidade", "relatorio_sensibilidade", "relatorio_intervencao"]
 
 [produces]

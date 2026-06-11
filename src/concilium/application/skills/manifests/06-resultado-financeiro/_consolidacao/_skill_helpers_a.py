@@ -11,7 +11,6 @@ e separando os desvios estruturais (escala + clima) do delta real de gestão.
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Any, Literal
 
 from concilium.domain.models.canonical import (
@@ -25,7 +24,6 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
     Venda,
 )
-from concilium.domain.services.bridge_analyzer import BridgeAnalyzer
 
 try:
     from ._skill_helpers_b import _classificar_margem, _resolve_bdi_full
@@ -72,17 +70,35 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         _eq = float(part.custo_inst_eq or 0.0)
         _comb = float(part.custo_inst_comb or 0.0)
         _mat = float(part.custo_inst_mat or 0.0)
+        # Mob+demob+idle: custo contratual além do produtivo — vai para eq_aluguel (BDI_servicos)
+        _mob = float(getattr(part, "custo_mob_imputado", 0.0) or 0.0)
+        _demob = float(getattr(part, "custo_demob_imputado", 0.0) or 0.0)
+        _idle = float(getattr(part, "custo_ocioso_imputado", 0.0) or 0.0)
         cat["mao_obra"] += _mo
-        cat["eq_aluguel"] += _eq
+        cat["eq_aluguel"] += _eq + _mob + _demob + _idle
         cat["material"] += _mat + _comb  # ADR-090: combustivel funde em material
         cat["eq_combustivel"] += _comb  # diagnóstico granular
         contados.add(item_id)
 
-    # 2. Demais itens: decompõe custo_total pelas frações recorrentes
+    # 2. Demais itens: prioriza custo_inst_* se disponível (ADR-106 F7), senão heurística proporcional
     for eq in canonical_in.equipes_diretas:
         if eq.item_id in contados:
             continue
         ct = float(eq.custo_total or 0.0)
+
+        # ADR-106 F7: usar custo_inst_* diretamente quando preenchidos (F3 garantiu isso)
+        if getattr(eq, "custo_inst_mo", None) is not None:
+            _ct_mo = float(eq.custo_inst_mo or 0.0)
+            _ct_eq = float(getattr(eq, "custo_inst_eq", 0.0) or 0.0)
+            _ct_comb = float(getattr(eq, "custo_inst_comb", 0.0) or 0.0)
+            _ct_mat = float(getattr(eq, "custo_inst_mat", 0.0) or 0.0)
+            cat["mao_obra"] += _ct_mo
+            cat["eq_aluguel"] += _ct_eq
+            cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
+            cat["eq_combustivel"] += _ct_comb
+            continue
+
+        # Fallback heurístico (legado) para equipes sem custo_inst_* preenchido
         # NEP-037: incluir encargos na fração de MO para decomposição (encargos ficam em mao_obra)
         _mo_mais_enc = float(eq.custo_mao_obra_mensal or 0.0) + float(getattr(eq, "custo_encargos_mensal", 0.0) or 0.0)
         base = (
@@ -228,12 +244,12 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     """
     venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento)
     venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento)
-    # Custo real de pool: soma custo_total de cada equipe.
-    # No modelo de pool (ADR-071), custo_total já é o custo total atribuído ao item
-    # (fração proporcional ao machine-weeks) — não multiplicar por num_equipes_base.
-    # No modo autônomo legado (sem pool), custo_total era por-frente × permanência,
-    # mas esse caminho está sendo eliminado (ADR-106).
-    custo_direto_equipe = sum(float(e.custo_total or 0.0) for e in canonical_in.equipes_diretas)
+    # NEP-043: custo_total armazena custo de 1 frente (ADR-091 divide por num_equipes_paralelas).
+    # Para obter o custo operacional real da atividade, multiplicar pelo número de frentes.
+    custo_direto_equipe = sum(
+        float(e.custo_total or 0.0) * max(1, int(getattr(e, "num_equipes_base", 1) or 1))
+        for e in canonical_in.equipes_diretas
+    )
     custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
 
     # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
@@ -267,18 +283,16 @@ def _build_resultado(
     )
     custos_indiretos = {ind.categoria: ind.custo_total for ind in canonical_in.indiretos}
 
-    venda_catalogo_plus = round(venda_com_bdi + venda_indireto, 2)
-    venda_plus = round(venda_direto_eq + venda_indireto, 2)
+    venda_catalogo_plus = round(venda_com_bdi + venda_indireto, 2)  # N1×BDI — usado só na bridge
+    venda_plus = round(venda_direto_eq + venda_indireto, 2)  # preço operacional (base do resultado)
 
     # ── Pricing consolidado ───────────────────────────────────────────────────────
-    # custo_operacional_real: o que de fato se gasta para executar o projeto.
-    # Inclui permanência de MO (CLT integral mesmo em ociosidade), aluguel de EQ,
-    # mob/demob, overhead de pool — tudo auditável no CuboPoolInstancial (ADR-086).
-    # O consolidado mantém venda_catalogo_plus como base de resultado e margem.
-    # venda_plus é mantido para análises operacionais complementares.
+    # custo_operacional_real: pool (produtivo + idle + mob/demob) + indiretos.
+    # venda_plus: BDI aplicado sobre custo operacional real por componente.
+    # Margem sempre sobre venda_plus — venda_catalogo_plus é referência de mercado (bridge/N1).
     custo_operacional_real = round(custo_direto + custo_indireto_total, 2)
-    resultado_fin = round(venda_catalogo_plus - custo_operacional_real, 2)
-    margem = resultado_fin / venda_catalogo_plus if venda_catalogo_plus > 0 else 0.0
+    resultado_fin = round(venda_plus - custo_operacional_real, 2)
+    margem = resultado_fin / venda_plus if venda_plus > 0 else 0.0
 
     # markup efetivo: venda_catalogo_plus / custo_real (para auditoria do consolidado)
     bdi_lucro = (venda_catalogo_plus / custo_operacional_real - 1) if custo_operacional_real > 0 else 0.0
@@ -369,9 +383,19 @@ def _lesao_from_sched(sched: Any) -> dict:
     soma_clima = sum(getattr(d, "fator_clima", 1.0) * d.num_equipes for d in dist.values())
     soma_cal = sum(getattr(d, "fator_calendario", 1.0) * d.num_equipes for d in dist.values())
     semanas_lesadas = sum(1 for d in dist.values() if getattr(d, "fator_clima", 1.0) < 0.90)
+    # NEP-042 TD-3: eMW_i = Σ_j(m_{ij} × η_j) usando fator_total (= η_s·η_p·η_w)
+    # Preferir fator_total quando disponível; fallback para fator_clima × fator_calendario
+    emw = sum(
+        d.num_equipes
+        * float(
+            getattr(d, "fator_total", None) or (getattr(d, "fator_clima", 1.0) * getattr(d, "fator_calendario", 1.0))
+        )
+        for d in dist.values()
+    )
     return {
         "team_weeks": team_weeks,
         "active_weeks": active_weeks,
+        "effective_machine_weeks": round(emw, 4),
         "fator_clima": round(soma_clima / team_weeks, 4),
         "fator_cal": round(soma_cal / team_weeks, 4),
         "semanas_lesadas_clima": semanas_lesadas,
@@ -420,6 +444,7 @@ def _build_pe_for_equipe(
     sched_por_item: dict | None = None,
     particao_por_item: dict | None = None,
     idle_por_item: dict | None = None,
+    pool_total_por_item: dict | None = None,
 ) -> PontoEquilibrio | None:
     """Constrói PontoEquilibrio para uma equipe. Retorna None se custo_fixo ≤ 0.
 
@@ -440,10 +465,15 @@ def _build_pe_for_equipe(
     custo_operacional_real = float(equipe.custo_total or 0.0)
     frentes = custo_operacional_real / custo_fixo_total if custo_fixo_total > 0 else 1.0
 
+    # NEP-043: custo_total armazena custo de 1 frente (ADR-091); multiplicar por n_frentes.
+    _n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
+
     # ── ADR-076 campos quantitativos ──────────────────────────────────────────
-    custo_total_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
-    if custo_total_autonomo <= 0 and custo_operacional_real > 0:
-        custo_total_autonomo = custo_operacional_real
+    # custo_total_autonomo: custo da equipe dedicada sem pool (1 frente × n_frentes = total)
+    _custo_1fr_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
+    if _custo_1fr_autonomo <= 0 and custo_operacional_real > 0:
+        _custo_1fr_autonomo = custo_operacional_real
+    custo_total_autonomo = _custo_1fr_autonomo * _n_frentes
 
     # gap_pool_overhead: quando idle_por_item está disponível (pool ativo), usa idle real.
     # Caso contrário, fallback para diferença entre custo operacional e custo autônomo.
@@ -504,12 +534,39 @@ def _build_pe_for_equipe(
     fator_cal_v = lesao.get("fator_cal", 1.0)
     semanas_lesadas_v = lesao.get("semanas_lesadas_clima", 0)
 
-    # ADR-083 §4: gap_praticabilidade — custo excedente por η̄ < 1 (clima/terreno)
-    # Derivação: team_weeks = T_nom/η̄  →  C_real = C_cat/η̄  →  gap = C_real × (1 − η̄)
-    # fator_clima_v é a média ponderada por team-weeks do fator_clima semanal (= η̄).
-    # Sem schedule (lesao vazio): fator_clima_v = 1.0, gap = 0 — comportamento conservador correto.
-    if custo_total_autonomo > 0.0 and fator_clima_v < 0.9999:
-        gap_praticabilidade_abs = round(custo_total_autonomo * (1.0 - fator_clima_v), 2)
+    # NEP-042: Camada 2 — PU operacional autônomo, machine-weeks, η_real
+    _Q = float((plan.quantitativo if plan else 0) or 0)
+    pu_operacional_autonomo = round(custo_total_autonomo / _Q, 4) if _Q > 0 and custo_total_autonomo > 0 else 0.0
+    machine_weeks_brutas = float(lesao.get("team_weeks", 0)) if lesao else 0.0
+    # TD-3: usar eMW exacto (Σ m_{ij}·η_j) de fator_total quando disponível
+    machine_weeks_efetivas = float(lesao.get("effective_machine_weeks", 0)) if lesao else 0.0
+    if machine_weeks_efetivas == 0 and machine_weeks_brutas > 0:
+        # fallback para produto das médias se effective_machine_weeks não computado
+        _feta = float(lesao.get("fator_clima", 1.0)) * float(lesao.get("fator_cal", 1.0)) if lesao else 1.0
+        machine_weeks_efetivas = round(machine_weeks_brutas * _feta, 4)
+    eta_real = round(machine_weeks_efetivas / machine_weeks_brutas, 4) if machine_weeks_brutas > 0 else 1.0
+
+    # NEP-042 / NEP-043: Camada 3 — custo pool instancial agregado e PU pool.
+    # pool_total_por_item armazena custo de 1 frente (partição do contrato); multiplicar por n_frentes.
+    # C_pool = custo produtivo do pool × n_frentes (idle = 0 quando sem gaps entre atividades).
+    # Quando idle > 0 (recursos mobilizados sem produção), C_pool > C_ativo_pool.
+    _raw_pool = float((pool_total_por_item or {}).get(equipe.item_id, 0.0))
+    custo_pool_total = round(_raw_pool * _n_frentes, 2) if _raw_pool > 0 else 0.0
+    custo_pool_por_unidade = round(custo_pool_total / _Q, 4) if _Q > 0 and custo_pool_total > 0 else 0.0
+    economia_pool_abs = round(custo_total_autonomo - custo_pool_total, 2)
+
+    # ADR-083 §4: gap_praticabilidade — custo excedente C_eps por η̄ < 1 (clima/terreno)
+    # NEP-043: C_eps = (PU_mo + PU_eq) × Q × (1/η - 1) × n_frentes
+    # Diesel NÃO integra C_eps: ocorre por produção (não por calendário), é constante em Q.
+    # Apenas MO e EQ acumulam custo em intervalos não produtivos (extensão do prazo).
+    # fator_clima_v é a média ponderada de η por team-weeks; gap = 0 quando η = 1.
+    if fator_clima_v < 0.9999 and plan is not None and _Q > 0:
+        _pu = plan.preco_unitario if plan and plan.preco_unitario else None
+        _pu_mo_eq = float(
+            (getattr(_pu, "mao_obra", 0.0) or 0.0) + (getattr(_pu, "equipamentos", 0.0) or 0.0)
+        ) if _pu else 0.0
+        if _pu_mo_eq > 0:
+            gap_praticabilidade_abs = round(_pu_mo_eq * _Q * (1.0 / fator_clima_v - 1.0) * _n_frentes, 2)
 
     # gap_escala_abs: custo adicional por usar N>1 equipes vs 1 equipe × perm.nominal
     perm_nom = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
@@ -627,7 +684,7 @@ def _build_pe_for_equipe(
         pu_calibrado_unitario=pu_calibrado_unitario,
         ajuste_minimo_pct=ajuste_minimo_pct,
         gap_praticabilidade_abs=gap_praticabilidade_abs,
-        gap_pool_abs=gap_pool_overhead,
+        gap_pool_abs=round(-economia_pool_abs, 2) if economia_pool_abs != 0 else gap_pool_overhead,
         # ADR-076 Justificativa de Lesão
         n_equipes_efetivo=n_equipes_ef,
         semanas_ativas=semanas_ativas_v,
@@ -638,6 +695,14 @@ def _build_pe_for_equipe(
         diagnostico_lesao=diag,
         # ADR-082
         levers_equilibrio=levers,
+        # NEP-042: três camadas de precificação
+        pu_operacional_autonomo=pu_operacional_autonomo,
+        machine_weeks_brutas=machine_weeks_brutas,
+        machine_weeks_efetivas=machine_weeks_efetivas,
+        eta_real=eta_real,
+        custo_pool_total=custo_pool_total,
+        custo_pool_por_unidade=custo_pool_por_unidade,
+        economia_pool_abs=economia_pool_abs,
     )
 
 
@@ -791,11 +856,20 @@ def _bpe_process_equipe(
     sched_por_item: dict | None = None,
     particao_por_item: dict | None = None,
     idle_por_item: dict | None = None,
+    pool_total_por_item: dict | None = None,
 ) -> PontoEquilibrio | None:
     """Builds and validates PE for a single equipe; returns None if skipped."""
     if not equipe.item_id:
         return None
-    pe = _build_pe_for_equipe(equipe, venda_por_item, planejamento_por_item, sched_por_item, particao_por_item, idle_por_item)
+    pe = _build_pe_for_equipe(
+        equipe,
+        venda_por_item,
+        planejamento_por_item,
+        sched_por_item,
+        particao_por_item,
+        idle_por_item,
+        pool_total_por_item,
+    )
     if pe is None:
         return None
     _validate_pe_duplo_risco(pe, validacoes)
@@ -824,6 +898,14 @@ def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> l
         for part in contrato.particao_por_item:
             particao_por_item[part.item_id] = part
 
+    # NEP-042 D3: custo pool total por item — soma custo_total_particionado sobre TODOS os contratos
+    pool_total_por_item: dict[str, float] = {}
+    for contrato in canonical_in.contratos_recurso:
+        for part in contrato.particao_por_item:
+            pool_total_por_item[part.item_id] = pool_total_por_item.get(part.item_id, 0.0) + float(
+                getattr(part, "custo_total_particionado", 0.0) or 0.0
+            )
+
     # Idle real por item: Σ(custo_idle_mo + custo_idle_eq) das instâncias do pool.
     # Quando a política de late hire / early dismissal está ativa e não há standby,
     # esse valor é 0 — e o lever ResourcePool no painel_equilibrio desaparece.
@@ -838,7 +920,16 @@ def _build_ponto_equilibrio(canonical_in: CanonicalModel, validacoes: list) -> l
         pe
         for e in canonical_in.equipes_diretas
         for pe in [
-            _bpe_process_equipe(e, venda_por_item, validacoes, planejamento_por_item, sched_por_item, particao_por_item, idle_por_item)
+            _bpe_process_equipe(
+                e,
+                venda_por_item,
+                validacoes,
+                planejamento_por_item,
+                sched_por_item,
+                particao_por_item,
+                idle_por_item,
+                pool_total_por_item,
+            )
         ]
         if pe is not None
     ]
@@ -868,43 +959,82 @@ def _as_bool(value: Any) -> bool:
     return False
 
 
-def _build_bridge(inputs: dict, venda_sem_bdi: float, custo_direto_equipe: float, validacoes: list) -> dict | None:
+def _build_bridge_from_pe(
+    pe_items: list,
+    venda_sem_bdi: float,
+    custo_direto_equipe: float,
+    inputs: dict,
+    validacoes: list,
+) -> dict | None:
+    """Deriva bridge N1→N2→N3→N4 das três camadas de PontoEquilibrio (NEP-042 D5).
+
+    N1 = Σ(PU_cat × Q)     — catálogo puro
+    N2 = N1 + Σ gap_escala  — corrigido por escala de frentes (quantização)
+    N3 = N2 + Σ gap_prat    — corrigido por praticabilidade climática
+    N4 = custo operacional real (pool instancial)
+    """
     try:
         benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
-        praticabilidade = inputs.get("praticabilidade", 1.0)
-        if isinstance(praticabilidade, dict):
-            praticabilidade = praticabilidade.get("fator", 1.0)
-        praticabilidade = max(0.01, min(1.0, float(praticabilidade or 1.0)))
 
-        # In benchmark baseline mode we compare catalog-vs-reference; operational N4 is not used.
+        N1 = round(venda_sem_bdi, 2)
+        gap_escala = sum(float(getattr(pe, "gap_escala_abs", 0.0) or 0.0) for pe in pe_items)
+        gap_prat = sum(float(getattr(pe, "gap_praticabilidade_abs", 0.0) or 0.0) for pe in pe_items)
+        N2 = round(N1 + gap_escala, 2)
+        N3 = round(N2 + gap_prat, 2)
+
         if benchmark_mode:
-            nivel_4 = None
+            N4 = None
         else:
-            nivel_4 = inputs.get("custo_operacional_equipes") or (
+            raw_n4 = inputs.get("custo_operacional_equipes") or (
                 custo_direto_equipe if custo_direto_equipe > 0 else None
             )
+            N4 = round(float(raw_n4), 2) if raw_n4 else None
 
-        bridge = BridgeAnalyzer.calcular(
-            nivel_1=venda_sem_bdi,
-            necessidades_fracionadas=inputs.get("necessidades_fracionadas", []),
-            praticabilidade=praticabilidade,
-            nivel_4=float(nivel_4) if nivel_4 else None,
+        delta_abs = round(N4 - N3, 2) if N4 is not None else None
+        delta_pct = round(delta_abs / N4 * 100, 2) if delta_abs is not None and N4 else None
+        abs_pct = abs(delta_pct) if delta_pct is not None else None
+        status = (
+            "VERDE"
+            if abs_pct is not None and abs_pct <= 10
+            else (
+                "AMARELO"
+                if abs_pct is not None and abs_pct <= 25
+                else ("VERMELHO" if abs_pct is not None else "SEM_DADOS")
+            )
         )
-        bridge_dict = asdict(bridge)
-        bridge_dict["status_alerta"] = bridge.status_alerta
-        bridge_dict["delta_estrutural_abs"] = bridge.delta_estrutural_abs
+        fq = round(N2 / N1, 4) if N1 > 0 else 1.0
+        praticabilidade = round(N2 / N3, 4) if N3 > 0 else 1.0
+
+        # NEP-042 D5: N_pool = custo pool instancial total (Camada 3)
+        N_pool = round(sum(float(getattr(pe, "custo_pool_total", 0.0) or 0.0) for pe in pe_items), 2)
+
+        bridge = {
+            "nivel_1_catalogo_base": N1,
+            "nivel_2_catalogo_escalado": N2,
+            "nivel_3_catalogo_normalizado": N3,
+            "nivel_4_operacional": N4,
+            # NEP-042: custo pool instancial explícito (Camada 3)
+            "nivel_pool_instancial": N_pool if N_pool > 0 else None,
+            "fator_quantizacao": fq,
+            "fator_praticabilidade": praticabilidade,
+            "desvio_escala_abs": round(gap_escala, 2),
+            "desvio_clima_abs": round(gap_prat, 2),
+            "delta_real_abs": delta_abs,
+            "delta_real_percentual": delta_pct,
+            "delta_estrutural_abs": round(N3 - N1, 2),
+            "necessidades_fracionadas": [],
+            "status_alerta": status,
+        }
+        n4_str = f"{N4:.0f}" if N4 is not None else "N/A"
+        pool_str = f" | pool={N_pool:.0f}" if N_pool > 0 else ""
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-BRIDGE-OK",
                 status="OK",
-                mensagem=(
-                    f"Bridge calculada: N1={bridge.nivel_1_catalogo_base:.0f}"
-                    f" -> N3={bridge.nivel_3_catalogo_normalizado:.0f}"
-                    f" | alerta={bridge.status_alerta}"
-                ),
+                mensagem=f"Bridge: N1={N1:.0f} → N2={N2:.0f} → N3={N3:.0f} → N4={n4_str}{pool_str} | alerta={status}",
             )
         )
-        return bridge_dict
+        return bridge
     except Exception as exc:
         validacoes.append(
             ValidacaoItem(codigo="VAL-BRIDGE-WARN", status="AVISO", mensagem=f"Bridge não calculada: {exc}")
@@ -912,12 +1042,24 @@ def _build_bridge(inputs: dict, venda_sem_bdi: float, custo_direto_equipe: float
         return None
 
 
-def _build_diagnostico_pe(canonical_in: CanonicalModel, custos_atividades: list, validacoes: list) -> tuple:
+def _build_diagnostico_pe(
+    canonical_in: CanonicalModel,
+    custos_atividades: list,
+    pe_items: list,
+    validacoes: list,
+) -> tuple:
     try:
         from concilium.domain.services.backtracking_pe_builder import BacktrackingPEBuilder
         from concilium.domain.services.diagnostico_pe_builder import DiagnosticoPEBuilder
 
-        _cp = canonical_in.model_copy(update={"custos_atividades": custos_atividades})
+        # Injeta ponto_equilibrio da run atual para que _compute_f1_quantizacao
+        # leia gap_escala_abs correto em vez de bridge_analysis do run anterior.
+        _cp = canonical_in.model_copy(
+            update={
+                "custos_atividades": custos_atividades,
+                "ponto_equilibrio": pe_items,
+            }
+        )
         diag = DiagnosticoPEBuilder().build(_cp)
         back = BacktrackingPEBuilder().build(diag, _cp)
         return diag, back

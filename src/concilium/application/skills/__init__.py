@@ -176,6 +176,8 @@ def _discover_manifest_meta() -> dict[str, dict]:
                 "phase": skill_cfg.get("phase", "Sem Classificação"),
                 "gate": bool(skill_cfg.get("gate", False)),
                 "depends_on": config.get("depends_on", {}),
+                # NEP-041 F3: skills dormantes ficam fora do pipeline automático
+                "status": skill_cfg.get("status", "ativo"),
             }
         except Exception as e:
             raise RuntimeError(f"Erro lendo manifesto em {manifest_dir}: {e}") from e
@@ -184,6 +186,29 @@ def _discover_manifest_meta() -> dict[str, dict]:
 
 # backward-compat alias (test_coverage_batch_a calls _discover_skills())
 _discover_skills = _discover_manifest_index
+
+
+def load_skill_stage(skill_id: str, stage: str, func_name: str) -> Any:
+    """Carrega explicitamente um estágio interno de uma skill consolidada (NEP-041).
+
+    Skills unificadas (ex: 06-resultado-financeiro) mantêm seus estágios em
+    sub-pacotes (_precificacao/, _indiretos/, _consolidacao/) ou módulos
+    (_assessor.py, _explorador.py). Este loader dá acesso direto a um estágio
+    para callers que precisam executá-lo isoladamente (otimizador, testes).
+
+    Args:
+        skill_id: ID da skill consolidada (diretório em manifests/).
+        stage: nome do sub-pacote ("_indiretos") ou módulo sem .py ("_assessor").
+        func_name: nome da função a retornar.
+    """
+    import importlib.util
+
+    stage_dir = _MANIFESTS / skill_id / stage
+    path = stage_dir / "skill.py" if stage_dir.is_dir() else _MANIFESTS / skill_id / f"{stage}.py"
+    spec = importlib.util.spec_from_file_location(f"stage_{skill_id}_{stage}".replace("-", "_"), path)
+    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    return getattr(mod, func_name)
 
 
 def list_compat_aliases() -> dict[str, str]:

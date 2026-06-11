@@ -57,4 +57,9 @@ def get_all_phases() -> list[str]:
 # ── Canonical pipeline execution order (single source of truth) ───────────────
 # Derived from PHASE_MAP so that any new skill added to a phase is automatically
 # included in auto-advance without touching pipeline.py (DRY / ADR-026 §D6).
-CANONICAL_SKILL_ORDER: list[str] = [skill_id for phase in PHASE_MAP.values() for skill_id in phase]
+# NEP-041 F3: skills com status="dormante" são excluídas do pipeline automático
+# (permanecem em SKILLS, invocáveis explicitamente).
+_DORMANTES: set[str] = {sid for sid, meta in MANIFEST_META.items() if meta.get("status") == "dormante"}
+CANONICAL_SKILL_ORDER: list[str] = [
+    skill_id for phase in PHASE_MAP.values() for skill_id in phase if skill_id not in _DORMANTES
+]

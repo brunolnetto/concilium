@@ -1,7 +1,8 @@
-"""Skill 15 — Relatório Executivo Consolidado.
+"""Relatório executivo consolidado — absorvido de 15-relatorio-executivo (NEP-041 Fase 1).
 
-Consolida os antigos Relatórios de Criticidade (skill 15), Sensibilidade (skill 16)
-e Intervenção (skill 17) em um único passo para eficiência e consistência.
+Gera RelatorioCriticidade, RelatorioSensibilidade, RelatorioIntervencao e o
+BridgeWaterfall como estágio interno do skill 09. Originalmente em skill-15,
+agora computado dentro de 09 para eliminar o passo intermediário (ADR-026).
 """
 
 from __future__ import annotations
@@ -9,9 +10,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from concilium.application.skills.base import SkillResult
 from concilium.domain.models.artifact import ArtifactEnvelope, ArtifactKind
-from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
+from concilium.domain.models.canonical import ValidacaoItem
 from concilium.domain.models.reports import (
     EixoIntervencao,
     ItemCriticidadeRelatorio,
@@ -20,6 +20,8 @@ from concilium.domain.models.reports import (
     RelatorioIntervencao,
     RelatorioSensibilidade,
 )
+
+_CREATED_BY = "09-relatorio-e-artefatos"
 
 
 def _rre_get_margin_status(resultado) -> tuple[str, float]:
@@ -59,7 +61,7 @@ def _rre_build_criticidade(ccr, proj, now) -> tuple:
         kind=ArtifactKind.RELATORIO_CRITICIDADE,
         schema_name="RelatorioCriticidade",
         schema_version="1.0.0",
-        created_by="15-relatorio-executivo",
+        created_by=_CREATED_BY,
     )
     validacao = ValidacaoItem(
         codigo="VAL-REX-CRIT",
@@ -121,7 +123,7 @@ def _rre_build_sensibilidade(rp, proj, now, status_margem: str, margem_entrada: 
         kind=ArtifactKind.RELATORIO_SENSIBILIDADE,
         schema_name="RelatorioSensibilidade",
         schema_version="1.0.0",
-        created_by="15-relatorio-executivo",
+        created_by=_CREATED_BY,
     )
     validacao = ValidacaoItem(
         codigo="VAL-REX-SENS",
@@ -186,13 +188,13 @@ def _rre_build_intervencao(psr, proj, now, status_margem: str) -> tuple:
         kind=ArtifactKind.RELATORIO_INTERVENCAO,
         schema_name="RelatorioIntervencao",
         schema_version="1.0.0",
-        created_by="15-relatorio-executivo",
+        created_by=_CREATED_BY,
     )
     rec_nome = recomendacao.nome if recomendacao else "Nenhuma"
     validacao = ValidacaoItem(
         codigo="VAL-REX-INT",
         status="OK",
-        mensagem=f"Interven\u00e7\u00e3o: Recomenda\u00e7\u00e3o '{rec_nome}'.",
+        mensagem=f"Intervenção: Recomendação '{rec_nome}'.",
     )
     return relatorio, artifact, validacao
 
@@ -203,7 +205,7 @@ def _rre_build_bridge(bridge_analysis, proj, now) -> tuple:
         validacao = ValidacaoItem(
             codigo="VAL-REX-BRIDGE",
             status="AVISO",
-            mensagem="Bridge Analysis ausente \u2014 execute a Skill 08 (Consolida\u00e7\u00e3o Financeira) antes.",
+            mensagem="Bridge Analysis ausente — execute a Skill 08 (Consolidação Financeira) antes.",
         )
         return None, validacao
     n1 = bridge_analysis.get("nivel_1_catalogo_base", 0)
@@ -215,12 +217,12 @@ def _rre_build_bridge(bridge_analysis, proj, now) -> tuple:
     delta_pct = bridge_analysis.get("delta_real_percentual")
     waterfall = {
         "nota_metodologica": (
-            "ADR-039 The Bridge: N1=cat\u00e1logo base puro | "
-            "N2=escalado por quantiza\u00e7\u00e3o de frentes (overhead de escala) | "
-            "N3=normalizado por praticabilidade clim\u00e1tica (parada for\u00e7ada por chuva) | "
+            "ADR-039 The Bridge: N1=catálogo base puro | "
+            "N2=escalado por quantização de frentes (overhead de escala) | "
+            "N3=normalizado por praticabilidade climática (parada forçada por chuva) | "
             "N4=custo operacional real medido. "
-            "O delta real (N4\u2212N3) isola a inefici\u00eancia gestional genu\u00edna, "
-            "separada de causas estruturais n\u00e3o control\u00e1veis pelo or\u00e7amentista."
+            "O delta real (N4−N3) isola a ineficiência gestional genuína, "
+            "separada de causas estruturais não controláveis pelo orçamentista."
         ),
         "niveis": {
             "N1_catalogo_base": round(n1, 2),
@@ -241,39 +243,41 @@ def _rre_build_bridge(bridge_analysis, proj, now) -> tuple:
         },
         "status_alerta": status_bridge,
     }
+    # NEP-041 Fase 1: como estágio interno do skill de saída (09), um bridge VERMELHO
+    # é um achado diagnóstico a reportar — não uma falha de geração de relatório.
+    # Mantém-se como AVISO (visível) em vez de ERRO (que bloquearia o nó terminal).
     status_val = "OK" if status_bridge in ("VERDE", "SEM_DADOS") else "AVISO"
-    if status_bridge == "VERMELHO":
-        status_val = "ERRO"
-    n4_str = f" \u2192 N4={n4:,.0f}" if n4 is not None else ""
-    delta_str = f" | \u0394real={delta_pct:+.1f}%" if delta_pct is not None else ""
+    n4_str = f" → N4={n4:,.0f}" if n4 is not None else ""
+    delta_str = f" | Δreal={delta_pct:+.1f}%" if delta_pct is not None else ""
     validacao = ValidacaoItem(
         codigo="VAL-REX-BRIDGE",
         status=status_val,
-        mensagem=(f"Bridge {status_bridge}: N1={n1:,.0f} \u2192 N2={n2:,.0f} \u2192 N3={n3:,.0f}{n4_str}{delta_str}"),
+        mensagem=(f"Bridge {status_bridge}: N1={n1:,.0f} → N2={n2:,.0f} → N3={n3:,.0f}{n4_str}{delta_str}"),
     )
     artifact = ArtifactEnvelope.create(
         payload=waterfall,
         kind=ArtifactKind.RELATORIO_EXECUTIVO,
         schema_name="BridgeWaterfall",
         schema_version="1.0.0",
-        created_by="15-relatorio-executivo",
+        created_by=_CREATED_BY,
     )
     return artifact, validacao
 
 
-def run_relatorio_executivo(
-    canonical_in: CanonicalModel,
-    inputs: dict[str, Any],
-    **_kwargs: Any,
-) -> SkillResult:
-    """Gera relatórios de Criticidade, Sensibilidade e Intervenção."""
+def build_relatorio_executivo(canonical_in: Any) -> tuple[dict, list, list]:
+    """NEP-041 Fase 1: computa os relatórios executivos como estágio interno de 09.
 
-    validacoes: list[ValidacaoItem] = []
+    Returns:
+        (canonical_update, artifacts, validacoes) — onde canonical_update tem as
+        chaves relatorio_criticidade/sensibilidade/intervencao para model_copy.
+    """
     now = datetime.now(UTC)
     proj = canonical_in.projeto
     resultado = canonical_in.resultado
-    artifacts = []
+    artifacts: list = []
+    validacoes: list[ValidacaoItem] = []
     status_margem, margem_entrada = _rre_get_margin_status(resultado)
+
     relatorio_crit, art_crit, val_crit = _rre_build_criticidade(canonical_in.cost_criticality_report, proj, now)
     if art_crit is not None:
         artifacts.append(art_crit)
@@ -290,11 +294,10 @@ def run_relatorio_executivo(
     if art_bridge is not None:
         artifacts.append(art_bridge)
     validacoes.append(val_bridge)
-    canonical_out = canonical_in.model_copy(
-        update={
-            "relatorio_criticidade": relatorio_crit,
-            "relatorio_sensibilidade": relatorio_sens,
-            "relatorio_intervencao": relatorio_int,
-        }
-    )
-    return SkillResult(canonical_out, validacoes, artifacts=artifacts)
+
+    canonical_update = {
+        "relatorio_criticidade": relatorio_crit,
+        "relatorio_sensibilidade": relatorio_sens,
+        "relatorio_intervencao": relatorio_int,
+    }
+    return canonical_update, artifacts, validacoes
