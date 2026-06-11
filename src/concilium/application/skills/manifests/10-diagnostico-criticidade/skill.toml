@@ -5,7 +5,7 @@ version = "1.0.0"
 descricao = "Diagnóstico consolidado de criticidade (Prazo, Custo, Recurso, Sensibilidade). ADR-026."
 
 [depends_on]
-skills = ["04-cronograma", "05-equipes-e-alocacao", "06-precificacao-unitaria"]
+skills = ["04-cronograma", "05-equipes-e-alocacao", "06-resultado-financeiro"]
 canonical_sections = ["cronograma", "equipes_diretas", "alocacoes"]
 
 [produces]

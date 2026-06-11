@@ -2,10 +2,12 @@
 id = "12-registro-decisoes"
 phase = "Decisão"
 version = "1.1.0"
+status = "dormante"
+motivo = "NEP-041 F3: aguarda loop de feedback de agente (ADR-070). Fora do pipeline automatico; invocavel explicitamente."
 descricao = "Registra decisão técnica humana estruturada com contexto do estado atual do projeto. Valida campos obrigatórios e persiste decision_log.json."
 
 [depends_on]
-skills = ["08-consolidacao-financeira", "05-equipes-e-alocacao"]
+skills = ["06-resultado-financeiro", "05-equipes-e-alocacao"]
 canonical_sections = ["resultado_reconciliado", "resultado", "conflitos_pico"]
 
 [produces]
