@@ -1,277 +1,268 @@
-# ADR-070: Exploracao Deterministica do Espaco de Configuracao Operacional para Viabilidade de GO
+# ADR-070: Exploração Determinística do Espaço de Configuração Operacional para Viabilidade de GO
 
-**Status:** Implementado ✅ _(auditado 2026-06-09)_
-
-> **Nota:** `plan_space` e exploração determinística presentes no código.
-**Data:** 2026-05-23
-**Autor:** Engenheiro Senior
-**Relacionado:** ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061
+**Status:** ⚠️ Parcialmente Implementado — reavaliado 2026-06-11  
+**Data original:** 2026-05-23  
+**Reavaliação:** 2026-06-11 — correção de status + mapeamento ao estado atual + path revisado  
+**Relacionado:** ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061, NEP-042, NEP-043
 
 ---
 
-## 1. Contexto
+## Reavaliação 2026-06-11
 
-A operacao precisa encontrar configuracoes viaveis de GO a partir de um baseline tecnico consistente.
+### Por que o status "Implementado" estava incorreto
 
-Hoje, o sistema executa planejamento e classificacao com qualidade de benchmark, mas nao possui um mecanismo canonico para:
+A auditoria de 2026-06-09 identificou `plan_space` e `replan_suggestions` no código e inferiu implementação. Na prática:
 
-1. explorar sistematicamente variacoes controladas de entrada,
-2. classificar alternativas em escala,
-3. curar um conjunto final auditavel de melhores configuracoes.
-4. versionar uma campanha de pesquisa que consolide ranges, composicoes e expectativas de avaliacao.
-
-A ausencia desse mecanismo limita a descoberta de solucoes operacionais melhores quando o baseline inicial nao atende simultaneamente prazo, custo e viabilidade de execucao.
-
----
-
-## 2. Problema
-
-### P1 - Falta de motor de busca de alternativas
-Nao existe um servico dedicado para gerar e avaliar multiplos cenarios de GO por projeto.
-
-### P2 - Ajustes manuais pouco escalaveis
-A calibracao por tentativa manual depende de especialista e nao escala com numero de atividades.
-
-### P3 - Risco de exploracao sem governanca
-Sem contrato formal, uma busca automatica pode variar parametros sensiveis sem trilha de auditoria.
-
-### P4 - Conhecimento tacito de composicao de equipes
-Composicao de times nao pode ser variada livremente em grid-search puro sem degradar semantica de negocio.
-
-### P5 - Ausencia de curadoria formal
-Mesmo com varios cenarios avaliados, nao ha regra deterministica padrao para selecionar top alternativas.
-
-### P6 - Metrica objetivo unica mascara trade-offs
-Combinar todas as saidas em um unico escalar tende a esconder conclusoes composicionais entre dimensoes operacionais e economico-financeiras/fidelidade.
-
----
-
-## 3. Decisao
-
-### D1 - Introduzir um motor de exploracao deterministica
-Criar um servico de aplicacao para explorar espaco de configuracao operacional com entrada tipada e reproducivel.
-
-Nome proposto:
-`GoConfigurationSearchService`
-
-### D2 - Separar parametros por nivel de risco semantico
-A busca v1 variara somente parametros controlaveis de baixo risco:
-
-1. `ramp_up_rate`
-2. `ramp_down_rate`
-3. `team_max_count`
-4. `productivity_boost_pct`
-
-### D3 - Tratar composicao de equipes como escolha discreta governada
-Em vez de variacao livre da composicao, a v1/v2 deve usar:
-
-1. catalogo de templates de equipe aprovados,
-2. selecao discreta entre templates,
-3. bloqueio de combinacoes fora de politica.
-
-### D4 - Reusar semaforo oficial de viabilidade
-A classificacao de cada cenario deve usar o mesmo contrato de decisao do pipeline:
-
-1. `APROVADO`
-2. `APROVADO_COM_RESSALVAS`
-3. `BLOQUEADO_COM_INVESTIGACAO`
-4. `BLOQUEADO`
-
-No nivel de item, manter classes existentes (`IDEAL`, `ATENCAO`, `PREOCUPANTE`, `CRITICO`) para explainability.
-
-### D5 - Definir curadoria deterministica e auditavel
-A selecao final sera feita por algoritmo deterministico:
-
-1. filtrar cenarios viaveis,
-2. construir fronteira de Pareto,
-3. aplicar tie-break estavel por risco operacional, custo e hash do cenario,
-4. retornar `top_k` com justificativa explicita.
-
-### D6 - Persistir trilha de auditoria por execucao
-Cada run devera persistir:
-
-1. espaco de busca solicitado,
-2. constraints aplicadas,
-3. resultado por cenario,
-4. ranking final,
-5. versao da politica de curadoria.
-
-### D7 - Instituir o conceito de Campanha de Pesquisa
-Toda exploracao deve ocorrer dentro de uma entidade versionada:
-
-`GoResearchCampaignBundle`
-
-Esse bundle versiona, no minimo:
-
-1. parametros de entrada (intervalos e discretizacoes),
-2. politicas de composicao (templates e restricoes),
-3. constraints operacionais,
-4. definicao dos espacos de avaliacao,
-5. perfil de expectativas para categorizacao,
-6. politica de curadoria e desempate.
-
-### D8 - Avaliar em dois espacos multidimensionais sem colapso em escalar unico
-A avaliacao da campanha deve separar explicitamente:
-
-1. Espaco O (Operacional),
-2. Espaco EF/F (Economico-Financeiro e Fidelidade).
-
-No espaco EF/F, cada metrica deve ser categorizada por expectativa:
-
-1. `DENTRO_EXPECTATIVA`,
-2. `ATENCAO`,
-3. `FORA_EXPECTATIVA`.
-
-A decisao final nao deve depender de uma metrica agregada unica.
-
----
-
-## 4. Modelo Operacional
-
-### 4.1 Entradas
-
-`GoResearchCampaignBundle` (proposto):
-
-1. identificacao do projeto/escopo/plano,
-2. versao da campanha (`campaign_version`),
-3. baseline de referencia,
-4. ranges/discretizacoes por parametro,
-5. politicas de composicao (templates aprovados),
-6. constraints operacionais,
-7. definicao de espaco O,
-8. definicao de espaco EF/F,
-9. perfil de expectativas EF/F por metrica,
-10. politica de curadoria,
-11. `top_k`.
-
-### 4.2 Avaliacao por cenario
-
-Para cada cenario:
-
-1. aplicar transformacoes controladas sobre baseline,
-2. executar pipeline de planejamento,
-3. coletar vetor de metricas no espaco O,
-4. coletar vetor de metricas no espaco EF/F,
-5. categorizar metricas EF/F conforme perfil de expectativas,
-6. classificar decisao de viabilidade,
-7. armazenar evidencia.
-
-### 4.3 Curadoria
-
-Curadoria em camadas, sem escalar unico:
-
-1. filtro por restricoes duras,
-2. fronteira de Pareto no espaco O,
-3. fronteira de Pareto no espaco EF/F,
-4. intersecao prioritaria entre nao-dominados de ambos os espacos,
-5. tie-break deterministico estavel.
-
-Representacao vetorial:
-
-$$
-I_O(x)=(prazo, violacao\_capacidade, churn\_equipes, mobilizacao)
-$$
-
-$$
-I_{EF/F}(x)=(\Delta custo\_direto, \Delta custo\_indireto, \Delta preco\_venda, margem, fidelidade\_gates)
-$$
-
-Com restricao dura de viabilidade:
-
-$$
-status\_final(x) \in \{APROVADO, APROVADO\_COM\_RESSALVAS\}
-$$
-
-Perfil de expectativa (exemplo por metrica EF/F):
-
-1. `DENTRO_EXPECTATIVA`: valor dentro da faixa alvo da campanha,
-2. `ATENCAO`: valor em faixa de alerta,
-3. `FORA_EXPECTATIVA`: valor fora da tolerancia da campanha.
-
----
-
-## 5. Alternativas Rejeitadas
-
-| ID | Alternativa | Motivo |
+| Conceito ADR-070 | O que o audit encontrou | O que realmente é |
 |---|---|---|
-| A1 | Grid-search irrestrito incluindo composicao de equipe livre | Alto risco semantico e explosao combinatoria |
-| A2 | Curadoria puramente subjetiva por agente sem ranking deterministico | Reduz auditabilidade e reprodutibilidade |
-| A3 | Heuristica unica sem exploracao de espaco | Pode perder solucoes viaveis superiores |
-| A4 | Otimizacao estocastica sem seed/versionamento | Dificulta replay e governanca |
-| A5 | Objetivo combinado unico (soma ponderada de todas as metricas) | Mascara trade-offs e reduz explainability composicional |
+| `GoResearchCampaignBundle` | `plan_space` CLI de benchmark | CLI para comparar alternativas manuais de benchmark — não é busca paramétrica sistemática |
+| Motor de exploração (F2) | `simular_cenario_replan` | Estimativa linear sem re-execução do pipeline |
+| Curadoria Pareto (F3) | `replan_suggestions` | Ranking heurístico por `delta_margem_estimado` — sem fronteira de Pareto nos dois espaços |
+| Avaliação O + EF/F (D8) | — | Não existe separação formal dos dois espaços |
+
+**Status correto: ⚠️ Parcialmente Implementado** — os esboços de F2 e F3 existem, mas sem o contrato tipado do bundle, sem sweep paramétrico e sem curadoria Pareto.
+
+### O que mudou desde 2026-05-23 que torna o ADR mais factível
+
+**Mudanças que habilitam a implementação:**
+
+| Mudança | Relevância para ADR-070 |
+|---|---|
+| **NEP-043 — C_r reconciliado** | Comparações entre cenários agora são significativas: pool cost / PU_cat ≈ 0.90 (era 0.45, não representativo) |
+| **ADR-091 — makespan fix (n_max)** | O-space tem `prazo` correto: 42 semanas em vez de 67 infladas |
+| **NEP-042 — três camadas de custo** | EF/F-space tem `{PU_cat, PU_op_pool, C_permanência}` separados e auditáveis |
+| **ProjetoSpec completo (v2.0)** | Os "parâmetros de baixo risco" de D2 são exatamente campos do spec: `n_max`, `leadtime_mob_semanas`, `lag_demob_semanas`, `restricoes_mercado` |
+| **`plan_space` CLI paralelo** | Infra de avaliação paralela de alternativas já existe — pode ser reutilizada |
+| **ADR-106 F5 — mob_window** | Custo de mobilização por janela agora é computável — entra no O-space como `custo_mob_window` |
+
+**Consequência:** antes dessas mudanças, uma exploração produziria cenários com métricas sistematicamente erradas. Agora a infra subjacente é confiável.
 
 ---
 
-## 6. Consequencias
+## 1. Contexto (original — preservado)
 
-### Positivas
-
-1. Padroniza descoberta de configuracoes viaveis de GO.
-2. Reduz dependencia de tentativa manual ad hoc.
-3. Mantem governanca por trilha auditavel e regra deterministica.
-4. Permite acoplamento opcional de agente sobre shortlist qualificada.
-5. Preserva leitura composicional ao separar espacos O e EF/F.
-6. Versiona integralmente a campanha de pesquisa como bundle reproduzivel.
-
-### Negativas / Riscos
-
-1. Explosao de combinacoes em ranges amplos.
-2. Risco de overfitting em cenarios de benchmark.
-3. Custo computacional maior em projetos grandes.
-4. Complexidade adicional na definicao de perfil de expectativas por metrica.
-
-### Mitigacoes
-
-1. Pruning por constraints e limites de cardinalidade.
-2. Busca hierarquica (global -> cluster -> atividade).
-3. Politica de amostragem inicial + refinamento local.
-4. Seed fixa, versao de politica e artefato de replay.
-5. Biblioteca de perfis de expectativa reutilizaveis por tipo de projeto.
+A operação precisa encontrar configurações viáveis de GO a partir de um baseline técnico consistente. O sistema hoje executa planejamento e classificação com qualidade de benchmark, mas não possui um mecanismo canônico para explorar sistematicamente variações controladas.
 
 ---
 
-## 7. Plano de Implementacao
+## 2. Problema (original — preservado)
 
-| Fase | Entregas | Status |
+P1–P6 permanecem válidos. Adições pós-reavaliação:
+
+**P7 — Estimativa linear é insuficiente para senários de composição**  
+O `simular_cenario_replan` retorna `fe_nec_novo = fe_nec / prod_factor` — válido para lever_adjust simples, mas não captura efeitos não-lineares de mudança de `n_max` (interação com RCPSP, gaps de idle, custo de mob_window).
+
+**P8 — Plan_space CLI é centrado em benchmark, não em projeto**  
+O comando `concilium benchmark plan-space` opera sobre alternativas de `referencia.json` de benchmark — sem bundle de campanha versionado, sem sweep paramétrico, sem Pareto.
+
+---
+
+## 3. Decisão (atualizada)
+
+### D1–D8 originais: mantidos
+
+### D9 — Ancorar a campanha no ProjetoSpec (novo)
+
+`GoResearchCampaignBundle` não inventa contratos próprios. Uma campanha é:
+
+```
+GoResearchCampaignBundle = {
+    base_spec: ProjetoSpec,          ← spec canônico da obra
+    sweep: [ParametroSweep],         ← quais campos variam e em que range
+    constraints: [Constraint],       ← restrições duras
+    espaco_O: MetricaODef,           ← quais campos do canonical medem O-space
+    espaco_EF: MetricaEFDef,         ← quais campos medem EF/F-space
+    perfil_expectativas: dict,       ← faixas alvo por métrica EF/F
+    politica_curadoria: CuradoriaConfig,
+    top_k: int,
+    campaign_version: str
+}
+```
+
+Os "parâmetros controláveis de baixo risco" (D2) já estão no `ProjetoSpec`:
+
+| D2 original | Campo no ProjetoSpec |
+|---|---|
+| `ramp_up_rate` | `escopos[].cronograma[].n_equipes.n_inicial / n_max` |
+| `ramp_down_rate` | `escopos[].cronograma[].lag_demob_semanas` |
+| `team_max_count` | `escopos[].cronograma[].n_equipes.n_max` |
+| `productivity_boost_pct` | `escopos[].cronograma[].producao_diaria` (override) |
+| Restrição de mercado | `restricoes_mercado: {tipo: N_max}` |
+
+### D10 — Definir os vetores de espaço O e EF/F com campos canônicos (novo)
+
+**Espaço O** — métricas operacionais do canonical após pipeline completo:
+
+```
+I_O(x) = {
+    prazo_semanas:        cronograma.makespan_semanas,
+    fe_nec_medio:         mean(ponto_equilibrio[].frentes_equivalentes_necessarias),
+    gap_pool_total:       sum(ponto_equilibrio[].gap_pool_overhead),
+    custo_mob_window_total: sum(equipes_diretas[].custo_inst_mob_demob),
+    itens_criticos_pct:   count(pe.status_frentes=='CRITICO') / N_itens
+}
+```
+
+**Espaço EF/F** — métricas econômico-financeiras:
+
+```
+I_EF(x) = {
+    margem_pct:            resultado.margem_pct,
+    custo_execucao_pool:   resultado.custo.direto_equipes,
+    custo_indireto:        sum(resultado.custo.indireto_*),
+    preco_venda:           resultado.venda.total_com_bdi,
+    delta_custo_direto_pct: (custo_execucao_pool - PU_cat_Q) / PU_cat_Q,
+    fidelidade_gates:      quality_gates.decision in {APROVADO, APROVADO_COM_RESSALVAS}
+}
+```
+
+---
+
+## 4. Mapeamento ao Estado Atual
+
+### O que já existe como fundação
+
+| Componente ADR-070 | Implementado onde | Maturidade |
 |---|---|---|
-| F1 | Contrato tipado `GoResearchCampaignBundle` e `GoSearchResult` + persistencia de run versionado | Proposto |
-| F2 | Motor de geracao/avaliacao para parametros v1 (sem composicao livre) | Proposto |
-| F3 | Curadoria deterministica em dois espacos (Pareto O + Pareto EF/F + tie-break estavel) | Proposto |
-| F4 | Catalogo de templates de equipe e selecao discreta | Proposto |
-| F5 | Endpoint/API de exploracao e relatorio executivo de alternativas | Proposto |
+| Estimativa linear de lever | `_simular_lever_adjust()` em `replan.py` | ✅ Funcional (F2 simplificado) |
+| Ranking heurístico de sugestões | `replan_suggestions` via skill-13 assessor | ✅ Funcional (F3 simplificado) |
+| Oportunidades identificadas | `plan_space_result.oportunidades` via skill-13 explorador | ✅ Funcional |
+| Avaliação paralela de alternativas | CLI `benchmark plan-space` | ✅ Funcional (mas não paramétrico) |
+| Vetor O-space | `ponto_equilibrio[]` + `cronograma.makespan_semanas` | ✅ Dados disponíveis |
+| Vetor EF/F-space | `resultado.custo/venda` + `quality_gates` | ✅ Dados corretos pós-NEP-043 |
+| Semáforo de viabilidade | `quality_gates.decision` | ✅ Reutilizável conforme D4 |
+| Visualização de espaço | `_chart_plan_space` | ✅ Existe |
+
+### O que não existe
+
+| Componente ADR-070 | Status |
+|---|---|
+| `GoResearchCampaignBundle` tipado | ❌ Não existe |
+| Sweep paramétrico de `ProjetoSpec` | ❌ Não existe — apenas alternativas manuais no CLI |
+| Pareto O-space × EF/F-space | ❌ Não existe — apenas ranking heurístico por `delta_margem` |
+| Templates de equipe (D3/F4) | ❌ Não existe — composições do catálogo usam `composicao_padrao_equipe` como template único |
+| Persistência de campanha versionada | ❌ Não existe |
+| API de exploração (F5) | ❌ Não existe — apenas CLI |
 
 ---
 
-## 8. Definition of Done
+## 5. Plano de Implementação Revisado
+
+As fases foram reordenadas para aproveitar a infra existente e validar valor incremental antes de investir em complexidade.
+
+### Fase 1 — Contrato e infra mínima (F1 revisado)
+
+```python
+@dataclass
+class ParametroSweep:
+    campo: str           # "escopos[0].cronograma[0].n_equipes.n_max"
+    valores: list[Any]   # [1, 2, 3, 4] ou range discreto
+
+@dataclass
+class GoResearchCampaignBundle:
+    base_spec: dict              # ProjetoSpec canônico
+    sweep: list[ParametroSweep]
+    constraints: list[str]       # ex: ["n_max >= n_inicial", "prazo <= deadline"]
+    top_k: int = 5
+    campaign_version: str = "v1"
+```
+
+DoD: Bundle versionado e persistido. Geração do grid de cenários (produto cartesiano de `sweep`). Pruning por `constraints`.
+
+### Fase 2 — Motor de avaliação real (F2 revisado)
+
+Adaptar o CLI `benchmark plan-space` para consumir `GoResearchCampaignBundle`:
+1. Gerar `ProjetoSpec` variantes a partir do sweep
+2. Executar pipeline completo para cada variante (workers paralelos — ADR-102)
+3. Coletar `I_O(x)` e `I_EF(x)` do canonical resultante
+
+DoD: 10 cenários avaliados em paralelo com canonical completo por cenário. Trilha de auditoria por run.
+
+### Fase 3 — Curadoria Pareto (F3 revisado)
+
+```python
+def curar_pareto(cenarios: list[CenarioAvaliado], top_k: int) -> list[CenarioRankeado]:
+    viaveis = [c for c in cenarios if c.ief["fidelidade_gates"]]
+    pareto_O  = fronteira_pareto(viaveis, dims=["prazo_semanas", "gap_pool_total", "custo_mob_window"])
+    pareto_EF = fronteira_pareto(viaveis, dims=["margem_pct", "custo_indireto"])
+    intersecao = set(pareto_O) & set(pareto_EF)
+    ranked = sorted(intersecao or pareto_EF,
+                    key=lambda c: (-c.ief["margem_pct"], c.io["prazo_semanas"], c.hash))
+    return ranked[:top_k]
+```
+
+DoD: Top-k com justificativa explícita por dimensão. Replay reproduz mesmo ranking com mesmo seed/inputs.
+
+### Fase 4 — Templates de equipe (F4)
+
+Em vez de composição livre, usar `producao.composicao_padrao_equipe` do catálogo como template canônico. Sweep D3 é sobre seleção entre CPUs alternativos para o mesmo item (ex: escavação 1ª cat. DMT2000 vs DMT3000), não sobre composição livre.
+
+DoD: Catálogo de CPUs alternativos por tipo de serviço. Sweep discreta entre CPUs — bloqueio de combinações inválidas.
+
+### Fase 5 — MCP tool e relatório (F5)
+
+```python
+explorar_configuracoes_go(
+    project_id: str,
+    parametros_sweep: dict,   # ex: {"n_max": [1,2,3], "leadtime_mob": [1,2,3]}
+    top_k: int = 5
+) -> GoSearchResult
+```
+
+DoD: MCP tool registrado. Resultado renderizado no app diagnóstico-pe (aba nova "Exploração GO").
+
+---
+
+## 6. Definition of Done Revisado
 
 ### Fase 1
-- [ ] Contratos tipados definidos e versionados.
-- [ ] Entidade `GoResearchCampaignBundle` persistida com `campaign_version`.
-- [ ] Artefato de auditoria persistido por run.
+- [ ] `GoResearchCampaignBundle` tipado com validação
+- [ ] Geração de grid de `ProjetoSpec` variantes
+- [ ] Pruning por constraints antes da avaliação
+- [ ] Persistência com `campaign_version`
 
 ### Fase 2
-- [ ] Busca v1 executa para ranges de ramp up/down, team max e produtividade.
-- [ ] Classificacao de viabilidade reaproveita semaforo oficial.
+- [ ] Pipeline completo por variante (não estimativa linear)
+- [ ] `I_O` e `I_EF` coletados automaticamente do canonical
+- [ ] Execução paralela com worker pool (ADR-102)
+- [ ] Trilha de auditoria JSON por run
 
 ### Fase 3
-- [ ] Ranking final reprodutivel com intersecao de Pareto entre espacos O e EF/F.
-- [ ] Perfil de expectativas EF/F aplicado com categorias `DENTRO_EXPECTATIVA`, `ATENCAO`, `FORA_EXPECTATIVA`.
-- [ ] Replay de execucao reproduz top_k identico com mesmos inputs.
+- [ ] Pareto O-space com dims `(prazo, gap_pool, mob_window)`
+- [ ] Pareto EF/F-space com dims `(margem, custo_indireto)`
+- [ ] Tie-break estável por `(margem DESC, prazo ASC, hash)`
+- [ ] Replay produz top-k idêntico
 
 ### Fase 4
-- [ ] Composicao de equipe operando por templates aprovados.
-- [ ] Bloqueio de configuracoes fora de politica.
+- [ ] Catálogo de CPUs alternativos por tipo de serviço
+- [ ] Sweep discreta entre CPUs com validação semântica
 
 ### Fase 5
-- [ ] API exposta com filtros e pagina de resultados.
-- [ ] Export de shortlist com justificativas e rastreabilidade.
+- [ ] MCP tool `explorar_configuracoes_go`
+- [ ] Aba "Exploração GO" no app diagnóstico-pe
 
 ---
 
-## 9. Politica de Governanca
+## 7. Consequências (atualizadas)
 
-1. Toda variacao de parametro deve declarar fonte, limite e responsavel.
-2. Toda mudanca da funcao de ranking deve incrementar versao de politica.
-3. Nenhum resultado sem trilha de auditoria pode ser promovido como recomendacao.
-4. Curadoria por agente e opcional; curadoria deterministica e obrigatoria.
-5. Toda campanha deve explicitar perfil de expectativas EF/F versionado no bundle.
+### Positivas novas (pós-reavaliação)
+
+1. **ProjetoSpec como base natural do bundle** — sem contratos proprietários; sweep é só uma forma de variar o mesmo documento que o engenheiro já conhece
+2. **NEP-043 garante métricas confiáveis** — comparações entre cenários são agora matematicamente defensáveis
+3. **Infra paralela já existe** — `plan_space` CLI + worker pool (ADR-102) são reutilizáveis diretamente
+4. **Sliders como "Fase 0"** — `simular_cenario_replan` com `lever_adjust` já dá preview linear antes do pipeline completo; pode ser o gatilho de decisão de executar a campanha completa
+
+### Riscos mantidos
+
+1. Explosão combinatória para sweeps amplos — mitigar com pruning por constraints antes da avaliação
+2. Custo computacional — mitigar com amostragem inicial (Latin Hypercube) + refinamento local nas regiões Pareto-ativas
+
+---
+
+## 8. Política de Governança (original — preservada)
+
+1. Toda variação de parâmetro deve declarar fonte, limite e responsável
+2. Toda mudança da função de ranking deve incrementar `campaign_version`
+3. Nenhum resultado sem trilha de auditoria pode ser promovido como recomendação
+4. Curadoria por agente é opcional; curadoria determinística é obrigatória
+5. Toda campanha deve explicitar perfil de expectativas EF/F versionado no bundle
