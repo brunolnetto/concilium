@@ -15,11 +15,23 @@ def _bfc_custo_indireto(custo: object) -> float:
     )
 
 
-def _bfc_custo_direto_total(custo: object, custo_indireto: float) -> tuple[float | None, float | None]:
-    custo_direto = getattr(custo, "direto_equipes", None)
+def _bfc_custo_direto_total(
+    custo: object, custo_indireto: float, venda: object | None = None
+) -> tuple[float | None, float | None, float | None]:
+    """Retorna (custo_direto_gate, custo_total_gate, custo_execucao_pool).
+
+    custo_direto_gate  — PU_cat × Q: preço de catálogo, comparável à referência planilha.
+    custo_execucao_pool — custo real do pool para executar (PU_pool × Q + idle/mob overhead).
+    Invariante: custo_execucao_pool ≤ custo_direto_gate ≤ Σ(PU_op_standalone × Q).
+    custo_total_gate = custo_direto_gate + custo_indireto.
+    """
+    instancial = getattr(custo, "direto_equipes", None)
+    # PU×Q é o comparável com a referência (planilha): mesma base de cálculo
+    pu_q = getattr(venda, "total_sem_bdi", None) if venda else None
+    custo_direto = pu_q if pu_q is not None else instancial
     if custo_direto is not None and custo_indireto is not None:
-        return custo_direto, round(custo_direto + custo_indireto, 2)
-    return custo_direto, getattr(custo, "total", None)
+        return custo_direto, round(custo_direto + custo_indireto, 2), instancial
+    return custo_direto, getattr(custo, "total", None), instancial
 
 
 def _bfc_preco_venda(venda: object, custo_total: float | None) -> tuple[float | None, float | None]:
@@ -59,15 +71,20 @@ def _bfc_bdi_lucro(preco_venda: float | None, custo_total: float | None, raw_bdi
 
 
 def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], float | None, float | None]:
-    """Retorna (ferramenta_dict, custo_direto, custo_indireto)."""
+    """Retorna (ferramenta_dict, custo_direto, custo_indireto).
+
+    custo_direto = PU_cat × Q (comparável à referência planilha, gate de benchmark).
+    custo_execucao_pool = custo real do pool (PU_pool × Q + idle/mob overhead, diagnóstico).
+    Invariante: custo_execucao_pool ≤ custo_direto ≤ Σ(PU_op_standalone × Q).
+    Violação por atividade indica item deficitário (subsidiado pelo portfólio).
+    """
     custo_indireto = _bfc_custo_indireto(custo)
-    custo_direto, custo_total = _bfc_custo_direto_total(custo, custo_indireto)
+    custo_direto, custo_total, instancial = _bfc_custo_direto_total(custo, custo_indireto, venda)
     raw_bdi_lucro, preco_venda = _bfc_preco_venda(venda, custo_total)
     bdi_lucro = _bfc_bdi_lucro(preco_venda, custo_total, raw_bdi_lucro)
     ferramenta = {
-        "custo_direto": custo_direto,
-        "custo_direto_equipes": getattr(custo, "direto_equipes", None),
-        "custo_direto_pu_q": getattr(venda, "total_sem_bdi", None) if venda else None,
+        "custo_direto": custo_direto,  # PU×Q — comparável à referência
+        "custo_execucao_pool": instancial,  # pool instancial (diagnóstico)
         "custo_indireto": custo_indireto,
         "custo_total": custo_total,
         "preco_venda": preco_venda,
@@ -165,9 +182,10 @@ def _accumulate_equipes(equipes_diretas: list) -> dict[str, float]:
                 totals["diesel"] += equipe.custo_combustivel_total_mensal * fator
                 totals["materiais"] += getattr(equipe, "custo_material_mensal", 0.0) * fator
 
-    # ADR-091: Multiplicar custo_total por num_equipes_base para agregação correta
+    # NEP-043: custo_total = custo de 1 frente → multiplicar por num_equipes_base
     totals["total"] = sum(
-        equipe.custo_total * max(1, getattr(equipe, "num_equipes_base", 1) or 1) for equipe in equipes_diretas
+        equipe.custo_total * max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
+        for equipe in equipes_diretas
     )
     return totals
 

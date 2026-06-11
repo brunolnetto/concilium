@@ -38,13 +38,6 @@ def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, A
                 "absoluto": round(tool_v - ref_v, 2),
                 "percentual": round((tool_v - ref_v) / ref_v * 100, 2) if ref_v != 0 else None,
             }
-    ref_direto = ref_vals.get("custo_direto")
-    tool_pu_q = fer_vals.get("custo_direto_pu_q")
-    if ref_direto is not None and tool_pu_q is not None:
-        deltas["custo_direto_pu_q_vs_ref"] = {
-            "absoluto": round(tool_pu_q - ref_direto, 2),
-            "percentual": round((tool_pu_q - ref_direto) / ref_direto * 100, 2) if ref_direto != 0 else None,
-        }
     return deltas
 
 
@@ -98,8 +91,6 @@ def _build_rcpsp_schedule(canonical: Any, spec: ProjectSpec) -> dict[str, Any]:
 def _bq_get_cause(metric: str) -> str:
     """Maps metric name to cause category string."""
     if metric == "custo_direto":
-        return "DERIVACAO_PIPELINE"
-    if metric == "custo_direto_pu_q_vs_ref":
         return "CATALOGO"
     if metric == "custo_indireto":
         return "CONSOLIDACAO"
@@ -212,10 +203,9 @@ _ACTION_TABLE: dict[tuple[str, str], tuple[str, str]] = {
 class BenchmarkReportBuilder:
     _PHASE_BY_METRIC = {
         "custo_direto": "06-consolidacao",
-        "custo_direto_pu_q_vs_ref": "06-consolidacao",
-        "custo_indireto": "07-custos-indiretos",
+        "custo_indireto": "06-resultado-financeiro",
         "custo_total": "06-consolidacao",
-        "preco_venda": "06-precificacao-unitaria",
+        "preco_venda": "06-resultado-financeiro",
         "margem_pct": "06-consolidacao",
     }
 
@@ -294,10 +284,6 @@ class BenchmarkReportBuilder:
             entry = _build_composicao_item(referencia.get(item), ferramenta.get(item))
             if entry is not None:
                 composicao[item] = entry
-        ref_direto = referencia.get("custo_direto")
-        tool_pu_q = ferramenta.get("custo_direto_pu_q")
-        if ref_direto is not None and tool_pu_q is not None:
-            composicao["custo_direto_pu_q_vs_ref"] = _build_composicao_item(ref_direto, tool_pu_q)
         return composicao or None
 
     def _finalize_confronto(self, confronto: dict[str, Any], ref: dict[str, Any] | None) -> None:

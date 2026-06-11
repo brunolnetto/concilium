@@ -57,8 +57,10 @@ class BenchmarkReportPrinter:
         if not ferramenta:
             print("     (sem resultado computado)")
             return
-        direto_pu_q = ferramenta.get("custo_direto_pu_q")
-        fmt_pu_q = f"R$ {direto_pu_q:>14,.2f}" if direto_pu_q is not None else "  (nao disponivel)"
+        custo_direto = ferramenta.get("custo_direto")
+        fmt_direto = f"R$ {custo_direto:>14,.2f}" if custo_direto is not None else "  (nao disponivel)"
+        instancial = ferramenta.get("custo_execucao_pool")
+        fmt_inst = f"R$ {instancial:>14,.2f}" if instancial is not None else "  (nao disponivel)"
         indireto = ferramenta.get("custo_indireto")
         preco_venda = ferramenta.get("preco_venda")
         bdi = ferramenta.get("bdi_lucro_impostos")
@@ -68,8 +70,9 @@ class BenchmarkReportPrinter:
         # Preço operacional honesto (total_com_bdi = custo instancial × BDI)
         preco_venda_cat = ferramenta.get("preco_venda_catalogo")
         fmt_venda_cat = f"R$ {preco_venda_cat:>14,.2f}" if preco_venda_cat is not None else ""
-        print("     base metodologia        : Operacional (custo instancial x BDI)")
-        print(f"     custo_direto_pu_q       : {fmt_pu_q}   <- PUxQ (alinhado c/ Referencia)")
+        print("     base metodologia           : Operacional (custo execucao pool x BDI)")
+        print(f"     custo_direto (PUxQ)        : {fmt_direto}   <- preco de mercado, comparavel c/ Referencia")
+        print(f"     custo_execucao_pool        : {fmt_inst}   <- custo real de execucao via pool (PU_pool x Q + idle)")
         print(f"     custo_indireto          : {fmt_indireto}")
         print(
             f"     preco_venda (operac.)   : {fmt_venda}   <- custo instancial x BDI + indireto x BDI = markup efetivo {bdi_pct}"  # noqa: E501
