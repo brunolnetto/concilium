@@ -499,6 +499,7 @@ def _extract_dag(
     # ── Extrair arestas e thresholds ──────────────────────────────────────────
     edge_thresholds: dict[tuple[str, str], float] = {}
     from concilium.application.scheduling.cpsat_scheduler import ExtendedPrecedence as _EP
+
     extended: list[_EP] = []
 
     if canonical.eap:
@@ -526,7 +527,9 @@ def _extract_dag(
 
     # ADR-072: Use pre-computed activities if provided, otherwise extract from canonical
     acts = activities if activities is not None else _extract_activities(canonical)
-    return ActivityDAG(activities=acts, precedence=precedence, thresholds=edge_thresholds, extended_precedences=extended)
+    return ActivityDAG(
+        activities=acts, precedence=precedence, thresholds=edge_thresholds, extended_precedences=extended
+    )
 
 
 def _extract_pool(canonical: CanonicalModel) -> ResourcePool:
@@ -728,7 +731,11 @@ def _enrich_spec_resources_from_catalog(
             continue
 
         dur_1frente = max(1, math.ceil(Q / (P * horas_semana)))
-        n_frentes = max(1, math.ceil(dur_1frente / deadline_weeks))
+        # Usa n_max de ramp_params quando disponível (plano do projetista).
+        # Sem n_max, infere o mínimo de frentes para caber no prazo.
+        rp_pre = a.get("ramp_params") or {}
+        n_max_spec = int(rp_pre.get("n_max") or 0)
+        n_frentes = n_max_spec if n_max_spec > 0 else max(1, math.ceil(dur_1frente / deadline_weeks))
         duration = max(1, math.ceil(dur_1frente / n_frentes))
 
         # Granularidade do pool: UMA equipe-tipo por CPU. Equipes da mesma CPU são
@@ -1394,7 +1401,7 @@ def _run_auto_schedule_fallback_chain(
             ValidacaoItem(
                 codigo="VAL-SCHED-EXTRACT-FAIL",
                 status="ERRO",
-                mensagem="Falha ao extrair inputs de cronograma (atividades, DAG, pool ou deadline inválidos)."
+                mensagem="Falha ao extrair inputs de cronograma (atividades, DAG, pool ou deadline inválidos).",
             )
         )
         return [], None
@@ -2123,6 +2130,22 @@ def run_cronograma(
     )
 
     num_equipes_por_item = inputs.get("num_equipes_por_item")
+
+    if num_equipes_por_item is not None and isinstance(num_equipes_por_item, dict):
+        flat_items = [k for k, v in num_equipes_por_item.items() if not isinstance(v, dict)]
+        if flat_items:
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-CRON-EQUIPES-FORMATO",
+                    status="ERRO",
+                    mensagem=(
+                        f"num_equipes_por_item: valor deve ser dict[semana_iso, int], não int. "
+                        f"Itens com formato errado: {flat_items[:3]}. "
+                        f'Esperado: {{"item_id": {{"2025-W01": 2, "2025-W02": 3}}}}'
+                    ),
+                )
+            )
+            return SkillResult(canonical_in, validacoes)
 
     wmp_curves: list = []
     mobilizacao_policies = inputs.get("mobilizacao_policies")
