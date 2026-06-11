@@ -228,7 +228,7 @@ class TestResolveBdiPriority:
 
             skill_path = (
                 Path(__file__).parent.parent.parent
-                / "src/concilium/application/skills/manifests/06-precificacao-unitaria/skill.py"
+                / "src/concilium/application/skills/manifests/06-resultado-financeiro/_precificacao/skill.py"
             )
             spec = importlib.util.spec_from_file_location("skill_04", skill_path)
             mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
@@ -281,18 +281,20 @@ class TestResolveBdiPriority:
         assert abs(result["mao_obra"] - DEFAULT_BDI_TABELA.mao_obra.bdi_total) < 1e-6
         assert abs(result["material"] - DEFAULT_BDI_TABELA.material.bdi_total) < 1e-6
 
-    def test_equip_bdi_is_weighted_combination(self):
-        """EQUIP BDI = 70% MAO_OBRA + 30% DIESEL (ADR-023 §D3)."""
+    def test_equip_bdi_derivado_da_composicao(self):
+        """ADR-023 §D3 revisado: equip = frac_loc×material + (1−frac_loc)×mao_obra.
+
+        Default (locação pura, SV-31/STF: locação de bens móveis sem ISS) → material.
+        O placeholder 70/30 original foi removido — aplicava markup de MO/diesel a uma
+        base que, pós ADR-088/090, contém apenas locação+manutenção.
+        """
         _resolve_bdi = self._import_resolve_bdi()
         validacoes: list[ValidacaoItem] = []
         result = _resolve_bdi({}, validacoes)
 
-        bdi_mo = DEFAULT_BDI_TABELA.mao_obra.bdi_total
-        bdi_diesel = DEFAULT_BDI_TABELA.diesel.bdi_total
-        expected_equip = round(0.70 * bdi_mo + 0.30 * bdi_diesel, 6)
-
-        assert abs(result["equipamentos"] - expected_equip) < 1e-5, (
-            f"EQUIP BDI {result['equipamentos']:.6f} != expected {expected_equip:.6f} (70%×MO + 30%×DIESEL)"
+        bdi_mat = DEFAULT_BDI_TABELA.material.bdi_total
+        assert abs(result["equipamentos"] - bdi_mat) < 1e-5, (
+            f"EQUIP BDI {result['equipamentos']:.6f} != material {bdi_mat:.6f} (locação pura)"
         )
 
     def test_malformed_tabela_bdi_falls_back_to_default(self):
@@ -361,7 +363,7 @@ class TestSkill05IndiretosBdiEmission:
 
         skill_path = (
             Path(__file__).parent.parent.parent
-            / "src/concilium/application/skills/manifests/07-custos-indiretos/skill.py"
+            / "src/concilium/application/skills/manifests/06-resultado-financeiro/_indiretos/skill.py"
         )
         spec = importlib.util.spec_from_file_location("skill_05", skill_path)
         mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
@@ -536,7 +538,8 @@ class TestSkill04EquipamentoDecomp:
             / "application"
             / "skills"
             / "manifests"
-            / "06-precificacao-unitaria"
+            / "06-resultado-financeiro"
+            / "_precificacao"
             / "skill.py"
         )
         spec = importlib.util.spec_from_file_location("skill_04", path)

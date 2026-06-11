@@ -99,7 +99,7 @@ class TestTaintOnFailure:
         )
         result = _make_skill_result(canonical, has_errors=True)
 
-        skill_id = "06-precificacao-unitaria"
+        skill_id = "06-resultado-financeiro"  # NEP-041 F4
         assert skill_id in _GATE_SKILLS
 
         if result.has_errors and skill_id in _GATE_SKILLS:
@@ -116,7 +116,7 @@ class TestTaintOnFailure:
 
         blocked_set = set(result.canonical.pipeline_blocked_from)
         assert "04-cronograma" in blocked_set
-        assert "06-precificacao-unitaria" in blocked_set
+        assert "06-resultado-financeiro" in blocked_set
         assert result.canonical.pipeline_integridade == "CORROMPIDO"
 
 
@@ -159,7 +159,7 @@ class TestUntaintOnSuccess:
         from concilium.application.runtime import _GATE_SKILLS
 
         skill_id = "04-cronograma"
-        other_blocked = "06-precificacao-unitaria"
+        other_blocked = "06-resultado-financeiro"
         canonical = _make_canonical(
             pipeline_blocked_from=[skill_id, other_blocked],
             pipeline_integridade="CORROMPIDO",
@@ -191,7 +191,7 @@ class TestUntaintOnSuccess:
         """Advisory skills do not modify pipeline_blocked_from on success."""
         from concilium.application.runtime import _GATE_SKILLS
 
-        non_gate = "07-custos-indiretos"
+        non_gate = "09-relatorio-e-artefatos"  # NEP-041 F4: 07 absorvido; 09 é não-gate
         assert non_gate not in _GATE_SKILLS
 
         canonical = _make_canonical(
@@ -218,7 +218,7 @@ class TestGateSkillsConstant:
         # Match current _GATE_SKILLS which includes 03-catalogo-de-recursos
         assert "01-escopo-e-eap" in _GATE_SKILLS
         assert "04-cronograma" in _GATE_SKILLS
-        assert "06-precificacao-unitaria" in _GATE_SKILLS
+        assert "06-resultado-financeiro" in _GATE_SKILLS  # NEP-041 F4
 
     def test_gate_skills_is_frozenset(self):
         from concilium.application.runtime import _GATE_SKILLS
@@ -240,19 +240,26 @@ class TestGateSkillsConstant:
 class TestCanonicalOrderIncludes11And15To17:
     """ADR-026: CANONICAL_SKILL_ORDER must include all 24 skills."""
 
-    def test_canonical_order_includes_missing_skills(self):
+    def test_canonical_order_includes_active_skills(self):
+        from concilium.application.skills import SKILLS
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
-        for skill_id in ["12-registro-decisoes", "15-relatorio-executivo"]:
-            assert skill_id in CANONICAL_SKILL_ORDER, f"'{skill_id}' missing from CANONICAL_SKILL_ORDER"
+        # NEP-041 Fase 1: 15 absorvido em 09. Fase 3: 12 dormante (fora do pipeline auto).
+        assert "09-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
+        # 12-registro-decisoes permanece invocável (SKILLS) mas fora do pipeline auto
+        assert "12-registro-decisoes" in SKILLS
+        assert "12-registro-decisoes" not in CANONICAL_SKILL_ORDER
 
     def test_canonical_order_no_duplicates(self):
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         assert len(CANONICAL_SKILL_ORDER) == len(set(CANONICAL_SKILL_ORDER)), "CANONICAL_SKILL_ORDER has duplicates"
 
-    def test_canonical_order_matches_phase_map(self):
+    def test_canonical_order_matches_phase_map_minus_dormant(self):
+        from concilium.application.skills import MANIFEST_META
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER, PHASE_MAP
 
-        expected = [s for phase in PHASE_MAP.values() for s in phase]
+        # NEP-041 F3: CANONICAL_SKILL_ORDER = PHASE_MAP menos as skills dormantes
+        dormantes = {sid for sid, m in MANIFEST_META.items() if m.get("status") == "dormante"}
+        expected = [s for phase in PHASE_MAP.values() for s in phase if s not in dormantes]
         assert CANONICAL_SKILL_ORDER == expected

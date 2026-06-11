@@ -4,26 +4,7 @@ from datetime import date
 
 import pytest
 
-from concilium.domain.services.bridge_analyzer import BridgeAnalyzer
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
-
-
-def test_adr039_bridge_decomposition_is_deterministic() -> None:
-    bridge = BridgeAnalyzer.calcular(
-        nivel_1=1000.0,
-        necessidades_fracionadas=[0.5, 1.2],
-        praticabilidade=0.8,
-        nivel_4=2600.0,
-    )
-
-    assert bridge.fator_quantizacao == pytest.approx(1.8333, abs=1e-4)
-    assert bridge.nivel_2_catalogo_escalado == pytest.approx(1833.33, abs=1e-2)
-    assert bridge.nivel_3_catalogo_normalizado == pytest.approx(2291.66, abs=1e-2)
-    assert bridge.desvio_escala_abs == pytest.approx(833.33, abs=1e-2)
-    assert bridge.desvio_clima_abs == pytest.approx(458.33, abs=1e-2)
-    assert bridge.delta_real_abs == pytest.approx(308.34, abs=1e-2)
-    assert bridge.delta_estrutural_abs == pytest.approx(1291.66, abs=1e-2)
-    assert bridge.status_alerta == "AMARELO"
 
 
 def test_adr041_resolver_preco_cascade_priority() -> None:

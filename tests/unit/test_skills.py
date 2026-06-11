@@ -6,7 +6,12 @@ from typing import Any
 
 import pytest
 
-from concilium.application.skills import run_consolidacao_financeira, run_escopo_e_eap, run_produtividade_climatica
+from concilium.application.skills import load_skill_stage, run_escopo_e_eap, run_produtividade_climatica
+
+# NEP-041 F4: estágio de consolidação da skill unificada 06-resultado-financeiro
+run_consolidacao_financeira = load_skill_stage(
+    "06-resultado-financeiro", "_consolidacao", "run_consolidacao_financeira"
+)
 from concilium.domain.models.canonical import (
     BdiCategorias,
     CanonicalModel,
@@ -314,7 +319,8 @@ class TestSkillConsolidar:
             / "application"
             / "skills"
             / "manifests"
-            / "08-consolidacao-financeira"
+            / "06-resultado-financeiro"
+            / "_consolidacao"
             / "skill.py"
         )
         spec = importlib.util.spec_from_file_location("_skill_consolidacao", skill_path)
@@ -351,21 +357,19 @@ class TestSkillConsolidar:
         assert abs(res.venda.total_com_bdi - 142.06) < 0.50
         # custo.total agora é custo operacional real: custo_direto_equipe + indireto = 100 + 10 = 110
         assert res.custo.total == 110
-        # resultado_financeiro = venda_plus - custo_op ≈ 142.49 - 110 = 32.49
-        # (venda_plus deriva do custo instancial × BDI, não do catálogo × BDI)
-        assert abs(res.resultado_financeiro - 32.49) < 1.50
+        # resultado_financeiro = venda_plus - custo_op = total_custo_plus(≈122.82) - 110 ≈ 12.82
+        # (margem sobre preço operacional real, não sobre preço de catálogo)
+        assert abs(res.resultado_financeiro - 12.82) < 1.50
 
 
 # ─────────────────────── Skills 02-05 ───────────────────────
 
 from datetime import UTC, datetime
 
-from concilium.application.skills import (
-    run_cronograma,
-    run_custos_indiretos,
-    run_equipes_e_alocacao,
-    run_precificacao_unitaria,
-)
+from concilium.application.skills import run_cronograma, run_equipes_e_alocacao
+
+run_custos_indiretos = load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
+run_precificacao_unitaria = load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
 from concilium.domain.models.canonical import (
     Cronograma,
     DistribuicaoMensal,
@@ -1790,7 +1794,8 @@ class TestIndiretosBranches:
             / "application"
             / "skills"
             / "manifests"
-            / "07-custos-indiretos"
+            / "06-resultado-financeiro"
+            / "_indiretos"
             / "skill.py"
         )
         spec = importlib.util.spec_from_file_location("_skill_indiretos", skill_path)

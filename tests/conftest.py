@@ -292,14 +292,8 @@ def _session_pipeline_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
     print(f"[PERF] sk09/05-equipes: {time.time() - _t:.2f}s")
     _t = time.time()
-    runtime.run_skill("06-precificacao-unitaria", proj, inputs={})
-    print(f"[PERF] sk09/06-precificacao: {time.time() - _t:.2f}s")
-    _t = time.time()
-    runtime.run_skill("07-custos-indiretos", proj, inputs={})
-    print(f"[PERF] sk09/07-indiretos: {time.time() - _t:.2f}s")
-    _t = time.time()
-    runtime.run_skill("08-consolidacao-financeira", proj, inputs={})
-    print(f"[PERF] sk09/08-financeira: {time.time() - _t:.2f}s")
+    runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
+    print(f"[PERF] sk09/06-resultado-financeiro: {time.time() - _t:.2f}s")
     _t = time.time()
     r = runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
     print(f"[PERF] sk09/09-relatorio: {time.time() - _t:.2f}s")
@@ -326,9 +320,7 @@ def _session_edge_case_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     cron_inputs = {"num_equipes_por_item": {"eap-01": {"2026-W31": 1}}}  # cronograma mínimo
     runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
     runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
-    runtime.run_skill("06-precificacao-unitaria", proj, inputs={})
-    runtime.run_skill("07-custos-indiretos", proj, inputs={})
-    runtime.run_skill("08-consolidacao-financeira", proj, inputs={})
+    runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
     runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
     print(f"\n[PERF] Pipeline edge case sk09: {time.time() - _start:.2f}s")
     return proj
@@ -392,9 +384,7 @@ def _session_pipeline_mendeslobo_sk09(tmp_path_factory, runtime, inputs_escopo_t
     }
     runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
     runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
-    runtime.run_skill("06-precificacao-unitaria", proj, inputs={})
-    runtime.run_skill("07-custos-indiretos", proj, inputs={})
-    runtime.run_skill("08-consolidacao-financeira", proj, inputs={})
+    runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
     runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
     print(f"[PERF] Pipeline mendeslobo completo: {time.time() - _start:.2f}s")
     return proj

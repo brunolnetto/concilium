@@ -202,12 +202,17 @@ def test_run_skill_loga_observabilidade(config_root, projeto_terraplenagem, inpu
     assert "duration_ms" in entry
     assert "contract" in entry
     assert entry["contract"]["required_inputs"] is not None
+    # NEP-028 D4: proveniência de catálogo persistida por run
+    assert "catalog_source" in entry
+    assert entry["catalog_source"] in ("project_reference", "master")
 
 
-def test_run_skill_wraps_erro_tecnico(config_root, projeto_terraplenagem):
+def test_run_skill_wraps_erro_tecnico(config_root, projeto_terraplenagem, inputs_escopo_terraplenagem):
     r = Runtime(config_root)
     p = projeto_terraplenagem
     v = p.new_version()
+    # Popula canonical para evitar o guard RuntimeDomainError de "sem estado inicial"
+    r.run_skill("01-escopo-e-eap", p, v, inputs=inputs_escopo_terraplenagem)
     dummy = {"dummy": lambda **_: (_ for _ in ()).throw(ValueError("boom"))}
     # SKILLS é importado em dois namespaces (runtime.__init__ via get_skill_contract
     # e mixins.execution via run_skill); ambos precisam ser substituídos para que a
@@ -216,7 +221,7 @@ def test_run_skill_wraps_erro_tecnico(config_root, projeto_terraplenagem):
         patch("concilium.application.runtime.SKILLS", dummy),
         patch("concilium.application.runtime.mixins.execution.SKILLS", dummy),
     ):
-        with pytest.raises(RuntimeError, match="Falha técnica ao executar skill"):
+        with pytest.raises(RuntimeError, match="Falha técnica"):
             r.run_skill("dummy", p, v, inputs={})
 
 

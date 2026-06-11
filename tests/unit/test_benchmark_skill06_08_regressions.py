@@ -4,7 +4,13 @@ from datetime import UTC, datetime
 
 import pytest
 
-from concilium.application.skills import run_consolidacao_financeira, run_precificacao_unitaria
+from concilium.application.skills import load_skill_stage
+
+# NEP-041 F4: estágios da skill unificada 06-resultado-financeiro
+run_precificacao_unitaria = load_skill_stage("06-resultado-financeiro", "_precificacao", "run_precificacao_unitaria")
+run_consolidacao_financeira = load_skill_stage(
+    "06-resultado-financeiro", "_consolidacao", "run_consolidacao_financeira"
+)
 from concilium.domain.models.canonical import (
     BdiCategorias,
     CanonicalModel,
@@ -90,11 +96,12 @@ def _catalogo_minimo() -> dict:
     }
 
 
-def test_skill06_nep029_sbdi_primary_and_adr038_blocked():
-    """NEP-029: precos_unitarios_sbdi é fonte primária; ADR-038 é bloqueado.
+def test_skill06_nep029_sbdi_primary():
+    """NEP-029: precos_unitarios_sbdi é fonte primária.
 
-    Sem sbdi → composicao_itens (fallback); ADR-038 ignorado mesmo com override.
+    Sem sbdi → composicao_itens (fallback).
     Com sbdi  → sbdi em ambos os modos (normal e benchmark).
+    Parâmetro apply_adr038_compensation removido — inputs desconhecidos são ignorados.
     """
     canonical = _base_canonical()
     catalogo = _catalogo_minimo()  # CPU sem precos_unitarios_sbdi
@@ -105,12 +112,11 @@ def test_skill06_nep029_sbdi_primary_and_adr038_blocked():
     codigos = {v.codigo for v in res_sem_sbdi.validacoes}
     assert "VAL-PLAN-SBDI-MISSING" in codigos  # aviso: sbdi ausente
 
-    # ADR-038 override bloqueado → VAL-PLAN-ADR038-BLOCKED emitido, custo não muda
-    res_adr038 = run_precificacao_unitaria(canonical, {"apply_adr038_compensation": True}, catalogo, {})
-    assert res_adr038.canonical.planejamento[0].subtotal.sem_bdi.total == pytest.approx(1000.0)
-    codigos_adr = {v.codigo for v in res_adr038.validacoes}
-    assert "VAL-PLAN-ADR038-BLOCKED" in codigos_adr
-    assert "VAL-PLAN-PARAMETRICO" not in codigos_adr
+    # Parâmetro legado ignorado silenciosamente — custo não muda, sem erro
+    res_legado = run_precificacao_unitaria(canonical, {"apply_adr038_compensation": True}, catalogo, {})
+    assert res_legado.canonical.planejamento[0].subtotal.sem_bdi.total == pytest.approx(1000.0)
+    codigos_legado = {v.codigo for v in res_legado.validacoes}
+    assert "VAL-PLAN-ADR038-BLOCKED" not in codigos_legado
 
     # Com sbdi: usa sbdi em modo normal e benchmark
     catalogo_com_sbdi = {

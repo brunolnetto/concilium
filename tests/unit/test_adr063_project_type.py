@@ -156,7 +156,7 @@ class TestHotProjectStrategy:
         skills = HotProjectStrategy().skill_sequence()
         assert len(skills) > 0
         assert "01-escopo-e-eap" in skills
-        assert "08-consolidacao-financeira" in skills
+        assert "06-resultado-financeiro" in skills  # NEP-041 F4
 
 
 class TestProjectStrategy:

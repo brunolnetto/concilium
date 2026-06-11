@@ -1,6 +1,5 @@
 """Fixtures para testes de integração ADR-104."""
 
-
 import pytest
 
 

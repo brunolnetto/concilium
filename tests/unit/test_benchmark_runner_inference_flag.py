@@ -36,8 +36,7 @@ def test_prepare_inputs_nep030_minimal_injection() -> None:
         slug="proj-teste",
         contexto_id="ctx",
         extra_inputs={
-            "06-precificacao-unitaria": {"foo06": "bar"},
-            "08-consolidacao-financeira": {"foo08": "bar"},
+            "06-resultado-financeiro": {"foo06": "bar", "foo08": "bar"},
         },
     )
 
@@ -56,15 +55,15 @@ def test_prepare_inputs_nep030_minimal_injection() -> None:
     skill_inputs = _runner()._prepare_inputs(spec, ref=ref)
 
     # campos originais dos extra_inputs preservados
-    assert skill_inputs["06-precificacao-unitaria"]["foo06"] == "bar"
-    assert skill_inputs["08-consolidacao-financeira"]["foo08"] == "bar"
+    assert skill_inputs["06-resultado-financeiro"]["foo06"] == "bar"
+    assert skill_inputs["06-resultado-financeiro"]["foo08"] == "bar"
 
-    # skill-06 SEM benchmark_mode (modo produção)
-    assert "benchmark_mode" not in skill_inputs.get("06-precificacao-unitaria", {})
-    # skill-08 COM benchmark_mode (bridge ADR-039 catalog-vs-reference), mas SEM
-    # override circular de bdi_indireto_efetivo
-    assert skill_inputs.get("08-consolidacao-financeira", {}).get("benchmark_mode") is True
-    assert "bdi_indireto_efetivo" not in skill_inputs.get("08-consolidacao-financeira", {})
+    # NEP-041 F4: a skill unificada recebe benchmark_mode (consumido internamente
+    # pelo estágio de consolidação — bridge ADR-039 catalog-vs-reference); o estágio
+    # de precificação ignora o flag (modo produção). SEM override circular de
+    # bdi_indireto_efetivo (NEP-030 D2).
+    assert skill_inputs.get("06-resultado-financeiro", {}).get("benchmark_mode") is True
+    assert "bdi_indireto_efetivo" not in skill_inputs.get("06-resultado-financeiro", {})
 
     # skill-09 COM benchmark_mode para relatório de comparação
     assert skill_inputs["09-relatorio-e-artefatos"]["benchmark_mode"] is True
@@ -82,7 +81,7 @@ def test_prepare_inputs_uses_provided_pack_without_derive(monkeypatch) -> None:
         slug="proj-teste",
         contexto_id="ctx",
         extra_inputs={
-            "08-consolidacao-financeira": {"foo08": "bar"},
+            "06-resultado-financeiro": {"foo08": "bar"},
         },
     )
 
@@ -98,7 +97,7 @@ def test_prepare_inputs_uses_provided_pack_without_derive(monkeypatch) -> None:
     pack = BenchmarkInferencePack(
         benchmark_mode=True,
         skill_inputs={
-            "08-consolidacao-financeira": {
+            "06-resultado-financeiro": {
                 "benchmark_mode": True,
                 "bdi_indireto_efetivo": 0.123,
             },
@@ -108,9 +107,9 @@ def test_prepare_inputs_uses_provided_pack_without_derive(monkeypatch) -> None:
     skill_inputs = _runner()._prepare_inputs(spec, ref={"resultado": {}}, inference_pack=pack)
 
     # pack externo aplicado como-está
-    assert skill_inputs["08-consolidacao-financeira"]["benchmark_mode"] is True
-    assert skill_inputs["08-consolidacao-financeira"]["bdi_indireto_efetivo"] == 0.123
-    assert skill_inputs["08-consolidacao-financeira"]["foo08"] == "bar"
+    assert skill_inputs["06-resultado-financeiro"]["benchmark_mode"] is True
+    assert skill_inputs["06-resultado-financeiro"]["bdi_indireto_efetivo"] == 0.123
+    assert skill_inputs["06-resultado-financeiro"]["foo08"] == "bar"
 
 
 def test_prepare_inputs_is_stable_across_repeated_calls() -> None:
@@ -120,8 +119,8 @@ def test_prepare_inputs_is_stable_across_repeated_calls() -> None:
         slug="proj-teste",
         contexto_id="ctx",
         extra_inputs={
-            "08-consolidacao-financeira": {"foo08": "bar"},
-            "06-precificacao-unitaria": {"foo06": "bar"},
+            "06-resultado-financeiro": {"foo08": "bar"},
+            "06-resultado-financeiro": {"foo06": "bar"},
         },
     )
     ref = {
@@ -137,5 +136,5 @@ def test_prepare_inputs_is_stable_across_repeated_calls() -> None:
     first = _runner()._prepare_inputs(spec, ref=ref)
     second = _runner()._prepare_inputs(spec, ref=ref)
 
-    assert first["06-precificacao-unitaria"] == second["06-precificacao-unitaria"]
-    assert first["08-consolidacao-financeira"] == second["08-consolidacao-financeira"]
+    assert first["06-resultado-financeiro"] == second["06-resultado-financeiro"]
+    assert first["06-resultado-financeiro"] == second["06-resultado-financeiro"]

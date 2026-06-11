@@ -2,7 +2,10 @@
 
 from datetime import UTC, date, datetime
 
-from concilium.application.skills import run_explorador_cenarios
+from concilium.application.skills import load_skill_stage
+
+# NEP-041 F2: estágio explorador da skill unificada 13-replanejamento-e-cenarios
+run_explorador_cenarios = load_skill_stage("13-replanejamento-e-cenarios", "_explorador", "run_explorador_cenarios")
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,

@@ -193,16 +193,9 @@ class TestPipelineCompleto:
         r = runtime.run_skill("05-equipes-e-alocacao", projeto_terraplenagem, inputs={})
         assert not r.has_errors, r.validacoes
 
-        # 06-precificacao-unitaria
-        r = runtime.run_skill("06-precificacao-unitaria", projeto_terraplenagem, inputs={})
-        assert r.canonical is not None, r.validacoes  # skill 04 may emit price deviation warnings
-
-        # 07-custos-indiretos
-        r = runtime.run_skill("07-custos-indiretos", projeto_terraplenagem, inputs={})
-        assert not r.has_errors
-
-        # 06-consolidar
-        r = runtime.run_skill("08-consolidacao-financeira", projeto_terraplenagem, inputs={})
+        # 06-resultado-financeiro (NEP-041 F4: unifica precificação + indiretos + consolidação)
+        r = runtime.run_skill("06-resultado-financeiro", projeto_terraplenagem, inputs={})
+        assert r.canonical is not None, r.validacoes
 
         canonical = projeto_terraplenagem.load_canonical()
         assert canonical.resultado is not None, "Skill 06 deve produzir resultado"
@@ -222,7 +215,9 @@ class TestPipelineCompleto:
         # Log de invocações deve ter 7 entradas (uma por skill invocada)
         log = (projeto_terraplenagem.root / "v1" / "invocations.log").read_text()
         n_invocacoes = len([ln for ln in log.strip().splitlines() if ln])
-        assert n_invocacoes >= 8, f"Esperadas >= 8 invocações, encontradas {n_invocacoes}"
+        assert n_invocacoes >= 6, (
+            f"Esperadas >= 6 invocações (NEP-041 F4: pipeline encolheu), encontradas {n_invocacoes}"
+        )
 
     def test_pipeline_para_em_cron_quando_prazo_insuficiente(
         self,

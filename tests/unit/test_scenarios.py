@@ -107,13 +107,13 @@ def test_run_scenario_ok_retorna_metricas() -> None:
 
 def test_run_scenario_para_no_primeiro_erro() -> None:
     canonical = _canonical_com_metricas()
-    runtime = _FakeRuntime(fail_skill="03B-alocacao-recursos")
+    runtime = _FakeRuntime(fail_skill="05-equipes-e-alocacao")
     runner = ScenarioRunner(runtime=runtime, project=_FakeProject(canonical))
 
     result = runner.run_scenario(ScenarioConfig(nome="falha"), base_inputs={})
 
     assert result.status == "ERRO"
-    assert "03B-alocacao-recursos" in (result.erro or "")
+    assert "05-equipes-e-alocacao" in (result.erro or "")
     assert len(runtime.calls) >= 1
 
 

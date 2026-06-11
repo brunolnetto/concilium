@@ -104,7 +104,7 @@ def _build_pool(weeks_b, mo=200.0, remob=(20000.0, 10000.0)):
             eq.custo_total_autonomo = eq.custo_total
             eq.custo_total = atrib[eq.item_id][0]
     instancias, _comp, _res = mod._build_instancias_recurso(contratos, rcpsp, sched, val)
-    mod._aplicar_custo_instancial_adr085(contratos, instancias, equipes, val)
+    mod._aplicar_custo_instancial(contratos, instancias, equipes, val)
     canonical = SimpleNamespace(
         projeto=SimpleNamespace(nome="TEST-POOL"),
         contratos_recurso=contratos,

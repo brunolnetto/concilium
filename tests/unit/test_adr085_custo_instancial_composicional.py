@@ -284,7 +284,7 @@ class TestPipelineComposicional:
                 eq.custo_total = atribuicao[eq.item_id][0]
         instancias, _comp, _res = mod._build_instancias_recurso(contratos, rcpsp_spec, sched_lookup, validacoes)
         if instancias:
-            mod._aplicar_custo_instancial_adr085(contratos, instancias, equipes, validacoes)
+            mod._aplicar_custo_instancial(contratos, instancias, equipes, validacoes)
         return mod, contratos, equipes, instancias, validacoes
 
     def test_taxas_por_componente_somam_unitaria(self):

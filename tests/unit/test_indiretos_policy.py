@@ -1,6 +1,9 @@
 from datetime import UTC, date, datetime
 
-from concilium.application.skills import run_custos_indiretos
+from concilium.application.skills import load_skill_stage
+
+# NEP-041 F4: estágio de indiretos da skill unificada 06-resultado-financeiro
+run_custos_indiretos = load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
 from concilium.domain.models.canonical import (
     CanonicalModel,
     Coordenadas,

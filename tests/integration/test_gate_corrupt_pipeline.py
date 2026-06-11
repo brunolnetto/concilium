@@ -221,7 +221,8 @@ def _import_05_indiretos():
         / "application"
         / "skills"
         / "manifests"
-        / "07-custos-indiretos"
+        / "06-resultado-financeiro"
+        / "_indiretos"
         / "skill.py"
     )
     spec = importlib.util.spec_from_file_location("skill_05_indiretos", skill_path)
@@ -242,7 +243,8 @@ def _import_06_consolidar():
         / "application"
         / "skills"
         / "manifests"
-        / "08-consolidacao-financeira"
+        / "06-resultado-financeiro"
+        / "_consolidacao"
         / "skill.py"
     )
     spec = importlib.util.spec_from_file_location("skill_06_consolidar", skill_path)

@@ -63,7 +63,9 @@ class TestPipelineComSamples:
         assert log_path.exists()
         log_content = log_path.read_text()
         n_invocacoes = len([ln for ln in log_content.strip().splitlines() if ln])
-        assert n_invocacoes == 9, f"Esperadas 9 invocações (01-09), encontradas {n_invocacoes}"
+        assert n_invocacoes == 7, (
+            f"Esperadas 7 invocações (NEP-041 F4: 01-05 + 06-unificada + 09), encontradas {n_invocacoes}"
+        )
 
 
 class TestSkill07OutputFormat:

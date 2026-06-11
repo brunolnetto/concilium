@@ -100,14 +100,36 @@ def _load_skill(number_dash_name: str):
     return mod
 
 
-# ── Skill 15: RelatorioCriticidade ──────────────────────────────────────────
+# ── Relatório Executivo (NEP-041 Fase 1: absorvido em skill-09) ─────────────
 
 
 class TestSkill15RelatorioCriticidade:
-    def _run(self, canonical_in: CanonicalModel) -> SkillResult:
-        from concilium.application.skills import run_relatorio_executivo
+    def _run(self, canonical_in: CanonicalModel):
+        """NEP-041 Fase 1: relatório executivo agora é estágio interno de skill-09.
 
-        return run_relatorio_executivo(canonical_in=canonical_in, inputs={})
+        Testa o builder diretamente via _skill_helpers_executivo, envolvendo o
+        retorno (canonical_update, artifacts, validacoes) num objeto compatível.
+        """
+        import importlib.util
+        from pathlib import Path
+        from types import SimpleNamespace
+
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "src/concilium/application/skills/manifests"
+            / "09-relatorio-e-artefatos/_skill_helpers_executivo.py"
+        )
+        spec = importlib.util.spec_from_file_location("sk09_exec", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        update, artifacts, validacoes = mod.build_relatorio_executivo(canonical_in)
+        canonical_out = canonical_in.model_copy(update=update)
+        return SimpleNamespace(
+            artifacts=artifacts,
+            validacoes=validacoes,
+            canonical=canonical_out,
+            has_errors=any(v.status == "ERRO" for v in validacoes),
+        )
 
     def _canonical_with_criticidade(self) -> CanonicalModel:
         return CanonicalModel(
@@ -370,13 +392,14 @@ class TestRenderPlanejamentoCriticidade:
 
 class TestCanonicalSkillOrder:
     def test_includes_all_adrs_026_skills(self):
+        from concilium.application.skills import SKILLS
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
-        for skill in [
-            "12-registro-decisoes",
-            "15-relatorio-executivo",
-        ]:
-            assert skill in CANONICAL_SKILL_ORDER, f"{skill} not in CANONICAL_SKILL_ORDER"
+        # NEP-041 Fase 1: 15 absorvido em 09 (ativo no pipeline)
+        assert "09-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
+        # NEP-041 Fase 3: 12-registro-decisoes dormante — invocável mas fora do pipeline auto
+        assert "12-registro-decisoes" in SKILLS
+        assert "12-registro-decisoes" not in CANONICAL_SKILL_ORDER
 
     def test_07_comes_after_09(self):
         """ADR-026 §D: 09-relatorio-e-artefatos (Saída) must come after 10-diagnostico-criticidade (Análise)."""
@@ -387,23 +410,11 @@ class TestCanonicalSkillOrder:
             "10-diagnostico-criticidade"
         ), "09-relatorio-e-artefatos must come after 09-cost-criticality"
 
-    def test_15_comes_after_09(self):
+    def test_09_relatorio_absorve_executivo(self):
+        """NEP-041 Fase 1: 15 foi absorvido em 09 — 09 vem depois de 10 (Análise)."""
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
-        assert CANONICAL_SKILL_ORDER.index("15-relatorio-executivo") > CANONICAL_SKILL_ORDER.index(
+        assert "15-relatorio-executivo" not in CANONICAL_SKILL_ORDER
+        assert CANONICAL_SKILL_ORDER.index("09-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
             "10-diagnostico-criticidade"
-        )
-
-    def test_16_comes_after_13(self):
-        from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
-
-        assert CANONICAL_SKILL_ORDER.index("15-relatorio-executivo") > CANONICAL_SKILL_ORDER.index(
-            "13-assessor-replanejamento"
-        )
-
-    def test_17_comes_after_14(self):
-        from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
-
-        assert CANONICAL_SKILL_ORDER.index("15-relatorio-executivo") > CANONICAL_SKILL_ORDER.index(
-            "14-explorador-cenarios"
         )

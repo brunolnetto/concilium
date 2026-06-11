@@ -95,5 +95,5 @@ def test_generate_diffs_supports_modern_agis_reference_layout(tmp_path: Path):
     assert "por_etapa" in out
     assert "05-equipes-e-alocacao" in out["por_etapa"]
     assert "04-planejamento-e-insumos" in out["por_etapa"]
-    assert "07-custos-indiretos-e-contingencia" in out["por_etapa"]
+    assert "indiretos-e-contingencia" in out["por_etapa"]  # NEP-041 F4
     assert "06-consolidacao-resultado" in out["por_etapa"]

@@ -74,18 +74,20 @@ class TestCostDecompositionInvariant:
             )
 
     def test_agis_custo_direto_matches_reference(self, agis_benchmark):
-        """AGIS: custo_direto instancial (pós NEP-029 C_ref) deve bater com baseline calibrado.
+        """AGIS: custo_direto instancial (pós TD-1/TD-3) deve bater com baseline calibrado.
 
-        Nota: sum(eq.custo_total) é o custo instancial pós-calibração de C_ref por CPU (NEP-029),
-        não o PU×Q do catálogo (46.84M). A diferença (~5.5%) vem da redução de diesel (~22%)
-        por calibração por projeto. O baseline correto é o valor instancial calibrado.
+        Nota: sum(eq.custo_total) é o custo instancial pós-calibração. O valor é menor que
+        o baseline pré-TD-1/TD-3 (R$ 44,259,799.68) porque a correção TD-1 garante que
+        eq.custo_total = Σ custo_total_particionado por contrato, e o custo instancial
+        TD-3 usa machine_weeks_efetivas exatas — o tempo ocioso é mais barato (só MO, sem
+        diesel/material), reduzindo o custo total em ~20%.
         """
         canonical = agis_benchmark.canonical
 
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
-        # Baseline instancial pós-NEP-029: R$ 44,259,799.68
-        expected = 44_259_799.68
+        # Baseline instancial pós-TD-1/TD-3: R$ 35,255,483.25
+        expected = 35_255_483.25
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (

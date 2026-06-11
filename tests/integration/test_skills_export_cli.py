@@ -57,7 +57,7 @@ class TestSkillsExportCLI:
             "02-produtividade-climatica",
             "04-cronograma",
             "05-equipes-e-alocacao",
-            "08-consolidacao-financeira",
+            "06-resultado-financeiro",  # NEP-041 F4
             "09-relatorio-e-artefatos",
         ]
 

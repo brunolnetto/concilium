@@ -50,7 +50,7 @@ def test_nep030_bdi_indireto_efetivo_not_injected() -> None:
     pack = BenchmarkInferenceService.derive(ref)
 
     # bdi_indireto_efetivo não deve estar nos inputs de skill-08
-    skill08_inputs = pack.skill_inputs.get("08-consolidacao-financeira", {})
+    skill08_inputs = pack.skill_inputs.get("06-resultado-financeiro", {})
     assert "bdi_indireto_efetivo" not in skill08_inputs
 
     # skill-08 não recebe benchmark_mode (executa como produção)
@@ -79,8 +79,8 @@ def test_nep030_benchmark_mode_only_in_skill09() -> None:
     assert pack.skill_inputs.get("09-relatorio-e-artefatos", {}).get("benchmark_mode") is True
 
     # skills 06 e 08 NÃO recebem benchmark_mode
-    assert "benchmark_mode" not in pack.skill_inputs.get("06-precificacao-unitaria", {})
-    assert "benchmark_mode" not in pack.skill_inputs.get("08-consolidacao-financeira", {})
+    assert "benchmark_mode" not in pack.skill_inputs.get("06-resultado-financeiro", {})
+    assert "benchmark_mode" not in pack.skill_inputs.get("06-resultado-financeiro", {})
 
 
 def test_apply_to_skill_inputs_preserves_existing_fields() -> None:
@@ -98,17 +98,16 @@ def test_apply_to_skill_inputs_preserves_existing_fields() -> None:
     pack = BenchmarkInferenceService.derive(ref)
 
     base_inputs = {
-        "08-consolidacao-financeira": {"foo": "bar"},
-        "06-precificacao-unitaria": {"preco_diesel": 6.20},
+        "06-resultado-financeiro": {"foo": "bar", "preco_diesel": 6.20},
     }
 
     merged = BenchmarkInferenceService.apply_to_skill_inputs(base_inputs, pack)
 
     # campos originais preservados
-    assert merged["08-consolidacao-financeira"]["foo"] == "bar"
-    assert merged["06-precificacao-unitaria"]["preco_diesel"] == 6.20
+    assert merged["06-resultado-financeiro"]["foo"] == "bar"
+    assert merged["06-resultado-financeiro"]["preco_diesel"] == 6.20
 
     # overrides circulares ausentes (NEP-030)
-    assert "bdi_indireto_efetivo" not in merged.get("08-consolidacao-financeira", {})
-    assert "benchmark_mode" not in merged.get("06-precificacao-unitaria", {})
-    assert "benchmark_mode" not in merged.get("08-consolidacao-financeira", {})
+    assert "bdi_indireto_efetivo" not in merged.get("06-resultado-financeiro", {})
+    assert "benchmark_mode" not in merged.get("06-resultado-financeiro", {})
+    assert "benchmark_mode" not in merged.get("06-resultado-financeiro", {})

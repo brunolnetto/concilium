@@ -17,7 +17,7 @@ def test_catalog_help_lists_flat_commands() -> None:
     assert "survey" in result.stdout
     assert "promote" in result.stdout
     assert "search" in result.stdout
-    assert "validate-schema" in result.stdout
+    assert "validate" in result.stdout
 
 
 def test_project_catalog_help_is_flat() -> None:
@@ -26,7 +26,7 @@ def test_project_catalog_help_is_flat() -> None:
     assert result.exit_code == 0
     assert "quality" in result.stdout
     assert "promote" in result.stdout
-    assert "validate-schema" in result.stdout
+    assert "validate" in result.stdout
 
 
 def test_benchmark_help_renders_without_encoding_error() -> None:

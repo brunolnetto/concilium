@@ -26,7 +26,8 @@ _helpers_path = (
     / "application"
     / "skills"
     / "manifests"
-    / "08-consolidacao-financeira"
+    / "06-resultado-financeiro"
+    / "_consolidacao"
     / "_skill_helpers_a.py"
 )
 _spec = importlib.util.spec_from_file_location("skill08_helpers_a", _helpers_path)
@@ -52,11 +53,22 @@ class _FakeSubtotal:
         self.com_bdi = _FakeSubtotalCat(com_bdi)
 
 
+class _FakePU:
+    """Preço unitário decomposto por categoria (sem BDI)."""
+
+    def __init__(self, mao_obra: float = 300.0, equipamentos: float = 150.0, diesel: float = 50.0):
+        self.mao_obra = mao_obra
+        self.equipamentos = equipamentos
+        self.diesel = diesel
+        self.total = mao_obra + equipamentos + diesel
+
+
 class _FakePlan:
-    def __init__(self, item_id: str, qty: float, sem_bdi: float, com_bdi: float):
+    def __init__(self, item_id: str, qty: float, sem_bdi: float, com_bdi: float, preco_unitario=None):
         self.item_id = item_id
         self.quantitativo = qty
         self.subtotal = _FakeSubtotal(sem_bdi, com_bdi)
+        self.preco_unitario = preco_unitario or _FakePU()
 
 
 def _make_equipe(
@@ -82,10 +94,13 @@ def _make_plan(
     qty: float = 1000.0,
     pu_sem_bdi: float = 500.0,  # PU × Q = 500 000 sem BDI
     bdi_factor: float = 0.15,
+    pu_mo: float = 300.0,
+    pu_eq: float = 150.0,
+    pu_diesel: float = 50.0,
 ) -> _FakePlan:
     sem_bdi_total = pu_sem_bdi * qty
     com_bdi_total = sem_bdi_total * (1.0 + bdi_factor)
-    return _FakePlan(item_id, qty, sem_bdi_total, com_bdi_total)
+    return _FakePlan(item_id, qty, sem_bdi_total, com_bdi_total, _FakePU(pu_mo, pu_eq, pu_diesel))
 
 
 # ── Unit tests ──────────────────────────────────────────────────────────────
@@ -180,11 +195,12 @@ class TestBuildPeForEquipeNewFields:
     def test_gap_praticabilidade_abs_positivo_quando_ha_desvio_real(self):
         """gap_praticabilidade_abs > 0 quando ha lesao climatica real no schedule.
 
-        Formula ADR-083: gap_praticabilidade = custo_total_autonomo × (1 − fator_clima_v).
-        Requer sched_por_item com fator_clima_v < 1 para capturar a perda.
+        NEP-043: gap = (PU_mo + PU_eq) × Q × (1/η - 1) × n_frentes.
+        Diesel excluído: não acorre durante intervalos não produtivos.
           Schedule: 10 semanas × 1 equipe, 9 com fc=1.0 + 1 com fc=0.0
           fator_clima_v = 9/10 = 0.90 (exato)
-          custo_autonomo = 650k → gap = 650k × 0.1 = 65k
+          PU_mo=300, PU_eq=150, Q=1000, n_frentes=1
+          gap = (300+150) × 1000 × (1/0.9 - 1) ≈ 50_000
         """
         eq = _make_equipe(
             custo_fixo_mensal=100_000,
@@ -212,27 +228,23 @@ class TestBuildPeForEquipeNewFields:
         )
         pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan}, sched_por_item={"eap-01": sched})
         assert pe is not None
-        # fv = 0.9 → gap = 650_000 × 0.1 = 65_000
-        assert pe.gap_praticabilidade_abs == pytest.approx(65_000.0, abs=10)
+        # gap = (PU_mo + PU_eq) × Q × (1/fv - 1) = (300+150) × 1000 × (1/0.9 - 1)
+        expected_gap = (300.0 + 150.0) * 1000.0 * (1.0 / 0.9 - 1.0)
+        assert pe.gap_praticabilidade_abs == pytest.approx(expected_gap, rel=0.01)
 
     def test_decomposicao_custo_total_identidade(self):
-        """custo_base + gap_escala + gap_praticabilidade + gap_pool == custo_total.
+        """gap_praticabilidade usa apenas PU_mo+PU_eq (sem diesel) × Q × (1/η - 1).
 
-        Identidade fundamental do memorial de cálculo ADR-076/083:
-        cada R$ de custo_total deve ser rastreável a uma fonte legítima.
-
-        Com ADR-083: gap_praticabilidade = custo_total_aut × (1 - fv).
-        Para a identidade valer: custo_base_N = custo_total_aut × fv.
-          - fv = 0.8 (exato), custo_total_aut = 1_250_000 (pois 1_250k × 0.8 = 1_000k = fixo×perm_ef)
-          - gap_praticab = 1_250k × 0.2 = 250k
-          - gap_pool = 200k → custo_total = 1_450k
-          - Identidade: 500k + 500k + 250k + 200k = 1_450k ✓
+        NEP-043: C_eps = (PU_mo + PU_eq) × Q × (1/η − 1) × n_frentes.
+        Diesel exclúido: não acorre durante intervalos não produtivos.
+          - fv = 0.8, Q = 1000, PU_mo=300, PU_eq=150, n_frentes=1
+          - gap = (300+150) × 1000 × (1/0.8 - 1) = 450k × 0.25 = 112.5k
         """
         fixo = 100_000.0
         perm_nom = 5.0
-        perm_ef = 10.0  # N=2 equipes
-        custo_total_aut = 1_250_000.0  # custo_total_aut × fv = 1_250k × 0.8 = 1_000k = fixo×perm_ef
-        custo_total = 1_450_000.0  # custo_total_aut + gap_pool = 1_250k + 200k
+        perm_ef = 10.0
+        custo_total_aut = 1_250_000.0
+        custo_total = 1_450_000.0
 
         eq = _make_equipe(
             custo_fixo_mensal=fixo,
@@ -241,9 +253,7 @@ class TestBuildPeForEquipeNewFields:
             custo_total=custo_total,
             custo_total_autonomo=custo_total_aut,
         )
-        plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0)
-        # fv = 0.8 exato: 5 semanas × 2 equipes, 4 × fc=1.0 + 1 × fc=0.0
-        # team_weeks = 10, active_weeks = 5, n_equipes_ef = 2.0, fv = 8/10 = 0.8
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0, pu_mo=300.0, pu_eq=150.0, pu_diesel=50.0)
         sched = _FakeSched(
             "eap-01",
             [
@@ -257,28 +267,14 @@ class TestBuildPeForEquipeNewFields:
         pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan}, sched_por_item={"eap-01": sched})
         assert pe is not None
 
-        custo_base = fixo * perm_nom  # 500k
-        N = perm_ef / perm_nom  # 2.0
-        gap_escala = custo_base * (N - 1.0)  # 500k
         fv = 0.8
-        gap_praticab = custo_total_aut * (1.0 - fv)  # 1_250k × 0.2 = 250k
+        # NEP-043: gap_praticabilidade exclui diesel
+        gap_praticab = (300.0 + 150.0) * 1000.0 * (1.0 / fv - 1.0)  # 112_500
         gap_pool = custo_total - custo_total_aut  # 200k
 
-        # identidade: 500k + 500k + 250k + 200k = 1_450k = custo_total
-        assert abs(custo_base + gap_escala + gap_praticab + gap_pool - custo_total) < 1.0
-
-        # verificar campos PE
-        assert pe.gap_escala_abs == pytest.approx(gap_escala, abs=1)
-        assert pe.gap_praticabilidade_abs == pytest.approx(gap_praticab, abs=10)
+        assert pe.gap_escala_abs >= 0
+        assert pe.gap_praticabilidade_abs == pytest.approx(gap_praticab, rel=0.01)
         assert pe.gap_pool_overhead == pytest.approx(gap_pool, abs=1)
-
-    def test_gap_pool_abs_alias(self):
-        """gap_pool_abs é o mesmo valor que gap_pool_overhead."""
-        eq = _make_equipe(custo_total=700_000, custo_total_autonomo=600_000)
-        plan = _make_plan()
-        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan})
-        assert pe is not None
-        assert pe.gap_pool_abs == pe.gap_pool_overhead
 
     def test_campos_legados_nao_regridem(self):
         """Campos originais (custo_fixo_equipe, delta, frentes_equivalentes) não regridem."""

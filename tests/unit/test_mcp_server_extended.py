@@ -188,6 +188,31 @@ async def test_consultar_status_fresh_project(server, server_env):
 
 
 @pytest.mark.asyncio
+async def test_consultar_status_exibe_proveniencia_benchmark(server, server_env):
+    """NEP-039 D4: consultar_status expõe proveniência de benchmark quando presente."""
+    import json as _json
+
+    projects_path = server_env["projects_path"]
+    store = ProjectStore.init(
+        projects_path,
+        "DerivadoAGIS",
+        "test",
+        derivado_de_benchmark="AGIS_2025_Q1",
+        benchmark_versao=3,
+        benchmark_execution_id="exec-abc",
+    )
+    proj_id = store.root.name
+    result = await server.call_tool("consultar_status", arguments={"project_id": proj_id})
+    # Extrai o payload do resultado MCP (lista de content blocks)
+    payload = result[0][0].text if isinstance(result, tuple) else None
+    if payload is None:
+        # fallback: result pode ser list de TextContent
+        payload = result[0].text if hasattr(result[0], "text") else _json.dumps(result)
+    assert "AGIS_2025_Q1" in payload
+    assert "benchmark" in payload.lower()
+
+
+@pytest.mark.asyncio
 async def test_consultar_status_not_found(server):
     with pytest.raises(ToolError):
         await server.call_tool("consultar_status", arguments={"project_id": "ghost_project_xyz"})
@@ -360,9 +385,7 @@ async def test_avancar_pipeline_pipeline_complete(server, server_env):
         "02-produtividade-climatica",
         "04-cronograma",
         "05-equipes-e-alocacao",
-        "06-precificacao-unitaria",
-        "07-custos-indiretos",
-        "08-consolidacao-financeira",
+        "06-resultado-financeiro",  # NEP-041 F4
         "09-relatorio-e-artefatos",
     ]
     from datetime import UTC, datetime
@@ -698,9 +721,7 @@ async def test_consultar_status_with_resultado_populated(server, server_env):
     rt.run_skill("03-catalogo-de-recursos", store, inputs={})
     rt.run_skill("04-cronograma", store, inputs={})
     rt.run_skill("05-equipes-e-alocacao", store, inputs={})
-    rt.run_skill("06-precificacao-unitaria", store, inputs={})
-    rt.run_skill("07-custos-indiretos", store, inputs={})
-    rt.run_skill("08-consolidacao-financeira", store, inputs={})
+    rt.run_skill("06-resultado-financeiro", store, inputs={})  # NEP-041 F4: unifica 06+07+08
 
     proj_id = store.root.name
     result = await server.call_tool("consultar_status", arguments={"project_id": proj_id})

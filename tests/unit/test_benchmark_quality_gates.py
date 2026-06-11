@@ -41,10 +41,11 @@ class TestBenchmarkQualityGates:
             }
         }
 
+        # custo_direto is now PU×Q (comparable to reference); instancial is diagnostic only
         fake_projection = _fake_projection(
             ferramenta={
-                "custo_direto": 120.0,
-                "custo_direto_pu_q": 95.0,  # venda.total_sem_bdi (PUxQ) - for gate vs reference
+                "custo_direto": 120.0,  # PU×Q — gated against reference
+                "custo_execucao_pool": 55.0,  # pool instancial — diagnostic
                 "custo_indireto": 22.0,
                 "custo_total": 142.0,
                 "preco_venda": 150.0,
@@ -70,7 +71,7 @@ class TestBenchmarkQualityGates:
         assert custo_direto_item["classe"] in ("ATENCAO", "PREOCUPANTE")
         assert custo_direto_item["severidade"] in ("S1", "S2")
         assert "consolidacao" in custo_direto_item["fase"]
-        assert custo_direto_item["causa_categoria"] == "DERIVACAO_PIPELINE"
+        assert custo_direto_item["causa_categoria"] == "CATALOGO"
 
         preco_item = next(item for item in report["action_report"] if item["metric"] == "preco_venda")
         assert preco_item["causa_categoria"] == "PARAMETRIZACAO_BDI"
@@ -92,8 +93,8 @@ class TestBenchmarkQualityGates:
 
         fake_projection = _fake_projection(
             ferramenta={
-                "custo_direto": 100.0,
-                "custo_direto_pu_q": 100.0,  # venda.total_sem_bdi (PUxQ)
+                "custo_direto": 100.0,  # PU×Q
+                "custo_execucao_pool": 45.0,  # pool instancial (diagnostic)
                 "custo_indireto": 20.0,
                 "custo_total": 120.0,
                 "preco_venda": 130.0,

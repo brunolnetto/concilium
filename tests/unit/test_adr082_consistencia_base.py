@@ -26,7 +26,7 @@ def _load(mod_name: str, rel_path: str) -> ModuleType:
 
 
 _cron = _load("_cron_skill_082", "04-cronograma/skill.py")
-_cons = _load("_cons_helpers_082", "08-consolidacao-financeira/_skill_helpers_a.py")
+_cons = _load("_cons_helpers_082", "06-resultado-financeiro/_consolidacao/_skill_helpers_a.py")
 
 
 # ── _build_dist_cell: eficiencia = utilização; fator_total = p_j × m_ij ──────

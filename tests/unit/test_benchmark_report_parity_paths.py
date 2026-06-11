@@ -10,8 +10,8 @@ from concilium.application.benchmarks.spec_loader import ProjectSpec
 def _fake_projection() -> SimpleNamespace:
     return SimpleNamespace(
         ferramenta={
-            "custo_direto": 100.0,
-            "custo_direto_pu_q": 100.0,  # sourced from venda.total_sem_bdi in production
+            "custo_direto": 100.0,  # PU×Q — comparável à referência
+            "custo_execucao_pool": 45.0,  # pool instancial (diagnóstico)
             "custo_indireto": 20.0,
             "custo_total": 120.0,
             "preco_venda": 130.0,

@@ -40,7 +40,8 @@ def _h05():
 
 
 def _h06():
-    return _load_mod("06-precificacao-unitaria", "_skill_helpers_a")
+    # NEP-041 F4: precificação agora vive no sub-pacote da skill unificada
+    return _load_mod("06-resultado-financeiro/_precificacao", "_skill_helpers_a")
 
 
 def _s01():
