@@ -146,6 +146,196 @@ I_EF(x) = {
 
 ---
 
+## 4b. CampaignOutputBundle — Contrato de Saída e Critérios de Classificação
+
+### 4b.1 Estrutura geral
+
+```
+CampaignOutputBundle
+├── campaign_id: str
+├── campaign_version: str
+├── base_spec_hash: str               ← hash do ProjetoSpec base
+├── gerado_em: datetime
+├── n_cenarios_avaliados: int
+├── n_cenarios_viaveis: int
+├── n_falhas: int
+├── status: CampaignStatus            ← classificação do bundle inteiro
+├── cenarios: list[CenarioAvaliado]   ← todos os cenários com vetores e classificações
+├── shortlist: list[CenarioRankeado]  ← top_k curados com justificativa
+├── summary_O: SummaryEspacoO         ← fronteira Pareto O + estatísticas
+├── summary_EF: SummaryEspacoEF       ← fronteira Pareto EF/F + estatísticas
+└── trilha_auditoria: AuditTrail
+```
+
+### 4b.2 CenarioAvaliado — estrutura por cenário
+
+```
+CenarioAvaliado
+├── cenario_id: str                   ← hash determinístico dos parâmetros variados
+├── parametros_variados: dict         ← apenas os campos que divergem do base_spec
+├── viabilidade: ViabilidadeStatus    ← APROVADO / APROVADO_COM_RESSALVAS /
+│                                        BLOQUEADO_COM_INVESTIGACAO / BLOQUEADO
+│
+├── vetor_O: VetorEspacoO
+│   ├── prazo_semanas: int            ← cronograma.makespan_semanas
+│   ├── folga_semanas: float          ← prazo_contratual - prazo_semanas (+ = no prazo)
+│   ├── fe_nec_medio: float           ← mean(ponto_equilibrio[].frentes_equivalentes_necessarias)
+│   ├── itens_criticos_pct: float     ← count(fe_nec > 1.25) / N_itens
+│   ├── gap_pool_total: float         ← sum(ponto_equilibrio[].gap_pool_overhead)
+│   └── custo_mob_window_total: float ← sum(equipes_diretas[].custo_inst_mob_demob)
+│
+├── vetor_EF: VetorEspacoEF
+│   ├── margem_pct: float             ← resultado.margem_pct
+│   ├── custo_execucao_pool: float    ← resultado.custo.direto_equipes
+│   ├── custo_indireto: float         ← Σ resultado.custo.indireto_*
+│   ├── preco_venda: float            ← resultado.venda.total_com_bdi
+│   ├── ratio_pool_vs_cat: float      ← custo_execucao_pool / PU_cat_Q  (< 1.0 = bom)
+│   └── fidelidade_gates: bool        ← quality_gates.decision ∈ {APROVADO, APROVADO_COM_RESSALVAS}
+│
+├── classificacao_O: ClassificacaoO   ← por dimensão: IDEAL / ATENCAO / CRITICO
+├── classificacao_EF: ClassificacaoEF ← por métrica: DENTRO / ATENCAO / FORA
+│
+├── pareto_O: bool                    ← está na fronteira de Pareto do espaço O?
+├── pareto_EF: bool                   ← está na fronteira de Pareto do espaço EF/F?
+├── pareto_intersecao: bool           ← está em AMBAS as fronteiras?
+└── rank_final: int | None            ← posição no shortlist (None se não curado)
+```
+
+### 4b.3 Critérios de Classificação no Espaço O
+
+Cada dimensão recebe `IDEAL | ATENCAO | CRITICO`:
+
+| Dimensão | IDEAL | ATENCAO | CRITICO |
+|---|---|---|---|
+| `folga_semanas` | ≥ 0 (no prazo ou adiantado) | −2 ≤ folga < 0 | < −2 semanas |
+| `fe_nec_medio` | ≤ 1.0 (pool cobre sem esforço) | 1.0 < fe_nec ≤ 1.25 | > 1.25 |
+| `itens_criticos_pct` | 0% | 0% < pct ≤ 20% | > 20% |
+| `gap_pool_total` | ≤ 0 (pool eficiente) | > 0 e ≤ 5% custo_direto | > 5% custo_direto |
+| `custo_mob_window_total` | ≤ 2% custo_direto | 2–5% custo_direto | > 5% custo_direto |
+
+**Classificação O do cenário** = pior dimensão individual:
+- Se qualquer dimensão é CRITICO → classificacao_O = CRITICO
+- Se alguma é ATENCAO e nenhuma é CRITICO → classificacao_O = ATENCAO
+- Todas IDEAL → classificacao_O = IDEAL
+
+### 4b.4 Critérios de Classificação no Espaço EF/F
+
+Cada métrica recebe `DENTRO_EXPECTATIVA | ATENCAO | FORA_EXPECTATIVA`, parametrizado pelo `perfil_expectativas` da campanha:
+
+| Métrica | DENTRO_EXPECTATIVA | ATENCAO | FORA_EXPECTATIVA |
+|---|---|---|---|
+| `margem_pct` | ≥ meta_margem | meta_margem − tolerancia ≤ margem < meta_margem | < meta_margem − tolerancia |
+| `ratio_pool_vs_cat` | ≤ 1.0 (pool abaixo do mercado) | 1.0 < ratio ≤ 1.10 | > 1.10 (pool mais caro que mercado) |
+| `fidelidade_gates` | True (APROVADO ou APROVADO_COM_RESSALVAS) | — | False (BLOQUEADO_*) |
+
+Defaults do `perfil_expectativas` quando não especificados:
+```
+meta_margem = 0.10     (10%)
+tolerancia  = 0.03     (3 p.p. — ATENCAO entre 7% e 10%)
+```
+
+**Classificação EF do cenário** = pior métrica individual (mesma lógica do O-space).
+
+### 4b.5 Regra de Viabilidade do Cenário
+
+```
+viabilidade = quality_gates.decision (reutiliza semáforo oficial — D4)
+
+Para Pareto e shortlist, apenas cenários com:
+    viabilidade ∈ {APROVADO, APROVADO_COM_RESSALVAS}  →  "viável"
+```
+
+Um cenário com `classificacao_EF = FORA_EXPECTATIVA` pode ainda ser `viabilidade = APROVADO` — ele entra no Pareto mas não no shortlist recomendado.
+
+### 4b.6 Fronteira de Pareto
+
+**Pareto O** — minimizar `(prazo_semanas, fe_nec_medio, gap_pool_total)`:
+
+> Cenário x domina y se: x ≤ y em todas as dimensões AND x < y em pelo menos uma.
+
+Apenas cenários viáveis entram no Pareto O.
+
+**Pareto EF** — maximizar `margem_pct`, minimizar `custo_indireto`:
+
+> Cenário x domina y se: x ≥ y em margem AND x ≤ y em custo_indireto AND estrito em pelo menos um.
+
+**Interseção Pareto** = `pareto_O ∩ pareto_EF` — candidatos preferenciais para o shortlist.
+
+### 4b.7 Curadoria e Ranking do Shortlist
+
+```python
+def curar_shortlist(cenarios: list[CenarioAvaliado], top_k: int,
+                    perfil: PerfilExpectativas) -> list[CenarioRankeado]:
+    # 1. Filtro duro: viabilidade
+    viaveis = [c for c in cenarios if c.viabilidade in {APROVADO, APROVADO_COM_RESSALVAS}]
+
+    # 2. Pareto
+    pareto_O  = calcular_pareto(viaveis, dims_minimizar=["prazo_semanas","fe_nec_medio","gap_pool_total"])
+    pareto_EF = calcular_pareto(viaveis, dims_maximizar=["margem_pct"],
+                                         dims_minimizar=["custo_indireto"])
+    intersecao = [c for c in viaveis if c.pareto_O and c.pareto_EF]
+
+    # 3. Pool de candidatos: interseção preferida; fallback para Pareto EF
+    pool = intersecao if intersecao else [c for c in viaveis if c.pareto_EF]
+
+    # 4. Tie-break determinístico estável (sem escalar único — D6)
+    ranked = sorted(pool, key=lambda c: (
+        c.classificacao_O != "IDEAL",          # IDEAL primeiro
+        c.classificacao_EF != "DENTRO",        # DENTRO_EXPECTATIVA primeiro
+        -c.vetor_EF.margem_pct,                # maior margem
+         c.vetor_O.prazo_semanas,              # menor prazo
+         c.vetor_O.fe_nec_medio,               # menor fe_nec
+         c.cenario_id,                         # hash estável (reproducibilidade)
+    ))
+    return [CenarioRankeado(rank=i+1, cenario=c, justificativa=_build_justificativa(c))
+            for i, c in enumerate(ranked[:top_k])]
+```
+
+### 4b.8 Status do Bundle (Classificação Agregada)
+
+O status do `CampaignOutputBundle` classifica o resultado da campanha inteira:
+
+| Status | Condição |
+|---|---|
+| `SUCESSO` | ≥ 1 cenário em `pareto_intersecao` com `viabilidade ∈ {APROVADO, APROVADO_COM_RESSALVAS}` |
+| `SUCESSO_PARCIAL` | ≥ 1 cenário viável, mas nenhum em `pareto_intersecao` |
+| `FRONTEIRA_UNICA` | ≥ 1 cenário em `pareto_O` ou `pareto_EF`, mas sem interseção — trade-off irreconciliável |
+| `INFEASIBLE` | 0 cenários viáveis após avaliação completa |
+| `INCONCLUSO` | ≥ 1 falha de avaliação E 0 cenários viáveis confirmados |
+| `ABORTADO` | Todas as avaliações falharam |
+
+**`FRONTEIRA_UNICA`** é um caso relevante: indica que maximizar margem e minimizar prazo são objetivos conflitantes no espaço explorado — o engenheiro precisa decidir explicitamente qual dimensão priorizar. O bundle apresenta os top-k da fronteira mais relevante com a divergência documentada.
+
+### 4b.9 Justificativa por Cenário (Explainability)
+
+Cada `CenarioRankeado` inclui justificativa estruturada:
+
+```python
+@dataclass
+class JustificativaCenario:
+    rank: int
+    motivo_inclusao: str          # "pareto_intersecao" | "pareto_EF_fallback" | etc.
+    destaques_O: list[str]        # ex: ["prazo 2 sem antes do contrato", "0 itens críticos"]
+    destaques_EF: list[str]       # ex: ["margem 13.2% (meta: 10%)", "pool 8% abaixo mercado"]
+    alertas: list[str]            # dimensões em ATENCAO
+    parametros_chave: dict        # quais parâmetros variados distinguem este cenário
+```
+
+### 4b.10 Mapeamento de Campos → Fontes no Canonical
+
+| Campo | Fonte no canonical | Disponível desde |
+|---|---|---|
+| `prazo_semanas` | `cronograma.makespan_semanas` | ADR-091 (fix 2026-06-11) |
+| `fe_nec_medio` | `mean(ponto_equilibrio[].frentes_equivalentes_necessarias)` | ADR-076 |
+| `gap_pool_total` | `sum(ponto_equilibrio[].gap_pool_overhead)` | ADR-076 |
+| `custo_mob_window_total` | `sum(equipes_diretas[].custo_inst_mob_demob)` | ADR-106 F5 |
+| `margem_pct` | `resultado.margem_pct` | ADR-085 |
+| `custo_execucao_pool` | `resultado.custo.direto_equipes` | NEP-043 (fix 2026-06-11) |
+| `ratio_pool_vs_cat` | `custo_execucao_pool / venda.total_sem_bdi` | NEP-042 |
+| `fidelidade_gates` | `quality_gates.decision` | ADR-051 |
+
+---
+
 ## 5. Plano de Implementação Revisado
 
 As fases foram reordenadas para aproveitar a infra existente e validar valor incremental antes de investir em complexidade.
