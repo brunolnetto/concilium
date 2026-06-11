@@ -1,196 +1,168 @@
-# Script de Demo — CEO (2026-06-11)
+# Script de Demo — CEO (2026-06-11 v2)
 
 **Duração:** 15–18 min  
-**Objetivo:** Mostrar Claude planejando obra autônoma via MCP — do zero ao resultado financeiro com análise interativa de cenários em tempo real  
-**Perfil:** Engenheiro civil sênior — entende EAP, BDI, RCPSP, cronograma. Não precisa de explicação de termos; quer ver o agente **funcionando e aprendendo sobre o pool**.
+**Objetivo:** Mostrar Claude como engenheiro de planejamento autônomo — o usuário fala como em obra, o sistema entende e entrega resultado financeiro com análise interativa  
+**Perfil:** Engenheiro civil sênior — entende EAP, BDI, cronograma. Quer ver o agente **funcionando**, não explicações técnicas.
 
-> **O que mudou desde 2026-06-10:** pipeline agora tem 11 skills (antes 15), prazo AGIS saiu de 67 para 42 semanas, benchmark APROVADO em todos os gates, simulação de levers é real e interativa, Gantt integrado no chat.
+> **O que há de novo:** o agente conduz a criação do projeto em conversa natural — sem formulário técnico, sem códigos, sem JSON. O engenheiro fala como fala com um colega de planejamento.
 
 ---
 
-## Parte 1 — O Prompt Inicial
+## Parte 1 — O Prompt de Abertura
 
 Cole exatamente no Claude (MCP Concilium conectado):
 
 ```
-Preciso de um orçamento de planejamento para o seguinte empreendimento:
+Preciso fazer o orçamento de planejamento da Ferrovia Nova Transnordestina,
+Lote 09 e 10, em Quixadá, CE. Terraplenagem e supressão vegetal.
 
-Obra: Terraplenagem e drenagem — Lote 09 e 10 (Ferrovia Nova Transnordestina)
-Localização: Quixadá, CE
-Tipo: ferrovia
-Regime: 6 dias/semana, 8h/dia
-Início: 2026-08-01   Término: 2027-04-30
+Começa em agosto de 2026, prazo contratual de 9 meses.
+Regime de 6 dias × 8 horas.
+Lucro objetivo de 8%, Lucro Presumido.
 
-EAP (resumida):
-- 1.1 | Desmatamento e limpeza | m² | 450.000
-- 1.2 | Escavação 1ª cat. DMT ≤ 2000m | m³ | 380.000
-- 1.3 | Escavação 2ª cat. DMT ≤ 2000m | m³ | 120.000
-- 1.4 | Compactação PN | m³ | 310.000
-- 1.5 | Corpo de aterro 3ª cat. | m³ | 95.000
-- 1.6 | Drenagem — escavação de vala | m | 8.200
+Os serviços são:
+- Desmatamento e limpeza: 450 mil m²
+- Escavação 1ª categoria com carga e transporte até 2km: 380 mil m³
+- Escavação 2ª categoria com carga e transporte até 2km: 120 mil m³
+- Compactação PN: 310 mil m³
+- Corpo de aterro 3ª categoria: 95 mil m³
+- Escavação de vala para drenagem: 8.200 m
 
-Catálogo: mendeslobo (versão mais recente)
-Perfil BDI: usar padrão ferrovia com lucro 8% e impostos padrão
-
-Execute o pipeline completo e me entregue:
-1. Resultado financeiro consolidado
-2. As 3 atividades mais críticas para prazo e custo
-3. Margem projetada e status de viabilidade
+Não tenho os custos do canteiro na mão. Use os padrões da MendesLobo.
+Mobilização estimada em 3 semanas.
 ```
 
 ---
 
-## Parte 2 — O Que Claude Faz (sequência autônoma esperada)
+## Parte 2 — O Que Claude Faz
 
-Claude executa **11 skills sem intervenção** — eram 15 antes de ontem:
-
+**Criação do projeto em conversa:**
 ```
-1. iniciar_orcamento(...)
-   → Skill-01: EAP validada, project_id criado
+Claude: "Vou usar os padrões MendesLobo para canteiro:
+         ADM ~R$ 1M/mês, supervisão ~R$ 67k, lab ~R$ 11k, QSMS ~R$ 59k.
+         Mobilização: R$ 4M (padrão AGIS). Confirma ou ajusto?"
 
-2. disparar_pipeline(project_id, "02-produtividade-climatica")
-   → Open-Meteo Quixadá CE: jan–mai são meses críticos (período chuvoso)
-   ✓ fator_calendario_semanal calculado semana a semana
+Eng:    "Confirma."
 
-3. disparar_pipeline(project_id, "03-catalogo-de-recursos")
-   ✓ Pool de recursos declarado do catálogo mendeslobo
+Claude: "Para 'Escavação de vala para drenagem' encontrei dois enquadramentos:
+         (1) Escavação vala 1ª cat. com bota-fora — R$ 6,43/m
+         (2) Escavação mecanizada para drenos — R$ 8,53/m
+         Qual se encaixa melhor?"
 
-4. disparar_pipeline(project_id, "04-cronograma")
-   → RCPSP com n_max irrestrito por atividade:
-     cada atividade recebe o máximo de frentes que o planejador planeja
-     (NÃO o mínimo para caber no prazo — isso resolvia mal o problema)
-   ✓ Makespan determinístico alinhado ao contrato; sem atraso estrutural
+Eng:    "A primeira."
 
-5. disparar_pipeline(project_id, "05-equipes-e-alocacao")
-   → Dimensiona equipes: salário + encargos CLT pela tabela all-in do catálogo
-     (encargos não são mais duplicados — bug corrigido esta semana)
-   ✓ custo_execucao_pool ≈ 0.90 × PU_cat (era 0.45 — half the reality)
-
-6. disparar_pipeline(project_id, "06-resultado-financeiro")
-   → Orquestra precificação + indiretos (ADM/TOP/LAB/QSMS/MOB) +
-     consolidação financeira em 1 skill (eram 3: skills 06+07+08)
-   → BDI de equipamentos usa fração locação/manutenção (SV-31/STF) —
-     não mais 70/30 hardcoded
-   → Indiretos MOB com fases: mobilização (one-time) + operação (mensal) +
-     desmobilização (one-time no encerramento)
-   ✓ Resultado financeiro: custo_direto + custo_indireto + margem
-
-7. disparar_pipeline(project_id, "09-relatorio-e-artefatos")
-   ✓ Relatório PDF + Excel + Gantt (novo)
-
-8. auditar_plano(project_id)
-   → Retorna resultado, 3 atividades ABC-A, status de viabilidade
-
-9. disparar_pipeline(project_id, "10-diagnostico-criticidade")
-   ✓ Ranking ABC custo × prazo
-
-10. disparar_pipeline(project_id, "13-replanejamento-e-cenarios")
-    ✓ Assessor + explorador em 1 skill (eram 2: skills 13+14)
-
-11. disparar_pipeline(project_id, "11-avaliacao-intervencoes")
-    ✓ Relatório de sensibilidade — alavancas de melhoria
+Claude: "Projeto criado ✅  6 atividades · 9 meses · ID: ferrovia-tnt-lote09"
 ```
 
-**Tempo estimado:** 90–120 s. Pipeline 26% mais rápido que ontem (11 vs 15 skills).
+**Pipeline autônomo (11 skills, ~90s):**
+```
+01 → EAP validada
+02 → Clima Quixadá CE: jan–mai são os meses críticos (período chuvoso)
+03 → Catálogo de recursos
+04 → RCPSP: 42 semanas calculadas; alerta: prazo contratual é 39 semanas ⚠️
+05 → Equipes dimensionadas; encargos CLT por grupo A–F calculados
+06 → BDI 8% aplicado — locação de equipamentos isenta de ISS (SV-31/STF)
+     Mobilização faseada: R$ 4M entrada + operação + R$ 408k saída
+09 → Relatório PDF + Gantt gerados
+10 → Criticidade ABC: 3 atividades classe A identificadas
+```
+
+**Resultado financeiro entregue:**
+```
+Custo direto (preço mercado):  R$ 48.7M
+Custo execução com pool:       R$ 43.8M   ← executa 10% abaixo do mercado
+Custo indireto (canteiro):     R$ 19.6M
+Preço de venda:                R$ 76.9M
+Margem operacional:            17.6%      ✅ VERDE
+```
+
+**Tempo estimado:** 90–120 s.
 
 ---
 
 ## Parte 3 — Perguntas-Gancho Para o CEO
 
-### Pergunta 1 — A que vai abrir o Gantt no chat
+### Pergunta 1 — A que abre o Gantt no chat
 
-> "Posso ver o cronograma de forma visual?"
+> "Posso ver o cronograma visualmente?"
 
-Claude chama `listar_artefatos(project_id)` — o app de artefatos abre no chat e automaticamente exibe o **Gantt interativo** com as atividades. O CEO pode passar o mouse sobre cada barra e ver: nome da atividade, data início → fim, duração em semanas, número de frentes e CPU usada.
+Claude abre o **Gantt interativo** no chat. O CEO passa o mouse sobre uma barra:  
+*"Escavação 3ª cat. · 01/Out → 15/Jan · 15 semanas · 3 frentes simultâneas"*
 
-**Por que impacta:** o CEO nunca viu um Gantt aparecer dentro do Claude. Sem download, sem abrir programa.
-
----
-
-### Pergunta 2 — A que vai mostrar os levers
-
-> "E se eu quiser aumentar o ritmo da obra — mais horas por dia ou mais equipes?"
-
-Claude responde: *"Posso simular agora"* e abre o **app de Diagnóstico de Ponto de Equilíbrio**.
-
-O CEO vê os **sliders interativos** em tempo real:
-- Desliza "Fator de equipes" de 1.0× para 1.5×
-- Vê instantaneamente: `fe_nec_médio: 1.38 → 0.92`, `itens críticos: 4 → 0`, `Δ custo: +R$ 8.3M`
-- Desliza "Horas/dia" de 8 para 10 → custo sobre, prazo encurta
-
-Depois clica **"Aplicar via Pipeline"** — o sistema re-executa o cronograma com os parâmetros escolhidos.
-
-**Por que impacta:** iteração de cenário que levaria 2 horas de planilha acontece em 15 segundos sem sair do chat.
+**Por que impacta:** Gantt aparece dentro do Claude. Sem download, sem abrir outro programa.
 
 ---
 
-### Pergunta 3 — A que vai revelar as três camadas de custo
+### Pergunta 2 — A que mostra os levers em tempo real
 
-> "O que é esse 'custo do pool' que aparece no diagnóstico? É diferente do preço unitário?"
+> "E se eu colocar mais equipes para fechar no prazo?"
 
-Claude explica as três camadas — e o sistema mostra numericamente para o projeto do CEO:
+Claude abre o **Diagnóstico PE** no chat com sliders. O CEO desliza "Fator de equipes" de 1.0× para 1.3×:
 
-| Camada | O que é | Valor AGIS (referência) |
-|---|---|---|
-| **PU_cat × Q** | Preço de mercado — o que você cobra | R$ 48.7M |
-| **PU_op × Q** | Custo real de execução via pool | R$ 43.8M |
-| **PU_op_autônomo × Q** | Se cada atividade tivesse equipe dedicada | R$ 73.8M |
+- Frentes críticas (fe_nec > 1.25): **3 → 0**
+- Δ custo estimado: **+R$ 8.3M**
+- Margem estimada: **17.6% → 14.2%**
 
-A diferença entre executar com pool próprio (R$ 43.8M) versus subcontratar ao preço de mercado (R$ 48.7M) é a **margem bruta do trabalho direto — R$ 4.9M antes do BDI**.
+Tudo em tempo real, sem re-executar o pipeline. Clica **"Aplicar via Pipeline"** para confirmar.
 
-O sistema prova, numericamente, por que ter frota própria vence a subcontratação.
+**Por que impacta:** o CEO vê o trade-off prazo × custo em 15 segundos. Em planilha seriam 2 horas.
 
 ---
 
-### Pergunta 4 — A que vai revelar People & Finance
+### Pergunta 3 — A que revela as três camadas de custo
 
-> "E os encargos? O sistema calcula o custo real de cada funcionário com INSS, IRRF, tudo?"
+> "Por que o custo do pool é menor que o preço de catálogo?"
 
-Claude chama:
+| | Valor |
+|---|---|
+| **Preço de mercado** (o que você cobra) | R$ 48.7M |
+| **Custo de execução com pool próprio** | R$ 43.8M |
+| **Economia vs subcontratar** | **R$ 4.9M** |
+| **Custo se fosse equipe dedicada por atividade** | R$ 73.8M |
+
+*"Ter frota própria vale R$ 4.9M de margem bruta só em custo direto — antes do BDI."*
+
+---
+
+### Pergunta 4 — A que revela People & Finance
+
+> "Como o sistema calcula o encargo do operador?"
+
+Claude chama `calcular_custo_empregador_clt(salario_base=9000, categoria="horista")`:
 
 ```
-calcular_custo_empregador_clt(salario_base=9000, categoria="horista")
+INSS patronal 20%:       R$  1.800
+FGTS 8%:                 R$    720
+RAT + Sal-Educ + Sist.S: R$    880
+Férias + 13º + DSR:      R$  2.880   (SINTRACON-SP Grupo B)
+Rescisão + substituição: R$    540   (Grupo C+D)
+VT + VR + saúde + EPI:   R$  1.890   (Grupo E+F)
+─────────────────────────────────
+Total mensal:            R$ 24.993   (= R$ 9.000 × 2,777)
 ```
 
-Retorna breakdown auditável por grupo:
-- Grupo A (INSS patronal 20% + FGTS 8% + RAT 3% + Sal-Ed 2.5% + Sistema S 4.3%)
-- Grupos B–F (férias, 13º, DSR, rescisão, benefícios, VT+VR) por SINTRACON-SP
-- Judicial (provisão passivo trabalhista)
-- **Total: R$ 9.000 × 2.777 = R$ 24.993/mês**
-
-E IRRF:
-```
-calcular_irrf(base_calculo=7500)
-→ R$ 312,40 (desconto progressivo Lei 15.270/2025)
-```
-
-**Por que impacta:** qualquer RH da obra pode simular cenários salariais dentro do planejamento, com base legal citada por grupo. Nenhuma planilha de mercado faz isso.
+*"Cada operador custando R$ 9k nominalmente custa R$ 25k à empresa. O sistema usa a convenção SINTRACON-SP para cada função, com base legal citada grupo a grupo."*
 
 ---
 
-### Pergunta 5 — A que vai revelar combustível generalizado
+### Pergunta 5 — A que revela combustível generalizado
 
-> "E quando a frota é mista — escavadeiras elétricas e diesel?"
+> "Quando a frota for elétrica ou GNV, o sistema vai funcionar?"
 
-Resposta ideal:
-
-> *"Isso já está implementado. O catálogo agora tem `tipo_combustivel` como campo de primeira classe: DIESEL_S10, CNG, BIODIESEL, ELETRICO. O custo de cada tipo de combustível entra na precificação com sua própria taxa de BDI — material para todos — e aparece como dimensão separada no cubo analítico. Migrar uma frota de diesel para elétrico é trocar o campo `tipo_combustivel` no insumo do catálogo."*
-
-Isso mostra que a equipe **não só antecipou o problema como já resolveu**.
+*"Já está pronto. O catálogo tem tipo de combustível como campo de primeira classe: diesel S10, GNV, biodiesel, elétrico. O custo de combustível segue a categoria material (4% de BDI) independente do tipo — só o preço/L muda. Migrar uma escavadeira para elétrica é trocar um campo no insumo do catálogo."*
 
 ---
 
-## Parte 4 — Fechamento (o que mostrar por último)
+## Parte 4 — Fechamento
 
-Abra o relatório PDF diretamente no chat (via app de artefatos). Aponte apenas:
+Abra o relatório PDF no chat. Aponte apenas:
 
-1. **Seção RESULTADO** — três linhas: `PU_cat × Q`, `custo_execucao_pool`, `margem`
-2. **Seção CRONOGRAMA** — Gantt com fator climático visível (semanas em cinza = sem produção)
-3. **Seção PE por atividade** — fe_nec por item, cores verde/amarelo/vermelho
+1. **Resultado financeiro** — três linhas: custo de mercado, custo de execução, margem
+2. **Gantt** — fator climático visível (semanas cinza = sem produção)
+3. **PE por atividade** — verde/amarelo/vermelho por viabilidade de frentes
 
 Frase final:
-
-> *"Cada R$ deste resultado é rastreável até o insumo do catálogo — coeficiente, preço unitário, encargo por grupo, BDI por sub-categoria. Se um fiscal do TCU pedir a memória de cálculo, o sistema a gera em segundos."*
+> *"Cada R$ deste resultado é rastreável até o insumo do catálogo — coeficiente, hora, encargo por grupo legal, BDI por sub-categoria. Se o fiscal do TCU pedir a memória de cálculo, o sistema gera em 3 segundos."*
 
 ---
 
@@ -198,33 +170,33 @@ Frase final:
 
 | Problema | Solução |
 |---|---|
-| Pipeline trava | `consultar_status(project_id)` mostra qual skill e o código de validação. Diga: *"Esse gate detectou uma inconsistência — em produção ele bloqueia antes do dado errado entrar no orçamento"* |
-| Margem sai VERMELHO | **Melhor cenário** — abre os sliders ao vivo, ajusta equipes, mostra margem subindo em tempo real |
-| CPU não no catálogo | Use AGIS diretamente: `consultar_status("AGIS")` → `auditar_plano("AGIS")` — resultado calibrado, zero surpresa |
+| Claude pede esclarecimento | Normal — o agente está coletando o que falta. Responder naturalmente |
+| CPU não mapeado | Claude apresenta opções descritivas → engenheiro escolhe em português |
+| Pipeline trava | `consultar_status(project_id)` — mostrar o gate que detectou a inconsistência |
+| Margem VERMELHO | **Melhor cenário** — abre sliders, ajusta equipes, vê margem subir ao vivo |
 
-### Projeto Backup — AGIS Pré-Calibrado
+### Projeto Backup — AGIS Calibrado
 
-Se quiser zero risco de erro ao vivo:
+Para zero risco de erro ao vivo:
 
 ```
-"Mostre o planejamento atual do projeto AGIS e me dê o diagnóstico completo,
-incluindo análise de cenários e o Gantt do cronograma"
+"Mostre o planejamento do projeto AGIS e me dê o diagnóstico completo"
 
-→ listar_projetos()
 → consultar_status("AGIS")
-→ auditar_plano("AGIS")         ← abre diagnostico-pe com dados reais
-→ listar_artefatos("AGIS")      ← abre Gantt interativo
+→ auditar_plano("AGIS")
+→ listar_artefatos("AGIS")      ← Gantt interativo abre automaticamente
 → simular_cenario_replan("AGIS", "lever_adjust",
     {"fator_equipes": 1.3, "meta_margem_pct": 0.12})
 ```
 
-Gates do AGIS atual: **+3.83% custo_direto · -0.00% custo_indireto · -0.13% preço_venda** — tudo IDEAL S0.
+Gates AGIS: **+3.83% custo_direto · 0.00% custo_indireto · -0.13% preço_venda — APROVADO S0**
 
 ---
 
 ## O que NÃO Dizer
 
-- Não mencione "NEPs", "ADRs", "benchmarks", "testes" espontaneamente
-- Não abra código-fonte
-- Se perguntar sobre segurança: *"Dados do projeto ficam no SharePoint da MendesLobo — o Claude acessa via MCP server na infraestrutura de vocês; nada sai para a Anthropic"*
-- Se perguntar "quanto tempo levou?": *"O planejamento que você viu levou 2 minutos. Em planilha seriam 2 semanas de engenharia."*
+- Não mencione "NEPs", "ADRs", "benchmarks", "json", "schema", "cpu_id"
+- Não abra código-fonte ou terminal
+- Se perguntar "quanto tempo de desenvolvimento?": *"Construído iterativamente — o importante é que hoje está em produção"*
+- Se perguntar sobre segurança: *"Dados ficam no SharePoint da MendesLobo — Claude acessa via MCP server na infraestrutura de vocês"*
+- Se perguntar "e quando a IA errar?": *"Há gates de validação em cada etapa — um erro é capturado antes de chegar ao orçamento, com a causa específica identificada"*
