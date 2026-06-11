@@ -182,9 +182,19 @@ def _bii_build_entry(cat: str, data: dict, detalhe_por_cat: dict) -> dict:
         return {"categoria": cat, "driver": "one_time", "custo_fixo_total": float(custo_total_mob or 0)}
     custo_mensal = data.get("custo_fixo_mensal_total") or data.get("mao_de_obra_mensal", 0)
     entry: dict = {"categoria": cat, "driver": "permanencia", "custo_fixo_mensal": float(custo_mensal or 0)}
-    mo = _bii_build_mao_obra(cat, detalhe_por_cat.get(cat) or {})
+    detalhe = detalhe_por_cat.get(cat) or {}
+    mo = _bii_build_mao_obra(cat, detalhe)
     if mo:
         entry["mao_de_obra"] = mo
+    # Auditoria AGIS 2026-06-11: componentes de equipamentos (locação+combustível de
+    # veículos de apoio) e verbas vindos da planilha — habilitam BDI por sub-categoria
+    # (equip → taxa de material/4%, fiel à coluna DIESEL da planilha; verbas → indireto).
+    eq_total = detalhe.get("equipamentos_mensal_total")
+    if isinstance(eq_total, (int, float)) and eq_total > 0:
+        entry["equipamentos"] = {"nome": f"EQUIP {cat}", "custo_fixo_mensal": round(float(eq_total), 2), "itens": []}
+    vb_total = detalhe.get("verbas_mensal_total")
+    if isinstance(vb_total, (int, float)) and vb_total > 0:
+        entry["verbas"] = {"nome": f"VERBAS {cat}", "custo_fixo_mensal": round(float(vb_total), 2), "itens": []}
     return entry
 
 
@@ -268,7 +278,7 @@ def _bs_lfd_build_bdi_section(svc: BenchmarkSpecLoader, extra_inputs: dict, ref:
         "diesel": _lfd_to_bdi_comp(bdi_ref.get("diesel", {}), ref_bdi_rates.get("diesel"), default_vals),
         "data_vigencia": "2026-04-01",
     }
-    for skill_id in ("06-precificacao-unitaria", "08-consolidacao-financeira"):
+    for skill_id in ("06-resultado-financeiro",):  # NEP-041 F4: chave unificada
         section = extra_inputs.get(skill_id, {})
         section["tabela_bdi"] = tabela_bdi
         extra_inputs[skill_id] = section

@@ -117,12 +117,12 @@ def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> l
         # duration_weeks é derivado de Q/P em skill-04 (_enrich_spec_resources_from_catalog)
         # e não deve ser armazenado na spec (seria redundante e poderia divergir).
         cron_index: dict[str, dict] = {}
-        for c in (out.get("cronograma_compacto") or []):
+        for c in out.get("cronograma_compacto") or []:
             if isinstance(c, dict) and c.get("item_id"):
                 cron_index[str(c["item_id"])] = c
         # fallback: atividades legadas
         if not cron_index:
-            cron_legacy = (out.get("cronograma") or {})
+            cron_legacy = out.get("cronograma") or {}
             for c in (cron_legacy.get("atividades") if isinstance(cron_legacy, dict) else []) or []:
                 if isinstance(c, dict) and c.get("item_id"):
                     cron_index[str(c["item_id"])] = c
@@ -150,9 +150,9 @@ def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> l
             eq = cron_item.get("equipes")
             if isinstance(eq, dict) and eq.get("n_max", 0) > 0:
                 act["ramp_params"] = {
-                    "n_inicial":           eq.get("n_inicial", 1),
-                    "n_max":               eq["n_max"],  # necessário para _compute_ramp_profile
-                    "taxa_mobilizacao":    eq.get("taxa_mobilizacao", float(eq["n_max"])),
+                    "n_inicial": eq.get("n_inicial", 1),
+                    "n_max": eq["n_max"],  # necessário para _compute_ramp_profile
+                    "taxa_mobilizacao": eq.get("taxa_mobilizacao", float(eq["n_max"])),
                     "taxa_desmobilizacao": eq.get("taxa_desmobilizacao", float(eq["n_max"])),
                 }
 

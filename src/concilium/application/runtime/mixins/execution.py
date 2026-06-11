@@ -17,7 +17,7 @@ from ..deliverables.side_effects import (
     _json_default,
     _persist_typed_artifacts,
 )
-from ..exceptions import RuntimeDomainError, RuntimeTechnicalError
+from ..exceptions import RuntimeDomainError
 from ..gates import _GATE_SKILLS
 from ..helpers.pipeline import _execute_skill
 
@@ -37,48 +37,6 @@ class ExecutionMixin:
             return [d for d in contract.depends_on_skills if d not in _executed_ok]
         return self.check_manifest_deps(skill_id, project, v)  # type: ignore[attr-defined]
 
-    def _handle_error(
-        self,
-        exc: Exception,
-        skill_id: str,
-        canonical_in: Any,
-        project: Any,
-        v: str,
-        ts_inicio: Any,
-        execution_id: str,
-        correlation_id: str,
-        trace_id: str | None,
-    ) -> None:
-        error_kind = "DOMINIO" if isinstance(exc, RuntimeDomainError) else "TECNICO"
-        project.log_invocation(
-            v,
-            {
-                "ts": ts_inicio.isoformat(),
-                "execution_id": execution_id,
-                "correlation_id": correlation_id,
-                "skill": skill_id,
-                "status": "ERRO",
-                "error_kind": error_kind,
-                "erro": str(exc),
-            },
-        )
-        if skill_id in _GATE_SKILLS and canonical_in is not None:
-            blocked = list(set(canonical_in.pipeline_blocked_from) | {skill_id})
-            tainted = canonical_in.model_copy(
-                update={"pipeline_blocked_from": blocked, "pipeline_integridade": "CORROMPIDO"}
-            )
-            project.save_canonical(tainted, v, trace_id=trace_id, created_by=f"taint:{skill_id}")
-        from ..exceptions import RuntimeError as _RE
-
-        if isinstance(exc, _RE):
-            raise
-        raise RuntimeTechnicalError(f"Falha técnica ao executar skill '{skill_id}': {exc}") from exc
-
-    def _execution_ids(self, normalized_inputs: dict, project: Any, v: str) -> tuple[str, str]:
-        execution_id = normalized_inputs.get("execution_id") or str(uuid4())
-        correlation_id = normalized_inputs.get("correlation_id") or f"{project.meta['id']}:{v}"
-        return execution_id, correlation_id
-
     def _build_log_entry(
         self,
         contract: Any,
@@ -88,12 +46,15 @@ class ExecutionMixin:
         execution_id: str,
         correlation_id: str,
         skill_id: str,
+        catalog_source: str = "master",
     ) -> dict:
         return {
             "ts": ts_inicio.isoformat(),
             "execution_id": execution_id,
             "correlation_id": correlation_id,
             "skill": skill_id,
+            # NEP-028 D4: proveniência de catálogo por run — reprodutibilidade auditável
+            "catalog_source": catalog_source,
             "contract": {
                 "required_inputs": contract.required_inputs,
                 "optional_inputs": contract.optional_inputs,
@@ -115,55 +76,19 @@ class ExecutionMixin:
         trace_id: str | None = None,
         _executed_ok: set[str] | None = None,
     ) -> SkillResult:
-        contract = self.get_skill_contract(skill_id)  # type: ignore[attr-defined]
-        skill_fn = SKILLS[skill_id]
+        """Executa skill no modelo flat (vN) via FlatVersionStore → run_skill_on_plano."""
+        from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
         v = version or project.current_version()
         if v is None:
             raise RuntimeDomainError("Nenhuma versão ativa. Execute 'concilium version new' primeiro.")
+
+        contract = self.get_skill_contract(skill_id)  # type: ignore[attr-defined]
         missing_deps = self._resolve_missing_deps(contract, skill_id, project, v, _executed_ok)
         if missing_deps:
             raise RuntimeDomainError(f"Skill '{skill_id}' requer execução prévia bem-sucedida de: {missing_deps}")
 
-        canonical_in = project.load_canonical(v)
-        contexto = self.load_contexto(project.meta["contexto_id"])  # type: ignore[attr-defined]
-        perfil = self.load_perfil(contexto.perfil_id)  # type: ignore[attr-defined]
-        catalogo = self._load_resolved_catalogo(contexto.catalogo_id, contexto.jurisdicao_id, project)  # type: ignore[attr-defined]
-        catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()  # type: ignore[attr-defined]
-        normalized_inputs = self._apply_runtime_defaults(skill_id, project, contexto, inputs or {})  # type: ignore[attr-defined]
-        ts_inicio = datetime.now(UTC)
-        execution_id, correlation_id = self._execution_ids(normalized_inputs, project, v)
-        kwargs = self._build_skill_kwargs(  # type: ignore[attr-defined]
-            contract,
-            canonical_in=canonical_in,
-            inputs=normalized_inputs,
-            catalogo=catalogo,
-            perfil=perfil,
-            contexto=contexto,
-            project=project,
-            version=v,
-        )
-
-        try:
-            result = skill_fn(**kwargs)
-        except Exception as exc:
-            self._handle_error(
-                exc, skill_id, canonical_in, project, v, ts_inicio, execution_id, correlation_id, trace_id
-            )
-
-        should_save = not (skill_id == "00-escopo" and result.has_errors)
-        result, should_save = self._process_taint(skill_id, result, should_save)
-        result, should_save = self._process_decision_variables(normalized_inputs, result, should_save)
-
-        if should_save:
-            project.save_canonical(result.canonical, v, trace_id=trace_id, created_by=skill_id)
-
-        self._process_side_effects(skill_id, result, project, v)
-
-        ts_fim = datetime.now(UTC)
-        project.log_invocation(
-            v, self._build_log_entry(contract, result, ts_inicio, ts_fim, execution_id, correlation_id, skill_id)
-        )
-        return result
+        return self.run_skill_on_plano(skill_id, project, FlatVersionStore(project, v), inputs, trace_id)
 
     def run_skill_on_plano(
         self,
@@ -193,6 +118,9 @@ class ExecutionMixin:
 
         ts_inicio = datetime.now(UTC)
         execution_id = normalized_inputs.get("execution_id") or str(uuid4())
+        correlation_id = (
+            normalized_inputs.get("correlation_id") or f"{project.meta.get('id', '')}:{plano_store.plano_id}"
+        )
         kwargs = self._build_skill_kwargs(  # type: ignore[attr-defined]
             contract,
             canonical_in=canonical_in,
@@ -213,17 +141,14 @@ class ExecutionMixin:
         if should_save:
             plano_store.save_canonical(result.canonical, created_by=skill_id)
 
-        v_label = f"{escopo_meta['escopo_id']}/{plano_store.plano_id}"
-        self._process_side_effects(skill_id, result, project, v_label)
+        self._process_side_effects(skill_id, result, project, plano_store.plano_id)
 
+        ts_fim = datetime.now(UTC)
+        catalog_source = str(catalogo.get("_catalog_source", "master")) if isinstance(catalogo, dict) else "master"
         plano_store.log_invocation(
-            {
-                "ts": ts_inicio.isoformat(),
-                "execution_id": execution_id,
-                "skill": skill_id,
-                "status": "ERRO" if result.has_errors else "OK",
-                "duration_ms": int((datetime.now(UTC) - ts_inicio).total_seconds() * 1000),
-            }
+            self._build_log_entry(
+                contract, result, ts_inicio, ts_fim, execution_id, correlation_id, skill_id, catalog_source
+            )
         )
         return result
 

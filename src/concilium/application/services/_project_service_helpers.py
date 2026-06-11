@@ -107,7 +107,8 @@ def _compute_flat_bdi(tabela_bdi: dict[str, Any]) -> dict[str, float]:
         if "servicos" in flat:
             flat["equipamentos"] = flat["servicos"]
         else:
-            flat["equipamentos"] = round(0.70 * flat.get("mao_obra", 0.0) + 0.30 * flat.get("diesel", 0.0), 6)
+            # ADR-023 §D3 revisado: locação de equipamento sem ISS (SV-31) → taxa de material
+            flat["equipamentos"] = flat.get("material", 0.0)
     if flat and "servicos" not in flat:
         flat["servicos"] = flat.get("mao_obra", 0.0)
     return flat
@@ -115,13 +116,13 @@ def _compute_flat_bdi(tabela_bdi: dict[str, Any]) -> dict[str, float]:
 
 def _enrich_payload_bdi(payload: dict[str, Any]) -> None:
     try:
-        s6 = (payload.get("skill_inputs") or {}).get("06-precificacao-unitaria") or {}
+        s6 = (payload.get("skill_inputs") or {}).get("06-resultado-financeiro") or {}  # NEP-041 F4
         tabela_bdi = s6.get("tabela_bdi") or {}
         if not (tabela_bdi and isinstance(tabela_bdi, dict)):
             return
         flat = _compute_flat_bdi(tabela_bdi)
         if flat:
-            payload.setdefault("skill_inputs", {}).setdefault("06-precificacao-unitaria", {})["bdi_aplicado"] = flat
+            payload.setdefault("skill_inputs", {}).setdefault("06-resultado-financeiro", {})["bdi_aplicado"] = flat
     except Exception:
         pass
 

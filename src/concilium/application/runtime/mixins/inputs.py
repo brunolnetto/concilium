@@ -40,13 +40,18 @@ class InputsMixin:
                     "horas_dia": p_meta.get("horas_dia", 8),
                 }
 
-        if skill_id == "03-equipes-diretas" and "percentual_encargos" not in normalized:
+        if skill_id in ("03-equipes-diretas", "05-equipes-e-alocacao") and "percentual_encargos" not in normalized:
             jurisd = self.load_jurisdicao(contexto.jurisdicao_id)  # type: ignore[attr-defined]
             motor = jurisd.get("motor_encargos_sociais", {})
-            if motor.get("percentual_total") is not None:
-                normalized["percentual_encargos"] = motor["percentual_total"]
-            if motor.get("percentual_mensalista") is not None:
-                normalized["percentual_encargos_mensalista"] = motor["percentual_mensalista"]
+            # Preferência: campos específicos (ADR-097 F4) > percentual_total (retrocompat)
+            horista = motor.get("percentual_horista") or motor.get("percentual_total")
+            mensalista = motor.get("percentual_mensalista")
+            if horista is not None:
+                normalized["percentual_encargos"] = horista
+            if mensalista is not None:
+                normalized["percentual_encargos_mensalista"] = mensalista
+            if motor.get("percentual_pj") is not None:
+                normalized["percentual_encargos_pj"] = motor["percentual_pj"]
 
         if skill_id == "04-cronograma" and "calendario_operacional" not in normalized:
             proj_id = str(getattr(project, "id", "") or "")

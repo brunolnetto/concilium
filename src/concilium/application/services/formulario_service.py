@@ -221,7 +221,22 @@ def criar_projeto(
 
     projetos_root.mkdir(parents=True, exist_ok=True)
     store = ProjectStore.init(projetos_root, nome, contexto_id=contexto_id)
-    v = store.new_version()
+
+    # ADR-031: cria estrutura de escopo+plano para compatibilidade com disparar_pipeline
+    escopo_id = "esc-principal"
+    es = store.create_escopo(
+        escopo_id=escopo_id,
+        nome=nome,
+        tipo_obra=tipo_obra,
+        localizacao=localizacao,
+        coordenadas_lat=coordenadas_lat,
+        coordenadas_lng=coordenadas_lng,
+        data_inicio=data_inicio,
+        data_termino=data_termino or "",
+        dias_semana=dias_semana,
+        horas_dia=horas_dia,
+    )
+    ps = es.create_plan(nome="Plano Principal")
 
     eap_clean = [{k: val for k, val in it.items() if not k.startswith("_")} for it in mapeados]
 
@@ -240,26 +255,28 @@ def criar_projeto(
     }
 
     try:
-        from concilium.application.lifecycle_coordinator import LifecycleCoordinator
+        from concilium.application.orchestrators.lifecycle_coordinator import LifecycleCoordinator
 
         coord = LifecycleCoordinator(rt)
-        r = coord.avancar_projeto("01-escopo-e-eap", store, v, inputs=inputs_escopo)
+        r = coord.avancar_plano("01-escopo-e-eap", store, ps, inputs=inputs_escopo)
     except Exception as exc:
-        return {"status": "erro", "project_id": store.root.name, "version": v, "erro": str(exc)}
+        return {"status": "erro", "project_id": store.root.name, "escopo_id": escopo_id, "erro": str(exc)}
 
     if r.has_errors:
         erros = [val.mensagem for val in r.validacoes if val.status == "ERRO"]
         return {
             "status": "erro_escopo",
             "project_id": store.root.name,
-            "version": v,
+            "escopo_id": escopo_id,
+            "plano_id": ps.plano_id,
             "erros": erros,
         }
 
     return {
         "status": "criado",
         "project_id": store.root.name,
-        "version": v,
+        "escopo_id": escopo_id,
+        "plano_id": ps.plano_id,
         "eap_preview": mapeados_preview,
         "total_itens": len(mapeados),
         "proxima_skill_sugerida": "02-produtividade-climatica",

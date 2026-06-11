@@ -80,7 +80,8 @@ class ProjectInputBuilder:
             skill_inputs["03-catalogo-de-recursos"] = spec.inputs_01A
         if spec.inputs_cronograma:
             skill_inputs["04-cronograma"] = spec.inputs_cronograma
-        if spec.inputs_indiretos:
-            skill_inputs["07-custos-indiretos"] = spec.inputs_indiretos
         skill_inputs.update(spec.extra_inputs)
+        # NEP-041 F4: mesclar na chave unificada (extra_inputs pode trazer consolidacao_inputs)
+        if spec.inputs_indiretos:
+            skill_inputs.setdefault("06-resultado-financeiro", {}).update(spec.inputs_indiretos)
         return skill_inputs

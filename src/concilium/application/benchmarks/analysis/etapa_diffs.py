@@ -64,7 +64,7 @@ def _ces03_compare_item(item_id: str, can_eq: dict, ref_eq: dict) -> list:
     return diffs
 
 
-def compare_equipes_skill03(canonical_equipes: list, ref_equipes: list) -> list[dict[str, Any]]:
+def compare_equipes_skill05(canonical_equipes: list, ref_equipes: list) -> list[dict[str, Any]]:
     can_dict = {eq["item_id"]: eq for eq in canonical_equipes if eq.get("item_id")}
     ref_dict = {eq.get("item_id"): eq for eq in ref_equipes if eq.get("item_id")}
     discrepancias: list[dict[str, Any]] = []
@@ -389,7 +389,7 @@ def generate_diffs_for_benchmark(slug: str, root: Path | None = None) -> dict[st
         "por_etapa": {},
     }
 
-    d03 = compare_equipes_skill03(
+    d03 = compare_equipes_skill05(
         canonical.get("equipes_diretas", []),
         _normalize_ref_equipes(extracted.get("equipes", {})),
     )
@@ -413,7 +413,7 @@ def generate_diffs_for_benchmark(slug: str, root: Path | None = None) -> dict[st
         canonical.get("indiretos", []),
         _normalize_ref_indiretos(extracted.get("indiretos", {})),
     )
-    diffs_result["por_etapa"]["07-custos-indiretos-e-contingencia"] = {
+    diffs_result["por_etapa"]["indiretos-e-contingencia"] = {  # NEP-041 F4: etapa, não skill
         "total_discrepancias": len(d05),
         "discrepancias": d05,
         "resumo": _summarize(d05),

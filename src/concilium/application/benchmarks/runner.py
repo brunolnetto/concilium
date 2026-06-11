@@ -32,6 +32,16 @@ class BenchmarkRunner:
 
     def run(self, spec: ProjectSpec, *, reset: bool = False) -> dict[str, Any]:
         store = self._find_or_create(spec.nome, spec.slug, spec.contexto_id, reset)
+
+        # Short-circuit: canonical + relatório já existem e reset não foi solicitado.
+        if not reset:
+            v = store.current_version()
+            if v is not None and store.load_canonical(v) is not None:
+                audit_dir = self._artifact_output_dir(spec).parent / "audit"
+                report_file = audit_dir / "benchmark_report.json"
+                if report_file.exists():
+                    return json.loads(report_file.read_text(encoding="utf-8"))
+
         runtime = Runtime(self.config_root)
         ref_data = self._load_referencia(spec)
         svc_cls = _load_inference_service()
@@ -190,15 +200,18 @@ class BenchmarkRunner:
             skill_inputs["03-catalogo-de-recursos"] = spec.inputs_01A
         if spec.inputs_cronograma:
             skill_inputs["04-cronograma"] = spec.inputs_cronograma
-        if spec.inputs_indiretos:
-            skill_inputs["07-custos-indiretos"] = spec.inputs_indiretos
         skill_inputs.update(spec.extra_inputs)
+        # NEP-041 F4: indiretos e consolidação compartilham a chave unificada —
+        # mesclar por cima de extra_inputs (que pode trazer consolidacao_inputs do spec)
+        # em vez de substituir o dict inteiro.
+        if spec.inputs_indiretos:
+            skill_inputs.setdefault("06-resultado-financeiro", {}).update(spec.inputs_indiretos)
 
         # Em contexto de benchmark, a análise bridge (ADR-039) não deve usar custo
         # operacional de equipes (N4) — a comparação é catalog-vs-reference, não
         # deployment-vs-reference. Sem isso, skill-08 propaga VERMELHO → skill-15
         # falha com ERRO → status_final=INVIAVEL mesmo quando o plano é viável.
-        skill_inputs.setdefault("08-consolidacao-financeira", {})["benchmark_mode"] = True
+        skill_inputs.setdefault("06-resultado-financeiro", {})["benchmark_mode"] = True
 
         svc_cls = _load_inference_service()
         pack = inference_pack or svc_cls.derive(ref)

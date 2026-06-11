@@ -39,26 +39,6 @@ class LifecycleCoordinator:
         result = self.runtime.run_skill_on_plano(skill_id, project, plano_store, inputs=normalized_inputs)
         return result
 
-    def avancar_projeto(
-        self,
-        skill_id: str,
-        project: ProjectStore,
-        version: str,
-        inputs: dict[str, Any] | None = None,
-        force_data_gate: bool = True,
-    ) -> SkillResult:
-        """Executa um passo de avanço na raiz do projeto (Legado) com governança."""
-
-        # 1. Data Management Gate
-        if force_data_gate:
-            self._audit_data_governance_historical(project, version)
-
-        normalized_inputs = self._inject_project_catalog_layers(project, inputs)
-
-        # 2. Execution
-        result = self.runtime.run_skill(skill_id, project, version, inputs=normalized_inputs)
-        return result
-
     def _inject_project_catalog_layers(
         self,
         project: ProjectStore,
@@ -87,15 +67,6 @@ class LifecycleCoordinator:
                     pass
 
         return enriched
-
-    def _audit_data_governance_historical(self, project: ProjectStore, version: str):
-        """Auditoria para projetos legados (sem EscopoStore)."""
-        _ = version
-        contexto_id = project.meta.get("contexto_id")
-        if not contexto_id:
-            return
-
-        load_and_audit_catalog(self.runtime, contexto_id)
 
     def _audit_data_governance(self, project: ProjectStore, plano_store: Any):
         """Executa Quality Gates sobre os dados de gestão que alimentam o plano."""

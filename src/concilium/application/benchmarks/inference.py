@@ -191,7 +191,7 @@ class BenchmarkInferenceService:
         value = round((float(preco_ref) - float(direto_com_bdi)) / float(indireto_ref) - 1.0, 8)
         trace.append(
             BenchmarkInferenceTraceEntry(
-                field="skill_inputs.08-consolidacao-financeira.bdi_indireto_efetivo",
+                field="skill_inputs.06-resultado-financeiro.bdi_indireto_efetivo",
                 source_path="(preco_venda_ref - sum(planejamento.com_bdi))/custo_indireto_ref - 1",
                 rule_id="INF-BENCH-201",
             )

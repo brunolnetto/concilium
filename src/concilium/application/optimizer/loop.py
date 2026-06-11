@@ -7,12 +7,16 @@ constraint violations and returns (canonical, feasible, violations).
 
 from typing import Any
 
-from concilium.application.skills import run_cronograma, run_custos_indiretos, run_equipes_e_alocacao
+from concilium.application.skills import load_skill_stage, run_cronograma, run_equipes_e_alocacao
 from concilium.domain.models import (
     CanonicalModel,
     ConstraintViolation,
     DecisionVariables,
 )
+
+# NEP-041 F4: o estágio de indiretos vive no sub-pacote da skill unificada.
+# O loop re-roda apenas indiretos após ajuste de cronograma — uso de estágio, não da skill.
+run_custos_indiretos = load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
 
 
 def _convert_validacoes_to_violations(validacoes: list[Any]) -> list[ConstraintViolation]:

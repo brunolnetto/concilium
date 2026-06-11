@@ -59,12 +59,19 @@ class CatalogMixin:
         project: Any,
         version: str | None = None,
     ) -> dict[str, Any]:
-        """ADR-066/NEP-028: load project baseline catalog then apply jurisdiction + project overlays."""
+        """ADR-066/NEP-028 A1: load project baseline catalog then apply jurisdiction + project overlays.
+
+        Preferência: snapshot do projeto (benchmark_reference.json) → catálogo master.
+        Quando o fallback para master ocorre, marca `_catalog_source: "master"` no retorno
+        para que o caller possa emitir VAL-CATALOG-FALLBACK se necessário.
+        """
         from concilium.application.services.catalog_resolver import CatalogResolver
 
-        master, _source = self._resolve_project_catalog_base(catalogo_id, project)
+        master, source = self._resolve_project_catalog_base(catalogo_id, project)
         resolver = CatalogResolver(self.config_root)
         resolved, _trace = resolver.apply_overlays(master, project, jurisdicao_id)
+        # NEP-028 A1: rastrear fonte para observabilidade (lida em _audit_data_governance)
+        resolved["_catalog_source"] = source
         return resolved
 
     def _load_resolved_catalog_with_provenance(

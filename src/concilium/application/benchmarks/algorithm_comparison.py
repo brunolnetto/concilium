@@ -284,9 +284,10 @@ class AlgorithmComparisonRunner:
             skill_inputs["03-catalogo-de-recursos"] = spec.inputs_01A
         if getattr(spec, "inputs_cronograma", None):
             skill_inputs["04-cronograma"] = dict(spec.inputs_cronograma)
-        if getattr(spec, "inputs_indiretos", None):
-            skill_inputs["07-custos-indiretos"] = spec.inputs_indiretos
         skill_inputs.update(getattr(spec, "extra_inputs", {}))
+        # NEP-041 F4: mesclar na chave unificada (extra_inputs pode trazer consolidacao_inputs)
+        if getattr(spec, "inputs_indiretos", None):
+            skill_inputs.setdefault("06-resultado-financeiro", {}).update(spec.inputs_indiretos)
         skill_inputs = svc_cls.apply_to_skill_inputs(skill_inputs, inference_pack)
         return skill_inputs
 

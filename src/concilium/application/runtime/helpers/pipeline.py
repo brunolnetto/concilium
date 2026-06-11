@@ -101,6 +101,8 @@ def _oas_log_invocation(runtime, store, version, invocation_context, skill_id, r
             {
                 "ts": datetime.now(_UTC).isoformat(),
                 "skill": skill_id,
+                # NEP-028 D4: proveniência de catálogo (default master se não rastreado)
+                "catalog_source": invocation_context.get("catalog_source", "master"),
                 **invocation_context,
                 "contract": {
                     "required_inputs": contract.required_inputs,

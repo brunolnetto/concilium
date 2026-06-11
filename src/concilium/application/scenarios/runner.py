@@ -33,25 +33,19 @@ from .runner_dv import generate_dv_variations, run_dv_scenario
 from .runner_utils import apply_custo_delta, apply_duracao_delta, apply_equipe_delta, extract_metricas
 
 PIPELINE_SKILLS = [
-    "00-escopo",
+    "01-escopo-e-eap",
     "02-produtividade-climatica",
     "03-catalogo-de-recursos",
     "04-cronograma",
-    "03-equipes-diretas",
-    "03A-derivar-requisitos",
-    "03B-alocacao-recursos",
-    "03C-validar-compartilhamento",
-    "06-precificacao-unitaria",
-    "07-custos-indiretos",
-    "06-consolidar",
+    "05-equipes-e-alocacao",
+    "06-resultado-financeiro",  # NEP-041 F4: unifica 06+07+08
 ]
 
 # Pipeline de análise executado após consolidação — opcional, não varia cenários
+# NEP-041 F3: 11-avaliacao-intervencoes congelada (dormante) — fora do pipeline automático
 ANALYSIS_SKILLS = [
     "09-relatorio-e-artefatos",
-    "08-criticality",
-    "09-cost-criticality",
-    "11-avaliacao-intervencoes",
+    "10-diagnostico-criticidade",
 ]
 
 

@@ -152,7 +152,9 @@ class Runtime(ConfigMixin, CatalogMixin, InputsMixin, ExecutionMixin):
         perfil = self.load_perfil(contexto.perfil_id)
         catalogo = self._load_resolved_catalogo(contexto.catalogo_id, contexto.jurisdicao_id, store)
         catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()
+        # NEP-028 A1: propagar fonte do catálogo para observabilidade nos inputs (lido por integrações externas)
         normalized = self._apply_runtime_defaults(skill_id, store, contexto, extra_inputs)
+        normalized.setdefault("_catalog_source", catalogo.get("_catalog_source", "master"))
 
         # ADR-100 Phase 4: CatalogSession cacheada por run — junction tables + drive-spill.
         # Criada uma vez por execução de pipeline e reutilizada entre skills.

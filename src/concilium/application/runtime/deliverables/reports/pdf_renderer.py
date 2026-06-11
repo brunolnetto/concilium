@@ -1,7 +1,8 @@
 """Renderizacao de Markdown para PDF para deliverables.
 
-Backend padrao: fpdf2.
-Para usar o backend ReportLab (NEP-033): CONCILIUM__PDF_RENDERER=reportlab
+Backend padrão: ReportLab (NEP-033 — melhor suporte a tabelas, blocos de código,
+cabeçalho/rodapé e imagens com aspect ratio correto).
+Para usar o backend legado fpdf2: CONCILIUM__PDF_RENDERER=fpdf2
 """
 
 from __future__ import annotations
@@ -57,11 +58,10 @@ def render_markdown_pdf(
     title: str = "",
     image_provider: Callable[[str], bytes | None] | None = None,
 ) -> bytes | None:
-    """Converte Markdown para PDF quando fpdf2 estiver disponivel.
+    """Converte Markdown para PDF.
 
-    Suporta: titulos (#/##/###), tabelas, ---,  blocos de codigo (skip),
-    imagens inline (via image_provider) e texto com **negrito** (stripped).
-    Retorna None em ambientes sem fpdf2.
+    Backend padrão: ReportLab (NEP-033). Fallback: fpdf2 (legado).
+    Retorna None se nenhum backend disponível ou se md_text estiver vazio.
     """
     if _USE_REPORTLAB:
         from .pdf_renderer_rl import render_markdown_pdf as _rl_render

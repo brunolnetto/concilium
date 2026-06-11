@@ -176,7 +176,13 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
             indiretos_detalhamento[cat] = {"custo_fixo_mensal_total": ind.get("custo_fixo_mensal_total", 0.0)}
         mao_obra = ind.get("mao_obra") or []
         if mao_obra:
-            equipes_indiretas.append({"id": f"INDIR-{cat}", "categoria": cat, "mao_obra": mao_obra})
+            eq_ind: dict[str, Any] = {"id": f"INDIR-{cat}", "categoria": cat, "mao_obra": mao_obra}
+            # Auditoria AGIS 2026-06-11: a planilha decompõe indiretos em MO+EQUIP+VERBAS
+            # (indiretos.adm.txt). Propagar os totais mensais para BDI fiel por sub-categoria.
+            for campo in ("equipamentos_mensal_total", "verbas_mensal_total"):
+                if isinstance(ind.get(campo), (int, float)):
+                    eq_ind[campo] = float(ind[campo])
+            equipes_indiretas.append(eq_ind)
     out["indiretos_detalhamento"] = indiretos_detalhamento
     out["equipes_indiretas"] = equipes_indiretas
 
@@ -295,7 +301,7 @@ class BenchmarkSpecLoader:
         consolidacao_inputs = {"bdi_lucro_impostos": bdi_meta}
         extra_inputs: dict = {
             "06-consolidar": consolidacao_inputs,
-            "08-consolidacao-financeira": consolidacao_inputs,
+            "06-resultado-financeiro": consolidacao_inputs,  # NEP-041 F4
         }
 
         # Permite override de BDI por referência quando disponível, com fallback termo-a-termo.
