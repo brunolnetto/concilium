@@ -1,16 +1,16 @@
 """Helpers extracted from commands_benchmark.py.
 
-CLI commands para o grupo 'benchmark': run, analyze, extract-trace, audit, cleanup.
+CLI commands para o grupo 'benchmark': run, analyze, trace, audit, cleanup.
 
 Comandos:
     concilium benchmark run [--slug SLUG] [--reset]
     concilium benchmark analyze
-    concilium benchmark extract-trace --slug SLUG
+    concilium benchmark trace --slug SLUG
     concilium benchmark audit --slug SLUG
     concilium benchmark cleanup
     concilium benchmark iterate --slug SLUG
     concilium benchmark schedule run <referencia.json>
-    concilium benchmark stage-summary
+    concilium benchmark summary
     concilium benchmark plan-space --slug SLUG [--reset] [--workers N]
 """
 

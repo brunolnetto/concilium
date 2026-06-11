@@ -48,12 +48,12 @@ configuration_app = typer.Typer(
 )
 benchmark_app = typer.Typer(
     name="benchmark",
-    help="Operações de benchmark: run, audit, analyze, extract e correção de discrepâncias.",
+    help="Execução, análise e auditoria de benchmarks.",
     no_args_is_help=True,
 )
 auth_app = typer.Typer(
     name="auth",
-    help="Gestão de usuários, dispositivos e tokens JWT (ADR-094).",
+    help="Gestão de usuários, dispositivos e tokens JWT.",
     no_args_is_help=True,
 )
 skills_app = typer.Typer(
@@ -62,7 +62,7 @@ skills_app = typer.Typer(
     no_args_is_help=True,
 )
 
-# ADR-062: context and perfil versioning + temas/jurisdicoes
+# Context and perfil versioning + temas/jurisdicoes
 from concilium.presentation.cli.commands_config_version import app_context, app_perfil  # noqa: E402
 from concilium.presentation.cli.commands_configuration import app_jurisdicao, app_temas  # noqa: E402
 
@@ -83,6 +83,8 @@ app.add_typer(auth_app)
 
 
 def _populate_catalog_into(target: typer.Typer, cmd) -> None:
+    target.command("list")(cmd.catalog_list)
+    target.command("browse")(cmd.catalog_browse)
     target.command("quality")(cmd.catalog_quality)
     target.command("simulate")(cmd.catalog_simulate)
     target.command("export")(cmd.catalog_export)
@@ -92,10 +94,9 @@ def _populate_catalog_into(target: typer.Typer, cmd) -> None:
     if hasattr(cmd, "catalog_audit_reasonability"):
         target.command("audit")(cmd.catalog_audit_reasonability)
     if hasattr(cmd, "catalog_validate_schema"):
-        target.command("validate-schema")(cmd.catalog_validate_schema)
+        target.command("validate")(cmd.catalog_validate_schema)
     if hasattr(cmd, "catalog_cure_schema"):
         target.command("cure")(cmd.catalog_cure_schema)
-        target.command("cure-schema")(cmd.catalog_cure_schema)
 
 
 def _load_catalog() -> None:
@@ -114,6 +115,7 @@ def _load_project() -> None:
         commands_validate,
     )
 
+    project_app.command("list")(commands_basic.list_projects)
     project_app.command("init")(commands_basic.init)
     project_app.command("status")(commands_basic.status)
     project_app.command("run")(commands_run.run)
@@ -122,7 +124,7 @@ def _load_project() -> None:
 
     project_catalog = typer.Typer(
         name="catalog",
-        help="Catálogo de overrides do projeto (ADR-040).",
+        help="Catálogo de overrides do projeto.",
         no_args_is_help=True,
     )
     _populate_catalog_into(project_catalog, commands_manage)
@@ -143,20 +145,20 @@ def _load_project() -> None:
 
 
 def _load_benchmark() -> None:
-    from concilium.presentation.cli import commands_benchmark, commands_reconciliacao, commands_schedule
+    from concilium.presentation.cli import commands_benchmark, commands_schedule
 
+    benchmark_app.command("list")(commands_benchmark.list_benchmarks)
     benchmark_app.command("run-batch")(commands_benchmark.run_benchmarks_batch)
     benchmark_app.command("run")(commands_benchmark.run_benchmarks)
     benchmark_app.command("analyze")(commands_benchmark.analyze)
-    benchmark_app.command("extract-trace")(commands_benchmark.extract_trace)
+    benchmark_app.command("trace")(commands_benchmark.extract_trace)
     benchmark_app.command("audit")(commands_benchmark.audit)
     benchmark_app.command("cleanup")(commands_benchmark.cleanup)
-    benchmark_app.command("stage-summary")(commands_benchmark.stage_summary)
+    benchmark_app.command("summary")(commands_benchmark.stage_summary)
     benchmark_app.command("iterate")(commands_benchmark.iterate_correction)
     benchmark_app.command("plan-space")(commands_benchmark.plan_space)
     benchmark_app.command("pack")(commands_benchmark.pack_benchmark)
     benchmark_app.command("compare")(commands_benchmark.compare_algorithms)
-    benchmark_app.command("reconciliar")(commands_reconciliacao.reconciliar)
     benchmark_app.add_typer(commands_schedule.app, name="schedule")
 
 
@@ -165,7 +167,7 @@ def _load_validate() -> None:
 
     validate_app = typer.Typer(
         name="validate",
-        help="Validação unificada de projeto/benchmark (ADR-050).",
+        help="Validação unificada de projeto/benchmark.",
         no_args_is_help=True,
     )
     validate_app.command("project")(commands_validate.validate_project)
@@ -226,7 +228,7 @@ def _load_all() -> None:
 
     validate_app = typer.Typer(
         name="validate",
-        help="Validação unificada de projeto/benchmark (ADR-050).",
+        help="Validação unificada de projeto/benchmark.",
         no_args_is_help=True,
     )
     validate_app.command("project")(commands_validate.validate_project)

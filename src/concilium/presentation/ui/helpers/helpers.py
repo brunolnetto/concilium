@@ -179,9 +179,7 @@ def collect_skill_candidates(reference: dict, current: dict[str, Any]) -> list[s
     candidates = {
         "04-cronograma",
         "05-equipes-e-produtividade",
-        "06-precificacao-unitaria",
-        "07-custos-indiretos",
-        "08-consolidacao-financeira",
+        "06-resultado-financeiro",  # NEP-041 F4
     }
     candidates.update(extract_all_skill_inputs(reference).keys())
     if isinstance(current, dict):

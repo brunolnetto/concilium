@@ -64,27 +64,45 @@ def register(server: FastMCP) -> None:
         dias_semana: int = 6,
         horas_dia: int = 8,
     ) -> dict[str, Any]:
-        """Cria projeto novo e executa skill 00 (escopo).
+        """Use quando a EAP já está completamente definida com cpu_ids conhecidos.
+
+        Alternativas: criar_projeto_formulario (quando os serviços estão em linguagem natural
+        e os cpu_ids precisam ser resolvidos automaticamente) ou criar_projeto_spec (quando o
+        projeto completo — incluindo cronograma e regime tributário — está em um documento JSON).
 
         Args:
             nome: Nome legível do projeto (ex.: "Lote 09/10 CE")
-            contexto_id: ID do contexto (ex.: "test"). Use listar_contextos para opções.
+            contexto_id: ID do contexto (ex.: "mendeslobo"). Use listar_contextos para opções.
             tipo_obra: "terraplenagem" | "pavimentacao" | "saneamento"
             localizacao: Cidade, UF (ex.: "Aracoiaba, CE")
-            coordenadas_lat / lng: Coordenadas para consulta climática
+            coordenadas_lat / lng: Coordenadas para consulta climática e calendário
             data_inicio / data_termino: ISO dates "YYYY-MM-DD"
-            eap: Lista de itens da EAP. Cada item é dict com:
-                 item_id, ordem, cpu_id, descricao, unidade, quantitativo
+            eap: Lista de itens com item_id, cpu_id, quantitativo e predecessores
 
         Returns:
-            project_id, version, status_skills_executadas, próximas_skills_pendentes
+            project_id, escopo_id, plano_id, status_skill_01, proxima_skill_sugerida
         """
         rt = _runtime()
         proj_root = _projetos_root()
         proj_root.mkdir(parents=True, exist_ok=True)
 
         store = ProjectStore.init(proj_root, nome, contexto_id=contexto_id)
-        v = store.new_version()
+
+        # ADR-031: cria estrutura de escopo+plano para compatibilidade com disparar_pipeline
+        escopo_id = "esc-principal"
+        es = store.create_escopo(
+            escopo_id=escopo_id,
+            nome=nome,
+            tipo_obra=tipo_obra,
+            localizacao=localizacao,
+            coordenadas_lat=coordenadas_lat,
+            coordenadas_lng=coordenadas_lng,
+            data_inicio=data_inicio,
+            data_termino=data_termino,
+            dias_semana=dias_semana,
+            horas_dia=horas_dia,
+        )
+        ps = es.create_plan(nome="Plano Principal")
 
         inputs_escopo = {
             "nome": nome,
@@ -100,9 +118,9 @@ def register(server: FastMCP) -> None:
 
         executadas = []
         try:
-            # ADR-035: Usa o Coordenador para garantir governança
+            # ADR-035: Usa o Coordenador para garantir governança (ADR-031: via plano)
             coord = _lifecycle_coordinator()
-            r = coord.avancar_projeto("01-escopo-e-eap", store, v, inputs=inputs_escopo)
+            r = coord.avancar_plano("01-escopo-e-eap", store, ps, inputs=inputs_escopo)
 
             executadas.append(
                 {
@@ -116,27 +134,30 @@ def register(server: FastMCP) -> None:
             if r.has_errors:
                 return {
                     "project_id": store.root.name,
-                    "version": v,
+                    "escopo_id": escopo_id,
+                    "plano_id": ps.plano_id,
                     "skills_executadas": executadas,
                     "erro": "Skill 01-escopo-e-eap falhou",
                 }
         except Exception as e:
-            return {"project_id": store.root.name, "version": v, "erro": str(e)}
+            return {"project_id": store.root.name, "escopo_id": escopo_id, "erro": str(e)}
 
         return {
             "project_id": store.root.name,
-            "version": v,
+            "escopo_id": escopo_id,
+            "plano_id": ps.plano_id,
             "skills_executadas": executadas,
             "proxima_skill_sugerida": "02-produtividade-climatica",
             "nota": (
-                "Projeto criado com escopo. Próximo passo: avancar_pipeline para calcular praticabilidade climática."
+                "Projeto criado com escopo e plano (ADR-031). "
+                "Próximo passo: disparar_pipeline para calcular praticabilidade climática."
             ),
         }
 
     # ── 6. Status ────────────────────────────────────────────────────────
     @server.tool()
     def consultar_status(project_id: str) -> dict[str, Any]:
-        """Retorna estado atual do projeto: versão atual, skills executadas, integridade do pipeline."""
+        """Retorna estado atual do projeto: escopos/plano ativo, skills executadas, integridade do pipeline."""
         store = _project(project_id)
         meta = store.meta
         v = meta.get("current_version")
@@ -147,6 +168,55 @@ def register(server: FastMCP) -> None:
             "current_version": v,
             "versoes": store.list_versions(),
         }
+
+        # NEP-039 D4: expõe proveniência de benchmark quando o projeto é derivado
+        if meta.get("derivado_de_benchmark"):
+            out["proveniencia_benchmark"] = {
+                "derivado_de_benchmark": meta.get("derivado_de_benchmark"),
+                "benchmark_versao": meta.get("benchmark_versao"),
+                "benchmark_execution_id": meta.get("benchmark_execution_id"),
+            }
+
+        # ADR-031: expõe escopos e plano ativo para projetos sem current_version (flat)
+        try:
+            escopos = store.list_escopos()
+            if escopos:
+                escopo_ativo = escopos[0] if len(escopos) == 1 else None
+                plano_ativo = None
+                skills_plano: list[dict] = []
+                canonical_plano = None
+                if escopo_ativo:
+                    try:
+                        es = store.escopo(escopo_ativo)
+                        active_plan = es.active_plan()
+                        if active_plan:
+                            plano_ativo = active_plan.plano_id
+                            for line in active_plan.read_invocations():
+                                skills_plano.append(
+                                    {"skill": line.get("skill"), "status": line.get("status"), "ts": line.get("ts")}
+                                )
+                            canonical_plano = active_plan.load_canonical()
+                    except Exception:
+                        pass
+                out["escopos"] = escopos
+                if escopo_ativo:
+                    out["escopo_ativo"] = escopo_ativo
+                if plano_ativo:
+                    out["plano_ativo"] = plano_ativo
+                if skills_plano:
+                    out["invocations"] = skills_plano
+                if canonical_plano and canonical_plano.resultado:
+                    res = canonical_plano.resultado
+                    out["resultado_atual"] = {
+                        "preco_venda": res.venda.total_com_bdi,
+                        "custo_total": res.custo.total,
+                        "margem_pct": res.margem_pct,
+                        "status_margem": res.status_margem,
+                    }
+                if canonical_plano:
+                    out["pipeline_integridade"] = canonical_plano.pipeline_integridade or "PARCIAL"
+        except Exception:
+            pass
 
         if v:
             log_path = store.version_path(v) / store.INVOCATIONS_LOG
@@ -203,65 +273,59 @@ def register(server: FastMCP) -> None:
 
         return _wrap_response(out)
 
-    # ── 7. Aprovar versão (operação irreversível, requer confirmação humana) ─
+    # ── 7. Aprovar plano (ADR-031) ────────────────────────────────────────────
     @server.tool()
-    def aprovar_versao(project_id: str, version: str | None = None) -> dict[str, Any]:
-        """Aprova a versão atual (ou versão indicada) do projeto.
+    def aprovar_versao(project_id: str, escopo_id: str | None = None, plano_id: str | None = None) -> dict[str, Any]:
+        """Aprova o plano ativo do projeto (operação irreversível — confirmar com o usuário).
 
-        IMPORTANTE: Esta operação é IRREVERSÍVEL. Marca os arquivos como read-only.
-        O Claude Desktop deve confirmar com o usuário antes de invocar.
+        Arquiva os planos alternativos do escopo e congela o plano aprovado.
+        Use consultar_estrutura_projeto para obter escopo_id e plano_id antes de chamar.
         """
+        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
+
         store = _project(project_id)
-        v = version or store.current_version()
-        if v is None:
-            return {"erro": "Nenhuma versão ativa para aprovar"}
-
         try:
-            store.approve(v)
-        except Exception as e:
-            return {"erro": str(e)}
-
-        return {"project_id": project_id, "version": v, "status": "APROVADO"}
-
-    # ── ADR-015 §P2: Bifurcar versão aprovada para nova iteração ─────────────
-    @server.tool()
-    def nova_versao(
-        project_id: str,
-        base_version: str | None = None,
-    ) -> dict[str, Any]:
-        """Cria nova versão de planejamento a partir de uma versão aprovada (ADR-015 §P2).
-
-        Permite retomar o pipeline de orçamento após aprovação (S4 -> S1).
-        A nova versão é uma cópia da base; todos os artefatos são herdados
-        e o pipeline pode ser re-executado do início ou de qualquer checkpoint.
-
-        Args:
-            project_id:   ID do projeto.
-            base_version: Versão de origem (padrão: versão atual).  Normalmente
-                          a última versão APROVADA.
-
-        Returns:
-            project_id, nova_versao, base_usada, proxima_skill_sugerida.
-        """
-        store = _project(project_id)
-        base = base_version or store.current_version()
-        if not base:
-            return {"erro": "Nenhuma versão ativa para bifurcar"}
-
-        try:
-            nova = store.new_version(base=base)
+            eid = _resolve_escopo_id(store, escopo_id)
+            es = store.escopo(eid)
+            pid = plano_id or (es.active_plan().plano_id if es.active_plan() else None)
+            if not pid:
+                return {"erro": f"Nenhum plano ativo no escopo '{eid}'. Informe plano_id."}
+            arquivados = es.approve_plan(pid)
         except Exception as e:
             return {"erro": str(e)}
 
         return {
             "project_id": project_id,
-            "nova_versao": nova,
-            "base_usada": base,
-            "proxima_skill_sugerida": "02-produtividade-climatica",
-            "nota": (
-                f"Nova versão {nova} criada a partir de {base}. "
-                "Re-execute o pipeline a partir de qualquer checkpoint ou do início."
-            ),
+            "escopo_id": eid,
+            "plano_aprovado": pid,
+            "planos_arquivados": arquivados,
+            "status": "APROVADO",
+        }
+
+    # ── Nova iteração de planejamento (ADR-031) ───────────────────────────────
+    @server.tool()
+    def nova_versao(project_id: str, escopo_id: str | None = None, nome: str | None = None) -> dict[str, Any]:
+        """Cria novo plano para uma nova iteração de orçamento no mesmo escopo.
+
+        Equivalente ao antigo bifurcar-versão, mas operando na estrutura ADR-031:
+        cria um novo plano dentro do escopo existente.
+        """
+        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
+
+        store = _project(project_id)
+        try:
+            eid = _resolve_escopo_id(store, escopo_id)
+            es = store.escopo(eid)
+            ps = es.create_plan(nome=nome or "Nova Iteração")
+        except Exception as e:
+            return {"erro": str(e)}
+
+        return {
+            "project_id": project_id,
+            "escopo_id": eid,
+            "plano_id": ps.plano_id,
+            "proxima_skill_sugerida": "01-escopo-e-eap",
+            "nota": f"Novo plano '{ps.plano_id}' criado. Execute disparar_pipeline para iniciar o orçamento.",
         }
 
     # ── ADR-023 §D6: Salvar / atualizar perfil BDI do projeto (Phase 1C) ─────

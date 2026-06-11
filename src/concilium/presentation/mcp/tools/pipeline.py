@@ -128,7 +128,7 @@ def register(server: FastMCP) -> None:
         stats_dto = service.obter_estatisticas()
         return _wrap_response(stats_dto.model_dump())
 
-    # ── 4. Avançar pipeline (síncrono — DEPRECATED) ──────────────────────
+    # ── 4. Avançar pipeline (síncrono — DEPRECATED) ─────────────────────────
     @server.tool()
     @permission("project:run")
     @mcp_rate_limit()

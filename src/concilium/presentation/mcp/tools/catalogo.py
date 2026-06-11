@@ -31,11 +31,17 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
 def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de catálogo."""
 
-    @server.tool(description="Lista os contextos de catálogo disponíveis.")
+    # ── Lookup / pesquisa ────────────────────────────────────────────────────
+
+    @server.tool(
+        description="Lista os contextos de catálogo disponíveis (ex: mendeslobo, test). Ponto de entrada para descobrir contexto_id."
+    )
     def listar_contextos() -> dict[str, Any]:
         return _impl_listar_contextos()
 
-    @server.tool(description="Pesquisa CPUs e recursos no catálogo de um contexto.")
+    @server.tool(
+        description="Busca CPUs por código ou descrição (ex: query='escavação 1ª cat'). Use para encontrar cpu_id antes de criar projeto."
+    )
     def pesquisar_catalogo(
         contexto_id: str,
         query: str | None = None,
@@ -44,11 +50,41 @@ def register(server: FastMCP) -> None:
     ) -> dict[str, Any]:
         return _impl_pesquisar_catalogo(contexto_id, query, tipo_obra, limite)
 
-    @server.tool(description="Consulta indicadores de saúde e cobertura do catálogo do contexto.")
+    # ── Diagnóstico — use um de cada vez ────────────────────────────────────
+    # consultar_saude_catalogo  → cobertura (quantos insumos têm preço, % CPUs calculáveis)
+    # avaliar_plausibilidade_catalogo → valores fora de faixa (outliers, razões anômalas)
+    # verificar_integridade_catalogo  → consistência referencial (insumos pendentes, ciclos, PUs)
+
+    @server.tool(
+        description="Cobertura do catálogo: % de insumos com preço, % de CPUs calculáveis. Use para saber se o catálogo está pronto para orçamento."
+    )
     def consultar_saude_catalogo(contexto_id: str) -> dict[str, Any]:
         return _impl_consultar_saude_catalogo(contexto_id)
 
-    @server.tool(description="Atualiza preço de um insumo no contexto/projeto informado.")
+    @server.tool(
+        description="Detecta valores fora de faixa no catálogo (outliers de preço, razões de produtividade anômalas). Use quando suspeitar de calibração errada."
+    )
+    def avaliar_plausibilidade_catalogo(
+        contexto_id: str,
+    ) -> dict[str, Any]:
+        return _impl_avaliar_plausibilidade_catalogo(contexto_id)
+
+    @server.tool(
+        description="Verifica consistência referencial (insumos ausentes, ciclos de dependência) e recalcula PUs com encargos e diesel informados. Use para auditoria de integridade."
+    )
+    def verificar_integridade_catalogo(
+        contexto_id: str,
+        alpha_clt: float = 1.777,
+        alpha_pj: float = 1.06,
+        preco_diesel: float = 6.50,
+    ) -> dict[str, Any]:
+        return _impl_verificar_integridade_catalogo(contexto_id, alpha_clt, alpha_pj, preco_diesel)
+
+    # ── Mutação / atualização ────────────────────────────────────────────────
+
+    @server.tool(
+        description="Atualiza o preço de um insumo (ex: novo preço de diesel após cotação). Use projeto_id para override de projeto em vez de alterar o master."
+    )
     def atualizar_preco_insumo(
         contexto_id: str,
         insumo_id: str,
@@ -59,17 +95,9 @@ def register(server: FastMCP) -> None:
     ) -> dict[str, Any]:
         return _impl_atualizar_preco_insumo(contexto_id, insumo_id, novo_preco, projeto_id, jurisdicao_id, nota)
 
-    @server.tool(description="Consulta preço temporal de insumo para uma data de referência.")
-    def consultar_preco_insumo_temporal(
-        contexto_id: str,
-        insumo_id: str,
-        data_referencia: str,
-        projeto_id: str | None = None,
-        jurisdicao_id: str | None = None,
-    ) -> dict[str, Any]:
-        return _impl_consultar_preco_insumo_temporal(contexto_id, insumo_id, data_referencia, projeto_id, jurisdicao_id)
-
-    @server.tool(description="Adiciona variante de produção com equipe e valor horário.")
+    @server.tool(
+        description="Adiciona uma variante de produtividade a uma producao existente (ex: equipe alternativa com custo/hora diferente)."
+    )
     def adicionar_variante_producao(
         contexto_id: str,
         producao_id: str,
@@ -83,23 +111,41 @@ def register(server: FastMCP) -> None:
             contexto_id, producao_id, variante_id, nome_variante, valor_horario, equipe_json, projeto_id
         )
 
-    # ── Ferramentas de Merge RFI + Integridade ────────────────────────────────
+    # ── Análise temporal / RFI ───────────────────────────────────────────────
 
-    @server.tool(description="Analisa tendência histórica de preços no catálogo do contexto.")
+    @server.tool(
+        description="Retorna o preço de um insumo específico em uma data passada. Use para verificar o preço vigente na época do contrato (diferente de tendencia_precos_catalogo que mostra evolução agregada)."
+    )
+    def consultar_preco_insumo_temporal(
+        contexto_id: str,
+        insumo_id: str,
+        data_referencia: str,
+        projeto_id: str | None = None,
+        jurisdicao_id: str | None = None,
+    ) -> dict[str, Any]:
+        return _impl_consultar_preco_insumo_temporal(contexto_id, insumo_id, data_referencia, projeto_id, jurisdicao_id)
+
+    @server.tool(
+        description="Mostra evolução histórica dos preços de todos os insumos do catálogo. Use para detectar inflação ou deflação sistêmica (diferente de consultar_preco_insumo_temporal que retorna ponto único)."
+    )
     def tendencia_precos_catalogo(
         contexto_id: str,
         jurisdicao_id: str | None = None,
     ) -> dict[str, Any]:
         return _impl_tendencia_precos_catalogo(contexto_id, jurisdicao_id)
 
-    @server.tool(description="Compara dados RFI com catálogo e retorna divergências.")
+    @server.tool(
+        description="Compara dados de RFI (Request for Information) com o catálogo master e lista divergências. dry_run=True (padrão) apenas mostra — use dry_run=False para aplicar as diferenças."
+    )
     def comparar_rfi_catalogo(
         contexto_id: str,
         dry_run: bool = True,
     ) -> dict[str, Any]:
         return _impl_comparar_rfi_catalogo(contexto_id, dry_run)
 
-    @server.tool(description="Calcula PU de produção a partir de parâmetros de custos e encargos.")
+    @server.tool(
+        description="Recalcula o preço unitário de uma produção específica dado alpha_clt, alpha_pj e preço do diesel. Use para simular impacto de mudança de encargos ou combustível em uma CPU."
+    )
     def calcular_pu_producao(
         contexto_id: str,
         producao_id: str,
@@ -109,18 +155,3 @@ def register(server: FastMCP) -> None:
         horas_mes: float = 208.0,
     ) -> dict[str, Any]:
         return _impl_calcular_pu_producao(contexto_id, producao_id, alpha_clt, alpha_pj, preco_diesel, horas_mes)
-
-    @server.tool(description="Avalia plausibilidade dos dados do catálogo para um contexto.")
-    def avaliar_plausibilidade_catalogo(
-        contexto_id: str,
-    ) -> dict[str, Any]:
-        return _impl_avaliar_plausibilidade_catalogo(contexto_id)
-
-    @server.tool(description="Verifica integridade estrutural e consistência do catálogo.")
-    def verificar_integridade_catalogo(
-        contexto_id: str,
-        alpha_clt: float = 1.777,
-        alpha_pj: float = 1.06,
-        preco_diesel: float = 6.50,
-    ) -> dict[str, Any]:
-        return _impl_verificar_integridade_catalogo(contexto_id, alpha_clt, alpha_pj, preco_diesel)

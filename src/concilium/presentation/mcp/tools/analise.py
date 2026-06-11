@@ -41,7 +41,7 @@ def register(server: FastMCP) -> None:
                 "escopo_id": eid,
                 "plano_id": pid,
                 "viabilidade": {
-                    "prazo_ok": canonical.projeto.data_termino <= canonical.projeto.data_termino,  # Placeholder
+                    "prazo_ok": canonical.projeto.data_termino >= __import__("datetime").date.today(),
                     "conflitos_recurso": len(canonical.conflitos_pico),
                     "integridade_pipeline": canonical.pipeline_integridade,
                 },

@@ -71,17 +71,25 @@ def register(server: FastMCP) -> None:
         localizacao: str,
         data_inicio: str,
         data_termino: str,
+        coordenadas_lat: float = 0.0,
+        coordenadas_lng: float = 0.0,
+        dias_semana: int = 6,
+        horas_dia: int = 8,
     ) -> dict[str, Any]:
         """Cria ou atualiza um escopo de obra no projeto."""
         store = _project(project_id)
         try:
-            es = store.create_escopo(  # type: ignore[call-arg]
+            es = store.create_escopo(
                 escopo_id=escopo_id,
                 nome=nome,
                 tipo_obra=tipo_obra,
                 localizacao=localizacao,
+                coordenadas_lat=coordenadas_lat,
+                coordenadas_lng=coordenadas_lng,
                 data_inicio=data_inicio,
                 data_termino=data_termino,
+                dias_semana=dias_semana,
+                horas_dia=horas_dia,
             )
         except Exception as e:
             return {"erro": str(e)}

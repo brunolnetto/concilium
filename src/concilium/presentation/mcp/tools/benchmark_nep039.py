@@ -67,8 +67,8 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
             "total_projetos_derivados": len({e.projeto_id for e in history if e.status == "SUCESSO"}),
         }
 
-    @server.tool(description="Lista todos os benchmarks disponíveis no catálogo.")
-    def listar_benchmarks() -> dict[str, Any]:
+    @server.tool(description="Lista benchmarks com metadados do catálogo NEP-039 (versão, imutabilidade, histórico).")
+    def listar_benchmarks_nep039() -> dict[str, Any]:
         """Retorna lista de benchmarks (versão atual de cada um).
 
         Returns:
@@ -93,8 +93,10 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
             ],
         }
 
-    @server.tool(description="Executa benchmark e cria/atualiza um projeto. Sempre atrelado a projeto.")
-    def executar_benchmark(
+    @server.tool(
+        description="Enfileira execução de benchmark NEP-039 (registra vínculo com projeto e retorna execution_id)."
+    )
+    def executar_benchmark_nep039(
         benchmark_id: str,
         criar_novo_projeto: bool = True,
         project_id: str | None = None,

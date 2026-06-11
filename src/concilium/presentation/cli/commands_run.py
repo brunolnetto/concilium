@@ -11,7 +11,7 @@ from concilium.presentation.cli.shared import config_root, parse_project_version
 
 # Runtime Ã© importado dentro de cada funÃ§Ã£o para evitar cascade Pydantic no startup.
 
-app = typer.Typer(name="run", help="ExecuÃ§Ã£o de skills.", no_args_is_help=True)
+app = typer.Typer(name="run", help="Execucao de skills.", no_args_is_help=True)
 
 
 def _run_parse_inputs(inputs_json: str | None) -> dict:
@@ -119,11 +119,11 @@ def run(
 def approve(
     arg: str = typer.Argument(..., help="projeto ou projeto@vN"),
     papel: str = typer.Option(..., "--as", help="Papel do aprovador (ex.: eng_senior, diretor)."),
-    motivo: str = typer.Option("", "--motivo", "-m", help="MotivaÃ§Ã£o da aprovaÃ§Ã£o."),
+    motivo: str = typer.Option("", "--motivo", "-m", help="Motivacao da aprovacao."),
     allow_pending_overrides: bool = typer.Option(
         False,
         "--allow-pending-overrides",
-        help="Permite aprovar mesmo com overrides de catálogo pendentes de curadoria (ADR-040).",
+        help="Permite aprovar mesmo com overrides de catálogo pendentes de curadoria.",
     ),
 ) -> None:
     """Aprova versÃ£o: atualiza status no canÃ´nico e torna arquivos read-only (chmod 444)."""
@@ -144,7 +144,7 @@ def approve(
         preview = ", ".join(sorted(pending_override_ids)[:5])
         suffix = "" if len(pending_override_ids) <= 5 else f" ... (+{len(pending_override_ids) - 5})"
         rprint(
-            "[yellow]AprovaÃ§Ã£o bloqueada: existem overrides pendentes de curadoria (ADR-040).[/yellow]\n"
+            "[yellow]AprovaÃ§Ã£o bloqueada: existem overrides pendentes de curadoria.[/yellow]\n"
             f"  Itens: {preview}{suffix}\n"
             "  OpÃ§Ãµes: promova/arquive os overrides ou reexecute com --allow-pending-overrides."
         )

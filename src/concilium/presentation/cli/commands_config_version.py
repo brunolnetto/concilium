@@ -1,4 +1,4 @@
-"""ADR-062: CLI commands for context and profile versioning.
+"""CLI commands for context and profile versioning.
 
 Commands:
   concilium context versions <id>              List versions of a context
@@ -25,8 +25,8 @@ from concilium.application.services.contexto_version_service import (
 
 # ── Sub-apps ──────────────────────────────────────────────────────────────────
 
-app_context = typer.Typer(name="context", help="Gerenciamento de versões de contextos (ADR-062).")
-app_perfil = typer.Typer(name="perfil", help="Gerenciamento de versões de perfis (ADR-062).")
+app_context = typer.Typer(name="context", help="Gerenciamento de versões de contextos.")
+app_perfil = typer.Typer(name="perfil", help="Gerenciamento de versões de perfis.")
 
 
 def _config_root() -> Path:

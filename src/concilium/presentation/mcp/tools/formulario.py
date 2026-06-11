@@ -168,10 +168,12 @@ def register(server: FastMCP) -> None:
         horas_dia: int = 8,
         objetivo_pool: str = "balanceado",
     ) -> dict[str, Any]:
-        """Cria um projeto a partir de uma lista de serviços em linguagem natural (QQP).
+        """Use quando os serviços estão em linguagem natural e os cpu_ids não são conhecidos.
 
-        Resolve automaticamente cpu_id por descrição. Se houver itens não mapeados,
-        retorna um preview para o agente corrigir antes de criar.
+        Resolve automaticamente cpu_id por descrição de texto (NLP). Se houver itens não
+        mapeados, retorna um preview para correção antes de criar. Alternativas: iniciar_orcamento
+        (quando os cpu_ids já são conhecidos) ou criar_projeto_spec (spec JSON completo com
+        cronograma e regime tributário).
 
         Args:
             nome:            Nome do projeto (ex: "Lote 09/10 CE")
@@ -249,7 +251,22 @@ def register(server: FastMCP) -> None:
         from concilium.infrastructure.storage.project import ProjectStore
 
         store = ProjectStore.init(proj_root, nome, contexto_id=contexto_id)
-        v = store.new_version()
+
+        # ADR-031: cria estrutura de escopo+plano para compatibilidade com disparar_pipeline
+        escopo_id = "esc-principal"
+        es = store.create_escopo(
+            escopo_id=escopo_id,
+            nome=nome,
+            tipo_obra=tipo_obra,
+            localizacao=localizacao,
+            coordenadas_lat=coordenadas_lat,
+            coordenadas_lng=coordenadas_lng,
+            data_inicio=data_inicio,
+            data_termino=data_termino or "",
+            dias_semana=dias_semana,
+            horas_dia=horas_dia,
+        )
+        ps = es.create_plan(nome="Plano Principal")
 
         # Remove campo interno _score antes de passar para a skill
         eap_clean = [{k: val for k, val in it.items() if k != "_score"} for it in eap_mapeados]
@@ -269,22 +286,24 @@ def register(server: FastMCP) -> None:
 
         try:
             coord = _lifecycle_coordinator()
-            r = coord.avancar_projeto("01-escopo-e-eap", store, v, inputs=inputs_escopo)
+            r = coord.avancar_plano("01-escopo-e-eap", store, ps, inputs=inputs_escopo)
         except Exception as e:
             return _wrap_response(
                 {
                     "project_id": store.root.name,
-                    "version": v,
+                    "escopo_id": escopo_id,
+                    "plano_id": ps.plano_id,
                     "erro": str(e),
                 }
             )
 
         if r.has_errors:
-            erros = [v.mensagem for v in r.validacoes if v.status == "ERRO"]
+            erros = [val.mensagem for val in r.validacoes if val.status == "ERRO"]
             return _wrap_response(
                 {
                     "project_id": store.root.name,
-                    "version": v,
+                    "escopo_id": escopo_id,
+                    "plano_id": ps.plano_id,
                     "status": "erro_escopo",
                     "erros": erros,
                     "dica": "Verifique se os cpu_ids são válidos para o contexto escolhido.",
@@ -295,13 +314,14 @@ def register(server: FastMCP) -> None:
             {
                 "status": "criado",
                 "project_id": store.root.name,
-                "version": v,
+                "escopo_id": escopo_id,
+                "plano_id": ps.plano_id,
                 "eap_preview": mapeados_preview,
                 "total_itens": len(eap_mapeados),
                 "proxima_skill_sugerida": "02-produtividade-climatica",
                 "nota": (
-                    "Projeto criado com escopo EAP. "
-                    "Use avancar_pipeline para calcular praticabilidade climática e prosseguir."
+                    "Projeto criado com escopo e plano (ADR-031). "
+                    "Use disparar_pipeline para calcular praticabilidade climática e prosseguir."
                 ),
             }
         )

@@ -1,14 +1,14 @@
-"""CLI commands para o grupo 'benchmark': run, analyze, extract-trace, audit, cleanup.
+"""CLI commands para o grupo 'benchmark': run, analyze, trace, audit, cleanup.
 
 Comandos:
   concilium benchmark run [--slug SLUG] [--reset]
   concilium benchmark analyze
-  concilium benchmark extract-trace --slug SLUG
+  concilium benchmark trace --slug SLUG
   concilium benchmark audit --slug SLUG
   concilium benchmark cleanup
   concilium benchmark iterate --slug SLUG
   concilium benchmark schedule run <referencia.json>
-  concilium benchmark stage-summary
+  concilium benchmark summary
   concilium benchmark plan-space --slug SLUG [--reset] [--workers N]
 """
 
@@ -37,6 +37,27 @@ app = typer.Typer(
     help="Operações de benchmark: run, audit, analyze, extract e correção de discrepâncias.",
     no_args_is_help=True,
 )
+
+
+@app.command("list")
+def list_benchmarks() -> None:
+    """Lista benchmarks disponíveis com slug e status."""
+    from concilium.application.benchmarks.batch import discover_benchmark_slugs
+
+    root = _DEFAULT_ROOT / "benchmarks" / "data"
+    slugs = discover_benchmark_slugs(root)
+    if not slugs:
+        rprint("[yellow]Nenhum benchmark encontrado.[/yellow]")
+        return
+
+    t = Table(show_header=True, header_style="bold")
+    t.add_column("Slug", style="cyan")
+    t.add_column("Referência")
+    for slug in slugs:
+        bench_dir = root / slug
+        ref_file = next((c for c in (bench_dir / "referencia.json", bench_dir / "referencia.yaml") if c.exists()), None)
+        t.add_row(slug, ref_file.name if ref_file else "[yellow]sem referencia.json[/yellow]")
+    rprint(t)
 
 
 @app.command("merge-catalog")
@@ -284,7 +305,7 @@ def analyze() -> None:
     rprint(table)
 
 
-@app.command("extract-trace")
+@app.command("trace")
 def extract_trace(
     slug: str = typer.Argument(..., help="Slug do benchmark (ex: CTC)"),
 ) -> None:
@@ -330,7 +351,7 @@ def cleanup() -> None:
     rprint(f"[green]Limpeza concluída. {removed} arquivos removidos.[/green]")
 
 
-@app.command("stage-summary")
+@app.command("summary")
 def stage_summary(
     output: str = typer.Option("", help="Caminho para salvar JSON de saída."),
 ) -> None:

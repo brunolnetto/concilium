@@ -2,27 +2,106 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diagnóstico PE — Concilium</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" crossorigin>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b; font-size: 13px; }
+    .header { background: #7c3aed; color: white; padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
+    .header h1 { font-size: 15px; font-weight: 600; }
+    .status-bar { padding: 6px 16px; font-size: 11px; background: #fefce8; border-bottom: 1px solid #fef08a; color: #854d0e; }
+    .status-bar.connected { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .content { padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 12px; }
+    .card-title { font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+    .metric-row:last-child { border: none; }
+    .metric-label { color: #64748b; }
+    .metric-value { font-weight: 600; }
+    .ok { color: #16a34a; } .warn { color: #d97706; } .crit { color: #dc2626; }
+    .pe-items { grid-column: 1 / -1; }
+    .table-wrap { overflow: auto; max-height: 180px; border: 1px solid #e2e8f0; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { background: #f8fafc; padding: 5px 8px; text-align: left; font-size: 10px; text-transform: uppercase; color: #64748b; position: sticky; top: 0; }
+    td { padding: 4px 8px; border-top: 1px solid #f1f5f9; }
+    .empty { text-align: center; padding: 24px; color: #94a3b8; }
+    .badge { display: inline-block; padding: 1px 5px; border-radius: 9999px; font-size: 10px; }
+    .badge-ok { background: #dcfce7; color: #16a34a; }
+    .badge-warn { background: #fef9c3; color: #a16207; }
+    .badge-crit { background: #fee2e2; color: #dc2626; }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
-  <div class="text-center max-w-md">
-    <div class="text-5xl mb-4">⚖️</div>
-    <h1 class="text-xl font-bold text-gray-900 mb-2">Diagnóstico de Ponto de Equilíbrio</h1>
-    <p class="text-sm text-gray-500 mb-6">Sliders de levers com impacto em tempo real via simular_impacto_replan.</p>
-    <div id="status" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
-      ADR-101 Fase 4 — em desenvolvimento
+<body>
+  <div class="header">
+    <span>⚖️</span><h1>Diagnóstico de Ponto de Equilíbrio</h1>
+    <span style="margin-left:auto;font-size:11px;opacity:.7">ADR-101 F4</span>
+  </div>
+  <div class="status-bar" id="status-bar">⏳ Aguardando dados do pipeline...</div>
+  <div class="content">
+    <div class="card">
+      <div class="card-title">Resumo Financeiro</div>
+      <div class="metric-row"><span class="metric-label">Custo operacional real</span><span class="metric-value" id="m-custo-op">—</span></div>
+      <div class="metric-row"><span class="metric-label">Venda c/ BDI</span><span class="metric-value" id="m-venda">—</span></div>
+      <div class="metric-row"><span class="metric-label">Resultado financeiro</span><span class="metric-value" id="m-resultado">—</span></div>
+      <div class="metric-row"><span class="metric-label">Margem operacional</span><span class="metric-value" id="m-margem">—</span></div>
+      <div class="metric-row"><span class="metric-label">Status margem</span><span id="m-status">—</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pool e Eficiência</div>
+      <div class="metric-row"><span class="metric-label">Gap de escala</span><span class="metric-value" id="m-gap-escala">—</span></div>
+      <div class="metric-row"><span class="metric-label">Gap pool overhead</span><span class="metric-value" id="m-gap-pool">—</span></div>
+      <div class="metric-row"><span class="metric-label">Economia pool abs</span><span class="metric-value" id="m-eco-pool">—</span></div>
+      <div class="metric-row"><span class="metric-label">η real médio</span><span class="metric-value" id="m-eta">—</span></div>
+      <div class="metric-row"><span class="metric-label">Frentes necessárias</span><span class="metric-value" id="m-frentes">—</span></div>
+    </div>
+    <div class="card pe-items">
+      <div class="card-title">Ponto de Equilíbrio por Item</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Item</th><th>Custo Op</th><th>Venda</th><th>fe_nec</th><th>Status</th><th>Gap Escala</th></tr></thead>
+          <tbody id="pe-tbody"><tr><td colspan="6" class="empty">Sem dados</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
   <script>
-    window.addEventListener('message', (e) => {
-      const msg = e.data;
-      if (msg?.result) {
-        document.getElementById('status').textContent = 'Conectado ao host MCP.';
-        document.getElementById('status').className = 'bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700';
+    const fmt = (v,d=0) => v==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:d}).format(v);
+    const pct = v => v==null?'—':`${(v*100).toFixed(1)}%`;
+    const num = (v,d=2) => v==null?'—':Number(v).toFixed(d);
+    function render(data) {
+      const r = data?.resultado;
+      if (r) {
+        document.getElementById('m-custo-op').textContent = fmt(r.custo?.total);
+        document.getElementById('m-venda').textContent = fmt(r.venda?.total_com_bdi??r.venda?.total_custo_plus);
+        document.getElementById('m-resultado').textContent = fmt(r.resultado_financeiro);
+        const mg = r.margem_operacional??r.margem_liquida??null;
+        const mgEl = document.getElementById('m-margem');
+        mgEl.textContent = pct(mg); mgEl.className = 'metric-value '+(mg==null?'':mg>=0.08?'ok':mg>=0.04?'warn':'crit');
+        document.getElementById('m-status').textContent = r.status_margem??'—';
       }
+      const pes = data?.ponto_equilibrio??[];
+      if (pes.length>0) {
+        const a = pes[0];
+        document.getElementById('m-gap-escala').textContent = fmt(a.gap_escala_abs);
+        document.getElementById('m-gap-pool').textContent = fmt(a.gap_pool_overhead);
+        document.getElementById('m-eco-pool').textContent = fmt(a.economia_pool_abs);
+        document.getElementById('m-eta').textContent = num(a.eta_real);
+        const fn = a.frentes_equivalentes_necessarias;
+        const fnEl = document.getElementById('m-frentes');
+        fnEl.textContent = num(fn); fnEl.className = 'metric-value '+(fn==null?'':fn<=1.25?'ok':fn<=1.5?'warn':'crit');
+        document.getElementById('pe-tbody').innerHTML = pes.map(p => {
+          const fn = p.frentes_equivalentes_necessarias;
+          const cls = fn==null?'':fn<=1.25?'badge-ok':fn<=1.5?'badge-warn':'badge-crit';
+          return `<tr><td><strong>${p.item_id}</strong></td><td>${fmt(p.custo_operacional_real)}</td><td>${fmt(p.custo_venda_cpu)}</td><td><span class="badge ${cls}">${num(fn)}</span></td><td>${p.status_frentes??'—'}</td><td>${fmt(p.gap_escala_abs)}</td></tr>`;
+        }).join('');
+      }
+    }
+    window.addEventListener('message', e => {
+      const msg = e.data; if (!msg||msg.jsonrpc!=='2.0') return;
+      if (msg.id===1&&msg.result) { document.getElementById('status-bar').textContent='✅ Conectado'; document.getElementById('status-bar').className='status-bar connected'; }
+      if (msg.method==='ui/toolResult') { const r=msg.params?.result; if(r?.canonical)render(r.canonical); else if(r)render(r); document.getElementById('status-bar').textContent=`✅ Atualizado — ${new Date().toLocaleTimeString('pt-BR')}`; document.getElementById('status-bar').className='status-bar connected'; }
     });
-    window.parent.postMessage({ jsonrpc: '2.0', id: 1, method: 'ui/initialize', params: { protocolVersion: '2026-01-26', capabilities: {} } }, '*');
+    window.parent.postMessage({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{protocolVersion:'2026-01-26',capabilities:{push:true}}},'*');
   </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-"""CLI commands: schedule - RCPSP solver (ADR-046)."""
+"""CLI commands: schedule - RCPSP solver."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from rich import print as rprint
 
 app = typer.Typer(
     name="schedule",
-    help="Escalonamento RCPSP baseado em restricoes de recursos (ADR-046).",
+    help="Escalonamento RCPSP baseado em restricoes de recursos.",
     no_args_is_help=True,
 )
 
@@ -70,7 +70,7 @@ def schedule_run(
     deadline_weeks: int | None = typer.Option(None, "--deadline", "-d"),
     timeout: int = typer.Option(30, "--timeout", "-t"),
 ) -> None:
-    """Executa o solver RCPSP sobre a referencia.json (ADR-046)."""
+    """Executa o solver RCPSP sobre a referencia.json."""
     from concilium.application.scheduling import explore_schedules
 
     ref_raw = json.loads(spec_path.read_text(encoding="utf-8"))

@@ -61,7 +61,9 @@ from concilium.presentation.mcp.tools import (
     pipeline,
     projeto,
     replan,
+    spec,
     system,
+    tributacao,
 )
 
 
@@ -74,6 +76,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     projeto.register(server)
     pipeline.register(server)
     formulario.register(server)  # ADR-092: criar_projeto_formulario
+    spec.register(server)  # ProjetoSpec unificado
     analise.register(server)
     replan.register(server)
     escopo.register(server)  # ADR-031
@@ -89,6 +92,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     benchmark_nep039.register(server, benchmark_store)
 
     artifacts.register(server)  # ADR-093: listar/ler/baixar/bundle de artefatos
+    tributacao.register(server)  # ADR-097 F6: INSS, IRRF, custo empregador CLT
     _register_ui_resources(server)  # ADR-101: MCP Apps — recursos ui://
     patch_fastmcp_server(server)  # ADR-095: OTEL tracing em todas as tools
     _patch_mcp_with_auth(server)  # ADR-099: JWT middleware para transport HTTP

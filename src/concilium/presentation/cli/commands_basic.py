@@ -2,10 +2,47 @@
 
 import typer
 from rich import print as rprint
+from rich.table import Table
 
-from concilium.presentation.cli.shared import config_root, parse_project_version, project_repository, resolve_project
+from concilium.presentation.cli.shared import (
+    config_root,
+    parse_project_version,
+    project_repository,
+    projetos_root,
+    resolve_project,
+)
 
 app = typer.Typer(name="root", help="Comandos bÃ¡sicos.", no_args_is_help=True)
+
+
+@app.command("list")
+def list_projects() -> None:
+    """Lista todos os projetos existentes."""
+    from concilium.infrastructure.storage.project import ProjectStore
+
+    root = projetos_root()
+    if not root.exists():
+        rprint("[yellow]Nenhum projeto encontrado.[/yellow]")
+        return
+
+    projetos = [p for p in sorted(root.iterdir()) if p.is_dir()]
+    if not projetos:
+        rprint("[yellow]Nenhum projeto encontrado.[/yellow]")
+        return
+
+    t = Table(show_header=True, header_style="bold")
+    t.add_column("ID", style="cyan")
+    t.add_column("Nome")
+    t.add_column("Contexto")
+    t.add_column("Versão")
+    for p in projetos:
+        try:
+            store = ProjectStore(p)
+            meta = store.meta
+            t.add_row(p.name, meta.get("nome", "?"), meta.get("contexto_id", "?"), meta.get("current_version") or "-")
+        except Exception as e:
+            t.add_row(p.name, "[red]?[/red]", "[red]?[/red]", f"[red]{e}[/red]")
+    rprint(t)
 
 
 @app.command()

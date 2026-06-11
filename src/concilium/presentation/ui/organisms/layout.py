@@ -1311,7 +1311,7 @@ def render_indiretos_config(base_url: str, project_id: str, actor: str) -> None:
                 method="POST",
                 path=f"/api/projects/{project_id}/overrides",
                 base_url=base_url,
-                payload={"skill_id": "07-custos-indiretos", "inputs": {"categorias_config": cats_config_edited}},
+                payload={"skill_id": "06-resultado-financeiro", "inputs": {"categorias_config": cats_config_edited}},
                 actor=actor,
             )
             st.success("Salvo. Re-execute o pipeline para refletir as alterações.")
@@ -1556,15 +1556,13 @@ def _render_saved_bdi_section(project_id: str, reference: dict, current: dict, b
     st.divider()
     st.subheader("BDI da versão base")
     st.caption("Edite os fatores de BDI e salve como override dos skills financeiros. Ex.: 0.25 = 25%.")
-    skill06_base = extract_skill_base_inputs(reference, "06-precificacao-unitaria")
-    skill08_base = extract_skill_base_inputs(reference, "08-consolidacao-financeira")
+    skill06_base = extract_skill_base_inputs(reference, "06-resultado-financeiro")
+    skill08_base = extract_skill_base_inputs(reference, "06-resultado-financeiro")
     skill06_cur = (
-        current.get("06-precificacao-unitaria", {}) if isinstance(current.get("06-precificacao-unitaria"), dict) else {}
+        current.get("06-resultado-financeiro", {}) if isinstance(current.get("06-resultado-financeiro"), dict) else {}
     )
     skill08_cur = (
-        current.get("08-consolidacao-financeira", {})
-        if isinstance(current.get("08-consolidacao-financeira"), dict)
-        else {}
+        current.get("06-resultado-financeiro", {}) if isinstance(current.get("06-resultado-financeiro"), dict) else {}
     )
     bdi_base = extract_bdi_dict(skill06_base) or extract_bdi_dict(skill08_base)
     bdi_cur = extract_bdi_dict(skill06_cur) or extract_bdi_dict(skill08_cur)
@@ -1624,7 +1622,7 @@ def _render_saved_bdi_section(project_id: str, reference: dict, current: dict, b
     if st.button("Salvar BDI", key=f"save-ov-bdi-{project_id}", use_container_width=True, type="primary"):
         p06 = {"bdi_aplicado": {k: edited_bdi[k] for k in ["mao_obra", "equipamentos", "material", "diesel"]}}
         p08 = {"bdi_aplicado": edited_bdi}
-        for skill_id, payload in [("06-precificacao-unitaria", p06), ("08-consolidacao-financeira", p08)]:
+        for skill_id, payload in [("06-resultado-financeiro", {**p06, **p08})]:
             api_call(
                 method="POST",
                 path=f"/api/projects/{project_id}/overrides",
@@ -2094,7 +2092,7 @@ def _hydrate_indiretos_from_overrides(base_url: str, project_id: str, actor: str
         ov = api_call(method="GET", path=f"/api/projects/{project_id}/overrides", base_url=base_url, actor=actor)
     except Exception:
         return {}, {}
-    s07 = ov.get("07-custos-indiretos") if isinstance(ov, dict) else None
+    s07 = ov.get("06-resultado-financeiro") if isinstance(ov, dict) else None
     if not isinstance(s07, dict):
         return {}, {}
     cats = s07.get("categorias_config") or []
@@ -2148,7 +2146,8 @@ def _compute_bdi_from_tabela(tabela_bdi: dict, bdi_base: dict) -> None:
         bdi_val = ((1 + ac + df_ + r_ + cr_ + l_) / (1 - t_) - 1) if t_ < 1 else 0.0
         bdi_base[cat] = round(bdi_val, 6)
     if "equipamentos" not in bdi_base:
-        bdi_base["equipamentos"] = round(0.70 * bdi_base.get("mao_obra", 0) + 0.30 * bdi_base.get("diesel", 0), 6)
+        # ADR-023 §D3 revisado: bucket equipamentos = locação (SV-31/STF: sem ISS) → taxa de material
+        bdi_base["equipamentos"] = bdi_base.get("material", 0.0)
 
 
 def _render_tcu_cat_expander(
@@ -2277,12 +2276,10 @@ def _resolve_bdi_pre_reforma_defaults(
     reference: dict, current: dict, skill06_current: dict, DEFAULT_BDI_TABELA: object
 ) -> tuple[dict, list[str]]:
     """Resolves bdi_defaults and bdi_keys for pre-reforma editor."""
-    skill06_base = extract_skill_base_inputs(reference, "06-precificacao-unitaria")
-    skill08_base = extract_skill_base_inputs(reference, "08-consolidacao-financeira")
+    skill06_base = extract_skill_base_inputs(reference, "06-resultado-financeiro")
+    skill08_base = extract_skill_base_inputs(reference, "06-resultado-financeiro")
     skill08_current = (
-        current.get("08-consolidacao-financeira", {})
-        if isinstance(current.get("08-consolidacao-financeira"), dict)
-        else {}
+        current.get("06-resultado-financeiro", {}) if isinstance(current.get("06-resultado-financeiro"), dict) else {}
     )
     bdi_base = extract_bdi_dict(skill06_base) or extract_bdi_dict(skill08_base)
     if not bdi_base:
@@ -2309,7 +2306,7 @@ def _render_bdi_simple_save(project_id: str, edited_bdi: dict, bdi_keys: list, b
         path=f"/api/projects/{project_id}/overrides",
         base_url=base_url,
         payload={
-            "skill_id": "06-precificacao-unitaria",
+            "skill_id": "06-resultado-financeiro",
             "inputs": {"bdi_aplicado": {k: edited_bdi[k] for k in bdi_keys if k != "indireto"}},
         },
         actor=actor,
@@ -2318,7 +2315,7 @@ def _render_bdi_simple_save(project_id: str, edited_bdi: dict, bdi_keys: list, b
         method="POST",
         path=f"/api/projects/{project_id}/overrides",
         base_url=base_url,
-        payload={"skill_id": "08-consolidacao-financeira", "inputs": {"bdi_aplicado": edited_bdi}},
+        payload={"skill_id": "06-resultado-financeiro", "inputs": {"bdi_aplicado": edited_bdi}},
         actor=actor,
     )
     st.success("BDI salvo.")
@@ -2350,7 +2347,7 @@ def _render_tcu_expander_section(
                 method="POST",
                 path=f"/api/projects/{project_id}/overrides",
                 base_url=base_url,
-                payload={"skill_id": "06-precificacao-unitaria", "inputs": {"tabela_bdi": tcu_edited}},
+                payload={"skill_id": "06-resultado-financeiro", "inputs": {"tabela_bdi": tcu_edited}},
                 actor=actor,
             )
             st.success("Decomposição TCU salva. Recalcule o BDI total com 'Salvar BDI' acima.")
@@ -2591,7 +2588,7 @@ def _render_bdi_cbs_ibs(
     st.dataframe(preview_rows, width="stretch", hide_index=True)
     if st.button("Salvar cenário CBS/IBS", key=f"save-tax-scenario-{project_id}", type="primary"):
         payload_ts = scenario_preview.to_dict()
-        for skill_id in ["06-precificacao-unitaria", "08-consolidacao-financeira"]:
+        for skill_id in ["06-resultado-financeiro"]:
             api_call(
                 method="POST",
                 path=f"/api/projects/{project_id}/overrides",
@@ -2617,7 +2614,7 @@ def render_bdi_editor(base_url: str, project_id: str, actor: str, reference: dic
     except Exception:
         current = {}
     skill06_current = (
-        current.get("06-precificacao-unitaria", {}) if isinstance(current.get("06-precificacao-unitaria"), dict) else {}
+        current.get("06-resultado-financeiro", {}) if isinstance(current.get("06-resultado-financeiro"), dict) else {}
     )
     saved_tax_scenario: dict = skill06_current.get("tax_scenario", {}) if isinstance(skill06_current, dict) else {}
     REGIME_LABELS = {

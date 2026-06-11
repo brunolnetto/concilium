@@ -2,27 +2,122 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Artefatos — Concilium</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" crossorigin>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b; font-size: 13px; display: flex; flex-direction: column; height: 100vh; }
+    .header { background: #0f766e; color: white; padding: 10px 16px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .header h1 { font-size: 14px; font-weight: 600; }
+    .status-bar { padding: 5px 16px; font-size: 11px; background: #fefce8; border-bottom: 1px solid #fef08a; color: #854d0e; flex-shrink: 0; }
+    .status-bar.connected { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .layout { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 200px; background: white; border-right: 1px solid #e2e8f0; overflow-y: auto; flex-shrink: 0; }
+    .sidebar-title { padding: 8px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; }
+    .art-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f8fafc; display: flex; align-items: center; gap: 6px; }
+    .art-item:hover { background: #f8fafc; }
+    .art-item.active { background: #eff6ff; color: #2563eb; }
+    .art-icon { font-size: 14px; flex-shrink: 0; }
+    .art-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .viewer { flex: 1; display: flex; flex-direction: column; }
+    .viewer-toolbar { padding: 6px 12px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+    .viewer-toolbar span { font-size: 11px; color: #64748b; }
+    .viewer-content { flex: 1; overflow: auto; }
+    iframe.pdf-frame { width: 100%; height: 100%; border: none; }
+    .empty-viewer { display: flex; align-items: center; justify-content: center; height: 100%; color: #94a3b8; flex-direction: column; gap: 8px; }
+    .empty-viewer .icon { font-size: 32px; }
+    pre.text-viewer { padding: 12px; font-size: 11px; white-space: pre-wrap; overflow: auto; height: 100%; background: white; }
+    .no-artifacts { padding: 24px; text-align: center; color: #94a3b8; font-size: 12px; }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
-  <div class="text-center max-w-md">
-    <div class="text-5xl mb-4">📦</div>
-    <h1 class="text-xl font-bold text-gray-900 mb-2">Visualizador de Artefatos</h1>
-    <p class="text-sm text-gray-500 mb-6">PDF, Gantt e Excel inline — sem download.</p>
-    <div id="status" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-700">
-      ADR-101 Fase 5 — em desenvolvimento
+<body>
+  <div class="header">
+    <span>📦</span><h1>Visualizador de Artefatos</h1>
+    <span style="margin-left:auto;font-size:11px;opacity:.7">ADR-101 F5</span>
+  </div>
+  <div class="status-bar" id="status-bar">⏳ Aguardando dados...</div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-title">Artefatos</div>
+      <div id="art-list"><div class="no-artifacts">Nenhum artefato disponível</div></div>
+    </div>
+    <div class="viewer">
+      <div class="viewer-toolbar">
+        <span id="viewer-label">Selecione um artefato</span>
+      </div>
+      <div class="viewer-content" id="viewer-content">
+        <div class="empty-viewer"><div class="icon">📄</div><span>Selecione um artefato na lista</span></div>
+      </div>
     </div>
   </div>
+
   <script>
-    window.addEventListener('message', (e) => {
-      const msg = e.data;
-      if (msg?.result) {
-        document.getElementById('status').textContent = 'Conectado ao host MCP.';
-        document.getElementById('status').className = 'bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700';
+    let artifacts = {};
+    const ICONS = { pdf: '📄', md: '📝', json: '🗂️', xlsx: '📊', png: '🖼️', default: '📁' };
+
+    function iconFor(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      return ICONS[ext] || ICONS.default;
+    }
+
+    function renderArtList(arts) {
+      const list = document.getElementById('art-list');
+      if (!arts || !arts.length) { list.innerHTML = '<div class="no-artifacts">Nenhum artefato disponível</div>'; return; }
+      list.innerHTML = arts.map((a, i) => `<div class="art-item" data-idx="${i}" onclick="openArt(${i})"><span class="art-icon">${iconFor(a.name)}</span><span class="art-name">${a.name}</span></div>`).join('');
+    }
+
+    function openArt(idx) {
+      document.querySelectorAll('.art-item').forEach(el => el.classList.remove('active'));
+      const el = document.querySelector(`[data-idx="${idx}"]`);
+      if (el) el.classList.add('active');
+
+      const art = artifacts[idx];
+      if (!art) return;
+
+      document.getElementById('viewer-label').textContent = art.name;
+      const content = document.getElementById('viewer-content');
+      const ext = art.name.split('.').pop().toLowerCase();
+
+      if (ext === 'pdf' && art.data_base64) {
+        const url = `data:application/pdf;base64,${art.data_base64}`;
+        content.innerHTML = `<iframe class="pdf-frame" src="${url}#toolbar=1&navpanes=0"></iframe>`;
+      } else if ((ext === 'md' || ext === 'txt') && art.text) {
+        content.innerHTML = `<pre class="text-viewer">${art.text.replace(/</g,'&lt;')}</pre>`;
+      } else if (ext === 'json' && art.data) {
+        content.innerHTML = `<pre class="text-viewer">${JSON.stringify(art.data, null, 2)}</pre>`;
+      } else if (ext === 'png' && art.data_base64) {
+        content.innerHTML = `<div style="padding:12px;text-align:center"><img src="data:image/png;base64,${art.data_base64}" style="max-width:100%;border-radius:6px"></div>`;
+      } else {
+        content.innerHTML = `<div class="empty-viewer"><div class="icon">${iconFor(art.name)}</div><span>${art.name}</span><span style="font-size:11px;color:#94a3b8">Visualização não disponível para este formato</span></div>`;
+      }
+    }
+
+    function processArtifacts(data) {
+      const arts = data?.artifacts ?? data?.artefatos ?? [];
+      artifacts = {};
+      arts.forEach((a, i) => { artifacts[i] = a; });
+      renderArtList(arts);
+    }
+
+    window.addEventListener('message', e => {
+      const msg = e.data; if (!msg || msg.jsonrpc !== '2.0') return;
+      if (msg.id === 1 && msg.result) {
+        document.getElementById('status-bar').textContent = '✅ Conectado';
+        document.getElementById('status-bar').className = 'status-bar connected';
+      }
+      if (msg.method === 'ui/toolResult') {
+        const r = msg.params?.result;
+        if (r) processArtifacts(r);
+        document.getElementById('status-bar').textContent = `✅ ${Object.keys(artifacts).length} artefato(s) — ${new Date().toLocaleTimeString('pt-BR')}`;
+        document.getElementById('status-bar').className = 'status-bar connected';
       }
     });
-    window.parent.postMessage({ jsonrpc: '2.0', id: 1, method: 'ui/initialize', params: { protocolVersion: '2026-01-26', capabilities: {} } }, '*');
+
+    window.parent.postMessage({
+      jsonrpc: '2.0', id: 1,
+      method: 'ui/initialize',
+      params: { protocolVersion: '2026-01-26', capabilities: { push: true } }
+    }, '*');
   </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-"""CLI unificada de validação (ADR-050).
+"""CLI unificada de validação.
 
 Comandos:
   concilium validate project <projeto> [--version vN] [--json]
@@ -19,7 +19,7 @@ from concilium.presentation.cli.shared import _tools_root, parse_project_version
 
 app = typer.Typer(
     name="validate",
-    help="Validação unificada para projeto e benchmark (ADR-050).",
+    help="Validação unificada para projeto e benchmark.",
     no_args_is_help=True,
 )
 
@@ -109,7 +109,7 @@ def validate_project(
     version: str = typer.Option("", "--version", help="Versão explícita (vN). Se vazio, usa current_version."),
     as_json: bool = typer.Option(False, "--json", help="Emite payload JSON no contrato unificado."),
 ) -> None:
-    """Valida projeto com contrato comum (ADR-050)."""
+    """Valida projeto com contrato comum."""
     nome, ver_inline = parse_project_version(project_ref)
     project = resolve_project(nome)
     resolved_version = version or ver_inline or project.current_version()
@@ -147,7 +147,7 @@ def validate_benchmark(
     slug: str = typer.Argument(..., help="Slug do benchmark (ex: AGIS)."),
     as_json: bool = typer.Option(False, "--json", help="Emite payload JSON no contrato unificado."),
 ) -> None:
-    """Valida benchmark com contrato comum (ADR-050)."""
+    """Valida benchmark com contrato comum."""
     from concilium.application.benchmarks.analysis import validate_pipeline_integrity
 
     result = validate_pipeline_integrity(slug.upper(), root=_tools_root())

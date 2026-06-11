@@ -1,4 +1,4 @@
-"""Commands: bdi show, bdi update (ADR-023 §D6 Phase 1C).
+"""Commands: bdi show, bdi update.
 
 Permite ao Engenheiro Sênior visualizar e atualizar o perfil BDI de um projeto
 via HiL (Human-in-the-Loop). O perfil é um snapshot imutável versionado;

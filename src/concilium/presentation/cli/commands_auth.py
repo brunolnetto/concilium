@@ -1,4 +1,4 @@
-"""concilium auth — gestão de usuários e dispositivos (ADR-094).
+"""concilium auth — gestão de usuários e dispositivos.
 
 Comandos de administrador para o sistema de autenticação por device code.
 
