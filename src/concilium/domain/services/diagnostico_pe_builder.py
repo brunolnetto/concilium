@@ -96,14 +96,12 @@ def _compute_item_metrics(active: list) -> dict[str, float]:
 
 
 def _compute_f1_quantizacao(canonical_in: Any, resultado: Any, gap_total: float) -> float:
-    if not (canonical_in.bridge_analysis and isinstance(canonical_in.bridge_analysis, dict)):
-        return 0.0
-    n1 = float(canonical_in.bridge_analysis.get("nivel_1_catalogo_base") or 0)
-    n2 = float(canonical_in.bridge_analysis.get("nivel_2_catalogo_escalado") or 0)
-    if n1 <= 0 or n2 <= n1:
+    pe_items = getattr(canonical_in, "ponto_equilibrio", None) or []
+    gap_escala = sum(float(getattr(pe, "gap_escala_abs", 0.0) or 0.0) for pe in pe_items)
+    if gap_escala <= 0:
         return 0.0
     proj_total = float(getattr(getattr(resultado, "custo", None), "total", 1) or 1)
-    return abs(gap_total) * (n2 - n1) / max(proj_total, 1.0)
+    return abs(gap_total) * gap_escala / max(proj_total, 1.0)
 
 
 def _build_gap_fatores(

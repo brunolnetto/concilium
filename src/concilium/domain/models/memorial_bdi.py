@@ -167,7 +167,7 @@ class MemorialMeta:
     projeto_id: str
     version: str  # versão do canonical que o gerou
     gerado_em: str  # ISO timestamp
-    skill_versao: str  # "08-consolidacao-financeira"
+    skill_versao: str  # "06-resultado-financeiro"
     vigencia_encargos: str  # "2026-04-01"
     vigencia_bdi: str  # "2026-04-01"
     regime_tributario: str  # "pre_reforma" | "transicao" | "pleno_cbs_ibs"

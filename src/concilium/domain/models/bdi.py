@@ -469,7 +469,7 @@ class DecomposicaoEquipamento(BaseModel):
       custo_material_h                    -> BDI MATERIAL
 
     Registrada em AtributosInsumo para enriquecer o catálogo.
-    Usada por skill 06-precificacao-unitaria em vez da ponderação 70%/30%.
+    Usada pelo estágio de precificação (06-resultado-financeiro) em vez da ponderação 70%/30%.
     """
 
     model_config = ConfigDict(frozen=True)

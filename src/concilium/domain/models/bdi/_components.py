@@ -128,8 +128,8 @@ class TabelaBdi(BaseModel):
     data_vigencia: date
 
     def para_categoria(self, categoria: CategoriaBdi) -> ComponentesBdi:
-        # ADR-090: DIESEL delega para material (mesma ComponentesBdi)
-        if categoria == "DIESEL":
+        # ADR-090/107: DIESEL e COMBUSTIVEL delegam para material (mesma ComponentesBdi)
+        if categoria in ("DIESEL", "COMBUSTIVEL"):
             return self.material
         return getattr(self, categoria.lower())
 

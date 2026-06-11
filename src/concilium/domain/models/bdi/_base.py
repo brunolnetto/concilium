@@ -12,7 +12,8 @@ from concilium.domain.constants import (
 )
 
 # ── Literals ──────────────────────────────────────────────────────────────
-CategoriaBdi = Literal["MAO_OBRA", "MATERIAL", "SERVICOS", "INDIRETO", "DIESEL"]
+# ADR-107 D4: "COMBUSTIVEL" é o termo canônico; "DIESEL" mantido como alias legado.
+CategoriaBdi = Literal["MAO_OBRA", "MATERIAL", "SERVICOS", "INDIRETO", "DIESEL", "COMBUSTIVEL"]
 
 
 # ── ADR-055 — Reforma Tributária CBS/IBS ─────────────────────────────────

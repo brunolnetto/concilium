@@ -25,7 +25,7 @@ SEMANAS_POR_MES: float = 365.25 / 7 / 12  # ≈ 4,3482 semanas/mês
 
 # Horas produtivas por mês no regime 6×8h:
 #   6 dias/semana × 8 h/dia × (365,25/7/12 semanas/mês) ≈ 208 h/mês
-# Usado em: Skills 05, 07, 08; pu_calculator; validador_pu_convergencia
+# Usado em: Skills 05, 07, 08; pu_calculator
 HORAS_MES_REGIME_6x1: float = DIAS_SEMANA_PADRAO * HORAS_DIA_PADRAO * SEMANAS_POR_MES  # ≈ 208 h/mês
 
 # Horas/mês CLT — convenção legal brasileira para contratação e precificação de MO:
@@ -146,7 +146,7 @@ SMH: float = SALARIO_MINIMO_MENSAL / HORAS_MES_CLT  # R$/h ≈ 7.37 (salário m�
 
 # ── Faixas de convergência de PU (ADR-051) ───────────────────────────────────
 # Thresholds de desvio entre PU calculado pelo pipeline e PU do catálogo.
-# Usado em validador_pu_catalogo.py e validador_pu_convergencia.py.
+# Usado em validacoes internas de skills de precificação.
 FAIXAS_CONVERGENCIA_PU: dict[str, float | None] = {
     "verde": 5.0,  # até 5% de desvio — convergência OK
     "amarelo": 10.0,  # 5% a 10% — atenção, verificar assumptions
@@ -234,3 +234,53 @@ ZSCORE_EXTREMO: float = 3.5  # desvios-padrão — threshold de erro (outlier se
 # Abaixo deste limiar o item apresenta risco financeiro e deve ser sinalizado.
 # Referência: política de precificação MendesLobo (Revisão 2024).
 MARGEM_MINIMA: float = 0.05  # 5 % — margem mínima sobre preço de venda por item
+
+
+# ── ADR-097 Fase 3 — Tabelas progressivas INSS/IRRF 2026 ─────────────────────
+#
+# Usadas para simulação de custo do trabalhador (People & Finance).
+# NÃO substituem ENCARGOS_CLT/MENSALISTA para custo de projeto — ver ADR-097 §D1.
+#
+# Cada faixa: (limite_superior_R$, aliquota, parcela_deduzir_R$).
+# Última faixa tem limite None (ilimitado). Aplicar progressive tax:
+#   inss = base × aliq − parcela_deduzir  (para a faixa em que base se enquadra)
+#
+# Fonte: Portaria MPS/MF nº 13/2026.
+
+INSS_BRACKETS_2026: list[tuple[float | None, float, float]] = [
+    (1_621.00, 0.075, 0.00),  # 0–1.621,00 → 7,5%
+    (2_902.84, 0.090, 24.32),  # 1.621,01–2.902,84 → 9%
+    (4_354.27, 0.120, 111.41),  # 2.902,85–4.354,27 → 12%
+    (8_475.55, 0.140, 198.26),  # 4.354,28–8.475,55 → 14%
+    (None, 0.140, 198.26),  # acima do teto: valor travado em 8.475,55 → máx R$ 988,09
+]
+
+# Fonte: Tabela RFB 2026 + isenção Lei 15.270/2025.
+# Isenção efetiva: base ≤ 5.000 → IRRF = 0.
+# Desconto progressivo: 5.000,01–7.350 → IRRF_bruto − (978,62 − 0,133145 × base).
+IRRF_BRACKETS_2026: list[tuple[float | None, float, float]] = [
+    (2_428.80, 0.000, 0.00),  # isento
+    (2_826.65, 0.075, 182.16),
+    (3_751.05, 0.150, 394.16),
+    (4_664.68, 0.225, 675.49),
+    (None, 0.275, 908.73),
+]
+IRRF_ISENCAO_EFETIVA_2026: float = 5_000.0  # Lei 15.270/2025: base ≤ 5.000 → IRRF = 0
+IRRF_DESCONTO_PROGRESSIVO_A: float = 978.62  # coeficientes da faixa de desconto progressivo
+IRRF_DESCONTO_PROGRESSIVO_B: float = 0.133145
+
+
+# ── ADR-097 Fase 4 — Regime tributário da empresa ────────────────────────────
+#
+# Afeta quais encargos patronais são recolhidos separadamente vs. no DAS.
+# MendesLobo opera no Lucro Presumido (LUCRO_PRESUMIDO).
+
+
+class TaxRegime:  # não é StrEnum para evitar dependência de importação em constants
+    SIMPLES_I_III_V = "simples_i_iii_v"  # INSS patronal/RAT/SistS no DAS
+    SIMPLES_IV = "simples_iv"  # INSS patronal fora do DAS
+    LUCRO_PRESUMIDO = "lucro_presumido"  # regime MendesLobo (padrão)
+    LUCRO_REAL = "lucro_real"
+
+
+TAX_REGIME_PADRAO: str = TaxRegime.LUCRO_PRESUMIDO

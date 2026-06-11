@@ -23,6 +23,7 @@ from ._profiles import (
     PerfilBdiProjeto,
     PerfilLucroProjeto,
     PerfilTributarioProjeto,
+    resolve_bdi_tabela,
     resolver_bdi_cbs_ibs,
     resolver_componentes_bdi,
 )

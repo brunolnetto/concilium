@@ -426,6 +426,13 @@ class EquipeDireta(BaseModel):
     custo_ocioso_equipamentos: float = 0.0
     # NEP-031 L3: custo total de mobilização/desmobilização por eventos detectados (§8)
     custo_mob_desmob: float = 0.0
+    # ADR-105 F1-F3: desdobramento de custo_mob_desmob em fases (preparatório para ADR-106).
+    # Invariante quando preenchido: custo_mobilizacao_mensal + custo_desmobilizacao_mensal ≈ custo_mob_desmob.
+    # custo_operacao_mensal captura custos recorrentes de canteiro (veículos de suporte, geradores, etc.)
+    # — independente de mob/demob, extraído de indiretos.adm em sprint S3.
+    custo_mobilizacao_mensal: float = 0.0  # custo de transporte + montagem na chegada
+    custo_operacao_mensal: float = 0.0  # custos fixos recorrentes de canteiro (≠ mob/demob)
+    custo_desmobilizacao_mensal: float = 0.0  # custo de desmontagem + transporte de retorno
     # ADR-071: campos de pool contract — preenchidos quando rcpsp_spec presente em skill-05
     custo_total_autonomo: float = 0.0  # custo disjunto original (diagnóstico/comparação)
     contrato_tipo_id: str = ""  # tipo_id do RecursoContrato atribuído; "" = sem pool
@@ -600,7 +607,7 @@ class PontoEquilibrio(BaseModel):
     # ≈ 0 para execução puramente proporcional; >0 indica desvio real de produtividade
     # (ex: extensão de prazo por clima além da compressão de N equipes, maior consumo de combustível)
     # NOTA: ≠ custo_total_autonomo − custo_base (esse seria gap_escala, não praticabilidade)
-    gap_pool_abs: float = 0.0  # custo_total − custo_total_autonomo (overhead de pool)
+    gap_pool_abs: float = 0.0  # alias de economia_pool_abs com sinal invertido (>0 = pool onerou)
 
     # ADR-076 Justificativa de Lesão de Produtividade Horária
     # Campos derivados de distribuicao_semanal — rastreiam a origem do desvio por componente
@@ -614,6 +621,17 @@ class PontoEquilibrio(BaseModel):
 
     # ADR-082: Levers de ação para fechar o gap do ponto de equilíbrio
     levers_equilibrio: list[LeverEquilibrio] = Field(default_factory=list)
+
+    # NEP-042: Modelo de três camadas — materialização explícita (D1 + D2 + D3)
+    # Camada 2: PU operacional autônomo
+    pu_operacional_autonomo: float = 0.0  # custo_total_autonomo / Q_i — sempre exposto
+    machine_weeks_brutas: float = 0.0  # MW_i = Σ_j m_{ij} (equipes × semanas ativas)
+    machine_weeks_efetivas: float = 0.0  # eMW_i = Σ_j (m_{ij} × η_j) (ponderado por eficiência)
+    eta_real: float = 1.0  # η_real = eMW_i / MW_i (eficiência média ponderada)
+    # Camada 3: PU pool instancial
+    custo_pool_total: float = 0.0  # Σ_r custo_total_particionado_r para esta atividade
+    custo_pool_por_unidade: float = 0.0  # custo_pool_total / Q_i — razão comparativa, não preço
+    economia_pool_abs: float = 0.0  # custo_total_autonomo − custo_pool_total (>0 = pool economiza)
 
 
 class Venda(BaseModel):
@@ -1549,7 +1567,7 @@ class ResultadoReconciliado(BaseModel):
 
 
 class ReplanSugestao(BaseModel):
-    """Sugestão concreta de re-planejamento com checkpoint e parâmetros (13-assessor-replanejamento)."""
+    """Sugestão concreta de re-planejamento com checkpoint e parâmetros (13-replanejamento-e-cenarios)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -1565,7 +1583,7 @@ class ReplanSugestao(BaseModel):
 
 
 class ReplanSuggestions(BaseModel):
-    """Seção canônica produzida por 13-assessor-replanejamento."""
+    """Seção canônica produzida por 13-replanejamento-e-cenarios."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -1730,7 +1748,7 @@ class OportunidadeVerde(BaseModel):
 
 
 class PlanSpaceResult(BaseModel):
-    """Resultado do 14-explorador-cenarios: repair_path e/ou oportunidades."""
+    """Resultado do 13-replanejamento-e-cenarios (estágio explorador): repair_path e/ou oportunidades."""
 
     model_config = ConfigDict(extra="ignore")
 

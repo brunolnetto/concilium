@@ -97,7 +97,7 @@ class MemorialBDIBuilder:
             projeto_id=projeto_id,
             version=str(getattr(canonical_in, "_version_", "?")),
             gerado_em=datetime.now(UTC).isoformat(),
-            skill_versao="08-consolidacao-financeira",
+            skill_versao="06-resultado-financeiro",  # NEP-041 F4
             vigencia_encargos=_VIGENCIA_ENCARGOS,
             vigencia_bdi=_VIGENCIA_BDI,
             regime_tributario=regime_version,

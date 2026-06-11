@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -11,7 +12,37 @@ from concilium.domain.models.bdi import DecomposicaoEquipamento
 from concilium.domain.units import normalize_unidade
 
 TipoInsumo = Literal["MATERIAL", "MAO_OBRA", "EQUIPAMENTO", "TERCEIRIZADO"]
-CategoriaCusto = Literal["MATERIAL", "DIESEL", "MAO_OBRA", "EQUIPAMENTO"]
+
+# ADR-107 D1: "DIESEL" mantido como alias legado; "COMBUSTIVEL" é o termo canônico.
+# Novos dados devem usar "COMBUSTIVEL"; leitura de dados legados aceita "DIESEL".
+CategoriaCusto = Literal["MATERIAL", "COMBUSTIVEL", "DIESEL", "MAO_OBRA", "EQUIPAMENTO"]
+
+
+class TipoCombustivel(StrEnum):
+    """ADR-107 D3 — Tipos de combustível suportados."""
+
+    DIESEL_S10 = "diesel_s10"
+    DIESEL_S500 = "diesel_s500"
+    CNG = "cng"  # Gás Natural Comprimido (GNV)
+    BIODIESEL = "biodiesel"
+    ELETRICO = "eletrico"
+    OUTRO = "outro"
+
+
+def _infer_tipo_combustivel(insumo_id: str) -> TipoCombustivel:
+    """ADR-107 D6 — Infere TipoCombustivel a partir do código do insumo (fallback para DIESEL_S10)."""
+    upper = insumo_id.upper()
+    if "GNV" in upper or "CNG" in upper or "GAS-NATURAL" in upper:
+        return TipoCombustivel.CNG
+    if "BIODIESEL" in upper or "B100" in upper:
+        return TipoCombustivel.BIODIESEL
+    if "ELETRIC" in upper or "ELÉTR" in upper:
+        return TipoCombustivel.ELETRICO
+    if "S500" in upper:
+        return TipoCombustivel.DIESEL_S500
+    return TipoCombustivel.DIESEL_S10  # fallback seguro para todo diesel legacy
+
+
 CategoriaCPU = Literal["TERRAPLENAGEM", "PAVIMENTACAO", "DRENAGEM", "SANEAMENTO", "OBRAS_ARTE", "DIVERSOS"]
 
 ClasseInsumo = Literal[
@@ -155,6 +186,9 @@ class ComposicaoItem(BaseModel):
     coeficiente: float = Field(gt=0)
     categoria_custo: CategoriaCusto
     unidade: str | None = None
+    # ADR-107 D2: tipo de combustível quando categoria_custo == "COMBUSTIVEL".
+    # None = legado (assume DIESEL_S10 quando categoria == COMBUSTIVEL/DIESEL).
+    tipo_combustivel: TipoCombustivel | None = None
 
 
 class FuncaoEquipe(BaseModel):

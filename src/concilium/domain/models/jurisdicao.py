@@ -32,10 +32,25 @@ class ComponenteEncargo(BaseModel):
 
 
 class MotorEncargosSociais(BaseModel):
+    """Motor de encargos sociais por jurisdição (ADR-097 §D1/D2/D4).
+
+    percentual_horista  → aplica-se a horistas CLT de campo/obra (default: ENCARGOS_CLT).
+    percentual_mensalista → aplica-se a mensalistas (gestão/admin) (default: ENCARGOS_MENSALISTA).
+    percentual_pj       → aplica-se a prestadores PJ (default: ENCARGOS_PJ).
+    percentual_total    → mantido para retrocompatibilidade; usado quando os campos
+                          específicos não estão preenchidos.
+    componentes         → detalhamento auditável por Grupo A–F+Judicial.
+    tax_regime          → regime tributário da empresa (afeta Grupo A — INSS patronal).
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     versao: str
     percentual_total: float = Field(ge=0, le=2)
+    percentual_horista: float | None = Field(default=None, ge=0, le=2)
+    percentual_mensalista: float | None = Field(default=None, ge=0, le=2)
+    percentual_pj: float | None = Field(default=None, ge=0, le=1)
+    tax_regime: str | None = None  # TaxRegime string; None = LUCRO_PRESUMIDO
     componentes: list[ComponenteEncargo] = Field(default_factory=list)
 
 

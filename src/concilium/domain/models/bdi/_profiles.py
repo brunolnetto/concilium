@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ._base import TaxRegimeVersion, TaxSimulationScenario
-from ._components import ComponentesBdi, TabelaBdi
+from ._components import DEFAULT_BDI_TABELA, ComponentesBdi, TabelaBdi
 
 
 class IndiretoComBdi(BaseModel):
@@ -45,7 +45,7 @@ class DecomposicaoEquipamento(BaseModel):
       custo_material_h                    -> BDI MATERIAL
 
     Registrada em AtributosInsumo para enriquecer o catálogo.
-    Usada por skill 06-precificacao-unitaria em vez da ponderação 70%/30%.
+    Usada pelo estágio de precificação (06-resultado-financeiro) em vez da ponderação 70%/30%.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -276,3 +276,26 @@ def resolver_bdi_cbs_ibs(
         diesel=_substituir(base.diesel, "diesel"),
         data_vigencia=base.data_vigencia,
     )
+
+
+# ── Resolução centralizada de TabelaBdi a partir de inputs ───────────────────
+
+
+def resolve_bdi_tabela(tabela_raw: Any) -> TabelaBdi:
+    """Resolve TabelaBdi a partir de um valor bruto de inputs.
+
+    Retorna DEFAULT_BDI_TABELA quando tabela_raw é None.
+    Propaga exceções de parsing para que o caller emita VAL-BDI-PARSE.
+
+    Args:
+        tabela_raw: valor de `inputs.get("tabela_bdi")` ou None.
+
+    Returns:
+        TabelaBdi efetiva (parseada ou DEFAULT_BDI_TABELA).
+
+    Raises:
+        ValidationError/Exception: quando tabela_raw não é um TabelaBdi válido.
+    """
+    if tabela_raw is None:
+        return DEFAULT_BDI_TABELA
+    return TabelaBdi.model_validate(tabela_raw) if isinstance(tabela_raw, dict) else tabela_raw
