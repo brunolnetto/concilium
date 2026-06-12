@@ -103,6 +103,10 @@ def campaign(
     run = store.new_run()
     typer.echo(f"\n[STORE] Novo run: {run}")
 
+    # inputs/ — configuração que gerou este run (bronze: reprodutibilidade)
+    store.save_config(run, cfg)
+
+    # outputs/ — dados processados e entregáveis
     report = serialize_campaign_report(result, cube)
     md = render_campaign_report_md(report)
     pdf = render_campaign_report_pdf(report, md)
@@ -118,13 +122,8 @@ def campaign(
         "n_falhas": result.n_falhas,
     })
 
-    run_path = store.run_path(run)
-    typer.echo(f"[SAVE] {run_path}/bundle.json")
-    typer.echo(f"[SAVE] {run_path}/campaign_report.json")
-    typer.echo(f"[SAVE] {run_path}/campaign_report.md")
-    if pdf:
-        typer.echo(f"[SAVE] {run_path}/campaign_report.pdf")
-    typer.echo(f"[SAVE] {run_path}/meta.json")
+    for f in store.list_run_files(run):
+        typer.echo(f"[SAVE] {store.run_path(run) / f}")
     typer.echo(f"\n[INFO] Runs disponíveis: {store.list_runs()}")
 
 

@@ -1,22 +1,26 @@
 """CampaignRunStore — store de execuções de campanha versionadas por projeto.
 
-Cada execução de campanha (run) é um artefato de projeto versionado, analogamente
-ao ProjectStore que versiona execuções de pipeline (v1, v2, ...).
+Cada execução de campanha (run) é um artefato de projeto versionado, seguindo
+a estrutura medalhão de entregáveis de execução:
 
-Estrutura:
-    projetos/{slug}/campaigns/
-        campaign_v1.json          ← configuração da campanha (gerenciado externamente)
-        runs/
-            run-001/
-                bundle.json       ← CampaignOutputBundle serializado
-                cube.json         ← CampaignBundleCube serializado
-                campaign_report.json
-                campaign_report.md
-                campaign_report.pdf   (se disponível)
-                meta.json         ← {campaign_version, gerado_em, status, n_avaliados}
-            run-002/
-                ...
-            current               ← arquivo com o nome do run mais recente
+    projetos/{slug}/campaigns/runs/
+        run-001/
+            inputs/
+                campaign_config.json  ← cópia da config usada neste run (bronze)
+            outputs/
+                bundle.json           ← CampaignOutputBundle (intermediário)
+                cube.json             ← CampaignBundleCube (intermediário)
+                reports/
+                    campaign_report.json  ← relatório final (gold)
+                    campaign_report.md    ← relatório legível (gold)
+                    campaign_report.pdf   ← entregável PDF (gold)
+            meta.json                 ← {campaign_version, gerado_em, status, ...}
+        run-002/
+            ...
+        current                       ← nome do run mais recente
+
+A configuração vive com o run que gerou, não no nível do projeto:
+isso garante reprodutibilidade — cada run é auto-contido.
 """
 
 from __future__ import annotations
@@ -34,13 +38,15 @@ class CampaignRunStore:
     artefatos imutáveis após `finalize()`.
     """
 
-    BUNDLE_FILE = "bundle.json"
-    CUBE_FILE = "cube.json"
-    REPORT_JSON = "campaign_report.json"
-    REPORT_MD = "campaign_report.md"
-    REPORT_PDF = "campaign_report.pdf"
-    META_FILE = "meta.json"
-    CURRENT_FILE = "current"
+    # Estrutura medalhão: inputs/ → outputs/reports/
+    CONFIG_FILE   = "inputs/campaign_config.json"
+    BUNDLE_FILE   = "outputs/bundle.json"
+    CUBE_FILE     = "outputs/cube.json"
+    REPORT_JSON   = "outputs/reports/campaign_report.json"
+    REPORT_MD     = "outputs/reports/campaign_report.md"
+    REPORT_PDF    = "outputs/reports/campaign_report.pdf"
+    META_FILE     = "meta.json"
+    CURRENT_FILE  = "current"
 
     def __init__(self, project_root: Path) -> None:
         """
@@ -71,15 +77,22 @@ class CampaignRunStore:
         return self.root / run
 
     def new_run(self) -> str:
-        """Cria e registra novo run. Retorna o nome (run-001, run-002, ...)."""
+        """Cria e registra novo run com estrutura medalhão. Retorna run-NNN."""
         existing = self.list_runs()
         next_num = (max((int(r.split("-")[1]) for r in existing), default=0)) + 1
         run_name = f"run-{next_num:03d}"
-        (self.root / run_name).mkdir()
+        run_dir = self.root / run_name
+        (run_dir / "inputs").mkdir(parents=True)
+        (run_dir / "outputs" / "reports").mkdir(parents=True)
         (self.root / self.CURRENT_FILE).write_text(run_name, encoding="utf-8")
         return run_name
 
     # ── Persistência ────────────────────────────────────────────────────────
+
+    def save_config(self, run: str, config: dict) -> None:
+        """Persiste cópia da campaign_config usada neste run (inputs/ — bronze)."""
+        path = self.run_path(run) / self.CONFIG_FILE
+        path.write_text(json.dumps(config, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
 
     def save_bundle(self, run: str, bundle_dict: dict) -> None:
         """Persiste CampaignOutputBundle serializado."""
@@ -132,8 +145,22 @@ class CampaignRunStore:
         p = self.run_path(r) / self.META_FILE
         return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
 
+    def load_config(self, run: str | None = None) -> dict | None:
+        """Carrega a campaign_config do run."""
+        r = run or self.current_run()
+        if not r:
+            return None
+        p = self.run_path(r) / self.CONFIG_FILE
+        return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
     def list_run_files(self, run: str | None = None) -> list[str]:
+        """Lista todos os arquivos do run (percorre subdiretórios da estrutura medalhão)."""
         r = run or self.current_run()
         if not r:
             return []
-        return sorted(p.name for p in self.run_path(r).iterdir() if p.is_file())
+        base = self.run_path(r)
+        return sorted(
+            str(p.relative_to(base))
+            for p in base.rglob("*")
+            if p.is_file()
+        )

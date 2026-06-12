@@ -17,10 +17,12 @@ def store(tmp_path: Path) -> CampaignRunStore:
 
 
 class TestCampaignRunStore:
-    def test_new_run_creates_directory(self, store: CampaignRunStore):
+    def test_new_run_creates_medallion_structure(self, store: CampaignRunStore):
         run = store.new_run()
         assert run == "run-001"
         assert (store.root / run).is_dir()
+        assert (store.root / run / "inputs").is_dir()
+        assert (store.root / run / "outputs" / "reports").is_dir()
 
     def test_sequential_runs(self, store: CampaignRunStore):
         r1 = store.new_run()
@@ -64,7 +66,7 @@ class TestCampaignRunStore:
     def test_save_report_pdf(self, store: CampaignRunStore):
         run = store.new_run()
         store.save_report(run, {}, md="md", pdf=b"%PDF-1.4 fake")
-        assert (store.run_path(run) / "campaign_report.pdf").exists()
+        assert (store.run_path(run) / "outputs" / "reports" / "campaign_report.pdf").exists()
 
     def test_save_report_no_pdf(self, store: CampaignRunStore):
         run = store.new_run()
@@ -86,12 +88,22 @@ class TestCampaignRunStore:
         assert "gerado_em" in meta
         assert "T" in meta["gerado_em"]  # ISO 8601 format
 
-    def test_list_run_files(self, store: CampaignRunStore):
+    def test_save_and_load_config(self, store: CampaignRunStore):
         run = store.new_run()
+        cfg = {"campaign_version": "v1", "sweep": [{"campo": "n_max", "valores": [1, 2]}]}
+        store.save_config(run, cfg)
+        loaded = store.load_config(run)
+        assert loaded["campaign_version"] == "v1"
+        assert loaded["sweep"][0]["campo"] == "n_max"
+
+    def test_list_run_files_medallion_paths(self, store: CampaignRunStore):
+        run = store.new_run()
+        store.save_config(run, {"version": "v1"})
         store.save_bundle(run, {})
         store.save_meta(run, {"status": "OK"})
         files = store.list_run_files(run)
-        assert "bundle.json" in files
+        assert "inputs/campaign_config.json" in files
+        assert "outputs/bundle.json" in files
         assert "meta.json" in files
 
     def test_runs_are_independent(self, store: CampaignRunStore):
