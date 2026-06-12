@@ -563,30 +563,33 @@ def _run_campaign_task(task: "_CampaignTask") -> "CenarioAvaliado":
         def print(self, report: dict) -> None:  # noqa: A003
             pass
 
+    import shutil
+    import tempfile
+
     cid = cenario_id(task.variados)
     spec_with_id = dict(task.spec_v)
     base_slug = spec_with_id.get("slug") or spec_with_id.get("id") or "UNKNOWN"
     scenario_slug = f"{base_slug}-{cid[:6]}"
+    # Definir TANTO "slug" QUANTO "id" — spec_loader usa ref.get("id") para o slug do projeto.
+    # Sem "id", _infer_slug_from_path leria o nome do tmpdir e criaria um projeto com
+    # esse nome em projetos/ (ex: campaign_AGIS-054483_ajeczz9t), impossibilitando a limpeza.
     spec_with_id["slug"] = scenario_slug
+    spec_with_id["id"] = scenario_slug
     meta = dict(spec_with_id.get("meta") or {})
     base_nome = meta.get("projeto", base_slug)
     meta["projeto"] = f"{base_nome} [{cid[:6]}]"
     spec_with_id["meta"] = meta
 
-    import shutil
-    import tempfile
+    scenario_projects_root = Path(task.projects_root)
+    actual_project_slug: str | None = None  # rastreado para cleanup preciso
 
-    # Usar diretório temporário do SO — limpo automaticamente após uso.
-    # benchmarks/data/{slug}/ permanece somente leitura (fonte de referência).
-    with tempfile.TemporaryDirectory(prefix=f"campaign_{scenario_slug}_") as tmp_dir:
+    with tempfile.TemporaryDirectory() as tmp_dir:
         ref_path = Path(tmp_dir) / "referencia.json"
         ref_path.write_text(json.dumps(spec_with_id, ensure_ascii=False, default=str))
 
-        # Projeto de cenário vai para projetos/ (sorvedouro), não data/ (fonte).
-        scenario_projects_root = Path(task.projects_root)
-
         try:
             spec_obj = load_spec_from_dict(spec_with_id, ref_path)
+            actual_project_slug = spec_obj.slug  # slug real após normalização do spec_loader
             _apply_post_load_overrides(spec_obj, task.variados)
             runner = BenchmarkRunner(
                 config_root=Path(task.config_root),
@@ -595,9 +598,8 @@ def _run_campaign_task(task: "_CampaignTask") -> "CenarioAvaliado":
                 report_printer=_Silent(),
             )
             report = runner.run(spec_obj, reset=task.do_reset, skip_artifacts=True)
-            _slug = spec_obj.slug
             canonical: dict = {}
-            for _try in (_slug, _slug.upper(), _slug.lower()):
+            for _try in (actual_project_slug, actual_project_slug.upper(), actual_project_slug.lower()):
                 _can = scenario_projects_root / _try / "v1" / "canonical.json"
                 if _can.exists():
                     canonical = json.loads(_can.read_text())
@@ -634,11 +636,16 @@ def _run_campaign_task(task: "_CampaignTask") -> "CenarioAvaliado":
                 erro=str(exc),
             )
         finally:
-            # Limpar projeto de cenário em projetos/ — é temporário, não precisa persistir.
-            for _try in (scenario_slug, scenario_slug.upper(), scenario_slug.lower()):
-                _proj = scenario_projects_root / _try
-                if _proj.exists():
-                    shutil.rmtree(_proj, ignore_errors=True)
+            # Limpar projeto de cenário em projetos/ usando o slug REAL (não o esperado).
+            # O spec_loader pode ter derivado um slug diferente do scenario_slug se "id"
+            # não estava definido — agora está, mas o finally usa actual_project_slug
+            # como defesa contra futuras inconsistências.
+            slugs_to_clean = {scenario_slug, actual_project_slug} if actual_project_slug else {scenario_slug}
+            for _slug_clean in slugs_to_clean:
+                for _try in (_slug_clean, _slug_clean.upper(), _slug_clean.lower()):
+                    _proj = scenario_projects_root / _try
+                    if _proj.exists():
+                        shutil.rmtree(_proj, ignore_errors=True)
 
     return result
 
