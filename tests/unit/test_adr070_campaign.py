@@ -385,3 +385,94 @@ def test_extrair_vetor_EF_bloqueado_gates():
     report = {"quality_gates": {"decision": "BLOQUEADO"}}
     v = extrair_vetor_EF(canonical, report)
     assert v.fidelidade_gates is False
+
+
+# ── Testes de _apply_scalar e _set_path ([*] wildcard + __scale__) ──────────
+
+from concilium.application.services.campaign_service import (
+    _apply_scalar,
+    _set_path,
+    _apply_post_load_overrides,
+)
+
+
+class TestApplyScalar:
+    def test_scale_int(self):
+        assert _apply_scalar(4, {"__scale__": 2.0}) == 8
+
+    def test_scale_float(self):
+        assert abs(_apply_scalar(3, {"__scale__": 1.25}) - 4) < 0.01  # ceil(3.75)=4
+
+    def test_scale_preserves_min_1(self):
+        assert _apply_scalar(1, {"__scale__": 0.5}) == 1  # max(1, ceil(0.5))
+
+    def test_add_int(self):
+        assert _apply_scalar(3, {"__add__": 2}) == 5
+
+    def test_plain_replace(self):
+        assert _apply_scalar(3, 7) == 7
+
+    def test_dict_merge(self):
+        result = _apply_scalar({"a": 1}, {"b": 2})
+        assert result == {"a": 1, "b": 2}
+
+    def test_scale_none_fallback(self):
+        # When existing is None, cannot scale — returns value as-is
+        result = _apply_scalar(None, {"__scale__": 2.0})
+        assert result == {"__scale__": 2.0}  # unchanged (no existing to scale)
+
+
+class TestSetPath:
+    def test_simple_path(self):
+        d = {"a": {"b": 5}}
+        _set_path(d, ["a", "b"], 10)
+        assert d["a"]["b"] == 10
+
+    def test_wildcard_list(self):
+        d = {"items": [{"n": 2}, {"n": 4}, {"n": 6}]}
+        _set_path(d, ["items", "[*]", "n"], {"__scale__": 2.0})
+        assert d["items"][0]["n"] == 4
+        assert d["items"][1]["n"] == 8
+        assert d["items"][2]["n"] == 12
+
+    def test_wildcard_nested(self):
+        d = {"activities": [
+            {"ramp_params": {"n_max": 3, "n_inicial": 1}},
+            {"ramp_params": {"n_max": 6, "n_inicial": 2}},
+        ]}
+        _set_path(d, ["activities", "[*]", "ramp_params", "n_max"], {"__scale__": 1.25})
+        assert d["activities"][0]["ramp_params"]["n_max"] == 4   # ceil(3.75)
+        assert d["activities"][1]["ramp_params"]["n_max"] == 8   # ceil(7.5)
+
+    def test_wildcard_creates_missing_key(self):
+        d = {"items": [{"a": 1}, {"a": 2}]}
+        _set_path(d, ["items", "[*]", "b"], 99)
+        assert d["items"][0]["b"] == 99
+        assert d["items"][1]["b"] == 99
+
+
+class TestApplyPostLoadOverrides:
+    def test_wildcard_scale_on_activities(self):
+        from types import SimpleNamespace
+        acts = [
+            {"ramp_params": {"n_max": 4, "n_inicial": 1}},
+            {"ramp_params": {"n_max": 2, "n_inicial": 1}},
+        ]
+        spec_obj = SimpleNamespace(
+            inputs_cronograma={"rcpsp_spec": {"activities": acts}}
+        )
+        _apply_post_load_overrides(spec_obj, {
+            "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max": {"__scale__": 1.5},
+        })
+        assert acts[0]["ramp_params"]["n_max"] == 6  # ceil(6.0)
+        assert acts[1]["ramp_params"]["n_max"] == 3  # ceil(3.0)
+
+    def test_add_on_scalar(self):
+        from types import SimpleNamespace
+        spec_obj = SimpleNamespace(
+            inputs_cronograma={"rcpsp_spec": {"deadline_weeks": 56}}
+        )
+        _apply_post_load_overrides(spec_obj, {
+            "inputs_cronograma.rcpsp_spec.deadline_weeks": {"__add__": 14},
+        })
+        assert spec_obj.inputs_cronograma["rcpsp_spec"]["deadline_weeks"] == 70

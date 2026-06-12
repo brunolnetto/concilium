@@ -1,6 +1,6 @@
 {
   "campaign_version": "v1",
-  "descricao": "Exploração regime × prazo — AGIS Ferrovia Transnordestina",
+  "descricao": "Exploração Classe 1+2 — AGIS Ferrovia Transnordestina",
   "perfil_expectativas": {
     "meta_margem_pct": 0.10,
     "tolerancia_margem": 0.03,
@@ -10,14 +10,24 @@
     {
       "campo": "meta.regime_trabalho",
       "valores": [
-        {"horas_dia": 8, "dias_semana": 5},
         {"horas_dia": 8, "dias_semana": 6},
         {"horas_dia": 10, "dias_semana": 6}
       ]
     },
     {
-      "campo": "inputs_cronograma.rcpsp_spec.deadline_weeks",
-      "valores": [39, 56, 70]
+      "campo": "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max",
+      "valores": [
+        {"__scale__": 0.75},
+        {"__scale__": 1.0},
+        {"__scale__": 1.25}
+      ]
+    },
+    {
+      "campo": "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_inicial",
+      "valores": [
+        {"__scale__": 0.5},
+        {"__scale__": 1.0}
+      ]
     }
   ],
   "top_k": 5

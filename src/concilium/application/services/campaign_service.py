@@ -74,26 +74,84 @@ def _apply_overrides(spec: dict, overrides: dict) -> dict:
     return spec
 
 
+def _apply_scalar(existing: Any, value: Any) -> Any:
+    """Aplica valor ou transformação escalar a um campo existente.
+
+    Sintaxe de valor especial:
+        {"__scale__": factor}   → multiplica o valor atual por factor (float)
+        {"__add__": delta}      → soma delta ao valor atual (int/float)
+        {"__frac_of__": "outro_campo", "__value__": frac}
+            → não usado aqui; requer contexto adicional
+
+    Qualquer outro dict faz merge; qualquer outro valor substitui.
+    """
+    import math as _math
+    if isinstance(value, dict):
+        if "__scale__" in value and existing is not None:
+            try:
+                raw = float(existing) * float(value["__scale__"])
+                # Preserva tipo int quando o campo original era int
+                if isinstance(existing, int):
+                    return max(1, int(_math.ceil(raw)))
+                return round(raw, 4)
+            except (TypeError, ValueError):
+                pass
+        if "__add__" in value and existing is not None:
+            try:
+                raw = float(existing) + float(value["__add__"])
+                return type(existing)(raw) if isinstance(existing, int) else round(raw, 4)
+            except (TypeError, ValueError):
+                pass
+        # merge dict
+        if isinstance(existing, dict):
+            return {**existing, **value}
+    return value
+
+
+def _set_path(d: Any, parts: list[str], value: Any) -> None:
+    """Navega path (suporta [*] para listas) e aplica valor."""
+    if not parts:
+        return
+    part = parts[0]
+    rest = parts[1:]
+
+    if part == "[*]":
+        # Aplica a todos os itens de uma lista
+        if isinstance(d, list):
+            for item in d:
+                _set_path(item, rest, value)
+        return
+
+    if not rest:
+        # Folha: aplicar valor
+        if isinstance(d, dict):
+            d[part] = _apply_scalar(d.get(part), value)
+        return
+
+    # Intermediate node
+    if isinstance(d, dict):
+        if part not in d:
+            d[part] = {} if rest[0] != "[*]" else []
+        _set_path(d[part], rest, value)
+
+
 def _apply_post_load_overrides(spec_obj: object, variados: dict) -> None:
-    """Aplica overrides com prefixo 'inputs_' diretamente no ProjectSpec carregado."""
+    """Aplica overrides com prefixo 'inputs_' diretamente no ProjectSpec carregado.
+
+    Suporta:
+      - dot-path simples: inputs_cronograma.rcpsp_spec.deadline_weeks
+      - wildcard de lista: inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max
+      - valores escalares especiais: {"__scale__": 1.25} ou {"__add__": 2}
+    """
     for key_path, value in variados.items():
         if not key_path.startswith("inputs_"):
             continue
         parts = key_path.split(".")
-        # spec_obj.{attr} é o primeiro nível
         attr = parts[0]
         d = getattr(spec_obj, attr, None)
-        if not isinstance(d, dict):
+        if d is None:
             continue
-        for part in parts[1:-1]:
-            if part not in d:
-                d[part] = {}
-            d = d[part]
-        last = parts[-1]
-        if isinstance(value, dict) and isinstance(d.get(last), dict):
-            d[last] = {**d[last], **value}
-        else:
-            d[last] = value
+        _set_path(d, parts[1:], value)
 
 
 def cenario_id(variados: dict) -> str:
