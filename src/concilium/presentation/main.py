@@ -122,6 +122,9 @@ def _load_project() -> None:
     project_app.command("audit")(commands_basic.audit)
     project_app.command("approve")(commands_run.approve)
 
+    from concilium.presentation.cli import commands_campaign
+    project_app.command("campaign")(commands_campaign.campaign)
+
     project_catalog = typer.Typer(
         name="catalog",
         help="Catálogo de overrides do projeto.",
