@@ -74,20 +74,27 @@ class TestCostDecompositionInvariant:
             )
 
     def test_agis_custo_direto_matches_reference(self, agis_benchmark):
-        """AGIS: custo_direto instancial (pós TD-1/TD-3) deve bater com baseline calibrado.
+        """AGIS: custo_direto instancial (pós TD-1/TD-3 + NEP-043 Bug 2) deve bater com baseline.
 
-        Nota: sum(eq.custo_total) é o custo instancial pós-calibração. O valor é menor que
-        o baseline pré-TD-1/TD-3 (R$ 44,259,799.68) porque a correção TD-1 garante que
-        eq.custo_total = Σ custo_total_particionado por contrato, e o custo instancial
-        TD-3 usa machine_weeks_efetivas exatas — o tempo ocioso é mais barato (só MO, sem
-        diesel/material), reduzindo o custo total em ~20%.
+        Histórico de baseline:
+          pré-TD-1/TD-3:     R$ 44,259,799.68  — encargos duplos + pool sem n_frentes
+          pós-TD-1/TD-3:     R$ 35,255,483.25  — TD-1/TD-3 corrigidos, ainda com encargos duplos
+          pós-NEP-043 Bug 2: R$ 16,529,359.75  — encargos CLT não reaplicados sobre taxa all-in
+
+        NEP-043 Bug 2 (2026-06-12): insumos AGIS têm nota_encargos="taxa horária já inclui
+        encargos". O engine não deve multiplicar por (1 + enc_horista) uma taxa que já embute
+        esses encargos. Correto: custo_fixo_mensal usa preco_unitario × horas_mes diretamente,
+        sem replicação do fator CLT. Isso reduz custo_total em ~53% vs o baseline anterior.
+
+        sum(eq.custo_total) aqui é a soma dos custos de 1-frente por atividade.
+        custo.direto_equipes = Σ(custo_total × n_frentes) é o custo real completo (~43.8M).
         """
         canonical = agis_benchmark.canonical
 
         custo_direto_agregado = sum(eq.custo_total for eq in canonical.equipes_diretas)
 
-        # Baseline instancial pós-TD-1/TD-3: R$ 35,255,483.25
-        expected = 35_255_483.25
+        # Baseline instancial pós-TD-1/TD-3 + NEP-043 Bug 2 (encargos all-in, 1-frente)
+        expected = 16_529_359.75
         desvio_pct = abs(custo_direto_agregado - expected) / expected * 100
 
         assert desvio_pct < 0.5, (
