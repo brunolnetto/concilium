@@ -54,6 +54,23 @@ class GoResearchCampaignBundle:
             h = hashlib.sha1(json.dumps(self.base_spec, sort_keys=True, default=str).encode()).hexdigest()[:8]
             self.campaign_id = f"campaign-{h}"
 
+    def cardinality(self) -> int:
+        """Produto cartesiano do espaço discretizado: Π |valores_i| para cada dimensão."""
+        result = 1
+        for s in self.sweep:
+            result *= len(s.valores)
+        return result
+
+    def cardinality_breakdown(self) -> list[dict]:
+        """Retorna contribuição de cada dimensão para a cardinalidade total."""
+        rows = []
+        acc = 1
+        for s in self.sweep:
+            k = len(s.valores)
+            acc *= k
+            rows.append({"campo": s.campo, "k": k, "acumulado": acc})
+        return rows
+
 
 @dataclass
 class VetorEspacoO:

@@ -662,7 +662,22 @@ def executar_campanha(
     num_workers: int = 3,
     reset: bool = True,
 ) -> CampaignOutputBundle:
-    """Execute a full campaign: generate grid, evaluate, curate, return bundle."""
+    """Execute a full campaign: generate grid, evaluate, curate, return bundle.
+
+    ADR-109: verifica fronteira de tratabilidade (10.000 cenários) antes de executar.
+    Acima desse limite, busca exaustiva pode levar horas — considere mode='guided' (futuro).
+    """
+    import warnings
+
+    n_card = bundle.cardinality()
+    if n_card > 10_000:
+        warnings.warn(
+            f"GoResearchCampaignBundle.cardinality={n_card:,} excede fronteira de "
+            f"tratabilidade (10.000). Busca exaustiva levaria ~{n_card * 6 // 3600:.0f}h "
+            f"com {num_workers} workers. Considere reduzir dimensões ou usar busca guiada.",
+            stacklevel=2,
+        )
+
     grid = gerar_grid(bundle)
     cenarios: list[CenarioAvaliado] = []
     prazo_cont = bundle.perfil_expectativas.prazo_contratual_semanas

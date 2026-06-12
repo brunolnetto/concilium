@@ -216,6 +216,8 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [105](ADR-105-mobilizacao-desmobilizacao-workforce-equipment.md) | Mobilização e Desmobilização de MO e Equipamentos | ⚠️ Parcial _(campos custo_mobilizacao/operacao/desmobilizacao_mensal adicionados ✅ 2026-06-10; desdobramento fases F1-F5 aguarda S3)_ | ADR-046, ADR-071, ADR-085 |
 | [106](adr-106-equipe-custo-engine-lifecycle-unificado.md) | EquipeCustoEngine — Lifecycle Unificado Diretas e Indiretas | ⚠️ Parcial _(F1-F4, F7 ✅ 2026-06-10; F5-F6 deferred; F8 💡)_ | ADR-085, ADR-104, NEP-029, NEP-031, NEP-037 |
 | [107](adr-107-generalizacao-tipo-combustivel.md) | Generalização do Tipo de Combustível: DIESEL → COMBUSTIVEL + tipo_combustivel | ✅ Implementado _(D1-D4, D6 ✅ 2026-06-10; D5 analytics aguarda ADR-106)_ | ADR-030, ADR-082, ADR-085, ADR-090, ADR-092 |
+| [108](ADR-108-campaign-bundle-cube-alimentado-por-cubos-existentes.md) | CampaignBundleCube alimentado pelos Cubos de Custo e Cronograma | ✅ Implementado 2026-06-12 | ADR-069, ADR-070, ADR-086, ADR-087 |
+| [109](ADR-109-cardinalidade-espaco-campanha-go.md) | Cardinalidade do Espaço de Campanha GO — Produto Cartesiano de Discretizações | ✅ Implementado 2026-06-12 | ADR-070, ADR-108 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 
