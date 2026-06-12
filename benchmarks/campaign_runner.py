@@ -162,7 +162,8 @@ def save_reports(bundle: CampaignOutputBundle, cube: CampaignBundleCube, data_di
         render_campaign_report_md,
         render_campaign_report_pdf,
     )
-    report_dir = data_dir / "artifacts" / "campaign"
+    # Entregáveis computados vivem em projetos/ (sorvedouro), não em data/ (fonte).
+    report_dir = PROJECTS_ROOT / slug / "artifacts" / "campaign"
     report_dir.mkdir(parents=True, exist_ok=True)
 
     # JSON

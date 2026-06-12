@@ -142,8 +142,9 @@ class BenchmarkRunner:
         return "reports"  # fallback
 
     def _artifact_output_dir(self, spec: ProjectSpec) -> Path:
-        benchmarks_root = self.projects_root.parent
-        return benchmarks_root / "data" / spec.slug / "artifacts" / "outputs"
+        # Entregáveis computados vivem em projetos/ (sorvedouro), não em data/ (fonte).
+        # data/{slug}/ é somente leitura: referencia.json, campaign_v{i}.json, artifacts/raw/.
+        return self.projects_root / spec.slug / "artifacts" / "outputs"
 
     def _find_or_create(self, nome: str, benchmark_id: str, contexto_id: str, reset: bool):
 

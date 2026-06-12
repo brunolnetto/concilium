@@ -573,60 +573,74 @@ def _run_campaign_task(task: "_CampaignTask") -> "CenarioAvaliado":
     meta["projeto"] = f"{base_nome} [{cid[:6]}]"
     spec_with_id["meta"] = meta
 
-    benchmarks_root = Path(task.projects_root).parent
-    scenario_dir = benchmarks_root / "data" / scenario_slug
-    scenario_dir.mkdir(parents=True, exist_ok=True)
-    ref_path = scenario_dir / "referencia.json"
-    ref_path.write_text(json.dumps(spec_with_id, ensure_ascii=False, default=str))
+    import shutil
+    import tempfile
 
-    try:
-        spec_obj = load_spec_from_dict(spec_with_id, ref_path)
-        _apply_post_load_overrides(spec_obj, task.variados)
-        runner = BenchmarkRunner(
-            config_root=Path(task.config_root),
-            projects_root=Path(task.projects_root),
-            report_builder=BenchmarkReportBuilder(),
-            report_printer=_Silent(),
-        )
-        report = runner.run(spec_obj, reset=task.do_reset, skip_artifacts=True)
-        _slug = spec_obj.slug
-        canonical: dict = {}
-        for _try in (_slug, _slug.upper(), _slug.lower()):
-            _can = Path(task.projects_root) / _try / "v1" / "canonical.json"
-            if _can.exists():
-                canonical = json.loads(_can.read_text())
-                break
+    # Usar diretório temporário do SO — limpo automaticamente após uso.
+    # benchmarks/data/{slug}/ permanece somente leitura (fonte de referência).
+    with tempfile.TemporaryDirectory(prefix=f"campaign_{scenario_slug}_") as tmp_dir:
+        ref_path = Path(tmp_dir) / "referencia.json"
+        ref_path.write_text(json.dumps(spec_with_id, ensure_ascii=False, default=str))
 
-        v_O = extrair_vetor_O(canonical, task.prazo_contratual)
-        v_EF = extrair_vetor_EF(canonical, report)
-        decision = (report.get("quality_gates") or {}).get("decision") or "BLOQUEADO"
-        via_map: dict[str, "ViabilidadeStatus"] = {
-            "APROVADO": "APROVADO",
-            "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
-            "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
-            "BLOQUEADO": "BLOQUEADO",
-        }
-        viabilidade: "ViabilidadeStatus" = via_map.get(decision, "ERRO")
-        return CenarioAvaliado(
-            cenario_id=cid,
-            parametros_variados=task.variados,
-            viabilidade=viabilidade,
-            vetor_O=v_O,
-            vetor_EF=v_EF,
-            classificacao_O=classificar_O(v_O, task.perfil),
-            classificacao_EF=classificar_EF(v_EF, task.perfil),
-        )
-    except Exception as exc:
-        return CenarioAvaliado(
-            cenario_id=cid,
-            parametros_variados=task.variados,
-            viabilidade="ERRO",
-            vetor_O=VetorEspacoO(),
-            vetor_EF=VetorEspacoEF(),
-            classificacao_O="CRITICO",
-            classificacao_EF="FORA_EXPECTATIVA",
-            erro=str(exc),
-        )
+        # Projeto de cenário vai para projetos/ (sorvedouro), não data/ (fonte).
+        scenario_projects_root = Path(task.projects_root)
+
+        try:
+            spec_obj = load_spec_from_dict(spec_with_id, ref_path)
+            _apply_post_load_overrides(spec_obj, task.variados)
+            runner = BenchmarkRunner(
+                config_root=Path(task.config_root),
+                projects_root=scenario_projects_root,
+                report_builder=BenchmarkReportBuilder(),
+                report_printer=_Silent(),
+            )
+            report = runner.run(spec_obj, reset=task.do_reset, skip_artifacts=True)
+            _slug = spec_obj.slug
+            canonical: dict = {}
+            for _try in (_slug, _slug.upper(), _slug.lower()):
+                _can = scenario_projects_root / _try / "v1" / "canonical.json"
+                if _can.exists():
+                    canonical = json.loads(_can.read_text())
+                    break
+
+            v_O = extrair_vetor_O(canonical, task.prazo_contratual)
+            v_EF = extrair_vetor_EF(canonical, report)
+            decision = (report.get("quality_gates") or {}).get("decision") or "BLOQUEADO"
+            via_map: dict[str, "ViabilidadeStatus"] = {
+                "APROVADO": "APROVADO",
+                "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
+                "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
+                "BLOQUEADO": "BLOQUEADO",
+            }
+            viabilidade: "ViabilidadeStatus" = via_map.get(decision, "ERRO")
+            result = CenarioAvaliado(
+                cenario_id=cid,
+                parametros_variados=task.variados,
+                viabilidade=viabilidade,
+                vetor_O=v_O,
+                vetor_EF=v_EF,
+                classificacao_O=classificar_O(v_O, task.perfil),
+                classificacao_EF=classificar_EF(v_EF, task.perfil),
+            )
+        except Exception as exc:
+            result = CenarioAvaliado(
+                cenario_id=cid,
+                parametros_variados=task.variados,
+                viabilidade="ERRO",
+                vetor_O=VetorEspacoO(),
+                vetor_EF=VetorEspacoEF(),
+                classificacao_O="CRITICO",
+                classificacao_EF="FORA_EXPECTATIVA",
+                erro=str(exc),
+            )
+        finally:
+            # Limpar projeto de cenário em projetos/ — é temporário, não precisa persistir.
+            for _try in (scenario_slug, scenario_slug.upper(), scenario_slug.lower()):
+                _proj = scenario_projects_root / _try
+                if _proj.exists():
+                    shutil.rmtree(_proj, ignore_errors=True)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
