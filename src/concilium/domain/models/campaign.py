@@ -118,3 +118,88 @@ class CampaignOutputBundle:
     status: CampaignStatus
     cenarios: list[CenarioAvaliado]
     shortlist: list[CenarioRankeado]
+
+
+# ---------------------------------------------------------------------------
+# CampaignBundleCube — camada analítica multidimensional (ADR-070 §4b + §D8)
+# ---------------------------------------------------------------------------
+
+TendenciaMarginal = Literal["crescente", "decrescente", "nao_monotona", "indeterminado"]
+
+
+@dataclass
+class CuboDimensao:
+    """Uma dimensão do espaço de exploração (= um ParametroSweep)."""
+
+    nome: str          # label legível, ex: "regime_trabalho" ou "deadline_weeks"
+    campo: str         # campo do ProjetoSpec, ex: "meta.regime_trabalho"
+    valores: list[Any] # valores únicos ordenados nesta dimensão
+
+
+@dataclass
+class CelulaAnalitica:
+    """Grão mínimo do cubo: uma combinação de valores de dimensões + métricas."""
+
+    dimensoes: dict[str, Any]          # {nome_dim: valor} para esta célula
+    cenario_id: str | None             # None se esta célula não foi avaliada
+    vetor_O: "VetorEspacoO | None"
+    vetor_EF: "VetorEspacoEF | None"
+    classificacao_O: ClassificacaoO | None
+    classificacao_EF: ClassificacaoEF | None
+    viabilidade: ViabilidadeStatus | None
+    pareto_O: bool = False
+    pareto_EF: bool = False
+    pareto_intersecao: bool = False
+
+
+@dataclass
+class FaceAnalitica:
+    """Projeção 2D do cubo em duas dimensões para uma métrica específica.
+
+    Permite visualizar o mapa de calor de qualquer métrica na interseção
+    de dois parâmetros do sweep, mantendo os demais fixos no valor mediano.
+    """
+
+    dim_x: str                              # nome da dimensão no eixo X
+    dim_y: str                              # nome da dimensão no eixo Y
+    metrica: str                            # métrica exibida (ex: "prazo_semanas")
+    valores_x: list[Any]                    # valores únicos da dim X (colunas)
+    valores_y: list[Any]                    # valores únicos da dim Y (linhas)
+    grade: list[list[float | None]]         # grade[i_y][i_x] = valor da métrica
+
+
+@dataclass
+class ResumoMarginal:
+    """Efeito marginal de uma dimensão numa métrica (mantendo as demais fixas na mediana)."""
+
+    dimensao: str
+    metrica: str
+    valores: list[Any]                      # valores da dimensão, em ordem
+    medias: list[float | None]              # média da métrica para cada valor
+    tendencia: TendenciaMarginal
+
+
+@dataclass
+class CampaignBundleCube:
+    """Cubo analítico multidimensional sobre um CampaignOutputBundle.
+
+    Dimensões = parâmetros do sweep. Medidas = vetores O e EF/F.
+    Faces = projeções 2D para qualquer par de dimensões.
+    Resumos marginais = efeito isolado de cada dimensão.
+
+    Invariantes:
+    - len(celulas) = Π len(dim.valores) para todas as dimensões
+    - Células não avaliadas têm cenario_id=None e vetores=None
+    - cobertura_pct = n_celulas_avaliadas / n_celulas_total
+    """
+
+    campaign_id: str
+    dimensoes: list[CuboDimensao]
+    celulas: list[CelulaAnalitica]
+    faces: list[FaceAnalitica]              # uma face por par de dimensões
+    resumos_marginais: list[ResumoMarginal]  # uma por (dimensão × métrica)
+    n_celulas_total: int
+    n_celulas_avaliadas: int
+    n_celulas_viaveis: int
+    n_celulas_pareto: int
+    cobertura_pct: float                    # n_avaliadas / n_total

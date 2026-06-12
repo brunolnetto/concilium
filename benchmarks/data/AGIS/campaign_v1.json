@@ -1,6 +1,6 @@
 {
   "campaign_version": "v1",
-  "descricao": "Exploração regime de trabalho — AGIS Ferrovia Transnordestina",
+  "descricao": "Exploração regime × prazo — AGIS Ferrovia Transnordestina",
   "perfil_expectativas": {
     "meta_margem_pct": 0.10,
     "tolerancia_margem": 0.03,
@@ -14,7 +14,11 @@
         {"horas_dia": 8, "dias_semana": 6},
         {"horas_dia": 10, "dias_semana": 6}
       ]
+    },
+    {
+      "campo": "inputs_cronograma.rcpsp_spec.deadline_weeks",
+      "valores": [39, 56, 70]
     }
   ],
-  "top_k": 3
+  "top_k": 5
 }

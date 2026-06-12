@@ -11,16 +11,21 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from concilium.domain.models.campaign import (
+    CampaignBundleCube,
     CampaignOutputBundle,
     CampaignStatus,
+    CelulaAnalitica,
     CenarioAvaliado,
     CenarioRankeado,
     ClassificacaoEF,
     ClassificacaoO,
+    CuboDimensao,
+    FaceAnalitica,
     GoResearchCampaignBundle,
     JustificativaCenario,
     ParametroSweep,
     PerfilExpectativas,
+    ResumoMarginal,
     VetorEspacoEF,
     VetorEspacoO,
     ViabilidadeStatus,
@@ -502,7 +507,7 @@ def executar_campanha(
     status = classificar_bundle(cenarios)
     viaveis = [c for c in cenarios if c.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"}]
 
-    return CampaignOutputBundle(
+    output = CampaignOutputBundle(
         campaign_id=bundle.campaign_id,
         campaign_version=bundle.campaign_version,
         gerado_em=datetime.now(timezone.utc),
@@ -512,4 +517,164 @@ def executar_campanha(
         status=status,
         cenarios=cenarios,
         shortlist=shortlist,
+    )
+    return output
+
+
+# ---------------------------------------------------------------------------
+# CampaignBundleCube — camada analítica multidimensional
+# ---------------------------------------------------------------------------
+
+_METRICAS_O = ["prazo_semanas", "fe_nec_medio", "itens_criticos_pct", "gap_pool_total"]
+_METRICAS_EF = ["margem_pct", "ratio_pool_vs_cat", "custo_indireto"]
+
+
+def _get_metrica(c: CenarioAvaliado, metrica: str) -> float | None:
+    vo, vef = c.vetor_O, c.vetor_EF
+    return getattr(vo, metrica, None) or getattr(vef, metrica, None)
+
+
+def _label_variados(variados: dict) -> str:
+    """Extrai label legível dos parâmetros variados."""
+    parts = []
+    for campo, valor in variados.items():
+        nome = campo.split(".")[-1]
+        if isinstance(valor, dict):
+            parts.append(", ".join(f"{k}={v}" for k, v in valor.items()))
+        else:
+            parts.append(f"{nome}={valor}")
+    return " | ".join(parts) if parts else str(variados)
+
+
+def _tendencia(valores_ord: list, medias: list[float | None]) -> "TendenciaMarginal":
+    from concilium.domain.models.campaign import TendenciaMarginal  # noqa: F401
+    valid = [(v, m) for v, m in zip(valores_ord, medias) if m is not None]
+    if len(valid) < 2:
+        return "indeterminado"
+    ms = [m for _, m in valid]
+    if all(ms[i] <= ms[i + 1] for i in range(len(ms) - 1)):
+        return "crescente"
+    if all(ms[i] >= ms[i + 1] for i in range(len(ms) - 1)):
+        return "decrescente"
+    return "nao_monotona"
+
+
+def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundle) -> CampaignBundleCube:
+    """Constrói o CampaignBundleCube a partir do bundle e do output da campanha.
+
+    Dimensões = parâmetros do sweep.
+    Células = todas as combinações avaliadas (com cenário) ou ausentes (sem cenário).
+    Faces = projeções 2D para cada par de dimensões (se sweep ≥ 2 dimensões).
+    Resumos marginais = efeito de cada dimensão em cada métrica.
+    """
+    # --- 1. Dimensões ---
+    dims = [
+        CuboDimensao(
+            nome=s.campo.split(".")[-1],
+            campo=s.campo,
+            valores=s.valores,
+        )
+        for s in bundle.sweep
+    ]
+
+    # Índice de cenários por variados-hash
+    cenario_por_id = {c.cenario_id: c for c in output.cenarios}
+    grid, _ = zip(*gerar_grid(bundle)) if bundle.sweep else ([], [])
+    grid_list = list(gerar_grid(bundle))
+
+    # --- 2. Células ---
+    celulas: list[CelulaAnalitica] = []
+    for _sv, variados in grid_list:
+        cid = cenario_id(variados)
+        c = cenario_por_id.get(cid)
+        celulas.append(CelulaAnalitica(
+            dimensoes={d.nome: variados.get(d.campo) for d in dims},
+            cenario_id=cid if c else None,
+            vetor_O=c.vetor_O if c else None,
+            vetor_EF=c.vetor_EF if c else None,
+            classificacao_O=c.classificacao_O if c else None,
+            classificacao_EF=c.classificacao_EF if c else None,
+            viabilidade=c.viabilidade if c else None,
+            pareto_O=c.pareto_O if c else False,
+            pareto_EF=c.pareto_EF if c else False,
+            pareto_intersecao=c.pareto_intersecao if c else False,
+        ))
+
+    n_total = len(celulas)
+    n_aval = sum(1 for ce in celulas if ce.cenario_id)
+    n_viaveis = sum(1 for ce in celulas if ce.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"})
+    n_pareto = sum(1 for ce in celulas if ce.pareto_intersecao)
+
+    # --- 3. Faces (pares de dimensões) ---
+    faces: list[FaceAnalitica] = []
+    if len(dims) >= 2:
+        for i, dx in enumerate(dims):
+            for dy in dims[i + 1:]:
+                for metrica in _METRICAS_O + _METRICAS_EF:
+                    grade: list[list[float | None]] = []
+                    for vy in dy.valores:
+                        row = []
+                        for vx in dx.valores:
+                            matching = [
+                                ce for ce in celulas
+                                if ce.dimensoes.get(dx.nome) == vx
+                                and ce.dimensoes.get(dy.nome) == vy
+                                and ce.cenario_id
+                            ]
+                            if matching:
+                                c_match = cenario_por_id.get(matching[0].cenario_id)
+                                row.append(_get_metrica(c_match, metrica) if c_match else None)
+                            else:
+                                row.append(None)
+                        grade.append(row)
+                    # Only include face if at least some values are non-None
+                    if any(v is not None for row in grade for v in row):
+                        faces.append(FaceAnalitica(
+                            dim_x=dx.nome,
+                            dim_y=dy.nome,
+                            metrica=metrica,
+                            valores_x=dx.valores,
+                            valores_y=dy.valores,
+                            grade=grade,
+                        ))
+
+    # --- 4. Resumos marginais ---
+    resumos: list[ResumoMarginal] = []
+    for d in dims:
+        for metrica in _METRICAS_O + _METRICAS_EF:
+            medias: list[float | None] = []
+            for val in d.valores:
+                celulas_val = [
+                    ce for ce in celulas
+                    if ce.dimensoes.get(d.nome) == val and ce.cenario_id
+                ]
+                vals_m = []
+                for ce in celulas_val:
+                    c_m = cenario_por_id.get(ce.cenario_id)
+                    if c_m:
+                        v = _get_metrica(c_m, metrica)
+                        if v is not None:
+                            vals_m.append(v)
+                medias.append(round(sum(vals_m) / len(vals_m), 4) if vals_m else None)
+
+            if any(m is not None for m in medias):
+                resumos.append(ResumoMarginal(
+                    dimensao=d.nome,
+                    metrica=metrica,
+                    valores=d.valores,
+                    medias=medias,
+                    tendencia=_tendencia(d.valores, medias),
+                ))
+
+    return CampaignBundleCube(
+        campaign_id=output.campaign_id,
+        dimensoes=dims,
+        celulas=celulas,
+        faces=faces,
+        resumos_marginais=resumos,
+        n_celulas_total=n_total,
+        n_celulas_avaliadas=n_aval,
+        n_celulas_viaveis=n_viaveis,
+        n_celulas_pareto=n_pareto,
+        cobertura_pct=round(n_aval / n_total, 4) if n_total else 0.0,
     )

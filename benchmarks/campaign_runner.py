@@ -20,8 +20,9 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT / "src"))
 
-from concilium.application.services.campaign_service import executar_campanha
+from concilium.application.services.campaign_service import construir_cubo, executar_campanha
 from concilium.domain.models.campaign import (
+    CampaignBundleCube,
     CampaignOutputBundle,
     CenarioAvaliado,
     GoResearchCampaignBundle,
@@ -60,14 +61,17 @@ def _build_bundle(base_spec: dict, cfg: dict) -> GoResearchCampaignBundle:
     )
 
 
-def _objetivo_label(c: CenarioAvaliado) -> str:
-    """Extract objetivo from parametros_variados (handles dict or simple values)."""
-    for val in c.parametros_variados.values():
-        if isinstance(val, dict) and "objetivo" in val:
-            return val["objetivo"]
-        if isinstance(val, str):
-            return val
-    return str(list(c.parametros_variados.values())[0]) if c.parametros_variados else "-"
+def _variados_label(c: CenarioAvaliado) -> str:
+    """Extrai label compacto dos parâmetros variados."""
+    parts = []
+    for campo, valor in c.parametros_variados.items():
+        nome = campo.split(".")[-1][:8]
+        if isinstance(valor, dict):
+            v = "/".join(f"{k[0]}={v}" for k, v in list(valor.items())[:2])
+        else:
+            v = str(valor)
+        parts.append(f"{nome}:{v}")
+    return " ".join(parts)[:20]
 
 
 def _fmt_pct(v: float | None) -> str:
@@ -118,7 +122,7 @@ def print_summary(result: CampaignOutputBundle) -> None:
     for c in sorted_cenarios:
         _row(
             c.cenario_id[:12],
-            _objetivo_label(c)[:20],
+            _variados_label(c)[:20],
             _fmt_semanas(c.vetor_O.prazo_semanas),
             _fmt_fe(c.vetor_O.fe_nec_medio),
             _fmt_pct(c.vetor_EF.margem_pct),
@@ -152,6 +156,49 @@ def print_summary(result: CampaignOutputBundle) -> None:
     )
 
 
+def print_cube(cube: CampaignBundleCube) -> None:
+    print(f"\n{'='*60}")
+    print(f"=== CampaignBundleCube — {cube.campaign_id} ===")
+    print(f"{'='*60}")
+    print(f"Dimensões: {[d.nome for d in cube.dimensoes]}")
+    print(f"Células: {cube.n_celulas_avaliadas}/{cube.n_celulas_total} avaliadas "
+          f"({cube.cobertura_pct*100:.0f}%) | {cube.n_celulas_viaveis} viáveis | "
+          f"{cube.n_celulas_pareto} em Pareto-interseção")
+
+    # Faces 2D — uma por par de dimensões e métrica relevante
+    metricas_principais = ["prazo_semanas", "fe_nec_medio", "margem_pct"]
+    shown_faces = [f for f in cube.faces if f.metrica in metricas_principais]
+    # Deduplicate (dim_x, dim_y, metrica)
+    seen = set()
+    for face in shown_faces:
+        key = (face.dim_x, face.dim_y, face.metrica)
+        if key in seen:
+            continue
+        seen.add(key)
+        print(f"\n  Face: {face.dim_x} × {face.dim_y} → {face.metrica}")
+        # Header row
+        header = f"{'':>20}" + "".join(f"{str(vx)[:10]:>12}" for vx in face.valores_x)
+        print(f"  {header}")
+        for vy, row in zip(face.valores_y, face.grade):
+            label = str(vy)[:18]
+            vals = "".join(
+                f"{v:>12.3f}" if v is not None else f"{'—':>12}"
+                for v in row
+            )
+            print(f"  {label:>20}{vals}")
+
+    # Resumos marginais
+    print(f"\n  Efeitos marginais:")
+    for r in cube.resumos_marginais:
+        if r.metrica not in metricas_principais:
+            continue
+        vals_str = "  ".join(
+            f"{str(v)[:8]}→{f'{m:.3f}' if m is not None else '—'}"
+            for v, m in zip(r.valores, r.medias)
+        )
+        print(f"    {r.dimensao}/{r.metrica}: {vals_str}  [{r.tendencia}]")
+
+
 def main() -> None:
     ref_path = DATA_DIR / "referencia.json"
     cfg_path = DATA_DIR / "campaign_v1.json"
@@ -176,15 +223,23 @@ def main() -> None:
     print(f"[INFO] Iniciando campanha com {len(bundle.sweep)} parametro(s) de sweep...")
     print()
 
+    print(f"[INFO] Grid: {len(bundle.sweep)} dimensões × {[len(s.valores) for s in bundle.sweep]} valores "
+          f"= {__import__('math').prod(len(s.valores) for s in bundle.sweep)} cenários")
+    print(f"[INFO] Iniciando campanha (skip_artifacts=True)...")
+    print()
+
     result = executar_campanha(
         bundle,
         config_root=CONFIG_ROOT,
         projects_root=PROJECTS_ROOT,
         num_workers=3,
-        reset=False,  # use existing canonical if available
+        reset=True,
     )
 
+    cube = construir_cubo(bundle, result)
+
     print_summary(result)
+    print_cube(cube)
 
 
 if __name__ == "__main__":
