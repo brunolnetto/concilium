@@ -1,0 +1,20 @@
+{
+  "campaign_version": "v1",
+  "descricao": "Exploração regime de trabalho — AGIS Ferrovia Transnordestina",
+  "perfil_expectativas": {
+    "meta_margem_pct": 0.10,
+    "tolerancia_margem": 0.03,
+    "prazo_contratual_semanas": 56
+  },
+  "sweep": [
+    {
+      "campo": "meta.regime_trabalho",
+      "valores": [
+        {"horas_dia": 8, "dias_semana": 5},
+        {"horas_dia": 8, "dias_semana": 6},
+        {"horas_dia": 10, "dias_semana": 6}
+      ]
+    }
+  ],
+  "top_k": 3
+}

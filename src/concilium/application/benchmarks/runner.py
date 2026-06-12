@@ -30,7 +30,7 @@ class BenchmarkRunner:
     report_builder: BenchmarkReportBuilder
     report_printer: BenchmarkReportPrinter
 
-    def run(self, spec: ProjectSpec, *, reset: bool = False) -> dict[str, Any]:
+    def run(self, spec: ProjectSpec, *, reset: bool = False, skip_artifacts: bool = False) -> dict[str, Any]:
         store = self._find_or_create(spec.nome, spec.slug, spec.contexto_id, reset)
 
         # Short-circuit: canonical + relatório já existem e reset não foi solicitado.
@@ -50,7 +50,21 @@ class BenchmarkRunner:
         if store.current_version() is None:
             store.new_version()
 
-        results_log = runtime.run_pipeline(store, self._prepare_inputs(spec, ref_data, inference_pack))
+        # Modo leve: pula skills pesadas de relatório/criticidade (usadas em campanhas de exploração)
+        _skill_seq = None
+        if skip_artifacts:
+            _skill_seq = [
+                "01-escopo-e-eap",
+                "02-produtividade-climatica",
+                "03-catalogo-de-recursos",
+                "04-cronograma",
+                "05-equipes-e-alocacao",
+                "06-resultado-financeiro",
+            ]
+        results_log = runtime.run_pipeline(
+            store, self._prepare_inputs(spec, ref_data, inference_pack),
+            skill_sequence=_skill_seq,
+        )
         report = self.report_builder.build(
             spec=spec,
             version=store.current_version(),
@@ -60,6 +74,16 @@ class BenchmarkRunner:
             inference_pack=inference_pack,
         )
         self.report_printer.print(report)
+
+        if skip_artifacts:
+            # Modo leve (ex: campanha de exploração): apenas o benchmark_report.json, sem imagens/PDFs.
+            artifacts_dir = self._artifact_output_dir(spec)
+            audit_dir = artifacts_dir.parent / "audit"
+            audit_dir.mkdir(parents=True, exist_ok=True)
+            (audit_dir / "benchmark_report.json").write_text(
+                json.dumps(report, indent=2, default=str, ensure_ascii=False), encoding="utf-8"
+            )
+            return report
 
         # Caminho organizado por benchmark slug (unico destino de artefatos).
         artifacts_dir = self._artifact_output_dir(spec)
