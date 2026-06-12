@@ -30,6 +30,10 @@ CampaignStatus = Literal[
 class ParametroSweep:
     campo: str        # dot-path into the spec dict, e.g. "spec.inputs_cronograma.rcpsp_spec.pool_config.objetivo"
     valores: list[Any]
+    scope: str = "global"           # "global" = mesma valor para todos (padrão)
+                                    # "per_item" = varia independentemente por item_id (k^n cenários)
+                                    # "cpu_alternativo" = substitui cpu_id no EAP para item_ids
+    item_ids: list[str] | None = None  # para per_item / cpu_alternativo: quais item_ids variar
 
 
 @dataclass
@@ -55,10 +59,19 @@ class GoResearchCampaignBundle:
             self.campaign_id = f"campaign-{h}"
 
     def cardinality(self) -> int:
-        """Produto cartesiano do espaço discretizado: Π |valores_i| para cada dimensão."""
+        """Produto cartesiano do espaço discretizado: Π |valores_i| para cada dimensão.
+
+        Para scope="global": contribui com len(valores).
+        Para scope="per_item" ou "cpu_alternativo": contribui com len(valores)^len(item_ids)
+        (cada item_id é uma dimensão independente com k valores).
+        """
         result = 1
         for s in self.sweep:
-            result *= len(s.valores)
+            k = len(s.valores)
+            if s.scope in ("per_item", "cpu_alternativo") and s.item_ids:
+                result *= k ** len(s.item_ids)
+            else:
+                result *= k
         return result
 
     def cardinality_breakdown(self) -> list[dict]:
@@ -67,8 +80,14 @@ class GoResearchCampaignBundle:
         acc = 1
         for s in self.sweep:
             k = len(s.valores)
-            acc *= k
-            rows.append({"campo": s.campo, "k": k, "acumulado": acc})
+            if s.scope in ("per_item", "cpu_alternativo") and s.item_ids:
+                contrib = k ** len(s.item_ids)
+                acc *= contrib
+                rows.append({"campo": s.campo, "k": k, "n_items": len(s.item_ids),
+                              "contrib": contrib, "acumulado": acc, "scope": s.scope})
+            else:
+                acc *= k
+                rows.append({"campo": s.campo, "k": k, "acumulado": acc, "scope": s.scope})
         return rows
 
 

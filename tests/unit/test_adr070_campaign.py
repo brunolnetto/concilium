@@ -576,3 +576,426 @@ class TestCronogramaUtilizacao:
         r = _cronograma_utilizacao(self._canonical_com_atividades(acts))
         # S1: 2 atividades ativas; S2: 1 ativa → média = 1.5
         assert r["paralelismo"] == pytest.approx(1.5, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
+# Feature 1 — per_item independent sweep
+# ---------------------------------------------------------------------------
+
+from concilium.application.services.campaign_service import _apply_per_item_post_load
+
+
+def _make_activities_spec_obj(activities: list[dict]) -> SimpleNamespace:
+    """Helper: cria um spec_obj com inputs_cronograma.rcpsp_spec.activities."""
+    return SimpleNamespace(
+        inputs_cronograma={"rcpsp_spec": {"activities": activities}}
+    )
+
+
+class TestPerItemSweep:
+    """Feature 1: scope='per_item' — cada item_id varia independentemente."""
+
+    # --- Cardinalidade ---
+
+    def test_per_item_cardinality_2_items_3_values(self):
+        """2 item_ids × 3 valores = 3^2 = 9 cenários."""
+        sweep = [
+            ParametroSweep(
+                campo="inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max",
+                valores=[{"__scale__": 0.75}, {"__scale__": 1.0}, {"__scale__": 1.25}],
+                scope="per_item",
+                item_ids=["eap-1_5", "eap-1_6"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        assert bundle.cardinality() == 9
+
+    def test_per_item_cardinality_adds_to_global(self):
+        """global(2) × per_item(3^2=9) = 18."""
+        sweep = [
+            ParametroSweep("meta.regime", [1, 2], scope="global"),
+            ParametroSweep(
+                campo="inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max",
+                valores=[{"__scale__": 0.75}, {"__scale__": 1.0}, {"__scale__": 1.25}],
+                scope="per_item",
+                item_ids=["eap-1_5", "eap-1_6"],
+            ),
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        assert bundle.cardinality() == 18
+
+    def test_per_item_gerar_grid_count(self):
+        """gerar_grid retorna 9 cenários para 2 item_ids × 3 valores."""
+        sweep = [
+            ParametroSweep(
+                campo="inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max",
+                valores=[{"__scale__": 0.75}, {"__scale__": 1.0}, {"__scale__": 1.25}],
+                scope="per_item",
+                item_ids=["eap-1_5", "eap-1_6"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        grid = gerar_grid(bundle)
+        assert len(grid) == 9
+
+    def test_per_item_cardinality_single_item(self):
+        """1 item_id × 3 valores = 3 cenários (não 3^1=3, mas efectivamente linear)."""
+        sweep = [
+            ParametroSweep(
+                campo="inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max",
+                valores=[{"__scale__": 0.75}, {"__scale__": 1.0}, {"__scale__": 1.25}],
+                scope="per_item",
+                item_ids=["eap-1_5"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        assert bundle.cardinality() == 3
+        assert len(gerar_grid(bundle)) == 3
+
+    # --- parametros_variados ---
+
+    def test_per_item_parametros_variados_has_item_keys(self):
+        """Cada cenário do grid registra chaves por item_id nos parametros_variados."""
+        sweep = [
+            ParametroSweep(
+                campo="inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max",
+                valores=[{"__scale__": 0.75}, {"__scale__": 1.25}],
+                scope="per_item",
+                item_ids=["eap-1_5", "eap-1_6"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        grid = gerar_grid(bundle)
+        # 4 cenários (2^2)
+        assert len(grid) == 4
+        campo = "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max"
+        for _sv, variados in grid:
+            key_5 = f"_per_item_:{campo}:eap-1_5"
+            key_6 = f"_per_item_:{campo}:eap-1_6"
+            assert key_5 in variados
+            assert key_6 in variados
+
+    def test_per_item_all_combos_present(self):
+        """Todos os 4 pares (v1×v2) aparecem nos parametros_variados."""
+        vals = [{"__scale__": 0.75}, {"__scale__": 1.25}]
+        campo = "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max"
+        sweep = [
+            ParametroSweep(campo=campo, valores=vals, scope="per_item",
+                           item_ids=["eap-1_5", "eap-1_6"]),
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        grid = gerar_grid(bundle)
+        key_5 = f"_per_item_:{campo}:eap-1_5"
+        key_6 = f"_per_item_:{campo}:eap-1_6"
+        pairs = {(str(v[key_5]), str(v[key_6])) for _sv, v in grid}
+        expected = {(str(a), str(b)) for a in vals for b in vals}
+        assert pairs == expected
+
+    # --- _apply_per_item_post_load ---
+
+    def test_per_item_applies_to_correct_activity(self):
+        """O override per_item afeta apenas a activity com o item_id correto."""
+        acts = [
+            {"item_id": "eap-1_5", "ramp_params": {"n_max": 4, "n_inicial": 1}},
+            {"item_id": "eap-1_6", "ramp_params": {"n_max": 6, "n_inicial": 1}},
+        ]
+        spec_obj = _make_activities_spec_obj(acts)
+        campo = "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max"
+        _apply_per_item_post_load(
+            spec_obj,
+            f"_per_item_:{campo}:eap-1_5",
+            {"__scale__": 0.75},
+        )
+        # eap-1_5: 4 * 0.75 = 3.0 → ceil = 3
+        assert acts[0]["ramp_params"]["n_max"] == 3
+        # eap-1_6: não deve ser modificado
+        assert acts[1]["ramp_params"]["n_max"] == 6
+
+    def test_per_item_does_not_affect_other_items(self):
+        """Múltiplos overrides per_item independentes não interferem entre si."""
+        acts = [
+            {"item_id": "eap-1_5", "ramp_params": {"n_max": 4}},
+            {"item_id": "eap-1_6", "ramp_params": {"n_max": 8}},
+            {"item_id": "eap-1_7", "ramp_params": {"n_max": 2}},
+        ]
+        spec_obj = _make_activities_spec_obj(acts)
+        campo = "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max"
+        # Override apenas eap-1_5 e eap-1_7
+        _apply_per_item_post_load(spec_obj, f"_per_item_:{campo}:eap-1_5",
+                                  {"__scale__": 1.25})
+        _apply_per_item_post_load(spec_obj, f"_per_item_:{campo}:eap-1_7",
+                                  {"__scale__": 2.0})
+        # eap-1_5: ceil(4 * 1.25) = 5
+        assert acts[0]["ramp_params"]["n_max"] == 5
+        # eap-1_6: intocado
+        assert acts[1]["ramp_params"]["n_max"] == 8
+        # eap-1_7: ceil(2 * 2.0) = 4
+        assert acts[2]["ramp_params"]["n_max"] == 4
+
+    def test_per_item_full_pipeline_gerar_grid_and_apply(self):
+        """Integração: gerar_grid + _apply_post_load_overrides aplica corretamente por item."""
+        acts = [
+            {"item_id": "eap-1_5", "ramp_params": {"n_max": 4}},
+            {"item_id": "eap-1_6", "ramp_params": {"n_max": 8}},
+        ]
+        base_spec = {}
+        campo = "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max"
+        sweep = [
+            ParametroSweep(
+                campo=campo,
+                valores=[{"__scale__": 0.75}, {"__scale__": 1.25}],
+                scope="per_item",
+                item_ids=["eap-1_5", "eap-1_6"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec=base_spec, sweep=sweep)
+        grid = gerar_grid(bundle)
+        assert len(grid) == 4
+
+        # Para cada cenário, aplicar post_load_overrides e verificar
+        from concilium.application.services.campaign_service import _apply_post_load_overrides
+        import copy
+
+        for _sv, variados in grid:
+            acts_copy = copy.deepcopy(acts)
+            spec_obj = _make_activities_spec_obj(acts_copy)
+            _apply_post_load_overrides(spec_obj, variados)
+
+            key_5 = f"_per_item_:{campo}:eap-1_5"
+            key_6 = f"_per_item_:{campo}:eap-1_6"
+            scale_5 = variados[key_5]["__scale__"]
+            scale_6 = variados[key_6]["__scale__"]
+
+            import math
+            expected_5 = max(1, math.ceil(4 * scale_5))
+            expected_6 = max(1, math.ceil(8 * scale_6))
+            assert acts_copy[0]["ramp_params"]["n_max"] == expected_5
+            assert acts_copy[1]["ramp_params"]["n_max"] == expected_6
+
+
+# ---------------------------------------------------------------------------
+# Feature 2 — cpu_alternativo sweep (Classe 4 — ADR-070 F4)
+# ---------------------------------------------------------------------------
+
+from concilium.application.services.campaign_service import _apply_cpu_alt_override
+
+
+class TestCpuAlternativoSweep:
+    """Feature 2: scope='cpu_alternativo' — substitui cpu_id no EAP por item_id."""
+
+    def _make_spec_com_eap(self, item_ids: list[str]) -> dict:
+        """Cria um spec com spec.eap contendo items com cpu_id padrão."""
+        return {
+            "spec": {
+                "eap": [
+                    {"item_id": iid, "cpu_id": f"CPU-DEFAULT-{iid}"}
+                    for iid in item_ids
+                ]
+            }
+        }
+
+    # --- Cardinalidade ---
+
+    def test_cpu_alternativo_generates_k_scenarios(self):
+        """2 CPUs = 2 cenários (1 item_id)."""
+        cpus = ["CPU-TERRA-ESCO-CARGA-3CAT-DMT2000", "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"]
+        sweep = [
+            ParametroSweep(
+                campo="eap.cpu_id",
+                valores=cpus,
+                scope="cpu_alternativo",
+                item_ids=["eap-1_5"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        assert bundle.cardinality() == 2
+        assert len(gerar_grid(bundle)) == 2
+
+    def test_cpu_alternativo_per_item_independent(self):
+        """2 item_ids × 2 CPUs = 4 cenários."""
+        cpus = ["CPU-TERRA-ESCO-CARGA-3CAT-DMT2000", "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"]
+        sweep = [
+            ParametroSweep(
+                campo="eap.cpu_id",
+                valores=cpus,
+                scope="cpu_alternativo",
+                item_ids=["eap-1_5", "eap-1_6"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        assert bundle.cardinality() == 4
+        assert len(gerar_grid(bundle)) == 4
+
+    # --- _apply_cpu_alt_override ---
+
+    def test_cpu_alternativo_modifies_spec_eap(self):
+        """O spec do cenário tem o cpu_id correto após _apply_overrides."""
+        spec = self._make_spec_com_eap(["eap-1_5", "eap-1_6"])
+        cpus = ["CPU-TERRA-ESCO-CARGA-3CAT-DMT2000", "CPU-TERRA-ESCO-CARGA-3CAT-DMT3000"]
+        sweep = [
+            ParametroSweep(
+                campo="eap.cpu_id",
+                valores=cpus,
+                scope="cpu_alternativo",
+                item_ids=["eap-1_5"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec=spec, sweep=sweep)
+        grid = gerar_grid(bundle)
+        # Cenário 0: eap-1_5 recebe CPU DMT2000
+        sv0, _ = grid[0]
+        eap0 = {e["item_id"]: e for e in sv0["spec"]["eap"]}
+        assert eap0["eap-1_5"]["cpu_id"] == cpus[0]
+        assert eap0["eap-1_6"]["cpu_id"] == "CPU-DEFAULT-eap-1_6"  # intocado
+
+        # Cenário 1: eap-1_5 recebe CPU DMT3000
+        sv1, _ = grid[1]
+        eap1 = {e["item_id"]: e for e in sv1["spec"]["eap"]}
+        assert eap1["eap-1_5"]["cpu_id"] == cpus[1]
+
+    def test_cpu_alternativo_direct_apply_override(self):
+        """_apply_cpu_alt_override modifica diretamente o spec aninhado."""
+        spec = self._make_spec_com_eap(["eap-1_5", "eap-1_6"])
+        _apply_cpu_alt_override(spec, "_cpu_alt_:eap.cpu_id:eap-1_5",
+                                "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000")
+        eap = {e["item_id"]: e for e in spec["spec"]["eap"]}
+        assert eap["eap-1_5"]["cpu_id"] == "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000"
+        assert eap["eap-1_6"]["cpu_id"] == "CPU-DEFAULT-eap-1_6"
+
+    def test_cpu_alternativo_two_items_all_combos(self):
+        """grid com 2 item_ids × 2 CPUs cobre todos os 4 pares."""
+        spec = self._make_spec_com_eap(["eap-1_5", "eap-1_6"])
+        cpus = ["CPU-A", "CPU-B"]
+        sweep = [
+            ParametroSweep(
+                campo="eap.cpu_id",
+                valores=cpus,
+                scope="cpu_alternativo",
+                item_ids=["eap-1_5", "eap-1_6"],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec=spec, sweep=sweep)
+        grid = gerar_grid(bundle)
+        assert len(grid) == 4
+
+        pairs = set()
+        for sv, _ in grid:
+            eap_dict = {e["item_id"]: e["cpu_id"] for e in sv["spec"]["eap"]}
+            pairs.add((eap_dict["eap-1_5"], eap_dict["eap-1_6"]))
+
+        expected = {(a, b) for a in cpus for b in cpus}
+        assert pairs == expected
+
+    def test_cpu_alternativo_combined_with_global_sweep(self):
+        """global(2) × cpu_alt(2 item × 2 CPU = 4) = 8 cenários."""
+        spec = self._make_spec_com_eap(["eap-1_5", "eap-1_6"])
+        sweep = [
+            ParametroSweep("meta.regime", [1, 2], scope="global"),
+            ParametroSweep(
+                campo="eap.cpu_id",
+                valores=["CPU-A", "CPU-B"],
+                scope="cpu_alternativo",
+                item_ids=["eap-1_5", "eap-1_6"],
+            ),
+        ]
+        bundle = GoResearchCampaignBundle(base_spec=spec, sweep=sweep)
+        assert bundle.cardinality() == 8
+        assert len(gerar_grid(bundle)) == 8
+
+
+# ---------------------------------------------------------------------------
+# Feature 3 — restricoes_mercado sweep
+# ---------------------------------------------------------------------------
+
+class TestRestricoesMercadoSweep:
+    """Feature 3: restricoes_mercado como dimensão de sweep (campo top-level)."""
+
+    def _make_spec_with_restricoes(self, restricoes: dict) -> dict:
+        return {"restricoes_mercado": restricoes, "meta": {"projeto": "teste"}}
+
+    # --- Cardinalidade ---
+
+    def test_restricoes_mercado_sweep_cardinality(self):
+        """3 valores = 3 cenários."""
+        sweep = [
+            ParametroSweep(
+                campo="restricoes_mercado",
+                valores=[
+                    {},
+                    {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2},
+                    {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2,
+                     "EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000": 2},
+                ],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        assert bundle.cardinality() == 3
+        assert len(gerar_grid(bundle)) == 3
+
+    def test_restricoes_mercado_irrestrito_is_empty_dict(self):
+        """Valor {} é o cenário irrestrito (sem restrição de mercado)."""
+        sweep = [
+            ParametroSweep(
+                campo="restricoes_mercado",
+                valores=[{}, {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 1}],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={"restricoes_mercado": {}}, sweep=sweep)
+        grid = gerar_grid(bundle)
+        assert len(grid) == 2
+        # Primeiro cenário: restricoes_mercado permanece vazio ou igual a {}
+        sv0, v0 = grid[0]
+        assert sv0.get("restricoes_mercado") == {} or sv0.get("restricoes_mercado") is not None
+        # O variados registra o valor bruto
+        assert v0["restricoes_mercado"] == {}
+
+    def test_restricoes_mercado_with_resource_cap(self):
+        """Dict com limite de recurso é aplicado corretamente como top-level field."""
+        resource_cap = {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2}
+        sweep = [
+            ParametroSweep(
+                campo="restricoes_mercado",
+                valores=[{}, resource_cap],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        grid = gerar_grid(bundle)
+        # Cenário 0: sem restrição
+        sv0, _ = grid[0]
+        assert sv0.get("restricoes_mercado") == {}
+        # Cenário 1: com restrição
+        sv1, _ = grid[1]
+        assert sv1.get("restricoes_mercado") == resource_cap
+
+    def test_restricoes_mercado_merge_on_existing(self):
+        """Quando base_spec já tem restricoes_mercado, sweep faz merge de dict."""
+        base = {"restricoes_mercado": {"EQUIPE-PADRAO": 5}}
+        sweep = [
+            ParametroSweep(
+                campo="restricoes_mercado",
+                valores=[{"EQUIPE-NOVA": 3}],
+            )
+        ]
+        bundle = GoResearchCampaignBundle(base_spec=base, sweep=sweep)
+        grid = gerar_grid(bundle)
+        sv, _ = grid[0]
+        # merge: ambas as chaves presentes
+        assert sv["restricoes_mercado"]["EQUIPE-PADRAO"] == 5
+        assert sv["restricoes_mercado"]["EQUIPE-NOVA"] == 3
+
+    def test_restricoes_mercado_combined_with_other_dims(self):
+        """restricoes_mercado × regime = 3 × 2 = 6 cenários."""
+        sweep = [
+            ParametroSweep("meta.regime", ["A", "B"]),
+            ParametroSweep(
+                campo="restricoes_mercado",
+                valores=[
+                    {},
+                    {"EQUIPE-CPU-DMT2000": 2},
+                    {"EQUIPE-CPU-DMT2000": 2, "EQUIPE-CPU-DMT3000": 2},
+                ],
+            ),
+        ]
+        bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
+        assert bundle.cardinality() == 6
+        assert len(gerar_grid(bundle)) == 6

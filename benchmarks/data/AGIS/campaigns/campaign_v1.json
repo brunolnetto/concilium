@@ -28,6 +28,18 @@
         {"__scale__": 0.5},
         {"__scale__": 1.0}
       ]
+    },
+    {
+      "campo": "restricoes_mercado",
+      "scope": "global",
+      "valores": [
+        {},
+        {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2},
+        {
+          "EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2,
+          "EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000": 2
+        }
+      ]
     }
   ],
   "top_k": 5
