@@ -6,6 +6,7 @@
     "tolerancia_margem": 0.03,
     "prazo_contratual_semanas": 56
   },
+  "_nota": "leadtime_mob_semanas excluído: lever correto mas wire-through skill-05 pendente (DEFAULT_LEADTIME_MOB_SEMANAS constante ainda não lido da spec)",
   "sweep": [
     {
       "campo": "meta.regime_trabalho",

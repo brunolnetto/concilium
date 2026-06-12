@@ -6,6 +6,7 @@ import copy
 import hashlib
 import itertools
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -441,6 +442,101 @@ def classificar_bundle(cenarios: list[CenarioAvaliado]) -> CampaignStatus:
 
 
 # ---------------------------------------------------------------------------
+# Task picklável para ProcessPoolExecutor (module-level = picklável)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _CampaignTask:
+    """Contexto completo para um cenário — picklável para multiprocessing."""
+
+    spec_v: dict
+    variados: dict
+    config_root: str
+    projects_root: str
+    prazo_contratual: int | None
+    perfil: "PerfilExpectativas"
+    do_reset: bool
+
+
+def _run_campaign_task(task: "_CampaignTask") -> "CenarioAvaliado":
+    """Avalia um cenário da campanha — module-level para ser picklável."""
+    from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
+    from concilium.application.benchmarks.runner import BenchmarkRunner
+    from concilium.application.benchmarks.spec_loader import load_spec_from_dict
+    from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
+
+    class _Silent(BenchmarkReportPrinter):
+        def print(self, report: dict) -> None:  # noqa: A003
+            pass
+
+    cid = cenario_id(task.variados)
+    spec_with_id = dict(task.spec_v)
+    base_slug = spec_with_id.get("slug") or spec_with_id.get("id") or "UNKNOWN"
+    scenario_slug = f"{base_slug}-{cid[:6]}"
+    spec_with_id["slug"] = scenario_slug
+    meta = dict(spec_with_id.get("meta") or {})
+    base_nome = meta.get("projeto", base_slug)
+    meta["projeto"] = f"{base_nome} [{cid[:6]}]"
+    spec_with_id["meta"] = meta
+
+    benchmarks_root = Path(task.projects_root).parent
+    scenario_dir = benchmarks_root / "data" / scenario_slug
+    scenario_dir.mkdir(parents=True, exist_ok=True)
+    ref_path = scenario_dir / "referencia.json"
+    ref_path.write_text(json.dumps(spec_with_id, ensure_ascii=False, default=str))
+
+    try:
+        spec_obj = load_spec_from_dict(spec_with_id, ref_path)
+        _apply_post_load_overrides(spec_obj, task.variados)
+        runner = BenchmarkRunner(
+            config_root=Path(task.config_root),
+            projects_root=Path(task.projects_root),
+            report_builder=BenchmarkReportBuilder(),
+            report_printer=_Silent(),
+        )
+        report = runner.run(spec_obj, reset=task.do_reset, skip_artifacts=True)
+        _slug = spec_obj.slug
+        canonical: dict = {}
+        for _try in (_slug, _slug.upper(), _slug.lower()):
+            _can = Path(task.projects_root) / _try / "v1" / "canonical.json"
+            if _can.exists():
+                canonical = json.loads(_can.read_text())
+                break
+
+        v_O = extrair_vetor_O(canonical, task.prazo_contratual)
+        v_EF = extrair_vetor_EF(canonical, report)
+        decision = (report.get("quality_gates") or {}).get("decision") or "BLOQUEADO"
+        via_map: dict[str, "ViabilidadeStatus"] = {
+            "APROVADO": "APROVADO",
+            "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
+            "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
+            "BLOQUEADO": "BLOQUEADO",
+        }
+        viabilidade: "ViabilidadeStatus" = via_map.get(decision, "ERRO")
+        return CenarioAvaliado(
+            cenario_id=cid,
+            parametros_variados=task.variados,
+            viabilidade=viabilidade,
+            vetor_O=v_O,
+            vetor_EF=v_EF,
+            classificacao_O=classificar_O(v_O, task.perfil),
+            classificacao_EF=classificar_EF(v_EF, task.perfil),
+        )
+    except Exception as exc:
+        return CenarioAvaliado(
+            cenario_id=cid,
+            parametros_variados=task.variados,
+            viabilidade="ERRO",
+            vetor_O=VetorEspacoO(),
+            vetor_EF=VetorEspacoEF(),
+            classificacao_O="CRITICO",
+            classificacao_EF="FORA_EXPECTATIVA",
+            erro=str(exc),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Main runner
 # ---------------------------------------------------------------------------
 
@@ -453,111 +549,32 @@ def executar_campanha(
     reset: bool = True,
 ) -> CampaignOutputBundle:
     """Execute a full campaign: generate grid, evaluate, curate, return bundle."""
-    import threading
-
-    from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-    from concilium.application.benchmarks.runner import BenchmarkRunner
-    from concilium.application.benchmarks.spec_loader import load_spec_from_dict
-
-    try:
-        from concilium.presentation.cli._commands_benchmark_helpers import _make_silent_printer
-        silent_printer = _make_silent_printer()
-    except Exception:
-        from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
-
-        class _SilentPrinterImpl(BenchmarkReportPrinter):
-            def print(self, report: dict) -> None:  # noqa: A003
-                pass
-
-        silent_printer = _SilentPrinterImpl()
-
-    # Serialize project-store access to avoid concurrent create races.
-    _store_lock = threading.Lock()
-
     grid = gerar_grid(bundle)
     cenarios: list[CenarioAvaliado] = []
     prazo_cont = bundle.perfil_expectativas.prazo_contratual_semanas
 
-    def _avaliar_um(spec_v: dict, variados: dict) -> CenarioAvaliado:
-        cid = cenario_id(variados)
-        try:
-            # Ensure the slug/id round-trips correctly through the spec loader.
-            # v2 schema uses "slug" at the top level; spec_loader uses ref.get("id").
-            # Inject "id" from "slug" so _infer_slug_from_path is not needed.
-            spec_with_id = dict(spec_v)
-            base_slug = spec_with_id.get("slug") or spec_with_id.get("id") or "UNKNOWN"
-            # Each scenario needs a unique project name AND slug so the BenchmarkRunner
-            # creates a separate project directory (it matches by nome, not slug).
-            scenario_slug = f"{base_slug}-{cid[:6]}"
-            spec_with_id["slug"] = scenario_slug
-            # Patch meta.projeto so the project nome is unique per scenario.
-            meta = dict(spec_with_id.get("meta") or {})
-            base_nome = meta.get("projeto", base_slug)
-            meta["projeto"] = f"{base_nome} [{cid[:6]}]"
-            spec_with_id["meta"] = meta
-            # Write to unique data dir so _infer_slug_from_path also gives the scenario slug.
-            benchmarks_root = Path(projects_root).parent
-            scenario_dir = benchmarks_root / "data" / scenario_slug
-            scenario_dir.mkdir(parents=True, exist_ok=True)
-            ref_path = scenario_dir / "referencia.json"
-            ref_path.write_text(json.dumps(spec_with_id, ensure_ascii=False, default=str))
-            spec_obj = load_spec_from_dict(spec_with_id, ref_path)
-            # Apply post-load overrides (campos com prefixo "inputs_") diretamente no spec_obj
-            _apply_post_load_overrides(spec_obj, variados)
-            runner = BenchmarkRunner(
-                config_root=Path(config_root),
-                projects_root=Path(projects_root),
-                report_builder=BenchmarkReportBuilder(),
-                report_printer=silent_printer,
-            )
-            # skip_artifacts=True: pula skills pesadas (09 relatório, 10 criticidade)
-            # e não gera PNGs/PDFs — suficiente para coletar I_O e I_EF.
-            with _store_lock:
-                report = runner.run(spec_obj, reset=reset, skip_artifacts=True)
-            # Load canonical — try exact slug, uppercase, and lowercase
-            _slug = spec_obj.slug
-            canonical = {}
-            for _try in (_slug, _slug.upper(), _slug.lower()):
-                _can = Path(projects_root) / _try / "v1" / "canonical.json"
-                if _can.exists():
-                    canonical = json.loads(_can.read_text())
-                    break
+    tasks = [
+        _CampaignTask(
+            spec_v=sv,
+            variados=var,
+            config_root=str(config_root),
+            projects_root=str(projects_root),
+            prazo_contratual=prazo_cont,
+            perfil=bundle.perfil_expectativas,
+            do_reset=reset,
+        )
+        for sv, var in grid
+    ]
 
-            v_O = extrair_vetor_O(canonical, prazo_cont)
-            v_EF = extrair_vetor_EF(canonical, report)
-            decision = (report.get("quality_gates") or {}).get("decision") or "BLOQUEADO"
-            via_map: dict[str, ViabilidadeStatus] = {
-                "APROVADO": "APROVADO",
-                "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
-                "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
-                "BLOQUEADO": "BLOQUEADO",
-            }
-            viabilidade: ViabilidadeStatus = via_map.get(decision, "ERRO")
-            cl_O = classificar_O(v_O, bundle.perfil_expectativas)
-            cl_EF = classificar_EF(v_EF, bundle.perfil_expectativas)
-            return CenarioAvaliado(
-                cenario_id=cid,
-                parametros_variados=variados,
-                viabilidade=viabilidade,
-                vetor_O=v_O,
-                vetor_EF=v_EF,
-                classificacao_O=cl_O,
-                classificacao_EF=cl_EF,
-            )
-        except Exception as exc:
-            return CenarioAvaliado(
-                cenario_id=cid,
-                parametros_variados=variados,
-                viabilidade="ERRO",
-                vetor_O=VetorEspacoO(),
-                vetor_EF=VetorEspacoEF(),
-                classificacao_O="CRITICO",
-                classificacao_EF="FORA_EXPECTATIVA",
-                erro=str(exc),
-            )
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {executor.submit(_avaliar_um, sv, var): (sv, var) for sv, var in grid}
+    # ProcessPoolExecutor para paralelismo real (bypassa GIL no RCPSP solver CPU-bound).
+    # _run_campaign_task é module-level → picklável para multiprocessing.
+    # Fallback para ThreadPoolExecutor quando num_workers=1 (debug/test/CI).
+    ExecutorClass = (
+        concurrent.futures.ProcessPoolExecutor if num_workers > 1
+        else concurrent.futures.ThreadPoolExecutor
+    )
+    with ExecutorClass(max_workers=num_workers) as executor:
+        futures = {executor.submit(_run_campaign_task, t): t for t in tasks}
         for future in concurrent.futures.as_completed(futures):
             cenarios.append(future.result())
 

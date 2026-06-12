@@ -232,7 +232,7 @@ def main() -> None:
         bundle,
         config_root=CONFIG_ROOT,
         projects_root=PROJECTS_ROOT,
-        num_workers=3,
+        num_workers=6,
         reset=True,
     )
 
