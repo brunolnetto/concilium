@@ -156,6 +156,37 @@ def print_summary(result: CampaignOutputBundle) -> None:
     )
 
 
+def save_reports(bundle: CampaignOutputBundle, cube: CampaignBundleCube, data_dir: Path, slug: str = "AGIS") -> None:
+    from concilium.application.services.campaign_report import (
+        serialize_campaign_report,
+        render_campaign_report_md,
+        render_campaign_report_pdf,
+    )
+    report_dir = data_dir / "artifacts" / "campaign"
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    # JSON
+    report = serialize_campaign_report(bundle, cube)
+    json_path = report_dir / "campaign_report.json"
+    json_path.write_text(json.dumps(report, indent=2, ensure_ascii=False, default=str))
+    print(f"[SAVE] {json_path}")
+
+    # Markdown
+    md = render_campaign_report_md(report)
+    md_path = report_dir / "campaign_report.md"
+    md_path.write_text(md, encoding="utf-8")
+    print(f"[SAVE] {md_path}")
+
+    # PDF
+    pdf_bytes = render_campaign_report_pdf(report, md)
+    if pdf_bytes:
+        pdf_path = report_dir / "campaign_report.pdf"
+        pdf_path.write_bytes(pdf_bytes)
+        print(f"[SAVE] {pdf_path}")
+    else:
+        print("[WARN] PDF não gerado (ReportLab não disponível?)")
+
+
 def print_cube(cube: CampaignBundleCube) -> None:
     print(f"\n{'='*60}")
     print(f"=== CampaignBundleCube — {cube.campaign_id} ===")
@@ -240,6 +271,7 @@ def main() -> None:
 
     print_summary(result)
     print_cube(cube)
+    save_reports(result, cube, DATA_DIR)
 
 
 if __name__ == "__main__":
