@@ -11,6 +11,7 @@ from .routes import (
     analysis_router,
     auth_router,
     benchmarks_router,
+    campaign_router,
     catalog_router,
     catalogs_router,
     configuration_router,
@@ -40,6 +41,8 @@ _TAGS_METADATA = [
     {"name": "projects - mobilization", "description": "Workforce mobilization policies and deliverables config."},
     # ── Benchmarks ─────────────────────────────────────────────────────────────
     {"name": "benchmarks", "description": "Benchmark templates and project-scoped artifact download/pack."},
+    # ── Campaign ───────────────────────────────────────────────────────────────
+    {"name": "projects - campaign", "description": "ADR-070: parametric GO-space sweep — campaign runs, bundles, reports."},
 ]
 
 
@@ -94,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(analysis_router)
     app.include_router(mobilization_router)
     app.include_router(benchmarks_router)
+    app.include_router(campaign_router)
 
     return app
 

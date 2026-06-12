@@ -1,6 +1,7 @@
 from .analysis import router as analysis_router
 from .auth import router as auth_router
 from .benchmarks import router as benchmarks_router
+from .campaign import router as campaign_router
 from .catalog import router as catalog_router
 from .catalogs import router as catalogs_router
 from .configuration import router as configuration_router
@@ -14,6 +15,7 @@ from .system import router as system_router
 __all__ = [
     "analysis_router",
     "auth_router",
+    "campaign_router",
     "formulario_router",
     "benchmarks_router",
     "catalog_router",

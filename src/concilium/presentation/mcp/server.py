@@ -55,6 +55,7 @@ from concilium.presentation.mcp.tools import (
     artifacts,
     benchmark,
     benchmark_nep039,
+    campaign,
     catalogo,
     escopo,
     formulario,
@@ -93,6 +94,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
 
     artifacts.register(server)  # ADR-093: listar/ler/baixar/bundle de artefatos
     tributacao.register(server)  # ADR-097 F6: INSS, IRRF, custo empregador CLT
+    campaign.register(server)   # ADR-070: exploração do espaço GO (sweep paramétrico)
     _register_ui_resources(server)  # ADR-101: MCP Apps — recursos ui://
     patch_fastmcp_server(server)  # ADR-095: OTEL tracing em todas as tools
     _patch_mcp_with_auth(server)  # ADR-099: JWT middleware para transport HTTP
