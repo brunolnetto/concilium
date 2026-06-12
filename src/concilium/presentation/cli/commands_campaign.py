@@ -46,7 +46,13 @@ def campaign(
 
     # Resolver campaign file
     if campaign_file is None:
-        campaign_file = _proj / slug / "campaigns" / "campaign_v1.json"
+        # 1. projetos/{slug}/campaigns/ (runtime, pode ser deletado em reset)
+        # 2. data/{slug}/campaigns/    (tracked, sobrevive ao reset — preferido)
+        _candidates = [
+            _proj / slug / "campaigns" / "campaign_v1.json",
+            _proj.parent / "data" / slug / "campaigns" / "campaign_v1.json",
+        ]
+        campaign_file = next((p for p in _candidates if p.exists()), _candidates[0])
 
     if not campaign_file.exists():
         typer.echo(f"[ERRO] Arquivo de campanha não encontrado: {campaign_file}", err=True)

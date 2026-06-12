@@ -57,6 +57,13 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         "eq_combustivel": 0.0,
     }
 
+    # NEP-043: mapa item_id → n_frentes para escalonar custo de 1-frente → todas as frentes.
+    # custo_inst_* armazena custo de 1 frente (ADR-091 divide por num_equipes_paralelas).
+    nfrentes_por_item: dict[str, int] = {
+        eq.item_id: max(1, int(getattr(eq, "num_equipes_base", 1) or 1))
+        for eq in canonical_in.equipes_diretas
+    }
+
     # 1. Itens com partição instancial categorial (pool, ADR-085 ativo)
     part_by_item: dict[str, Any] = {}
     for contrato in canonical_in.contratos_recurso:
@@ -66,14 +73,15 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
 
     contados: set[str] = set()
     for item_id, part in part_by_item.items():
-        _mo = float(part.custo_inst_mo or 0.0)
-        _eq = float(part.custo_inst_eq or 0.0)
-        _comb = float(part.custo_inst_comb or 0.0)
-        _mat = float(part.custo_inst_mat or 0.0)
+        _nf = nfrentes_por_item.get(item_id, 1)
+        _mo = float(part.custo_inst_mo or 0.0) * _nf
+        _eq = float(part.custo_inst_eq or 0.0) * _nf
+        _comb = float(part.custo_inst_comb or 0.0) * _nf
+        _mat = float(part.custo_inst_mat or 0.0) * _nf
         # Mob+demob+idle: custo contratual além do produtivo — vai para eq_aluguel (BDI_servicos)
-        _mob = float(getattr(part, "custo_mob_imputado", 0.0) or 0.0)
-        _demob = float(getattr(part, "custo_demob_imputado", 0.0) or 0.0)
-        _idle = float(getattr(part, "custo_ocioso_imputado", 0.0) or 0.0)
+        _mob = float(getattr(part, "custo_mob_imputado", 0.0) or 0.0) * _nf
+        _demob = float(getattr(part, "custo_demob_imputado", 0.0) or 0.0) * _nf
+        _idle = float(getattr(part, "custo_ocioso_imputado", 0.0) or 0.0) * _nf
         cat["mao_obra"] += _mo
         cat["eq_aluguel"] += _eq + _mob + _demob + _idle
         cat["material"] += _mat + _comb  # ADR-090: combustivel funde em material
@@ -81,17 +89,20 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         contados.add(item_id)
 
     # 2. Demais itens: prioriza custo_inst_* se disponível (ADR-106 F7), senão heurística proporcional
+    # NEP-043: custo_inst_* armazena custo de 1 frente — multiplicar por num_equipes_base
+    # (mesma correção de _br_build_venda_custo, que usa custo_total × n_frentes).
     for eq in canonical_in.equipes_diretas:
         if eq.item_id in contados:
             continue
-        ct = float(eq.custo_total or 0.0)
+        _n_eq = max(1, int(getattr(eq, "num_equipes_base", 1) or 1))
+        ct = float(eq.custo_total or 0.0) * _n_eq
 
         # ADR-106 F7: usar custo_inst_* diretamente quando preenchidos (F3 garantiu isso)
         if getattr(eq, "custo_inst_mo", None) is not None:
-            _ct_mo = float(eq.custo_inst_mo or 0.0)
-            _ct_eq = float(getattr(eq, "custo_inst_eq", 0.0) or 0.0)
-            _ct_comb = float(getattr(eq, "custo_inst_comb", 0.0) or 0.0)
-            _ct_mat = float(getattr(eq, "custo_inst_mat", 0.0) or 0.0)
+            _ct_mo = float(eq.custo_inst_mo or 0.0) * _n_eq
+            _ct_eq = float(getattr(eq, "custo_inst_eq", 0.0) or 0.0) * _n_eq
+            _ct_comb = float(getattr(eq, "custo_inst_comb", 0.0) or 0.0) * _n_eq
+            _ct_mat = float(getattr(eq, "custo_inst_mat", 0.0) or 0.0) * _n_eq
             cat["mao_obra"] += _ct_mo
             cat["eq_aluguel"] += _ct_eq
             cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
