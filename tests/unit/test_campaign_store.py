@@ -1,0 +1,112 @@
+"""CampaignRunStore — testes unitários."""
+
+from __future__ import annotations
+
+import json
+import tempfile
+from pathlib import Path
+
+import pytest
+
+from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
+
+@pytest.fixture
+def store(tmp_path: Path) -> CampaignRunStore:
+    return CampaignRunStore(project_root=tmp_path / "AGIS")
+
+
+class TestCampaignRunStore:
+    def test_new_run_creates_directory(self, store: CampaignRunStore):
+        run = store.new_run()
+        assert run == "run-001"
+        assert (store.root / run).is_dir()
+
+    def test_sequential_runs(self, store: CampaignRunStore):
+        r1 = store.new_run()
+        r2 = store.new_run()
+        r3 = store.new_run()
+        assert r1 == "run-001"
+        assert r2 == "run-002"
+        assert r3 == "run-003"
+
+    def test_current_run_tracks_latest(self, store: CampaignRunStore):
+        assert store.current_run() is None
+        store.new_run()
+        store.new_run()
+        assert store.current_run() == "run-002"
+
+    def test_list_runs_order(self, store: CampaignRunStore):
+        store.new_run()
+        store.new_run()
+        store.new_run()
+        assert store.list_runs() == ["run-001", "run-002", "run-003"]
+
+    def test_save_and_load_bundle(self, store: CampaignRunStore):
+        run = store.new_run()
+        data = {"campaign_id": "test", "status": "SUCESSO", "cenarios": []}
+        store.save_bundle(run, data)
+        loaded = store.load_bundle(run)
+        assert loaded["campaign_id"] == "test"
+
+    def test_load_bundle_current(self, store: CampaignRunStore):
+        run = store.new_run()
+        store.save_bundle(run, {"status": "INFEASIBLE"})
+        assert store.load_bundle()["status"] == "INFEASIBLE"
+
+    def test_save_and_load_report_json(self, store: CampaignRunStore):
+        run = store.new_run()
+        report = {"meta": {"campaign_id": "x"}, "shortlist": []}
+        store.save_report(run, report, md="# Relatório\n", pdf=None)
+        loaded = store.load_report_json(run)
+        assert loaded["meta"]["campaign_id"] == "x"
+
+    def test_save_report_pdf(self, store: CampaignRunStore):
+        run = store.new_run()
+        store.save_report(run, {}, md="md", pdf=b"%PDF-1.4 fake")
+        assert (store.run_path(run) / "campaign_report.pdf").exists()
+
+    def test_save_report_no_pdf(self, store: CampaignRunStore):
+        run = store.new_run()
+        store.save_report(run, {}, md="md", pdf=None)
+        assert not (store.run_path(run) / "campaign_report.pdf").exists()
+
+    def test_save_and_load_meta(self, store: CampaignRunStore):
+        run = store.new_run()
+        store.save_meta(run, {"status": "SUCESSO", "n_avaliados": 12})
+        meta = store.load_meta(run)
+        assert meta["status"] == "SUCESSO"
+        assert meta["n_avaliados"] == 12
+        assert "gerado_em" in meta  # injetado automaticamente
+
+    def test_meta_gerado_em_injected(self, store: CampaignRunStore):
+        run = store.new_run()
+        store.save_meta(run, {"status": "OK"})
+        meta = store.load_meta()
+        assert "gerado_em" in meta
+        assert "T" in meta["gerado_em"]  # ISO 8601 format
+
+    def test_list_run_files(self, store: CampaignRunStore):
+        run = store.new_run()
+        store.save_bundle(run, {})
+        store.save_meta(run, {"status": "OK"})
+        files = store.list_run_files(run)
+        assert "bundle.json" in files
+        assert "meta.json" in files
+
+    def test_runs_are_independent(self, store: CampaignRunStore):
+        r1 = store.new_run()
+        r2 = store.new_run()
+        store.save_meta(r1, {"status": "SUCESSO"})
+        store.save_meta(r2, {"status": "INFEASIBLE"})
+        assert store.load_meta(r1)["status"] == "SUCESSO"
+        assert store.load_meta(r2)["status"] == "INFEASIBLE"
+
+    def test_load_returns_none_when_empty(self, store: CampaignRunStore):
+        assert store.load_bundle() is None
+        assert store.load_report_json() is None
+        assert store.load_meta() is None
+
+    def test_run_path_correct(self, store: CampaignRunStore):
+        run = store.new_run()
+        assert store.run_path(run) == store.root / run

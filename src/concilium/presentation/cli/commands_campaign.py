@@ -95,24 +95,37 @@ def campaign(
             destaques = " · ".join((j.destaques_EF + j.destaques_O)[:3])
             typer.echo(f"  #{r.rank} {r.cenario.cenario_id} ({j.motivo_inclusao}): {destaques}")
 
-    # Salvar relatórios em projetos/{slug}/artifacts/campaign/
-    report_dir = _proj / slug / "artifacts" / "campaign"
-    report_dir.mkdir(parents=True, exist_ok=True)
+    # Persistir como artefato de projeto versionado
+    from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+    import dataclasses
+
+    store = CampaignRunStore(_proj / slug)
+    run = store.new_run()
+    typer.echo(f"\n[STORE] Novo run: {run}")
 
     report = serialize_campaign_report(result, cube)
-    (report_dir / "campaign_report.json").write_text(
-        json.dumps(report, indent=2, ensure_ascii=False, default=str)
-    )
-    typer.echo(f"[SAVE] {report_dir}/campaign_report.json")
-
     md = render_campaign_report_md(report)
-    (report_dir / "campaign_report.md").write_text(md, encoding="utf-8")
-    typer.echo(f"[SAVE] {report_dir}/campaign_report.md")
-
     pdf = render_campaign_report_pdf(report, md)
+
+    store.save_bundle(run, report)
+    store.save_cube(run, report.get("cubo") or {})
+    store.save_report(run, report, md, pdf)
+    store.save_meta(run, {
+        "campaign_version": result.campaign_version,
+        "status": result.status,
+        "n_avaliados": result.n_cenarios_avaliados,
+        "n_viaveis": result.n_cenarios_viaveis,
+        "n_falhas": result.n_falhas,
+    })
+
+    run_path = store.run_path(run)
+    typer.echo(f"[SAVE] {run_path}/bundle.json")
+    typer.echo(f"[SAVE] {run_path}/campaign_report.json")
+    typer.echo(f"[SAVE] {run_path}/campaign_report.md")
     if pdf:
-        (report_dir / "campaign_report.pdf").write_bytes(pdf)
-        typer.echo(f"[SAVE] {report_dir}/campaign_report.pdf")
+        typer.echo(f"[SAVE] {run_path}/campaign_report.pdf")
+    typer.echo(f"[SAVE] {run_path}/meta.json")
+    typer.echo(f"\n[INFO] Runs disponíveis: {store.list_runs()}")
 
 
 def _load_project_base_spec(projects_root: Path, slug: str) -> dict | None:
