@@ -476,3 +476,103 @@ class TestApplyPostLoadOverrides:
             "inputs_cronograma.rcpsp_spec.deadline_weeks": {"__add__": 14},
         })
         assert spec_obj.inputs_cronograma["rcpsp_spec"]["deadline_weeks"] == 70
+
+
+# ── ADR-108: cubo_analitico e cronograma alimentam vetores ───────────────────
+
+from concilium.application.services.campaign_service import (
+    _cubo_analitico_agregado,
+    _cronograma_utilizacao,
+)
+
+
+class TestCuboAnaliticoAgregado:
+    def _canonical(self, celulas):
+        return {"cubo_analitico": {"celulas": celulas}}
+
+    def test_vazio_retorna_dict_vazio(self):
+        assert _cubo_analitico_agregado({}) == {}
+        assert _cubo_analitico_agregado({"cubo_analitico": {"celulas": []}}) == {}
+
+    def test_share_mo_eq_comb(self):
+        celulas = [
+            {"componente_bdi": "custo_direto", "categoria_insumo": "mao_obra",
+             "propriedade": "salario_encargos", "atividade_id": "a1", "valor_rs": 100.0},
+            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
+             "propriedade": "aluguel", "atividade_id": "a2", "valor_rs": 200.0},
+            {"componente_bdi": "custo_direto", "categoria_insumo": "material",
+             "propriedade": "combustivel", "atividade_id": "a3", "valor_rs": 100.0},
+        ]
+        r = _cubo_analitico_agregado(self._canonical(celulas))
+        assert r["share_mo"] == pytest.approx(0.25, abs=0.01)
+        assert r["share_eq"] == pytest.approx(0.50, abs=0.01)
+        assert r["share_comb"] == pytest.approx(0.25, abs=0.01)
+
+    def test_ic1_shares_somam_no_maximo_1(self):
+        celulas = [
+            {"componente_bdi": "custo_direto", "categoria_insumo": "mao_obra",
+             "propriedade": "salario_encargos", "atividade_id": "a1", "valor_rs": 60.0},
+            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
+             "propriedade": "aluguel", "atividade_id": "a2", "valor_rs": 40.0},
+        ]
+        r = _cubo_analitico_agregado(self._canonical(celulas))
+        assert r["share_mo"] + r["share_eq"] + r["share_comb"] <= 1.0 + 1e-6
+
+    def test_hhi_uniforme(self):
+        # 4 atividades com mesmo custo → HHI = 4 × (0.25)² = 0.25
+        celulas = [
+            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
+             "propriedade": "aluguel", "atividade_id": f"a{i}", "valor_rs": 100.0}
+            for i in range(4)
+        ]
+        r = _cubo_analitico_agregado(self._canonical(celulas))
+        assert r["hhi"] == pytest.approx(0.25, abs=0.01)
+
+    def test_hhi_monopolio(self):
+        # Só 1 atividade → HHI = 1.0
+        celulas = [{"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
+                    "propriedade": "aluguel", "atividade_id": "a1", "valor_rs": 100.0}]
+        r = _cubo_analitico_agregado(self._canonical(celulas))
+        assert r["hhi"] == pytest.approx(1.0, abs=0.01)
+
+    def test_ignora_celulas_nao_custo_direto(self):
+        celulas = [
+            {"componente_bdi": "margem_l", "categoria_insumo": "mao_obra",
+             "propriedade": "salario_encargos", "atividade_id": "a1", "valor_rs": 9999.0},
+            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
+             "propriedade": "aluguel", "atividade_id": "a2", "valor_rs": 100.0},
+        ]
+        r = _cubo_analitico_agregado(self._canonical(celulas))
+        assert r["share_eq"] == pytest.approx(1.0, abs=0.01)
+
+
+class TestCronogramaUtilizacao:
+    def _canonical_com_atividades(self, acts):
+        return {"cronograma": {"scheduled_activities": acts}}
+
+    def test_vazio_retorna_dict_vazio(self):
+        assert _cronograma_utilizacao({}) == {}
+        assert _cronograma_utilizacao({"cronograma": {"scheduled_activities": []}}) == {}
+
+    def test_utilizacao_100pct(self):
+        acts = [{"distribuicao_semanal": {
+            "S1": {"num_equipes": 2}, "S2": {"num_equipes": 1}}}]
+        r = _cronograma_utilizacao(self._canonical_com_atividades(acts))
+        assert r["utilizacao"] == pytest.approx(1.0, abs=0.01)
+
+    def test_utilizacao_parcial(self):
+        # 2 semanas mobilizado, 1 produtivo → 50%
+        acts = [{"distribuicao_semanal": {
+            "S1": {"num_equipes": 0}, "S2": {"num_equipes": 1}}}]
+        r = _cronograma_utilizacao(self._canonical_com_atividades(acts))
+        assert r["utilizacao"] == pytest.approx(0.5, abs=0.01)
+
+    def test_paralelismo_2_atividades_simultaneas(self):
+        # 2 atividades ativas na mesma semana
+        acts = [
+            {"distribuicao_semanal": {"S1": {"num_equipes": 1}, "S2": {"num_equipes": 0}}},
+            {"distribuicao_semanal": {"S1": {"num_equipes": 1}, "S2": {"num_equipes": 1}}},
+        ]
+        r = _cronograma_utilizacao(self._canonical_com_atividades(acts))
+        # S1: 2 atividades ativas; S2: 1 ativa → média = 1.5
+        assert r["paralelismo"] == pytest.approx(1.5, abs=0.01)

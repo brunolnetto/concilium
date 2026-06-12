@@ -63,6 +63,10 @@ class VetorEspacoO:
     itens_criticos_pct: float | None = None     # fraction of items with fe_nec > 1.25
     gap_pool_total: float | None = None
     custo_mob_window_total: float | None = None
+    # ADR-108: métricas do cronograma
+    utilizacao_recursos_pct: float | None = None  # semanas produtivas / semanas mobilizadas
+    paralelismo_medio: float | None = None         # atividades ativas em simultâneo (média semanal)
+    idle_pool_pct: float | None = None             # cubo_pool_face quando disponível
 
 
 @dataclass
@@ -73,6 +77,11 @@ class VetorEspacoEF:
     preco_venda: float | None = None
     ratio_pool_vs_cat: float | None = None      # custo_execucao_pool / PU_cat_Q (< 1.0 = good)
     fidelidade_gates: bool | None = None
+    # ADR-108: composição de custo do cubo_analitico
+    share_mo_pct: float | None = None           # MO / custo_direto_total
+    share_eq_pct: float | None = None           # equipamento / custo_direto_total
+    share_comb_pct: float | None = None         # combustivel / custo_direto_total
+    concentracao_atividade: float | None = None  # HHI de concentração por atividade (1/N..1)
 
 
 @dataclass

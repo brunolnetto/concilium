@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from concilium.domain.models.campaign import (
     CampaignBundleCube,
@@ -189,6 +189,9 @@ def extrair_vetor_O(canonical: dict, prazo_contratual: int | None) -> VetorEspac
     eqs = canonical.get("equipes_diretas") or []
     mob_window = round(sum(e.get("custo_inst_mob_demob") or 0 for e in eqs), 2)
 
+    # ADR-108: métricas de utilização e paralelismo do cronograma
+    util = _cronograma_utilizacao(canonical)
+
     return VetorEspacoO(
         prazo_semanas=prazo,
         folga_semanas=round(folga, 1) if folga is not None else None,
@@ -196,7 +199,90 @@ def extrair_vetor_O(canonical: dict, prazo_contratual: int | None) -> VetorEspac
         itens_criticos_pct=round(itens_crit_pct, 3) if itens_crit_pct is not None else None,
         gap_pool_total=gap_pool,
         custo_mob_window_total=mob_window,
+        utilizacao_recursos_pct=util.get("utilizacao"),
+        paralelismo_medio=util.get("paralelismo"),
+        idle_pool_pct=util.get("idle_pct"),
     )
+
+
+def _cubo_analitico_agregado(canonical: dict) -> dict[str, Any]:
+    """Agrega cubo_analitico.celulas por categoria/propriedade (ADR-108).
+
+    Retorna {share_mo, share_eq, share_comb, hhi} em [0,1].
+    Retorna {} quando cubo vazio — caller atribui None (IC-4: sem falha silenciosa).
+    """
+    cubo = canonical.get("cubo_analitico") or {}
+    celulas = cubo.get("celulas") or []
+    if not celulas:
+        return {}
+
+    total = 0.0
+    mo = 0.0
+    eq = 0.0
+    comb = 0.0
+    por_atividade: dict[str, float] = {}
+
+    for c in celulas:
+        if c.get("componente_bdi") != "custo_direto":
+            continue
+        v = float(c.get("valor_rs") or 0.0)
+        total += v
+        cat  = (c.get("categoria_insumo") or "").lower()
+        prop = (c.get("propriedade") or "").lower()
+        aid  = c.get("atividade_id") or ""
+        if cat == "mao_obra":
+            mo += v
+        elif cat == "equipamento":
+            eq += v
+        if prop == "combustivel":
+            comb += v
+        if aid:
+            por_atividade[aid] = por_atividade.get(aid, 0.0) + v
+
+    if total <= 0:
+        return {}
+
+    hhi = round(sum((v / total) ** 2 for v in por_atividade.values()), 4) if por_atividade else None
+    return {
+        "share_mo":   round(mo   / total, 4),
+        "share_eq":   round(eq   / total, 4),
+        "share_comb": round(comb / total, 4),
+        "hhi":        hhi,
+    }
+
+
+def _cronograma_utilizacao(canonical: dict) -> dict[str, Any]:
+    """Extrai métricas de utilização e paralelismo do cronograma (ADR-108)."""
+    cron = canonical.get("cronograma") or {}
+    acts = cron.get("scheduled_activities") or []
+    if not acts:
+        return {}
+
+    total_mob = 0
+    total_prod = 0
+    for a in acts:
+        dist = a.get("distribuicao_semanal") or {}
+        total_mob += len(dist)
+        total_prod += sum(1 for d in dist.values() if (d.get("num_equipes") or 0) > 0)
+    utilizacao = round(total_prod / total_mob, 4) if total_mob > 0 else None
+
+    semanas: dict[str, int] = {}
+    for a in acts:
+        for semana, d in (a.get("distribuicao_semanal") or {}).items():
+            if (d.get("num_equipes") or 0) > 0:
+                semanas[semana] = semanas.get(semana, 0) + 1
+    paralelismo = round(sum(semanas.values()) / len(semanas), 3) if semanas else None
+
+    # CuboPoolFace quando disponível (ADR-106 F8)
+    pool_face = canonical.get("cubo_pool_face")
+    idle_pct: float | None = None
+    if pool_face and isinstance(pool_face, dict):
+        celulas_pf = pool_face.get("celulas") or []
+        total_pf = len(celulas_pf)
+        idle_sem = sum(1 for c in celulas_pf if (c.get("estado") or "") == "idle")
+        idle_pct = round(idle_sem / total_pf, 4) if total_pf > 0 else None
+
+    return {"utilizacao": utilizacao, "paralelismo": paralelismo, "idle_pct": idle_pct}
 
 
 def extrair_vetor_EF(canonical: dict, report: dict) -> VetorEspacoEF:
@@ -218,12 +304,19 @@ def extrair_vetor_EF(canonical: dict, report: dict) -> VetorEspacoEF:
     decision = gates.get("decision")
     fidelidade = decision in {"APROVADO", "APROVADO_COM_RESSALVAS"} if decision else None
 
+    # ADR-108: composição de custo do cubo_analitico
+    comp = _cubo_analitico_agregado(canonical)
+
     return VetorEspacoEF(
         margem_pct=round(margem, 4) if margem is not None else None,
         custo_execucao_pool=custo_pool,
         custo_indireto=custo_ind if custo_ind else None,
         preco_venda=preco_venda,
         ratio_pool_vs_cat=ratio,
+        share_mo_pct=comp.get("share_mo"),
+        share_eq_pct=comp.get("share_eq"),
+        share_comb_pct=comp.get("share_comb"),
+        concentracao_atividade=comp.get("hhi"),
         fidelidade_gates=fidelidade,
     )
 
@@ -600,8 +693,10 @@ def executar_campanha(
 # CampaignBundleCube — camada analítica multidimensional
 # ---------------------------------------------------------------------------
 
-_METRICAS_O = ["prazo_semanas", "fe_nec_medio", "itens_criticos_pct", "gap_pool_total"]
-_METRICAS_EF = ["margem_pct", "ratio_pool_vs_cat", "custo_indireto"]
+_METRICAS_O  = ["prazo_semanas", "fe_nec_medio", "itens_criticos_pct",
+                "gap_pool_total", "utilizacao_recursos_pct", "paralelismo_medio"]
+_METRICAS_EF = ["margem_pct", "ratio_pool_vs_cat", "custo_indireto",
+                "share_mo_pct", "share_eq_pct", "share_comb_pct", "concentracao_atividade"]
 
 
 def _get_metrica(c: CenarioAvaliado, metrica: str) -> float | None:
