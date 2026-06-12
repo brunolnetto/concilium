@@ -126,7 +126,7 @@ src/concilium/application/benchmarks/
   spec_loader.py
 
 benchmarks/
-  _benchmark_runner.py      (thin wrapper → BenchmarkFacade)
+ benchmark_runner.py      (thin wrapper → BenchmarkFacade)
   run_all.py                (thin wrapper → BenchmarkFacade.run_all_from_root)
 ```
 

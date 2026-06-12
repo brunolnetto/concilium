@@ -68,3 +68,11 @@ catalog.duckdb.timestamp
 audit.json
 commit-audit-*.json
 *-commit-report.json
+
+# Campaign scenario working dirs (generated per-run, not source)
+benchmarks/data/AGIS-*/
+benchmarks/data/MARA_ROSA-*/
+benchmarks/data/ROSH-*/
+benchmarks/data/RUMO-*/
+benchmarks/data/VALE-*/
+benchmarks/data/CTC-*/

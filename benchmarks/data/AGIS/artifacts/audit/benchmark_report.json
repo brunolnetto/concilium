@@ -6,25 +6,25 @@
     {
       "skill": "01-escopo-e-eap",
       "status": "OK",
-      "duration_ms": 1763,
+      "duration_ms": 9708,
       "avisos": []
     },
     {
       "skill": "02-produtividade-climatica",
       "status": "OK",
-      "duration_ms": 137,
+      "duration_ms": 427,
       "avisos": []
     },
     {
       "skill": "03-catalogo-de-recursos",
       "status": "OK",
-      "duration_ms": 93,
+      "duration_ms": 141,
       "avisos": []
     },
     {
       "skill": "04-cronograma",
       "status": "OK",
-      "duration_ms": 181,
+      "duration_ms": 983,
       "avisos": [
         "CPU CPU-DREN-BOCA-BTCC-350X350: ratio P_can/P_orig=3.612 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.06 vs P_original=0.02. PU_sbdi=10191.0858 implica custo=657.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
         "CPU CPU-DREN-CORPO-BSCC-250X250: ratio P_can/P_orig=3.480 fora do intervalo aceitável [0.5,2.0]. P_canonico=0.87 vs P_original=0.25. PU_sbdi=1508.5360 implica custo=1312.4 R$/h → valor_horario ou precos_unitarios_sbdi precisa correção no catálogo.",
@@ -80,7 +80,7 @@
     {
       "skill": "05-equipes-e-alocacao",
       "status": "OK",
-      "duration_ms": 107,
+      "duration_ms": 256,
       "avisos": [
         "ADR-077: Contrato EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000 — 2 instância(s) com standby >35%: EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-03: 9w idle; EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000-04: 19w idle. Taxa global: 72.0%. Custo standby: R$ 787,351.72."
       ]
@@ -88,7 +88,7 @@
     {
       "skill": "06-resultado-financeiro",
       "status": "OK",
-      "duration_ms": 93,
+      "duration_ms": 200,
       "avisos": [
         "Razão indireto/direto 118.5% fora da faixa [10.0%, 50.0%]",
         "Margem operacional -50.70% | status=VERMELHO | preço R$ 42,043,615 (operacional) vs R$ 76,864,593 (catálogo)",
@@ -102,7 +102,7 @@
     {
       "skill": "09-relatorio-e-artefatos",
       "status": "OK",
-      "duration_ms": 400,
+      "duration_ms": 812,
       "avisos": [
         "Relatório de criticidade ausente. Execute skill-15 (diagnóstico) para enriquecer o relatório.",
         "Erro ao gerar Excel relatório: '<' not supported between instances of 'NoneType' and 'NoneType'",
@@ -112,13 +112,13 @@
     {
       "skill": "10-diagnostico-criticidade",
       "status": "OK",
-      "duration_ms": 29,
+      "duration_ms": 31,
       "avisos": []
     },
     {
       "skill": "12-registro-decisoes",
       "status": "OK",
-      "duration_ms": 27,
+      "duration_ms": 28,
       "avisos": []
     },
     {
@@ -130,7 +130,7 @@
     {
       "skill": "13-replanejamento-e-cenarios",
       "status": "OK",
-      "duration_ms": 36,
+      "duration_ms": 27,
       "avisos": []
     }
   ],
