@@ -30,6 +30,29 @@ class BenchmarkRunner:
     report_builder: BenchmarkReportBuilder
     report_printer: BenchmarkReportPrinter
 
+    @classmethod
+    def from_settings(
+        cls,
+        report_builder: BenchmarkReportBuilder | None = None,
+        report_printer: BenchmarkReportPrinter | None = None,
+    ) -> "BenchmarkRunner":
+        """Constrói BenchmarkRunner a partir de concilium.infrastructure.settings.
+
+        Usa CONCILIUM__CONFIG_ROOT e CONCILIUM__BENCHMARK_PROJECTS_ROOT (ou derivados).
+        Elimina a necessidade de passar caminhos explícitos ou patchear env vars manualmente.
+        """
+        from concilium.infrastructure.settings import get_storage
+
+        storage = get_storage()
+        config_root = storage.config_root
+        projects_root = storage.benchmark_projects_root or (storage.root / "benchmarks" / "projetos")
+        return cls(
+            config_root=config_root,
+            projects_root=projects_root,
+            report_builder=report_builder or BenchmarkReportBuilder(),
+            report_printer=report_printer or BenchmarkReportPrinter(),
+        )
+
     def run(self, spec: ProjectSpec, *, reset: bool = False, skip_artifacts: bool = False) -> dict[str, Any]:
         store = self._find_or_create(spec.nome, spec.slug, spec.contexto_id, reset)
 
@@ -74,6 +97,9 @@ class BenchmarkRunner:
             inference_pack=inference_pack,
         )
         self.report_printer.print(report)
+
+        # Registrar execução no BenchmarkStore para auditabilidade (NEP-039).
+        self._log_execution(spec, report, store_project=store)
 
         if skip_artifacts:
             # Modo leve (ex: campanha de exploração): apenas o benchmark_report.json, sem imagens/PDFs.
@@ -145,6 +171,46 @@ class BenchmarkRunner:
         # Entregáveis computados vivem em projetos/ (sorvedouro), não em data/ (fonte).
         # data/{slug}/ é somente leitura: referencia.json, campaign_v{i}.json, artifacts/raw/.
         return self.projects_root / spec.slug / "artifacts" / "outputs"
+
+    def _log_execution(self, spec: ProjectSpec, report: dict, store_project: Any) -> None:
+        """Registra execução no FileSystemBenchmarkStore para auditabilidade (NEP-039).
+
+        Falha silenciosa: log de auditoria não deve quebrar o fluxo principal.
+        """
+        try:
+            import uuid
+            from datetime import datetime, timezone
+            from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+            from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
+
+            nep039_root = self.projects_root.parent / "data" / ".nep039"
+            nep039_root.mkdir(parents=True, exist_ok=True)
+            benchmark_store = FileSystemBenchmarkStore(root=nep039_root)
+
+            gates = report.get("quality_gates") or {}
+            decision = gates.get("decision") or "N/A"
+            status = (
+                BenchmarkState.SUCESSO
+                if decision in {"APROVADO", "APROVADO_COM_RESSALVAS"}
+                else BenchmarkState.FALHA
+            )
+
+            execution = BenchmarkExecution(
+                execution_id=str(uuid.uuid4()),
+                benchmark_id=spec.slug,
+                versao=1,
+                projeto_id=str(store_project.root) if store_project else "",
+                status=status,
+                executado_em=datetime.now(timezone.utc),
+                discrepancia_sumario={
+                    "decision": decision,
+                    "worst_severity": gates.get("worst_severity"),
+                    "n_gates": len(gates.get("items") or []),
+                },
+            )
+            benchmark_store.log_execution(execution)
+        except Exception:
+            pass  # Log de auditoria nunca deve quebrar o fluxo principal
 
     def _find_or_create(self, nome: str, benchmark_id: str, contexto_id: str, reset: bool):
 
