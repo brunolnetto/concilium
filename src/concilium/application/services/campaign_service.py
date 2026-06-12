@@ -664,17 +664,24 @@ def executar_campanha(
 ) -> CampaignOutputBundle:
     """Execute a full campaign: generate grid, evaluate, curate, return bundle.
 
-    ADR-109: verifica fronteira de tratabilidade (10.000 cenários) antes de executar.
-    Acima desse limite, busca exaustiva pode levar horas — considere mode='guided' (futuro).
+    ADR-109: verifica fronteira de tratabilidade antes de executar.
+    O limiar é configurável via CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD (default: 10.000).
     """
     import warnings
+    from concilium.infrastructure.settings import get_campaign as _get_campaign_settings
 
+    cfg = _get_campaign_settings()
     n_card = bundle.cardinality()
-    if n_card > 10_000:
+    if n_card > cfg.cardinality_threshold:
+        _w = num_workers or cfg.max_workers
+        _s = cfg.seconds_per_scenario
         warnings.warn(
             f"GoResearchCampaignBundle.cardinality={n_card:,} excede fronteira de "
-            f"tratabilidade (10.000). Busca exaustiva levaria ~{n_card * 6 // 3600:.0f}h "
-            f"com {num_workers} workers. Considere reduzir dimensões ou usar busca guiada.",
+            f"tratabilidade ({cfg.cardinality_threshold:,}). "
+            f"Busca exaustiva levaria ~{n_card * _s // _w // 3600:.0f}h "
+            f"com {_w} workers ({_s}s/cenário). "
+            f"Considere reduzir dimensões ou usar busca guiada. "
+            f"Ajuste CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD para suprimir este aviso.",
             stacklevel=2,
         )
 

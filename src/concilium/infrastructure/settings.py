@@ -91,6 +91,10 @@ CONCILIUM__DUCKDB_SPILL_DIR           [opt]   tmpdir           RuntimeSettings.d
 CONCILIUM__MAX_CONCURRENT_JOBS        [opt]   3                JobsSettings.max_concurrent_jobs
 CONCILIUM__JOB_TTL_HOURS              [opt]   24               JobsSettings.job_ttl_hours
 CONCILIUM__JOB_GC_INTERVAL_MINUTES    [opt]   60               JobsSettings.job_gc_interval_minutes
+── Campanha GO (CampaignSettings — ADR-109) ─────────────────────────────────
+CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD  [opt]  10000        CampaignSettings.cardinality_threshold
+CONCILIUM__CAMPAIGN_MAX_WORKERS           [opt]  6             CampaignSettings.max_workers
+CONCILIUM__CAMPAIGN_SECONDS_PER_SCENARIO  [opt]  6             CampaignSettings.seconds_per_scenario
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Variáveis de infra de testes (não produção):
@@ -799,6 +803,46 @@ def get_jobs() -> JobsSettings:
     return _jobs
 
 
+# ── CampaignSettings ─────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class CampaignSettings:
+    """Configuração do motor de exploração de campanha GO (ADR-070, ADR-109)."""
+
+    cardinality_threshold: int
+    """CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD — cardinalidade máxima para busca exaustiva
+    sem aviso (ADR-109: fronteira de tratabilidade). Acima desse valor, executar_campanha()
+    emite warnings.warn sugerindo busca guiada (default: 10000)."""
+
+    max_workers: int
+    """CONCILIUM__CAMPAIGN_MAX_WORKERS — número de workers paralelos para avaliação de cenários
+    (default: 6). Afeta o cálculo de tempo estimado no aviso de tratabilidade."""
+
+    seconds_per_scenario: int
+    """CONCILIUM__CAMPAIGN_SECONDS_PER_SCENARIO — estimativa de tempo por cenário em segundos
+    usada no cálculo de aviso de tratabilidade (default: 6)."""
+
+    @classmethod
+    def from_env(cls) -> "CampaignSettings":
+        return cls(
+            cardinality_threshold=_int("CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD", 10_000),
+            max_workers=_int("CONCILIUM__CAMPAIGN_MAX_WORKERS", 6),
+            seconds_per_scenario=_int("CONCILIUM__CAMPAIGN_SECONDS_PER_SCENARIO", 6),
+        )
+
+
+_campaign: CampaignSettings | None = None
+
+
+def get_campaign() -> CampaignSettings:
+    _refresh_if_env_changed()
+    global _campaign
+    if _campaign is None:
+        _campaign = CampaignSettings.from_env()
+    return _campaign
+
+
 # ── Validação de startup ──────────────────────────────────────────────────────
 
 
@@ -896,8 +940,8 @@ def _check_auth(auth: AuthSettings) -> list[str]:
 
 def _reset_all() -> None:
     """Invalida todos os singletons. Usar em fixtures de teste para isolar env vars."""
-    global _api, _mcp, _mcp_proxy, _ui, _auth, _storage, _telemetry, _runtime, _last_env_fingerprint
-    _api = _mcp = _mcp_proxy = _ui = _auth = _storage = _telemetry = _runtime = None
+    global _api, _mcp, _mcp_proxy, _ui, _auth, _storage, _telemetry, _runtime, _campaign, _last_env_fingerprint
+    _api = _mcp = _mcp_proxy = _ui = _auth = _storage = _telemetry = _runtime = _campaign = None
     _last_env_fingerprint = None
 
 
@@ -930,6 +974,7 @@ def env_summary() -> str:
         f"  mcp.rate_limit      : {mcp.rate_limit_calls}/{mcp.rate_limit_period_s}s",
         f"  pdf_renderer        : {rt.pdf_renderer}",
         f"  artifact_transport  : {rt.artifact_transport}",
+        f"  campaign.threshold  : {get_campaign().cardinality_threshold:,}  workers={get_campaign().max_workers}  s/cen={get_campaign().seconds_per_scenario}",
         "────────────────────────────────────────────────────",
     ]
     return "\n".join(lines)
