@@ -150,19 +150,26 @@ def _load_project() -> None:
 def _load_benchmark() -> None:
     from concilium.presentation.cli import commands_benchmark, commands_schedule
 
+    # ── Comandos visíveis ao usuário (calibração periódica) ──────────────────
     benchmark_app.command("list")(commands_benchmark.list_benchmarks)
-    benchmark_app.command("run-batch")(commands_benchmark.run_benchmarks_batch)
     benchmark_app.command("run")(commands_benchmark.run_benchmarks)
     benchmark_app.command("analyze")(commands_benchmark.analyze)
-    benchmark_app.command("trace")(commands_benchmark.extract_trace)
     benchmark_app.command("audit")(commands_benchmark.audit)
-    benchmark_app.command("cleanup")(commands_benchmark.cleanup)
-    benchmark_app.command("summary")(commands_benchmark.stage_summary)
-    benchmark_app.command("iterate")(commands_benchmark.iterate_correction)
-    benchmark_app.command("plan-space")(commands_benchmark.plan_space)
-    benchmark_app.command("pack")(commands_benchmark.pack_benchmark)
     benchmark_app.command("compare")(commands_benchmark.compare_algorithms)
-    benchmark_app.add_typer(commands_schedule.app, name="schedule")
+    benchmark_app.command("pack")(commands_benchmark.pack_benchmark)
+
+    # ── Ferramentas de desenvolvimento (ocultas — não sobrecarregam o help) ──
+    # run-batch: CI/automação, raramente manual
+    benchmark_app.command("run-batch", hidden=True)(commands_benchmark.run_benchmarks_batch)
+    # trace/cleanup/iterate/summary: ciclo de calibração interna
+    benchmark_app.command("trace",   hidden=True)(commands_benchmark.extract_trace)
+    benchmark_app.command("cleanup", hidden=True)(commands_benchmark.cleanup)
+    benchmark_app.command("iterate", hidden=True)(commands_benchmark.iterate_correction)
+    benchmark_app.command("summary", hidden=True)(commands_benchmark.stage_summary)
+    # plan-space: substituído por `project campaign` (ADR-070)
+    benchmark_app.command("plan-space", hidden=True)(commands_benchmark.plan_space)
+    # schedule: solver RCPSP isolado — ferramenta de dev, não workflow de usuário
+    benchmark_app.add_typer(commands_schedule.app, name="schedule", hidden=True)
 
 
 def _load_validate() -> None:
