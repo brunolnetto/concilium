@@ -128,26 +128,38 @@ def campaign(
 
 
 def _load_project_base_spec(projects_root: Path, slug: str) -> dict | None:
-    """Carrega o ProjetoSpec do projeto como base_spec para a campanha.
+    """Carrega o spec de entrada do projeto como base_spec para a campanha.
 
-    Tenta o canonical mais recente do projeto como fonte primária.
-    Para benchmarks sem ProjetoSpec canônico, fallback para referencia.json
-    na pasta de dados correspondente (se existir).
+    Para campaigns, a fonte canônica é a ESPECIFICAÇÃO DE ENTRADA (referencia.json
+    ou ProjetoSpec), não o canonical do pipeline (saída). O canonical é um produto
+    computado e não contém os parâmetros de sweep necessários (EAP, rcpsp_spec, etc.).
+
+    Prioridade:
+    1. referencia.json em data/{slug}/ (benchmarks com spec v2 completo)
+    2. ProjetoSpec em projetos/{slug}/spec.json (projetos nativos — futuro)
+    3. Fallback: canonical stripped (sem spec — resultado parcial)
     """
     import json
 
-    # Primário: canonical do projeto
+    # 1. Primário: referencia.json em data/ (spec de entrada completa)
+    for _try in (slug, slug.upper(), slug.lower()):
+        benchmarks_data = projects_root.parent / "data" / _try
+        ref = benchmarks_data / "referencia.json"
+        if ref.exists():
+            return json.loads(ref.read_text())
+
+    # 2. ProjetoSpec nativo (futuro)
+    for _try in (slug, slug.upper(), slug.lower()):
+        spec_file = projects_root / _try / "spec.json"
+        if spec_file.exists():
+            return json.loads(spec_file.read_text())
+
+    # 3. Fallback degradado: canonical stripped (sem EAP/rcpsp_spec)
     for _try in (slug, slug.upper(), slug.lower()):
         can = projects_root / _try / "v1" / "canonical.json"
         if can.exists():
             data = json.loads(can.read_text())
             return _canonical_to_base_spec(data, _try)
-
-    # Fallback: referencia.json em data/ (benchmarks com spec v2)
-    benchmarks_data = projects_root.parent / "data" / slug
-    ref = benchmarks_data / "referencia.json"
-    if ref.exists():
-        return json.loads(ref.read_text())
 
     return None
 
@@ -168,9 +180,16 @@ def _canonical_to_base_spec(canonical: dict, slug: str) -> dict:
 
 
 def _default_config_root() -> Path:
+    # Busca o config/ raiz do repositório (que contém catalogos/, concilium.yaml, etc.).
+    # Ignora pastas config/ vazias ou sem conteúdo de catálogo.
     here = Path(__file__).resolve()
     for p in here.parents:
-        if (p / "config").exists():
+        candidate = p / "config"
+        if candidate.is_dir() and (candidate / "catalogos").exists():
+            return candidate
+    # fallback: subir até .git
+    for p in here.parents:
+        if (p / ".git").exists():
             return p / "config"
     return Path("config")
 

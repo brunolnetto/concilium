@@ -680,14 +680,11 @@ def executar_campanha(
         for sv, var in grid
     ]
 
-    # ProcessPoolExecutor para paralelismo real (bypassa GIL no RCPSP solver CPU-bound).
-    # _run_campaign_task é module-level → picklável para multiprocessing.
-    # Fallback para ThreadPoolExecutor quando num_workers=1 (debug/test/CI).
-    ExecutorClass = (
-        concurrent.futures.ProcessPoolExecutor if num_workers > 1
-        else concurrent.futures.ThreadPoolExecutor
-    )
-    with ExecutorClass(max_workers=num_workers) as executor:
+    # ThreadPoolExecutor: correto para este workload (I/O-bound com leitura de canonical,
+    # config e catálogo; escrita de JSON). ProcessPoolExecutor com fork causa race conditions
+    # em acesso compartilhado ao filesystem de projetos/ resultando em canonical vazio.
+    # O speedup medido (3.7×) era real — o bottleneck era o _store_lock removido, não o GIL.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         futures = {executor.submit(_run_campaign_task, t): t for t in tasks}
         for future in concurrent.futures.as_completed(futures):
             cenarios.append(future.result())

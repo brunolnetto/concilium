@@ -98,6 +98,14 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
 
     out: dict[str, Any] = {}
 
+    # Preservar "id" e "slug" do nível raiz para que spec_loader derive o slug correto
+    # (slug = ref.get("id") or _infer_slug_from_path). Sem isso, _infer_slug_from_path
+    # lê o nome do diretório temporário e cria projetos com nomes errados.
+    if ref.get("id"):
+        out["id"] = ref["id"]
+    if ref.get("slug"):
+        out["slug"] = ref["slug"]
+
     # 1. meta → campos raiz
     out["projeto"] = meta.get("projeto", "")
     out["data_inicio"] = meta.get("data_inicio", "")
