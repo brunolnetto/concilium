@@ -84,12 +84,9 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     benchmark.register(server)  # execução, empacotamento e download de benchmark
 
     # NEP-039: Register benchmark metadata tools
-    from concilium.infrastructure.settings import get_storage
-    from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+    from concilium.infrastructure.storage.store_factory import get_benchmark_store
 
-    storage = get_storage()
-    benchmark_projects_root = storage.benchmark_projects_root or (storage.root / "benchmarks" / "projetos")
-    benchmark_store = FileSystemBenchmarkStore(root=Path(benchmark_projects_root) / ".nep039")
+    benchmark_store = get_benchmark_store()
     benchmark_nep039.register(server, benchmark_store)
 
     artifacts.register(server)  # ADR-093: listar/ler/baixar/bundle de artefatos

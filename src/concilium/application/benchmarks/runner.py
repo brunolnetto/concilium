@@ -185,7 +185,7 @@ class BenchmarkRunner:
 
             nep039_root = self.projects_root.parent / "data" / ".nep039"
             nep039_root.mkdir(parents=True, exist_ok=True)
-            benchmark_store = FileSystemBenchmarkStore(root=nep039_root)
+            benchmark_store = FileSystemBenchmarkStore.from_path(nep039_root)
 
             gates = report.get("quality_gates") or {}
             decision = gates.get("decision") or "N/A"
@@ -223,7 +223,7 @@ class BenchmarkRunner:
         nep039_root = self.projects_root.parent / "data" / ".nep039"
         if nep039_root.exists():
             try:
-                store = FileSystemBenchmarkStore(root=nep039_root)
+                store = FileSystemBenchmarkStore.from_path(nep039_root)
                 meta = store.get_metadata(benchmark_id)
                 if meta:
                     benchmark_versao = meta.versao

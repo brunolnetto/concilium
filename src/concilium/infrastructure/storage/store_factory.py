@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from concilium.application.services.project_repository import ProjectRepository
 from concilium.infrastructure.settings import get_storage
 
 from .file_project_repository import FileProjectRepository
+
+if TYPE_CHECKING:
+    from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
 DEFAULT_STORE_BACKEND = "filesystem"
 _BACKEND_ALIASES: dict[str, str] = {
@@ -68,9 +72,63 @@ def _build_gdrive_repository() -> ProjectRepository:
 
 def resolve_store_backend() -> str:
     """Resolve backend name for project repository from environment."""
-    value = (get_storage().backend or DEFAULT_STORE_BACKEND).strip().lower()
+    from concilium.infrastructure.settings import get_storage as _get_storage
+
+    value = (_get_storage().backend or DEFAULT_STORE_BACKEND).strip().lower()
     value = value or DEFAULT_STORE_BACKEND
     return _BACKEND_ALIASES.get(value, value)
+
+
+def build_blob_storage(root_override: Path | None = None) -> "BlobStoragePort":
+    """Constrói BlobStoragePort de acordo com CONCILIUM__STORE_BACKEND.
+
+    Ponto único de instanciação do backend de storage — benchmark store,
+    campaign store e project store todos usam este factory.
+    """
+    from concilium.infrastructure.settings import get_storage as _get_storage
+
+    backend = resolve_store_backend()
+    if backend == "filesystem":
+        from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+
+        storage_cfg = _get_storage()
+        root = root_override or storage_cfg.projects_root or (storage_cfg.root / "projetos")
+        return LocalBlobStorage(root_dir=root)
+    if backend == "sharepoint":
+        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointBlobStorage
+
+        return SharePointBlobStorage.from_env()
+    if backend == "s3":
+        from concilium.infrastructure.adapters.s3_blob_storage import S3BlobStorage
+
+        return S3BlobStorage.from_env()
+    if backend == "azure":
+        from concilium.infrastructure.adapters.azure_blob_storage import AzureBlobStorage
+
+        return AzureBlobStorage.from_env()
+    if backend == "gdrive":
+        from concilium.infrastructure.adapters.gdrive_blob_storage import GoogleDriveBlobStorage
+
+        return GoogleDriveBlobStorage.from_env()
+    raise ValueError(f"Backend não suportado: {backend}")
+
+
+def get_benchmark_store(slug: str | None = None) -> "FileSystemBenchmarkStore":  # type: ignore[name-defined]  # noqa: F821
+    """Retorna BenchmarkStore usando o backend configurado."""
+    from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
+    storage = build_blob_storage()
+    prefix = ".nep039"
+    return FileSystemBenchmarkStore(storage=storage, prefix=prefix)
+
+
+def get_campaign_store(project_slug: str) -> "CampaignRunStore":  # type: ignore[name-defined]  # noqa: F821
+    """Retorna CampaignRunStore para um projeto usando o backend configurado."""
+    from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
+    storage = build_blob_storage()
+    prefix = f"{project_slug}/campaigns"
+    return CampaignRunStore(storage=storage, prefix=prefix)
 
 
 def build_project_repository(projects_root: Path) -> ProjectRepository:
