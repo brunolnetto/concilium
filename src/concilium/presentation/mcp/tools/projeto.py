@@ -358,7 +358,7 @@ def register(server: FastMCP) -> None:
         import hashlib
         from datetime import datetime
 
-        from concilium.domain.models.bdi import (
+        from concilium.domain.models.financial.bdi import (
             BdiPerfilDiff,
             PerfilBdiProjeto,
             PerfilLucroProjeto,

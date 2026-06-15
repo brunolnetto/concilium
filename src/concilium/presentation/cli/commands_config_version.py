@@ -18,7 +18,7 @@ import typer
 from rich import print as rprint
 from rich.table import Table
 
-from concilium.application.services.contexto_version_service import (
+from concilium.application.services.catalog.contexto_version_service import (
     ContextoVersionService,
     PerfilVersionService,
 )
@@ -249,3 +249,6 @@ def perfil_compare(
     for field, delta in changed.items():
         table.add_row(field, str(delta.get("de") or "—"), str(delta.get("para") or "—"))
     rprint(table)
+    unchanged = diff.get("unchanged") or []
+    if unchanged:
+        rprint(f"[dim]Inalterados: {', '.join(str(u) for u in unchanged)}[/dim]")

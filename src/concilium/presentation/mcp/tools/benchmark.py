@@ -79,7 +79,7 @@ def register(server: FastMCP) -> None:
             gerar_graficos:    Gera PNGs analíticos antes de empacotar (requer matplotlib).
             incluir_cenarios:  Inclui JSONs dos cenários intermediários (plan space).
         """
-        from concilium.application.benchmarks.output_packager import empacotar_outputs
+        from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
 
         try:
             zip_path = empacotar_outputs(
@@ -145,7 +145,7 @@ def register(server: FastMCP) -> None:
             target = zips[0]  # mais recente
         else:
             # Gera o ZIP se não existir
-            from concilium.application.benchmarks.output_packager import empacotar_outputs
+            from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
 
             try:
                 target = empacotar_outputs(slug=slug, config_root=config_dir)
@@ -190,10 +190,10 @@ def register(server: FastMCP) -> None:
             empacotar:       Cria ZIP com todos os artefatos ao final.
         """
         from concilium.application.benchmarks import BenchmarkRunner
-        from concilium.application.benchmarks.batch import find_benchmark_reference
-        from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-        from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
-        from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
+        from concilium.application.benchmarks.execution.batch import find_benchmark_reference
+        from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
+        from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
         from concilium.presentation.mcp._context import _config_root
 
         config_dir = _config_root()
@@ -228,7 +228,7 @@ def register(server: FastMCP) -> None:
         }
 
         if empacotar:
-            from concilium.application.benchmarks.output_packager import empacotar_outputs
+            from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
 
             try:
                 zip_path = empacotar_outputs(slug=slug, config_root=config_dir, gerar_graficos=gerar_graficos)

@@ -18,6 +18,7 @@ from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
+from concilium.domain.models.financial.bdi import BdiPerfilDiff
 from concilium.presentation.cli.shared import resolve_project
 
 app = typer.Typer(
@@ -134,7 +135,7 @@ def _bu_persist_bdi_diff(
     try:
         import json
 
-        from concilium.domain.models.bdi import BdiPerfilDiff
+        from concilium.domain.models.financial.bdi import BdiPerfilDiff
 
         ant_dict2 = perfil_anterior.model_dump(mode="json")
         nov_dict2 = novo_perfil.model_dump(mode="json")
@@ -195,7 +196,7 @@ def bdi_update(
     import hashlib
     from datetime import datetime
 
-    from concilium.domain.models.bdi import (
+    from concilium.domain.models.financial.bdi import (
         PerfilBdiProjeto,
         PerfilLucroProjeto,
         PerfilTributarioProjeto,

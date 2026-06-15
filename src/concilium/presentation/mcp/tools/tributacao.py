@@ -33,7 +33,7 @@ def register(server: FastMCP) -> None:
         Returns:
             custo_total, salario_base, multiplicador efetivo e breakdown por grupo.
         """
-        from concilium.domain.services.tributacao import calculate_employer_clt
+        from concilium.domain.services.financial.tributacao import calculate_employer_clt
 
         try:
             result = calculate_employer_clt(salario_base, categoria=categoria)
@@ -69,7 +69,7 @@ def register(server: FastMCP) -> None:
         Args:
             salario_bruto: Salário bruto mensal em R$.
         """
-        from concilium.domain.services.tributacao import calculate_inss_employee
+        from concilium.domain.services.financial.tributacao import calculate_inss_employee
 
         try:
             inss = calculate_inss_employee(salario_bruto)
@@ -96,7 +96,7 @@ def register(server: FastMCP) -> None:
         Args:
             base_calculo: Base de cálculo do IRRF após deduções (INSS + dependentes).
         """
-        from concilium.domain.services.tributacao import calculate_irrf
+        from concilium.domain.services.financial.tributacao import calculate_irrf
 
         try:
             irrf = calculate_irrf(base_calculo)

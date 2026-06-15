@@ -88,7 +88,7 @@ def schedule_run(
 
     weeks = _resolve_deadline_weeks(deadline_weeks, ref_raw)
 
-    heuristics = [algorithm] if algorithm and algorithm != "MILP" else ["MINSLK", "LPT", "MAXRES"]
+    heuristics = [algorithm] if algorithm else ["MINSLK", "LPT", "MAXRES"]
     explored = explore_schedules(
         activities=activities,
         dag=dag,
@@ -99,29 +99,6 @@ def schedule_run(
     )
 
     if not explored:
-        if algorithm == "MILP" or not algorithm:
-            from concilium.application.scheduling.milp import MILPScheduler
-
-            sched = MILPScheduler(timeout_seconds=timeout).schedule(
-                activities=activities, dag=dag, pool=pool, deadline_weeks=weeks
-            )
-            if sched.feasible:
-                result_data = {
-                    "algorithm": "MILP",
-                    "makespan": sched.makespan,
-                    "feasible": True,
-                    "scheduled_activities": [
-                        {
-                            "activity_id": a.activity_id,
-                            "start_week": a.start_week,
-                            "end_week": a.end_week,
-                            "duration_weeks": a.duration_weeks,
-                        }
-                        for a in sched.scheduled_activities
-                    ],
-                }
-                _emit_result(result_data, output)
-                return
         rprint("[red]Solver nao encontrou solucao viavel.[/red]")
         raise typer.Exit(1)
 

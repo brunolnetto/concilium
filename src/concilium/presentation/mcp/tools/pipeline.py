@@ -128,7 +128,39 @@ def register(server: FastMCP) -> None:
         stats_dto = service.obter_estatisticas()
         return _wrap_response(stats_dto.model_dump())
 
-    # ── 4. Avançar pipeline (síncrono — DEPRECATED) ─────────────────────────
+    # ── 4b. Cancelar job de pipeline ─────────────────────────────────────────
+    @server.tool(
+        description=(
+            "Cancela um job de pipeline em fila ou em execução. "
+            "Jobs CONCLUIDO, ERRO ou CANCELADO não podem ser cancelados. "
+            "O motivo é registrado no histórico do job."
+        )
+    )
+    @permission("project:run")
+    @mcp_rate_limit()
+    def cancelar_job_pipeline(
+        job_id: str,
+        motivo: str = "Cancelado pelo usuário",
+    ) -> dict[str, Any]:
+        """Cancela um job de pipeline em fila ou em execução.
+
+        Args:
+            job_id: ID do job (obtido de disparar_pipeline).
+            motivo: Motivo do cancelamento — registrado no log do job.
+
+        Returns:
+            JobDTO com status CANCELADO.
+        """
+        from concilium.application.jobs import get_job_service
+
+        service = get_job_service()
+        try:
+            dto = service.cancelar_job(job_id, motivo=motivo)
+            return _wrap_response({"job_id": dto.job_id, "status": dto.status, "motivo": dto.erro})
+        except ValueError as exc:
+            return _wrap_response({"erro": str(exc)})
+
+    # ── 4c. Avançar pipeline (síncrono — DEPRECATED) ─────────────────────────
     @server.tool()
     @permission("project:run")
     @mcp_rate_limit()

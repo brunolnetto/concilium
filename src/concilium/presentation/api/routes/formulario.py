@@ -63,7 +63,7 @@ def sugerir_cpus(request: Request, response: Response, body: SugerirCpusRequest)
 
     Útil para pré-visualização no formulário UI antes do submit final.
     """
-    from concilium.application.services.formulario_service import build_eap
+    from concilium.application.services.project.formulario_service import build_eap
 
     result = build_eap([s.model_dump() for s in body.servicos])
     return {
@@ -102,7 +102,7 @@ def criar_projeto_formulario(
     Para itens não mapeados, use `GET /api/catalogs/cpus?q=<termo>` para
     encontrar o cpu_id e repita a chamada com `cpu_id` preenchido.
     """
-    from concilium.application.services.formulario_service import criar_projeto
+    from concilium.application.services.project.formulario_service import criar_projeto
 
     try:
         result = criar_projeto(

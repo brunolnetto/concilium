@@ -155,3 +155,59 @@ def register(server: FastMCP) -> None:
         horas_mes: float = 208.0,
     ) -> dict[str, Any]:
         return _impl_calcular_pu_producao(contexto_id, producao_id, alpha_clt, alpha_pj, preco_diesel, horas_mes)
+
+    # ── Versionamento de contexto (ADR-062) ─────────────────────────────────
+
+    @server.tool(
+        description=(
+            "Lista o histórico de versões de um contexto de catálogo (ADR-062). "
+            "Retorna versão atual, histórico com datas e autores, e número total de versões. "
+            "Use antes de comparar_versoes_catalogo para saber quais versões existem."
+        )
+    )
+    def listar_versoes_catalogo(contexto_id: str) -> dict[str, Any]:
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.settings import get_storage
+
+        config_root = get_storage().config_root
+        svc = ContextoVersionService(config_root)
+        try:
+            versions = svc.list_versions(contexto_id)
+            current = svc.current_version(contexto_id)
+        except Exception as exc:
+            return {"erro": str(exc)}
+        return {
+            "contexto_id": contexto_id,
+            "versao_atual": current,
+            "total_versoes": len(versions),
+            "historico": versions,
+        }
+
+    @server.tool(
+        description=(
+            "Compara duas versões de um contexto de catálogo lado a lado (ADR-062). "
+            "Retorna campos adicionados, removidos e modificados entre as versões. "
+            "Use para auditar o que mudou entre uma versão de catálogo e outra "
+            "antes de aprovar uma atualização de preços ou composições."
+        )
+    )
+    def comparar_versoes_catalogo(
+        contexto_id: str,
+        versao_a: str,
+        versao_b: str,
+    ) -> dict[str, Any]:
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.settings import get_storage
+
+        config_root = get_storage().config_root
+        svc = ContextoVersionService(config_root)
+        try:
+            diff = svc.compare(contexto_id, versao_a, versao_b)
+        except Exception as exc:
+            return {"erro": str(exc)}
+        return {
+            "contexto_id": contexto_id,
+            "versao_a": versao_a,
+            "versao_b": versao_b,
+            "diff": diff,
+        }

@@ -47,7 +47,7 @@ def _deserialize_diagnostico(data: dict | None):
     if not data:
         return None
     try:
-        from concilium.domain.models.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio, FatorPE
+        from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio, FatorPE
 
         itens = []
         for id_ in data.get("itens_deficit", []):
@@ -97,7 +97,7 @@ def _deserialize_backtracking(data: dict | None):
     if not data:
         return None
     try:
-        from concilium.domain.models.backtracking_pe import BacktrackingPEItem, BacktrackingPERelatorio, SolucaoInversa
+        from concilium.domain.models.financial.backtracking_pe import BacktrackingPEItem, BacktrackingPERelatorio, SolucaoInversa
 
         itens = []
         for it in data.get("itens", []):

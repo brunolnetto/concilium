@@ -98,7 +98,7 @@ def register(server: FastMCP) -> None:
         Faces: instancia_ciclo_vida | custo_estado_componente | utilizacao_temporal |
         atividade_instancia | causa_custo | economia_pool | cadeia_perpetuacao.
         """
-        from concilium.application.services.cubo_pool_projection import (
+        from concilium.application.services.analytics.cubo_pool_projection import (
             resolve_cubo_pool_projection,
         )
         from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id

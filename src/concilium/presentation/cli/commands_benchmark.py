@@ -21,6 +21,25 @@ import typer
 from rich import print as rprint
 from rich.table import Table
 
+from concilium.application.benchmarks import BenchmarkBatchRunner, BenchmarkRunner
+from concilium.application.benchmarks.algorithm_comparison import AlgorithmComparisonRunner
+from concilium.application.benchmarks.analysis import build_stage_discrepancy_summary
+from concilium.application.benchmarks.analysis.audit_six_questions import run_audit
+from concilium.application.benchmarks.analysis.pipeline_validator import validate_pipeline_integrity
+from concilium.application.benchmarks.execution.batch import discover_benchmark_slugs, find_benchmark_reference
+from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
+from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
+from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
+from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+from concilium.infrastructure.catalog.extraction.engine_refs import (
+    extract_engine_iteration_references,
+    iter_benchmark_reports,
+)
+from concilium.presentation.cli.shared import (
+    _tools_root,
+    benchmark_projects_root,
+    config_root,
+)
 from ._commands_benchmark_helpers import (
     _empacotar_benchmark_cli,
     _execute_plan_space_tasks,
@@ -32,6 +51,8 @@ from ._commands_benchmark_helpers import (
     _save_plan_space_results,
 )
 
+get_config_root = config_root  # alias used in tests and some command bodies
+
 app = typer.Typer(
     name="benchmark",
     help="Operações de benchmark: run, audit, analyze, extract e correção de discrepâncias.",
@@ -42,7 +63,6 @@ app = typer.Typer(
 @app.command("list")
 def list_benchmarks() -> None:
     """Lista benchmarks disponíveis com slug e status."""
-    from concilium.application.benchmarks.batch import discover_benchmark_slugs
 
     root = _DEFAULT_ROOT / "benchmarks" / "data"
     slugs = discover_benchmark_slugs(root)
@@ -101,8 +121,6 @@ def run_benchmarks_batch(
     """Executa todos os benchmarks em modo batch silencioso e eficiente."""
     from datetime import UTC, datetime
 
-    from concilium.application.benchmarks import BenchmarkBatchRunner
-    from concilium.presentation.cli.shared import _tools_root, benchmark_projects_root, config_root
 
     root = _tools_root()
     batch_runner = BenchmarkBatchRunner(
@@ -166,12 +184,6 @@ def run_benchmarks(
     charts: bool = typer.Option(False, "--charts", help="Gera gráficos PNG antes de empacotar (requer matplotlib)."),
 ) -> None:
     """Executa um benchmark específico ou todos (use run-batch para modo batch)."""
-    from concilium.application.benchmarks import BenchmarkBatchRunner, BenchmarkRunner
-    from concilium.application.benchmarks.batch import discover_benchmark_slugs, find_benchmark_reference
-    from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-    from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
-    from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
-    from concilium.presentation.cli.shared import _tools_root, benchmark_projects_root, config_root
 
     root = _tools_root()
     batch_runner = BenchmarkBatchRunner(
@@ -240,8 +252,6 @@ def pack_benchmark(
     """Empacota artefatos de saída do benchmark (PNGs, relatórios, audit) em ZIP."""
     from pathlib import Path as _Path
 
-    from concilium.application.benchmarks.output_packager import empacotar_outputs
-    from concilium.presentation.cli.shared import config_root as get_config_root
 
     rprint(f"[cyan]Empacotando benchmark {slug.upper()}...[/cyan]")
 
@@ -275,7 +285,6 @@ def pack_benchmark(
 @app.command("analyze")
 def analyze() -> None:
     """Exibe tabela de deltas de custo direto para todos os benchmarks."""
-    from concilium.presentation.cli.shared import _tools_root
 
     root = _tools_root()
     root / "benchmarks" / "data"
@@ -310,8 +319,6 @@ def extract_trace(
     slug: str = typer.Argument(..., help="Slug do benchmark (ex: CTC)"),
 ) -> None:
     """Extrai referências de iteração do engine para um benchmark."""
-    from concilium.infrastructure.catalog.extraction import extract_engine_iteration_references, iter_benchmark_reports
-    from concilium.presentation.cli.shared import _tools_root
 
     root = _tools_root()
     reports = [p for p in iter_benchmark_reports(root) if slug.upper() in p.name.upper()]
@@ -328,8 +335,6 @@ def audit(
     slug: str = typer.Argument(..., help="Slug do benchmark (ex: CTC)"),
 ) -> None:
     """Executa a auditoria das 6 perguntas para um benchmark."""
-    from concilium.application.benchmarks.analysis import run_audit
-    from concilium.presentation.cli.shared import _tools_root
 
     root = _tools_root()
     result = run_audit(slug.upper(), root=root)
@@ -339,7 +344,6 @@ def audit(
 @app.command("cleanup")
 def cleanup() -> None:
     """Remove intermediários temporários de benchmarks (logs de rerun, JSONs de extracao)."""
-    from concilium.presentation.cli.shared import _tools_root
 
     root = _tools_root()
     removed = 0
@@ -356,8 +360,6 @@ def stage_summary(
     output: str = typer.Option("", help="Caminho para salvar JSON de saída."),
 ) -> None:
     """Gera sumário de discrepâncias por etapa para todos os benchmarks."""
-    from concilium.application.benchmarks.analysis import build_stage_discrepancy_summary
-    from concilium.presentation.cli.shared import _tools_root
 
     root = _tools_root()
     summary = build_stage_discrepancy_summary(root=root)
@@ -376,15 +378,8 @@ def iterate_correction(
     slug: str = typer.Argument(..., help="Slug do benchmark (ex: CTC)"),
 ) -> None:
     """Orquestra ciclo completo: correcao -> rerun -> extract -> validate."""
-    from concilium.application.benchmarks import BenchmarkBatchRunner, BenchmarkRunner
-    from concilium.application.benchmarks.analysis import run_audit, validate_pipeline_integrity
-    from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-    from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
-    from concilium.infrastructure.catalog.extraction import extract_engine_iteration_references, iter_benchmark_reports
-    from concilium.presentation.cli.shared import _tools_root
 
     root = _tools_root()
-    from concilium.presentation.cli.shared import benchmark_projects_root
 
     # 1) Re-run do benchmark
     runner = BenchmarkBatchRunner(
@@ -429,7 +424,6 @@ def plan_space(
     workers: int = typer.Option(0, "--workers", help="Threads paralelas (0 = auto: min(alternativas, 8))."),
 ) -> None:
     """Explora cenários de benchmark (AUTO) sem poluir projetos reais."""
-    from concilium.presentation.cli.shared import _tools_root, benchmark_projects_root, config_root
 
     root = _tools_root()
     slug_upper = slug.upper()
@@ -506,10 +500,6 @@ def compare_algorithms(
         concilium benchmark compare --slug CTC --algorithms MINSLK,LPT
         concilium benchmark compare --slug CTC --reset --output comparison.json
     """
-    from concilium.application.benchmarks.algorithm_comparison import AlgorithmComparisonRunner
-    from concilium.application.benchmarks.batch import discover_benchmark_slugs, find_benchmark_reference
-    from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
-    from concilium.presentation.cli.shared import _tools_root, benchmark_projects_root, config_root
 
     root = _tools_root()
     target_slug = slug.upper()

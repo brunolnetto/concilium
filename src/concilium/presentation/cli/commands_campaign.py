@@ -30,13 +30,13 @@ def campaign(
         concilium project campaign AGIS --campaign projetos/AGIS/campaigns/campaign_v2.json
     """
     import json
-    from concilium.application.services.campaign_service import construir_cubo, executar_campanha
-    from concilium.application.services.campaign_report import (
+    from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
+    from concilium.application.services.campaign.campaign_report import (
         render_campaign_report_md,
         render_campaign_report_pdf,
         serialize_campaign_report,
     )
-    from concilium.domain.models.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
+    from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
 
     # Resolver paths
     _cfg = config_root or _default_config_root()

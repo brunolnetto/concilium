@@ -116,7 +116,7 @@ def register(server: FastMCP) -> None:
         Para replanejamento definitivo, use ``avancar_pipeline`` após confirmar os parâmetros.
         """
         try:
-            from concilium.application.services.project_service import ProjectService
+            from concilium.application.services.project.project_service import ProjectService
 
             svc = ProjectService()
             canonical = svc.load_canonical_latest(project_id)
@@ -132,11 +132,6 @@ def register(server: FastMCP) -> None:
             }
         except Exception as exc:
             return {"erro": f"Erro ao simular cenário: {exc}"}
-
-    @server.tool()
-    def aplicar_sugestao_replan(project_id: str, sugestao_id: str, justificativa: str) -> dict[str, Any]:
-        """[NÃO IMPLEMENTADO] Aplicação de sugestão de replanejamento — retorna erro informativo."""
-        return {"erro": "aplicar_sugestao_replan ainda não implementado. Crie nova versão via gerenciar_plano."}
 
     # ADR-101: _meta.ui para MCP Apps (Fase 1)
     _ui_metas = {

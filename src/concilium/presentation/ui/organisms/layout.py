@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 if TYPE_CHECKING:
-    from concilium.domain.models.backtracking_pe import BacktrackingPERelatorio
-    from concilium.domain.models.diagnostico_pe import DiagnosticoPERelatorio
+    from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio
+    from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
 
 from ..helpers.helpers import (
     build_team_adjustment_rows,
@@ -2601,7 +2601,7 @@ def _render_bdi_cbs_ibs(
 
 def render_bdi_editor(base_url: str, project_id: str, actor: str, reference: dict) -> None:
     """Editor de BDI — Modo Legado (PRE_REFORMA) ou CBS/IBS (ADR-055)."""
-    from concilium.domain.models.bdi import (
+    from concilium.domain.models.financial.bdi import (
         CENARIOS_TRIBUTARIOS,
         DEFAULT_BDI_TABELA,
         TaxRegimeVersion,

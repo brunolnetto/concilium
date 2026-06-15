@@ -58,7 +58,7 @@ def download_project_benchmark_zip(
     """Download ZIP of benchmark artifacts scoped to this project (ADR-066)."""
     from pathlib import Path
 
-    from concilium.application.benchmarks.output_packager import empacotar_outputs
+    from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
 
     config_root: Path = service.config_root  # type: ignore[attr-defined]
     try:
@@ -96,7 +96,7 @@ def trigger_project_pack_benchmark(
     """Queue benchmark packaging in background (ADR-066)."""
     from pathlib import Path
 
-    from concilium.application.benchmarks.output_packager import empacotar_outputs
+    from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
 
     config_root: Path = service.config_root  # type: ignore[attr-defined]
 

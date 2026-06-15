@@ -3,12 +3,12 @@ from __future__ import annotations
 from threading import Lock
 
 from concilium.application.runtime import Runtime
-from concilium.application.services.audit_service import AuditService
+from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.concilium_service import ConciliumDependencies, ConciliumService
-from concilium.application.services.override_service import OverrideService
+from concilium.application.services.project.override_service import OverrideService
 from concilium.application.services.pipeline_service import PipelineService
-from concilium.application.services.project_input_builder import ProjectInputBuilder
-from concilium.application.services.project_service import ProjectService
+from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+from concilium.application.services.project.project_service import ProjectService
 from concilium.infrastructure.storage.store_factory import build_project_repository
 from concilium.presentation.cli.shared import config_root, projetos_root
 

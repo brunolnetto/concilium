@@ -51,7 +51,7 @@ def _hc_check_sharepoint(rows: list) -> None:
     if not sp_drive:
         return
     try:
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import (
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import (
             SharePointBlobStorage,
         )
 

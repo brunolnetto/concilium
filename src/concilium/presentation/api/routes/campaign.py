@@ -102,13 +102,13 @@ def run_campaign(
     import json
     from pathlib import Path
 
-    from concilium.application.services.campaign_report import (
+    from concilium.application.services.campaign.campaign_report import (
         render_campaign_report_md,
         render_campaign_report_pdf,
         serialize_campaign_report,
     )
-    from concilium.application.services.campaign_service import construir_cubo, executar_campanha
-    from concilium.domain.models.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
+    from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
+    from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
     from concilium.infrastructure.settings import get_storage
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
     from concilium.presentation.cli.commands_campaign import _load_project_base_spec

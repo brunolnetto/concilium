@@ -24,6 +24,10 @@ import typer
 from rich import print as rprint
 from rich.table import Table
 
+from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
+from concilium.application.benchmarks.spec.spec_loader import load_spec_from_dict
+from concilium.presentation.cli.shared import config_root as get_config_root
+
 app = typer.Typer(
     name="benchmark",
     help="Operações de benchmark: run, audit, analyze, extract e correção de discrepâncias.",
@@ -88,8 +92,6 @@ def _discover_slugs(root: Path) -> list[str]:
 
 def _empacotar_benchmark_cli(slug: str, root: Path, gerar_charts: bool = True) -> None:
     """Helper: gera charts (se solicitado) e cria ZIP dos artefatos."""
-    from concilium.application.benchmarks.output_packager import empacotar_outputs
-    from concilium.presentation.cli.shared import config_root as get_config_root
 
     try:
         zip_path = empacotar_outputs(
@@ -105,7 +107,7 @@ def _empacotar_benchmark_cli(slug: str, root: Path, gerar_charts: bool = True) -
 
 
 def _make_silent_printer():
-    from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
+    from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
 
     class _SilentPrinterImpl(BenchmarkReportPrinter):
         def print(self, report: dict) -> None:  # noqa: A003
@@ -124,7 +126,7 @@ def _run_one_plan_space(
     out_dir: object,
 ) -> dict:
     from concilium.application.benchmarks import BenchmarkRunner
-    from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
+    from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
 
     runner = BenchmarkRunner(
         config_root=cfg_root,
@@ -192,7 +194,6 @@ def _prepare_one_task(alt: dict, base_ref: dict, ref_path, load_spec_from_dict):
 
 
 def _prepare_plan_space_tasks(base_ref: dict, ref_path: object, alternativas: list) -> list:
-    from concilium.application.benchmarks.spec_loader import load_spec_from_dict
 
     tasks: list = []
     for alt in alternativas:
