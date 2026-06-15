@@ -9,10 +9,10 @@ from typing import Any
 
 from concilium.application.runtime import Runtime
 
-from .inference import BenchmarkInferenceService  # noqa: F401 — needed for monkeypatching in tests
-from .report_builder import BenchmarkReportBuilder
-from .report_printer import BenchmarkReportPrinter
-from .spec_loader import ProjectSpec
+from ..inference import BenchmarkInferenceService  # noqa: F401 — needed for monkeypatching in tests
+from ..report.report_builder import BenchmarkReportBuilder
+from ..report.report_printer import BenchmarkReportPrinter
+from ..spec.spec_loader import ProjectSpec
 
 
 def _load_inference_service() -> Any:

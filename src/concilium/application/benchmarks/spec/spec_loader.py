@@ -27,7 +27,7 @@ from ._spec_loader_helpers_b import (
     _eei_find_best_match,
     _lfd_parse_raw_row,
 )
-from .input_derivation import BenchmarkInputDeriver
+from ..input_derivation import BenchmarkInputDeriver
 
 
 @dataclass
@@ -221,7 +221,7 @@ class BenchmarkSpecLoader:
     def resolve_contexto(self, contexto_id: str, version: str | None = None) -> dict[str, Any] | None:
         """Resolve contexto by id and optional version (ADR-062)."""
         try:
-            from concilium.application.services.contexto_version_service import ContextoVersionService
+            from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
 
             svc = ContextoVersionService(self._config_root)
             return svc.resolve(contexto_id, version)
@@ -240,7 +240,7 @@ class BenchmarkSpecLoader:
         perfil_id = None
         perfil_version = None
         try:
-            from concilium.application.services.contexto_version_service import (
+            from concilium.application.services.catalog.contexto_version_service import (
                 ContextoVersionService,
                 PerfilVersionService,
             )

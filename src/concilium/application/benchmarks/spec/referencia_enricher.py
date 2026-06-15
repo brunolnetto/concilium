@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .cpu_mapper import CpuMapper
-from .cronograma_parser import CronogramaParser
+from ..validation.cpu_mapper import CpuMapper
+from ..cronograma_parser import CronogramaParser
 
 
 def _infer_cpu_from_section(section_id: str, item_num: int) -> str:

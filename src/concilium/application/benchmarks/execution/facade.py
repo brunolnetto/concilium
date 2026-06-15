@@ -29,11 +29,11 @@ from typing import Any
 from concilium.infrastructure.settings import get_storage
 
 from .batch import BenchmarkBatchRunner
-from .input_derivation import normalize_referencia_weeks
-from .report_builder import BenchmarkReportBuilder
-from .report_printer import BenchmarkReportPrinter
+from ..input_derivation import normalize_referencia_weeks
+from ..report.report_builder import BenchmarkReportBuilder
+from ..report.report_printer import BenchmarkReportPrinter
 from .runner import BenchmarkRunner
-from .spec_loader import load_spec_from_dict
+from ..spec.spec_loader import load_spec_from_dict
 
 
 @dataclass

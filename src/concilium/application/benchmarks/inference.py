@@ -49,16 +49,8 @@ class BenchmarkInferenceService:
             ],
         )
 
-        if not isinstance(reference, dict):
+        if reference is not None and not isinstance(reference, dict):
             return pack
-
-        ref_proj, ref_trace = BenchmarkInferenceService._extract_reference_projection(reference)
-        pack.reference_projection = ref_proj
-        pack.trace.extend(ref_trace)
-        if isinstance(ref_proj, dict):
-            # reference_projection: apenas para comparação final em skill-09.
-            # Nenhum campo é usado em cálculos de skills 06/08.
-            pack.skill_inputs.setdefault("09-relatorio-e-artefatos", {})["benchmark_reference_projection"] = ref_proj
 
         # NEP-030 D2: _derive_bdi_indireto_efetivo removida da cadeia de injeção.
         # Era um resíduo circular: (venda_ref - Σ com_bdi) / custo_indir - 1.
@@ -70,6 +62,17 @@ class BenchmarkInferenceService:
                 rule_id="INF-BENCH-030-D2",
             )
         )
+
+        if reference is None:
+            return pack
+
+        ref_proj, ref_trace = BenchmarkInferenceService._extract_reference_projection(reference)
+        pack.reference_projection = ref_proj
+        pack.trace.extend(ref_trace)
+        if isinstance(ref_proj, dict):
+            # reference_projection: apenas para comparação final em skill-09.
+            # Nenhum campo é usado em cálculos de skills 06/08.
+            pack.skill_inputs.setdefault("09-relatorio-e-artefatos", {})["benchmark_reference_projection"] = ref_proj
 
         return pack
 

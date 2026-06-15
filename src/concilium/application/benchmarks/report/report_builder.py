@@ -4,7 +4,7 @@ import importlib
 from typing import Any
 
 from .projection import BenchmarkProjection
-from .spec_loader import ProjectSpec
+from ..spec.spec_loader import ProjectSpec
 
 
 def _load_inference_service() -> Any:

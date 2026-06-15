@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .input_derivation import normalize_referencia_weeks
-from .report_builder import BenchmarkReportBuilder
-from .report_printer import BenchmarkReportPrinter
+from ..input_derivation import normalize_referencia_weeks
+from ..report.report_builder import BenchmarkReportBuilder
+from ..report.report_printer import BenchmarkReportPrinter
 from .runner import BenchmarkRunner
-from .spec_loader import ProjectSpec, load_spec_from_dict
+from ..spec.spec_loader import ProjectSpec, load_spec_from_dict
 
 
 def _reference_candidates(benchmark_dir: Path) -> tuple[Path, ...]:
