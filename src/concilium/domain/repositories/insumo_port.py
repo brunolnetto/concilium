@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from concilium.domain.models.catalogo import Insumo
+    from concilium.domain.models.catalog.catalogo import Insumo
 
 
 class RepositorioInsumoPort(ABC):

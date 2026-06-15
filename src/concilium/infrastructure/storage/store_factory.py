@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from concilium.application.services.project_repository import ProjectRepository
+from concilium.application.services.project.project_repository import ProjectRepository
 from concilium.infrastructure.settings import get_storage
 
 from .file_project_repository import FileProjectRepository
@@ -33,7 +33,7 @@ def _projects_prefix() -> str:
 
 
 def _build_sharepoint_repository() -> ProjectRepository:
-    from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointBlobStorage
+    from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
 
     from .storage_project_repository import StorageProjectRepository
 
@@ -44,7 +44,7 @@ def _build_sharepoint_repository() -> ProjectRepository:
 
 
 def _build_s3_repository() -> ProjectRepository:
-    from concilium.infrastructure.adapters.s3_blob_storage import S3BlobStorage
+    from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
 
     from .storage_project_repository import StorageProjectRepository
 
@@ -53,7 +53,7 @@ def _build_s3_repository() -> ProjectRepository:
 
 
 def _build_azure_repository() -> ProjectRepository:
-    from concilium.infrastructure.adapters.azure_blob_storage import AzureBlobStorage
+    from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
 
     from .storage_project_repository import StorageProjectRepository
 
@@ -62,7 +62,7 @@ def _build_azure_repository() -> ProjectRepository:
 
 
 def _build_gdrive_repository() -> ProjectRepository:
-    from concilium.infrastructure.adapters.gdrive_blob_storage import GoogleDriveBlobStorage
+    from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
 
     from .storage_project_repository import StorageProjectRepository
 
@@ -89,25 +89,25 @@ def build_blob_storage(root_override: Path | None = None) -> "BlobStoragePort":
 
     backend = resolve_store_backend()
     if backend == "filesystem":
-        from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
         storage_cfg = _get_storage()
         root = root_override or storage_cfg.projects_root or (storage_cfg.root / "projetos")
         return LocalBlobStorage(root_dir=root)
     if backend == "sharepoint":
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
 
         return SharePointBlobStorage.from_env()
     if backend == "s3":
-        from concilium.infrastructure.adapters.s3_blob_storage import S3BlobStorage
+        from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
 
         return S3BlobStorage.from_env()
     if backend == "azure":
-        from concilium.infrastructure.adapters.azure_blob_storage import AzureBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
 
         return AzureBlobStorage.from_env()
     if backend == "gdrive":
-        from concilium.infrastructure.adapters.gdrive_blob_storage import GoogleDriveBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
 
         return GoogleDriveBlobStorage.from_env()
     raise ValueError(f"Backend não suportado: {backend}")

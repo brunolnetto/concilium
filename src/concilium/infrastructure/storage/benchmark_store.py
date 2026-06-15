@@ -39,7 +39,7 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
             # ``root`` is the store's own directory (e.g. .nep039/).
             # Create a LocalBlobStorage rooted at that dir with an empty prefix,
             # so metadata lives at <root>/metadata/ and audit at <root>/audit.jsonl.
-            from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+            from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
             _storage = LocalBlobStorage(root_dir=root)
             self._storage = _storage
@@ -68,7 +68,7 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
         *root* é o diretório raiz do store (ex: ``.nep039/``).
         Os blobs são armazenados em ``root/metadata/`` e ``root/audit.jsonl``.
         """
-        from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
         storage = LocalBlobStorage(root_dir=root)
         # Empty prefix: blobs live directly under root (metadata/, audit.jsonl)

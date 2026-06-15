@@ -118,7 +118,7 @@ class RepositorioInsumo:
 
         # 1. InsumoVersionado com snapshot por período YYYY-MM
         if "versoes" in insumo:
-            from concilium.domain.models.catalogo_versioned import InsumoVersionado
+            from concilium.domain.models.catalog.versioned import InsumoVersionado
 
             try:
                 iv = InsumoVersionado.model_validate(insumo)

@@ -17,8 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from concilium.domain.models.observacao import PropostaAtualizacao
-from concilium.domain.models.producao import AuditoriaProducao, OrigemProducao, QualidadeProducao
+from concilium.domain.models.project.observacao import PropostaAtualizacao
+from concilium.domain.models.catalog.producao import AuditoriaProducao, OrigemProducao, QualidadeProducao
 from concilium.infrastructure.repositories.producao import RepositorioProducao
 
 

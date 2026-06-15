@@ -30,7 +30,7 @@ from typing import Any
 from uuid import uuid4
 
 from concilium.domain.models.canonical import CanonicalModel
-from concilium.domain.models.escopo import Escopo, StatusPlano
+from concilium.domain.models.project.escopo import Escopo, StatusPlano
 
 
 class PlanoStore:

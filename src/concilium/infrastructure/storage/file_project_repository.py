@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from concilium.application.services.project_repository import ProjectHandle, ProjectRepository
+from concilium.application.services.project.project_repository import ProjectHandle, ProjectRepository
 
 from .project import ProjectStore
 

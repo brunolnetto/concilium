@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from concilium.domain.models.catalog_health import (
+from concilium.domain.models.catalog.health import (
     CatalogGap,
     CatalogHealthReport,
     CoberturaConfig,

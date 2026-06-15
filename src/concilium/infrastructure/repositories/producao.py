@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from concilium.domain.models.producao import Producao
+from concilium.domain.models.catalog.producao import Producao
 
 
 class RepositorioProducao:

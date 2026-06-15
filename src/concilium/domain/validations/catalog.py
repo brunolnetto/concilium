@@ -23,7 +23,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Literal
 
-from concilium.domain.models.constraint_violation import ConstraintViolation
+from concilium.domain.models.project.constraint_violation import ConstraintViolation
 
 ConstraintStatus = Literal["OK", "AVISO", "ERRO"]
 

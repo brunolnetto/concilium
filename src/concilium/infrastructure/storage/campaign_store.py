@@ -86,7 +86,7 @@ class CampaignRunStore:
             if _path is None:
                 raise ValueError("Forneça storage+prefix ou project_root como Path.")
             _path = Path(_path)
-            from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+            from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
             # _path is the "project root" (e.g. projetos/AGIS).
             # campaigns live at _path/campaigns/runs/
             # We root the storage at _path.parent so that _path.name/campaigns/... works
@@ -110,7 +110,7 @@ class CampaignRunStore:
             slug: Slug do projeto. Se fornecido, project_root é tratado como
                   o diretório pai e o prefixo será ``{slug}/campaigns``.
         """
-        from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
         if slug:
             root = project_root
@@ -177,7 +177,7 @@ class CampaignRunStore:
         Para backends filesystem (LocalBlobStorage), retorna o Path real.
         Para outros backends, retorna um Path-like string path lógico.
         """
-        from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
         if isinstance(self._storage, LocalBlobStorage):
             return self._storage.root_dir / self._prefix / "runs" / run
@@ -199,7 +199,7 @@ class CampaignRunStore:
 
         # For backward compat with tests that check directory structure:
         # if storage is LocalBlobStorage, also create the dirs
-        from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
         if isinstance(self._storage, LocalBlobStorage):
             run_dir = self._storage.root_dir / self._prefix / "runs" / run_name

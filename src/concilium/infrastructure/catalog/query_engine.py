@@ -759,7 +759,7 @@ class CatalogSession:
 
     def get_price_stats(self, tipo: str | None = None) -> list[dict[str, Any]]:
         """Estatísticas de preço por tipo — substitui Python aggregations em plausibility."""
-        where = "WHERE tipo = ?" if tipo else ""
+        where = "AND tipo = ?" if tipo else ""
         params = [tipo] if tipo else []
         rows = self._conn.execute(
             f"""

@@ -25,7 +25,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from concilium.domain.models.catalog_snapshot import (
+from concilium.domain.models.catalog.snapshot import (
     CatalogDiff,
     CatalogSnapshot,
     CatalogSnapshotMeta,
