@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 
-from concilium.domain.models.analitica import CurvaABCInsumo, InsumoDetalheAtividade, ItemCurvaABC
+from concilium.domain.models.analytics.analitica import CurvaABCInsumo, InsumoDetalheAtividade, ItemCurvaABC
 
 
 def _accumulate_funcoes_de_equipe(custo_acum: dict, equipe: object) -> None:

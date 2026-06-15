@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from concilium.domain.models.cubo_pool import CelulaPoolInstancial, CuboPoolInstancial
-from concilium.domain.services.week_sequence import enumerar_semanas
+from concilium.domain.models.analytics.cubo_pool import CelulaPoolInstancial, CuboPoolInstancial
+from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
 _IDLE_MARKER = "__idle__"
 

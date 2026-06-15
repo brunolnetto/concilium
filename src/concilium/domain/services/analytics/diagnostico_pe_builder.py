@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.constants import SEMANAS_POR_MES
-from concilium.domain.models.diagnostico_pe import (
+from concilium.domain.models.analytics.diagnostico_pe import (
     DiagnosticoPEItem,
     DiagnosticoPERelatorio,
     FatorPE,
@@ -193,7 +193,7 @@ def _resolve_cubo_analitico(canonical_in: Any) -> Any | None:
     if cubo is not None:
         return cubo
     try:
-        from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
 
         return CuboAnaliticoBuilder().build(canonical_in)
     except Exception:

@@ -9,12 +9,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from concilium.domain.models.bdi import (
+from concilium.domain.models.financial.bdi import (
     DEFAULT_BDI_TABELA,
     ComponentesBdi,
     TabelaBdi,
 )
-from concilium.domain.models.memorial_bdi import (
+from concilium.domain.models.financial.memorial_bdi import (
     MemorialBDICategoria,
     MemorialCalculoBDI,
     MemorialDecomposicao,
@@ -161,7 +161,7 @@ class MemorialBDIBuilder:
             _ENC_F_MENSALISTA,
             _ENC_JUDICIAL,
         )
-        from concilium.domain.models.bdi import DEFAULT_ENCARGOS
+        from concilium.domain.models.financial.bdi import DEFAULT_ENCARGOS
 
         if regime == "horista_clt":
             enc = DEFAULT_ENCARGOS.horistas

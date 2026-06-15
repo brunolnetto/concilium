@@ -14,7 +14,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 
-from concilium.domain.models.campanha_equipamento import (
+from concilium.domain.models.campaign.campanha_equipamento import (
     AnaliseFrequenciaCampanhas,
     CampanhaEquipamento,
     InstanciaEquipamento,
@@ -81,7 +81,7 @@ def _ceb_group_sorted_usos(sorted_usos: list, gap_limit: int, regime: object, ti
 
 def _ceb_build_campanha(group: list, tipo_id: str, instancia_num: int, regime: object, inst_id: str) -> tuple:
     """Builds (InstanciaEquipamento, CampanhaEquipamento) from a usage group."""
-    from concilium.domain.models.campanha_equipamento import CampanhaEquipamento, InstanciaEquipamento
+    from concilium.domain.models.campaign.campanha_equipamento import CampanhaEquipamento, InstanciaEquipamento
 
     active_weeks: set = set()
     for u in group:

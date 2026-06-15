@@ -16,8 +16,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.constants import SEMANAS_POR_MES
-from concilium.domain.models.analitica import AgregacaoSemanalEquipamentos, SCurve
-from concilium.domain.services.week_sequence import next_week
+from concilium.domain.models.analytics.analitica import AgregacaoSemanalEquipamentos, SCurve
+from concilium.domain.services.planning.week_sequence import next_week
 
 
 def _scb_collect_semanas(sched_activities: list) -> tuple:
@@ -79,7 +79,7 @@ def _scb_collect_direct_costs(sched_activities: list, equipe_lookup: dict) -> tu
 
 def _scb_collect_direct_costs_pool(canonical_in: Any) -> dict[str, float]:
     """Custos diretos instanciais por semana (prod+idle+off) a partir do cubo pool."""
-    from concilium.domain.services.cubo_pool_builder import CuboPoolInstancialBuilder
+    from concilium.domain.services.analytics.cubo_pool_builder import CuboPoolInstancialBuilder
 
     custo_por_semana: dict[str, float] = defaultdict(float)
     try:

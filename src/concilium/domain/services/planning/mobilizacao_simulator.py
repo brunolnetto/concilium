@@ -27,7 +27,7 @@ from __future__ import annotations
 import math
 from typing import ClassVar
 
-from concilium.domain.models.mobilizacao import (
+from concilium.domain.models.planning.mobilizacao import (
     CurvaForca,
     CurvaForcaSemanal,
     MobilizacaoPolicy,
@@ -128,6 +128,13 @@ class WorkforcePolicySimulator:
                     semana_iso=semana_iso,
                 )
             )
+
+            # Early exit: n dropped to zero and demobilization is finite (semanas_plateau
+            # set). Once past plateau, n is monotonically decreasing — n=0 is permanent.
+            # Record the zero-week above first so the curve includes it, then terminate.
+            if n_t == 0 and policy.semanas_plateau is not None:
+                incompleta = True
+                break
         else:
             # for-loop exhausted max_weeks without delivering Q
             incompleta = True

@@ -24,8 +24,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.constants import SEMANAS_POR_MES
-from concilium.domain.models.bdi import DEFAULT_BDI_TABELA, TabelaBdi
-from concilium.domain.models.cubo_analitico import CelulaAnalitica, CuboAnalitico
+from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
+from concilium.domain.models.analytics.cubo_analitico import CelulaAnalitica, CuboAnalitico
 
 # ADR-087/089: mapeamento (campo_equipe, categoria_insumo, propriedade, cat_bdi, unidade_fisica)
 # A coluna cat_bdi referencia o campo na TabelaBdi para obter BDI e decomposição.
@@ -194,7 +194,7 @@ class CuboAnaliticoBuilder:
 
     def _build_from_pool(self, canonical_in: Any) -> CuboAnalitico:
         """Deriva CuboAnalitico do CuboPoolInstancial — invariância construtiva ADR-086."""
-        from concilium.domain.services.cubo_pool_builder import CuboPoolInstancialBuilder
+        from concilium.domain.services.analytics.cubo_pool_builder import CuboPoolInstancialBuilder
 
         projeto_id = str(getattr(getattr(canonical_in, "projeto", None), "nome", "?"))
         cubo_pool = CuboPoolInstancialBuilder().build(canonical_in)

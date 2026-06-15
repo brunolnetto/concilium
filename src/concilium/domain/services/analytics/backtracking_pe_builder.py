@@ -10,12 +10,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.constants import SEMANAS_POR_MES
-from concilium.domain.models.backtracking_pe import (
+from concilium.domain.models.financial.backtracking_pe import (
     BacktrackingPEItem,
     BacktrackingPERelatorio,
     SolucaoInversa,
 )
-from concilium.domain.models.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio
+from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio
 
 _EPS_TOL_REL = 0.0001  # 0,01% de tolerância relativa
 _EPS_TOL_ABS = 10.0  # R$10 tolerância absoluta mínima
