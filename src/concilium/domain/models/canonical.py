@@ -7,18 +7,18 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from statemachine import State, StateMachine
 
-from concilium.domain.models.analitica import CurvaABCInsumo, SCurve  # ADR-058
-from concilium.domain.models.backtracking_pe import BacktrackingPERelatorio  # ADR-061
-from concilium.domain.models.bdi import IndiretoComBdi, TabelaBdi  # ADR-023 §D4
-from concilium.domain.models.calendario_operacional import CalendarioOperacionalSemanal
-from concilium.domain.models.campanha_equipamento import AnaliseFrequenciaCampanhas  # ADR-059
-from concilium.domain.models.catalogo import PapelFuncao
-from concilium.domain.models.constraint_violation import ConstraintViolation
-from concilium.domain.models.cubo_analitico import CuboAnalitico  # ADR-058 ext.
-from concilium.domain.models.decision_variables import DecisionVariables
-from concilium.domain.models.diagnostico_pe import DiagnosticoPERelatorio  # ADR-060
-from concilium.domain.models.memorial_bdi import MemorialCalculoBDI  # ADR-057
-from concilium.domain.models.mobilizacao import CurvaForca, MobilizacaoPolicy  # ADR-054
+from concilium.domain.models.analytics.analitica import CurvaABCInsumo, SCurve  # ADR-058
+from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio  # ADR-061
+from concilium.domain.models.financial.bdi import IndiretoComBdi, TabelaBdi  # ADR-023 §D4
+from concilium.domain.models.planning.calendario_operacional import CalendarioOperacionalSemanal
+from concilium.domain.models.campaign.campanha_equipamento import AnaliseFrequenciaCampanhas  # ADR-059
+from concilium.domain.models.catalog.catalogo import PapelFuncao
+from concilium.domain.models.project.constraint_violation import ConstraintViolation
+from concilium.domain.models.analytics.cubo_analitico import CuboAnalitico  # ADR-058 ext.
+from concilium.domain.models.project.decision_variables import DecisionVariables
+from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio  # ADR-060
+from concilium.domain.models.financial.memorial_bdi import MemorialCalculoBDI  # ADR-057
+from concilium.domain.models.planning.mobilizacao import CurvaForca, MobilizacaoPolicy  # ADR-054
 
 StatusValidacao = Literal["OK", "AVISO", "ERRO", "INFO"]
 StatusMargem = Literal["VERDE", "AMARELO", "VERMELHO"]

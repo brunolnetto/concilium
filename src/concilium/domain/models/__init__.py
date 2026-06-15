@@ -31,13 +31,13 @@ if TYPE_CHECKING:  # static analysis & IDEs only — never runs at startup
         StatusValidacao,
         ValidacaoItem,
     )
-    from concilium.domain.models.catalogo import CPU, Insumo, TemplateObra, TipoInsumo
-    from concilium.domain.models.constraint_violation import ConstraintViolation
-    from concilium.domain.models.contexto import ContextoObra
-    from concilium.domain.models.decision_variables import DecisionVariables
-    from concilium.domain.models.jurisdicao import Jurisdicao
-    from concilium.domain.models.perfil import PerfilConstrutora
-    from concilium.domain.models.referencia import TabelaReferencia
+    from concilium.domain.models.catalog.catalogo import CPU, Insumo, TemplateObra, TipoInsumo
+    from concilium.domain.models.project.constraint_violation import ConstraintViolation
+    from concilium.domain.models.catalog.contexto import ContextoObra
+    from concilium.domain.models.project.decision_variables import DecisionVariables
+    from concilium.domain.models.catalog.jurisdicao import Jurisdicao
+    from concilium.domain.models.project.perfil import PerfilConstrutora
+    from concilium.domain.models.catalog.referencia import TabelaReferencia
 
 # name -> (module_path, attribute)
 _LAZY_MAP: dict[str, tuple[str, str]] = {
@@ -59,25 +59,25 @@ _LAZY_MAP: dict[str, tuple[str, str]] = {
     "StatusValidacao": ("concilium.domain.models.canonical", "StatusValidacao"),
     "ValidacaoItem": ("concilium.domain.models.canonical", "ValidacaoItem"),
     # catalogo
-    "CPU": ("concilium.domain.models.catalogo", "CPU"),
-    "Insumo": ("concilium.domain.models.catalogo", "Insumo"),
-    "TemplateObra": ("concilium.domain.models.catalogo", "TemplateObra"),
-    "TipoInsumo": ("concilium.domain.models.catalogo", "TipoInsumo"),
+    "CPU": ("concilium.domain.models.catalog.catalogo", "CPU"),
+    "Insumo": ("concilium.domain.models.catalog.catalogo", "Insumo"),
+    "TemplateObra": ("concilium.domain.models.catalog.catalogo", "TemplateObra"),
+    "TipoInsumo": ("concilium.domain.models.catalog.catalogo", "TipoInsumo"),
     # contexto
-    "ContextoObra": ("concilium.domain.models.contexto", "ContextoObra"),
+    "ContextoObra": ("concilium.domain.models.catalog.contexto", "ContextoObra"),
     # jurisdicao
-    "Jurisdicao": ("concilium.domain.models.jurisdicao", "Jurisdicao"),
+    "Jurisdicao": ("concilium.domain.models.catalog.jurisdicao", "Jurisdicao"),
     # perfil
-    "PerfilConstrutora": ("concilium.domain.models.perfil", "PerfilConstrutora"),
+    "PerfilConstrutora": ("concilium.domain.models.project.perfil", "PerfilConstrutora"),
     # referencia
-    "TabelaReferencia": ("concilium.domain.models.referencia", "TabelaReferencia"),
+    "TabelaReferencia": ("concilium.domain.models.catalog.referencia", "TabelaReferencia"),
     # outros
-    "DecisionVariables": ("concilium.domain.models.decision_variables", "DecisionVariables"),
-    "ConstraintViolation": ("concilium.domain.models.constraint_violation", "ConstraintViolation"),
+    "DecisionVariables": ("concilium.domain.models.project.decision_variables", "DecisionVariables"),
+    "ConstraintViolation": ("concilium.domain.models.project.constraint_violation", "ConstraintViolation"),
     # ADR-054: workforce mobilization policy
-    "MobilizacaoPolicy": ("concilium.domain.models.mobilizacao", "MobilizacaoPolicy"),
-    "CurvaForca": ("concilium.domain.models.mobilizacao", "CurvaForca"),
-    "CurvaForcaSemanal": ("concilium.domain.models.mobilizacao", "CurvaForcaSemanal"),
+    "MobilizacaoPolicy": ("concilium.domain.models.planning.mobilizacao", "MobilizacaoPolicy"),
+    "CurvaForca": ("concilium.domain.models.planning.mobilizacao", "CurvaForca"),
+    "CurvaForcaSemanal": ("concilium.domain.models.planning.mobilizacao", "CurvaForcaSemanal"),
 }
 
 __all__ = list(_LAZY_MAP)

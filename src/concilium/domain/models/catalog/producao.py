@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from concilium.domain.models.catalogo import ComposicaoPadraoEquipe
+from concilium.domain.models.catalog.catalogo import ComposicaoPadraoEquipe
 
 # Recurso que limita (gargaleia) a taxa de produção desta atividade.
 # equipamento — produção proporcional ao número de unidades do equipamento principal
