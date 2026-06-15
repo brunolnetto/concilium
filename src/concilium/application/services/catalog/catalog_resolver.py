@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
-    from concilium.application.services.project_repository import ProjectHandle
+    from concilium.application.services.project.project_repository import ProjectHandle
 
 OverlaySource = Literal["master", "jurisdiction", "project"]
 ItemType = Literal["cpu", "insumo", "producao"]

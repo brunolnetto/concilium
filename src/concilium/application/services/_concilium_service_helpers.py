@@ -169,8 +169,8 @@ def _cs_get_enriched_cpus(svc: ConciliumService, catalog_id: str) -> list[dict[s
 
 
 def _cs_simulate_mobilizacao_policy(project_id: str, req: dict[str, Any]) -> dict[str, Any]:
-    from concilium.domain.models.mobilizacao import MobilizacaoPolicy
-    from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
+    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
     policy = MobilizacaoPolicy(**req["policy"])
     simulator = WorkforcePolicySimulator()
@@ -235,7 +235,7 @@ def _process_wmp_policy(
     sim: Any, item_id: str, policy_dict: dict, eap_items: dict, cpu_lookup: dict, producao_lookup: dict, results: list
 ) -> None:
     """Process one WMP policy: validate, resolve P, simulate, append result."""
-    from concilium.domain.models.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
 
     try:
         policy = MobilizacaoPolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
@@ -289,7 +289,7 @@ def _process_wmp_policy(
 
 def _cs_validate_mobilizacao_policies(svc: ConciliumService, project_id: str) -> list[dict[str, Any]]:
     """Validate all saved WMP policies without running the full pipeline."""
-    from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
     policies = svc._dependencies.override_service.get_mobilizacao_policies(project_id)
     if not policies:

@@ -23,7 +23,7 @@ from ._project_service_helpers import (
 from .audit_service import AuditService
 from .project_files import DEFAULT_PROJECT_FILES, ProjectFiles
 from .project_repository import ProjectRepository
-from .service_support import build_summary
+from ..service_support import build_summary
 
 logger = logging.getLogger(__name__)
 
@@ -465,7 +465,7 @@ class ProjectService:
         try:
             from pathlib import Path
 
-            from concilium.application.services.contexto_version_service import PerfilVersionService
+            from concilium.application.services.catalog.contexto_version_service import PerfilVersionService
 
             for candidate in [
                 Path(__file__).parents[4] / "config",
@@ -541,7 +541,7 @@ class ProjectService:
         try:
             from pathlib import Path
 
-            from concilium.application.services.contexto_version_service import JurisdictionVersionService
+            from concilium.application.services.catalog.contexto_version_service import JurisdictionVersionService
 
             for candidate in [
                 Path(__file__).parents[4] / "config",
@@ -557,7 +557,7 @@ class ProjectService:
         try:
             from pathlib import Path
 
-            from concilium.application.services.contexto_version_service import TemaVersionService
+            from concilium.application.services.catalog.contexto_version_service import TemaVersionService
 
             for candidate in [
                 Path(__file__).parents[4] / "config",
@@ -574,7 +574,7 @@ class ProjectService:
         try:
             from pathlib import Path
 
-            from concilium.application.services.contexto_version_service import ContextoVersionService
+            from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
 
             for candidate in [
                 Path(__file__).parents[4] / "config",
@@ -643,7 +643,7 @@ class ProjectService:
                 raise ValueError(f"catalogo_id inválido: '{catalogo_id}'")
 
     def _validate_tema_fields(self, svc: Any, tema_id: str, fields: dict[str, Any]) -> None:
-        from concilium.domain.models.tema import TemaVisual
+        from concilium.domain.models.catalog.tema import TemaVisual
 
         base = svc.resolve(tema_id) or {"id": tema_id}
         merged = {**base, **fields}

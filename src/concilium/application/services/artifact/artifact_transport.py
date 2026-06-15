@@ -115,19 +115,19 @@ class BlobStorageTransport:
 def _blob_port_from_env(escolha: str) -> Any:
     """Instancia o adapter de BlobStoragePort para o backend escolhido."""
     if escolha in ("azure", "azure_blob", "blob"):
-        from concilium.infrastructure.adapters.azure_blob_storage import AzureBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
 
         return AzureBlobStorage.from_env()
     if escolha in ("sharepoint", "sp"):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
 
         return SharePointBlobStorage.from_env()
     if escolha in ("gdrive", "google_drive", "drive"):
-        from concilium.infrastructure.adapters.gdrive_blob_storage import GoogleDriveBlobStorage
+        from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
 
         return GoogleDriveBlobStorage.from_env()
     if escolha == "s3":
-        from concilium.infrastructure.adapters.s3_blob_storage import S3BlobStorage
+        from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
 
         return S3BlobStorage.from_env()
     raise ValueError(f"Backend de transporte desconhecido: {escolha!r}")

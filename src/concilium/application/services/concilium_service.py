@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from concilium.application.benchmarks.batch import discover_benchmark_slugs
-from concilium.application.services.audit_service import AuditService
-from concilium.application.services.override_service import OverrideService
+from concilium.application.benchmarks.execution.batch import discover_benchmark_slugs
+from concilium.application.runtime import Runtime
+from concilium.application.services.project.audit_service import AuditService
+from concilium.application.services.project.override_service import OverrideService
 from concilium.application.services.pipeline_service import PipelineService
-from concilium.application.services.project_input_builder import ProjectInputBuilder
-from concilium.application.services.project_repository import ProjectRepository
-from concilium.application.services.project_service import ProjectService
+from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+from concilium.application.services.project.project_repository import ProjectRepository
+from concilium.application.services.project.project_service import ProjectService
 
 from ._concilium_service_helpers import (
     _cs_get_enriched_cpus,
@@ -19,7 +20,7 @@ from ._concilium_service_helpers import (
     _cs_validate_mobilizacao_policies,
     _enrich_cpus_with_producao,
 )
-from .catalog_reasonability import build_catalog_reasonability_artifact
+from .catalog.catalog_reasonability import build_catalog_reasonability_artifact
 
 
 @dataclass(frozen=True)
@@ -69,7 +70,6 @@ class ConciliumService:
         )
 
     def get_catalog(self, catalog_id: str) -> dict[str, Any]:
-        from concilium.application.runtime import Runtime
 
         rt = Runtime(self.config_root)
         cat = rt.load_catalogo(catalog_id)
@@ -105,7 +105,6 @@ class ConciliumService:
         return None
 
     def list_catalog_insumos(self, catalog_id: str, q: str | None = None, limit: int = 50) -> dict[str, Any]:
-        from concilium.application.runtime import Runtime
 
         rt = Runtime(self.config_root)
         cat = rt.load_catalogo(catalog_id)
@@ -133,7 +132,6 @@ class ConciliumService:
         return {"q": q, "items": results[:limit], "total": len(results)}
 
     def audit_catalog_reasonability(self, catalog_id: str) -> dict[str, Any]:
-        from concilium.application.runtime import Runtime
 
         rt = Runtime(self.config_root)
         cat = rt.load_catalogo(catalog_id)
@@ -236,7 +234,6 @@ class ConciliumService:
         return cpu
 
     def _get_catalog_producao(self, catalog_id: str, prod_id: str) -> dict[str, Any] | None:
-        from concilium.application.runtime import Runtime
 
         rt = Runtime(self.config_root)
         cat = rt.load_catalogo(catalog_id)
@@ -606,7 +603,7 @@ class ConciliumService:
             return {"version": resolved_version, "cubo_analitico": None}
         cubo = getattr(canonical, "cubo_analitico", None)
         if cubo is None:
-            from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
+            from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
 
             cubo = CuboAnaliticoBuilder().build(canonical)
         return {"version": resolved_version, "cubo_analitico": cubo.to_dict() if cubo else None}
@@ -615,7 +612,7 @@ class ConciliumService:
     @staticmethod
     def get_cubo_pool_projection_contract() -> dict[str, Any]:
         """ADR-086 D6.1: contrato navegável das faces do cubo de pool."""
-        from concilium.application.services.cubo_pool_projection import (
+        from concilium.application.services.analytics.cubo_pool_projection import (
             cubo_pool_projection_contract,
         )
 
@@ -633,7 +630,7 @@ class ConciliumService:
         instancia_id: str | None = None,
     ) -> dict[str, Any]:
         """ADR-086 D6.1: projeção honesta e descritiva da decomposição de pool de recursos."""
-        from concilium.application.services.cubo_pool_projection import (
+        from concilium.application.services.analytics.cubo_pool_projection import (
             resolve_cubo_pool_projection,
         )
 
@@ -726,7 +723,7 @@ class ConciliumService:
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
         top_n: int,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str]:
-        from .cube_projection_views import resolve_cubo_projection_rows
+        from .analytics.cube_projection_views import resolve_cubo_projection_rows
 
         return resolve_cubo_projection_rows(cubo, face, granularidade, top_n)
 
@@ -735,7 +732,7 @@ class ConciliumService:
         week_iso: str,
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
     ) -> str:
-        from .cube_projection_views import bucket_from_week_iso
+        from .analytics.cube_projection_views import bucket_from_week_iso
 
         return bucket_from_week_iso(week_iso, granularidade)
 
@@ -746,7 +743,7 @@ class ConciliumService:
         threshold_a: float,
         threshold_b: float,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
-        from .cube_projection_views import resolve_abc_curva_rows
+        from .analytics.cube_projection_views import resolve_abc_curva_rows
 
         return resolve_abc_curva_rows(canonical, top_n, threshold_a, threshold_b)
 
@@ -756,7 +753,7 @@ class ConciliumService:
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
         top_n: int,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
-        from .cube_projection_views import resolve_s_curve_rows
+        from .analytics.cube_projection_views import resolve_s_curve_rows
 
         return resolve_s_curve_rows(canonical, granularidade, top_n)
 
@@ -766,7 +763,7 @@ class ConciliumService:
         granularidade: Literal["semana", "mes", "bimestre", "trimestre", "semestre", "ano"],
         top_n: int,
     ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str, str, dict[str, Any]]:
-        from .cube_projection_views import resolve_recursos_ativos_rows
+        from .analytics.cube_projection_views import resolve_recursos_ativos_rows
 
         return resolve_recursos_ativos_rows(canonical, granularidade, top_n)
 
@@ -787,21 +784,8 @@ class ConciliumService:
         abc_threshold_b: float = 0.95,
     ) -> dict[str, Any]:
         """ADR-069: Projeções navegáveis do cubo para UX iterativa de filtros."""
-        canonical, resolved_version = self._load_canonical_for_version(project_id, version)
-        if canonical is None:
-            return {
-                "version": resolved_version,
-                "face": face,
-                "granularidade": granularidade,
-                "rows": [],
-                "filtros_aplicados": {},
-            }
-        cubo = getattr(canonical, "cubo_analitico", None)
-        if cubo is None:
-            from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
-
-            cubo = CuboAnaliticoBuilder().build(canonical)
-
+        # Validate parameters early — before loading canonical, so callers get
+        # immediate errors on invalid face/granularidade regardless of project state.
         allowed_faces = {
             "tempo_natureza",
             "tempo_componente",
@@ -857,10 +841,25 @@ class ConciliumService:
         if resolved_aggregation_mode not in face_aggregation_modes:
             raise ValueError(f"Aggregation mode inválido para a face: {resolved_aggregation_mode} em {face}")
 
+        canonical, resolved_version = self._load_canonical_for_version(project_id, version)
+        if canonical is None:
+            return {
+                "version": resolved_version,
+                "face": face,
+                "granularidade": granularidade,
+                "rows": [],
+                "filtros_aplicados": {},
+            }
+        cubo = getattr(canonical, "cubo_analitico", None)
+        if cubo is None:
+            from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+            cubo = CuboAnaliticoBuilder().build(canonical)
+
         bounded_top_n = max(1, min(int(top_n), 2000))
         cubo_filtrado = cubo.slice(categoria=categoria, atividade_id=atividade_id, componente_bdi=componente_bdi)
 
-        from .cube_projection_views import build_cube_projection_payload
+        from .analytics.cube_projection_views import build_cube_projection_payload
 
         projection_payload = build_cube_projection_payload(
             canonical=canonical,

@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from concilium.application.benchmarks.batch import find_benchmark_reference
-from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
+from concilium.application.benchmarks.execution.batch import find_benchmark_reference
+from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
 
 
 @dataclass(frozen=True)

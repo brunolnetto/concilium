@@ -219,7 +219,7 @@ def read_binary_b64(
     kind, path = hit
 
     if transport is None:
-        from concilium.application.services.artifact_transport import LocalBase64Transport
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
 
         transport = LocalBase64Transport(max_mb=max_mb)
 
@@ -311,7 +311,7 @@ def build_bundle(
     nome_zip = f"{root_folder}.zip"
 
     if transport is None:
-        from concilium.application.services.artifact_transport import LocalBase64Transport
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
 
         transport = LocalBase64Transport(max_mb=50.0)
 

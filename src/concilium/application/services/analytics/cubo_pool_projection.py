@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from concilium.domain.services.cubo_pool_builder import (
+from concilium.domain.services.analytics.cubo_pool_builder import (
     CuboPoolInstancialBuilder,
     validar_invariantes_cubo_pool,
 )

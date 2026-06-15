@@ -8,9 +8,9 @@ from uuid import uuid4
 
 from concilium.application.pipeline_strategy import get_pipeline_strategy
 
-from .audit_service import AuditService
-from .project_files import DEFAULT_PROJECT_FILES, ProjectFiles
-from .project_repository import ProjectHandle, ProjectRepository
+from .project.audit_service import AuditService
+from .project.project_files import DEFAULT_PROJECT_FILES, ProjectFiles
+from .project.project_repository import ProjectHandle, ProjectRepository
 from .service_support import build_summary, deep_merge
 
 

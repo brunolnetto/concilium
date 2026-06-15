@@ -10,7 +10,7 @@ from __future__ import annotations
 import html
 from io import BytesIO
 
-from concilium.domain.models.campaign import CampaignBundleCube, CampaignOutputBundle
+from concilium.domain.models.campaign.campaign import CampaignBundleCube, CampaignOutputBundle
 
 
 # ---------------------------------------------------------------------------
