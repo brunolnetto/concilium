@@ -29,7 +29,7 @@ from concilium.domain.models.canonical import (
     Projeto,
     RegimeTrabalho,
 )
-from concilium.domain.models.catalogo import (
+from concilium.domain.models.catalog.catalogo import (
     ComposicaoPadraoEquipe,
     EquipamentoEquipe,
     FuncaoEquipe,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from concilium.application.services.catalog_reasonability import build_catalog_reasonability_artifact
+from concilium.application.services.catalog.catalog_reasonability import build_catalog_reasonability_artifact
 
 
 def test_reasonability_artifact_flags_missing_productivity_and_team() -> None:

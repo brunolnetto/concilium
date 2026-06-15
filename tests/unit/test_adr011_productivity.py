@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concilium.domain.models.producao import (
+from concilium.domain.models.catalog.producao import (
     ComponenteCombustivel,
     ComponenteEquipamento,
     ComponenteMaoDeObra,

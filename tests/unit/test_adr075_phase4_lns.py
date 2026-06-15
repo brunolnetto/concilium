@@ -14,8 +14,8 @@ from concilium.application.scheduling.models import (
     ResourcePool,
     ScheduleOutput,
 )
-from concilium.domain.models.optimization import RampProfile
-from concilium.domain.services.matching_oracle import MatchingOracle
+from concilium.domain.models.analytics.optimization import RampProfile
+from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

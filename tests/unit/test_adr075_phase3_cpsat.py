@@ -17,7 +17,7 @@ from concilium.application.scheduling.models import (
     ResourcePool,
     ScheduleOutput,
 )
-from concilium.domain.models.optimization import RampProfile
+from concilium.domain.models.analytics.optimization import RampProfile
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

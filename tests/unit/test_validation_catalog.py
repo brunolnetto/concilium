@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from concilium.domain.models.constraint_violation import ConstraintViolation
+from concilium.domain.models.project.constraint_violation import ConstraintViolation
 from concilium.domain.validations.catalog import ValidationCode, make_violation
 
 

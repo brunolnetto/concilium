@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from concilium.application.services.project_service import ProjectService
+from concilium.application.services.project.project_service import ProjectService
 from concilium.presentation.ui.helpers.helpers import extract_bdi_dict, extract_eap_items_for_policy, safe_count_eap
 
 

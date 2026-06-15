@@ -1,96 +1,9 @@
-"""Coverage boost tests for milp.py and fuel.py.
-
-These tests target the remaining missing lines in:
-- concilium/scheduling/milp.py (lines 34-35, 71, 181)
-- concilium/clients/fuel.py (lines 181-189, the __main__ block)
-"""
+"""Coverage boost test for fuel.py __main__ block."""
 
 from __future__ import annotations
 
-import importlib
 import sys
 from unittest.mock import MagicMock, patch
-
-import pytest
-
-from concilium.application.scheduling.milp import MILPScheduler
-from concilium.application.scheduling.models import (
-    Activity,
-    ActivityDAG,
-    ResourcePool,
-    ScheduleError,
-)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# milp.py — missing lines 34-35, 71, 181
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
-class TestMILPMissingLines:
-    """Cover the remaining lines in milp.py."""
-
-    def test_milp_no_pulp_raises_import_error(self):
-        """schedule() raises ImportError when _HAS_PULP is False (line 71)."""
-        import concilium.application.scheduling.milp as milp_mod
-
-        acts = [Activity(activity_id="A", description="A", duration_weeks=1)]
-        dag = ActivityDAG(activities=acts, precedence=[])
-        pool = ResourcePool(resources={})
-
-        with patch.object(milp_mod, "_HAS_PULP", False):
-            scheduler = MILPScheduler()
-            with pytest.raises(ImportError, match="PuLP is required"):
-                scheduler.schedule(acts, dag, pool, deadline_weeks=5)
-
-    def test_milp_module_reload_without_pulp_sets_has_pulp_false(self):
-        """Covers lines 34-35 (except ImportError: _HAS_PULP = False) by blocking pulp import."""
-        import concilium.application.scheduling.milp as milp_mod
-
-        original_pulp = sys.modules.get("pulp")
-        # Block pulp so the except ImportError branch executes on reload
-        sys.modules["pulp"] = None  # type: ignore[assignment]
-        try:
-            importlib.reload(milp_mod)
-            assert milp_mod._HAS_PULP is False
-        finally:
-            # Restore pulp module
-            if original_pulp is not None:
-                sys.modules["pulp"] = original_pulp
-            elif "pulp" in sys.modules:
-                del sys.modules["pulp"]
-            # Reload back to working state
-            importlib.reload(milp_mod)
-            assert milp_mod._HAS_PULP is True
-
-    def test_milp_resource_infeasible_raises_schedule_error(self):
-        """MILP solver returns infeasible when resource constraints are violated (line 181).
-
-        Two activities each needing 5 workers with a pool of 5 and deadline=3
-        means they MUST overlap (3 weeks total, each 2 weeks, sequential requires 4)
-        but cannot overlap due to resources.
-        """
-        acts = [
-            Activity(
-                activity_id="A",
-                description="Task A",
-                duration_weeks=2,
-                required_resources={"workers": 5},
-            ),
-            Activity(
-                activity_id="B",
-                description="Task B",
-                duration_weeks=2,
-                required_resources={"workers": 5},
-            ),
-        ]
-        dag = ActivityDAG(activities=acts, precedence=[])
-        pool = ResourcePool(resources={"workers": 5})
-        scheduler = MILPScheduler(timeout_seconds=30)
-        # Both activities must overlap at some week (deadline=3, each dur=2)
-        # but they can't (pool = 5 = max one at a time)
-        with pytest.raises(ScheduleError):
-            scheduler.schedule(acts, dag, pool, deadline_weeks=3)
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # fuel.py — lines 181-189 (__main__ block)

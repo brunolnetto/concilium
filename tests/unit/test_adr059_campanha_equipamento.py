@@ -19,11 +19,11 @@ import math
 
 import pytest
 
-from concilium.domain.models.campanha_equipamento import (
+from concilium.domain.models.campaign.campanha_equipamento import (
     CampanhaEquipamento,
     RegimePermanencia,
 )
-from concilium.domain.services.campanha_equipamento_builder import CampanhaEquipamentoBuilder
+from concilium.domain.services.campaign.campanha_equipamento_builder import CampanhaEquipamentoBuilder
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from concilium.application.services.contexto_version_service import (
+from concilium.application.services.catalog.contexto_version_service import (
     ConfigVersionService,
     ContextoVersionService,
     PerfilVersionService,

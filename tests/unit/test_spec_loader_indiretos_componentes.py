@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from concilium.application.benchmarks.spec_loader import BenchmarkSpecLoader
+from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
 
 
 def _ref_minimo_com_indiretos() -> dict:

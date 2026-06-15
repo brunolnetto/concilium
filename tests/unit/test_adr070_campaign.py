@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from concilium.application.services.campaign_service import (
+from concilium.application.services.campaign.campaign_service import (
     _apply_overrides,
     calcular_pareto,
     classificar_EF,
@@ -20,7 +20,7 @@ from concilium.application.services.campaign_service import (
     extrair_vetor_O,
     extrair_vetor_EF,
 )
-from concilium.domain.models.campaign import (
+from concilium.domain.models.campaign.campaign import (
     CenarioAvaliado,
     GoResearchCampaignBundle,
     ParametroSweep,
@@ -389,7 +389,7 @@ def test_extrair_vetor_EF_bloqueado_gates():
 
 # ── Testes de _apply_scalar e _set_path ([*] wildcard + __scale__) ──────────
 
-from concilium.application.services.campaign_service import (
+from concilium.application.services.campaign.campaign_service import (
     _apply_scalar,
     _set_path,
     _apply_post_load_overrides,
@@ -480,7 +480,7 @@ class TestApplyPostLoadOverrides:
 
 # ── ADR-108: cubo_analitico e cronograma alimentam vetores ───────────────────
 
-from concilium.application.services.campaign_service import (
+from concilium.application.services.campaign.campaign_service import (
     _cubo_analitico_agregado,
     _cronograma_utilizacao,
 )
@@ -582,7 +582,7 @@ class TestCronogramaUtilizacao:
 # Feature 1 — per_item independent sweep
 # ---------------------------------------------------------------------------
 
-from concilium.application.services.campaign_service import _apply_per_item_post_load
+from concilium.application.services.campaign.campaign_service import _apply_per_item_post_load
 
 
 def _make_activities_spec_obj(activities: list[dict]) -> SimpleNamespace:
@@ -753,7 +753,7 @@ class TestPerItemSweep:
         assert len(grid) == 4
 
         # Para cada cenário, aplicar post_load_overrides e verificar
-        from concilium.application.services.campaign_service import _apply_post_load_overrides
+        from concilium.application.services.campaign.campaign_service import _apply_post_load_overrides
         import copy
 
         for _sv, variados in grid:
@@ -777,7 +777,7 @@ class TestPerItemSweep:
 # Feature 2 — cpu_alternativo sweep (Classe 4 — ADR-070 F4)
 # ---------------------------------------------------------------------------
 
-from concilium.application.services.campaign_service import _apply_cpu_alt_override
+from concilium.application.services.campaign.campaign_service import _apply_cpu_alt_override
 
 
 class TestCpuAlternativoSweep:
@@ -999,3 +999,139 @@ class TestRestricoesMercadoSweep:
         bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
         assert bundle.cardinality() == 6
         assert len(gerar_grid(bundle)) == 6
+
+
+class TestClasse3RestricoesMercadoPool:
+    """Classe 3: restricoes_mercado top-level propaga para inferir_pool_minimo."""
+
+    def test_restricoes_mercado_propagadas_para_pool_inference(self):
+        """restricoes_mercado no spec top-level limita o pool inferido."""
+        from concilium.application.scheduling.models import Activity, ActivityDAG, ResourcePool
+        from concilium.application.scheduling.pool_inference import inferir_pool_minimo_from_spec
+
+        spec = {
+            "activities": [
+                {"item_id": "A", "duration_weeks": 2, "required_resources": {"EQUIPE-R": 3}},
+                {"item_id": "B", "duration_weeks": 2, "required_resources": {"EQUIPE-R": 3}},
+            ],
+            "precedence": [],
+            "pool_config": {"objetivo": "minimizar_prazo"},
+            "restricoes_mercado": {"EQUIPE-R": 2},  # mercado só tem 2
+        }
+        pool, diag = inferir_pool_minimo_from_spec(spec)
+        # Pico seria 6 (ambas paralelas), mas mercado limita a 2
+        assert pool.get("EQUIPE-R", 999) <= 2, f"Pool {pool} deve ser limitado a 2 pelo mercado"
+
+    def test_restricoes_mercado_ausente_nao_limita(self):
+        """Sem restricoes_mercado, pool sobe ao pico normalmente."""
+        from concilium.application.scheduling.pool_inference import inferir_pool_minimo_from_spec
+
+        spec = {
+            "activities": [
+                {"item_id": "A", "duration_weeks": 2, "required_resources": {"EQUIPE-R": 3}},
+            ],
+            "precedence": [],
+            "pool_config": {"objetivo": "minimizar_prazo"},
+        }
+        pool, _ = inferir_pool_minimo_from_spec(spec)
+        assert pool.get("EQUIPE-R", 0) == 3
+
+    def test_restricoes_mercado_nao_dict_ignorado(self):
+        """Valor inválido (não-dict) em restricoes_mercado é ignorado sem erro."""
+        from concilium.application.scheduling.pool_inference import inferir_pool_minimo_from_spec
+
+        spec = {
+            "activities": [
+                {"item_id": "A", "duration_weeks": 1, "required_resources": {"R": 1}},
+            ],
+            "precedence": [],
+            "restricoes_mercado": "invalido",
+        }
+        pool, _ = inferir_pool_minimo_from_spec(spec)
+        assert isinstance(pool, dict)
+
+
+class TestClasse4CpuAlternativo:
+    """Classe 4: listar_cpus_alternativos e sugerir_levers_cpu_alternativo."""
+
+    def test_listar_cpus_alternativos_dmt(self, tmp_path):
+        """CPU com cpus_alternativos declarado retorna lista correta."""
+        from concilium.application.services.campaign.campaign_service import listar_cpus_alternativos
+
+        cpus_dir = tmp_path / "catalogos" / "mendeslobo" / "cpus"
+        cpus_dir.mkdir(parents=True)
+        (cpus_dir / "CPU-A.json").write_text(
+            '{"descricao": "A", "cpus_alternativos": ["CPU-B"]}', encoding="utf-8"
+        )
+        alts = listar_cpus_alternativos("CPU-A", tmp_path)
+        assert alts == ["CPU-B"]
+
+    def test_listar_cpus_alternativos_sem_campo(self, tmp_path):
+        """CPU sem cpus_alternativos retorna lista vazia."""
+        from concilium.application.services.campaign.campaign_service import listar_cpus_alternativos
+
+        cpus_dir = tmp_path / "catalogos" / "mendeslobo" / "cpus"
+        cpus_dir.mkdir(parents=True)
+        (cpus_dir / "CPU-X.json").write_text('{"descricao": "X"}', encoding="utf-8")
+        assert listar_cpus_alternativos("CPU-X", tmp_path) == []
+
+    def test_listar_cpus_alternativos_inexistente(self, tmp_path):
+        """CPU inexistente retorna lista vazia sem exceção."""
+        from concilium.application.services.campaign.campaign_service import listar_cpus_alternativos
+
+        assert listar_cpus_alternativos("CPU-NAOEXISTE", tmp_path) == []
+
+    def test_sugerir_levers_cpu_alternativo(self, tmp_path):
+        """sugerir_levers retorna ParametroSweep para item com CPU que tem alternativo."""
+        from concilium.application.services.campaign.campaign_service import sugerir_levers_cpu_alternativo
+
+        cpus_dir = tmp_path / "catalogos" / "mendeslobo" / "cpus"
+        cpus_dir.mkdir(parents=True)
+        (cpus_dir / "CPU-DMT2000.json").write_text(
+            '{"descricao": "DMT2000", "cpus_alternativos": ["CPU-DMT3000"]}', encoding="utf-8"
+        )
+        base_spec = {
+            "spec": {
+                "eap": [
+                    {"item_id": "eap-01", "cpu_id": "CPU-DMT2000", "quantitativo": 100},
+                    {"item_id": "eap-02", "cpu_id": "CPU-SEM-ALT", "quantitativo": 50},
+                ]
+            }
+        }
+        levers = sugerir_levers_cpu_alternativo(base_spec, tmp_path)
+        assert len(levers) == 1
+        lv = levers[0]
+        assert lv.scope == "cpu_alternativo"
+        assert lv.item_ids == ["eap-01"]
+        assert "CPU-DMT2000" in lv.valores
+        assert "CPU-DMT3000" in lv.valores
+
+    def test_sugerir_levers_sem_alternativos(self, tmp_path):
+        """EAP com CPUs sem alternativo retorna lista vazia."""
+        from concilium.application.services.campaign.campaign_service import sugerir_levers_cpu_alternativo
+
+        cpus_dir = tmp_path / "catalogos" / "mendeslobo" / "cpus"
+        cpus_dir.mkdir(parents=True)
+        base_spec = {"spec": {"eap": [{"item_id": "x", "cpu_id": "CPU-NAOEXISTE"}]}}
+        assert sugerir_levers_cpu_alternativo(base_spec, tmp_path) == []
+
+    def test_cpu_alternativo_lever_gera_cenarios_corretos(self, tmp_path):
+        """Lever cpu_alternativo com 2 valores para 1 item gera 2 cenários."""
+        from concilium.application.services.campaign.campaign_service import (
+            sugerir_levers_cpu_alternativo, gerar_grid
+        )
+        from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle
+
+        cpus_dir = tmp_path / "catalogos" / "mendeslobo" / "cpus"
+        cpus_dir.mkdir(parents=True)
+        (cpus_dir / "CPU-A.json").write_text(
+            '{"descricao":"A","cpus_alternativos":["CPU-B"]}', encoding="utf-8"
+        )
+        base_spec = {"spec": {"eap": [{"item_id": "i1", "cpu_id": "CPU-A"}]}}
+        levers = sugerir_levers_cpu_alternativo(base_spec, tmp_path)
+        bundle = GoResearchCampaignBundle(base_spec=base_spec, sweep=levers)
+        assert bundle.cardinality() == 2
+        grid = gerar_grid(bundle)
+        assert len(grid) == 2
+        cpu_ids = [sv["spec"]["eap"][0]["cpu_id"] for sv, _ in grid]
+        assert set(cpu_ids) == {"CPU-A", "CPU-B"}

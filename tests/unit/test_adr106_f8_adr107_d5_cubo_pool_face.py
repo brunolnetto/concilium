@@ -28,12 +28,12 @@ import pytest
 
 class TestCelulaOcupacaoPool:
     def test_import_existe(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         assert CelulaOcupacaoPool is not None
 
     def test_instanciavel_com_campos_obrigatorios(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         c = CelulaOcupacaoPool(
             item_id="EAP-001",
@@ -45,7 +45,7 @@ class TestCelulaOcupacaoPool:
         assert c.tipo_recurso == "EQUIP-ESCAV-22T"
 
     def test_defaults_zero(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         c = CelulaOcupacaoPool(item_id="X", semana="S001", tipo_recurso="EQUIP-A")
         assert c.horas_ativas == pytest.approx(0.0)
@@ -54,20 +54,20 @@ class TestCelulaOcupacaoPool:
         assert c.custo_idle == pytest.approx(0.0)
 
     def test_estado_default_ativo(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         c = CelulaOcupacaoPool(item_id="X", semana="S001", tipo_recurso="R")
         assert c.estado == "ativo"
 
     def test_estados_aceitos(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         for estado in ("mobilizando", "ativo", "idle", "desmobilizando", "off"):
             c = CelulaOcupacaoPool(item_id="X", semana="S001", tipo_recurso="R", estado=estado)
             assert c.estado == estado
 
     def test_utilizacao_ativa(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         c = CelulaOcupacaoPool(
             item_id="X",
@@ -79,7 +79,7 @@ class TestCelulaOcupacaoPool:
         assert c.utilizacao == pytest.approx(1.0)
 
     def test_utilizacao_parcial(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         c = CelulaOcupacaoPool(
             item_id="X",
@@ -91,13 +91,13 @@ class TestCelulaOcupacaoPool:
         assert c.utilizacao == pytest.approx(0.5, abs=0.01)
 
     def test_utilizacao_zero_sem_horas(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         c = CelulaOcupacaoPool(item_id="X", semana="S001", tipo_recurso="R")
         assert c.utilizacao == pytest.approx(0.0)
 
     def test_custo_total_soma_ativo_mais_idle(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool
 
         c = CelulaOcupacaoPool(
             item_id="X",
@@ -116,7 +116,7 @@ class TestCelulaOcupacaoPool:
 
 class TestCuboPoolFace:
     def _make_face(self):
-        from concilium.domain.models.cubo_pool import CelulaOcupacaoPool, CuboPoolFace
+        from concilium.domain.models.analytics.cubo_pool import CelulaOcupacaoPool, CuboPoolFace
 
         celulas = (
             CelulaOcupacaoPool(
@@ -149,7 +149,7 @@ class TestCuboPoolFace:
         return CuboPoolFace(projeto_id="PROJ-001", gerado_em="2026-06-11", celulas=celulas)
 
     def test_instanciavel(self):
-        from concilium.domain.models.cubo_pool import CuboPoolFace
+        from concilium.domain.models.analytics.cubo_pool import CuboPoolFace
 
         f = CuboPoolFace(projeto_id="P", gerado_em="2026-01-01")
         assert f.projeto_id == "P"
@@ -205,12 +205,12 @@ class TestCuboPoolFace:
 
 class TestCelulaCombustivel:
     def test_import_existe(self):
-        from concilium.domain.models.cubo_pool import CelulaCombustivel
+        from concilium.domain.models.analytics.cubo_pool import CelulaCombustivel
 
         assert CelulaCombustivel is not None
 
     def test_instanciavel(self):
-        from concilium.domain.models.cubo_pool import CelulaCombustivel
+        from concilium.domain.models.analytics.cubo_pool import CelulaCombustivel
 
         c = CelulaCombustivel(
             item_id="EAP-001",
@@ -222,7 +222,7 @@ class TestCelulaCombustivel:
         assert c.custo == pytest.approx(2_500.0)
 
     def test_defaults(self):
-        from concilium.domain.models.cubo_pool import CelulaCombustivel
+        from concilium.domain.models.analytics.cubo_pool import CelulaCombustivel
 
         c = CelulaCombustivel(item_id="X", semana="S001", tipo_combustivel="eletrico")
         assert c.custo == pytest.approx(0.0)
@@ -231,7 +231,7 @@ class TestCelulaCombustivel:
 
 class TestCuboCombustivelFace:
     def _make_face(self):
-        from concilium.domain.models.cubo_pool import CelulaCombustivel, CuboCombustivelFace
+        from concilium.domain.models.analytics.cubo_pool import CelulaCombustivel, CuboCombustivelFace
 
         celulas = (
             CelulaCombustivel(item_id="EAP-001", semana="S001", tipo_combustivel="diesel_s10", custo=3_000.0),
@@ -241,7 +241,7 @@ class TestCuboCombustivelFace:
         return CuboCombustivelFace(projeto_id="PROJ-001", gerado_em="2026-06-11", celulas=celulas)
 
     def test_instanciavel(self):
-        from concilium.domain.models.cubo_pool import CuboCombustivelFace
+        from concilium.domain.models.analytics.cubo_pool import CuboCombustivelFace
 
         f = CuboCombustivelFace(projeto_id="P", gerado_em="2026-01-01")
         assert f is not None
@@ -272,7 +272,7 @@ class TestCuboCombustivelFace:
         assert len(diesel_only) == 2
 
     def test_face_vazia(self):
-        from concilium.domain.models.cubo_pool import CuboCombustivelFace
+        from concilium.domain.models.analytics.cubo_pool import CuboCombustivelFace
 
         face = CuboCombustivelFace(projeto_id="P", gerado_em="2026-01-01")
         assert face.custo_por_tipo() == {}
@@ -311,7 +311,7 @@ class TestBuildCuboPoolFaceStub:
         assert callable(fn)
 
     def test_retorna_cubo_pool_face(self):
-        from concilium.domain.models.cubo_pool import CuboPoolFace
+        from concilium.domain.models.analytics.cubo_pool import CuboPoolFace
 
         fn = self._import_builder()
         result = fn(equipes_diretas=[], cronograma=[], projeto_id="PROJ-TEST")

@@ -435,7 +435,7 @@ class TestRunDvScenario:
 
     def test_feasible_scenario(self):
         """run_dv_scenario() with feasible result returns status=OK."""
-        from concilium.domain.models.decision_variables import DecisionVariables
+        from concilium.domain.models.project.decision_variables import DecisionVariables
 
         runner = ScenarioRunner(runtime=MagicMock(), project=MagicMock())
         config = ScenarioConfig(
@@ -459,7 +459,7 @@ class TestRunDvScenario:
 
     def test_infeasible_scenario(self):
         """run_dv_scenario() with infeasible result returns status=INFEASIBLE."""
-        from concilium.domain.models.decision_variables import DecisionVariables
+        from concilium.domain.models.project.decision_variables import DecisionVariables
 
         runner = ScenarioRunner(runtime=MagicMock(), project=MagicMock())
         config = ScenarioConfig(
@@ -489,7 +489,7 @@ class TestRunDvScenario:
 
     def test_exception_caught(self):
         """run_dv_scenario() catches exceptions and returns status=ERRO."""
-        from concilium.domain.models.decision_variables import DecisionVariables
+        from concilium.domain.models.project.decision_variables import DecisionVariables
 
         runner = ScenarioRunner(runtime=MagicMock(), project=MagicMock())
         config = ScenarioConfig(

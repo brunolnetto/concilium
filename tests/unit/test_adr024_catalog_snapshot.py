@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from concilium.domain.models.catalog_snapshot import (
+from concilium.domain.models.catalog.snapshot import (
     CatalogSnapshot,
     compute_catalog_diff,
 )

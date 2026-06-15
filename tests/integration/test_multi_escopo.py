@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from concilium.domain.models.resultado_consolidado import BreakdownEscopo, ResultadoConsolidadoProjeto
+from concilium.domain.models.financial.resultado import BreakdownEscopo, ResultadoConsolidadoProjeto
 from concilium.infrastructure.storage.escopo_store import EscopoStore, PlanoStore
 from concilium.infrastructure.storage.project import ProjectStore
 

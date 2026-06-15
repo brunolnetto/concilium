@@ -12,7 +12,7 @@ from concilium.domain.models.canonical import (
     Resultado,
     Venda,
 )
-from concilium.domain.models.decision_variables import DecisionVariables
+from concilium.domain.models.project.decision_variables import DecisionVariables
 
 
 class _FakeSkillResult:

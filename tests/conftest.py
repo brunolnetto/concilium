@@ -231,6 +231,7 @@ def _session_pipeline_sk03(tmp_path_factory, runtime, inputs_escopo_terraplenage
     PERFORMANCE: Skills 01-03 (especialmente 03-catalogo) são as mais lentas (~70s).
     Compartilhar este base é crítico para performance de toda a suite.
     """
+    _start = time.time()
     projetos_root = tmp_path_factory.mktemp("session_sk03")
     proj = ProjectStore.init(projetos_root, "session-sk03-test", "test")
     proj.new_version()
@@ -250,15 +251,23 @@ def _session_pipeline_sk03(tmp_path_factory, runtime, inputs_escopo_terraplenage
     }
     proj.write_json("deliverables_config.json", _deliverables)
 
+    _t = time.time()
     runtime.run_skill("01-escopo-e-eap", proj, inputs=inputs_escopo_terraplenagem)
+    print(f"\n[PERF] sk03/01-escopo-e-eap: {time.time() - _t:.2f}s")
+    
+    _t = time.time()
     with patch(
         "concilium.infrastructure.clients.openmeteo.OpenMeteoClient",
         return_value=mock_openmeteo_aracoiaba,
     ):
         runtime.run_skill("02-produtividade-climatica", proj, inputs={"ano_referencia": 2024})
+    print(f"[PERF] sk03/02-produtividade-climatica: {time.time() - _t:.2f}s")
 
     # Skill 03 é o maior gargalo (~50-60s) - carrega catálogo completo
+    _t = time.time()
     runtime.run_skill("03-catalogo-de-recursos", proj, inputs={})
+    print(f"[PERF] sk03/03-catalogo-de-recursos (GARGALO): {time.time() - _t:.2f}s")
+    print(f"[PERF] Base sk03 completo: {time.time() - _start:.2f}s")
     return proj.root
 
 
@@ -397,13 +406,19 @@ def _wb_sk09(_session_pipeline_sk09):
     Evita N invocações independentes de load_workbook (cada uma ~12–23 s)
     sobre os mesmos bytes. Todos os consumidores são read-only (sheetnames,
     iter_rows) — sem risco de estado compartilhado entre testes.
+    
+    LAZY IMPORT: openpyxl só é importado quando fixture é realmente usada,
+    reduzindo tempo de inicialização para testes que não precisam de Excel.
     """
     from io import BytesIO
 
     from openpyxl import load_workbook
 
     _, r = _session_pipeline_sk09
-    return load_workbook(BytesIO(r.excel_bytes))
+    _start = time.time()
+    wb = load_workbook(BytesIO(r.excel_bytes), data_only=True, read_only=True)
+    print(f"\n[PERF] load_workbook: {time.time() - _start:.2f}s")
+    return wb
 
 
 @pytest.fixture

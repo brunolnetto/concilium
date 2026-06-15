@@ -11,7 +11,7 @@ from concilium.domain.models.canonical import (
     RecursoPool,
     RegimeTrabalho,
 )
-from concilium.domain.models.decision_variables import DecisionVariables
+from concilium.domain.models.project.decision_variables import DecisionVariables
 
 
 def test_planning_loop_detects_pool_violation():

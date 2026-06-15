@@ -172,7 +172,7 @@ class TestRuntimeEdgeCases:
     def test_plan_with_decisions_calls_adjust_schedule(self):
         """plan_with_decisions calls adjust_schedule (lines 333-335)."""
         from concilium.application.runtime import Runtime
-        from concilium.domain.models.decision_variables import DecisionVariables
+        from concilium.domain.models.project.decision_variables import DecisionVariables
 
         config_root = Path(__file__).parents[3] / "config"
         r = Runtime(config_root)

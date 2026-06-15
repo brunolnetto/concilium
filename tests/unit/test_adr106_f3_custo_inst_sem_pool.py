@@ -52,7 +52,7 @@ def _make_equipe(
 
 
 def _import():
-    from concilium.domain.services.equipe_custo_engine import _fill_custo_inst_sem_pool
+    from concilium.domain.services.financial.equipe_custo_engine import _fill_custo_inst_sem_pool
 
     return _fill_custo_inst_sem_pool
 

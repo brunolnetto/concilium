@@ -3,8 +3,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from concilium.application.benchmarks.inference import BenchmarkInferenceService
-from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-from concilium.application.benchmarks.spec_loader import ProjectSpec
+from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
+from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
 
 
 def _fake_projection() -> SimpleNamespace:
@@ -42,7 +42,7 @@ def test_report_reference_projection_parity_historical_vs_v2(monkeypatch) -> Non
     }
 
     monkeypatch.setattr(
-        "concilium.application.benchmarks.report_builder.BenchmarkProjection.from_canonical",
+        "concilium.application.benchmarks.report.report_builder.BenchmarkProjection.from_canonical",
         lambda canonical: _fake_projection(),
     )
 

@@ -6,7 +6,7 @@ import zipfile
 
 import pytest
 
-from concilium.application.services import artifact_bundle as ab
+from concilium.application.services.artifact import artifact_bundle as ab
 
 
 class _StoreStub:
@@ -146,7 +146,7 @@ class TestBundle:
 
 class TestTransport:
     def test_local_base64_inline(self):
-        from concilium.application.services.artifact_transport import LocalBase64Transport
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
 
         t = LocalBase64Transport(max_mb=10.0)
         out = t.deliver(nome="x.bin", data=b"hello", mime="application/octet-stream")
@@ -154,7 +154,7 @@ class TestTransport:
         assert base64.b64decode(out["conteudo_base64"]) == b"hello"
 
     def test_local_acima_do_limite_com_path(self, tmp_path):
-        from concilium.application.services.artifact_transport import LocalBase64Transport
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
 
         p = tmp_path / "big.bin"
         p.write_bytes(b"x" * 100)
@@ -164,7 +164,7 @@ class TestTransport:
         assert out["caminho"] == str(p)
 
     def test_local_acima_do_limite_sem_path_usa_base64_com_aviso(self):
-        from concilium.application.services.artifact_transport import LocalBase64Transport
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
 
         t = LocalBase64Transport(max_mb=0.0)
         out = t.deliver(nome="bundle.zip", data=b"x" * 100, mime="application/zip")
@@ -172,7 +172,7 @@ class TestTransport:
         assert "aviso" in out
 
     def test_get_transport_default_local(self):
-        from concilium.application.services.artifact_transport import (
+        from concilium.application.services.artifact.artifact_transport import (
             LocalBase64Transport,
             get_transport,
         )
@@ -180,7 +180,7 @@ class TestTransport:
         assert isinstance(get_transport(), LocalBase64Transport)
 
     def test_get_transport_azure_sem_env_levanta(self, monkeypatch):
-        from concilium.application.services.artifact_transport import get_transport
+        from concilium.application.services.artifact.artifact_transport import get_transport
 
         # Sem CONCILIUM__AZURE_CONTAINER, o adapter Azure recusa instanciar.
         monkeypatch.delenv("CONCILIUM__AZURE_CONTAINER", raising=False)
@@ -207,7 +207,7 @@ class _FakePort:
 
 class TestBlobStorageTransport:
     def test_entrega_via_url_quando_backend_suporta(self):
-        from concilium.application.services.artifact_transport import BlobStorageTransport
+        from concilium.application.services.artifact.artifact_transport import BlobStorageTransport
 
         port = _FakePort(url="https://blob.example/sas?token=abc")
         t = BlobStorageTransport(port, prefixo="entregas")
@@ -218,7 +218,7 @@ class TestBlobStorageTransport:
         assert port.gravados["entregas/bundle.zip"] == b"zipdata"
 
     def test_fallback_base64_quando_sem_url(self):
-        from concilium.application.services.artifact_transport import BlobStorageTransport
+        from concilium.application.services.artifact.artifact_transport import BlobStorageTransport
 
         port = _FakePort(url=None)
         out = BlobStorageTransport(port).deliver(nome="a.bin", data=b"xyz", mime="application/octet-stream")
@@ -226,7 +226,7 @@ class TestBlobStorageTransport:
         assert base64.b64decode(out["conteudo_base64"]) == b"xyz"
 
     def test_fallback_base64_quando_upload_falha(self):
-        from concilium.application.services.artifact_transport import BlobStorageTransport
+        from concilium.application.services.artifact.artifact_transport import BlobStorageTransport
 
         port = _FakePort(raise_on_write=True)
         out = BlobStorageTransport(port).deliver(nome="a.bin", data=b"xyz", mime="application/octet-stream")
@@ -253,7 +253,7 @@ class TestBlobStorageTransport:
         assert _Min().gerar_url_temporaria("x") is None
 
     def test_read_binary_respeita_transport_injetado(self, store):
-        from concilium.application.services.artifact_transport import LocalBase64Transport
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
 
         res = ab.read_binary_b64(store, None, "gantt_cronograma.png", transport=LocalBase64Transport(max_mb=10.0))
         assert res["encoding"] == "base64"

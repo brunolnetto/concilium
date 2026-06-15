@@ -29,11 +29,11 @@ from collections import defaultdict
 
 import pytest
 
-from concilium.domain.models.cubo_analitico import (
+from concilium.domain.models.analytics.cubo_analitico import (
     CelulaAnalitica,
     CuboAnalitico,
 )
-from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
+from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -225,45 +225,13 @@ def test_02_auto_infeasivel_quando_tudo_falha():
     canonical = _make_canonical(num_activities=2, deadline_days=20)
 
     target = "concilium.application.skills.cronograma.explore_schedules"
-    milp_target = "concilium.application.skills.cronograma._try_milp"
-    with patch(target, side_effect=always_empty), patch(milp_target, return_value=None):
+    with patch(target, side_effect=always_empty):
         result = run_cronograma(canonical, {"deadline_weeks": 20})
 
     erros = [v for v in result.validacoes if v.status == "ERRO" and v.codigo == "VAL-SCHED-05"]
     assert erros, "Expected VAL-SCHED-05 ERRO when infeasible"
     assert result.canonical.cronograma is None, "cronograma must not be set when infeasible"
 
-
-def test_02_auto_milp_fallback_quando_heuristicas_falham():
-    """When heuristics fail but MILP succeeds, VAL-SCHED-04 AVISO is emitted."""
-    fake_milp_candidate = ScheduledActivityCanonical(
-        activity_id="act-01",
-        start_week=0,
-        end_week=2,
-        duration_weeks=2,
-    )
-    from concilium.domain.models.canonical import ScheduleCandidateCanonical
-
-    fake_candidate = ScheduleCandidateCanonical(
-        heuristic="MILP",
-        scheduled_activities=[fake_milp_candidate],
-        makespan=2,
-        quality_score=0.85,
-    )
-
-    def always_empty(*args, **kwargs):
-        return []
-
-    canonical = _make_canonical(num_activities=1, deadline_days=20)
-
-    target = "concilium.application.skills.cronograma.explore_schedules"
-    milp_target = "concilium.application.skills.cronograma._try_milp"
-    with patch(target, side_effect=always_empty), patch(milp_target, return_value=fake_candidate):
-        result = run_cronograma(canonical, {"deadline_weeks": 20})
-
-    aviso_codes = {v.codigo for v in result.validacoes if v.status == "AVISO"}
-    assert "VAL-SCHED-04" in aviso_codes, "Expected VAL-SCHED-04 when MILP used"
-    assert result.canonical.cronograma is not None
 
 
 def test_02_auto_algorithm_override():

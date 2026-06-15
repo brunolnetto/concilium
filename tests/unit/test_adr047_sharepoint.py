@@ -27,7 +27,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 from concilium.infrastructure.storage.storage_project_repository import (
     StorageProjectHandle,
     StorageProjectRepository,
@@ -75,14 +75,14 @@ class TestLocalBlobStorageAprovacao:
 
 class TestSharePointCredential:
     def test_from_env_missing_raises(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointCredential
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointCredential
 
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(EnvironmentError):
                 SharePointCredential.from_env()
 
     def test_from_env_success(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointCredential
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointCredential
 
         env = {
             "CONCILIUM__SP_TENANT_ID": "t-id",
@@ -95,13 +95,13 @@ class TestSharePointCredential:
             assert cred.client_secret == "secret"
 
     def test_no_secret_no_cert_raises(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointCredential
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointCredential
 
         with pytest.raises(ValueError):
             SharePointCredential(tenant_id="t", client_id="c")
 
     def test_acquire_token_msal_missing_raises(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointCredential
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointCredential
 
         cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
         with patch.dict("sys.modules", {"msal": None}):
@@ -109,7 +109,7 @@ class TestSharePointCredential:
                 cred.acquire_token()
 
     def test_acquire_token_success(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointCredential
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointCredential
 
         cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
         mock_app = MagicMock()
@@ -121,7 +121,7 @@ class TestSharePointCredential:
         assert token == "tok123"
 
     def test_acquire_token_auth_failure_raises(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import SharePointCredential
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointCredential
 
         cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
         mock_app = MagicMock()
@@ -139,7 +139,7 @@ class TestSharePointCredential:
 
 
 def _make_storage(tmp_cache: Path | None = None):
-    from concilium.infrastructure.adapters.sharepoint_blob_storage import (
+    from concilium.infrastructure.adapters.blob_storage.sharepoint import (
         SharePointBlobStorage,
         SharePointCredential,
     )
@@ -224,7 +224,7 @@ class TestSharePointBlobStorage:
             mock_httpx.put.assert_called_once()
 
     def test_gravar_blob_412_raises_concurrency_error(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import StorageConcurrencyError
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import StorageConcurrencyError
 
         with tempfile.TemporaryDirectory() as tmp:
             storage = _make_storage(Path(tmp))
@@ -234,7 +234,7 @@ class TestSharePointBlobStorage:
                     storage.gravar_blob("conflict.json", b"data")
 
     def test_gravar_blob_read_only_raises(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import (
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import (
             SharePointBlobStorage,
             SharePointCredential,
         )
@@ -314,7 +314,7 @@ class TestSharePointBlobStorage:
             assert result["status"] == "error"
 
     def test_offline_mode_uses_stale_cache(self):
-        from concilium.infrastructure.adapters.sharepoint_blob_storage import (
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import (
             SharePointBlobStorage,
             SharePointCredential,
         )

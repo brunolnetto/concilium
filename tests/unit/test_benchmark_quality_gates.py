@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-from concilium.application.benchmarks.spec_loader import ProjectSpec
+from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
+from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
 
 
 def _fake_projection(**kwargs):
@@ -53,7 +53,7 @@ class TestBenchmarkQualityGates:
         )
 
         monkeypatch.setattr(
-            "concilium.application.benchmarks.report_builder.BenchmarkProjection.from_canonical",
+            "concilium.application.benchmarks.report.report_builder.BenchmarkProjection.from_canonical",
             lambda canonical: fake_projection,
         )
 
@@ -101,7 +101,7 @@ class TestBenchmarkQualityGates:
             }
         )
         monkeypatch.setattr(
-            "concilium.application.benchmarks.report_builder.BenchmarkProjection.from_canonical",
+            "concilium.application.benchmarks.report.report_builder.BenchmarkProjection.from_canonical",
             lambda canonical: fake_projection,
         )
 
@@ -109,7 +109,7 @@ class TestBenchmarkQualityGates:
             raise AssertionError("_extract_referencia_confronto should not run when inference_pack is provided")
 
         monkeypatch.setattr(
-            "concilium.application.benchmarks.report_builder.BenchmarkReportBuilder._extract_referencia_confronto",
+            "concilium.application.benchmarks.report.report_builder.BenchmarkReportBuilder._extract_referencia_confronto",
             staticmethod(_unexpected_extract),
         )
 

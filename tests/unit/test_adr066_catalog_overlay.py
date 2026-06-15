@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from concilium.application.services.catalog_resolver import (
+from concilium.application.services.catalog.catalog_resolver import (
     CatalogResolutionTrace,
     CatalogResolver,
     _deep_merge,

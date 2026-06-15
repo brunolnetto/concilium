@@ -15,7 +15,7 @@ import pytest
 
 
 def _import():
-    from concilium.domain.services.tributacao import (
+    from concilium.domain.services.financial.tributacao import (
         TaxationResult,
         calculate_employer_clt,
         calculate_inss_employee,

@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from concilium.application.benchmarks.inference import BenchmarkInferencePack
-from concilium.application.benchmarks.report_builder import BenchmarkReportBuilder
-from concilium.application.benchmarks.report_printer import BenchmarkReportPrinter
-from concilium.application.benchmarks.runner import BenchmarkRunner
-from concilium.application.benchmarks.spec_loader import ProjectSpec
+from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
+from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
+from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
 
 
 def _runner() -> BenchmarkRunner:
@@ -89,7 +89,7 @@ def test_prepare_inputs_uses_provided_pack_without_derive(monkeypatch) -> None:
         raise AssertionError("derive should not be called when inference_pack is provided")
 
     monkeypatch.setattr(
-        "concilium.application.benchmarks.runner.BenchmarkInferenceService.derive",
+        "concilium.application.benchmarks.execution.runner.BenchmarkInferenceService.derive",
         _unexpected_derive,
     )
 

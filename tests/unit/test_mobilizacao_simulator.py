@@ -19,10 +19,10 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from concilium.domain.models.mobilizacao import (
+from concilium.domain.models.planning.mobilizacao import (
     MobilizacaoPolicy,
 )
-from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
+from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
 # ---------------------------------------------------------------------------
 # Fixtures

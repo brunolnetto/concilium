@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import pytest
 
-from concilium.domain.models.optimization import (
+from concilium.domain.models.analytics.optimization import (
     ActivityPlan,
     RampProfile,
 )
-from concilium.domain.services.matching_oracle import MatchingOracle
+from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 

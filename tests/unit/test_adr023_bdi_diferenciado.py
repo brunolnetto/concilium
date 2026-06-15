@@ -16,7 +16,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from concilium.domain.models.bdi import (
+from concilium.domain.models.financial.bdi import (
     DEFAULT_BDI_TABELA,
     ComponentesBdi,
     IndiretoComBdi,
@@ -82,7 +82,7 @@ def _make_bdi_perfil(**lucro_overrides) -> PerfilBdiProjeto:
 
     Pass keyword args (mao_obra, material, servicos, indireto, diesel) to override lucro.
     """
-    from concilium.domain.models.bdi import (
+    from concilium.domain.models.financial.bdi import (
         AplicacaoTributaria,
         CheckboxTributo,
         PerfilBdiProjeto,
@@ -459,7 +459,7 @@ class TestDecomposicaoEquipamento:
     """ADR-023 §D3: DecomposicaoEquipamento model validation."""
 
     def test_valid_decomposition(self):
-        from concilium.domain.models.bdi import DecomposicaoEquipamento
+        from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
 
         d = DecomposicaoEquipamento(
             equip_id="EQ-001",
@@ -475,7 +475,7 @@ class TestDecomposicaoEquipamento:
         assert abs(d.fracao_material - 0.10) < 1e-6
 
     def test_components_must_sum_to_total(self):
-        from concilium.domain.models.bdi import DecomposicaoEquipamento
+        from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
 
         with pytest.raises(Exception, match="Soma dos componentes"):
             DecomposicaoEquipamento(
@@ -488,7 +488,7 @@ class TestDecomposicaoEquipamento:
             )
 
     def test_fracao_properties_sum_to_one(self):
-        from concilium.domain.models.bdi import DecomposicaoEquipamento
+        from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
 
         d = DecomposicaoEquipamento(
             equip_id="EQ-002",
@@ -502,8 +502,8 @@ class TestDecomposicaoEquipamento:
         assert abs(total - 1.0) < 1e-5
 
     def test_atributos_insumo_carries_decomposicao(self):
-        from concilium.domain.models.bdi import DecomposicaoEquipamento
-        from concilium.domain.models.catalogo import AtributosInsumo
+        from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
+        from concilium.domain.models.catalog.catalogo import AtributosInsumo
 
         decomp = DecomposicaoEquipamento(
             equip_id="EQ-003",
@@ -518,7 +518,7 @@ class TestDecomposicaoEquipamento:
         assert attr.decomposicao_equip.equip_id == "EQ-003"
 
     def test_atributos_insumo_decomposicao_none_by_default(self):
-        from concilium.domain.models.catalogo import AtributosInsumo
+        from concilium.domain.models.catalog.catalogo import AtributosInsumo
 
         attr = AtributosInsumo()
         assert attr.decomposicao_equip is None

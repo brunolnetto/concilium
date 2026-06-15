@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from concilium.application.services.cube_projection_views import resolve_cubo_projection_rows
+from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
 
 
 class _CuboCategoriaStub:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from concilium.domain.models.optimization import ActivityPlan, PerpetuationSolution, RampProfile
+from concilium.domain.models.analytics.optimization import ActivityPlan, PerpetuationSolution, RampProfile
 
 # ── RampProfile.build() ───────────────────────────────────────────────────────
 

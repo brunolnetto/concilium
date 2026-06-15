@@ -15,7 +15,7 @@ import pytest
 
 
 def _import():
-    from concilium.domain.services.equipe_custo_engine import (
+    from concilium.domain.services.financial.equipe_custo_engine import (
         CustoEquipeDecomposicao,
         IndirectTeamCostStrategy,
     )

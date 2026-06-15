@@ -20,11 +20,11 @@ from concilium.domain.constants import (
     ENCARGOS_CLT,
     ENCARGOS_MENSALISTA,
 )
-from concilium.domain.models.bdi import DEFAULT_BDI_TABELA
-from concilium.domain.models.memorial_bdi import (
+from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA
+from concilium.domain.models.financial.memorial_bdi import (
     MemorialCalculoBDI,
 )
-from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -67,19 +67,19 @@ def _make_minimal_canonical():
 
 class TestMemorialEncargos:
     def test_horista_total_matches_constant(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         enc = MemorialBDIBuilder._build_encargos("horista_clt")
         assert math.isclose(enc.total, ENCARGOS_CLT, abs_tol=1e-4)
 
     def test_mensalista_total_matches_constant(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         enc = MemorialBDIBuilder._build_encargos("mensalista_clt")
         assert math.isclose(enc.total, ENCARGOS_MENSALISTA, abs_tol=1e-4)
 
     def test_grupo_sum_equals_total(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         for regime in ("horista_clt", "mensalista_clt"):
             enc = MemorialBDIBuilder._build_encargos(regime)
@@ -89,19 +89,19 @@ class TestMemorialEncargos:
             assert math.isclose(computed, enc.total, abs_tol=1e-4), f"Regime {regime}: {computed} != {enc.total}"
 
     def test_mensalista_grupo_f_is_zero(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         enc = MemorialBDIBuilder._build_encargos("mensalista_clt")
         assert enc.grupo_f == 0.0
 
     def test_horista_grupo_f_positive(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         enc = MemorialBDIBuilder._build_encargos("horista_clt")
         assert enc.grupo_f > 0.0
 
     def test_vigencia_set(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         enc = MemorialBDIBuilder._build_encargos("horista_clt")
         assert enc.vigencia == "2026-04-01"
@@ -115,7 +115,7 @@ class TestMemorialEncargos:
 
 class TestMemorialBDICategoria:
     def test_bdi_total_matches_componentesbdi(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         for cat in ["mao_obra", "material", "servicos", "indireto", "diesel"]:
             comp = getattr(DEFAULT_BDI_TABELA, cat)
@@ -123,7 +123,7 @@ class TestMemorialBDICategoria:
             assert math.isclose(mem.bdi_total, comp.bdi_total, rel_tol=1e-6)
 
     def test_overhead_total_correct(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_bdi_categoria("mao_obra", comp, "DEFAULT", "pre_reforma", False)
@@ -132,7 +132,7 @@ class TestMemorialBDICategoria:
 
     def test_tributos_total_correct(self):
         """tributos_total deve refletir a configuração real do DEFAULT calibrado."""
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_bdi_categoria("mao_obra", comp, "DEFAULT", "pre_reforma", False)
@@ -141,14 +141,14 @@ class TestMemorialBDICategoria:
         assert math.isclose(mem.tributos_total, expected_t, abs_tol=1e-6)
 
     def test_material_has_zero_tributos(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.material
         mem = MemorialBDIBuilder._build_bdi_categoria("material", comp, "DEFAULT", "pre_reforma", False)
         assert mem.tributos_total == 0.0
 
     def test_override_flag_propagated(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_bdi_categoria("mao_obra", comp, "inputs.bdi_aplicado", "pre_reforma", True)
@@ -156,7 +156,7 @@ class TestMemorialBDICategoria:
         assert mem.fonte_bdi == "inputs.bdi_aplicado"
 
     def test_frozen_immutable(self):
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_bdi_categoria("mao_obra", comp, "DEFAULT", "pre_reforma", False)
@@ -173,7 +173,7 @@ class TestMemorialDecomposicao:
     @pytest.mark.parametrize("cat", ["mao_obra", "material", "servicos", "indireto", "diesel"])
     def test_soma_equals_one(self, cat: str):
         """INVARIANT: All decomposicao components sum to 1.0 (100% of selling price)."""
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = getattr(DEFAULT_BDI_TABELA, cat)
         mem = MemorialBDIBuilder._build_decomposicao(cat, comp)
@@ -181,7 +181,7 @@ class TestMemorialDecomposicao:
 
     def test_custo_direto_mao_obra(self):
         """For mao_obra: custo_direto ≈ 77.49% (calibração AGIS — T=9.73% vs 13.38% antigo)."""
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_decomposicao("mao_obra", comp)
@@ -190,7 +190,7 @@ class TestMemorialDecomposicao:
 
     def test_margem_mao_obra(self):
         """Margem L contribui ~6.97% do preço de venda para mao_obra (calibração AGIS)."""
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.mao_obra
         mem = MemorialBDIBuilder._build_decomposicao("mao_obra", comp)
@@ -199,7 +199,7 @@ class TestMemorialDecomposicao:
 
     def test_tributos_por_categoria(self):
         """Tributos do DEFAULT calibrado AGIS: isenção COFINS/PIS; diesel/material sem tributos."""
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         # mao_obra, servicos, indireto: ISS=5% + CSSL=1.99% + IR=2.74% = 9.73%
         for cat in ["mao_obra", "servicos", "indireto"]:
@@ -216,7 +216,7 @@ class TestMemorialDecomposicao:
 
     def test_material_zero_tributos(self):
         """Material tem tributos zerados."""
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         comp = DEFAULT_BDI_TABELA.material
         mem = MemorialBDIBuilder._build_decomposicao("material", comp)
@@ -224,7 +224,7 @@ class TestMemorialDecomposicao:
 
     def test_decomposicao_all_positive(self):
         """All decomposition values must be >= 0."""
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         for cat in ["mao_obra", "material", "servicos", "indireto", "diesel"]:
             comp = getattr(DEFAULT_BDI_TABELA, cat)

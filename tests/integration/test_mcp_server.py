@@ -15,7 +15,7 @@ from concilium.presentation.mcp.server import build_server
 #              aprovar_versao, nova_versao, salvar_perfil_bdi
 # pipeline (1): avancar_pipeline
 # analise (2): auditar_plano, comparar_planos
-# replan (2): simular_cenario_replan, aplicar_sugestao_replan
+# replan (1): simular_cenario_replan  [aplicar_sugestao_replan removido — era stub]
 # escopo (3): consultar_estrutura_projeto, configurar_escopo, gerenciar_plano
 TOOLS_ESPERADAS = {
     # sistema
@@ -40,7 +40,6 @@ TOOLS_ESPERADAS = {
     "comparar_planos",
     # replan
     "simular_cenario_replan",
-    "aplicar_sugestao_replan",
     # escopo
     "consultar_estrutura_projeto",
     "configurar_escopo",

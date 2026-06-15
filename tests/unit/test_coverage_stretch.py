@@ -167,20 +167,6 @@ class TestSchedulingModels:
 
 
 # ────────────────────────────────────────────────────────────────
-# scheduling/milp.py: solver setup (lines 136, 188)
-# ────────────────────────────────────────────────────────────────
-
-
-class TestMilpScheduling:
-    """Test MILP solver edge cases."""
-
-    def test_milp_variable_setup(self):
-        """MILP solver should set up decision variables."""
-        # MILP tests are complex and may require PuLP
-        pass
-
-
-# ────────────────────────────────────────────────────────────────
 # scheduling/scheduler.py: resource matching (line 191)
 # ────────────────────────────────────────────────────────────────
 

@@ -17,13 +17,13 @@ from concilium.domain.models.canonical import (
     DistribuicaoSemanal,
     ScheduledActivityCanonical,
 )
-from concilium.domain.models.catalogo import (
+from concilium.domain.models.catalog.catalogo import (
     ComposicaoPadraoEquipe,
     EquipamentoEquipe,
     FuncaoEquipe,
     PapelFuncao,
 )
-from concilium.domain.models.producao import (
+from concilium.domain.models.catalog.producao import (
     AuditoriaProducao,
     CondicoesCalibração,
     LimiteProducao,

@@ -15,13 +15,13 @@ import math
 
 import pytest
 
-from concilium.domain.models.analitica import (
+from concilium.domain.models.analytics.analitica import (
     CurvaABCInsumo,
     InsumoDetalheAtividade,
     SCurve,
 )
-from concilium.domain.services.curva_abc_builder import CurvaABCBuilder
-from concilium.domain.services.s_curve_builder import SCurveBuilder
+from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
+from concilium.domain.services.analytics.s_curve_builder import SCurveBuilder
 
 # ---------------------------------------------------------------------------
 # Fixtures

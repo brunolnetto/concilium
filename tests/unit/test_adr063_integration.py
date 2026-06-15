@@ -8,8 +8,8 @@ from __future__ import annotations
 import pytest
 
 from concilium.application.pipeline_strategy import ProjectStrategy, get_pipeline_strategy
-from concilium.application.services.audit_service import AuditService
-from concilium.application.services.project_service import ProjectService
+from concilium.application.services.project.audit_service import AuditService
+from concilium.application.services.project.project_service import ProjectService
 from concilium.infrastructure.storage.file_project_repository import (
     FileProjectHandle,
     FileProjectRepository,

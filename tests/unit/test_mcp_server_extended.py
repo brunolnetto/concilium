@@ -7,6 +7,7 @@ tools directly to exercise the business-logic bodies in server.py.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -28,18 +29,33 @@ pytestmark = [pytest.mark.slow]
 CONFIG_ROOT = Path(__file__).resolve().parents[2] / "config"
 
 
-@pytest.fixture
-def server_env(monkeypatch, tmp_path):
-    """Configure env pointing to real config and a fresh tmp projects dir."""
-    projects = tmp_path / "projetos"
-    projects.mkdir()
-    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
-    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(projects))
-    return {"config": str(CONFIG_ROOT), "projects": str(projects), "projects_path": projects}
+@pytest.fixture(scope="module")
+def server_env(tmp_path_factory):
+    """Module-scoped env: config + fresh projects dir — built once per module.
+
+    Avoids recreating the server (build_server) for every test function.
+    Individual tests that need per-test isolation use `patch` context managers,
+    which are unaffected by module scope.
+    """
+    projects = tmp_path_factory.mktemp("projetos")
+    _old: dict[str, str | None] = {}
+    for key, val in [
+        ("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT)),
+        ("CONCILIUM__PROJECTS_ROOT", str(projects)),
+    ]:
+        _old[key] = os.environ.get(key)
+        os.environ[key] = val
+    yield {"config": str(CONFIG_ROOT), "projects": str(projects), "projects_path": projects}
+    for key, old_val in _old.items():
+        if old_val is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = old_val
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def server(server_env):
+    """Module-scoped server — built once, shared across all tests in module."""
     return build_server()
 
 

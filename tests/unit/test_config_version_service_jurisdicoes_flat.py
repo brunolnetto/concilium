@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from concilium.application.services.contexto_version_service import JurisdictionVersionService
+from concilium.application.services.catalog.contexto_version_service import JurisdictionVersionService
 
 
 def test_list_jurisdicoes_includes_flat_files(tmp_path: Path) -> None:

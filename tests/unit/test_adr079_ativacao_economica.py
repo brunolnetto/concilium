@@ -539,7 +539,7 @@ class TestLambdaInicializacao:
         """LnsScheduler deve aceitar campo initial_lambdas sem erro."""
         pytest.importorskip("ortools", reason="ortools não disponível neste ambiente")
         from concilium.application.scheduling.lns_scheduler import LnsScheduler
-        from concilium.domain.services.matching_oracle import MatchingOracle
+        from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
         oracle = MatchingOracle(mob_costs={})
         lambdas = {("act-1", "act-2", "ESC-3CAT"): 480_000.0}
@@ -550,7 +550,7 @@ class TestLambdaInicializacao:
         """LnsScheduler sem initial_lambdas funciona como antes."""
         pytest.importorskip("ortools", reason="ortools não disponível neste ambiente")
         from concilium.application.scheduling.lns_scheduler import LnsScheduler
-        from concilium.domain.services.matching_oracle import MatchingOracle
+        from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
         oracle = MatchingOracle(mob_costs={})
         lns = LnsScheduler(oracle=oracle)
@@ -561,7 +561,7 @@ class TestLambdaInicializacao:
         pytest.importorskip("ortools", reason="ortools não disponível neste ambiente")
         from concilium.application.scheduling.lns_scheduler import LnsScheduler
         from concilium.application.scheduling.models import ActivityDAG, ResourcePool
-        from concilium.domain.services.matching_oracle import MatchingOracle
+        from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
         oracle = MatchingOracle(mob_costs={})
         lns = LnsScheduler(oracle=oracle, initial_lambdas=None)
@@ -595,7 +595,7 @@ class TestLambdaInicializacao:
         pytest.importorskip("ortools", reason="ortools não disponível neste ambiente")
         from concilium.application.scheduling.lns_scheduler import LnsScheduler
         from concilium.application.scheduling.models import ActivityDAG, ResourcePool
-        from concilium.domain.services.matching_oracle import MatchingOracle
+        from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
         oracle = MatchingOracle(mob_costs={})
         original_lambdas = {("a", "b", "T"): 100.0}

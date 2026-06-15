@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from types import SimpleNamespace
 
-from concilium.domain.services.eficiencia_field_builder import CampoEficiencia, EficienciaFieldBuilder
+from concilium.domain.services.analytics.eficiencia_field_builder import CampoEficiencia, EficienciaFieldBuilder
 
 
 def _cell(eta_s, eta_p, eta_w, q, q_max):

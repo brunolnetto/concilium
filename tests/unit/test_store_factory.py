@@ -98,7 +98,7 @@ def test_build_sharepoint_repository_wires_cache_and_prefix(monkeypatch, tmp_pat
 
     monkeypatch.setitem(
         sys.modules,
-        "concilium.infrastructure.adapters.sharepoint_blob_storage",
+        "concilium.infrastructure.adapters.blob_storage.sharepoint",
         types.SimpleNamespace(SharePointBlobStorage=DummySharePointBlobStorage),
     )
     monkeypatch.setitem(
@@ -131,7 +131,7 @@ def test_build_s3_repository_wires_prefix(monkeypatch) -> None:
     monkeypatch.setenv("CONCILIUM__STORE_PROJECTS_PREFIX", "projects")
     monkeypatch.setitem(
         sys.modules,
-        "concilium.infrastructure.adapters.s3_blob_storage",
+        "concilium.infrastructure.adapters.blob_storage.s3",
         types.SimpleNamespace(S3BlobStorage=DummyS3BlobStorage),
     )
     monkeypatch.setitem(

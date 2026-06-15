@@ -19,8 +19,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from concilium.domain.models.contexto import ContextoObra
-from concilium.domain.models.tema import (
+from concilium.domain.models.catalog.contexto import ContextoObra
+from concilium.domain.models.catalog.tema import (
     TEMA_DEFAULT,
     CoresTema,
     FontesTema,

@@ -54,7 +54,7 @@ class TestCostDecompositionInvariant:
 
     def test_projection_breakdown_sums_correctly(self, agis_benchmark):
         """Valida que breakdown em report (MO+EQ+COMB+MAT) == total."""
-        from concilium.application.benchmarks.projection import BenchmarkProjection
+        from concilium.application.benchmarks.report.projection import BenchmarkProjection
 
         projection = BenchmarkProjection.from_canonical(agis_benchmark.canonical)
         breakdown = projection.ferramenta_breakdown_direto

@@ -10,16 +10,16 @@ from datetime import datetime
 
 import pytest
 
-from concilium.application.services.campaign_report import (
+from concilium.application.services.campaign.campaign_report import (
     render_campaign_report_md,
     render_campaign_report_pdf,
     serialize_campaign_report,
 )
-from concilium.application.services.campaign_service import (
+from concilium.application.services.campaign.campaign_service import (
     classificar_EF,
     classificar_O,
 )
-from concilium.domain.models.campaign import (
+from concilium.domain.models.campaign.campaign import (
     CampaignBundleCube,
     CampaignOutputBundle,
     CenarioAvaliado,

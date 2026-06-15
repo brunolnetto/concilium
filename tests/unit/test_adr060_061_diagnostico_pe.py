@@ -17,10 +17,10 @@ from dataclasses import replace
 
 import pytest
 
-from concilium.domain.models.backtracking_pe import SolucaoInversa
-from concilium.domain.models.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio, FatorPE
-from concilium.domain.services.backtracking_pe_builder import BacktrackingPEBuilder
-from concilium.domain.services.diagnostico_pe_builder import DiagnosticoPEBuilder
+from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
+from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio, FatorPE
+from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -658,7 +658,7 @@ class TestBacktrackingPEBuilder:
 class TestDiagnosticoValidacoes:
     def test_val_pe_cross_term_emitted_when_cross_term_present(self):
         """VAL-PE-CROSS-TERM is emitted when aviso_cross_term is True."""
-        from concilium.domain.models.diagnostico_pe import DiagnosticoPERelatorio
+        from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
 
         # Build a relatorio with aviso_cross_term=True
         relatorio = DiagnosticoPERelatorio(
@@ -679,7 +679,7 @@ class TestDiagnosticoValidacoes:
 
     def test_no_cross_term_when_not_present(self):
         """VAL-PE-CROSS-TERM not emitted when aviso_cross_term is False."""
-        from concilium.domain.models.diagnostico_pe import DiagnosticoPERelatorio
+        from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
 
         relatorio = DiagnosticoPERelatorio(
             projeto_id="x",
@@ -701,7 +701,7 @@ class TestDiagnosticoValidacoes:
         """consistencia_validada reflects sum-of-factors check."""
         # DiagnosticoPEBuilder sets consistencia_validada based on actual check
         # A zero-deficit project always passes
-        from concilium.domain.services.diagnostico_pe_builder import DiagnosticoPEBuilder
+        from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 
         class _FakeCanonical:
             ponto_equilibrio = []

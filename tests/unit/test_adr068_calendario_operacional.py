@@ -10,8 +10,8 @@ from concilium.domain.models.canonical import (
     Praticabilidade,
     ScheduledActivityCanonical,
 )
-from concilium.domain.services.backtracking_pe_builder import BacktrackingPEBuilder
-from concilium.domain.services.diagnostico_pe_builder import DiagnosticoPEBuilder
+from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 from concilium.infrastructure.adapters.excel_adapter import ExcelRenderer
 
 

@@ -20,7 +20,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from concilium.domain.models.catalog_draft import (
+from concilium.domain.models.catalog.draft import (
     CatalogDraft,
     CatalogPermission,
     ReferenciaItem,

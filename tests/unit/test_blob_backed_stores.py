@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from concilium.infrastructure.adapters.local_blob_storage import LocalBlobStorage
+from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
 from concilium.infrastructure.storage.campaign_store import CampaignRunStore
 

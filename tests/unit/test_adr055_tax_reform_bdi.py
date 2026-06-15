@@ -20,7 +20,7 @@ from datetime import datetime
 
 import pytest
 
-from concilium.domain.models.bdi import (
+from concilium.domain.models.financial.bdi import (
     CENARIOS_TRIBUTARIOS,
     DEFAULT_BDI_TABELA,
     ComponentesBdi,
@@ -291,7 +291,7 @@ class TestResolverBdiCbsIbs:
 class TestPerfilBdiProjetoRegimeVersion:
     def test_default_regime_is_pre_reforma(self):
         """PerfilBdiProjeto defaults to PRE_REFORMA — backward compat."""
-        from concilium.domain.models.bdi import (
+        from concilium.domain.models.financial.bdi import (
             AplicacaoTributaria,
             CheckboxTributo,
             PerfilLucroProjeto,

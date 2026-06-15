@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 import pytest
 
-from concilium.domain.models.catalogo_versioned import (
+from concilium.domain.models.catalog.versioned import (
     CPUVersionada,
     DateRange,
     InsumoVersionado,

@@ -15,12 +15,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from concilium.application.services.cubo_pool_projection import (
+from concilium.application.services.analytics.cubo_pool_projection import (
     cubo_pool_projection_contract,
     resolve_cubo_pool_projection,
 )
-from concilium.domain.models.cubo_pool import CelulaPoolInstancial
-from concilium.domain.services.cubo_pool_builder import (
+from concilium.domain.models.analytics.cubo_pool import CelulaPoolInstancial
+from concilium.domain.services.analytics.cubo_pool_builder import (
     CuboPoolInstancialBuilder,
     validar_invariantes_cubo_pool,
 )

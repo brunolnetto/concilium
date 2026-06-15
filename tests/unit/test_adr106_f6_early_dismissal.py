@@ -22,7 +22,7 @@ import pytest
 
 
 def _engine():
-    from concilium.domain.services.equipe_custo_engine import LifecycleEngine
+    from concilium.domain.services.financial.equipe_custo_engine import LifecycleEngine
 
     return LifecycleEngine()
 

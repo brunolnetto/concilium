@@ -34,7 +34,7 @@ def _make_server():
 
 def _call_clt(salario_base: float, categoria: str = "horista") -> dict:
     """Chama o serviço de domínio de custo CLT e retorna dict completo para testes."""
-    from concilium.domain.services.tributacao import calculate_employer_clt
+    from concilium.domain.services.financial.tributacao import calculate_employer_clt
 
     result = calculate_employer_clt(salario_base, categoria=categoria)
     return {
@@ -47,13 +47,13 @@ def _call_clt(salario_base: float, categoria: str = "horista") -> dict:
 
 
 def _call_inss(salario_bruto: float) -> float:
-    from concilium.domain.services.tributacao import calculate_inss_employee
+    from concilium.domain.services.financial.tributacao import calculate_inss_employee
 
     return calculate_inss_employee(salario_bruto)
 
 
 def _call_irrf(base_calculo: float) -> float:
-    from concilium.domain.services.tributacao import calculate_irrf
+    from concilium.domain.services.financial.tributacao import calculate_irrf
 
     return calculate_irrf(base_calculo)
 
@@ -205,21 +205,21 @@ class TestCalcularIrrf:
 class TestIntegracaoMcpComServicoDominio:
     def test_mcp_e_servico_concordam_inss(self):
         """MCP tool deve retornar o mesmo INSS que o serviço direto."""
-        from concilium.domain.services.tributacao import calculate_inss_employee
+        from concilium.domain.services.financial.tributacao import calculate_inss_employee
 
         inss_direto = calculate_inss_employee(5000.0)
         inss_mcp = _call_inss(5000.0)
         assert inss_mcp == pytest.approx(inss_direto, abs=0.01)
 
     def test_mcp_e_servico_concordam_irrf(self):
-        from concilium.domain.services.tributacao import calculate_irrf
+        from concilium.domain.services.financial.tributacao import calculate_irrf
 
         irrf_direto = calculate_irrf(6500.0)
         irrf_mcp = _call_irrf(6500.0)
         assert irrf_mcp == pytest.approx(irrf_direto, abs=0.01)
 
     def test_mcp_e_servico_concordam_custo_empregador(self):
-        from concilium.domain.services.tributacao import calculate_employer_clt
+        from concilium.domain.services.financial.tributacao import calculate_employer_clt
 
         result_direto = calculate_employer_clt(4000.0, categoria="horista")
         result_mcp = _call_clt(4000.0, categoria="horista")

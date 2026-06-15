@@ -189,7 +189,7 @@ class TestSemResiduosLegados:
         """O benchmark _prepare_inputs produz inputs keyed pela skill unificada."""
         import inspect
 
-        from concilium.application.benchmarks import runner as bench_runner
+        from concilium.application.benchmarks.execution import runner as bench_runner
 
         src = inspect.getsource(bench_runner)
         assert '"06-resultado-financeiro"' in src

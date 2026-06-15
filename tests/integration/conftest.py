@@ -10,7 +10,7 @@ def agis_benchmark(config_root):
     Executa o pipeline completo do AGIS via BenchmarkFacade e retorna um wrapper
     com o canonical model com todos os dados processados.
     """
-    from concilium.application.benchmarks.facade import BenchmarkFacade
+    from concilium.application.benchmarks.execution.facade import BenchmarkFacade
 
     # Criar facade a partir do config_root
     # BenchmarkFacade descobre benchmarks_root e projects_root automaticamente

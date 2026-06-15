@@ -25,7 +25,7 @@ from concilium.domain.models.canonical import (
     Atividade,
     CanonicalModel,
 )
-from concilium.domain.models.mobilizacao import MobilizacaoPolicy
+from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers

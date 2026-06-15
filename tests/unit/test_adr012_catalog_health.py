@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from concilium.domain.models.catalog_health import (
+from concilium.domain.models.catalog.health import (
     CatalogGap,
     CatalogHealthReport,
     CoberturaConfig,
