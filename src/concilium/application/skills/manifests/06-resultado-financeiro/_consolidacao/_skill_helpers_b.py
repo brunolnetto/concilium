@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from concilium.domain.models.bdi import (
+from concilium.domain.models.financial.bdi import (
     DEFAULT_BDI_TABELA,
     PerfilBdiProjeto,
     TabelaBdi,
@@ -31,9 +31,9 @@ def _build_abc_analytics(
     canonical_in: CanonicalModel, inputs: dict, bdi_tabela: Any, bdi_regime: str, validacoes: list
 ) -> tuple:
     try:
-        from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
-        from concilium.domain.services.curva_abc_builder import CurvaABCBuilder
-        from concilium.domain.services.s_curve_builder import SCurveBuilder
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+        from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
+        from concilium.domain.services.analytics.s_curve_builder import SCurveBuilder
 
         curva_abc = CurvaABCBuilder().build(canonical_in)
         s_curve = SCurveBuilder().build(canonical_in)
@@ -55,7 +55,7 @@ def _build_memorial_bdi(
     canonical_in: CanonicalModel, bdi_fonte: str, bdi_regime: str, bdi_tabela: Any, bdi_override: bool
 ) -> Any:
     try:
-        from concilium.domain.services.memorial_bdi_builder import MemorialBDIBuilder
+        from concilium.domain.services.financial.memorial_bdi_builder import MemorialBDIBuilder
 
         return MemorialBDIBuilder().build(
             canonical_in=canonical_in,

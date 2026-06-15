@@ -25,7 +25,7 @@ from typing import Any
 
 from concilium.application.runtime import Runtime
 from concilium.domain.models.canonical import CanonicalModel
-from concilium.domain.models.decision_variables import DecisionVariables
+from concilium.domain.models.project.decision_variables import DecisionVariables
 from concilium.infrastructure.storage.project import ProjectStore
 
 from .config import ScenarioConfig

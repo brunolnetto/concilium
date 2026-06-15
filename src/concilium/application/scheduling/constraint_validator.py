@@ -12,7 +12,7 @@ Checks:
 from __future__ import annotations
 
 from concilium.domain.models.canonical import CanonicalModel
-from concilium.domain.models.constraint_violation import ConstraintViolation
+from concilium.domain.models.project.constraint_violation import ConstraintViolation
 
 
 class ConstraintValidator:

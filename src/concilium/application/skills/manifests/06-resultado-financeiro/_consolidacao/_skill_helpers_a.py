@@ -1060,8 +1060,8 @@ def _build_diagnostico_pe(
     validacoes: list,
 ) -> tuple:
     try:
-        from concilium.domain.services.backtracking_pe_builder import BacktrackingPEBuilder
-        from concilium.domain.services.diagnostico_pe_builder import DiagnosticoPEBuilder
+        from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
+        from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 
         # Injeta ponto_equilibrio da run atual para que _compute_f1_quantizacao
         # leia gap_escala_abs correto em vez de bridge_analysis do run anterior.
@@ -1125,7 +1125,7 @@ def _build_cubo_pool_face(
     """
     import datetime
 
-    from concilium.domain.models.cubo_pool import CuboPoolFace
+    from concilium.domain.models.analytics.cubo_pool import CuboPoolFace
 
     gerado_em = datetime.datetime.now(datetime.timezone.utc).isoformat()
     return CuboPoolFace(

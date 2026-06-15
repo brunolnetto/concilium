@@ -17,7 +17,7 @@ _COLOR_OFF = "#c8c8c8"  # cinza — desmobilizado (custo zero)
 
 def build(canonical, cubo=None) -> bytes | None:
     try:
-        from concilium.application.services.cubo_pool_projection import resolve_cubo_pool_projection
+        from concilium.application.services.analytics.cubo_pool_projection import resolve_cubo_pool_projection
 
         proj = resolve_cubo_pool_projection(canonical, face="utilizacao_temporal", granularidade="mes", top_n=300)
     except Exception:

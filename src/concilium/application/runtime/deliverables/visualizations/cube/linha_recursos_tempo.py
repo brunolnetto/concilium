@@ -2,22 +2,26 @@
 
 from __future__ import annotations
 
+from . import _common
 from ..chart_markdown_support import weekly_to_monthly_labels
-from ._common import apply_monthly_ticks, build_payload, init_mpl, is_weekly_labels
 
 
 def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
     try:
-        payload = build_payload("recursos_ativos_tempo", "semana", 120, canonical, cubo)
+        payload = _common.build_payload("recursos_ativos_tempo", "semana", 120, canonical, cubo)
     except Exception:
         return None
     rows = payload.get("rows") or []
     if not rows:
         return None
+
     try:
-        plt, fig_to_bytes = init_mpl()
+        plt, fig_to_bytes = _common.init_mpl()
     except ImportError:
         return None
+
+    fig = None
+
     try:
         periods = [str(row.get("periodo", "")) for row in rows]
         x_axis = list(range(len(periods)))
@@ -81,15 +85,20 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
         ax_team.set_title("Equipes de Trabalho", fontsize=11, fontweight="bold")
         ax_team.grid(axis="y", alpha=0.3)
 
-        apply_monthly_ticks(ax_team, periods, weekly_to_monthly_labels)
-        if not is_weekly_labels(periods):
+        _common.apply_monthly_ticks(ax_team, periods, weekly_to_monthly_labels)
+        if not _common.is_weekly_labels(periods):
             ax_team.set_xticks(x_axis)
             ax_team.set_xticklabels(periods, rotation=45, ha="right", fontsize=8)
         ax_team.set_xlabel("Periodo", fontsize=9)
 
         fig.suptitle("Recursos Ativos no Tempo", fontsize=13, fontweight="bold")
         fig.tight_layout()
+
         return fig_to_bytes(fig)
     except Exception:
-        plt.close("all")
+        if fig is not None:
+            plt.close(fig)
+        else:
+            plt.close()
         return None
+

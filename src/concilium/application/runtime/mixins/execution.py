@@ -193,7 +193,7 @@ class ExecutionMixin:
         dv_raw = normalized_inputs.get("decision_variables")
         if dv_raw is not None and not result.has_errors:
             try:
-                from concilium.domain.models.decision_variables import DecisionVariables
+                from concilium.domain.models.project.decision_variables import DecisionVariables
 
                 dv_obj = DecisionVariables.model_validate(dv_raw) if isinstance(dv_raw, dict) else dv_raw
                 if result.canonical.decision_variables != dv_obj:

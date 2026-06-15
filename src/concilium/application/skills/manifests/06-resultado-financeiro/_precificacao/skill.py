@@ -28,7 +28,7 @@ from concilium.domain.models.canonical import (
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 try:
-    from concilium.domain.models.bdi import DEFAULT_BDI_TABELA, TabelaBdi
+    from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 except Exception:
     DEFAULT_BDI_TABELA = None  # type: ignore[assignment]
     TabelaBdi = None  # type: ignore[assignment,misc]
@@ -140,7 +140,7 @@ def _resolve_bdi(
     tabela = None
     if tabela_raw is not None:
         try:
-            from concilium.domain.models.bdi import resolve_bdi_tabela
+            from concilium.domain.models.financial.bdi import resolve_bdi_tabela
 
             tabela = resolve_bdi_tabela(tabela_raw)
         except Exception as exc:

@@ -9,7 +9,7 @@ from concilium.application.scenarios.config import ScenarioConfig
 
 if TYPE_CHECKING:
     from concilium.domain.models.canonical import CanonicalModel
-    from concilium.domain.models.decision_variables import DecisionVariables
+    from concilium.domain.models.project.decision_variables import DecisionVariables
 
 
 @dataclass
@@ -46,7 +46,7 @@ def generate_dv_variations(
     Returns:
         Lista de ScenarioConfig onde cada config tem decision_variables preenchido.
     """
-    from concilium.domain.models.decision_variables import DecisionVariables
+    from concilium.domain.models.project.decision_variables import DecisionVariables
 
     _valid_policies = {"lean", "standard", "robust"}
     if dv4_options:

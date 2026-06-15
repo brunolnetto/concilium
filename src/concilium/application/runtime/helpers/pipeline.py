@@ -51,7 +51,7 @@ def _execute_skill(skill_fn, kwargs, skill_id, execution_id, ts_inicio, plano_st
 def _apply_dv(new_canonical: Any, dv_raw: Any) -> Any:
     """Apply decision variables to canonical model if valid."""
     try:
-        from concilium.domain.models.decision_variables import DecisionVariables
+        from concilium.domain.models.project.decision_variables import DecisionVariables
 
         dv_obj = DecisionVariables.model_validate(dv_raw) if isinstance(dv_raw, dict) else dv_raw
         if new_canonical.decision_variables != dv_obj:
@@ -126,7 +126,7 @@ def _oas_log_invocation(runtime, store, version, invocation_context, skill_id, r
 def _oas_save_state(store, version, skill_id, result, new_state, record):
     """Persist canonical state after skill execution (taint-aware)."""
     should_save = not (skill_id == "00-escopo" and record.status == "ERRO")
-    if new_state is not None and should_save and record.status != "EXCEPTION":
+    if result is not None and new_state is not None and should_save and record.status != "EXCEPTION":
         store.save_canonical(new_state, version, created_by=skill_id)
     elif result is None and skill_id in _GATE_SKILLS and new_state is not None:
         blocked = list(set(new_state.pipeline_blocked_from) | {skill_id})

@@ -27,7 +27,7 @@ class ConfigMixin:
 
     def load_tema(self, tema_id: str | None = None):
         """Carrega TemaVisual pelo ID (ADR-065). None -> fallback 'default'."""
-        from concilium.domain.models.tema import TEMA_DEFAULT, TemaVisual
+        from concilium.domain.models.catalog.tema import TEMA_DEFAULT, TemaVisual
 
         tid = tema_id or "default"
         key = f"tema:{tid}"
@@ -47,7 +47,7 @@ class ConfigMixin:
         return tema
 
     def load_contexto(self, contexto_id: str):
-        from concilium.domain.models.contexto import ContextoObra
+        from concilium.domain.models.catalog.contexto import ContextoObra
 
         key = f"ctx:{contexto_id}"
         if key not in self._config_cache:

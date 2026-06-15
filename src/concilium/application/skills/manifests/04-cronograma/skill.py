@@ -921,28 +921,6 @@ def _to_canonical_candidate(
     )
 
 
-def _try_milp(
-    activities: list[Activity],
-    dag: ActivityDAG,
-    pool: ResourcePool,
-    deadline_weeks: int,
-    timeout_seconds: int = 30,
-) -> ScheduleCandidateCanonical | None:
-    """Tenta resolver com MILP (opcional, lazy import)."""
-    try:
-        from concilium.application.scheduling.milp import MILPScheduler
-
-        scheduler = MILPScheduler(timeout_seconds=timeout_seconds)
-        sched = scheduler.schedule(
-            activities=activities,
-            dag=dag,
-            pool=pool,
-            deadline_weeks=deadline_weeks,
-        )
-        quality = sched.metrics.quality_score(deadline_weeks=deadline_weeks)
-        return _to_canonical_candidate("MILP", sched, quality, relaxed=False)
-    except (ImportError, Exception):
-        return None
 
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -1389,7 +1367,7 @@ def _run_auto_schedule_fallback_chain(
     cpu_lookup: dict | None = None,
     producao_lookup: dict | None = None,
 ) -> tuple[list[ScheduleCandidateCanonical], ScheduleCandidateCanonical | None]:
-    """Executa fallback chain (heurísticas -> relax -> MILP).
+    """Executa fallback chain (heurísticas -> relax).
 
     ADR-046: se inputs contiver 'rcpsp_spec', usa extratores baseados na spec
     em vez de tentar derivar do canônico (que pode estar incompleto).
@@ -1408,12 +1386,6 @@ def _run_auto_schedule_fallback_chain(
     activities, dag, pool, deadline_weeks = extracted
 
     candidates_canonical, _relaxed = _rasfc_run_heuristics(activities, dag, pool, deadline_weeks, inputs, validacoes)
-
-    if not candidates_canonical:
-        milp_candidate = _try_milp(activities, dag, pool, deadline_weeks, timeout_seconds=30)
-        if milp_candidate:
-            candidates_canonical = [milp_candidate]
-            validacoes.append(ValidacaoItem(codigo="VAL-SCHED-04", status="AVISO", mensagem="MILP usado."))
 
     if not candidates_canonical:
         validacoes.append(ValidacaoItem(codigo="VAL-SCHED-05", status="ERRO", mensagem="Cronograma inviável."))
@@ -1589,7 +1561,7 @@ def _cpv_process_violations(
     pool: dict[str, int],
     validacoes: list[ValidacaoItem],
 ) -> list:
-    from concilium.domain.models.constraint_violation import ConstraintViolation
+    from concilium.domain.models.project.constraint_violation import ConstraintViolation
 
     violations = []
     reported: set[str] = set()
@@ -1704,7 +1676,7 @@ def _check_wmp_desmob(
 
 
 def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> object | None:
-    from concilium.domain.models.mobilizacao import MobilizacaoPolicy
+    from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
 
     try:
         return MobilizacaoPolicy(**{k: v for k, v in policy_dict.items() if v is not None or k == "semanas_plateau"})
@@ -1797,7 +1769,7 @@ def _process_single_wmp_policy(
 
     prod_base = P * regime.dias_semana * regime.horas_dia * policy.n_maximo  # type: ignore[union-attr]
     nominal = math.ceil(Q / prod_base) if prod_base > 0 else 1
-    from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
     guard = WorkforcePolicySimulator.MAX_MULTIPLIER * max(1, nominal)
 
@@ -1997,7 +1969,7 @@ def _build_cronograma_out(
     distribuicao_mensal: dict,
     validacoes: list,
 ) -> object:
-    AVAILABLE_SCHEDULE_ALGORITHMS = ("MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP", "CP-SAT", "LNS")
+    AVAILABLE_SCHEDULE_ALGORITHMS = ("MINSLK", "LPT", "MAXRES", "ES", "GR", "CP-SAT", "LNS")
     if mode == "MANUAL_ALLOCATION":
         _algo = "manual_allocation"
     elif schedule_selected and schedule_selected.heuristic in AVAILABLE_SCHEDULE_ALGORITHMS:  # type: ignore[union-attr]
@@ -2029,7 +2001,7 @@ def _build_intervalos_and_campanhas(
 
     analise_campanhas = None
     try:
-        from concilium.domain.services.campanha_equipamento_builder import CampanhaEquipamentoBuilder
+        from concilium.domain.services.campaign.campanha_equipamento_builder import CampanhaEquipamentoBuilder
 
         _temp = canonical_in.model_copy(update={"cronograma": cronograma_out})  # type: ignore[union-attr]
         analise_campanhas = CampanhaEquipamentoBuilder().build(_temp)
@@ -2056,7 +2028,7 @@ def _expand_mobilizacao_policies(
     validacoes: list[ValidacaoItem],
 ) -> tuple[dict[str, dict[str, int]], list]:
     """ADR-054 Phase 3: Convert WMP policies into per-week team allocations for MANUAL mode."""
-    from concilium.domain.services.mobilizacao_simulator import WorkforcePolicySimulator
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
     result: dict[str, dict[str, int]] = dict(existing_allocation or {})
     curves: list = []

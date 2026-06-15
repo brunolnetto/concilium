@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from concilium.domain.models.constraint_violation import ConstraintViolation
+from concilium.domain.models.project.constraint_violation import ConstraintViolation
 
 
 def _collect_schedule_weeks(schedule: dict) -> set:

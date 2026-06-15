@@ -5,8 +5,8 @@ Public API
 Always available (no optional dependencies):
   SerialScheduler, select_scheduling_algorithm, explore_schedules, models.
 
-Optional (require ortools / pulp — imported lazily inside explore_schedules):
-  CpSatScheduler, LnsScheduler, MILPScheduler.
+Optional (require ortools — imported lazily inside explore_schedules):
+  CpSatScheduler, LnsScheduler.
   Import them directly from their sub-modules when needed for testing or CLI use:
     from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler
 """
@@ -62,7 +62,7 @@ __all__ = [
     "KScaleResult",
     "compute_compression_sensitivities",
     "format_compression_table",
-    # Optional schedulers — not exported here to avoid eager ortools/pulp import.
+    # Optional schedulers — not exported here to avoid eager ortools import.
     # Import directly: from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler
-    # "CpSatScheduler", "ExtendedPrecedence", "LnsScheduler", "MILPScheduler"
+    # "CpSatScheduler", "ExtendedPrecedence", "LnsScheduler"
 ]

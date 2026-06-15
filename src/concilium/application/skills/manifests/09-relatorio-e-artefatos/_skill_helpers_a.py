@@ -525,34 +525,23 @@ def _gerar_excel_bytes(canonical_in: CanonicalModel, validacoes: list, gerar_exc
 
 
 def _gerar_live_model(canonical_in: CanonicalModel, validacoes: list, gerar_modelo_vivo: bool) -> bytes | None:
-    if not gerar_modelo_vivo:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-ADAPTER-EXCEL-LIVE",
-                status="AVISO",
-                mensagem=(
-                    "Geração de modelo vivo desabilitada (padrão). Use input 'gerar_modelo_vivo=true' para habilitar."
-                ),
-            )
-        )
-        return None
-    try:
-        from concilium.infrastructure.adapters.excel_live_model import render_live_model
+    """Formulação referencial migrada para MEMORIAL.CATALOGO + REFERÊNCIA no ExcelRenderer.
 
-        live_bytes = render_live_model(canonical_in)
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-ADAPTER-EXCEL-LIVE", status="OK", mensagem="Modelo vivo Excel (fórmulas) gerado com sucesso"
-            )
+    O modelo vivo separado (live_model.py) foi descontinuado. As abas MEMORIAL.CATALOGO
+    e REFERÊNCIA do adapter principal já expõem os parâmetros de catálogo e a auditoria
+    de cálculo que o live_model fornecia.
+    """
+    validacoes.append(
+        ValidacaoItem(
+            codigo="VAL-ADAPTER-EXCEL-LIVE",
+            status="AVISO",
+            mensagem=(
+                "Modelo vivo descontinuado. Formulação referencial disponível nas abas "
+                "MEMORIAL.CATALOGO e REFERÊNCIA do relatório Excel principal."
+            ),
         )
-        return live_bytes
-    except Exception as e:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-ADAPTER-EXCEL-LIVE", status="AVISO", mensagem=f"Erro ao gerar modelo vivo: {str(e)}"
-            )
-        )
-        return None
+    )
+    return None
 
 
 def _gerar_memorial_json_bytes(canonical_in: CanonicalModel) -> bytes | None:
@@ -1059,7 +1048,7 @@ def _rra_build_decomposicao_pool(canonical_in: CanonicalModel) -> dict | None:
     if not (canonical_in.contratos_recurso or canonical_in.instancias_recurso):
         return None
     try:
-        from concilium.application.services.cubo_pool_projection import (
+        from concilium.application.services.analytics.cubo_pool_projection import (
             resolve_cubo_pool_projection,
         )
     except Exception:

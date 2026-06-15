@@ -38,7 +38,7 @@ from concilium.application.scheduling.models import (
     ScheduleMetrics,
     ScheduleOutput,
 )
-from concilium.domain.models.optimization import RampProfile
+from concilium.domain.models.analytics.optimization import RampProfile
 
 _log = logging.getLogger(__name__)
 

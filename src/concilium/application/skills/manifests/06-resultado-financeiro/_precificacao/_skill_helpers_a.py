@@ -532,7 +532,7 @@ def _process_eap_item(
         )
     else:
         # Fonte 2: composicao_itens × preco_insumo (fallback)
-        from concilium.domain.models.catalogo import CPU
+        from concilium.domain.models.catalog.catalogo import CPU
 
         cpu_model = CPU.model_validate(cpu)
         preco_cat, equip_sem_decomp_item = _compute_preco_cat_from_cpu(

@@ -146,8 +146,6 @@ def _handle_skill_09_side_effects(result: object, project: object, v: str, outpu
     gerar_mem_pdf = outputs_cfg.get("memorial_bdi_pdf", outputs_cfg.get("memorial_bdi", True))
     gerar_xlsx = outputs_cfg.get("resultado_xlsx", outputs_cfg.get("cronograma_xlsx", True))
     gerar_pngs = outputs_cfg.get("graficos_png", True)  # False desabilita PNGs pesados (analytic cube)
-    gerar_modelo_vivo = outputs_cfg.get("modelo_vivo_xlsx", False)
-
     relatorio = getattr(result, "relatorio", None)
     if relatorio:
         project.save_intermediate_file(  # type: ignore[union-attr]
@@ -157,10 +155,6 @@ def _handle_skill_09_side_effects(result: object, project: object, v: str, outpu
     excel_bytes = getattr(result, "excel_bytes", None)
     if excel_bytes and gerar_xlsx:
         project.save_output_file(excel_bytes, v, "resultado_planejamento.xlsx")  # type: ignore[union-attr]
-
-    excel_live_bytes = getattr(result, "excel_live_bytes", None)
-    if excel_live_bytes and gerar_modelo_vivo:
-        project.save_output_file(excel_live_bytes, v, "modelo_vivo.xlsx")  # type: ignore[union-attr]
 
     _save_memorial_bdi_files(result, project, v, gerar_mem_md, gerar_mem_pdf)
     _save_relatorio_files(result, project, v, gerar_md, gerar_rpdf, gerar_pngs=gerar_pngs)

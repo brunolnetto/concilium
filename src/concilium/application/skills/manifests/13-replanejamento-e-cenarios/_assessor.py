@@ -152,27 +152,6 @@ def _build_sugestao_cronograma(canonical_in: "CanonicalModel", delta_necessario:
     )
 
 
-def _build_sugestao_milp(status_gatilho: Any, delta_necessario: float, margem_atual: float) -> "ReplanSugestao | None":
-    if not (status_gatilho == "VERMELHO" and delta_necessario > 0.03):
-        return None
-    return ReplanSugestao(
-        id="REPLAN-004",
-        tipo="CRONOGRAMA",
-        checkpoint_skill="04-cronograma",
-        parametros_sugeridos={"algorithm": "MILP", "deadline_margin_pct": "0.10", "criticality": "true"},
-        delta_margem_estimado=round(abs(delta_necessario) * 0.35, 4),
-        confianca="BAIXA",
-        controle="TUNAVEL",
-        justificativa=(
-            f"Margem {margem_atual * 100:.1f}% requer revisão estrutural. "
-            "Algoritmo MILP otimiza cronograma globalmente reduzindo picos de recurso."
-        ),
-        restricoes=[
-            "Pode alterar caminho crítico e impactar prazo",
-            "Requer re-execução completa da pipeline a partir de 02",
-        ],
-    )
-
 
 def _build_sugestao_bdi(margem_atual: float, delta_necessario: float) -> ReplanSugestao:
     return ReplanSugestao(
@@ -209,9 +188,6 @@ def _collect_sugestoes(
     s3 = _build_sugestao_cronograma(canonical_in, delta_necessario)
     if s3:
         sugestoes.append(s3)
-    s4 = _build_sugestao_milp(status_gatilho, delta_necessario, margem_atual)
-    if s4:
-        sugestoes.append(s4)
     if not sugestoes:
         sugestoes.append(_build_sugestao_bdi(margem_atual, delta_necessario))
     return sugestoes

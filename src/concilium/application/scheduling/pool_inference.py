@@ -335,9 +335,13 @@ def inferir_pool_minimo_from_spec(
     dag = _dag_from_spec(spec, activities)
     pool_config = spec.get("pool_config") if isinstance(spec.get("pool_config"), dict) else {}
     deadline = spec.get("deadline_weeks")
+    # ADR-070 Classe 3: restricoes_mercado pode vir do campo top-level do spec
+    # (escrito pelo sweep da campanha) ou de dentro de pool_config.
+    restricoes = spec.get("restricoes_mercado") if isinstance(spec.get("restricoes_mercado"), dict) else None
     return inferir_pool_minimo(
         activities=activities,
         dag=dag,
         pool_config=pool_config,
         deadline_weeks=int(deadline) if deadline else None,
+        restricoes_mercado=restricoes,
     )

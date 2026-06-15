@@ -68,7 +68,6 @@ class InputsMixin:
                     "gerar_excel",
                     bool(outputs.get("resultado_xlsx", outputs.get("cronograma_xlsx", True))),
                 )
-                normalized.setdefault("gerar_modelo_vivo", bool(outputs.get("modelo_vivo_xlsx", False)))
             except Exception:
                 pass
 

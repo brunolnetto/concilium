@@ -22,10 +22,13 @@ Transições válidas:
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from typing import Any
 
 from statemachine import State, StateMachine
+
+logger = logging.getLogger(__name__)
 
 
 class PipelineJobStateMachine(StateMachine):
@@ -56,11 +59,8 @@ class PipelineJobStateMachine(StateMachine):
     def on_enter_state(self, event: str, state: State) -> None:
         """Hook chamado ao entrar em qualquer estado."""
         # Log de auditoria para debugging
-        import sys
-
-        print(
-            f"[job-state] Job {self.job_data['job_id'][:8]}... → {state.value} via {event}",
-            file=sys.stderr,
+        logger.debug(
+            f"Job {self.job_data['job_id'][:8]}... → {state.value} via {event}"
         )
 
     def on_iniciar(self) -> None:

@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from concilium.domain.services.eficiencia_field_builder import CampoEficiencia
+    from concilium.domain.services.analytics.eficiencia_field_builder import CampoEficiencia
 
 
 def plot_waterfall_causal(

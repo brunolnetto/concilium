@@ -264,7 +264,7 @@ def run_equipes_e_alocacao(
 
     # ADR-106 F3: preenche custo_inst_* para equipes sem pool contract (NEP-040 Fase 4 completa)
     try:
-        from concilium.domain.services.equipe_custo_engine import _fill_custo_inst_sem_pool
+        from concilium.domain.services.financial.equipe_custo_engine import _fill_custo_inst_sem_pool
 
         _fill_custo_inst_sem_pool(equipes)
     except Exception:

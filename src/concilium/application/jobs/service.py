@@ -358,6 +358,31 @@ class JobService:
             max_concurrent_jobs=self._config.max_concurrent_jobs,
         )
 
+    def cancelar_job(self, job_id: str, motivo: str = "Cancelado pelo usuário") -> JobDTO:
+        """Cancela um job em fila ou em execução.
+
+        Args:
+            job_id: ID do job a cancelar.
+            motivo: Motivo do cancelamento (registrado no histórico).
+
+        Returns:
+            JobDTO com status CANCELADO.
+
+        Raises:
+            ValueError: Se job não encontrado ou já em estado final.
+        """
+        job = self._repo.get(job_id)
+        if not job:
+            raise ValueError(f"Job '{job_id}' não encontrado (pode ter expirado)")
+        sm: PipelineJobStateMachine = job["state_machine"]
+        if not sm.pode_cancelar:
+            raise ValueError(
+                f"Job '{job_id}' está em estado '{sm.status_str}' e não pode ser cancelado. "
+                "Apenas jobs AGUARDANDO_FILA ou EM_EXECUCAO podem ser cancelados."
+            )
+        sm.cancelar(motivo=motivo)
+        return self.consultar_job(job_id)
+
     def obter_estatisticas(self) -> SystemStatsDTO:
         """Retorna estatísticas do sistema de jobs.
 

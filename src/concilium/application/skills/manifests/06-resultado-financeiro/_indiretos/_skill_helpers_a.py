@@ -205,7 +205,7 @@ def _bcfd_resolve_salario_base(preco: float, unidade: str) -> float:
 
 def _bcfd_apply_encargos(salario_base: float, atrib: dict) -> float:
     """Aplica encargos sociais sobre salário-base conforme categoria_sindical."""
-    from concilium.domain.services.encargo_resolver import resolver_encargo
+    from concilium.domain.services.financial.encargo_resolver import resolver_encargo
 
     cat_sind = (atrib.get("categoria_sindical") or "").lower()
     if cat_sind.startswith("pj"):

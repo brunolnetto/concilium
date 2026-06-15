@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Protocol
 from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
 if TYPE_CHECKING:
-    from concilium.application.services.project_repository import ProjectHandle
+    from concilium.application.services.project.project_repository import ProjectHandle
 
 # Ordem canônica derivada dos manifests TOML (fonte única de verdade).
 HOT_PROJECT_PIPELINE_SKILLS: list[str] = list(CANONICAL_SKILL_ORDER)

@@ -35,7 +35,7 @@ from concilium.domain.models.canonical import (
     SegmentoAtividade,
     ValidacaoItem,
 )
-from concilium.domain.services.week_sequence import enumerar_semanas
+from concilium.domain.services.planning.week_sequence import enumerar_semanas
 
 try:
     from eule import euler as _euler
@@ -117,7 +117,7 @@ def _resolve_encargo_funcao(
     atrib: dict, encargo_override, enc_horista: float, enc_mensalista: float, categoria: str
 ) -> float:
     """Resolve percentual de encargo a aplicar (ADR-034). Delega para encargo_resolver."""
-    from concilium.domain.services.encargo_resolver import resolver_encargo
+    from concilium.domain.services.financial.encargo_resolver import resolver_encargo
 
     return resolver_encargo(atrib, enc_horista, enc_mensalista, encargo_override=encargo_override)
 

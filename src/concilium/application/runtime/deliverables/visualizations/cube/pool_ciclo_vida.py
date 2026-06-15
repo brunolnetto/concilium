@@ -23,7 +23,7 @@ def _fget(d, key):
 
 def _try_project(canonical):
     try:
-        from concilium.application.services.cubo_pool_projection import resolve_cubo_pool_projection
+        from concilium.application.services.analytics.cubo_pool_projection import resolve_cubo_pool_projection
 
         proj = resolve_cubo_pool_projection(canonical, face="instancia_ciclo_vida", granularidade="mes", top_n=100)
         return proj.get("rows") or []

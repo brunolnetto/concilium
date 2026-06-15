@@ -65,7 +65,7 @@ class CatalogMixin:
         Quando o fallback para master ocorre, marca `_catalog_source: "master"` no retorno
         para que o caller possa emitir VAL-CATALOG-FALLBACK se necessário.
         """
-        from concilium.application.services.catalog_resolver import CatalogResolver
+        from concilium.application.services.catalog.catalog_resolver import CatalogResolver
 
         master, source = self._resolve_project_catalog_base(catalogo_id, project)
         resolver = CatalogResolver(self.config_root)
@@ -85,7 +85,7 @@ class CatalogMixin:
         import hashlib
         import json as _json
 
-        from concilium.application.services.catalog_resolver import CatalogResolver
+        from concilium.application.services.catalog.catalog_resolver import CatalogResolver
 
         benchmark_reference = project.read_json("benchmark_reference.json", {})
         project_catalog = benchmark_reference.get("catalog") if isinstance(benchmark_reference, dict) else None

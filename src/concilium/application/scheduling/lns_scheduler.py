@@ -37,8 +37,8 @@ from concilium.application.scheduling.models import (
     ScheduleMetrics,
     ScheduleOutput,
 )
-from concilium.domain.models.optimization import ActivityPlan, RampProfile
-from concilium.domain.services.matching_oracle import MatchingOracle
+from concilium.domain.models.analytics.optimization import ActivityPlan, RampProfile
+from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
 _log = logging.getLogger(__name__)
 
@@ -242,7 +242,7 @@ class LnsScheduler:
 
         result_acts = list(scheduled.values())
         makespan_val = max(s.end_week for s in result_acts) if result_acts else 0
-        metrics = _simple_metrics(result_acts, pool, makespan_val)
+        metrics = _compute_lns_metrics(resource_usage, pool, makespan_val, deadline)
         return ScheduleOutput(
             scheduled_activities=result_acts,
             makespan=makespan_val,
@@ -262,7 +262,9 @@ class LnsScheduler:
         t = earliest
         while t + a.duration_weeks <= deadline:
             if all(
-                resource_usage.get(t + offset, {}).get(res, 0) + qty <= pool.resources.get(res, 0)
+                resource_usage.get(t + offset, {}).get(res, 0)
+                + _lns_demand_at_offset(a, offset, res, qty)
+                <= pool.resources.get(res, 0)
                 for res, qty in a.required_resources.items()
                 for offset in range(a.duration_weeks)
             ):
@@ -288,7 +290,7 @@ class LnsScheduler:
             scheduled_activities=[],
             makespan=0,
             feasible=False,
-            metrics=_simple_metrics([], ResourcePool(), 0),
+            metrics=_compute_lns_metrics({}, ResourcePool(), 0, 0),
             heuristic="LNS",
         )
 
@@ -318,16 +320,28 @@ def _compute_earliest_starts(
     return es
 
 
+def _lns_demand_at_offset(a: Activity, offset: int, res: str, qty: int) -> int:
+    """Ramp-aware demand for resource *res* at *offset* weeks into activity *a*.
+
+    Mirrors scheduler._demand_at_offset() — NEP-047.
+    When ramp_profile is absent, returns *qty* (flat demand).
+    """
+    if a.ramp_profile is None or offset >= len(a.ramp_profile):
+        return qty
+    return max(0, round(qty * a.ramp_profile[offset]))
+
+
 def _book_resources(
     a: Activity,
     t_start: int,
     t_end: int,
     usage: dict[int, dict[str, int]],
 ) -> None:
-    for t in range(t_start, t_end):
+    for offset, t in enumerate(range(t_start, t_end)):
         week = usage.setdefault(t, {})
         for res, qty in a.required_resources.items():
-            week[res] = week.get(res, 0) + qty
+            demand = _lns_demand_at_offset(a, offset, res, qty)
+            week[res] = week.get(res, 0) + demand
 
 
 def _schedule_hash(scheduled: list[ScheduledActivity]) -> int:
@@ -345,16 +359,44 @@ def _to_activity_plans(scheduled: list[ScheduledActivity]) -> list[ActivityPlan]
     ]
 
 
-def _simple_metrics(
-    scheduled: list[ScheduledActivity],
+def _compute_lns_metrics(
+    resource_usage: dict[int, dict[str, int]],
     pool: ResourcePool,
     makespan: int,
+    deadline: int,
 ) -> ScheduleMetrics:
+    """Compute real schedule metrics from resource_usage built during _ssgs().
+
+    Mirrors SerialScheduler._compute_metrics() — leveling via CV, idle time,
+    utilization average (NEP-046).
+    """
+    if not resource_usage or makespan == 0:
+        return ScheduleMetrics(
+            makespan=makespan,
+            resource_leveling_score=1.0,
+            idle_time=0,
+            activity_fragmentation=0,
+            critical_path_slack_min=float(max(0, deadline - makespan)),
+            resource_utilization_avg=0.0,
+        )
+
+    total_capacity = sum(pool.resources.values()) or 1
+    weekly_loads: list[float] = []
+    for w in range(makespan):
+        week_load = sum(resource_usage.get(w, {}).values())
+        weekly_loads.append(week_load / total_capacity)
+
+    avg = sum(weekly_loads) / len(weekly_loads)
+    variance = sum((x - avg) ** 2 for x in weekly_loads) / len(weekly_loads)
+    cv = variance**0.5 / max(avg, 1e-9)
+    leveling_score = max(0.0, 1.0 - cv)
+    idle_time = sum(1 for w in range(makespan) if not resource_usage.get(w))
+
     return ScheduleMetrics(
         makespan=makespan,
-        resource_leveling_score=1.0,
-        idle_time=0,
+        resource_leveling_score=round(leveling_score, 4),
+        idle_time=idle_time,
         activity_fragmentation=0,
-        critical_path_slack_min=0.0,
-        resource_utilization_avg=0.0,
+        critical_path_slack_min=float(max(0, deadline - makespan)),
+        resource_utilization_avg=round(avg, 4),
     )

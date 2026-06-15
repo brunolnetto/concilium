@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from concilium.application.services.cube_projection_views import _iter_scaled_cubo_cells
+from concilium.application.services.analytics.cube_projection_views import _iter_scaled_cubo_cells
 
 from ._common import COLORS, init_mpl
 

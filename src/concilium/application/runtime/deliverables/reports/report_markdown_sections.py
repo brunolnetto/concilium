@@ -351,7 +351,7 @@ def render_pool_economia_origem(canonical: object | None) -> list[str]:
     if canonical is None:
         return []
     try:
-        from concilium.application.services.cubo_pool_projection import resolve_cubo_pool_projection
+        from concilium.application.services.analytics.cubo_pool_projection import resolve_cubo_pool_projection
 
         eco_proj = resolve_cubo_pool_projection(canonical, face="economia_pool", top_n=300)
         causa_proj = resolve_cubo_pool_projection(canonical, face="causa_custo", top_n=300)

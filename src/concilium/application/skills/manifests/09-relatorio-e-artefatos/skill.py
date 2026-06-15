@@ -104,7 +104,6 @@ def run_relatorio_e_artefatos(
     """Produz relatório estruturado baseado em template."""
     validacoes: list[ValidacaoItem] = []
     gerar_excel = _as_bool(inputs.get("gerar_excel", True))
-    gerar_modelo_vivo = _as_bool(inputs.get("gerar_modelo_vivo", False))
     benchmark_mode = _as_bool(inputs.get("benchmark_mode")) or _as_bool(inputs.get("modo_benchmark"))
     benchmark_reference_projection = inputs.get("benchmark_reference_projection")
     if not isinstance(benchmark_reference_projection, dict):
@@ -171,7 +170,7 @@ def run_relatorio_e_artefatos(
     novo._relatorio_saida = relatorio  # type: ignore[attr-defined]
 
     excel_bytes = _gerar_excel_bytes(canonical_in, validacoes, gerar_excel)
-    live_bytes = _gerar_live_model(canonical_in, validacoes, gerar_modelo_vivo)
+    live_bytes = _gerar_live_model(canonical_in, validacoes, False)
     memorial_json_bytes = _gerar_memorial_json_bytes(canonical_in)
 
     # NEP-041 Fase 1: artefatos executivos (criticidade, sensibilidade, intervenção, bridge)

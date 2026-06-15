@@ -42,7 +42,7 @@ def _resolve_cubo(canonical):
     if cubo is not None:
         return cubo
     try:
-        from concilium.domain.services.cubo_analitico_builder import CuboAnaliticoBuilder
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
 
         return CuboAnaliticoBuilder().build(canonical)
     except Exception:

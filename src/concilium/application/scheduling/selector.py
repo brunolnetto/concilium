@@ -14,6 +14,7 @@ from .models import (
     Activity,
     ActivityDAG,
     ResourcePool,
+    ScheduleError,
     ScheduleOutput,
     SchedulingStrategy,
 )
@@ -106,15 +107,8 @@ def explore_schedules(
     score_deadline = deadline_for_score or deadline_weeks
     algorithm = (strategy.algorithm if strategy else None) or "SerialScheduler"
 
-    # Track whether a primary ADR-075 algorithm was attempted.
-    # When it fails we fall back to a SINGLE reliable SSGS rule (MINSLK) rather
-    # than running all five — the others exist as explicit manual-override options,
-    # not as parallel auto-candidates.
-    _primary_attempted = False
-
     # ── CP-SAT exact solver (ADR-075 Mode A) ─────────────────────────────────
     if algorithm == "CP-SAT":
-        _primary_attempted = True
         try:
             from .cpsat_scheduler import CpSatScheduler  # lazy — avoids import cost
 
@@ -129,15 +123,20 @@ def explore_schedules(
             if sched.feasible:
                 score = sched.metrics.quality_score(deadline_weeks=score_deadline)
                 return [ExploreResult("CP-SAT", sched, score)]
-        except Exception:
-            _log.warning("CpSatScheduler failed; falling back to MINSLK", exc_info=True)
-        # fall through to SerialScheduler below
+            raise ScheduleError(
+                "CP-SAT solver não encontrou solução viável dentro do horizonte configurado. "
+                f"Verifique restrições de precedência e disponibilidade do pool "
+                f"(deadline={deadline_weeks}w, horizon={horizon}w)."
+            )
+        except ScheduleError:
+            raise
+        except Exception as exc:
+            raise ScheduleError(f"CP-SAT solver falhou com erro inesperado: {exc}") from exc
 
     # ── LNS Lagrangian + SSGS (ADR-075 Mode B) ───────────────────────────────
     elif algorithm == "LNS":
-        _primary_attempted = True
         try:
-            from concilium.domain.services.matching_oracle import MatchingOracle
+            from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
             from .lns_scheduler import LnsScheduler  # lazy import
 
@@ -147,17 +146,21 @@ def explore_schedules(
             if sched.feasible:
                 score = sched.metrics.quality_score(deadline_weeks=score_deadline)
                 return [ExploreResult("LNS", sched, score)]
-        except Exception:
-            _log.warning("LnsScheduler failed; falling back to MINSLK", exc_info=True)
-        # fall through to SerialScheduler below
+            raise ScheduleError(
+                "LNS solver não encontrou solução viável. "
+                "Verifique restrições de precedência e disponibilidade do pool."
+            )
+        except ScheduleError:
+            raise
+        except Exception as exc:
+            raise ScheduleError(f"LNS solver falhou com erro inesperado: {exc}") from exc
 
     # ── SerialScheduler SGS ───────────────────────────────────────────────────
-    # Fallback from a failed primary (CP-SAT / LNS): run MINSLK only — one fast,
-    # reliable rule is enough when we already tried the best available solver.
-    # Direct invocation (no primary attempted): explore all requested heuristics
-    # so the caller can compare and pick the best result.
+    # Reached only when algorithm is neither CP-SAT nor LNS (direct SerialScheduler
+    # invocation or explicit heuristic override). CP-SAT/LNS failures raise ScheduleError
+    # and never fall through here.
     if heuristics is None:
-        heuristics = ["MINSLK"] if _primary_attempted else ["MINSLK", "LPT", "MAXRES", "ES", "GR"]
+        heuristics = ["MINSLK", "LPT", "MAXRES", "ES", "GR"]
 
     results: list[ExploreResult] = []
     for heuristic in heuristics:
@@ -242,7 +245,7 @@ def compare_all_algorithms(
 
         elif algorithm == "LNS":
             try:
-                from concilium.domain.services.matching_oracle import MatchingOracle
+                from concilium.domain.services.planning.matching_oracle import MatchingOracle
 
                 from .lns_scheduler import LnsScheduler  # lazy
 

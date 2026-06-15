@@ -93,7 +93,7 @@ def init_mpl():
 
 def build_payload(face: str, granularidade: str, top_n: int, canonical, cubo) -> dict:
     """Convenience wrapper around build_cube_projection_payload."""
-    from concilium.application.services.cube_projection_views import build_cube_projection_payload
+    from concilium.application.services.analytics.cube_projection_views import build_cube_projection_payload
 
     return build_cube_projection_payload(
         canonical=canonical,
