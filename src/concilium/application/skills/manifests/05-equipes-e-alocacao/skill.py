@@ -277,6 +277,118 @@ def run_equipes_e_alocacao(
             contratos_recurso, rcpsp_spec, cron_lookup, validacoes
         )
 
+    # ADR-110: detecção automática de oportunidades de compartilhamento paralelo
+    # Executado quando há schedule, resource_costs e pool contracts disponíveis.
+    if (
+        relatorio_oportunidades is not None
+        and canonical_in.cronograma is not None
+        and canonical_in.cronograma.scheduled_activities
+        and canonical_in.recurso_pool
+    ):
+        try:
+            from concilium.application.scheduling.models import (
+                Activity,
+                ActivityDAG,
+                ResourcePool,
+                ScheduledActivity,
+                ScheduleMetrics,
+                ScheduleOutput,
+            )
+            from ._skill_helpers_pre import _detectar_oportunidades_paralelo
+
+            # Reconstruir ScheduleOutput a partir do cronograma canônico
+            _sched_acts_110 = []
+            for _sa in canonical_in.cronograma.scheduled_activities:
+                _rr = {}
+                for _cont in contratos_recurso:
+                    if _sa.activity_id in _cont.items_cobertos:
+                        _rr[_cont.tipo_id] = _rr.get(_cont.tipo_id, 0) + 1
+                _sched_acts_110.append(
+                    ScheduledActivity(
+                        activity_id=_sa.activity_id,
+                        start_week=int(getattr(_sa, "semana_inicio_idx", 0) or 0),
+                        end_week=int(getattr(_sa, "semana_fim_idx", 1) or 1),
+                        duration_weeks=max(
+                            1,
+                            int(getattr(_sa, "semana_fim_idx", 1) or 1)
+                            - int(getattr(_sa, "semana_inicio_idx", 0) or 0),
+                        ),
+                        assigned_resources=_rr,
+                    )
+                )
+
+            _makespan_110 = max((s.end_week for s in _sched_acts_110), default=0)
+            _metrics_110 = ScheduleMetrics(
+                makespan=_makespan_110,
+                resource_leveling_score=1.0,
+                idle_time=0,
+                activity_fragmentation=0,
+                critical_path_slack_min=0.0,
+                resource_utilization_avg=1.0,
+            )
+            _sched_output_110 = ScheduleOutput(
+                scheduled_activities=_sched_acts_110,
+                makespan=_makespan_110,
+                feasible=True,
+                metrics=_metrics_110,
+            )
+
+            # Reconstruir ActivityDAG a partir do rcpsp_spec
+            _act_110 = []
+            for _a in rcpsp_spec.get("activities") or []:
+                _dur = max(1, int(_a.get("duration_weeks") or 1))
+                _rr_a = {str(k): int(v) for k, v in (_a.get("required_resources") or {}).items()}
+                _act_110.append(
+                    Activity(
+                        activity_id=str(_a.get("item_id") or _a.get("activity_id") or ""),
+                        description=str(_a.get("descricao") or ""),
+                        duration_weeks=_dur,
+                        required_resources=_rr_a,
+                    )
+                )
+            _prec_110 = [
+                (str(e[0]), str(e[1]))
+                for e in (rcpsp_spec.get("precedence") or [])
+                if isinstance(e, (list, tuple)) and len(e) >= 2
+            ]
+            _dag_110 = ActivityDAG(activities=_act_110, precedence=_prec_110)
+
+            # Pool a partir dos contratos
+            _pool_res = {c.tipo_id: int(c.quantidade_total) for c in contratos_recurso}
+            _pool_110 = ResourcePool(resources=_pool_res)
+
+            _resource_costs_110 = rcpsp_spec.get("resource_costs") or {}
+            _custo_ind_sem = 0.0
+            if canonical_in.indiretos:
+                _custo_ind_sem = sum(i.custo_total for i in canonical_in.indiretos)
+                _n_sem = max(1, canonical_in.cronograma.makespan_weeks or 1)
+                _custo_ind_sem = _custo_ind_sem / _n_sem
+
+            _opps_paralelo = _detectar_oportunidades_paralelo(
+                _sched_output_110,
+                _dag_110,
+                _pool_110,
+                _resource_costs_110,
+                _custo_ind_sem,
+            )
+            if _opps_paralelo:
+                relatorio_oportunidades = relatorio_oportunidades.model_copy(
+                    update={"oportunidades_paralelo": _opps_paralelo}
+                )
+                _n_viaveis_par = sum(1 for o in _opps_paralelo if o.economicamente_viavel)
+                validacoes.append(
+                    ValidacaoItem(
+                        codigo="VAL-OPP-PARALELO-OK",
+                        status="OK",
+                        mensagem=(
+                            f"ADR-110: {len(_opps_paralelo)} oportunidade(s) paralela(s) detectada(s) "
+                            f"— {_n_viaveis_par} economicamente viável(is)."
+                        ),
+                    )
+                )
+        except Exception:
+            pass  # best-effort: não bloqueia o pipeline se o detector falhar
+
     requisitos, tipos = _build_requisitos_e_tipos(equipes, canonical_in, cron_lookup, validacoes)
     alocacoes, pool_dict = _build_alocacoes_pool(requisitos, canonical_in, tipos)
     conflitos: list[ConflitoPico] = []
