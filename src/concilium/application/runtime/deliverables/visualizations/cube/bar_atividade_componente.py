@@ -117,7 +117,7 @@ def _render(plt, rows: list):
         )
 
     # Desenhar as barras primeiro, depois ajustar xlim para labels
-    max_val = max(lefts) if lefts else 1.0
+    max_val = max(max(lefts), 1e-9) if lefts else 1.0
     ax.set_xlim(0, max_val * 1.12)
 
     ax.axhspan(-0.5, cut_ab - 0.5, color="#1a3a5c", alpha=0.06, zorder=0)
