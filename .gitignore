@@ -76,3 +76,7 @@ benchmarks/data/ROSH-*/
 benchmarks/data/RUMO-*/
 benchmarks/data/VALE-*/
 benchmarks/data/CTC-*/
+
+# NEP-039 audit store — runtime, gerado pelo BenchmarkRunner (não é fonte)
+benchmarks/data/.nep039/
+benchmarks/projetos/.nep039/
