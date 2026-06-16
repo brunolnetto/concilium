@@ -1009,12 +1009,38 @@ class OportunidadeCompartilhamento(BaseModel):
     economicamente_viavel: bool = True  # gap <= gap_max
 
 
+class OportunidadeCompartilhamentoParalelo(BaseModel):
+    """Par de atividades paralelizáveis via compartilhamento de recurso — ADR-110.
+
+    Detectado automaticamente pós-RCPSP. O solver serializou (i, j) exclusivamente
+    por escassez de pool (pool == 1, demanda == 2). Ambas têm folga CPM positiva,
+    portanto a alternativa de paralelo-com-alternância é geometricamente viável.
+
+    O planejador recebe o balanço custo × prazo e decide aceitar ou rejeitar.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    atividade_i: str          # item_id — uma das atividades do par
+    atividade_j: str          # item_id — outra atividade do par
+    tipo_recurso_id: str      # tipo de recurso compartilhável
+    recurso_e_gargalo: bool   # True → compartilhar estende duration (limite_producao == "equipamento" e r é equip principal)
+    delta_makespan_semanas: int  # semanas adicionais no makespan total (0 se r é suporte)
+    delta_custo_frota: float  # R$ economizado em frota (1 unidade poupada) — positivo = economia
+    delta_indiretos: float    # R$ adicional em indiretos pelo Δ_makespan — positivo = custo extra
+    delta_liquido: float      # delta_custo_frota − delta_indiretos
+    economicamente_viavel: bool  # delta_liquido > 0
+
+
 class RelatorioOportunidades(BaseModel):
     """Artefato de pré-processamento estrutural — ADR-078.
 
     Produzido pelo _build_pre_processamento_compartilhamento em skill-05 quando
     `rcpsp_spec.resource_costs` está presente. Contém o grafo de oportunidades H
     completo (incluindo arestas inviáveis para auditoria).
+
+    ADR-110: `oportunidades_paralelo` agrega os candidatos a compartilhamento
+    paralelo detectados automaticamente pós-RCPSP.
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -1025,6 +1051,8 @@ class RelatorioOportunidades(BaseModel):
     lambda0_total: float  # Σ lambda0 (apenas viáveis)
     oportunidades: list[OportunidadeCompartilhamento] = Field(default_factory=list)
     gap_max_por_tipo: dict[str, int] = Field(default_factory=dict)  # {tipo_id: gap_max}
+    # ADR-110: candidatos a paralelo-com-alternância (detecção pós-RCPSP)
+    oportunidades_paralelo: list[OportunidadeCompartilhamentoParalelo] = Field(default_factory=list)
 
 
 class RequisitoRecurso(BaseModel):
