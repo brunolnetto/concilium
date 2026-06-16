@@ -183,7 +183,7 @@ class BenchmarkRunner:
             from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
             from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
 
-            nep039_root = self.projects_root.parent / "data" / ".nep039"
+            nep039_root = self.projects_root / ".nep039"
             nep039_root.mkdir(parents=True, exist_ok=True)
             benchmark_store = FileSystemBenchmarkStore.from_path(nep039_root)
 
@@ -220,7 +220,7 @@ class BenchmarkRunner:
         # Load benchmark metadata if available
         benchmark_versao = None
         benchmark_execution_id = None
-        nep039_root = self.projects_root.parent / "data" / ".nep039"
+        nep039_root = self.projects_root / ".nep039"
         if nep039_root.exists():
             try:
                 store = FileSystemBenchmarkStore.from_path(nep039_root)

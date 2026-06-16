@@ -105,6 +105,10 @@ def _unpack_v2_schema(ref: dict[str, Any]) -> dict[str, Any]:
         out["id"] = ref["id"]
     if ref.get("slug"):
         out["slug"] = ref["slug"]
+    # Propaga contexto_id do topo ou de meta — permite override do contexto por benchmark
+    ctx = ref.get("contexto_id") or meta.get("contexto_id")
+    if ctx:
+        out["contexto_id"] = ctx
 
     # 1. meta → campos raiz
     out["projeto"] = meta.get("projeto", "")
