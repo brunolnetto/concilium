@@ -137,7 +137,8 @@ class TestAdapterRunHappyPath:
         with patch_parse, patch_resolve, patch_rt, patch_re, _patch_config_root(tmp_path):
             result = runner.invoke(app, ["meu-projeto"])
 
-        assert "relatorio.json" in result.output
+        # Path may wrap across lines in narrow terminal; collapse to check presence
+        assert "relatorio.json" in result.output.replace("\n", "")
 
     def test_run_skill_called_with_correct_skill_name(self, tmp_path):
         project = _make_project_mock(version="v2")
