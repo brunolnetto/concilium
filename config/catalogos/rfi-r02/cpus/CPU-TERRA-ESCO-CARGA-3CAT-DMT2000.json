@@ -1,0 +1,16 @@
+{
+  "codigo": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000",
+  "descricao": "Esc/carg/transp 3ªcat DMT≤2000m",
+  "unidade": "m3",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000-PROD-001",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.372,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "_nota": "Calibrado AGIS-RFI. PU = (MO R$166.97 + EQ R$1659.28) / 142.02 m3/h = R$12.8591/m3. 3ªcat: escav 38t (rocha) + 6 cam 16m³. | Diesel: 0.3720 L/m3 × R$5.8/L = R$2.1576/m3. Coeficiente calibrado do campo AGIS (mendeslobo). Locação RFI é seca (combustível separado)."
+}

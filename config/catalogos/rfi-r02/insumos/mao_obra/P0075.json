@@ -1,0 +1,17 @@
+{
+  "codigo": "P0075",
+  "tipo": "MAO_OBRA",
+  "descricao": "Técnico de Planejamento",
+  "unidade": "mes",
+  "preco_unitario": 14000.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "PJ",
+    "horas_mes": 220.0,
+    "salario_base_hora": 63.636364,
+    "custo_hora_com_encargos_planilha": 63.6364,
+    "codigo_planilha": "P0075"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

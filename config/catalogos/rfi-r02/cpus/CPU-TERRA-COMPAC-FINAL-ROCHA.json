@@ -1,0 +1,16 @@
+{
+  "codigo": "CPU-TERRA-COMPAC-FINAL-ROCHA",
+  "descricao": "Compactação de camada final de aterro de rocha",
+  "unidade": "m3",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.8916,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "_nota": "Calibrado AGIS-RFI. PU = (MO R$139.09 + EQ R$715.92) / 100.0 m3/h = R$8.5501/m3. Compactação de camada final de aterro de rocha. Composição calibrada AGIS. | Diesel: 0.8916 L/m3 × R$5.8/L = R$5.1713/m3. Coeficiente calibrado do campo AGIS (mendeslobo). Locação RFI é seca (combustível separado)."
+}

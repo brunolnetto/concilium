@@ -1,0 +1,13 @@
+{
+  "codigo": "M0012",
+  "tipo": "MATERIAL",
+  "descricao": "CAP 50/70 (Cimento Asfáltico)",
+  "unidade": "t",
+  "preco_unitario": 6091.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0012"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

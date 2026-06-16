@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-026",
+  "descricao": "Corpo BSTC D=1,00m PA2 — Padrão VALEC",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-026-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-026. Custo horário equipe: MO R$146.11/h + Equip R$123.50/h. Produt: 1.0 m/h."
+}

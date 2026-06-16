@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-024",
+  "descricao": "Espalhamento pó de pedra",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-024-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-024. Custo horário equipe: MO R$70.22/h + Equip R$186.00/h. Produt: 19.0 m³/h."
+}

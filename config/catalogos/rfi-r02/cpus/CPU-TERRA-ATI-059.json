@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-059",
+  "descricao": "Dreno de pavimento",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-059-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-059. Custo horário equipe: MO R$94.43/h + Equip R$74.50/h. Produt: 6.67 m/h."
+}

@@ -1,0 +1,17 @@
+{
+  "codigo": "P0067",
+  "tipo": "MAO_OBRA",
+  "descricao": "Técnico de Enfermagem",
+  "unidade": "mes",
+  "preco_unitario": 2594.04,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "CLT",
+    "horas_mes": 220.0,
+    "salario_base_hora": 11.791091,
+    "custo_hora_com_encargos_planilha": 19.0568,
+    "codigo_planilha": "P0067"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

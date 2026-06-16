@@ -1,0 +1,17 @@
+{
+  "codigo": "P0065",
+  "tipo": "MAO_OBRA",
+  "descricao": "Encarregado de Frente",
+  "unidade": "mes",
+  "preco_unitario": 7500.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "PJ",
+    "horas_mes": 220.0,
+    "salario_base_hora": 34.090909,
+    "custo_hora_com_encargos_planilha": 34.0909,
+    "codigo_planilha": "P0065"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

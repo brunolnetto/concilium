@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-058",
+  "descricao": "CBUQ E=3,0cm",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-058-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-058. Custo horário equipe: MO R$119.35/h + Equip R$433.35/h. Produt: 816.67 m²/h."
+}

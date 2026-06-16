@@ -1,0 +1,38 @@
+{
+  "id": "CPU-TERRA-ATI-002-PROD-001",
+  "codigo": "ATI-002",
+  "descricao": "Limpeza camada vegetal 20cm",
+  "valor_horario": 500.0,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-002",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 64.77,
+    "custo_equip_h": 180.8,
+    "total_h": 245.57,
+    "pu_calculado": 0.4911
+  },
+  "categoria": "TERRAPLENAGEM"
+}

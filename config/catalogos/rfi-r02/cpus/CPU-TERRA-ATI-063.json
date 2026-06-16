@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-063",
+  "descricao": "Piso intertravado espessura 10cm",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-063-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-063. Custo horário equipe: MO R$234.87/h + Equip R$84.50/h. Produt: 25.0 m²/h."
+}

@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-005-PROD-001",
+  "codigo": "ATI-005",
+  "descricao": "Supressão c/ destocamento",
+  "valor_horario": 6.25,
+  "unidade": "m³",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-005",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0048",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0024",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 120.14,
+    "custo_equip_h": 431.8,
+    "total_h": 551.94,
+    "pu_calculado": 88.3104
+  },
+  "categoria": "TERRAPLENAGEM"
+}

@@ -1,0 +1,18 @@
+{
+  "codigo": "E0029",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Motoniveladora 140HP",
+  "unidade": "h",
+  "preco_unitario": 246.17600000000002,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 219.8,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 49235.200000000004,
+    "codigo_planilha": "E0029",
+    "consumo_litros_hora": 16.0
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

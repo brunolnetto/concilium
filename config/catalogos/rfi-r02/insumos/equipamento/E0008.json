@@ -1,0 +1,18 @@
+{
+  "codigo": "E0008",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão Basculante 16m³",
+  "unidade": "h",
+  "preco_unitario": 227.75199999999998,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 203.35,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 45550.399999999994,
+    "codigo_planilha": "E0008",
+    "consumo_litros_hora": 3.3
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

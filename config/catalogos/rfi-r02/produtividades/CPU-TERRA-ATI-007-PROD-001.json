@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-007-PROD-001",
+  "codigo": "ATI-007",
+  "descricao": "Supressão média densidade",
+  "valor_horario": 625.0,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-007",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0062",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 3
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0031",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 95.92,
+    "custo_equip_h": 210.8,
+    "total_h": 306.72,
+    "pu_calculado": 0.4908
+  },
+  "categoria": "TERRAPLENAGEM"
+}

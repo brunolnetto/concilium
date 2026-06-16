@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-067",
+  "descricao": "Remoção de cerca",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-067-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-067. Custo horário equipe: MO R$64.77/h + Equip R$20.00/h. Produt: 42.86 m/h."
+}

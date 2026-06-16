@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-071",
+  "descricao": "Assentamento piso intertravado (terceirizado)",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-071-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-071. Custo horário equipe: MO R$59.68/h + Equip R$0.00/h. Produt: 25.0 m²/h."
+}

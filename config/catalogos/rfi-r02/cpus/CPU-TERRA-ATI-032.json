@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-032",
+  "descricao": "Corpo BTTC D=1,20m PA2",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-032-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-032. Custo horário equipe: MO R$146.11/h + Equip R$123.50/h. Produt: 0.25 m/h."
+}

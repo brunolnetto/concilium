@@ -1,0 +1,56 @@
+{
+  "id": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
+  "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT",
+  "descricao": "Construção de corpo de aterro com material de 3ª categoria oriundo de corte",
+  "valor_horario": 214.92,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_agis_rfi",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Híbrido: composição/produtividade mendeslobo (campo AGIS 2026-05) + preços unitários RFI-R02 (mercado mai/2026)."
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0048",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0029",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0035",
+        "num_unidades": 2,
+        "consumo_litros_hora": 25.98
+      },
+      {
+        "equip_id": "E0025",
+        "num_unidades": 1,
+        "consumo_litros_hora": 18.5
+      }
+    ]
+  },
+  "custos_equipe_rfi": {
+    "custo_mo_h": 146.25,
+    "custo_equip_h": 659.9,
+    "total_h": 806.15,
+    "pu_calculado": 3.7509
+  },
+  "_nota_calibracao": "Corpo de aterro 3ªcat. Trator esteiras grande + 2 rolos. Calibrado AGIS.",
+  "categoria": "TERRAPLENAGEM"
+}

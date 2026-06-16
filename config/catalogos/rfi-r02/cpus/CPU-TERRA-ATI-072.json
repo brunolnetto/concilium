@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-072",
+  "descricao": "Assentamento de guia (terceirizado)",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-072-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-072. Custo horário equipe: MO R$64.51/h + Equip R$0.00/h. Produt: 15.0 m/h."
+}

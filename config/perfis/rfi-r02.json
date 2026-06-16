@@ -1,0 +1,48 @@
+{
+  "id": "rfi-r02",
+  "nome": "Planilha Padrão RFI R02 — MendesLôbo Construção",
+  "descricao": "Parâmetros financeiros extraídos da Planilha RFI R02 (mai/2026).",
+  "origem": "planilha_rfi_r02",
+  "data_referencia": "2026-05-08",
+  "bdi": {
+    "mao_obra": {
+      "ac": 0.05,
+      "df": 0.015,
+      "r": 0.01,
+      "l": 0.09,
+      "cofins": 0.03,
+      "iss": 0.05,
+      "pis": 0.0065,
+      "cssl": 0.0199,
+      "ir": 0.0274,
+      "total": 0.3545187889632879
+    },
+    "materiais": {
+      "l": 0.05,
+      "total": 0.050000000000000044
+    },
+    "servicos": {
+      "total": 0.3545187889632879
+    },
+    "diesel": {
+      "total": 0.2606788270607252
+    }
+  },
+  "percentual_encargos": 0.6162,
+  "percentual_encargos_clt_horista": 0.777,
+  "percentual_encargos_clt_mensalista": 0.06,
+  "regime_tributacao": "nao_desonerado",
+  "meta_margem_pct": 0.1,
+  "taxa_risco_adicional": 0.0,
+  "faixa_margem_alvo": { "min": 0.08, "max": 0.14 },
+  "faixa_margem_aceitavel": { "min": 0.06, "max": 0.16 },
+  "razao_indireto_direto_alvo": { "min": 0.10, "max": 0.50 },
+  "jurisdicao_id": "BR",
+  "categorias_indireto": [
+    { "codigo": "ADM",  "descricao": "Administração de obra" },
+    { "codigo": "TOP",  "descricao": "Topografia" },
+    { "codigo": "LAB",  "descricao": "Laboratório" },
+    { "codigo": "QSMS", "descricao": "Qualidade, Saúde, Segurança e Meio Ambiente" },
+    { "codigo": "MOB",  "descricao": "Mobilização e desmobilização" }
+  ]
+}

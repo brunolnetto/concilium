@@ -1,0 +1,18 @@
+{
+  "codigo": "E0007",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Caminhão Basculante 14m³",
+  "unidade": "h",
+  "preco_unitario": 142.8,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 127.5,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 28560.000000000004,
+    "codigo_planilha": "E0007",
+    "consumo_litros_hora": 2.76
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

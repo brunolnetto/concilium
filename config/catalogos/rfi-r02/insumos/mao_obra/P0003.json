@@ -1,0 +1,17 @@
+{
+  "codigo": "P0003",
+  "tipo": "MAO_OBRA",
+  "descricao": "Almoxarife",
+  "unidade": "mes",
+  "preco_unitario": 2757.59,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "CLT",
+    "horas_mes": 220.0,
+    "salario_base_hora": 12.5345,
+    "custo_hora_com_encargos_planilha": 20.2583,
+    "codigo_planilha": "P0003"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

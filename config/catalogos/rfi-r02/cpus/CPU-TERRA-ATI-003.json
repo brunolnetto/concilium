@@ -1,0 +1,16 @@
+{
+  "codigo": "CPU-TERRA-ATI-003",
+  "descricao": "Desmatamento, destocamento, limpeza",
+  "unidade": "m2",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-003-PROD-001",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.0738,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "_nota": "Calibrado AGIS-RFI. PU = (MO R$158.92 + EQ R$519.62) / 738.0 m2/h = R$0.9194/m2. Produtividade/composição da planilha AGIS 2026-05 (mendeslobo). Correto para área de caatinga/cerrado do Nordeste. RFI (250 m²/h) é para mata fechada DAP≥30cm — não aplicável ao AGIS. | Diesel: 0.0738 L/m2 × R$5.8/L = R$0.4280/m2. Coeficiente calibrado do campo AGIS (mendeslobo). Locação RFI é seca (combustível separado)."
+}

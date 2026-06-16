@@ -1,0 +1,50 @@
+{
+  "id": "CPU-TERRA-ATI-060-PROD-001",
+  "codigo": "ATI-060",
+  "descricao": "Demolição de pavimento asfáltico",
+  "valor_horario": 26.1,
+  "unidade": "m³",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-060",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0032",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0050",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0008",
+        "num_unidades": 2
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 77.23,
+    "custo_equip_h": 581.2,
+    "total_h": 658.43,
+    "pu_calculado": 25.2272
+  },
+  "categoria": "TERRAPLENAGEM"
+}

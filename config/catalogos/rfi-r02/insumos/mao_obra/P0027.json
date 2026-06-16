@@ -1,0 +1,17 @@
+{
+  "codigo": "P0027",
+  "tipo": "MAO_OBRA",
+  "descricao": "Gerente de Contrato",
+  "unidade": "mes",
+  "preco_unitario": 30000.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "PJ",
+    "horas_mes": 220.0,
+    "salario_base_hora": 136.363636,
+    "custo_hora_com_encargos_planilha": 136.3636,
+    "codigo_planilha": "P0027"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

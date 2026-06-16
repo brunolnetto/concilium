@@ -1,0 +1,50 @@
+{
+  "id": "CPU-TERRA-ATI-039-PROD-001",
+  "codigo": "ATI-039",
+  "descricao": "Corpo BDCC 2,50×2,50m — aterro 10-15m",
+  "valor_horario": 0.15,
+  "unidade": "m",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-039",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0020",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0037",
+        "num_pessoas": 5
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0027",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0026",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0002",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 346.79,
+    "custo_equip_h": 126.5,
+    "total_h": 473.29,
+    "pu_calculado": 3155.2667
+  },
+  "categoria": "TERRAPLENAGEM"
+}

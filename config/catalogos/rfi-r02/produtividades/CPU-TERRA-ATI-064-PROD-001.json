@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-064-PROD-001",
+  "codigo": "ATI-064",
+  "descricao": "Instalação guia 1,00×0,30×0,15",
+  "valor_horario": 15.0,
+  "unidade": "m",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-064",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0039",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0026",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0002",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 134.99,
+    "custo_equip_h": 77.5,
+    "total_h": 212.49,
+    "pu_calculado": 14.166
+  },
+  "categoria": "TERRAPLENAGEM"
+}

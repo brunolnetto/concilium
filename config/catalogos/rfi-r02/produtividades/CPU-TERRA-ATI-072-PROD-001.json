@@ -1,0 +1,37 @@
+{
+  "id": "CPU-TERRA-ATI-072-PROD-001",
+  "codigo": "ATI-072",
+  "descricao": "Assentamento de guia (terceirizado)",
+  "valor_horario": 15.0,
+  "unidade": "m",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-072",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0065",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0039",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": []
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 64.51,
+    "custo_equip_h": 0.0,
+    "total_h": 64.51,
+    "pu_calculado": 4.3007
+  },
+  "categoria": "TERRAPLENAGEM"
+}

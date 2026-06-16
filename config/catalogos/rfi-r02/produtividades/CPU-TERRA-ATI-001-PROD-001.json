@@ -1,0 +1,38 @@
+{
+  "id": "CPU-TERRA-ATI-001-PROD-001",
+  "codigo": "ATI-001",
+  "descricao": "Supressão vegetal DAP≥0,30 e arbustos",
+  "valor_horario": 0.625,
+  "unidade": "und",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-001",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0062",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 3
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0031",
+        "num_unidades": 2
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 60.81,
+    "custo_equip_h": 60.0,
+    "total_h": 120.81,
+    "pu_calculado": 193.296
+  },
+  "categoria": "TERRAPLENAGEM"
+}

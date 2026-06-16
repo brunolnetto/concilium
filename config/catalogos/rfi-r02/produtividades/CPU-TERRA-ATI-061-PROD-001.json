@@ -1,0 +1,62 @@
+{
+  "id": "CPU-TERRA-ATI-061-PROD-001",
+  "codigo": "ATI-061",
+  "descricao": "Recomposição de pavimento asfáltico",
+  "valor_horario": 74.07,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-061",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0081",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0047",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0032",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0023",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0041",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0036",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0037",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0008",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 119.35,
+    "custo_equip_h": 433.35,
+    "total_h": 552.7,
+    "pu_calculado": 7.4619
+  },
+  "categoria": "TERRAPLENAGEM"
+}

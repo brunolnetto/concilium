@@ -1,0 +1,17 @@
+{
+  "codigo": "E0047",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Bobcat / Minicarregadeira",
+  "unidade": "h",
+  "preco_unitario": 78.4,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 70.0,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 15680.000000000002,
+    "codigo_planilha": "E0047"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

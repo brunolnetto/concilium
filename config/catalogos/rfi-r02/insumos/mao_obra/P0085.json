@@ -1,0 +1,17 @@
+{
+  "codigo": "P0085",
+  "tipo": "MAO_OBRA",
+  "descricao": "Operador de Guindaste",
+  "unidade": "mes",
+  "preco_unitario": 3843.4,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "CLT",
+    "horas_mes": 220.0,
+    "salario_base_hora": 17.47,
+    "custo_hora_com_encargos_planilha": 28.235,
+    "codigo_planilha": "P0085"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

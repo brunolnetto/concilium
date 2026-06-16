@@ -1,0 +1,62 @@
+{
+  "id": "CPU-TERRA-COMPAC-FINAL-ROCHA-PROD-001",
+  "codigo": "CPU-TERRA-COMPAC-FINAL-ROCHA",
+  "descricao": "Compactação de camada final de aterro de rocha",
+  "valor_horario": 100.0,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_agis_rfi",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Híbrido: composição/produtividade mendeslobo (campo AGIS 2026-05) + preços unitários RFI-R02 (mercado mai/2026)."
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0048",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 3
+      },
+      {
+        "funcao_id": "P0033",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0024",
+        "num_unidades": 1,
+        "consumo_litros_hora": 24.39
+      },
+      {
+        "equip_id": "E0036",
+        "num_unidades": 2,
+        "consumo_litros_hora": 13.9
+      },
+      {
+        "equip_id": "E0010",
+        "num_unidades": 1,
+        "consumo_litros_hora": 11.0
+      },
+      {
+        "equip_id": "E0035",
+        "num_unidades": 1,
+        "consumo_litros_hora": 25.98
+      }
+    ]
+  },
+  "custos_equipe_rfi": {
+    "custo_mo_h": 139.09,
+    "custo_equip_h": 715.92,
+    "total_h": 855.01,
+    "pu_calculado": 8.5501
+  },
+  "_nota_calibracao": "Compactação de camada final de aterro de rocha. Composição calibrada AGIS.",
+  "categoria": "TERRAPLENAGEM"
+}

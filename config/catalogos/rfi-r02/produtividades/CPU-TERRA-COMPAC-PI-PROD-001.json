@@ -1,0 +1,74 @@
+{
+  "id": "CPU-TERRA-COMPAC-PI-PROD-001",
+  "codigo": "CPU-TERRA-COMPAC-PI",
+  "descricao": "Aterro compactado 100% PI",
+  "valor_horario": 132.32,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_agis_rfi",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Híbrido: composição/produtividade mendeslobo (campo AGIS 2026-05) + preços unitários RFI-R02 (mercado mai/2026)."
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0049",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0043",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0033",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0029",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0035",
+        "num_unidades": 2,
+        "consumo_litros_hora": 25.98
+      },
+      {
+        "equip_id": "E0039",
+        "num_unidades": 1,
+        "consumo_litros_hora": 8.0
+      },
+      {
+        "equip_id": "E0029",
+        "num_unidades": 1,
+        "consumo_litros_hora": 16.0
+      },
+      {
+        "equip_id": "E0010",
+        "num_unidades": 1,
+        "consumo_litros_hora": 11.0
+      }
+    ]
+  },
+  "custos_equipe_rfi": {
+    "custo_mo_h": 187.58,
+    "custo_equip_h": 717.94,
+    "total_h": 905.52,
+    "pu_calculado": 6.8434
+  },
+  "_nota_calibracao": "PI exige mais passadas que PN → mesma frota, menor produtividade. Frota calibrada campo AGIS.",
+  "categoria": "TERRAPLENAGEM"
+}

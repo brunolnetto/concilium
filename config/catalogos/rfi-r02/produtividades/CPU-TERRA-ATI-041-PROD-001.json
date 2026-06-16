@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-041-PROD-001",
+  "codigo": "ATI-041",
+  "descricao": "Boca tubulares",
+  "valor_horario": 0.042,
+  "unidade": "unid",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-041",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0020",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0037",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0026",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 175.77,
+    "custo_equip_h": 255.3,
+    "total_h": 431.07,
+    "pu_calculado": 10263.5714
+  },
+  "categoria": "TERRAPLENAGEM"
+}

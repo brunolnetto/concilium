@@ -1,0 +1,18 @@
+{
+  "codigo": "E0016",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Escavadeira Hidráulica 22t",
+  "unidade": "h",
+  "preco_unitario": 202.496,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 180.8,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 40499.200000000004,
+    "codigo_planilha": "E0016",
+    "consumo_litros_hora": 28.58
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

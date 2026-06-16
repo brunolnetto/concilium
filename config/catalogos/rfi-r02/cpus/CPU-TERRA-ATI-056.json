@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-056",
+  "descricao": "Imprimação",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-056-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-056. Custo horário equipe: MO R$54.91/h + Equip R$187.50/h. Produt: 900.0 m²/h."
+}

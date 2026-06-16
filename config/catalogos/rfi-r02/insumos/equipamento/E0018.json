@@ -1,0 +1,18 @@
+{
+  "codigo": "E0018",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Escavadeira Hidráulica 38t",
+  "unidade": "h",
+  "preco_unitario": 292.768,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 261.4,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 58553.59999999999,
+    "codigo_planilha": "E0018",
+    "consumo_litros_hora": 33.01
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

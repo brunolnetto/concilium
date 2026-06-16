@@ -1,0 +1,13 @@
+{
+  "codigo": "M0010",
+  "tipo": "MATERIAL",
+  "descricao": "BGTC (Brita Graduada Tratada c/ Cimento)",
+  "unidade": "m³",
+  "preco_unitario": 360.05,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0010"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

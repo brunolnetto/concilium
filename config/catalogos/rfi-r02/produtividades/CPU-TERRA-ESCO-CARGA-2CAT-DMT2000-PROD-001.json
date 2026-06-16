@@ -1,0 +1,52 @@
+{
+  "id": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000-PROD-001",
+  "codigo": "CPU-TERRA-ESCO-CARGA-2CAT-DMT2000",
+  "descricao": "Esc/carg/transp 2ªcat DMT≤2000m",
+  "valor_horario": 158.28,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_agis_rfi",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Híbrido: composição/produtividade mendeslobo (campo AGIS 2026-05) + preços unitários RFI-R02 (mercado mai/2026)."
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0032",
+        "num_pessoas": 6
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1,
+        "consumo_litros_hora": 28.58
+      },
+      {
+        "equip_id": "E0007",
+        "num_unidades": 6,
+        "consumo_litros_hora": 2.76
+      }
+    ]
+  },
+  "custos_equipe_rfi": {
+    "custo_mo_h": 195.2,
+    "custo_equip_h": 1059.3,
+    "total_h": 1254.5,
+    "pu_calculado": 7.9258
+  },
+  "_nota_calibracao": "2ªcat: mesma escav 22t, mas 6 cam (solo mais duro → menor produção).",
+  "categoria": "TERRAPLENAGEM"
+}

@@ -1,0 +1,38 @@
+{
+  "id": "CPU-TERRA-ATI-069-PROD-001",
+  "codigo": "ATI-069",
+  "descricao": "Instalação de manta geotêxtil (Bidim)",
+  "valor_horario": 327.5,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-069",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0001",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 94.43,
+    "custo_equip_h": 20.0,
+    "total_h": 114.43,
+    "pu_calculado": 0.3494
+  },
+  "categoria": "TERRAPLENAGEM"
+}

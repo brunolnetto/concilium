@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-046",
+  "descricao": "Tubulação água DEFOFO 100mm",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-046-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-046. Custo horário equipe: MO R$134.99/h + Equip R$123.50/h. Produt: 12.825 m/h."
+}

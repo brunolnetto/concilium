@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-056-PROD-001",
+  "codigo": "ATI-056",
+  "descricao": "Imprimação",
+  "valor_horario": 900.0,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-056",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0041",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0033",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0079",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0020",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0010",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 54.91,
+    "custo_equip_h": 187.5,
+    "total_h": 242.41,
+    "pu_calculado": 0.2693
+  },
+  "categoria": "TERRAPLENAGEM"
+}

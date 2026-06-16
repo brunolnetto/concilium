@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-023-PROD-001",
+  "codigo": "ATI-023",
+  "descricao": "Espalhamento e compactação BGTC",
+  "valor_horario": 138.0,
+  "unidade": "m³",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-023",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0043",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0028",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0036",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 91.28,
+    "custo_equip_h": 276.0,
+    "total_h": 367.28,
+    "pu_calculado": 2.6614
+  },
+  "categoria": "TERRAPLENAGEM"
+}

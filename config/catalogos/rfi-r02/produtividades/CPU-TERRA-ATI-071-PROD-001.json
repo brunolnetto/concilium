@@ -1,0 +1,37 @@
+{
+  "id": "CPU-TERRA-ATI-071-PROD-001",
+  "codigo": "ATI-071",
+  "descricao": "Assentamento piso intertravado (terceirizado)",
+  "valor_horario": 25.0,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-071",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0065",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0037",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": []
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 59.68,
+    "custo_equip_h": 0.0,
+    "total_h": 59.68,
+    "pu_calculado": 2.3872
+  },
+  "categoria": "TERRAPLENAGEM"
+}

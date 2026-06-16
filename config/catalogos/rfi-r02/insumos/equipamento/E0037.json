@@ -1,0 +1,17 @@
+{
+  "codigo": "E0037",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Rolo Compactador Pneu 16t",
+  "unidade": "h",
+  "preco_unitario": 116.032,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 103.6,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 23206.399999999998,
+    "codigo_planilha": "E0037"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

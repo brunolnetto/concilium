@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-022",
+  "descricao": "Espalhamento e compactação rachão",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-022-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-022. Custo horário equipe: MO R$91.28/h + Equip R$276.00/h. Produt: 82.03 m³/h."
+}

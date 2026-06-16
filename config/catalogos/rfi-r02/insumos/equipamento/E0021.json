@@ -1,0 +1,17 @@
+{
+  "codigo": "E0021",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Compactador Vibratório Mão",
+  "unidade": "h",
+  "preco_unitario": 5.75,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "próprio",
+    "custo_produtivo_h": 5.0,
+    "pct_manutencao": 0.15,
+    "custo_mensal": 1150.0,
+    "codigo_planilha": "E0021"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

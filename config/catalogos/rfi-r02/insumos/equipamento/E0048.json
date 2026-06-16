@@ -1,0 +1,17 @@
+{
+  "codigo": "E0048",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Roçadeira Costal",
+  "unidade": "h",
+  "preco_unitario": 12.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "próprio",
+    "custo_produtivo_h": 10.0,
+    "pct_manutencao": 0.2,
+    "custo_mensal": 2400.0,
+    "codigo_planilha": "E0048"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

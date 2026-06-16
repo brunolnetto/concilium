@@ -1,0 +1,17 @@
+{
+  "codigo": "E0003",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Bogie Vibratório Tampão",
+  "unidade": "h",
+  "preco_unitario": 26.4,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 24.0,
+    "pct_manutencao": 0.1,
+    "custo_mensal": 5280.0,
+    "codigo_planilha": "E0003"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

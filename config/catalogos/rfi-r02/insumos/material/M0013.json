@@ -1,0 +1,13 @@
+{
+  "codigo": "M0013",
+  "tipo": "MATERIAL",
+  "descricao": "RR-2C (Emulsão Catiônica Ruptura Média)",
+  "unidade": "t",
+  "preco_unitario": 4121.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0013"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

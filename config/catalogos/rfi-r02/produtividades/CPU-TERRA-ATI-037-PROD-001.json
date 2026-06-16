@@ -1,0 +1,50 @@
+{
+  "id": "CPU-TERRA-ATI-037-PROD-001",
+  "codigo": "ATI-037",
+  "descricao": "Corpo BSCC 3,00×2,50m — aterro 2-6m",
+  "valor_horario": 0.25,
+  "unidade": "m",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-037",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0020",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0037",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0027",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0026",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0002",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 296.79,
+    "custo_equip_h": 126.5,
+    "total_h": 423.29,
+    "pu_calculado": 1693.16
+  },
+  "categoria": "TERRAPLENAGEM"
+}

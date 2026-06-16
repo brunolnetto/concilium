@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-053",
+  "descricao": "Reforço do subleito",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-053-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-053. Custo horário equipe: MO R$154.46/h + Equip R$802.70/h. Produt: 220.0 m³/h."
+}

@@ -1,0 +1,17 @@
+{
+  "codigo": "P0009",
+  "tipo": "MAO_OBRA",
+  "descricao": "Auxiliar de Laboratório",
+  "unidade": "mes",
+  "preco_unitario": 1986.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "CLT",
+    "horas_mes": 220.0,
+    "salario_base_hora": 9.027273,
+    "custo_hora_com_encargos_planilha": 14.5899,
+    "codigo_planilha": "P0009"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

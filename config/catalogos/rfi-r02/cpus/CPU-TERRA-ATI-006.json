@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-006",
+  "descricao": "Supressão baixa densidade",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-006-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-006. Custo horário equipe: MO R$45.98/h + Equip R$30.00/h. Produt: 1428.57 m²/h."
+}

@@ -1,0 +1,42 @@
+{
+  "id": "CPU-TERRA-ATI-006-PROD-001",
+  "codigo": "ATI-006",
+  "descricao": "Supressão baixa densidade",
+  "valor_horario": 1428.57,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-006",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0062",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0031",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0048",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 45.98,
+    "custo_equip_h": 30.0,
+    "total_h": 75.98,
+    "pu_calculado": 0.0532
+  },
+  "categoria": "TERRAPLENAGEM"
+}

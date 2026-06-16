@@ -1,0 +1,17 @@
+{
+  "codigo": "P0018",
+  "tipo": "MAO_OBRA",
+  "descricao": "Encarregado Geral",
+  "unidade": "mes",
+  "preco_unitario": 15000.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "PJ",
+    "horas_mes": 220.0,
+    "salario_base_hora": 68.181818,
+    "custo_hora_com_encargos_planilha": 68.1818,
+    "codigo_planilha": "P0018"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

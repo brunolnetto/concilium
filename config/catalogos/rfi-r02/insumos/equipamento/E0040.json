@@ -1,0 +1,17 @@
+{
+  "codigo": "E0040",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Vibrador de Imersão",
+  "unidade": "h",
+  "preco_unitario": 4.025,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "próprio",
+    "custo_produtivo_h": 3.5,
+    "pct_manutencao": 0.15,
+    "custo_mensal": 805.0000000000001,
+    "codigo_planilha": "E0040"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

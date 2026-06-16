@@ -1,0 +1,13 @@
+{
+  "codigo": "M0032",
+  "tipo": "MATERIAL",
+  "descricao": "Guia de Concreto 1,00×0,30×0,15m",
+  "unidade": "m",
+  "preco_unitario": 63.21,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0032"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

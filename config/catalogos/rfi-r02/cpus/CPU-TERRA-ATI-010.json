@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-010",
+  "descricao": "Escavação canaletas",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-010-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-010. Custo horário equipe: MO R$90.48/h + Equip R$74.50/h. Produt: 37.5 m³/h."
+}

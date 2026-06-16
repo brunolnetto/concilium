@@ -1,0 +1,13 @@
+{
+  "codigo": "M0018",
+  "tipo": "MATERIAL",
+  "descricao": "Tubo PVC DEFOFO D=100mm",
+  "unidade": "m",
+  "preco_unitario": 35.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0018"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

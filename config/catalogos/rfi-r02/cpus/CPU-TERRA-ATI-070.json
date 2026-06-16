@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-070",
+  "descricao": "Implantação de eixo",
+  "unidade": "km",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-070-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-070. Custo horário equipe: MO R$119.39/h + Equip R$130.00/h. Produt: 0.143 km/h."
+}

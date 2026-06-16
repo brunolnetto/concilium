@@ -1,0 +1,16 @@
+{
+  "codigo": "CPU-TERRA-COMPAC-PN",
+  "descricao": "Aterro compactado 100% PN",
+  "unidade": "m3",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-COMPAC-PN-PROD-001",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.5026,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "_nota": "Calibrado AGIS-RFI. PU = (MO R$187.58 + EQ R$717.94) / 173.01 m3/h = R$5.2339/m3. Frota ferrovia: 2 rolos PC + trator pneu c/ grade + motoniveladora + pipa. Sem trator de pneu o PN não atinge adensamento ferroviário. | Diesel: 0.5026 L/m3 × R$5.8/L = R$2.9151/m3. Coeficiente calibrado do campo AGIS (mendeslobo). Locação RFI é seca (combustível separado)."
+}

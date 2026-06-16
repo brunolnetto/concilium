@@ -1,0 +1,17 @@
+{
+  "codigo": "P0024",
+  "tipo": "MAO_OBRA",
+  "descricao": "Engenheiro Civil",
+  "unidade": "mes",
+  "preco_unitario": 18000.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "PJ",
+    "horas_mes": 220.0,
+    "salario_base_hora": 81.818182,
+    "custo_hora_com_encargos_planilha": 81.8182,
+    "codigo_planilha": "P0024"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

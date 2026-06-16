@@ -1,0 +1,42 @@
+{
+  "id": "CPU-TERRA-ATI-024-PROD-001",
+  "codigo": "ATI-024",
+  "descricao": "Espalhamento pó de pedra",
+  "valor_horario": 19.0,
+  "unidade": "m³",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-024",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0043",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0028",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 70.22,
+    "custo_equip_h": 186.0,
+    "total_h": 256.22,
+    "pu_calculado": 13.4853
+  },
+  "categoria": "TERRAPLENAGEM"
+}

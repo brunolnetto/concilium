@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-063-PROD-001",
+  "codigo": "ATI-063",
+  "descricao": "Piso intertravado espessura 10cm",
+  "valor_horario": 25.0,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-063",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0037",
+        "num_pessoas": 4
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 4
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0033",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0026",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 234.87,
+    "custo_equip_h": 84.5,
+    "total_h": 319.37,
+    "pu_calculado": 12.7748
+  },
+  "categoria": "TERRAPLENAGEM"
+}

@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-005",
+  "descricao": "Supressão c/ destocamento",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-005-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-005. Custo horário equipe: MO R$120.14/h + Equip R$431.80/h. Produt: 6.25 m³/h."
+}

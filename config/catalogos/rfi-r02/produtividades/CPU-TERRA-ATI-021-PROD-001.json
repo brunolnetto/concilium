@@ -1,0 +1,46 @@
+{
+  "id": "CPU-TERRA-ATI-021-PROD-001",
+  "codigo": "ATI-021",
+  "descricao": "Rebaixo terreno natural argiloso 20cm",
+  "valor_horario": 157.25,
+  "unidade": "m²",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-021",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0043",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0046",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0028",
+        "num_unidades": 1
+      },
+      {
+        "equip_id": "E0036",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 91.28,
+    "custo_equip_h": 276.0,
+    "total_h": 367.28,
+    "pu_calculado": 2.3356
+  },
+  "categoria": "TERRAPLENAGEM"
+}

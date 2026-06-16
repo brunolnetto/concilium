@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-021",
+  "descricao": "Rebaixo terreno natural argiloso 20cm",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-021-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-021. Custo horário equipe: MO R$91.28/h + Equip R$276.00/h. Produt: 157.25 m²/h."
+}

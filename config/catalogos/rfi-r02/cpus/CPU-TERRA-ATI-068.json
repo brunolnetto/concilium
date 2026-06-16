@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-068",
+  "descricao": "Aceiro",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-068-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-068. Custo horário equipe: MO R$60.81/h + Equip R$30.00/h. Produt: 142.86 m/h."
+}

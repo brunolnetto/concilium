@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-065",
+  "descricao": "Cercamento — mourão de eucalipto",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-065-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-065. Custo horário equipe: MO R$129.55/h + Equip R$20.00/h. Produt: 37.5 m/h."
+}

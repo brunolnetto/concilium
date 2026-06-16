@@ -1,0 +1,18 @@
+{
+  "codigo": "E0025",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Trator de Esteiras 30t (440HP)",
+  "unidade": "h",
+  "preco_unitario": 413.50399999999996,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 369.2,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 82700.79999999999,
+    "codigo_planilha": "E0025",
+    "consumo_litros_hora": 18.5
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

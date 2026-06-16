@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-041",
+  "descricao": "Boca tubulares",
+  "unidade": "unid",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-041-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-041. Custo horário equipe: MO R$175.77/h + Equip R$255.30/h. Produt: 0.042 unid/h."
+}

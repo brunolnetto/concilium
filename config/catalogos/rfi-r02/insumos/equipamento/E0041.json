@@ -1,0 +1,17 @@
+{
+  "codigo": "E0041",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Vibroacabadora de Asfalto",
+  "unidade": "h",
+  "preco_unitario": 106.4,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 95.0,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 21280.0,
+    "codigo_planilha": "E0041"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

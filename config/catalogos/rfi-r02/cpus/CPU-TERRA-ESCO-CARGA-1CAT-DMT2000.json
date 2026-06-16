@@ -1,0 +1,16 @@
+{
+  "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000",
+  "descricao": "Esc/carg/transp 1ªcat DMT≤2000m",
+  "unidade": "m3",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ESCO-CARGA-1CAT-DMT2000-PROD-001",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.2065,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "_nota": "Calibrado AGIS-RFI. PU = (MO R$215.87 + EQ R$1202.10) / 231.87 m3/h = R$6.1153/m3. Comboio ferrovia AGIS: 1 escav 22t + 7 cam 14m³. Frota campo mai/2026. | Diesel: 0.2065 L/m3 × R$5.8/L = R$1.1977/m3. Coeficiente calibrado do campo AGIS (mendeslobo). Locação RFI é seca (combustível separado)."
+}

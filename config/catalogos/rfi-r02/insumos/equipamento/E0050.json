@@ -1,0 +1,17 @@
+{
+  "codigo": "E0050",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Rompedor Hidráulico",
+  "unidade": "h",
+  "preco_unitario": 200.675,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 174.5,
+    "pct_manutencao": 0.15,
+    "custo_mensal": 40135.0,
+    "codigo_planilha": "E0050"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

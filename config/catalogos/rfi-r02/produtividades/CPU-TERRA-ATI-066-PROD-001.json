@@ -1,0 +1,38 @@
+{
+  "id": "CPU-TERRA-ATI-066-PROD-001",
+  "codigo": "ATI-066",
+  "descricao": "Cercamento — mourão de concreto",
+  "valor_horario": 50.0,
+  "unidade": "m",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-066",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0064",
+        "num_pessoas": 3
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0001",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 129.55,
+    "custo_equip_h": 20.0,
+    "total_h": 149.55,
+    "pu_calculado": 2.991
+  },
+  "categoria": "TERRAPLENAGEM"
+}

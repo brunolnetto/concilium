@@ -1,0 +1,13 @@
+{
+  "codigo": "M0030",
+  "tipo": "MATERIAL",
+  "descricao": "BTTC D=1,20m PA2 (tubo triplo)",
+  "unidade": "m",
+  "preco_unitario": 299.5,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0030"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

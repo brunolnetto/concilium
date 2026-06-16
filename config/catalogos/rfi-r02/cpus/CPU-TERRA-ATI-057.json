@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-057",
+  "descricao": "Pintura de ligação",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-057-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-057. Custo horário equipe: MO R$54.91/h + Equip R$187.50/h. Produt: 816.67 m²/h."
+}

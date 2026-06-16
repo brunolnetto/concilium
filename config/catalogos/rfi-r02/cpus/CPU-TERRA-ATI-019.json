@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-019",
+  "descricao": "Aterro executado em CCR",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-019-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-019. Custo horário equipe: MO R$133.40/h + Equip R$429.80/h. Produt: 250.0 m³/h."
+}

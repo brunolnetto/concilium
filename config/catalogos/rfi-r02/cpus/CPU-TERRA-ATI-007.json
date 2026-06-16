@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-007",
+  "descricao": "Supressão média densidade",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-007-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-007. Custo horário equipe: MO R$95.92/h + Equip R$210.80/h. Produt: 625.0 m²/h."
+}

@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-054",
+  "descricao": "Sub-base estabilizada granulometricamente",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-054-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-054. Custo horário equipe: MO R$154.46/h + Equip R$802.70/h. Produt: 55.0 m³/h."
+}

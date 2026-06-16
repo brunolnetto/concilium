@@ -1,0 +1,69 @@
+{
+  "id": "CPU-TERRA-ATI-003-PROD-001",
+  "codigo": "CPU-TERRA-ATI-003",
+  "descricao": "Desmatamento, destocamento, limpeza",
+  "valor_horario": 738.0,
+  "unidade": "m2",
+  "origem": {
+    "tipo": "calibrado_agis_rfi",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Híbrido: composição/produtividade mendeslobo (campo AGIS 2026-05) + preços unitários RFI-R02 (mercado mai/2026)."
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0048",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0062",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0072",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0079",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0024",
+        "num_unidades": 1,
+        "consumo_litros_hora": 24.39
+      },
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1,
+        "consumo_litros_hora": 28.58
+      },
+      {
+        "equip_id": "E0031",
+        "num_unidades": 1,
+        "consumo_litros_hora": 1.5
+      }
+    ]
+  },
+  "custos_equipe_rfi": {
+    "custo_mo_h": 158.92,
+    "custo_equip_h": 519.62,
+    "total_h": 678.53,
+    "pu_calculado": 0.9194
+  },
+  "_nota_calibracao": "Produtividade/composição da planilha AGIS 2026-05 (mendeslobo). Correto para área de caatinga/cerrado do Nordeste. RFI (250 m²/h) é para mata fechada DAP≥30cm — não aplicável ao AGIS.",
+  "categoria": "TERRAPLENAGEM"
+}

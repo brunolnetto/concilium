@@ -1,0 +1,13 @@
+{
+  "codigo": "M0037",
+  "tipo": "MATERIAL",
+  "descricao": "Emulsão RR-2C — imprimação (0,8 kg/m²)",
+  "unidade": "m²",
+  "preco_unitario": 3.08,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0037"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

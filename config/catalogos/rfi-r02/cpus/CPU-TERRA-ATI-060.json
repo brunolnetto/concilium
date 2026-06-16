@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-060",
+  "descricao": "Demolição de pavimento asfáltico",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-060-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-060. Custo horário equipe: MO R$77.23/h + Equip R$581.20/h. Produt: 26.1 m³/h."
+}

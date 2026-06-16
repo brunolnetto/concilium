@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-001",
+  "descricao": "Supressão vegetal DAP≥0,30 e arbustos",
+  "unidade": "und",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-001-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-001. Custo horário equipe: MO R$60.81/h + Equip R$60.00/h. Produt: 0.625 und/h."
+}

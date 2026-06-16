@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-066",
+  "descricao": "Cercamento — mourão de concreto",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-066-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-066. Custo horário equipe: MO R$129.55/h + Equip R$20.00/h. Produt: 50.0 m/h."
+}

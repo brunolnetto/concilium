@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-020",
+  "descricao": "Espalhamento areia/pó de pedra 5cm",
+  "unidade": "m³",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-020-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-020. Custo horário equipe: MO R$91.28/h + Equip R$276.00/h. Produt: 20.0 m³/h."
+}

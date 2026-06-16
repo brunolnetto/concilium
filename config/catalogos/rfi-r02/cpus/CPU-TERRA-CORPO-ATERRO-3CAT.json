@@ -1,0 +1,16 @@
+{
+  "codigo": "CPU-TERRA-CORPO-ATERRO-3CAT",
+  "descricao": "Construção de corpo de aterro com material de 3ª categoria oriundo de corte",
+  "unidade": "m3",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-CORPO-ATERRO-3CAT-PROD-001",
+  "composicao_itens": [
+    {
+      "insumo_id": "MA-DIESEL-S10",
+      "coeficiente": 0.3278,
+      "categoria_custo": "DIESEL"
+    }
+  ],
+  "_nota": "Calibrado AGIS-RFI. PU = (MO R$146.25 + EQ R$659.90) / 214.92 m3/h = R$3.7509/m3. Corpo de aterro 3ªcat. Trator esteiras grande + 2 rolos. Calibrado AGIS. | Diesel: 0.3278 L/m3 × R$5.8/L = R$1.9012/m3. Coeficiente calibrado do campo AGIS (mendeslobo). Locação RFI é seca (combustível separado)."
+}

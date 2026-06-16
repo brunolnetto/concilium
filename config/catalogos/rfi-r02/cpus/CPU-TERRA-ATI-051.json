@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-051",
+  "descricao": "Tubo PVC DEFOFO D=300mm",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-051-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-051. Custo horário equipe: MO R$175.77/h + Equip R$123.50/h. Produt: 9.89625 m/h."
+}

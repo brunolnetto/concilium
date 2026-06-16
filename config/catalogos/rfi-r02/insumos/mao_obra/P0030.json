@@ -1,0 +1,17 @@
+{
+  "codigo": "P0030",
+  "tipo": "MAO_OBRA",
+  "descricao": "Laboratorista",
+  "unidade": "mes",
+  "preco_unitario": 12000.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "PJ",
+    "horas_mes": 220.0,
+    "salario_base_hora": 54.545455,
+    "custo_hora_com_encargos_planilha": 54.5455,
+    "codigo_planilha": "P0030"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

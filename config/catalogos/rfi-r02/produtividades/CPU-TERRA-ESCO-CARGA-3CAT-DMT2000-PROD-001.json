@@ -1,0 +1,48 @@
+{
+  "id": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000-PROD-001",
+  "codigo": "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000",
+  "descricao": "Esc/carg/transp 3ªcat DMT≤2000m",
+  "valor_horario": 142.02,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_agis_rfi",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Híbrido: composição/produtividade mendeslobo (campo AGIS 2026-05) + preços unitários RFI-R02 (mercado mai/2026)."
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0032",
+        "num_pessoas": 6
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0018",
+        "num_unidades": 1,
+        "consumo_litros_hora": 33.01
+      },
+      {
+        "equip_id": "E0008",
+        "num_unidades": 6,
+        "consumo_litros_hora": 3.3
+      }
+    ]
+  },
+  "custos_equipe_rfi": {
+    "custo_mo_h": 166.97,
+    "custo_equip_h": 1659.28,
+    "total_h": 1826.25,
+    "pu_calculado": 12.8591
+  },
+  "_nota_calibracao": "3ªcat: escav 38t (rocha) + 6 cam 16m³.",
+  "categoria": "TERRAPLENAGEM"
+}

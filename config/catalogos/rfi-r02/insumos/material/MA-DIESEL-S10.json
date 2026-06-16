@@ -1,0 +1,14 @@
+{
+  "codigo": "MA-DIESEL-S10",
+  "tipo": "COMBUSTIVEL",
+  "descricao": "Óleo Diesel S10 — referência campo Nordeste",
+  "unidade": "L",
+  "preco_unitario": 5.8,
+  "fonte_preco": "ANTT_2026_Nordeste",
+  "atributos_especificos": {
+    "especificacao": "S10 (baixo teor de enxofre)",
+    "uso": "equipamentos pesados de terraplenagem"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

@@ -1,0 +1,52 @@
+{
+  "id": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000-PROD-001",
+  "codigo": "CPU-TERRA-ESCO-CARGA-1CAT-DMT3000",
+  "descricao": "Esc/carg/transp 1ªcat DMT 2000-3000m",
+  "valor_horario": 230.91,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_agis_rfi",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Híbrido: composição/produtividade mendeslobo (campo AGIS 2026-05) + preços unitários RFI-R02 (mercado mai/2026)."
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0040",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0032",
+        "num_pessoas": 8
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0016",
+        "num_unidades": 1,
+        "consumo_litros_hora": 28.58
+      },
+      {
+        "equip_id": "E0007",
+        "num_unidades": 8,
+        "consumo_litros_hora": 2.76
+      }
+    ]
+  },
+  "custos_equipe_rfi": {
+    "custo_mo_h": 236.53,
+    "custo_equip_h": 1344.9,
+    "total_h": 1581.43,
+    "pu_calculado": 6.8487
+  },
+  "_nota_calibracao": "Comboio ferrovia AGIS: 1 escav 22t + 8 cam 14m³ (DMT maior = mais caminhões).",
+  "categoria": "TERRAPLENAGEM"
+}

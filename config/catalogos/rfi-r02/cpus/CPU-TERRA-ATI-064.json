@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-064",
+  "descricao": "Instalação guia 1,00×0,30×0,15",
+  "unidade": "m",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-064-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-064. Custo horário equipe: MO R$134.99/h + Equip R$77.50/h. Produt: 15.0 m/h."
+}

@@ -1,0 +1,13 @@
+{
+  "codigo": "M0007",
+  "tipo": "MATERIAL",
+  "descricao": "Brita 04 (Rachão)",
+  "unidade": "m³",
+  "preco_unitario": 147.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "codigo_planilha": "M0007"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

@@ -1,0 +1,17 @@
+{
+  "codigo": "E0030",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Motoniveladora 180HP",
+  "unidade": "h",
+  "preco_unitario": 313.6,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 280.0,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 62720.00000000001,
+    "codigo_planilha": "E0030"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

@@ -1,0 +1,17 @@
+{
+  "codigo": "E0019",
+  "tipo": "EQUIPAMENTO",
+  "descricao": "Escavadeira Hidráulica 48t",
+  "unidade": "h",
+  "preco_unitario": 388.416,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_locacao": "locação",
+    "custo_produtivo_h": 346.8,
+    "pct_manutencao": 0.12,
+    "custo_mensal": 77683.2,
+    "codigo_planilha": "E0019"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

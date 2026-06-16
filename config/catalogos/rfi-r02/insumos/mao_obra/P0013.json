@@ -1,0 +1,17 @@
+{
+  "codigo": "P0013",
+  "tipo": "MAO_OBRA",
+  "descricao": "Administrativo",
+  "unidade": "mes",
+  "preco_unitario": 8000.0,
+  "fonte_preco": "planilha_rfi_r02",
+  "atributos_especificos": {
+    "tipo_contrato": "PJ",
+    "horas_mes": 220.0,
+    "salario_base_hora": 36.363636,
+    "custo_hora_com_encargos_planilha": 36.3636,
+    "codigo_planilha": "P0013"
+  },
+  "data_referencia_preco": "2026-05-08",
+  "categoria": "TERRAPLENAGEM"
+}

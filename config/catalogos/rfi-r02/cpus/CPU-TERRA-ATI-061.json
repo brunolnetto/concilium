@@ -1,0 +1,10 @@
+{
+  "codigo": "CPU-TERRA-ATI-061",
+  "descricao": "Recomposição de pavimento asfáltico",
+  "unidade": "m²",
+  "categoria": "TERRAPLENAGEM",
+  "origem": "PROPRIA",
+  "producao_id_ref": "CPU-TERRA-ATI-061-PROD-001",
+  "composicao_itens": [],
+  "_nota": "Fonte: Planilha RFI R02, ATI-061. Custo horário equipe: MO R$119.35/h + Equip R$433.35/h. Produt: 74.07 m²/h."
+}

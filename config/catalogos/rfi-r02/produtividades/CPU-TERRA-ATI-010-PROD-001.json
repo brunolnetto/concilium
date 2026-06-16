@@ -1,0 +1,42 @@
+{
+  "id": "CPU-TERRA-ATI-010-PROD-001",
+  "codigo": "ATI-010",
+  "descricao": "Escavação canaletas",
+  "valor_horario": 37.5,
+  "unidade": "m³",
+  "origem": {
+    "tipo": "planilha_rfi_r02",
+    "fonte_id": "ATI-010",
+    "data_calibracao": "2026-05-08",
+    "referencia": "Planilha Padrão RFI R02 — MendesLôbo Construção"
+  },
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "P0044",
+        "num_pessoas": 1
+      },
+      {
+        "funcao_id": "P0001",
+        "num_pessoas": 2
+      },
+      {
+        "funcao_id": "P0022",
+        "num_pessoas": 1
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0026",
+        "num_unidades": 1
+      }
+    ]
+  },
+  "custos_equipe_planilha": {
+    "custo_mo_h": 90.48,
+    "custo_equip_h": 74.5,
+    "total_h": 164.98,
+    "pu_calculado": 4.3995
+  },
+  "categoria": "TERRAPLENAGEM"
+}
