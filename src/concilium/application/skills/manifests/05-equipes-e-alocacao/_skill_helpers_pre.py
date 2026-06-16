@@ -20,6 +20,7 @@ from typing import Any
 
 from concilium.domain.models.canonical import (
     OportunidadeCompartilhamento,
+    OportunidadeCompartilhamentoParalelo,
     RelatorioOportunidades,
     ValidacaoItem,
 )
@@ -412,3 +413,190 @@ def _build_pre_processamento_compartilhamento(
         )
 
     return relatorio
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ADR-110: Detector de Oportunidades de Compartilhamento Paralelo
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _cpm_early_start(dag: Any) -> dict[str, int]:
+    """Forward pass CPM sem recursos — retorna ES por atividade."""
+    acts: dict[str, Any] = {a.activity_id: a for a in dag.activities}
+    order: list[str] = dag.topological_order()
+    es: dict[str, int] = {aid: 0 for aid in order}
+    for aid in order:
+        ef_i = es[aid] + acts[aid].duration_weeks
+        for succ in dag.successors(aid):
+            if ef_i > es.get(succ, 0):
+                es[succ] = ef_i
+    return es
+
+
+def _cpm_late_finish(dag: Any, makespan: int) -> dict[str, int]:
+    """Backward pass CPM — retorna LF por atividade.
+
+    LF(i) = makespan se sem sucessores, caso contrário min(LS(succ)).
+    """
+    acts: dict[str, Any] = {a.activity_id: a for a in dag.activities}
+    order: list[str] = dag.topological_order()
+    lf: dict[str, int] = {aid: makespan for aid in order}
+    for aid in reversed(order):
+        for succ in dag.successors(aid):
+            ls_succ = lf[succ] - acts[succ].duration_weeks
+            if ls_succ < lf[aid]:
+                lf[aid] = ls_succ
+    return lf
+
+
+def _gap_coberto_por_recurso(sched: Any, tipo_id: str, t_start: int, t_end: int) -> bool:
+    """True se [t_start, t_end) está totalmente coberto por atividades usando tipo_id."""
+    if t_start >= t_end:
+        return True
+    covered: set[int] = set()
+    for sa in sched.scheduled_activities:
+        if sa.assigned_resources.get(tipo_id, 0) > 0:
+            for w in range(max(t_start, sa.start_week), min(t_end, sa.end_week)):
+                covered.add(w)
+    return len(covered) == t_end - t_start
+
+
+def _detectar_oportunidades_paralelo(
+    sched: Any,
+    dag: Any,
+    pool: Any,
+    resource_costs: dict[str, dict],
+    custo_indireto_semana: float,
+    limite_producao_por_tipo: dict[str, str] | None = None,
+) -> list[OportunidadeCompartilhamentoParalelo]:
+    """Detecta candidatos a compartilhamento paralelo pós-RCPSP (ADR-110 §D1).
+
+    Critérios:
+      1. Tipo r presente em resource_costs (custo de frota conhecido)
+      2. pool[r] == 1 (recurso disputado — contenção)
+      3. Sem aresta de precedência lógica direta entre i e j
+      4. Gap entre elas coberto por outras atividades do mesmo tipo
+         (mesma cadeia de contenção); gap zero = diretamente adjacentes
+      5. Para gargalo: delay causado não viola o float dos sucessores diretos no DAG
+    """
+    if not sched.scheduled_activities:
+        return []
+
+    lpp = limite_producao_por_tipo or {}
+    sa_map: dict[str, Any] = {sa.activity_id: sa for sa in sched.scheduled_activities}
+    act_map: dict[str, Any] = {a.activity_id: a for a in dag.activities}
+
+    cpm_es = _cpm_early_start(dag)
+    cpm_lf = _cpm_late_finish(dag, sched.makespan)
+
+    precedencias: set[frozenset] = {
+        frozenset([pred, succ]) for pred, succ in dag.precedence
+    }
+
+    resultado: list[OportunidadeCompartilhamentoParalelo] = []
+
+    for tipo_id, costs in resource_costs.items():
+        if not isinstance(costs, dict):
+            continue
+        if pool.resources.get(tipo_id, 0) != 1:
+            continue
+
+        custo_semana = float(costs.get("custo_contrato_semana_unit", 0.0))
+        if custo_semana <= 0.0:
+            continue
+
+        usuarios: list[str] = [
+            sa.activity_id
+            for sa in sched.scheduled_activities
+            if sa.assigned_resources.get(tipo_id, 0) > 0
+        ]
+        if len(usuarios) < 2:
+            continue
+
+        e_gargalo = lpp.get(tipo_id, "equipamento") == "equipamento"
+
+        for idx_x in range(len(usuarios)):
+            for idx_y in range(idx_x + 1, len(usuarios)):
+                id_x, id_y = usuarios[idx_x], usuarios[idx_y]
+
+                if frozenset([id_x, id_y]) in precedencias:
+                    continue
+
+                sa_x, sa_y = sa_map[id_x], sa_map[id_y]
+
+                if sa_x.end_week <= sa_y.start_week:
+                    i_id, j_id = id_x, id_y
+                elif sa_y.end_week <= sa_x.start_week:
+                    i_id, j_id = id_y, id_x
+                else:
+                    continue
+
+                sa_i, sa_j = sa_map[i_id], sa_map[j_id]
+                act_i = act_map.get(i_id)
+                act_j = act_map.get(j_id)
+                if act_i is None or act_j is None:
+                    continue
+
+                # Critério 4: gap entre i e j coberto por outras atividades do tipo
+                if not _gap_coberto_por_recurso(sched, tipo_id, sa_i.end_week, sa_j.start_week):
+                    continue
+
+                d_i = act_i.duration_weeks
+                d_j = act_j.duration_weeks
+                t0 = sa_i.start_week  # ambas iniciam em t0 no cenário paralelo
+
+                # Delays individuais no cenário paralelo-com-alternância
+                new_ef_i = t0 + 2 * d_i
+                new_ef_j = t0 + 2 * d_j
+                delay_i = max(0, new_ef_i - sa_i.end_week)
+                delay_j = max(0, new_ef_j - sa_j.end_week)
+
+                # Critério 5 (gargalo): delay não pode violar float de sucessores diretos
+                if e_gargalo:
+                    rejeitado = False
+                    for act_id, delay in ((i_id, delay_i), (j_id, delay_j)):
+                        if delay <= 0:
+                            continue
+                        for succ in dag.successors(act_id):
+                            act_succ = act_map.get(succ)
+                            if act_succ is None:
+                                continue
+                            tf_succ = (
+                                cpm_lf[succ]
+                                - cpm_es.get(succ, 0)
+                                - act_succ.duration_weeks
+                            )
+                            if tf_succ < delay:
+                                rejeitado = True
+                                break
+                        if rejeitado:
+                            break
+                    if rejeitado:
+                        continue
+
+                if e_gargalo:
+                    delta_makespan = max(0, max(new_ef_i, new_ef_j) - sa_j.end_week)
+                else:
+                    delta_makespan = 0
+
+                semanas_frota = max(d_i, d_j)
+                delta_custo_frota = round(custo_semana * semanas_frota, 2)
+                delta_indiretos = round(custo_indireto_semana * delta_makespan, 2)
+                delta_liquido = round(delta_custo_frota - delta_indiretos, 2)
+
+                resultado.append(
+                    OportunidadeCompartilhamentoParalelo(
+                        atividade_i=i_id,
+                        atividade_j=j_id,
+                        tipo_recurso_id=tipo_id,
+                        recurso_e_gargalo=e_gargalo,
+                        delta_makespan_semanas=delta_makespan,
+                        delta_custo_frota=delta_custo_frota,
+                        delta_indiretos=delta_indiretos,
+                        delta_liquido=delta_liquido,
+                        economicamente_viavel=delta_liquido > 0,
+                    )
+                )
+
+    resultado.sort(key=lambda o: -o.delta_liquido)
+    return resultado
