@@ -203,7 +203,9 @@ class CuboAnalitico:
         result: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         for c in self.celulas:
             bucket = _temporal_bucket_from_week_iso(c.semana_iso, granularidade)
-            natureza = "direto" if c.is_custo_direto() else "indireto"
+            # Usa c.natureza (campo canônico) em vez de is_custo_direto() para classificar
+            # corretamente células de indireto adicionadas pelo enriquecimento financeiro.
+            natureza = c.natureza  # "direto" | "indireto"
             result[bucket][natureza] += c.valor_rs
         return {k: dict(v) for k, v in sorted(result.items())}
 

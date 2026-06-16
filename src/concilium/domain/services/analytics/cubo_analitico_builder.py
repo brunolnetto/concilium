@@ -243,7 +243,10 @@ class CuboAnaliticoBuilder:
                             )
                         )
 
-        total = round(sum(c.valor_rs for c in celulas), 2)
+        # Enriquecimento financeiro: escalar ao PUxQ e adicionar indireto
+        celulas = self._enrich_with_financial_data(canonical_in, celulas)
+
+        total = round(sum(c.valor_rs for c in celulas if c.natureza == "direto"), 2)
         return CuboAnalitico(
             projeto_id=projeto_id,
             gerado_em=datetime.now(UTC).isoformat(),
@@ -251,6 +254,88 @@ class CuboAnaliticoBuilder:
             total_preco_venda=total,
             celulas=tuple(celulas),
         )
+
+    def _enrich_with_financial_data(
+        self, canonical_in: Any, celulas: list[CelulaAnalitica]
+    ) -> list[CelulaAnalitica]:
+        """Escala células diretas ao custo PUxQ e adiciona células de indireto.
+
+        O pool captura apenas a fatia rastreável (estado=prod); o planejamento contém
+        o custo completo (overhead de quantização, praticabilidade, etc.).
+        Escalamos por atividade para preservar a distribuição temporal do pool.
+        """
+        # 1. Escalar células diretas ao custo PUxQ por atividade
+        plan_total_by_item: dict[str, float] = {}
+        for item in (getattr(canonical_in, "planejamento", None) or []):
+            item_id = str(getattr(item, "item_id", "") or "")
+            subtotal = getattr(item, "subtotal", None)
+            sem_bdi  = getattr(subtotal, "sem_bdi", None) if subtotal else None
+            total_rs = float(getattr(sem_bdi, "total", 0.0) or 0.0) if sem_bdi else 0.0
+            if item_id and total_rs > 0:
+                plan_total_by_item[item_id] = total_rs
+
+        if plan_total_by_item and celulas:
+            pool_total_by_item: dict[str, float] = {}
+            for c in celulas:
+                if c.natureza == "direto" and c.componente_bdi == "custo_direto":
+                    pool_total_by_item[c.atividade_id] = (
+                        pool_total_by_item.get(c.atividade_id, 0.0) + c.valor_rs
+                    )
+            scale_factors: dict[str, float] = {
+                item_id: plan_val / pool_total_by_item[item_id]
+                for item_id, plan_val in plan_total_by_item.items()
+                if pool_total_by_item.get(item_id, 0.0) > 0
+            }
+            celulas = [
+                CelulaAnalitica(
+                    natureza=c.natureza,
+                    atividade_id=c.atividade_id,
+                    categoria_insumo=c.categoria_insumo,
+                    propriedade=c.propriedade,
+                    semana_iso=c.semana_iso,
+                    componente_bdi=c.componente_bdi,
+                    valor_rs=round(c.valor_rs * scale_factors.get(c.atividade_id, 1.0), 2),
+                    valor_fisico=c.valor_fisico,
+                    unidade_fisica=c.unidade_fisica,
+                )
+                for c in celulas
+            ]
+
+        # 2. Adicionar células de indireto de indiretos_semanal
+        projeto = getattr(canonical_in, "projeto", None)
+        data_inicio_str = str(getattr(projeto, "data_inicio", "") or "") if projeto else ""
+        ind_sem = getattr(canonical_in, "indiretos_semanal", None) or []
+        if ind_sem and data_inicio_str:
+            try:
+                from datetime import date, timedelta
+                data_inicio = date.fromisoformat(data_inicio_str)
+                for item in ind_sem:
+                    semana_offset = getattr(item, "semana", None)
+                    if semana_offset is None:
+                        continue
+                    custo_sem = float(getattr(item, "custo_semanal", 0.0) or 0.0)
+                    if custo_sem <= self._min:
+                        continue
+                    cat = str(getattr(item, "categoria", "ADM") or "ADM")
+                    dt  = data_inicio + timedelta(weeks=int(semana_offset))
+                    iso = f"{dt.isocalendar()[0]}-W{dt.isocalendar()[1]:02d}"
+                    celulas.append(
+                        CelulaAnalitica(
+                            natureza="indireto",
+                            atividade_id=f"IND-{cat}",
+                            categoria_insumo="verba",   # Literal válido; natureza='indireto' diferencia
+                            propriedade=cat.lower(),
+                            semana_iso=iso,
+                            componente_bdi="custo_direto",
+                            valor_rs=round(custo_sem, 2),
+                            valor_fisico=0.0,
+                            unidade_fisica="",
+                        )
+                    )
+            except Exception:
+                pass  # enriquecimento de indireto é best-effort
+
+        return celulas
 
     def _build_autonomous(self, canonical_in: Any) -> CuboAnalitico:
         """Fallback autônomo: custo_*_mensal × schedule."""

@@ -109,15 +109,28 @@ def _build_pool_scaling_by_item(canonical: Any, cubo: Any) -> dict[str, float]:
 
 
 def _iter_scaled_cubo_cells(canonical: Any, cubo: Any):
-    """Itera células do cubo aplicando escala de pool particionado por atividade."""
+    """Itera células diretas do cubo aplicando escala de pool particionado por atividade.
+
+    Filtra exclusivamente natureza='direto' — células indiretas (IND-*) têm seu
+    próprio canal de leitura via _iter_indireto_cubo_cells.
+    """
     scaling = _build_pool_scaling_by_item(canonical, cubo)
     for celula in getattr(cubo, "celulas", None) or []:
+        if str(getattr(celula, "natureza", "direto") or "direto") != "direto":
+            continue
         valor = float(getattr(celula, "valor_rs", 0.0) or 0.0)
         item_id = str(getattr(celula, "atividade_id", "") or "")
         categoria = str(getattr(celula, "categoria", "") or "")
         if categoria != "material":
             valor *= float(scaling.get(item_id, 1.0))
         yield celula, valor
+
+
+def _iter_indireto_cubo_cells(cubo: Any):
+    """Itera células indiretas (natureza='indireto') do cubo enriquecido."""
+    for celula in getattr(cubo, "celulas", None) or []:
+        if str(getattr(celula, "natureza", "") or "") == "indireto":
+            yield celula, float(getattr(celula, "valor_rs", 0.0) or 0.0)
 
 
 def _extract_cost_from_entry(entry: Any) -> float:
@@ -221,24 +234,46 @@ def resolve_cubo_projection_rows(
     canonical: Any = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str]:
     if face == "tempo_natureza":
-        from concilium.domain.services.analytics.s_curve_builder import SCurveBuilder
-
-        s_curve = SCurveBuilder().build(canonical)
+        # Usar cubo_analitico enriquecido (fonte primária analítica).
+        # O cubo tem cells natureza='direto' (escalonadas ao PUxQ) e natureza='indireto'
+        # adicionadas pelo enriquecimento financeiro do CuboAnaliticoBuilder.
+        # Filtramos componente_bdi='custo_direto' para não somar os overlays de BDI.
         direto_por_bucket: dict[str, float] = defaultdict(float)
         indireto_por_bucket: dict[str, float] = defaultdict(float)
-        for agg in s_curve.agregacao_semanal:
-            bucket = bucket_from_week_iso(str(agg.semana_iso), granularidade)
-            direto_por_bucket[bucket] += float(agg.custo_direto_semana or 0.0)
-            indireto_por_bucket[bucket] += float(agg.custo_indireto_semana or 0.0)
+
+        cubo_obj = getattr(canonical, "cubo_analitico", None)
+        if cubo_obj is not None and getattr(cubo_obj, "celulas", None):
+            for c in cubo_obj.celulas:
+                nat  = str(getattr(c, "natureza", "") or "")
+                comp = str(getattr(c, "componente_bdi", "") or "")
+                val  = float(getattr(c, "valor_rs", 0.0) or 0.0)
+                bucket = bucket_from_week_iso(str(getattr(c, "semana_iso", "") or ""), granularidade)
+                if not bucket:
+                    continue
+                if nat == "direto" and comp == "custo_direto":
+                    direto_por_bucket[bucket] += val
+                elif nat == "indireto" and comp == "custo_direto":
+                    indireto_por_bucket[bucket] += val
+        else:
+            # Fallback: SCurveBuilder quando cubo não está disponível
+            from concilium.domain.services.analytics.s_curve_builder import SCurveBuilder
+            s_curve = SCurveBuilder().build(canonical)
+            for agg in s_curve.agregacao_semanal:
+                bucket = bucket_from_week_iso(str(agg.semana_iso), granularidade)
+                direto_por_bucket[bucket] += float(agg.custo_direto_semana or 0.0)
+                indireto_por_bucket[bucket] += float(agg.custo_indireto_semana or 0.0)
+
         all_buckets = sorted(set(direto_por_bucket) | set(indireto_por_bucket))
         rows = [
-            {"periodo": b, "natureza": "direto", "valor_rs": direto_por_bucket.get(b, 0.0)} for b in all_buckets
-        ] + [{"periodo": b, "natureza": "indireto", "valor_rs": indireto_por_bucket.get(b, 0.0)} for b in all_buckets]
+            {"periodo": b, "natureza": "direto",   "valor_rs": direto_por_bucket.get(b, 0.0)} for b in all_buckets
+        ] + [
+            {"periodo": b, "natureza": "indireto", "valor_rs": indireto_por_bucket.get(b, 0.0)} for b in all_buckets
+        ]
         rows.sort(key=lambda row: (str(row["periodo"]), str(row["natureza"])))
         columns = [
-            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
-            {"id": "natureza", "label": "Natureza", "dtype": "str", "role": "series"},
-            {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
+            {"id": "periodo",   "label": "Período",    "dtype": "str",   "role": "x"},
+            {"id": "natureza",  "label": "Natureza",   "dtype": "str",   "role": "series"},
+            {"id": "valor_rs",  "label": "Valor (R$)", "dtype": "float", "role": "value"},
         ]
         return rows[:top_n], columns, "bar_stacked"
 
@@ -268,21 +303,21 @@ def resolve_cubo_projection_rows(
         return rows[:top_n], columns, "line"
 
     if face == "categoria_componente":
-        # Agrupa por {direto,indireto}.{categoria} com o mesmo breakdown de componentes
-        # (custo operacional, overhead BDI, lucro L e tributos).
+        # Agrupa por {direto,indireto}.{categoria} com o mesmo breakdown de componentes.
+        # Direto: células do cubo com natureza='direto' (via _iter_scaled_cubo_cells).
+        # Indireto: células do cubo com natureza='indireto' (via _iter_indireto_cubo_cells).
         aggregated_cat: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         bdi_multipliers = _build_bdi_multipliers_from_cubo(cubo)
         for celula, valor_cell in _iter_scaled_cubo_cells(canonical, cubo):
-            natureza_key = f"direto.{str(getattr(celula, 'categoria', '') or '')}"
+            natureza_key = f"direto.{str(getattr(celula, 'categoria_insumo', '') or '')}"
             agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
             aggregated_cat[natureza_key][agg_comp] += float(valor_cell)
-        # Indiretos agregados por componente operacional (mao_obra/equipamento/verbas).
-        if canonical:
-            indireto_comp = _build_indireto_component_totals(canonical)
-            for comp_cat, base_cost in indireto_comp.items():
-                cat_key = f"indireto.{comp_cat}"
-                for comp_name, comp_value in _split_operational_cost_with_bdi(base_cost, bdi_multipliers).items():
-                    aggregated_cat[cat_key][comp_name] += comp_value
+        # Células indiretas do cubo enriquecido (IND-* por categoria)
+        for celula, valor_cell in _iter_indireto_cubo_cells(cubo):
+            cat_prop = str(getattr(celula, "propriedade", "verbas") or "verbas")
+            cat_key  = f"indireto.{cat_prop}"
+            agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
+            aggregated_cat[cat_key][agg_comp] += float(valor_cell)
         rows = [
             {"categoria": natureza_key, "componente_bdi": comp, "valor_rs": float(valor)}
             for natureza_key, comp_dict in aggregated_cat.items()
@@ -297,22 +332,20 @@ def resolve_cubo_projection_rows(
         return rows[:top_n], columns, "heatmap"
 
     if face == "atividade_componente":
-        # Chave composta {direto,indireto}.{atividade} com breakdown simetrico de componentes.
+        # Chave composta {direto,indireto}.{atividade} com breakdown simétrico de componentes.
+        # Direto: células cubo natureza='direto' → chave direto.eap-1_X
+        # Indireto: células cubo natureza='indireto' → chave indireto.IND-{cat}
         aggregated_atv: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         bdi_multipliers = _build_bdi_multipliers_from_cubo(cubo)
         for celula, valor_cell in _iter_scaled_cubo_cells(canonical, cubo):
             natureza_key = f"direto.{str(getattr(celula, 'atividade_id', '') or '')}"
             agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
             aggregated_atv[natureza_key][agg_comp] += float(valor_cell)
-        # Atividades indiretas (ADM, LAB, MOB, etc.) com o mesmo breakdown BDI.
-        if canonical:
-            for ind in getattr(canonical, "indiretos", None) or []:
-                ind_key = f"indireto.{ind.categoria}"
-                for comp_name, comp_value in _split_operational_cost_with_bdi(
-                    float(ind.custo_total or 0.0),
-                    bdi_multipliers,
-                ).items():
-                    aggregated_atv[ind_key][comp_name] += comp_value
+        # Células indiretas do cubo enriquecido
+        for celula, valor_cell in _iter_indireto_cubo_cells(cubo):
+            ind_key  = f"indireto.{str(getattr(celula, 'atividade_id', '') or '')}"
+            agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
+            aggregated_atv[ind_key][agg_comp] += float(valor_cell)
         rows = [
             {"atividade_id": natureza_key, "componente_bdi": comp, "valor_rs": float(valor)}
             for natureza_key, comp_dict in aggregated_atv.items()

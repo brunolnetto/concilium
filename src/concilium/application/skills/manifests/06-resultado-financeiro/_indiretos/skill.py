@@ -122,18 +122,16 @@ def run_custos_indiretos(
             )
         )
 
-    # Indiretos acompanham os diretos: usar o makespan real do cronograma quando disponível.
-    # O prazo contratual (data_termino) pode ser menor que a duração produtiva real quando
-    # múltiplas frentes são necessárias para caber no prazo — nesse caso o cronograma
-    # calculado pelo pool pode se estender além de data_termino.
+    # Indiretos acompanham as atividades diretas: usar makespan do algoritmo de otimização.
+    # A duração do canteiro é determinada pelo cronograma produtivo (RCPSP), não pelo prazo
+    # contratual — a obra termina quando o cronograma diz que termina.
+    # Se o makespan exceder o prazo contratual (projeto atrasado), usa-se o makespan.
+    # Fallback: n_semanas_contrato quando não há cronograma calculado.
     cron = getattr(canonical_in, "cronograma", None)
     makespan_real = int(getattr(cron, "makespan_weeks", 0) or 0)
     n_semanas_contrato = _semanas_projeto(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
-    n_semanas = max(n_semanas_contrato, makespan_real)
-    prazo_meses = max(
-        _meses_entre(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino),
-        int(n_semanas / 4.345),
-    )
+    n_semanas = makespan_real if makespan_real > 0 else n_semanas_contrato
+    prazo_meses = round(n_semanas / 4.345, 1)
     num_pessoas_direta = _count_pessoas_diretas(canonical_in)
 
     composicoes_input = inputs.get("composicoes_indireto", {})
