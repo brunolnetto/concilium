@@ -141,31 +141,79 @@ def _auth_enabled() -> bool:
 # ── Mapeamento MCP tool → permissão ──────────────────────────────────────────
 
 TOOL_PERMISSIONS: dict[str, str] = {
-    # Leitura
-    "listar_projetos": PROJECT_READ,
-    "consultar_status": PROJECT_READ,
-    "listar_contextos": CATALOG_READ,
-    "listar_cpus": CATALOG_READ,
-    "buscar_cpu": CATALOG_READ,
-    "derivar_recursos_do_catalogo": CATALOG_READ,
-    "listar_artefatos_projeto": ARTIFACTS_READ,
-    # Dados financeiros
-    "consultar_viabilidade_prazo": FINANCIALS_READ,
-    "identificar_gargalos_recurso": FINANCIALS_READ,
-    # Download
-    "ler_artefato": ARTIFACTS_DOWNLOAD,
-    "baixar_bundle_zip": ARTIFACTS_DOWNLOAD,
-    "auditar_plano": ARTIFACTS_READ,
-    "explorar_pool_recursos": PROJECT_READ,
-    # Criação
-    "criar_projeto_formulario": PROJECT_CREATE,
-    "iniciar_orcamento": PROJECT_CREATE,
-    # Execução
-    "avancar_pipeline": PROJECT_RUN,
-    "simular_impacto_replan": PROJECT_RUN,
-    "aplicar_sugestao_replan": PROJECT_RUN,
-    # Aprovação
-    "aprovar_versao": PROJECT_APPROVE,
+    # ── Leitura (viewer) ──────────────────────────────────────────────────────
+    "listar_projetos":                  PROJECT_READ,
+    "consultar_status":                 PROJECT_READ,
+    "comparar_planos":                  PROJECT_READ,
+    "explorar_pool_recursos":           PROJECT_READ,
+    "listar_benchmarks":                PROJECT_READ,
+    "consultar_benchmark":              PROJECT_READ,
+    "listar_benchmarks_nep039":         PROJECT_READ,
+    "comparar_execucoes_benchmark":     PROJECT_READ,
+    "listar_runs_campanha":             PROJECT_READ,
+    "consultar_estrutura_projeto":      PROJECT_READ,
+    "consultar_job_pipeline":           PROJECT_READ,
+    "listar_jobs_pipeline":             PROJECT_READ,
+    "obter_estatisticas_jobs":          PROJECT_READ,
+    # ── Catálogo leitura (viewer) ─────────────────────────────────────────────
+    "listar_contextos":                 CATALOG_READ,
+    "pesquisar_catalogo":               CATALOG_READ,
+    "listar_cpus":                      CATALOG_READ,
+    "buscar_cpu":                       CATALOG_READ,
+    "derivar_recursos_do_catalogo":     CATALOG_READ,
+    "consultar_saude_catalogo":         CATALOG_READ,
+    "avaliar_plausibilidade_catalogo":  CATALOG_READ,
+    "verificar_integridade_catalogo":   CATALOG_READ,
+    "consultar_preco_insumo_temporal":  CATALOG_READ,
+    "tendencia_precos_catalogo":        CATALOG_READ,
+    "calcular_pu_producao":             CATALOG_READ,
+    "listar_versoes_catalogo":          CATALOG_READ,
+    "comparar_versoes_catalogo":        CATALOG_READ,
+    # ── Tributação (viewer — informacional) ───────────────────────────────────
+    "calcular_custo_empregador_clt":    CATALOG_READ,
+    "calcular_inss_empregado":          CATALOG_READ,
+    "calcular_irrf":                    CATALOG_READ,
+    # ── Sistema (admin) ───────────────────────────────────────────────────────
+    "ping":                             SYSTEM_READ,
+    # ── Artefatos leitura ─────────────────────────────────────────────────────
+    "listar_artefatos_projeto":         ARTIFACTS_READ,
+    "auditar_plano":                    ARTIFACTS_READ,
+    # ── Financeiros (auditor/operator) ────────────────────────────────────────
+    "consultar_viabilidade_prazo":      FINANCIALS_READ,
+    "identificar_gargalos_recurso":     FINANCIALS_READ,
+    "obter_resultado_campanha":         FINANCIALS_READ,
+    "comparar_rfi_catalogo":            FINANCIALS_READ,
+    # ── Download (operator) ───────────────────────────────────────────────────
+    "ler_artefato":                     ARTIFACTS_DOWNLOAD,
+    "ler_artefato_texto":               ARTIFACTS_DOWNLOAD,
+    "baixar_artefato_binario":          ARTIFACTS_DOWNLOAD,
+    "baixar_bundle_zip":                ARTIFACTS_DOWNLOAD,
+    "download_benchmark_zip":           ARTIFACTS_DOWNLOAD,
+    # ── Criação (operator) ────────────────────────────────────────────────────
+    "criar_projeto_formulario":         PROJECT_CREATE,
+    "criar_projeto_spec":               PROJECT_CREATE,
+    "iniciar_orcamento":                PROJECT_CREATE,
+    "nova_versao":                      PROJECT_CREATE,
+    "configurar_escopo":                PROJECT_CREATE,
+    "gerenciar_plano":                  PROJECT_CREATE,
+    # ── Execução (operator) ───────────────────────────────────────────────────
+    "disparar_pipeline":                PROJECT_RUN,
+    "avancar_pipeline":                 PROJECT_RUN,
+    "cancelar_job_pipeline":            PROJECT_RUN,
+    "executar_benchmark":               PROJECT_RUN,
+    "executar_benchmark_nep039":        PROJECT_RUN,
+    "empacotar_benchmark":              PROJECT_RUN,
+    "explorar_configuracoes_go":        PROJECT_RUN,
+    "simular_cenario_replan":           PROJECT_RUN,
+    "salvar_perfil_bdi":                PROJECT_RUN,
+    "editar_benchmark":                 PROJECT_RUN,
+    "simular_impacto_replan":           PROJECT_RUN,
+    "aplicar_sugestao_replan":          PROJECT_RUN,
+    # ── Aprovação / Escrita catálogo (engineer) ───────────────────────────────
+    "aprovar_versao":                   PROJECT_APPROVE,
+    "marcar_benchmark_imutavel":        PROJECT_APPROVE,
+    "atualizar_preco_insumo":           CATALOG_WRITE,
+    "adicionar_variante_producao":      CATALOG_WRITE,
 }
 
 
@@ -259,3 +307,72 @@ def roles(*required_roles: str):
         return wrapper
 
     return decorator
+
+
+# ── Enforcement centralizado para MCP tools ────────────────────────────────────
+
+import logging as _logging
+
+_guard_log = _logging.getLogger(__name__)
+
+# Permissão padrão para tools sem mapeamento explícito (mínimo: qualquer usuário autenticado)
+_DEFAULT_TOOL_PERMISSION = PROJECT_READ
+
+
+def validate_tool_coverage(server: Any) -> list[str]:
+    """Verifica quais tools registradas no servidor não têm entrada em TOOL_PERMISSIONS.
+
+    Retorna lista de nomes de tools sem mapeamento.
+    Chamado em build_server() para auditoria de cobertura.
+    """
+    try:
+        tools = server._tool_manager._tools
+    except AttributeError:
+        return []
+    missing = [name for name in tools if name not in TOOL_PERMISSIONS]
+    if missing:
+        _guard_log.warning(
+            "RBAC: %d tool(s) sem mapeamento em TOOL_PERMISSIONS: %s — "
+            "será aplicada permissão padrão '%s'",
+            len(missing), missing, _DEFAULT_TOOL_PERMISSION,
+        )
+    return missing
+
+
+def patch_mcp_auth_permissions(server: Any) -> None:
+    """Envolve todas as tools MCP com verificação de permissão via TOOL_PERMISSIONS.
+
+    Para tools com @permission() decorator: a verificação dupla é harmless
+    (o decorator ainda executa depois do wrapper).
+    Para tools sem @permission(): o wrapper é a única linha de defesa.
+    Tools sem entrada em TOOL_PERMISSIONS recebem _DEFAULT_TOOL_PERMISSION.
+
+    Chamado em build_server() após registrar todas as tools.
+    """
+    try:
+        tools = server._tool_manager._tools
+    except AttributeError:
+        _guard_log.warning("patch_mcp_auth_permissions: servidor sem _tool_manager._tools — skipping")
+        return
+
+    for tool_name, tool in tools.items():
+        if not (hasattr(tool, "fn") and callable(tool.fn)):
+            continue
+        required_perm = TOOL_PERMISSIONS.get(tool_name, _DEFAULT_TOOL_PERMISSION)
+        original_fn = tool.fn
+
+        def _make_wrapper(fn: Any, perm: str) -> Any:
+            @wraps(fn)
+            def _auth_wrapper(*args: Any, **kwargs: Any) -> Any:
+                if _auth_enabled():
+                    token_roles = list(_current_roles.get())
+                    if perm not in get_permissions(token_roles):
+                        raise PermissionError(
+                            f"MCP tool '{fn.__name__}' requer '{perm}'. "
+                            f"Roles do token: {token_roles or ['(nenhum)']}. "
+                            "Solicite ao admin o role adequado."
+                        )
+                return fn(*args, **kwargs)
+            return _auth_wrapper
+
+        tool.fn = _make_wrapper(original_fn, required_perm)

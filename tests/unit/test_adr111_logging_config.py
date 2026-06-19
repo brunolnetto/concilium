@@ -47,20 +47,34 @@ def reset_telemetry():
     tel._initialized = False
     yield
     tel._initialized = original
-    # Shutdown do MeterProvider para matar o PeriodicExportingMetricReader background thread
-    # (evita "I/O operation on closed file" ao encerrar pytest)
+    # Shutdown de TODOS os providers criados (tracked no módulo telemetry).
+    # set_meter_provider() só funciona uma vez — providers subsequentes ficam órfãos
+    # com threads rodando; é preciso fechar cada instância explicitamente.
     try:
-        from opentelemetry import metrics as otel_metrics
-        provider = otel_metrics.get_meter_provider()
-        if hasattr(provider, "shutdown"):
-            provider.shutdown()
+        for mp in list(tel._active_meter_providers):
+            if hasattr(mp, "shutdown"):
+                mp.shutdown()
+        tel._active_meter_providers.clear()
     except Exception:
         pass
     try:
-        from opentelemetry._logs import get_logger_provider
-        lp = get_logger_provider()
-        if hasattr(lp, "shutdown"):
-            lp.shutdown()
+        for lp in list(tel._active_log_providers):
+            if hasattr(lp, "shutdown"):
+                lp.shutdown()
+        tel._active_log_providers.clear()
+    except Exception:
+        pass
+    # Reseta o lock Once do OTel para permitir set_meter_provider() em múltiplos testes
+    try:
+        import opentelemetry.metrics._internal as _m_internal
+        _m_internal._METER_PROVIDER_SET_ONCE._done = False
+        _m_internal._METER_PROVIDER = None
+    except Exception:
+        pass
+    try:
+        import opentelemetry._logs._internal as _l_internal
+        _l_internal._LOGGER_PROVIDER_SET_ONCE._done = False
+        _l_internal._LOGGER_PROVIDER = None
     except Exception:
         pass
 
@@ -270,7 +284,7 @@ class TestSetupLogging:
 
     def test_setup_telemetry_adds_logging_handler_in_console_mode(self, monkeypatch):
         """Com CONCILIUM__OTEL_CONSOLE=true, root logger recebe LoggingHandler OTel."""
-        from opentelemetry.sdk._logs import LoggingHandler
+        from opentelemetry.sdk._logs._internal import LoggingHandler
 
         monkeypatch.setenv("CONCILIUM__OTEL_CONSOLE", "true")
         monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
@@ -283,7 +297,7 @@ class TestSetupLogging:
 
     def test_setup_telemetry_no_logging_handler_when_sdk_disabled(self, monkeypatch):
         """Com OTEL_SDK_DISABLED=true, nenhum LoggingHandler é adicionado."""
-        from opentelemetry.sdk._logs import LoggingHandler
+        from opentelemetry.sdk._logs._internal import LoggingHandler
 
         monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
 

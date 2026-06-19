@@ -46,6 +46,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.observability.logging_config import configure_logging
+from concilium.infrastructure.auth.permission_guard import patch_mcp_auth_permissions, validate_tool_coverage
 from concilium.infrastructure.telemetry import patch_fastmcp_server, setup_telemetry
 from concilium.presentation.mcp._context import _config_root
 from concilium.presentation.mcp.middleware import McpAuthMiddleware
@@ -95,8 +96,10 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     tributacao.register(server)  # ADR-097 F6: INSS, IRRF, custo empregador CLT
     campaign.register(server)  # ADR-070: exploração do espaço GO (sweep paramétrico)
     _register_ui_resources(server)  # ADR-101: MCP Apps — recursos ui://
-    patch_fastmcp_server(server)  # ADR-095: OTEL tracing em todas as tools
-    _patch_mcp_with_auth(server)  # ADR-099: JWT middleware para transport HTTP
+    patch_fastmcp_server(server)          # ADR-095: OTEL tracing em todas as tools
+    patch_mcp_auth_permissions(server)   # ADR-099: RBAC enforcement via TOOL_PERMISSIONS
+    validate_tool_coverage(server)       # Loga warnings para tools sem mapeamento
+    _patch_mcp_with_auth(server)         # ADR-099: JWT middleware para transport HTTP
     return server
 
 

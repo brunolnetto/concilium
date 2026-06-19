@@ -76,6 +76,7 @@ configuration_app.add_typer(app_perfil)
 configuration_app.add_typer(app_temas)
 configuration_app.add_typer(app_jurisdicao)
 
+from concilium.presentation.cli.commands_blob import blob_app  # noqa: E402
 from concilium.presentation.cli.commands_observability import observability_app  # noqa: E402
 
 app.add_typer(catalog_app)
@@ -84,6 +85,7 @@ app.add_typer(configuration_app)
 app.add_typer(benchmark_app)
 app.add_typer(auth_app)
 app.add_typer(observability_app)
+app.add_typer(blob_app)
 
 
 # ── Loaders por grupo ────────────────────────────────────────────────────────

@@ -37,6 +37,10 @@ _skill_duration_histogram = None
 _tool_calls_counter = None
 _rate_limit_exceeded_counter = None
 
+# ── Provider references (para shutdown em testes) ─────────────────────────────
+_active_meter_providers: list = []
+_active_log_providers: list = []
+
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -62,6 +66,7 @@ def setup_telemetry() -> None:
 def _setup_logging() -> None:
     """Configura LoggerProvider OTel e ponte Python logging → OTel (ADR-111 F2)."""
     import logging
+    global _active_log_providers
 
     from opentelemetry._logs import set_logger_provider
     from opentelemetry.sdk._logs import LoggerProvider
@@ -72,6 +77,7 @@ def _setup_logging() -> None:
     telemetry = get_telemetry()
     resource = Resource({SERVICE_NAME: telemetry.otel_service_name})
     log_provider = LoggerProvider(resource=resource)
+    _active_log_providers.append(log_provider)
 
     otlp_endpoint = telemetry.otlp_endpoint
     if otlp_endpoint:
@@ -126,6 +132,7 @@ def _setup_metrics() -> None:
     from opentelemetry import metrics
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+    global _active_meter_providers
 
     telemetry = get_telemetry()
     resource = Resource({SERVICE_NAME: telemetry.otel_service_name})
@@ -142,7 +149,9 @@ def _setup_metrics() -> None:
 
         readers.append(PeriodicExportingMetricReader(ConsoleMetricExporter()))
 
-    metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=readers))
+    provider = MeterProvider(resource=resource, metric_readers=readers)
+    _active_meter_providers.append(provider)
+    metrics.set_meter_provider(provider)
 
 
 # ── Tracer / Meter ────────────────────────────────────────────────────────────
