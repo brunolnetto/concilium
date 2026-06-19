@@ -18,8 +18,8 @@ DEPRECATION NOTICE (ADR-105):
 from __future__ import annotations
 
 import math
-from hashlib import sha1
 from datetime import date, timedelta
+from hashlib import sha1
 from typing import Any
 
 from concilium.application.scheduling import (

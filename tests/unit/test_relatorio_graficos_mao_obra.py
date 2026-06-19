@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 def _load_helpers_a():
     root = Path(__file__).resolve().parents[2]
-    helper = root / "src/concilium/application/skills/manifests/09-relatorio-e-artefatos/_skill_helpers_a.py"
+    helper = root / "src/concilium/application/skills/manifests/10-relatorio-e-artefatos/_skill_helpers_a.py"
     spec = importlib.util.spec_from_file_location("_skill_helpers_a_09_graficos", helper)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

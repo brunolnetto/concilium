@@ -234,7 +234,7 @@ class BenchmarkReportBuilder:
 
     @staticmethod
     def _format_phase(metric: str) -> str:
-        return BenchmarkReportBuilder._PHASE_BY_METRIC.get(metric, "09-relatorio-e-artefatos")
+        return BenchmarkReportBuilder._PHASE_BY_METRIC.get(metric, "10-relatorio-e-artefatos")
 
     @staticmethod
     def _recommend_action(metric: str, severity: str) -> tuple[str, str]:

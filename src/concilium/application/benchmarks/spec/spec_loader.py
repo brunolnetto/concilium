@@ -338,7 +338,7 @@ class BenchmarkSpecLoader:
             equipes_indiretas=ref.get("equipes_indiretas") or [],
         )
 
-        extra_inputs["11-avaliacao-intervencoes"] = {
+        extra_inputs["08-avaliacao-intervencoes"] = {
             "intervencoes_propostas": [
                 {
                     "nome": "Baseline Automatica",
@@ -348,7 +348,7 @@ class BenchmarkSpecLoader:
                 }
             ]
         }
-        extra_inputs["12-registro-decisoes"] = {
+        extra_inputs["09-registro-decisoes"] = {
             "objective": "Aprovacao de Baseline para Auditoria Financeira",
             "considered_interventions": [
                 {
@@ -484,7 +484,9 @@ class BenchmarkSpecLoader:
         _ebr_apply_fallbacks(mapped)
         return mapped
 
-    def _enrich_eap_with_cpu_ids(self, eap: list[dict[str, Any]], contexto_id: str = "mendeslobo") -> list[dict[str, Any]]:
+    def _enrich_eap_with_cpu_ids(
+        self, eap: list[dict[str, Any]], contexto_id: str = "mendeslobo"
+    ) -> list[dict[str, Any]]:
         if not eap:
             return eap
         if all(item.get("cpu_id") for item in eap):

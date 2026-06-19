@@ -1,8 +1,52 @@
-"""Phase classification for skills — organizes skills into logical groups."""
+"""Phase classification for skills — organizes skills into logical groups.
+
+ADR-113: skills são classificadas em dois tiers de execução:
+  OLTP (01-06): resultado de planejamento em < 30s
+  OLAP (07-11): análise analítica e artefatos (pesado, opcional)
+"""
+
+from __future__ import annotations
 
 from collections import defaultdict
+from enum import Enum
 
 from concilium.application.skills import MANIFEST_META
+
+# ── Tiers de execução (ADR-113) ───────────────────────────────────────────────
+
+
+class PipelineMode(str, Enum):
+    """Modo de execução do pipeline de skills.
+
+    OLTP  — skills 01-06: resultado de planejamento em tempo real (< 30s)
+    LIGHT — skills 01-06 + relatorio: planejamento com relatório básico (30-90s)
+    OLAP  — skills 01-11: pipeline completo com análise e artefatos (2-5min)
+    """
+
+    OLTP = "oltp"  # planejamento: 01-06
+    LIGHT = "light"  # planejamento + relatório: 01-06 + 10-relatorio
+    OLAP = "olap"  # completo: 01-11
+
+
+def get_skills_for_mode(mode: PipelineMode) -> list[str]:
+    """Retorna lista de skill IDs para o modo especificado.
+
+    Usa MANIFEST_META (skill.toml) como fonte de verdade — funciona
+    tanto com IDs atuais quanto após a renumeração F4.
+    """
+    oltp_ids = sorted(sid for sid, meta in MANIFEST_META.items() if meta.get("tier") == "oltp")
+    olap_ids = sorted(sid for sid, meta in MANIFEST_META.items() if meta.get("tier") == "olap")
+
+    if mode == PipelineMode.OLTP:
+        return oltp_ids
+    if mode == PipelineMode.OLAP:
+        return oltp_ids + olap_ids
+    if mode == PipelineMode.LIGHT:
+        # LIGHT = OLTP + apenas o skill de relatório-e-artefatos (saída direta)
+        relatorio = [sid for sid in olap_ids if "relatorio" in sid]
+        return oltp_ids + relatorio
+    return oltp_ids + olap_ids  # fallback seguro
+
 
 # Preserve canonical display order
 _PHASE_ORDER = ["Definição", "Planejamento", "Consolidação", "Análise", "Decisão", "Saída"]
@@ -23,6 +67,31 @@ for _p, _skills in _phase_index.items():
 _MANIFEST_META_BY_PHASE: dict[str, str] = {
     sid: meta.get("phase", "Sem Classificação") for sid, meta in MANIFEST_META.items()
 }
+
+# ── Alias map ADR-113 F3: IDs legados → novos após renumeração ─────────────────
+# Permite que callers com IDs antigos continuem funcionando durante F4 (renaming).
+# Remover após todos os callers atualizados.
+SKILL_ID_ALIASES: dict[str, str] = {
+    # legado → novo (após renumeração F4)
+    "10-relatorio-e-artefatos": "10-relatorio-e-artefatos",
+    "07-diagnostico-criticidade": "07-diagnostico-criticidade",
+    "08-avaliacao-intervencoes": "08-avaliacao-intervencoes",
+    "09-registro-decisoes": "09-registro-decisoes",
+    "11-replanejamento-e-cenarios": "11-replanejamento-e-cenarios",
+}
+
+# Mapeamento inverso (novo → legado), para referência
+SKILL_ID_CANONICAL: dict[str, str] = {v: k for k, v in SKILL_ID_ALIASES.items()}
+
+
+def resolve_skill_id(skill_id: str) -> str:
+    """Resolve um skill ID potencialmente legado para o ID canônico atual.
+
+    Durante a transição F3→F4:
+    - Se o diretório antigo ainda existe: retorna o ID antigo (sem mudança)
+    - Após F4 (renaming): SKILL_ID_ALIASES aponta para os novos IDs
+    """
+    return SKILL_ID_ALIASES.get(skill_id, skill_id)
 
 
 def classify_phase(skill_id: str) -> str:

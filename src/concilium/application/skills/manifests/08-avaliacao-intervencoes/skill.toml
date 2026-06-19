@@ -1,5 +1,6 @@
 [skill]
-id = "11-avaliacao-intervencoes"
+id = "08-avaliacao-intervencoes"
+tier = "olap"
 phase = "Decisão"
 version = "1.0.0"
 status = "dormante"
@@ -7,7 +8,7 @@ motivo = "NEP-041 F3: aguarda loop de feedback de agente (ADR-070). Fora do pipe
 descricao = "Matriz de decisão ROI×Effort×Risk para intervenções propostas. Sem score combinado — classificação separada por dimensão."
 
 [depends_on]
-skills = ["10-diagnostico-criticidade"]
+skills = ["07-diagnostico-criticidade"]
 canonical_sections = ["cost_criticality_report"]
 
 [produces]

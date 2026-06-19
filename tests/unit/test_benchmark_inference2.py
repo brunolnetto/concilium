@@ -34,8 +34,8 @@ def test_derive_none_returns_benchmark_mode_true() -> None:
 
 def test_derive_none_skill_inputs_only_skill09() -> None:
     pack = BenchmarkInferenceService.derive(None)
-    assert set(pack.skill_inputs.keys()) == {"09-relatorio-e-artefatos"}
-    assert pack.skill_inputs["09-relatorio-e-artefatos"].get("benchmark_mode") is True
+    assert set(pack.skill_inputs.keys()) == {"10-relatorio-e-artefatos"}
+    assert pack.skill_inputs["10-relatorio-e-artefatos"].get("benchmark_mode") is True
 
 
 def test_derive_none_reference_projection_is_none() -> None:
@@ -119,7 +119,7 @@ def test_derive_confronto_reference_projection_not_none() -> None:
 
 def test_derive_confronto_benchmark_reference_projection_in_skill09() -> None:
     pack = BenchmarkInferenceService.derive(_ref_with_confronto())
-    skill09 = pack.skill_inputs.get("09-relatorio-e-artefatos", {})
+    skill09 = pack.skill_inputs.get("10-relatorio-e-artefatos", {})
     assert "benchmark_reference_projection" in skill09
     assert isinstance(skill09["benchmark_reference_projection"], dict)
 
@@ -359,17 +359,17 @@ def test_sum_indireto_rounding() -> None:
 
 def test_apply_to_skill_inputs_does_not_mutate_original() -> None:
     pack = BenchmarkInferenceService.derive(_ref_with_confronto())
-    original = {"09-relatorio-e-artefatos": {"existing_key": "existing_value"}}
-    original_copy = {"09-relatorio-e-artefatos": {"existing_key": "existing_value"}}
+    original = {"10-relatorio-e-artefatos": {"existing_key": "existing_value"}}
+    original_copy = {"10-relatorio-e-artefatos": {"existing_key": "existing_value"}}
     BenchmarkInferenceService.apply_to_skill_inputs(original, pack)
     assert original == original_copy
 
 
 def test_apply_to_skill_inputs_merges_pack_into_existing() -> None:
     pack = BenchmarkInferenceService.derive(_ref_with_confronto())
-    base = {"09-relatorio-e-artefatos": {"my_flag": True}}
+    base = {"10-relatorio-e-artefatos": {"my_flag": True}}
     merged = BenchmarkInferenceService.apply_to_skill_inputs(base, pack)
-    skill09 = merged["09-relatorio-e-artefatos"]
+    skill09 = merged["10-relatorio-e-artefatos"]
     assert skill09["my_flag"] is True
     assert skill09.get("benchmark_mode") is True
 
@@ -378,8 +378,8 @@ def test_apply_to_skill_inputs_creates_skill_key_when_absent() -> None:
     """When the pack introduces a skill key not in base, it is created."""
     pack = BenchmarkInferenceService.derive(None)
     merged = BenchmarkInferenceService.apply_to_skill_inputs({}, pack)
-    assert "09-relatorio-e-artefatos" in merged
-    assert merged["09-relatorio-e-artefatos"]["benchmark_mode"] is True
+    assert "10-relatorio-e-artefatos" in merged
+    assert merged["10-relatorio-e-artefatos"]["benchmark_mode"] is True
 
 
 def test_apply_to_skill_inputs_empty_pack_returns_copy() -> None:

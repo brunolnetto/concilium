@@ -1,5 +1,6 @@
 [skill]
-id = "10-diagnostico-criticidade"
+id = "07-diagnostico-criticidade"
+tier = "olap"
 phase = "Análise"
 version = "1.0.0"
 descricao = "Diagnóstico consolidado de criticidade (Prazo, Custo, Recurso, Sensibilidade). ADR-026."

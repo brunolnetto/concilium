@@ -6,9 +6,9 @@ import pytest
 
 from concilium.application.skills import load_skill_stage
 
-# NEP-041 F2: estágio assessor da skill unificada 13-replanejamento-e-cenarios
+# NEP-041 F2: estágio assessor da skill unificada 11-replanejamento-e-cenarios
 run_assessor_replanejamento = load_skill_stage(
-    "13-replanejamento-e-cenarios", "_assessor", "run_assessor_replanejamento"
+    "11-replanejamento-e-cenarios", "_assessor", "run_assessor_replanejamento"
 )
 from concilium.domain.models.canonical import (
     CanonicalModel,

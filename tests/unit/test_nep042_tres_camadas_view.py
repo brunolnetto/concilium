@@ -20,7 +20,7 @@ def _load_helpers():
     path = (
         Path(__file__).resolve().parents[2]
         / "src/concilium/application/skills/manifests"
-        / "09-relatorio-e-artefatos/_skill_helpers_a.py"
+        / "10-relatorio-e-artefatos/_skill_helpers_a.py"
     )
     spec = importlib.util.spec_from_file_location("sk09_helpers_nep042", path)
     mod = importlib.util.module_from_spec(spec)

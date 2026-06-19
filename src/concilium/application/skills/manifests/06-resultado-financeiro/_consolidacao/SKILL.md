@@ -95,6 +95,6 @@ delta_operacional = N4 - N3        (ineficiência de gestão)
 
 ## Próximas skills no pipeline
 
-- [`09-relatorio-e-artefatos`](../09-relatorio-e-artefatos/SKILL.md)
-- [`10-diagnostico-criticidade`](../10-diagnostico-criticidade/SKILL.md)
+- [`10-relatorio-e-artefatos`](../10-relatorio-e-artefatos/SKILL.md)
+- [`07-diagnostico-criticidade`](../07-diagnostico-criticidade/SKILL.md)
 - [`13-assessor-replanejamento`](../13-assessor-replanejamento/SKILL.md)

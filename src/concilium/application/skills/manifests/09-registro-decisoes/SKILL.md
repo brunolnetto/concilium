@@ -1,5 +1,5 @@
 ﻿---
-name: 12-registro-decisoes
+name: 09-registro-decisoes
 description: Use when recording the justification for a human decision about which interventions to apply (or not apply) to a project version.
 ---
 
@@ -51,7 +51,7 @@ Modo lean é suficiente para começar. Estrutura completa pode ser adotada quand
 ## Depende de
 
 **Skills predecessoras**:
-- [`11-avaliacao-intervencoes`](../11-avaliacao-intervencoes/SKILL.md) — fornece classificação das intervenções consideradas
+- [`08-avaliacao-intervencoes`](../08-avaliacao-intervencoes/SKILL.md) — fornece classificação das intervenções consideradas
 - Qualquer skill anterior que tenha gerado dados referenciados na justificativa
 
 **Recursos consumidos**: nenhum externo.
@@ -134,5 +134,5 @@ Estrutura completa:
 
 ## Posição no pipeline
 
-Fase **Decisão** — último passo antes da renderização final (09-relatorio-e-artefatos).
+Fase **Decisão** — último passo antes da renderização final (10-relatorio-e-artefatos).
 Documenta a decisão humana tomada com base nos outputs de 09, 10, 13 e 14.

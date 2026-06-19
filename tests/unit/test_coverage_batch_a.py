@@ -1,6 +1,6 @@
 """Coverage batch A — targets mcp_server/__main__, semantic/__init__,
 scheduling/selector, optimizer/loop, skills/__init__, cpu_insumo validations,
-02-produtividade-climatica, 09-relatorio-e-artefatos, and scheduling/scheduler edge cases.
+02-produtividade-climatica, 10-relatorio-e-artefatos, and scheduling/scheduler edge cases.
 """
 
 from __future__ import annotations
@@ -344,7 +344,7 @@ class TestPraticabilidadeEdgeCases:
         assert result.get("06") == 0.0
 
 
-# ══ 09-relatorio-e-artefatos edge cases ══════════════════════════════════════════════
+# ══ 10-relatorio-e-artefatos edge cases ══════════════════════════════════════════════
 
 
 class TestAdapterSaidaEdgeCases:

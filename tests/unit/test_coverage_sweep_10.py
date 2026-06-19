@@ -27,7 +27,7 @@ def _load_skill_module(skill_dir: str, module_name: str):
 
 class TestSkill09HelpersA:
     def _load(self):
-        return _load_skill_module("09-relatorio-e-artefatos", "_skill_helpers_a")
+        return _load_skill_module("10-relatorio-e-artefatos", "_skill_helpers_a")
 
     def test_module_loads(self):
         mod = self._load()
@@ -93,7 +93,7 @@ class TestSkill09HelpersA:
 
 class TestSkill09:
     def _load(self):
-        return _load_skill_module("09-relatorio-e-artefatos", "skill")
+        return _load_skill_module("10-relatorio-e-artefatos", "skill")
 
     def test_as_bool_true(self):
         mod = self._load()

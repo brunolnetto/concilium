@@ -161,9 +161,7 @@ def _calc_venda_com_bdi(
     def _bdi(categoria: str) -> float:
         rate = bdi_rates.get(categoria)
         if rate is None:
-            logger.warning(
-                "BDI sem taxa para '%s' — markup zero aplicado (preço de venda subavaliado)", categoria
-            )
+            logger.warning("BDI sem taxa para '%s' — markup zero aplicado (preço de venda subavaliado)", categoria)
             return 0.0
         return float(rate)
 
@@ -179,11 +177,7 @@ def _calc_venda_com_bdi(
     r_mo = _bdi("mao_obra")
     r_eq = _bdi("equipamentos")
     r_mat = _bdi("material")
-    r_indir = (
-        float(bdi_indireto_efetivo)
-        if isinstance(bdi_indireto_efetivo, (int, float))
-        else _bdi("indireto")
-    )
+    r_indir = float(bdi_indireto_efetivo) if isinstance(bdi_indireto_efetivo, (int, float)) else _bdi("indireto")
 
     venda_indireto = 0.0
     custo_indireto_total = 0.0

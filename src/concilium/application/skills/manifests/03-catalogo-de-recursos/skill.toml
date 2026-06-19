@@ -1,5 +1,6 @@
 [skill]
 id = "03-catalogo-de-recursos"
+tier = "oltp"
 phase = "Definição"
 gate = true
 version = "1.0.0"

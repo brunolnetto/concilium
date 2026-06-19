@@ -12,7 +12,7 @@ app = typer.Typer(name="adapter", help="Adaptadores de saÃ­da.", no_args_is_he
 def adapter_run(
     arg: str = typer.Argument(..., help="projeto ou projeto@vN"),
 ) -> None:
-    """Gera artefato de saÃ­da via skill 09-relatorio-e-artefatos. Salva em outputs/relatorio.json."""
+    """Gera artefato de saÃ­da via skill 10-relatorio-e-artefatos. Salva em outputs/relatorio.json."""
     nome, ver = parse_project_version(arg)
     project = resolve_project(nome)
     from concilium.application.runtime import Runtime, RuntimeError
@@ -25,7 +25,7 @@ def adapter_run(
         raise typer.Exit(1)
 
     try:
-        result = rt.run_skill("09-relatorio-e-artefatos", project, version=v, inputs={})
+        result = rt.run_skill("10-relatorio-e-artefatos", project, version=v, inputs={})
     except RuntimeError as e:
         rprint(f"[red]Erro de runtime: {e}[/red]")
         raise typer.Exit(1) from None

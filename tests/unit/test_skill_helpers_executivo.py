@@ -17,7 +17,7 @@ def _make_proj():
 
 _MODULE_PATH = (
     "/home/pingu/github/agente-gerente-de-engenharia/src/concilium"
-    "/application/skills/manifests/09-relatorio-e-artefatos/_skill_helpers_executivo.py"
+    "/application/skills/manifests/10-relatorio-e-artefatos/_skill_helpers_executivo.py"
 )
 
 

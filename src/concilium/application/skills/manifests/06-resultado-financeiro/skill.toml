@@ -1,5 +1,6 @@
 [skill]
 id = "06-resultado-financeiro"
+tier = "oltp"
 phase = "Planejamento"
 gate = true  # ADR-022 / NEP-041 F4: falha em qualquer estágio bloqueia downstream (sem receita não há margem)
 version = "1.0.0"

@@ -60,7 +60,7 @@ class InputsMixin:
                 proj_id or None,
             )
 
-        if skill_id == "09-relatorio-e-artefatos":
+        if skill_id == "10-relatorio-e-artefatos":
             try:
                 deliv_cfg = project.read_json("deliverables_config.json", {})
                 outputs = deliv_cfg.get("outputs", {}) if isinstance(deliv_cfg, dict) else {}

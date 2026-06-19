@@ -178,6 +178,8 @@ def _discover_manifest_meta() -> dict[str, dict]:
                 "depends_on": config.get("depends_on", {}),
                 # NEP-041 F3: skills dormantes ficam fora do pipeline automático
                 "status": skill_cfg.get("status", "ativo"),
+                # ADR-113: tier de execução — "oltp" (01-06) | "olap" (07-11)
+                "tier": skill_cfg.get("tier", "olap"),  # default olap = conservador
             }
         except Exception as e:
             raise RuntimeError(f"Erro lendo manifesto em {manifest_dir}: {e}") from e

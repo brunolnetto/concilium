@@ -21,7 +21,7 @@ from concilium.domain.models.reports import (
     RelatorioSensibilidade,
 )
 
-_CREATED_BY = "09-relatorio-e-artefatos"
+_CREATED_BY = "10-relatorio-e-artefatos"
 
 
 def _rre_get_margin_status(resultado) -> tuple[str, float]:

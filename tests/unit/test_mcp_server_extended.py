@@ -402,7 +402,7 @@ async def test_avancar_pipeline_pipeline_complete(server, server_env):
         "04-cronograma",
         "05-equipes-e-alocacao",
         "06-resultado-financeiro",  # NEP-041 F4
-        "09-relatorio-e-artefatos",
+        "10-relatorio-e-artefatos",
     ]
     from datetime import UTC, datetime
 

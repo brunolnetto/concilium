@@ -40,7 +40,7 @@ from concilium.domain.models.canonical import (
 # ---------------------------------------------------------------------------
 
 run_replanejamento_e_cenarios = load_skill_stage(
-    "13-replanejamento-e-cenarios", "skill", "run_replanejamento_e_cenarios"
+    "11-replanejamento-e-cenarios", "skill", "run_replanejamento_e_cenarios"
 )
 
 # The module namespace where we can inject mocks

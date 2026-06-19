@@ -117,7 +117,7 @@ class TestSkill15RelatorioCriticidade:
         path = (
             Path(__file__).resolve().parents[2]
             / "src/concilium/application/skills/manifests"
-            / "09-relatorio-e-artefatos/_skill_helpers_executivo.py"
+            / "10-relatorio-e-artefatos/_skill_helpers_executivo.py"
         )
         spec = importlib.util.spec_from_file_location("sk09_exec", path)
         mod = importlib.util.module_from_spec(spec)
@@ -180,7 +180,7 @@ class TestSkill07CriticidadeEnrichment:
     pytestmark = [pytest.mark.slow]
 
     def _run(self, canonical_in: CanonicalModel) -> SkillResult:
-        mod = _load_skill("09-relatorio-e-artefatos")
+        mod = _load_skill("10-relatorio-e-artefatos")
         return mod.run_relatorio_e_artefatos(
             canonical_in=canonical_in,
             inputs={},
@@ -247,7 +247,7 @@ class TestSkill07CriticidadeEnrichment:
 
     def test_planejamento_rows_include_criticidade_key(self):
         """When enriched, planejamento rows include 'criticidade' field."""
-        mod = _load_skill("09-relatorio-e-artefatos")
+        mod = _load_skill("10-relatorio-e-artefatos")
         canonical_in = self._canonical_with_resultado(with_criticidade=True)
 
         # We need to inspect the JSON relatorio for criticidade field
@@ -263,7 +263,7 @@ class TestSkill07CriticidadeEnrichment:
 
     def test_planejamento_rows_no_criticidade_when_absent(self):
         """When not enriched, planejamento rows do not include 'criticidade' field."""
-        mod = _load_skill("09-relatorio-e-artefatos")
+        mod = _load_skill("10-relatorio-e-artefatos")
         canonical_in = self._canonical_with_resultado(with_criticidade=False)
         result = mod.run_relatorio_e_artefatos(canonical_in=canonical_in, inputs={}, perfil={})
         relatorio = getattr(result, "relatorio", None)
@@ -278,7 +278,7 @@ class TestSkill07CriticidadeEnrichment:
         """Relatório financeiro deve usar custo direto operacional como fonte única."""
         from concilium.domain.models.canonical import CustoTotal, Resultado, Venda
 
-        mod = _load_skill("09-relatorio-e-artefatos")
+        mod = _load_skill("10-relatorio-e-artefatos")
         canonical_in = self._canonical_with_resultado(with_criticidade=False)
         resultado = Resultado(
             venda=Venda(total_sem_bdi=5_000.0, total_com_bdi=7_000.0),
@@ -396,25 +396,25 @@ class TestCanonicalSkillOrder:
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         # NEP-041 Fase 1: 15 absorvido em 09 (ativo no pipeline)
-        assert "09-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
-        # NEP-041 Fase 3: 12-registro-decisoes dormante — invocável mas fora do pipeline auto
-        assert "12-registro-decisoes" in SKILLS
-        assert "12-registro-decisoes" not in CANONICAL_SKILL_ORDER
+        assert "10-relatorio-e-artefatos" in CANONICAL_SKILL_ORDER
+        # NEP-041 Fase 3: 09-registro-decisoes dormante — invocável mas fora do pipeline auto
+        assert "09-registro-decisoes" in SKILLS
+        assert "09-registro-decisoes" not in CANONICAL_SKILL_ORDER
 
     def test_07_comes_after_09(self):
-        """ADR-026 §D: 09-relatorio-e-artefatos (Saída) must come after 10-diagnostico-criticidade (Análise)."""
+        """ADR-026 §D: 10-relatorio-e-artefatos (Saída) must come after 07-diagnostico-criticidade (Análise)."""
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         # Skill 09 (Saída) deve vir depois de skill 10 (Análise) na ordem canônica
-        assert CANONICAL_SKILL_ORDER.index("09-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
-            "10-diagnostico-criticidade"
-        ), "09-relatorio-e-artefatos must come after 09-cost-criticality"
+        assert CANONICAL_SKILL_ORDER.index("10-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
+            "07-diagnostico-criticidade"
+        ), "10-relatorio-e-artefatos must come after 09-cost-criticality"
 
     def test_09_relatorio_absorve_executivo(self):
         """NEP-041 Fase 1: 15 foi absorvido em 09 — 09 vem depois de 10 (Análise)."""
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
         assert "15-relatorio-executivo" not in CANONICAL_SKILL_ORDER
-        assert CANONICAL_SKILL_ORDER.index("09-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
-            "10-diagnostico-criticidade"
+        assert CANONICAL_SKILL_ORDER.index("10-relatorio-e-artefatos") > CANONICAL_SKILL_ORDER.index(
+            "07-diagnostico-criticidade"
         )

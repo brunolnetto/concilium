@@ -18,8 +18,8 @@ NOTAS_VIABILIDADE = {
 # Replanejamento
 PROXIMOS_PASSOS_REPLAN = [
     "avancar_pipeline('{project_id}', '06-resultado-financeiro') para recomputar precificação+indiretos+consolidação",
-    "avancar_pipeline('{project_id}', '13-replanejamento-e-cenarios') para reanalisar sugestões e cenários",
-    "avancar_pipeline('{project_id}', '09-relatorio-e-artefatos') para gerar relatório final",
+    "avancar_pipeline('{project_id}', '11-replanejamento-e-cenarios') para reanalisar sugestões e cenários",
+    "avancar_pipeline('{project_id}', '10-relatorio-e-artefatos') para gerar relatório final",
 ]
 
 # Mensagens de Erro Comuns

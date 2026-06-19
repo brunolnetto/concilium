@@ -168,7 +168,7 @@ class TestInputsMixin:
         mixin = self._make_mixin()
         proj = self._make_project()
         ctx = self._make_contexto()
-        result = mixin._apply_runtime_defaults("09-relatorio-e-artefatos", proj, ctx, {})
+        result = mixin._apply_runtime_defaults("10-relatorio-e-artefatos", proj, ctx, {})
         assert "gerar_excel" in result
 
     def test_build_skill_kwargs(self):

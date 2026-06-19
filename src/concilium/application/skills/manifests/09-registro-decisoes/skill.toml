@@ -1,5 +1,6 @@
 [skill]
-id = "12-registro-decisoes"
+id = "09-registro-decisoes"
+tier = "olap"
 phase = "Decisão"
 version = "1.1.0"
 status = "dormante"

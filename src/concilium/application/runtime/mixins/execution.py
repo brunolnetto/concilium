@@ -210,7 +210,7 @@ class ExecutionMixin:
     def _process_side_effects(self, skill_id: str, result: SkillResult, project: ProjectStore, v: str) -> None:
         _persist_typed_artifacts(result, project, v)
 
-        if skill_id == "09-relatorio-e-artefatos":
+        if skill_id == "10-relatorio-e-artefatos":
             try:
                 _deliv_cfg = project.read_json("deliverables_config.json", {})
                 _outputs_cfg: dict = _deliv_cfg.get("outputs", {})
@@ -218,7 +218,7 @@ class ExecutionMixin:
                 _outputs_cfg = {}
             _handle_skill_09_side_effects(result, project, v, _outputs_cfg)
 
-        elif skill_id == "12-registro-decisoes":
+        elif skill_id == "09-registro-decisoes":
             decision_log = getattr(result, "decision_log", None)
             if decision_log:
                 payload = json.dumps(decision_log, indent=2, ensure_ascii=False, default=_json_default)

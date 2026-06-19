@@ -1,8 +1,8 @@
 """ADR-026 — Payloads dos relatórios analíticos de Saída (skills 15, 16, 17).
 
 RelatorioCriticidade  (Skill 15): ranking Pareto de atividades + decisões do 11.
-RelatorioSensibilidade (Skill 16): levers de margem do 13-replanejamento-e-cenarios.
-RelatorioIntervencao   (Skill 17): eixos combinados de intervenção do 13-replanejamento-e-cenarios.
+RelatorioSensibilidade (Skill 16): levers de margem do 11-replanejamento-e-cenarios.
+RelatorioIntervencao   (Skill 17): eixos combinados de intervenção do 11-replanejamento-e-cenarios.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ class RelatorioCriticidade(BaseModel):
     total_C: int = 0
     custo_A_mais_pct: float = Field(default=0.0, ge=0, le=1)  # soma custo_share dos A+
 
-    notas_engenheiro: str | None = None  # do 12-registro-decisoes geral
+    notas_engenheiro: str | None = None  # do 09-registro-decisoes geral
 
     def calcular_estatisticas(self) -> RelatorioCriticidade:
         """Recalcula contadores a partir dos itens. Retorna nova instância."""

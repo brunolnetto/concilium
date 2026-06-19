@@ -1,5 +1,6 @@
 [skill]
 id = "02-produtividade-climatica"
+tier = "oltp"
 phase = "Definição"
 gate = true  # ADR-022: falha bloqueia 04-cronograma e todo o pipeline de custos
 version = "1.0.0"

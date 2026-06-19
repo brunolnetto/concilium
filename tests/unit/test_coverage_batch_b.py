@@ -600,7 +600,7 @@ class TestPlanejamentoBdiEdgeCases:
 
 class TestCostCriticalityEdgeCases:
     def _classify(self):
-        mod = _load_skill_module("10-diagnostico-criticidade")
+        mod = _load_skill_module("07-diagnostico-criticidade")
         return mod._classify
 
     def test_classify_score_tier_a(self):

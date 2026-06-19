@@ -42,10 +42,10 @@ PIPELINE_SKILLS = [
 ]
 
 # Pipeline de análise executado após consolidação — opcional, não varia cenários
-# NEP-041 F3: 11-avaliacao-intervencoes congelada (dormante) — fora do pipeline automático
+# NEP-041 F3: 08-avaliacao-intervencoes congelada (dormante) — fora do pipeline automático
 ANALYSIS_SKILLS = [
-    "09-relatorio-e-artefatos",
-    "10-diagnostico-criticidade",
+    "10-relatorio-e-artefatos",
+    "07-diagnostico-criticidade",
 ]
 
 

@@ -76,7 +76,7 @@ def test_nep030_benchmark_mode_only_in_skill09() -> None:
     pack = BenchmarkInferenceService.derive(ref)
 
     # skill-09 recebe benchmark_mode para habilitar comparação final
-    assert pack.skill_inputs.get("09-relatorio-e-artefatos", {}).get("benchmark_mode") is True
+    assert pack.skill_inputs.get("10-relatorio-e-artefatos", {}).get("benchmark_mode") is True
 
     # skills 06 e 08 NÃO recebem benchmark_mode
     assert "benchmark_mode" not in pack.skill_inputs.get("06-resultado-financeiro", {})

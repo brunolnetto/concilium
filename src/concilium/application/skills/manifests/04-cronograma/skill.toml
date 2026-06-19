@@ -1,5 +1,6 @@
 [skill]
 id = "04-cronograma"
+tier = "oltp"
 phase = "Planejamento"
 gate = true  # ADR-022: falha bloqueia 03, 04, 05, 06 e toda análise downstream
 version = "2.0.0"

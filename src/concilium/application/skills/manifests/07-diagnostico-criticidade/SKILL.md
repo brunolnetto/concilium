@@ -1,5 +1,5 @@
 ---
-name: 10-diagnostico-criticidade
+name: 07-diagnostico-criticidade
 description: Use when producing a 360° health diagnosis of the project — ranks activities by schedule criticality, cost exposure, resource conflicts and margin sensitivity using Pareto classification.
 ---
 
@@ -98,13 +98,13 @@ Limites:
 
 ## Notas de implementação
 
-- O `cost_criticality_report` é consumido por `11-avaliacao-intervencoes`, `13-assessor-replanejamento`, `14-explorador-cenarios` e `15-relatorio-executivo`. Skills que dependem desta devem verificar `canonical.cost_criticality_report is not None` antes de operar.
+- O `cost_criticality_report` é consumido por `08-avaliacao-intervencoes`, `13-assessor-replanejamento`, `14-explorador-cenarios` e `15-relatorio-executivo`. Skills que dependem desta devem verificar `canonical.cost_criticality_report is not None` antes de operar.
 - A fronteira de Pareto (`frontier_ids`) é o conjunto de atividades que não são dominadas em todas as dimensões por nenhuma outra — representa o conjunto irredutível de riscos do projeto.
 - O score de prazo usa `_periodo_to_ordinal()` para normalizar chaves de semanas ISO e períodos mensais para uma escala comparável.
 
 ## Próximas skills no pipeline
 
-- [`11-avaliacao-intervencoes`](../11-avaliacao-intervencoes/SKILL.md)
+- [`08-avaliacao-intervencoes`](../08-avaliacao-intervencoes/SKILL.md)
 - [`13-assessor-replanejamento`](../13-assessor-replanejamento/SKILL.md)
 - [`14-explorador-cenarios`](../14-explorador-cenarios/SKILL.md)
 - [`15-relatorio-executivo`](../15-relatorio-executivo/SKILL.md)

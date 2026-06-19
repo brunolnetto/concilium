@@ -6,7 +6,7 @@ Skills marcadas com status="dormante" no skill.toml:
   - permanecem em SKILLS (invocáveis explicitamente — sementes para ADR-070)
   - são EXCLUÍDAS de CANONICAL_SKILL_ORDER (não rodam no pipeline automático)
 
-Skills congeladas: 11-avaliacao-intervencoes, 12-registro-decisoes.
+Skills congeladas: 08-avaliacao-intervencoes, 09-registro-decisoes.
 """
 
 from __future__ import annotations
@@ -17,22 +17,22 @@ class TestSkillsDormantes:
         """Dormantes continuam invocáveis explicitamente (não deletadas)."""
         from concilium.application.skills import SKILLS
 
-        assert "11-avaliacao-intervencoes" in SKILLS
-        assert "12-registro-decisoes" in SKILLS
+        assert "08-avaliacao-intervencoes" in SKILLS
+        assert "09-registro-decisoes" in SKILLS
 
     def test_11_e_12_excluidas_de_canonical_order(self):
         """NEP-041 Fase 3: dormantes fora do pipeline automático."""
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
 
-        assert "11-avaliacao-intervencoes" not in CANONICAL_SKILL_ORDER
-        assert "12-registro-decisoes" not in CANONICAL_SKILL_ORDER
+        assert "08-avaliacao-intervencoes" not in CANONICAL_SKILL_ORDER
+        assert "09-registro-decisoes" not in CANONICAL_SKILL_ORDER
 
     def test_manifest_meta_captura_status(self):
         """MANIFEST_META expõe o campo status do skill.toml."""
         from concilium.application.skills import MANIFEST_META
 
-        assert MANIFEST_META["11-avaliacao-intervencoes"].get("status") == "dormante"
-        assert MANIFEST_META["12-registro-decisoes"].get("status") == "dormante"
+        assert MANIFEST_META["08-avaliacao-intervencoes"].get("status") == "dormante"
+        assert MANIFEST_META["09-registro-decisoes"].get("status") == "dormante"
 
     def test_skills_ativas_continuam_no_canonical_order(self):
         """Skills não-dormantes permanecem no pipeline."""
@@ -42,8 +42,8 @@ class TestSkillsDormantes:
             "01-escopo-e-eap",
             "05-equipes-e-alocacao",
             "06-resultado-financeiro",
-            "09-relatorio-e-artefatos",
-            "13-replanejamento-e-cenarios",
+            "10-relatorio-e-artefatos",
+            "11-replanejamento-e-cenarios",
         ]:
             assert sid in CANONICAL_SKILL_ORDER, f"{sid} deveria estar no pipeline ativo"
 
@@ -51,4 +51,4 @@ class TestSkillsDormantes:
         """Scenario runner não tenta executar skill dormante."""
         from concilium.application.scenarios.runner import ANALYSIS_SKILLS
 
-        assert "11-avaliacao-intervencoes" not in ANALYSIS_SKILLS
+        assert "08-avaliacao-intervencoes" not in ANALYSIS_SKILLS

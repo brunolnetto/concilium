@@ -57,7 +57,23 @@ class BenchmarkRunner:
             report_printer=report_printer or BenchmarkReportPrinter(),
         )
 
-    def run(self, spec: ProjectSpec, *, reset: bool = False, skip_artifacts: bool = False) -> dict[str, Any]:
+    def run(
+        self,
+        spec: ProjectSpec,
+        *,
+        reset: bool = False,
+        skip_artifacts: bool = False,
+        mode: PipelineMode | None = None,
+    ) -> dict[str, Any]:
+        """Executa o benchmark com o modo de pipeline especificado.
+
+        Args:
+            mode:           PipelineMode.OLTP (01-06), LIGHT (01-06+relatorio) ou
+                            OLAP (01-11 completo, padrão). Tem precedência sobre skip_artifacts.
+            skip_artifacts: Legado — equivale a mode=PipelineMode.OLTP quando True.
+        """
+        from concilium.application.skills.phase_classifier import PipelineMode, get_skills_for_mode
+
         store = self._find_or_create(spec.nome, spec.slug, spec.contexto_id, reset)
 
         # Short-circuit: canonical + relatório já existem e reset não foi solicitado.
@@ -77,35 +93,10 @@ class BenchmarkRunner:
         if store.current_version() is None:
             store.new_version()
 
-        # Sequência explícita de skills: 10-diagnostico antes de 09-relatorio para que
-        # cost_criticality_report esteja disponível quando o Excel for gerado.
-        _FULL_BENCHMARK_SKILLS = [
-            "01-escopo-e-eap",
-            "02-produtividade-climatica",
-            "03-catalogo-de-recursos",
-            "04-cronograma",
-            "05-equipes-e-alocacao",
-            "06-resultado-financeiro",
-            "10-diagnostico-criticidade",
-            "11-avaliacao-intervencoes",
-            "12-registro-decisoes",
-            "09-relatorio-e-artefatos",
-            "13-replanejamento-e-cenarios",
-        ]
-
-        # Modo leve: pula skills pesadas de relatório/criticidade (usadas em campanhas de exploração)
-        _skill_seq = None
-        if skip_artifacts:
-            _skill_seq = [
-                "01-escopo-e-eap",
-                "02-produtividade-climatica",
-                "03-catalogo-de-recursos",
-                "04-cronograma",
-                "05-equipes-e-alocacao",
-                "06-resultado-financeiro",
-            ]
-        else:
-            _skill_seq = _FULL_BENCHMARK_SKILLS
+        # Resolve modo de execução: mode= tem precedência sobre skip_artifacts legado
+        if mode is None:
+            mode = PipelineMode.OLTP if skip_artifacts else PipelineMode.OLAP
+        _skill_seq = get_skills_for_mode(mode)
         results_log = runtime.run_pipeline(
             store,
             self._prepare_inputs(spec, ref_data, inference_pack),
@@ -124,8 +115,8 @@ class BenchmarkRunner:
         # Registrar execução no BenchmarkStore para auditabilidade (NEP-039).
         self._log_execution(spec, report, store_project=store)
 
-        if skip_artifacts:
-            # Modo leve (ex: campanha de exploração): apenas o benchmark_report.json, sem imagens/PDFs.
+        if mode != PipelineMode.OLAP:
+            # Modo OLTP/LIGHT (ex: campanha de exploração): apenas benchmark_report.json, sem imagens/PDFs.
             artifacts_dir = self._artifact_output_dir(spec)
             audit_dir = artifacts_dir.parent / "audit"
             audit_dir.mkdir(parents=True, exist_ok=True)
@@ -232,7 +223,9 @@ class BenchmarkRunner:
             )
             benchmark_store.log_execution(execution)
         except Exception as e:
-            logger.warning("Falha ao registrar execução no benchmark store (não bloqueia o fluxo): %s", e, exc_info=True)
+            logger.warning(
+                "Falha ao registrar execução no benchmark store (não bloqueia o fluxo): %s", e, exc_info=True
+            )
 
     def _find_or_create(self, nome: str, benchmark_id: str, contexto_id: str, reset: bool):
 
@@ -250,7 +243,9 @@ class BenchmarkRunner:
                 if meta:
                     benchmark_versao = meta.versao
             except Exception as e:
-                logger.warning("Falha ao carregar metadata do benchmark store (continuando sem linkage): %s", e, exc_info=True)
+                logger.warning(
+                    "Falha ao carregar metadata do benchmark store (continuando sem linkage): %s", e, exc_info=True
+                )
 
         if self.projects_root.exists():
             for project_dir in self.projects_root.iterdir():

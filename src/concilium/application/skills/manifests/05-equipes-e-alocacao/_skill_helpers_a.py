@@ -12,8 +12,8 @@ Objetivo: Reduzir fragmentação e garantir consistência atômica entre dimensi
 from __future__ import annotations
 
 import math
-from hashlib import sha1
 import unicodedata
+from hashlib import sha1
 
 from concilium.application.skills.manifests._05_equipes_custo_helpers import (
     calcular_custo_instancia_composicional,
@@ -311,10 +311,7 @@ def _calcular_custo_equipamento(
     )
     _atrib = insumo.get("atributos_especificos") or {}
     _tipo_comb = str(
-        tipo_combustivel_override
-        or _atrib.get("tipo_combustivel")
-        or _atrib.get("combustivel")
-        or ""
+        tipo_combustivel_override or _atrib.get("tipo_combustivel") or _atrib.get("combustivel") or ""
     ).strip()
     if not _tipo_comb and (consumo and consumo > 0):
         _tipo_comb = "Diesel S10"

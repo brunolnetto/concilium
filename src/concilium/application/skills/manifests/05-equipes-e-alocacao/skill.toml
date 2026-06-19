@@ -1,5 +1,6 @@
 [skill]
 id = "05-equipes-e-alocacao"
+tier = "oltp"
 phase = "Planejamento"
 version = "1.0.0"
 descricao = "Dimensionamento de equipes e alocação de recursos em pool consolidada. ADR-026."

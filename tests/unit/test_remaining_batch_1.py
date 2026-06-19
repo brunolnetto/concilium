@@ -155,7 +155,7 @@ class TestSkill13Run:
 
         # Find the skill module path
         base = "concilium.application.skills.manifests"
-        mod_name = f"{base}.13-replanejamento-e-cenarios.skill"
+        mod_name = f"{base}.11-replanejamento-e-cenarios.skill"
         # Module names with dashes need special handling
         try:
             mod = importlib.import_module(mod_name)

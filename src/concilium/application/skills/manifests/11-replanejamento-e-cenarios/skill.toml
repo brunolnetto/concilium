@@ -1,11 +1,12 @@
 [skill]
-id = "13-replanejamento-e-cenarios"
+id = "11-replanejamento-e-cenarios"
+tier = "olap"
 phase = "Análise"
 version = "1.0.0"
 descricao = "Assessor de replanejamento e exploração do espaço de planos. Unifica 13 (assessor) + 14 (explorador). NEP-041 Fase 2."
 
 [depends_on]
-skills = ["06-resultado-financeiro", "10-diagnostico-criticidade", "05-equipes-e-alocacao"]
+skills = ["06-resultado-financeiro", "07-diagnostico-criticidade", "05-equipes-e-alocacao"]
 canonical_sections = [
   "resultado", "resultado_reconciliado", "cost_criticality_report",
   "conflitos_pico", "indiretos", "equipes_diretas", "cronograma", "ponto_equilibrio"

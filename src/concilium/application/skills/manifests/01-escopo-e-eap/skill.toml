@@ -1,5 +1,6 @@
 [skill]
 id = "01-escopo-e-eap"
+tier = "oltp"
 phase = "Inicialização"
 gate = true
 version = "1.0.0"
