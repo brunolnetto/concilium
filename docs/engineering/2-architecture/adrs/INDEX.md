@@ -221,7 +221,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [110](adr-110-remediacao-fallbacks-silenciosos.md) | Remediação de Fallbacks Silenciosos — 7 Fases: logging, None/0.0, fatores, constantes, float utils, modelo, fonte de venda | ✅ Implementado 2026-06-18 | ADR-043, ADR-085, ADR-060, ADR-090 |
 | [111](adr-111-logging-centralizado-otel-bridge.md) | Logging Centralizado e Ponte Python → OTel — `_setup_logging()`, `LoggingHandler`, `_JsonFormatter`, `configure_logging()` nos 3 entry points | ✅ Implementado 2026-06-18 _(TDD · 28 testes)_ | ADR-095, ADR-110, ADR-096, ADR-112 |
 | [112](adr-112-pipeline-observabilidade-medalhao.md) | Pipeline Assíncrona de Observabilidade Medalhão — Bronze/Silver/Gold, backfill-incremental (fast-forward), checkpoints, DuckDB, SLIs, alertas, cross-domain | ⚠️ Parcial _(F1–F6 ✅ 2026-06-19 · TDD · 40 testes; F7-F8 pendentes)_ | ADR-095, ADR-111, ADR-047, ADR-102, ADR-103 |
-| [113](adr-113-desacoplamento-pipeline-otimizacao.md) | Desacoplamento do Pipeline de Otimização — ADR-079 operacional (mob_costs + initial_lambdas), fast path 01-04, replay financeiro sem re-RCPSP | 💡 Proposta | ADR-046, ADR-075, ADR-078, ADR-079, ADR-070 |
+| [113](adr-113-desacoplamento-pipeline-otimizacao.md) | Tiers OLTP/OLAP de Skills — Planejamento (01-06) separado de Análise/Artefatos (07-11); renumeração 09→10, 10→07, 11→08, 12→09, 13→11; PipelineMode enum | 💡 Proposta | ADR-022, ADR-036, ADR-050, ADR-070, ADR-102 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 

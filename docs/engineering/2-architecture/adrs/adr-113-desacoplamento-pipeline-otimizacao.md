@@ -1,9 +1,9 @@
-# ADR-113 — Desacoplamento do Pipeline de Otimização de Persistência e Análise
+# ADR-113 — Tiers de Execução de Skills: OLTP (Planejamento) e OLAP (Análise/Artefatos)
 
 **Status:** Proposta  
 **Data:** 2026-06-19  
 **Contexto:** MendesLobo Construtora — Concilium  
-**Dependências:** ADR-046 (RCPSP), ADR-075 (Pipeline-Motor), ADR-078 (Pré-Processamento), ADR-079 (Ativação Econômica), ADR-091 (Pool Mínimo como Variável)
+**Dependências:** ADR-022 (Wave Execution & Gate Propagation), ADR-036 (CLI Reorganização), ADR-050 (CLI Unificada), ADR-102 (Pipeline Jobs)
 
 ---
 
@@ -11,154 +11,127 @@
 
 ### Problema
 
-**P1. ADR-079 implementado mas não conectado — LNS otimiza sem feedback de custo real.**
+**P1. Pipeline monolítico sem separação entre computação e apresentação.**
 
-`explore_schedules()` em `selector.py` instancia `MatchingOracle(mob_costs={})` hardcoded vazio em duas
-chamadas (linhas 143 e 252). A skill-04 (`skill.py:1355, 1368`) nunca passa `initial_lambdas` vindos
-do `RelatorioOportunidades` (ADR-078). O resultado prático:
+O pipeline de skills executa sequencialmente 01→…→13, misturando duas naturezas radicalmente
+diferentes de trabalho:
 
-- LNS converge em relação a makespan estrutural, não a `C_total = C_op + C_mob`
-- Multi-projeto com compartilhamento de pool recebe a mesma qualidade de solução que mono-projeto
-- ADR-079 (pre-warming de λ₀ a partir de oportunidades) declarado como implementado, mas inerte
+| Categoria | Skills atuais | Característica |
+|---|---|---|
+| Planejamento (core) | 01–06 | Determinísticas, < 5s cada, produzem canonical |
+| Análise/Artefatos | 09–13 | Computacionalmente pesadas, 10–60s, geram Excel/PDF/gráficos |
 
-```python
-# selector.py:143 — mob_costs sempre vazio
-oracle = MatchingOracle(mob_costs={})
-lns = LnsScheduler(oracle=oracle, initial_lambdas=initial_lambdas or None)
+Toda execução — incluindo exploração paramétrica de campanha (ADR-070) que pode rodar centenas de
+vezes — paga o custo das skills pesadas mesmo quando só o resultado de planejamento é relevante.
 
-# skill.py:1355 — initial_lambdas nunca fornecido
-explored = explore_schedules(
-    activities=activities,
-    dag=dag,
-    pool=pool,
-    deadline_weeks=deadline_weeks,
-    ...
-    # initial_lambdas ausente → LNS não recebe λ₀ do RelatorioOportunidades
-)
-```
-
-**P2. Pipeline de skills monolítico — não há "fast path" de scheduling sem análise financeira.**
-
-O `BenchmarkRunner.run()` tem dois modos:
-- `skip_artifacts=False`: skills 01–13 (completo)
-- `skip_artifacts=True`: skills 01–06 (ainda inclui 05/06 de custo)
-
-Não existe modo que pare após skill-04 (só agendamento, sem custo). Para uma campanha de exploração
-que precisa avaliar N cronogramas antes de escolher o melhor para análise financeira completa:
+**P2. Numeração das skills não reflete ordem de execução real.**
 
 ```
-Atual (ineficiente):
-  N × (01→02→03→04→05→06) = N execuções de custo completo
-
-Ideal:
-  1 × (01→02→03)                     [once: catalog + EAP]
-  N × (04_schedule_only)             [N vezes: só scheduling]
-  K × (04_replay + 05→06)            [K vezes: análise nos K melhores]
+Execução atual (runner.py):
+  01 → 02 → 03 → 04 → 05 → 06 → 10 → 11 → 12 → 09 → 13
+                                   ↑                 ↑
+                           skill 10 roda antes     skill 09 roda DEPOIS
+                           de skill 09             de 10, 11, 12
 ```
 
-Sem esse fast path, a campanha de exploração (ADR-070) corre N pipelines completos, sendo 80% do
-tempo gasto em custo para cronogramas descartados.
+`09-relatorio-e-artefatos` roda por último porque depende dos outputs de `10-diagnostico-criticidade`,
+`11-avaliacao-intervencoes` e `12-registro-decisoes` para gerar o Excel completo. O número `09` não
+reflete isso. Skills `07` e `08` simplesmente não existem (lacuna).
 
-**P3. ScheduleOutput não distingue resultado de otimização de configuração de replay.**
+**P3. Sem definição explícita de quais skills são obrigatórias para um "resultado de planejamento".**
 
-Não há como re-executar as skills 05-06 sobre um cronograma já computado (replay) sem refazer o
-RCPSP. Isso impede:
-- Recalcular custos com BDI diferente sem re-agendar
-- Comparar preços de catálogo alternativos sobre o mesmo cronograma
-- Análise de sensibilidade financeira mantendo o schedule fixo
+O campo `gate=true` nos toml indica que falha bloqueia downstream, mas não existe distinção
+formal entre "skill necessária para tomada de decisão" e "skill necessária para relatório final".
+Isso dificulta:
+- Expor resultado de planejamento em tempo real via MCP/API sem esperar artefatos
+- Rodar campanhas de exploração sem gerar Excel/PDF desnecessários
+- Configurar job ACI "leve" vs "completo" por tipo de uso
 
 ---
 
 ## Decisão
 
-### Eixo 1 — Conectar mob_costs e initial_lambdas ao LNS (ADR-079 operacional)
+### D1 — Classificação formal em dois tiers: OLTP e OLAP
 
-**D1 — `explore_schedules()` aceita mob_costs opcionais e repassa ao MatchingOracle.**
+**Tier 1 — OLTP (Online Transaction Processing):**
+Skills que produzem o canonical de planejamento. Rápidas, determinísticas, obrigatórias para qualquer
+operação útil do sistema.
 
-```python
-def explore_schedules(
-    ...,
-    initial_lambdas: dict | None = None,
-    mob_costs: dict[str, float] | None = None,   # NOVO: {resource_id: C_mob}
-) -> list[ExploreResult]:
-    ...
-    oracle = MatchingOracle(mob_costs=mob_costs or {})
-    lns = LnsScheduler(oracle=oracle, initial_lambdas=initial_lambdas or None)
-```
+| Número novo | Número antigo | Nome | Fase | Descrição |
+|---|---|---|---|---|
+| 01 | 01 | escopo-e-eap | Inicialização | EAP, atividades, DAG de precedências |
+| 02 | 02 | produtividade-climatica | Definição | Praticabilidade semanal, fatores climáticos |
+| 03 | 03 | catalogo-de-recursos | Definição | Pool de recursos, catálogo de insumos |
+| 04 | 04 | cronograma | Planejamento | RCPSP/scheduling, distribuição semanal |
+| 05 | 05 | equipes-e-alocacao | Planejamento | Dimensionamento, mob/demob, custos de pool |
+| 06 | 06 | resultado-financeiro | Planejamento | PU×Q, BDI, consolidação financeira |
 
-**D2 — Skill-04 extrai `mob_costs` do canonical existente (run anterior) e os passa ao LNS.**
+**Saída do tier OLTP**: canonical completo com `cronograma`, `equipes_diretas`, `resultado` (venda,
+custo, margem). Suficiente para responder: "qual o prazo e custo desta configuração?"
 
-Se existe canonical de uma run anterior (re-planejamento ou campanha incremental), skill-04 lê
-`eq.custo_mob_desmob_total` por recurso e monta o dicionário `mob_costs`:
+**Tier 2 — OLAP (Online Analytical Processing):**
+Skills que enriquecem o canonical com análise e geram artefatos de saída. Pesadas, opcionais para
+exploração, obrigatórias para entrega final.
 
-```python
-mob_costs = {
-    eq.equip_id: eq.custo_mob_desmob_total
-    for eq in canonical_anterior.equipes_diretas
-    if eq.custo_mob_desmob_total
-} if canonical_anterior else {}
-```
+| Número novo | Número antigo | Nome | Fase | Descrição |
+|---|---|---|---|---|
+| 07 | 10 | diagnostico-criticidade | Análise | Curva ABC, pontos de equilíbrio por item |
+| 08 | 11 | avaliacao-intervencoes | Decisão | Matriz ROI×Effort×Risk de intervenções |
+| 09 | 12 | registro-decisoes | Decisão | Registro estruturado de decisão técnica |
+| 10 | 09 | relatorio-e-artefatos | Saída | Excel auditável, PDF, gráficos (depende de 07-09) |
+| 11 | 13 | replanejamento-e-cenarios | Análise | Assessor de replanejamento, exploração de planos |
 
-**D3 — Skill-04 extrai `initial_lambdas` do RelatorioOportunidades quando disponível.**
+**Saída do tier OLAP**: relatórios, planilhas, gráficos, registros — entregáveis para cliente/equipe.
 
-Se ADR-078 já foi executado (canonical tem `relatorio_oportunidades`), skill-04 mapeia
-`(atividade_i, atividade_j, tipo_id) → λ₀` e passa ao `explore_schedules()`.
+### D2 — Renumeração das skills OLAP para refletir ordem de execução
 
-### Eixo 2 — Fast path de scheduling e replay financeiro
+Skills 07–11 substituem a numeração desconexa atual (09, 10, 11, 12, 13) com sequência que reflete
+dependências reais:
+- `07-diagnostico-criticidade` (era `10`) — precisa apenas do canonical de 01-06
+- `08-avaliacao-intervencoes` (era `11`) — precisa do diagnóstico (07)
+- `09-registro-decisoes` (era `12`) — precisa das intervenções (08)
+- `10-relatorio-e-artefatos` (era `09`) — precisa de tudo (07-09) para gerar Excel completo
+- `11-replanejamento-e-cenarios` (era `13`) — usa canonical completo (01-09)
 
-**D4 — Skill-04 expõe modo `scheduling_only=True`.**
-
-Quando `scheduling_only=True`, skill-04 executa o RCPSP e persiste `scheduled_activities` no
-canonical, mas não calcula `distribuicao_semanal` completa nem prepara inputs para skill-05/06:
-
-```python
-# Inputs de skill-04 que ativam fast path
-{
-    "scheduling_only": True    # parar após ScheduleOutput; pular expansão para distribs
-}
-```
-
-**D5 — `BenchmarkRunner` expõe terceiro modo: `schedule_only=True`.**
+### D3 — Três modos de execução explícitos no pipeline
 
 ```python
-runner.run(spec, skip_artifacts=False)      # completo (01-13)
-runner.run(spec, skip_artifacts=True)       # financeiro (01-06)
-runner.run(spec, schedule_only=True)        # só scheduling (01-04)
+class PipelineMode(str, Enum):
+    OLTP  = "oltp"   # skills 01-06: resultado de planejamento (< 30s)
+    OLAP  = "olap"   # skills 01-11: completo com artefatos  (2-5min)
+    LIGHT = "light"  # skills 01-06 + 10: planejamento + relatório sem análise profunda
 ```
 
-Tempo estimado do modo `schedule_only` para benchmark típico: 2–5s vs 20–40s do `skip_artifacts`.
+| Modo | Skills | Caso de uso | Tempo estimado |
+|---|---|---|---|
+| `OLTP` | 01-06 | Exploração paramétrica, campanha GO, MCP interativo | 5–30s |
+| `LIGHT` | 01-06, 10 | Benchmark com relatório básico, sem diagnóstico de criticidade | 30–90s |
+| `OLAP` | 01-11 | Entrega completa ao cliente, benchmark de referência | 2–5min |
 
-**D6 — Skill-04 e BenchmarkRunner aceitam `schedule_input` para replay financeiro.**
+A troca de `skip_artifacts: bool` por `mode: PipelineMode` formaliza semântica que hoje está
+implícita na CLI (`--skip-artifacts`) e no `BenchmarkRunner`.
 
-Para re-executar custo sobre um cronograma já computado:
+### D4 — `skill.toml` declara tier explicitamente
 
-```python
-runner.run(spec, replay_schedule_from=version_id)
+```toml
+[skill]
+id = "07-diagnostico-criticidade"
+tier = "olap"          # NOVO: "oltp" ou "olap"
+phase = "Análise"
+gate = false
+...
 ```
 
-Internamente:
-1. Lê `ScheduleOutput` do canonical da versão `version_id`
-2. Cria nova versão no store
-3. Pula skill-01 a 04, começa da skill-05 com o schedule fixo
-4. Persiste novo canonical com custo diferente mas mesmo cronograma
+O runtime valida que nenhuma skill OLTP depende de skill OLAP (dependência cruzada é erro de
+configuração).
 
-Isso permite análise de sensibilidade: "qual o impacto financeiro de mudar o BDI de material de 4%
-para 6% neste cronograma?" sem re-agendar.
+### D5 — Renaming de diretórios é feito via migração explícita
 
-### Eixo 3 — Separação conceptual: SchedulingSpec vs AnalysisSpec
-
-**D7 — `ProjectSpec` passa a ter seção `rcpsp_override` explícita, separada de `bdi_override`.**
-
-```python
-@dataclass
-class ProjectSpec:
-    # Existente
-    inputs_cronograma: dict     # controla skill-04
-    inputs_indiretos: dict      # controla skill-05/06
-    ...
-    # Novo: override explícito de schedule sem re-agendar
-    rcpsp_override: dict | None = None    # se presente, pula RCPSP e usa schedule fornecido
-```
+Para manter compatibilidade durante a transição:
+1. Criar diretório com nome novo (ex: `07-diagnostico-criticidade`)
+2. Adicionar alias `id_legado = "10-diagnostico-criticidade"` no `skill.toml` novo
+3. Runtime aceita ambos os IDs por 1 release
+4. Remover diretório antigo e alias após todos os callers atualizados
 
 ---
 
@@ -166,9 +139,9 @@ class ProjectSpec:
 
 | ID | Alternativa | Motivo |
 |---|---|---|
-| A1 | Extrair scheduler como microserviço separado | Over-engineering; o problema é de fast-path e feedback de custo, não de deployment |
-| A2 | Refatorar todo o pipeline de skills | Risco de regressão elevado; os dois eixos cobrem o problema sem quebrar o contrato das skills |
-| A3 | Manter ADR-079 inerte e só documentar | O feedback de custo é arquiteturalmente fundamental para otimização multi-projeto real |
+| A1 | Manter numeração atual e apenas documentar | Não resolve a confusão operacional; 09 rodando depois de 12 vai causar erros futuros |
+| A2 | Renomear tudo de uma vez sem aliases | Quebra todas as referências em tests, CLI, runner, conftest — risco de regressão elevado |
+| A3 | Usar `skip_artifacts=bool` como hoje | Bool binário não expressa as 3 necessidades (exploração, light, completo) |
 
 ---
 
@@ -178,18 +151,18 @@ class ProjectSpec:
 
 | Efeito | Descrição |
 |---|---|
-| LNS otimiza custo real | mob_costs wired → solução melhora para projetos com pool compartilhado |
-| Campanhas 10–20× mais rápidas | `schedule_only` mode evita skills 05-06 para N cronogramas descartados |
-| Análise de sensibilidade habilitada | `replay_schedule_from` permite variar BDI/catálogo sem re-agendar |
-| ADR-079 operacional | Pre-warming de lambdas finalmente conectado ao LNS |
+| Campanhas 10-20× mais rápidas | Modo OLTP pula 5 skills pesadas; campanha de exploração paga < 5% do custo atual |
+| Numeração reflete execução | `07 → 08 → 09 → 10` segue dependências reais sem surpresas |
+| MCP responde em tempo real | Tool MCP pode retornar resultado financeiro em < 30s sem gerar Excel |
+| Tier OLTP testável isoladamente | Testes de integração de campanha não precisam de assets de saída |
 
 ### Negativas / Riscos
 
 | Risco | Mitigação |
 |---|---|
-| `mob_costs` do canonical anterior pode ser de um projeto diferente | Validar que canonical é do mesmo `contexto_id` antes de usar; fallback para `{}` |
-| `scheduling_only=True` cria canônicos incompletos (sem equipes/custos) | Marcar canonical com `scheduling_state: "partial"` para evitar uso indevido |
-| Replay financeiro pode divergir de um run completo se skills 01-03 mudaram | Incluir hash do catálogo/perfil no canonical; avisar quando o replay usa catálogo diferente |
+| Callers hardcoded com `"09-relatorio-e-artefatos"` | Alias no skill.toml garante backward compat por 1 release |
+| Canonical marcado como "incompleto" pode ser usado indevidamente | Campo `pipeline_mode` no canonical indica quais tiers foram executados |
+| Testes que verificam número de skills precisam ser atualizados | Atualizar em conjunto com a renumeração |
 
 ---
 
@@ -197,36 +170,35 @@ class ProjectSpec:
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `explore_schedules()` aceita `mob_costs` opcionais; `selector.py` repassa ao oracle | ⬜ Pendente |
-| F2 | Skill-04 extrai `mob_costs` do canonical anterior e passa a `explore_schedules` | ⬜ Pendente |
-| F3 | Skill-04 extrai `initial_lambdas` do `relatorio_oportunidades` quando disponível | ⬜ Pendente |
-| F4 | `BenchmarkRunner.run(schedule_only=True)` — fast path 01-04 | ⬜ Pendente |
-| F5 | `BenchmarkRunner.run(replay_schedule_from=version_id)` — replay financeiro | ⬜ Pendente |
-| F6 | `ProjectSpec.rcpsp_override` — spec explícita para replay sem RCPSP | ⬜ Pendente |
+| F1 | Adicionar `tier = "oltp"\|"olap"` a todos os `skill.toml`; runtime valida sem dependência cruzada | ⬜ Pendente |
+| F2 | `PipelineMode` enum; `BenchmarkRunner` e CLI aceitam `mode=` em vez de `skip_artifacts=` | ⬜ Pendente |
+| F3 | Renomear `10→07`, `11→08`, `12→09`, `09→10`, `13→11` com aliases de compatibilidade | ⬜ Pendente |
+| F4 | Remover aliases e referências legadas após testes verdes | ⬜ Pendente |
 
-**Invariante:** cada fase preserva comportamento para callers que não passam os novos parâmetros.
+**Invariante:** `mode="olap"` deve produzir resultado idêntico ao comportamento atual.
 
 ---
 
 ## Definition of Done
 
-### Fase 1–3 (ADR-079 operacional)
-- [ ] `explore_schedules(mob_costs={"E0027": 6500.0}, ...)` produz makespan ≤ run sem mob_costs em problema multi-projeto com sobreposição
-- [ ] Skill-04 lê `mob_costs` do canonical anterior quando disponível
-- [ ] Benchmark AGIS re-executado com mob_costs: LNS muda estratégia de alocação (log `_log.info`)
+### Fase 1–2
+- [ ] Todos os `skill.toml` têm campo `tier`
+- [ ] Runtime rejeita skill OLTP com `depends_on.skills` apontando para skill OLAP
+- [ ] `BenchmarkRunner.run(spec, mode=PipelineMode.OLTP)` executa apenas 01-06
 - [ ] `pytest tests/` verde
 
-### Fase 4–5 (Fast path e replay)
-- [ ] `runner.run(spec, schedule_only=True)` para AGIS completa em < 5s
-- [ ] `runner.run(spec, replay_schedule_from="v1")` produz canonical com `scheduling_state: "replay"` e mesmo `makespan_weeks` de v1
+### Fase 3–4
+- [ ] Skills renumeradas em `07–11`; diretórios antigos removidos
+- [ ] AGIS benchmark com `mode=OLAP` produz canonical idêntico ao baseline
+- [ ] Campanha AGIS com `mode=OLTP` completa em < 10s
 - [ ] `pytest tests/` verde
 
 ---
 
 ## Relacionados
 
-- ADR-075 — Pipeline-Motor (selector.py — ponto de injeção de mob_costs)
-- ADR-079 — Ativação Econômica (initial_lambdas — conectar ao LNS)
-- ADR-078 — Pré-Processamento (RelatorioOportunidades — fonte de λ₀)
-- ADR-070 — Cardinalidade do Espaço GO (campanha beneficia do fast path)
-- ADR-046 — RCPSP (contrato de entrada/saída do scheduler)
+- ADR-022 — Wave Execution & Gate Propagation (gate=true permanece no tier OLTP)
+- ADR-036 — CLI Reorganização (CLI `concilium project run` recebe `--mode`)
+- ADR-050 — CLI Unificada (benchmark CLI igualmente)
+- ADR-070 — Cardinalidade Espaço GO (campanha beneficia diretamente do modo OLTP)
+- ADR-102 — Pipeline Jobs (job ACI usa `mode` para selecionar tier)
