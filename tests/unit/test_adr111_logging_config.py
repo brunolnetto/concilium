@@ -41,12 +41,28 @@ def clean_root_logger():
 
 @pytest.fixture(autouse=False)
 def reset_telemetry():
-    """Reseta o flag _initialized da telemetria entre testes."""
+    """Reseta o flag _initialized da telemetria e faz shutdown dos providers OTel."""
     import concilium.infrastructure.telemetry as tel
     original = tel._initialized
     tel._initialized = False
     yield
     tel._initialized = original
+    # Shutdown do MeterProvider para matar o PeriodicExportingMetricReader background thread
+    # (evita "I/O operation on closed file" ao encerrar pytest)
+    try:
+        from opentelemetry import metrics as otel_metrics
+        provider = otel_metrics.get_meter_provider()
+        if hasattr(provider, "shutdown"):
+            provider.shutdown()
+    except Exception:
+        pass
+    try:
+        from opentelemetry._logs import get_logger_provider
+        lp = get_logger_provider()
+        if hasattr(lp, "shutdown"):
+            lp.shutdown()
+    except Exception:
+        pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -14,14 +14,29 @@ def _load_skill05_helpers_a():
     return mod
 
 
-def test_resolve_consumo_ignora_override_zero_e_faz_fallback_insumo():
+def test_resolve_consumo_sem_override_faz_fallback_insumo():
+    """Sem override (None), _resolve_consumo_equip usa o valor do insumo no catálogo."""
     mod = _load_skill05_helpers_a()
     atrib = {"consumo_litros_hora": 12.0}
 
-    consumo, code = mod._resolve_consumo_equip(atrib, consumo_override_proj=0.0, consumo_override_cpu=0.0, preco_diesel=7.0)
+    consumo, code = mod._resolve_consumo_equip(atrib, consumo_override_proj=None, consumo_override_cpu=None, preco_diesel=7.0)
 
     assert consumo == 12.0
     assert code == "VAL-EQUIP-COMB-02"
+
+
+def test_resolve_consumo_override_zero_forca_sem_combustivel():
+    """Override explícito de 0.0 força consumo=0.0 (equipamento sem combustível neste contexto).
+
+    Para usar o valor do catálogo, passar None em vez de 0.0.
+    """
+    mod = _load_skill05_helpers_a()
+    atrib = {"consumo_litros_hora": 12.0}
+
+    consumo, code = mod._resolve_consumo_equip(atrib, consumo_override_proj=0.0, consumo_override_cpu=None, preco_diesel=7.0)
+
+    assert consumo == 0.0
+    assert code == "VAL-EQUIP-COMB-01"
 
 
 def test_alias_enriquece_consumo_por_codigo_planilha_e_descricao():

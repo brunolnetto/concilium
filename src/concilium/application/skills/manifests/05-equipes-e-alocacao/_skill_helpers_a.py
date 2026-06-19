@@ -276,8 +276,9 @@ def _resolve_consumo_equip(atrib: dict, consumo_override_proj, consumo_override_
     consumo_insumo = _to_positive_float_or_none(atrib.get("consumo_litros_hora")) or 0.0
     decomposicao = atrib.get("decomposicao_equip") or {}
     consumo_decomposicao = _consumo_from_decomposicao(decomposicao, preco_diesel) if decomposicao else 0.0
-    if _to_positive_float_or_none(consumo_override_proj) is not None:
-        return consumo_override_proj, "VAL-EQUIP-COMB-01"
+    if consumo_override_proj is not None:
+        # None = "sem override"; 0.0 = "sem combustível neste contexto" (override explícito)
+        return float(consumo_override_proj), "VAL-EQUIP-COMB-01"
     if _to_positive_float_or_none(consumo_override_cpu) is not None:
         return consumo_override_cpu, "VAL-EQUIP-COMB-01"
     if consumo_insumo > 0:

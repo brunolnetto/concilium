@@ -18,10 +18,16 @@ def storage(tmp_path):
 
 @pytest.fixture
 def client(storage):
-    """TestClient com dependency_overrides para _get_storage → storage isolado."""
+    """TestClient com dependency_overrides para _get_storage → storage isolado.
+
+    Mockamos setup_telemetry para evitar que PeriodicExportingMetricReader inicie
+    threads de background que causam "I/O operation on closed file" ao encerrar pytest.
+    """
     from concilium.presentation.api.app import create_app
     from concilium.presentation.api.routes.observability import _get_storage
-    app = create_app()
+    with patch("concilium.presentation.api.app.setup_telemetry"), \
+         patch("concilium.presentation.api.app.configure_logging"):
+        app = create_app()
     app.dependency_overrides[_get_storage] = lambda: storage
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c
