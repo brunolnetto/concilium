@@ -32,11 +32,24 @@ def _get_trace_context() -> tuple[str, str]:
     return "", ""
 
 
+def _get_auth_context() -> tuple[str, str]:
+    """Retorna (user_id, request_id) do contexto de request atual, ou ('', '') se ausente."""
+    try:
+        from concilium.infrastructure.middleware.auth_context import (
+            current_request_id,
+            current_user_id,
+        )
+        return current_user_id.get(), current_request_id.get()
+    except Exception:
+        return "", ""
+
+
 class _JsonFormatter(logging.Formatter):
     """Emite JSON-lines com campos obrigatórios: ts, severity, logger, message, trace_id, span_id, service."""
 
     def format(self, record: logging.LogRecord) -> str:
         trace_id, span_id = _get_trace_context()
+        user_id, request_id = _get_auth_context()
         payload: dict[str, Any] = {
             "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%fZ"),
             "severity": record.levelname,
@@ -45,6 +58,8 @@ class _JsonFormatter(logging.Formatter):
             "trace_id": trace_id,
             "span_id": span_id,
             "service": "concilium",
+            "user_id": user_id,
+            "request_id": request_id,
         }
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from concilium.infrastructure.middleware.auth_context import AuthContextMiddleware
 from concilium.infrastructure.observability.logging_config import configure_logging
 from concilium.infrastructure.telemetry import setup_telemetry
 
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
     app.add_middleware(JWTAuthMiddleware)
+    app.add_middleware(AuthContextMiddleware)  # antes do JWT — request_id sempre presente
     app.add_middleware(SlowAPIMiddleware)
 
     # Ordem de registro = ordem de aparição no Swagger (dentro de cada tag)

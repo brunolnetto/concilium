@@ -150,3 +150,61 @@ def refresh_token(request: Request, response: Response, body: TokenRefreshReques
     ttl = timedelta(hours=8)
     token = _issue(subject=record.client_id, roles=record.roles, ttl=ttl)
     return TokenResponse(access_token=token, expires_in=int(ttl.total_seconds()))
+
+
+# ── Emissão direta de token por usuário (sem device registration) ─────────────
+
+
+class IssueTokenRequest(BaseModel):
+    client_id: str = Field(description="ID do usuário (definido em CONCILIUM__AUTH_CLIENTS).")
+    client_secret: str = Field(description="Senha do usuário.")
+    ttl_days: int = Field(default=30, ge=1, le=90, description="Validade em dias. Padrão: 30 dias.")
+    label: str = Field(default="", description="Rótulo opcional para identificar o uso do token (ex: 'claude-desktop-bruno').")
+
+
+@router.post(
+    "/token/issue",
+    response_model=TokenResponse,
+    summary="Emitir token de longa duração por usuário — sem device registration",
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("10/minute", key_func=get_remote_address)
+def issue_user_token(request: Request, response: Response, body: IssueTokenRequest) -> TokenResponse:
+    """Emite JWT de longa duração diretamente para um usuário existente.
+
+    Alternativa ao fluxo de registro de dispositivo (device code + refresh token):
+    - Sem necessidade de ativar dispositivo manualmente
+    - Token válido por até 90 dias
+    - Ideal para configuração de Claude Desktop, CI/CD, agentes automatizados
+
+    O `label` é registrado nos logs para rastreabilidade de origem.
+    Retorna `401` para credenciais inválidas.
+    """
+    import logging
+
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+    from concilium.infrastructure.auth.token_service import issue_token as _issue
+
+    logger = logging.getLogger(__name__)
+
+    store = get_auth_store()
+    client_roles = store.get_client_roles(body.client_id, body.client_secret)
+    if client_roles is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciais inválidas.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    ttl = timedelta(days=body.ttl_days)
+    token = _issue(subject=body.client_id, roles=client_roles, ttl=ttl)
+
+    logger.info(
+        "Token emitido para usuário '%s' (label='%s', ttl=%dd, roles=%s)",
+        body.client_id, body.label or "—", body.ttl_days, client_roles,
+    )
+
+    return TokenResponse(
+        access_token=token,
+        expires_in=int(ttl.total_seconds()),
+    )
