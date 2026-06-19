@@ -81,11 +81,15 @@ class BenchmarkFacade:
 
     # ── Execução ──────────────────────────────────────────────────────────────
 
-    def run_single(self, slug: str, *, reset: bool = True) -> dict[str, Any]:
+    def run_single(self, slug: str, *, reset: bool = True, mode: "PipelineMode | None" = None) -> dict[str, Any]:
         """Executa benchmark de um único projeto pelo slug.
 
         Normaliza automaticamente semanas numéricas → ISO antes de injetar nos inputs.
+
+        Args:
+            mode: PipelineMode.OLTP (01-06), LIGHT ou OLAP (completo, padrão).
         """
+        from concilium.application.skills.phase_classifier import PipelineMode as _PM
         slug_upper = slug.upper()
         benchmark_dir = self.benchmarks_root / slug_upper
         ref_path = benchmark_dir / "referencia.json"
@@ -100,7 +104,7 @@ class BenchmarkFacade:
 
         spec = load_spec_from_dict(ref_data, ref_path)
         runner = self._make_runner()
-        return runner.run(spec, reset=reset)
+        return runner.run(spec, reset=reset, mode=mode)
 
     def run_all(self, *, reset: bool = True) -> list[dict[str, Any]]:
         """Executa todos os benchmarks descobertos em benchmarks_root."""

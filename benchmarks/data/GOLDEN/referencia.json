@@ -1,0 +1,154 @@
+{
+  "$comment": "ADR-114: Golden Example de Avaliação — projeto sintético mínimo com invariantes verificáveis.",
+  "$golden_audit": {
+    "versao": "1.0.0",
+    "data_calibracao": "2026-06-19",
+    "proposito": "Referência matemática do sistema. Use para onboarding e validação de invariantes.",
+    "invariantes": {
+      "1_PU_check": "subtotal_sem_bdi[i] = round(quantitativo[i] * preco_unitario[i].total, 2)",
+      "2_BDI_check": "subtotal_com_bdi[i] = round(subtotal_sem_bdi[i] * (1 + bdi_pct), 2) onde bdi_pct vem do perfil",
+      "3_venda_check": "venda.total_com_bdi ≈ Σ(subtotal_com_bdi) + indireto_com_bdi",
+      "4_custo_formula": "custo_total = custo.direto_equipes + custo_indireto_total",
+      "5_margem_formula": "margem_pct = (venda.total_com_bdi - custo_total) / venda.total_com_bdi",
+      "6_instancial_invariant": "custo.direto_equipes ≤ Σ(subtotal_sem_bdi) [ADR-085]",
+      "7_margem_minima": "margem_pct ≥ 0.05 [ADR-060 MARGEM_MINIMA]"
+    },
+    "derivacao_numerica": {
+      "item_eap_01": "Q=40000 m³ × PU=6.15 R$/m³ = R$246.000,00",
+      "item_eap_02": "Q=30000 m³ × PU=6.00 R$/m³ = R$180.000,00",
+      "item_eap_03": "Q=10000 m² × PU=4.60 R$/m² = R$ 46.000,00",
+      "soma_catalog":  "Σ subtotal_sem_bdi = R$472.000,00",
+      "venda_semBDI_esperada": "≈ R$472.000 (BDI 0% neste perfil de referência) + indiretos = ~R$540.000",
+      "custo_instancial_nota": "custo.direto_equipes < Σ subtotal_sem_bdi (eficiência de pool, ADR-085)",
+      "margem_nota": "margem_pct esperada ≥ 9% com base no custo instancial histórico"
+    }
+  },
+  "meta": {
+    "gerado_em": "2026-06-19",
+    "contexto_id": "mendeslobo",
+    "modo": "golden_reference"
+  },
+  "projeto": {
+    "id": "GOLDEN",
+    "nome": "GOLDEN — Projeto de Referência (ADR-114)",
+    "tipo_obra": "TERRAPLANAGEM",
+    "tipo_projeto": "hot_project",
+    "data_inicio": "2026-07-07",
+    "data_termino": "2026-08-30",
+    "regime_trabalho": {"horas_dia": 8, "dias_semana": 6},
+    "localizacao": "Brasil"
+  },
+  "eap": [
+    {
+      "item_id": "eap-01",
+      "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
+      "descricao": "Escavação carga e transporte DMT=2000m (terraplenagem referência)",
+      "unidade": "m3",
+      "quantitativo": 40000,
+      "ordem": 1
+    },
+    {
+      "item_id": "eap-02",
+      "cpu_id": "COMPACT-ATERRO-100PN",
+      "descricao": "Compactação de aterro a 100% PN (terraplenagem referência)",
+      "unidade": "m3",
+      "quantitativo": 30000,
+      "ordem": 2
+    },
+    {
+      "item_id": "eap-03",
+      "cpu_id": "REGULARIZACAO-SUBLEITO",
+      "descricao": "Regularização do subleito (pavimentação referência)",
+      "unidade": "m2",
+      "quantitativo": 10000,
+      "ordem": 3
+    }
+  ],
+  "cronograma": {
+    "atividades": [
+      {
+        "item_id": "eap-01",
+        "producao_diaria": 0,
+        "quantitativo": 40000,
+        "semanas": {
+          "2026-W28": 0.1667,
+          "2026-W29": 0.1667,
+          "2026-W30": 0.1667,
+          "2026-W31": 0.1667,
+          "2026-W32": 0.1667,
+          "2026-W33": 0.1665
+        }
+      },
+      {
+        "item_id": "eap-02",
+        "producao_diaria": 0,
+        "quantitativo": 30000,
+        "semanas": {
+          "2026-W31": 0.25,
+          "2026-W32": 0.25,
+          "2026-W33": 0.25,
+          "2026-W34": 0.25
+        }
+      },
+      {
+        "item_id": "eap-03",
+        "producao_diaria": 0,
+        "quantitativo": 10000,
+        "semanas": {
+          "2026-W34": 0.5,
+          "2026-W35": 0.5
+        }
+      }
+    ]
+  },
+  "planejamento": [
+    {
+      "item_id": "eap-01",
+      "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
+      "quantitativo": 40000,
+      "preco_unitario": {"material": 0.0, "diesel": 1.25, "mao_obra": 0.40, "equipamentos": 4.50, "total": 6.15},
+      "subtotal": {
+        "sem_bdi": {"total": 246000.0},
+        "com_bdi": {"total": 246000.0}
+      }
+    },
+    {
+      "item_id": "eap-02",
+      "cpu_id": "COMPACT-ATERRO-100PN",
+      "quantitativo": 30000,
+      "preco_unitario": {"material": 0.0, "diesel": 1.00, "mao_obra": 0.50, "equipamentos": 4.50, "total": 6.00},
+      "subtotal": {
+        "sem_bdi": {"total": 180000.0},
+        "com_bdi": {"total": 180000.0}
+      }
+    },
+    {
+      "item_id": "eap-03",
+      "cpu_id": "REGULARIZACAO-SUBLEITO",
+      "quantitativo": 10000,
+      "preco_unitario": {"material": 0.50, "diesel": 0.80, "mao_obra": 0.30, "equipamentos": 3.00, "total": 4.60},
+      "subtotal": {
+        "sem_bdi": {"total": 46000.0},
+        "com_bdi": {"total": 46000.0}
+      }
+    }
+  ],
+  "indiretos": [
+    {"categoria": "ADM", "custo_total": 60000.0},
+    {"categoria": "TOP", "custo_total": 40000.0}
+  ],
+  "resultado": {
+    "$nota": "Valores capturados na calibração 2026-06-19. Atualizar com commit 'golden(update): razão'.",
+    "venda": {
+      "total_sem_bdi": null,
+      "total_com_bdi": null
+    },
+    "custo": {
+      "direto_equipes": null,
+      "total": null
+    },
+    "margem_pct": null,
+    "status_margem": null,
+    "$calibrado": false
+  }
+}
