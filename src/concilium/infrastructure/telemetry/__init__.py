@@ -64,7 +64,8 @@ def _setup_logging() -> None:
     import logging
 
     from opentelemetry._logs import set_logger_provider
-    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs import LoggerProvider
+    from opentelemetry.sdk._logs._internal import LoggingHandler  # public alias deprecated; usar _internal
     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
@@ -80,9 +81,9 @@ def _setup_logging() -> None:
             BatchLogRecordProcessor(OTLPLogExporter(endpoint=f"{otlp_endpoint}/v1/logs"))
         )
     elif _otel_console():
-        from opentelemetry.sdk._logs.export import ConsoleLogExporter
+        from opentelemetry.sdk._logs.export import ConsoleLogRecordExporter  # ConsoleLogExporter deprecated
 
-        log_provider.add_log_record_processor(BatchLogRecordProcessor(ConsoleLogExporter()))
+        log_provider.add_log_record_processor(BatchLogRecordProcessor(ConsoleLogRecordExporter()))
 
     set_logger_provider(log_provider)
 
