@@ -258,9 +258,9 @@ class CelulaOcupacaoPool:
     Medidas: horas_ativas, horas_idle, custo_ativo, custo_idle, estado.
     """
 
-    item_id: str           # atividade ou contrato que gera a demanda
-    semana: str            # semana ISO ou sequencial (S001, S002, ...)
-    tipo_recurso: str      # tipo_id do recurso (ex: EQUIP-ESCAV-22T, FUNC-OPER)
+    item_id: str  # atividade ou contrato que gera a demanda
+    semana: str  # semana ISO ou sequencial (S001, S002, ...)
+    tipo_recurso: str  # tipo_id do recurso (ex: EQUIP-ESCAV-22T, FUNC-OPER)
     horas_ativas: float = 0.0
     horas_idle: float = 0.0
     custo_ativo: float = 0.0
@@ -337,7 +337,7 @@ class CelulaCombustivel:
     Dimensões: item_id × semana × tipo_combustivel.
     """
 
-    item_id: str           # atividade EAP ou equipe
+    item_id: str  # atividade EAP ou equipe
     semana: str
     tipo_combustivel: str  # TipoCombustivel value (ex: "diesel_s10", "eletrico", "cng")
     custo: float = 0.0

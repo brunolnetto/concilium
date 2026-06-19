@@ -3,6 +3,7 @@
 No real pipeline execution — all canonical/report data is mocked using
 SimpleNamespace and plain dicts.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -12,13 +13,13 @@ import pytest
 from concilium.application.services.campaign.campaign_service import (
     _apply_overrides,
     calcular_pareto,
+    classificar_bundle,
     classificar_EF,
     classificar_O,
     curar_shortlist,
-    gerar_grid,
-    classificar_bundle,
-    extrair_vetor_O,
     extrair_vetor_EF,
+    extrair_vetor_O,
+    gerar_grid,
 )
 from concilium.domain.models.campaign.campaign import (
     CenarioAvaliado,
@@ -29,10 +30,10 @@ from concilium.domain.models.campaign.campaign import (
     VetorEspacoO,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_cenario(
     cid: str,
@@ -76,6 +77,7 @@ def _make_cenario(
 # 1. gerar_grid — 2 params × 3 values each → 9 scenarios
 # ---------------------------------------------------------------------------
 
+
 def test_gerar_grid_cross_product():
     sweep = [
         ParametroSweep("spec.a", [1, 2, 3]),
@@ -100,6 +102,7 @@ def test_gerar_grid_empty_sweep_returns_base():
 # ---------------------------------------------------------------------------
 # 2. _apply_overrides — nested dot-path works
 # ---------------------------------------------------------------------------
+
 
 def test_apply_overrides_nested():
     spec = {"a": {"b": {"c": 0}}}
@@ -165,6 +168,7 @@ def test_classificar_O_atencao_no_data():
 # 4. classificar_EF — DENTRO/ATENCAO/FORA thresholds
 # ---------------------------------------------------------------------------
 
+
 def test_classificar_EF_dentro():
     v = VetorEspacoEF(margem_pct=0.15, ratio_pool_vs_cat=0.90, fidelidade_gates=True)
     assert classificar_EF(v, PERFIL) == "DENTRO_EXPECTATIVA"
@@ -198,6 +202,7 @@ def test_classificar_EF_atencao_no_data():
 # ---------------------------------------------------------------------------
 # 5. calcular_pareto — basic dominance in O-space
 # ---------------------------------------------------------------------------
+
 
 def test_calcular_pareto_O_basic():
     # c1 strictly dominates c2 (prazo 30 < 40, fe same, gap same)
@@ -236,15 +241,16 @@ def test_calcular_pareto_single_item_always_pareto():
 # 6. curar_shortlist — top-k with tie-break
 # ---------------------------------------------------------------------------
 
+
 def test_curar_shortlist_returns_top_k():
     # Use scenarios that are non-dominated in EF space (different margem vs custo_ind tradeoffs)
     # so the Pareto frontier has multiple members and top_k cap is exercised.
     cs = [
-        _make_cenario("c0", margem=0.14, custo_ind=5_000.0),   # high margem, low cost
-        _make_cenario("c1", margem=0.13, custo_ind=4_000.0),   # lower margem, lower cost
-        _make_cenario("c2", margem=0.12, custo_ind=3_000.0),   # ...
-        _make_cenario("c3", margem=0.11, custo_ind=2_000.0),   # ...
-        _make_cenario("c4", margem=0.10, custo_ind=1_000.0),   # low margem, lowest cost
+        _make_cenario("c0", margem=0.14, custo_ind=5_000.0),  # high margem, low cost
+        _make_cenario("c1", margem=0.13, custo_ind=4_000.0),  # lower margem, lower cost
+        _make_cenario("c2", margem=0.12, custo_ind=3_000.0),  # ...
+        _make_cenario("c3", margem=0.11, custo_ind=2_000.0),  # ...
+        _make_cenario("c4", margem=0.10, custo_ind=1_000.0),  # low margem, lowest cost
     ]
     shortlist = curar_shortlist(cs, top_k=3, perfil=PERFIL)
     # All 5 are Pareto-non-dominated (each has one better dimension), top_k=3 caps to 3
@@ -280,6 +286,7 @@ def test_curar_shortlist_rank_increases():
 # ---------------------------------------------------------------------------
 # 7. classificar_bundle — SUCESSO/FRONTEIRA_UNICA/INFEASIBLE
 # ---------------------------------------------------------------------------
+
 
 def test_classificar_bundle_sucesso():
     c1 = _make_cenario("c1", prazo=30, fe_nec=0.8, margem=0.20)
@@ -320,6 +327,7 @@ def test_classificar_bundle_sucesso_parcial():
 # 8. extrair_vetor_O — canonical dict parsing
 # ---------------------------------------------------------------------------
 
+
 def test_extrair_vetor_O_from_makespan():
     canonical = {
         "cronograma": {"makespan_semanas": 42},
@@ -357,6 +365,7 @@ def test_extrair_vetor_O_fallback_to_scheduled_activities():
 # 9. extrair_vetor_EF — canonical dict parsing
 # ---------------------------------------------------------------------------
 
+
 def test_extrair_vetor_EF_basic():
     canonical = {
         "resultado": {
@@ -390,9 +399,9 @@ def test_extrair_vetor_EF_bloqueado_gates():
 # ── Testes de _apply_scalar e _set_path ([*] wildcard + __scale__) ──────────
 
 from concilium.application.services.campaign.campaign_service import (
+    _apply_post_load_overrides,
     _apply_scalar,
     _set_path,
-    _apply_post_load_overrides,
 )
 
 
@@ -436,13 +445,15 @@ class TestSetPath:
         assert d["items"][2]["n"] == 12
 
     def test_wildcard_nested(self):
-        d = {"activities": [
-            {"ramp_params": {"n_max": 3, "n_inicial": 1}},
-            {"ramp_params": {"n_max": 6, "n_inicial": 2}},
-        ]}
+        d = {
+            "activities": [
+                {"ramp_params": {"n_max": 3, "n_inicial": 1}},
+                {"ramp_params": {"n_max": 6, "n_inicial": 2}},
+            ]
+        }
         _set_path(d, ["activities", "[*]", "ramp_params", "n_max"], {"__scale__": 1.25})
-        assert d["activities"][0]["ramp_params"]["n_max"] == 4   # ceil(3.75)
-        assert d["activities"][1]["ramp_params"]["n_max"] == 8   # ceil(7.5)
+        assert d["activities"][0]["ramp_params"]["n_max"] == 4  # ceil(3.75)
+        assert d["activities"][1]["ramp_params"]["n_max"] == 8  # ceil(7.5)
 
     def test_wildcard_creates_missing_key(self):
         d = {"items": [{"a": 1}, {"a": 2}]}
@@ -454,35 +465,39 @@ class TestSetPath:
 class TestApplyPostLoadOverrides:
     def test_wildcard_scale_on_activities(self):
         from types import SimpleNamespace
+
         acts = [
             {"ramp_params": {"n_max": 4, "n_inicial": 1}},
             {"ramp_params": {"n_max": 2, "n_inicial": 1}},
         ]
-        spec_obj = SimpleNamespace(
-            inputs_cronograma={"rcpsp_spec": {"activities": acts}}
+        spec_obj = SimpleNamespace(inputs_cronograma={"rcpsp_spec": {"activities": acts}})
+        _apply_post_load_overrides(
+            spec_obj,
+            {
+                "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max": {"__scale__": 1.5},
+            },
         )
-        _apply_post_load_overrides(spec_obj, {
-            "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max": {"__scale__": 1.5},
-        })
         assert acts[0]["ramp_params"]["n_max"] == 6  # ceil(6.0)
         assert acts[1]["ramp_params"]["n_max"] == 3  # ceil(3.0)
 
     def test_add_on_scalar(self):
         from types import SimpleNamespace
-        spec_obj = SimpleNamespace(
-            inputs_cronograma={"rcpsp_spec": {"deadline_weeks": 56}}
+
+        spec_obj = SimpleNamespace(inputs_cronograma={"rcpsp_spec": {"deadline_weeks": 56}})
+        _apply_post_load_overrides(
+            spec_obj,
+            {
+                "inputs_cronograma.rcpsp_spec.deadline_weeks": {"__add__": 14},
+            },
         )
-        _apply_post_load_overrides(spec_obj, {
-            "inputs_cronograma.rcpsp_spec.deadline_weeks": {"__add__": 14},
-        })
         assert spec_obj.inputs_cronograma["rcpsp_spec"]["deadline_weeks"] == 70
 
 
 # ── ADR-108: cubo_analitico e cronograma alimentam vetores ───────────────────
 
 from concilium.application.services.campaign.campaign_service import (
-    _cubo_analitico_agregado,
     _cronograma_utilizacao,
+    _cubo_analitico_agregado,
 )
 
 
@@ -496,12 +511,27 @@ class TestCuboAnaliticoAgregado:
 
     def test_share_mo_eq_comb(self):
         celulas = [
-            {"componente_bdi": "custo_direto", "categoria_insumo": "mao_obra",
-             "propriedade": "salario_encargos", "atividade_id": "a1", "valor_rs": 100.0},
-            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
-             "propriedade": "aluguel", "atividade_id": "a2", "valor_rs": 200.0},
-            {"componente_bdi": "custo_direto", "categoria_insumo": "material",
-             "propriedade": "combustivel", "atividade_id": "a3", "valor_rs": 100.0},
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "mao_obra",
+                "propriedade": "salario_encargos",
+                "atividade_id": "a1",
+                "valor_rs": 100.0,
+            },
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "equipamento",
+                "propriedade": "aluguel",
+                "atividade_id": "a2",
+                "valor_rs": 200.0,
+            },
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "material",
+                "propriedade": "combustivel",
+                "atividade_id": "a3",
+                "valor_rs": 100.0,
+            },
         ]
         r = _cubo_analitico_agregado(self._canonical(celulas))
         assert r["share_mo"] == pytest.approx(0.25, abs=0.01)
@@ -510,10 +540,20 @@ class TestCuboAnaliticoAgregado:
 
     def test_ic1_shares_somam_no_maximo_1(self):
         celulas = [
-            {"componente_bdi": "custo_direto", "categoria_insumo": "mao_obra",
-             "propriedade": "salario_encargos", "atividade_id": "a1", "valor_rs": 60.0},
-            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
-             "propriedade": "aluguel", "atividade_id": "a2", "valor_rs": 40.0},
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "mao_obra",
+                "propriedade": "salario_encargos",
+                "atividade_id": "a1",
+                "valor_rs": 60.0,
+            },
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "equipamento",
+                "propriedade": "aluguel",
+                "atividade_id": "a2",
+                "valor_rs": 40.0,
+            },
         ]
         r = _cubo_analitico_agregado(self._canonical(celulas))
         assert r["share_mo"] + r["share_eq"] + r["share_comb"] <= 1.0 + 1e-6
@@ -521,8 +561,13 @@ class TestCuboAnaliticoAgregado:
     def test_hhi_uniforme(self):
         # 4 atividades com mesmo custo → HHI = 4 × (0.25)² = 0.25
         celulas = [
-            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
-             "propriedade": "aluguel", "atividade_id": f"a{i}", "valor_rs": 100.0}
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "equipamento",
+                "propriedade": "aluguel",
+                "atividade_id": f"a{i}",
+                "valor_rs": 100.0,
+            }
             for i in range(4)
         ]
         r = _cubo_analitico_agregado(self._canonical(celulas))
@@ -530,17 +575,34 @@ class TestCuboAnaliticoAgregado:
 
     def test_hhi_monopolio(self):
         # Só 1 atividade → HHI = 1.0
-        celulas = [{"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
-                    "propriedade": "aluguel", "atividade_id": "a1", "valor_rs": 100.0}]
+        celulas = [
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "equipamento",
+                "propriedade": "aluguel",
+                "atividade_id": "a1",
+                "valor_rs": 100.0,
+            }
+        ]
         r = _cubo_analitico_agregado(self._canonical(celulas))
         assert r["hhi"] == pytest.approx(1.0, abs=0.01)
 
     def test_ignora_celulas_nao_custo_direto(self):
         celulas = [
-            {"componente_bdi": "margem_l", "categoria_insumo": "mao_obra",
-             "propriedade": "salario_encargos", "atividade_id": "a1", "valor_rs": 9999.0},
-            {"componente_bdi": "custo_direto", "categoria_insumo": "equipamento",
-             "propriedade": "aluguel", "atividade_id": "a2", "valor_rs": 100.0},
+            {
+                "componente_bdi": "margem_l",
+                "categoria_insumo": "mao_obra",
+                "propriedade": "salario_encargos",
+                "atividade_id": "a1",
+                "valor_rs": 9999.0,
+            },
+            {
+                "componente_bdi": "custo_direto",
+                "categoria_insumo": "equipamento",
+                "propriedade": "aluguel",
+                "atividade_id": "a2",
+                "valor_rs": 100.0,
+            },
         ]
         r = _cubo_analitico_agregado(self._canonical(celulas))
         assert r["share_eq"] == pytest.approx(1.0, abs=0.01)
@@ -555,15 +617,13 @@ class TestCronogramaUtilizacao:
         assert _cronograma_utilizacao({"cronograma": {"scheduled_activities": []}}) == {}
 
     def test_utilizacao_100pct(self):
-        acts = [{"distribuicao_semanal": {
-            "S1": {"num_equipes": 2}, "S2": {"num_equipes": 1}}}]
+        acts = [{"distribuicao_semanal": {"S1": {"num_equipes": 2}, "S2": {"num_equipes": 1}}}]
         r = _cronograma_utilizacao(self._canonical_com_atividades(acts))
         assert r["utilizacao"] == pytest.approx(1.0, abs=0.01)
 
     def test_utilizacao_parcial(self):
         # 2 semanas mobilizado, 1 produtivo → 50%
-        acts = [{"distribuicao_semanal": {
-            "S1": {"num_equipes": 0}, "S2": {"num_equipes": 1}}}]
+        acts = [{"distribuicao_semanal": {"S1": {"num_equipes": 0}, "S2": {"num_equipes": 1}}}]
         r = _cronograma_utilizacao(self._canonical_com_atividades(acts))
         assert r["utilizacao"] == pytest.approx(0.5, abs=0.01)
 
@@ -587,9 +647,7 @@ from concilium.application.services.campaign.campaign_service import _apply_per_
 
 def _make_activities_spec_obj(activities: list[dict]) -> SimpleNamespace:
     """Helper: cria um spec_obj com inputs_cronograma.rcpsp_spec.activities."""
-    return SimpleNamespace(
-        inputs_cronograma={"rcpsp_spec": {"activities": activities}}
-    )
+    return SimpleNamespace(inputs_cronograma={"rcpsp_spec": {"activities": activities}})
 
 
 class TestPerItemSweep:
@@ -680,8 +738,7 @@ class TestPerItemSweep:
         vals = [{"__scale__": 0.75}, {"__scale__": 1.25}]
         campo = "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max"
         sweep = [
-            ParametroSweep(campo=campo, valores=vals, scope="per_item",
-                           item_ids=["eap-1_5", "eap-1_6"]),
+            ParametroSweep(campo=campo, valores=vals, scope="per_item", item_ids=["eap-1_5", "eap-1_6"]),
         ]
         bundle = GoResearchCampaignBundle(base_spec={}, sweep=sweep)
         grid = gerar_grid(bundle)
@@ -721,10 +778,8 @@ class TestPerItemSweep:
         spec_obj = _make_activities_spec_obj(acts)
         campo = "inputs_cronograma.rcpsp_spec.activities.[*].ramp_params.n_max"
         # Override apenas eap-1_5 e eap-1_7
-        _apply_per_item_post_load(spec_obj, f"_per_item_:{campo}:eap-1_5",
-                                  {"__scale__": 1.25})
-        _apply_per_item_post_load(spec_obj, f"_per_item_:{campo}:eap-1_7",
-                                  {"__scale__": 2.0})
+        _apply_per_item_post_load(spec_obj, f"_per_item_:{campo}:eap-1_5", {"__scale__": 1.25})
+        _apply_per_item_post_load(spec_obj, f"_per_item_:{campo}:eap-1_7", {"__scale__": 2.0})
         # eap-1_5: ceil(4 * 1.25) = 5
         assert acts[0]["ramp_params"]["n_max"] == 5
         # eap-1_6: intocado
@@ -753,8 +808,9 @@ class TestPerItemSweep:
         assert len(grid) == 4
 
         # Para cada cenário, aplicar post_load_overrides e verificar
-        from concilium.application.services.campaign.campaign_service import _apply_post_load_overrides
         import copy
+
+        from concilium.application.services.campaign.campaign_service import _apply_post_load_overrides
 
         for _sv, variados in grid:
             acts_copy = copy.deepcopy(acts)
@@ -767,6 +823,7 @@ class TestPerItemSweep:
             scale_6 = variados[key_6]["__scale__"]
 
             import math
+
             expected_5 = max(1, math.ceil(4 * scale_5))
             expected_6 = max(1, math.ceil(8 * scale_6))
             assert acts_copy[0]["ramp_params"]["n_max"] == expected_5
@@ -785,14 +842,7 @@ class TestCpuAlternativoSweep:
 
     def _make_spec_com_eap(self, item_ids: list[str]) -> dict:
         """Cria um spec com spec.eap contendo items com cpu_id padrão."""
-        return {
-            "spec": {
-                "eap": [
-                    {"item_id": iid, "cpu_id": f"CPU-DEFAULT-{iid}"}
-                    for iid in item_ids
-                ]
-            }
-        }
+        return {"spec": {"eap": [{"item_id": iid, "cpu_id": f"CPU-DEFAULT-{iid}"} for iid in item_ids]}}
 
     # --- Cardinalidade ---
 
@@ -856,8 +906,7 @@ class TestCpuAlternativoSweep:
     def test_cpu_alternativo_direct_apply_override(self):
         """_apply_cpu_alt_override modifica diretamente o spec aninhado."""
         spec = self._make_spec_com_eap(["eap-1_5", "eap-1_6"])
-        _apply_cpu_alt_override(spec, "_cpu_alt_:eap.cpu_id:eap-1_5",
-                                "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000")
+        _apply_cpu_alt_override(spec, "_cpu_alt_:eap.cpu_id:eap-1_5", "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000")
         eap = {e["item_id"]: e for e in spec["spec"]["eap"]}
         assert eap["eap-1_5"]["cpu_id"] == "CPU-TERRA-ESCO-CARGA-3CAT-DMT2000"
         assert eap["eap-1_6"]["cpu_id"] == "CPU-DEFAULT-eap-1_6"
@@ -907,6 +956,7 @@ class TestCpuAlternativoSweep:
 # Feature 3 — restricoes_mercado sweep
 # ---------------------------------------------------------------------------
 
+
 class TestRestricoesMercadoSweep:
     """Feature 3: restricoes_mercado como dimensão de sweep (campo top-level)."""
 
@@ -923,8 +973,7 @@ class TestRestricoesMercadoSweep:
                 valores=[
                     {},
                     {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2},
-                    {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2,
-                     "EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000": 2},
+                    {"EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT2000": 2, "EQUIPE-CPU-TERRA-ESCO-CARGA-3CAT-DMT3000": 2},
                 ],
             )
         ]
@@ -1006,7 +1055,6 @@ class TestClasse3RestricoesMercadoPool:
 
     def test_restricoes_mercado_propagadas_para_pool_inference(self):
         """restricoes_mercado no spec top-level limita o pool inferido."""
-        from concilium.application.scheduling.models import Activity, ActivityDAG, ResourcePool
         from concilium.application.scheduling.pool_inference import inferir_pool_minimo_from_spec
 
         spec = {
@@ -1060,9 +1108,7 @@ class TestClasse4CpuAlternativo:
 
         cpus_dir = tmp_path / "catalogos" / "mendeslobo" / "cpus"
         cpus_dir.mkdir(parents=True)
-        (cpus_dir / "CPU-A.json").write_text(
-            '{"descricao": "A", "cpus_alternativos": ["CPU-B"]}', encoding="utf-8"
-        )
+        (cpus_dir / "CPU-A.json").write_text('{"descricao": "A", "cpus_alternativos": ["CPU-B"]}', encoding="utf-8")
         alts = listar_cpus_alternativos("CPU-A", tmp_path)
         assert alts == ["CPU-B"]
 
@@ -1117,16 +1163,12 @@ class TestClasse4CpuAlternativo:
 
     def test_cpu_alternativo_lever_gera_cenarios_corretos(self, tmp_path):
         """Lever cpu_alternativo com 2 valores para 1 item gera 2 cenários."""
-        from concilium.application.services.campaign.campaign_service import (
-            sugerir_levers_cpu_alternativo, gerar_grid
-        )
+        from concilium.application.services.campaign.campaign_service import gerar_grid, sugerir_levers_cpu_alternativo
         from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle
 
         cpus_dir = tmp_path / "catalogos" / "mendeslobo" / "cpus"
         cpus_dir.mkdir(parents=True)
-        (cpus_dir / "CPU-A.json").write_text(
-            '{"descricao":"A","cpus_alternativos":["CPU-B"]}', encoding="utf-8"
-        )
+        (cpus_dir / "CPU-A.json").write_text('{"descricao":"A","cpus_alternativos":["CPU-B"]}', encoding="utf-8")
         base_spec = {"spec": {"eap": [{"item_id": "i1", "cpu_id": "CPU-A"}]}}
         levers = sugerir_levers_cpu_alternativo(base_spec, tmp_path)
         bundle = GoResearchCampaignBundle(base_spec=base_spec, sweep=levers)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from concilium.presentation.cli.commands_validate import (
@@ -51,10 +50,14 @@ class TestHelpers:
         assert resumo == {"verde": 0, "amarelo": 0, "vermelho": 0}
 
     def test_collect_project_validacoes_with_data(self):
-        canonical = {"resultado": {"validacoes": [
-            {"status": "OK", "codigo": "VAL-01", "mensagem": "ok"},
-            {"status": "AVISO", "codigo": "VAL-02", "mensagem": "warn"},
-        ]}}
+        canonical = {
+            "resultado": {
+                "validacoes": [
+                    {"status": "OK", "codigo": "VAL-01", "mensagem": "ok"},
+                    {"status": "AVISO", "codigo": "VAL-02", "mensagem": "warn"},
+                ]
+            }
+        }
         validacoes, resumo = _collect_project_validacoes(canonical)
         assert len(validacoes) == 2
         assert resumo["verde"] == 1
@@ -144,7 +147,9 @@ class TestValidateBenchmarkCommand:
 
         with (
             patch("concilium.presentation.cli.commands_validate._tools_root", return_value=tmp_path),
-            patch("concilium.application.benchmarks.analysis.validate_pipeline_integrity", return_value=validate_result),
+            patch(
+                "concilium.application.benchmarks.analysis.validate_pipeline_integrity", return_value=validate_result
+            ),
         ):
             result = runner.invoke(app, ["benchmark", "AGIS", "--json"])
         assert result.exit_code == 0
@@ -158,7 +163,9 @@ class TestValidateBenchmarkCommand:
 
         with (
             patch("concilium.presentation.cli.commands_validate._tools_root", return_value=tmp_path),
-            patch("concilium.application.benchmarks.analysis.validate_pipeline_integrity", return_value=validate_result),
+            patch(
+                "concilium.application.benchmarks.analysis.validate_pipeline_integrity", return_value=validate_result
+            ),
         ):
             result = runner.invoke(app, ["benchmark", "AGIS"])
         assert result.exit_code == 0
@@ -168,7 +175,9 @@ class TestValidateBenchmarkCommand:
 
         with (
             patch("concilium.presentation.cli.commands_validate._tools_root", return_value=tmp_path),
-            patch("concilium.application.benchmarks.analysis.validate_pipeline_integrity", return_value=validate_result),
+            patch(
+                "concilium.application.benchmarks.analysis.validate_pipeline_integrity", return_value=validate_result
+            ),
         ):
             result = runner.invoke(app, ["benchmark", "AGIS", "--json"])
         assert result.exit_code == 0

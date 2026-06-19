@@ -1,0 +1,19 @@
+{
+  "codigo": "CPU-REJEITO-COMP-EQ3",
+  "descricao": "3ª Equipe - Recebimento, espalhamento e compactação de rejeito filtrado",
+  "unidade": "m3",
+  "origem": "PROPRIA",
+  "categoria": "MINERACAO",
+  "composicao_itens": [],
+  "custo_direto_unitario_planilha": 3.0731,
+  "precos_unitarios_sbdi": {
+    "mo": 0.5990,
+    "equipamentos": 2.4741,
+    "diesel": 0.0,
+    "material": 0.0,
+    "total": 3.0731
+  },
+  "producao_id_ref": "PROD-REJEITO-COMP-EQ3-001",
+  "_nota_pu_engine": "Serra Verde: A_equip=556.67 + B_mo=134.77 / C=225.00 = 3.0731 R$/m³. Regime 12x36, 2 eq. diurnas + 1 noturna.",
+  "_custo_direto_unitario_planilha_engine": 3.0731
+}

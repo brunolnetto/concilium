@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -65,7 +64,6 @@ def client_factory(tmp_projects_root: Path, monkeypatch):
     """Factory that creates a TestClient with an injected fake service and tmp projects root."""
 
     def _make(project_id: str = "PROJ-TEST") -> TestClient:
-        import concilium.presentation.api.routes.campaign as _campaign_route
         from concilium.infrastructure import settings as _settings
 
         # Patch get_storage() to point to our tmp dir
@@ -232,9 +230,7 @@ class TestGetCampaignRunReport:
         """Returns 422 for an invalid format param."""
         run_id = campaign_store.new_run()
         client = client_factory()
-        resp = client.get(
-            f"/api/projects/PROJ-TEST/campaign/runs/{run_id}/report?format=xlsx"
-        )
+        resp = client.get(f"/api/projects/PROJ-TEST/campaign/runs/{run_id}/report?format=xlsx")
         assert resp.status_code == 422
 
 
@@ -283,6 +279,7 @@ class TestMcpCampaignTools:
                 config_root = tmp_path
                 projects_root = _projects_root
                 benchmark_projects_root = None
+
             return _S()
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)
@@ -305,6 +302,7 @@ class TestMcpCampaignTools:
                 config_root = tmp_path
                 projects_root = _projects_root
                 benchmark_projects_root = None
+
             return _S()
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)
@@ -343,6 +341,7 @@ class TestMcpCampaignTools:
                 config_root = tmp_path
                 projects_root = _projects_root
                 benchmark_projects_root = None
+
             return _S()
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)
@@ -395,6 +394,7 @@ class TestMcpCampaignTools:
                 config_root = tmp_path
                 projects_root = _projects_root
                 benchmark_projects_root = None
+
             return _S()
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)

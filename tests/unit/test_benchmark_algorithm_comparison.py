@@ -14,13 +14,10 @@ Covers:
 from __future__ import annotations
 
 import json
-import types
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch, call
-import tempfile
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from concilium.application.benchmarks.algorithm_comparison import (
     DEFAULT_COMPARISON_ALGORITHMS,
@@ -28,7 +25,6 @@ from concilium.application.benchmarks.algorithm_comparison import (
     AlgorithmComparisonReport,
     AlgorithmComparisonRunner,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -158,9 +154,7 @@ class TestBestByQuality:
         assert report.best_by_quality is None
 
     def test_returns_none_for_empty_entries(self):
-        report = AlgorithmComparisonReport(
-            project_name="P", algorithms_tried=[]
-        )
+        report = AlgorithmComparisonReport(project_name="P", algorithms_tried=[])
         assert report.best_by_quality is None
 
     def test_single_feasible_entry(self):
@@ -594,9 +588,7 @@ class TestRunnerCompare:
         mock_runtime_cls = MagicMock()
         mock_runtime = MagicMock()
         mock_runtime_cls.return_value = mock_runtime
-        patches["runtime_cls"] = patch(
-            "concilium.application.runtime.Runtime", mock_runtime_cls
-        )
+        patches["runtime_cls"] = patch("concilium.application.runtime.Runtime", mock_runtime_cls)
 
         # Mock ProjectStore
         mock_store_cls = MagicMock()
@@ -605,9 +597,7 @@ class TestRunnerCompare:
         mock_store_cls.init.return_value = mock_store
         mock_store.new_version.return_value = "v1"
         mock_store.load_canonical.return_value = _make_canonical()
-        patches["store_cls"] = patch(
-            "concilium.infrastructure.storage.project.ProjectStore", mock_store_cls
-        )
+        patches["store_cls"] = patch("concilium.infrastructure.storage.project.ProjectStore", mock_store_cls)
 
         return patches, mock_runtime, mock_store, mock_runtime_cls, mock_store_cls
 
@@ -1127,9 +1117,7 @@ class TestFindOrCreate:
             spec = SimpleNamespace(nome="MyProject", contexto_id="CTX-1")
 
             mock_store = MagicMock()
-            with patch(
-                "concilium.infrastructure.storage.project.ProjectStore"
-            ) as MockStore:
+            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
                 MockStore.init.return_value = mock_store
                 result = runner._find_or_create(spec, reset=False)
 
@@ -1141,17 +1129,13 @@ class TestFindOrCreate:
             # Create a fake project directory with meta.json
             proj_dir = projects_root / "abc123"
             proj_dir.mkdir()
-            (proj_dir / "meta.json").write_text(
-                json.dumps({"nome": "ExistingProject"}), encoding="utf-8"
-            )
+            (proj_dir / "meta.json").write_text(json.dumps({"nome": "ExistingProject"}), encoding="utf-8")
 
             runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), projects_root)
             spec = SimpleNamespace(nome="ExistingProject", contexto_id="CTX-1")
 
             mock_store = MagicMock()
-            with patch(
-                "concilium.infrastructure.storage.project.ProjectStore"
-            ) as MockStore:
+            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
                 MockStore.return_value = mock_store
                 result = runner._find_or_create(spec, reset=False)
 
@@ -1163,17 +1147,13 @@ class TestFindOrCreate:
             projects_root = Path(tmpdir)
             proj_dir = projects_root / "abc123"
             proj_dir.mkdir()
-            (proj_dir / "meta.json").write_text(
-                json.dumps({"nome": "ExistingProject"}), encoding="utf-8"
-            )
+            (proj_dir / "meta.json").write_text(json.dumps({"nome": "ExistingProject"}), encoding="utf-8")
 
             runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), projects_root)
             spec = SimpleNamespace(nome="ExistingProject", contexto_id="CTX-1")
 
             mock_store = MagicMock()
-            with patch(
-                "concilium.infrastructure.storage.project.ProjectStore"
-            ) as MockStore:
+            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
                 MockStore.init.return_value = mock_store
                 result = runner._find_or_create(spec, reset=True)
 
@@ -1190,9 +1170,7 @@ class TestFindOrCreate:
             spec = SimpleNamespace(nome="SomeProject", contexto_id="CTX-1")
 
             mock_store = MagicMock()
-            with patch(
-                "concilium.infrastructure.storage.project.ProjectStore"
-            ) as MockStore:
+            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
                 MockStore.init.return_value = mock_store
                 runner._find_or_create(spec, reset=False)
 
@@ -1207,6 +1185,7 @@ class TestFindOrCreate:
 class TestPrintEntry:
     def test_prints_error_for_failed_entry(self, capsys):
         from concilium.application.benchmarks.algorithm_comparison import _print_entry
+
         e = AlgorithmComparisonEntry(algorithm="CP-SAT", error="some failure")
         _print_entry(e)
         captured = capsys.readouterr()
@@ -1215,9 +1194,8 @@ class TestPrintEntry:
 
     def test_prints_ok_for_successful_entry(self, capsys):
         from concilium.application.benchmarks.algorithm_comparison import _print_entry
-        e = AlgorithmComparisonEntry(
-            algorithm="LNS", makespan_weeks=10, quality_score=0.85, is_feasible=True
-        )
+
+        e = AlgorithmComparisonEntry(algorithm="LNS", makespan_weeks=10, quality_score=0.85, is_feasible=True)
         _print_entry(e)
         captured = capsys.readouterr()
         assert "[OK]" in captured.out
@@ -1225,6 +1203,7 @@ class TestPrintEntry:
 
     def test_prints_relaxed_flag(self, capsys):
         from concilium.application.benchmarks.algorithm_comparison import _print_entry
+
         e = AlgorithmComparisonEntry(
             algorithm="MINSLK",
             makespan_weeks=12,
@@ -1237,6 +1216,7 @@ class TestPrintEntry:
 
     def test_prints_cost_when_present(self, capsys):
         from concilium.application.benchmarks.algorithm_comparison import _print_entry
+
         e = AlgorithmComparisonEntry(
             algorithm="CP-SAT",
             makespan_weeks=8,
@@ -1249,6 +1229,7 @@ class TestPrintEntry:
 
     def test_prints_mob_when_present(self, capsys):
         from concilium.application.benchmarks.algorithm_comparison import _print_entry
+
         e = AlgorithmComparisonEntry(
             algorithm="LNS",
             makespan_weeks=10,

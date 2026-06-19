@@ -14,20 +14,22 @@ from concilium.application.benchmarks.diff_service import BenchmarkDiffResult
 from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkMetadata
 from concilium.presentation.mcp.tools.benchmark_nep039 import register
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_server_and_tools(store):
     """Build a mock FastMCP server and return a dict of captured tool functions."""
     tools: dict = {}
     server = MagicMock()
+
     # server.tool(description=...) must return a decorator that receives the fn
     def _tool_decorator(description=None, **_kw):
         def _capture(fn):
             tools[fn.__name__] = fn
             return fn
+
         return _capture
 
     server.tool.side_effect = _tool_decorator
@@ -88,6 +90,7 @@ def tools(store):
 # register()
 # ---------------------------------------------------------------------------
 
+
 class TestRegister:
     def test_all_tools_registered(self, store):
         """register() must register exactly the six expected tool names."""
@@ -111,6 +114,7 @@ class TestRegister:
 # consultar_benchmark
 # ---------------------------------------------------------------------------
 
+
 class TestConsultarBenchmark:
     def test_not_found_returns_erro(self, store, tools):
         store.get_metadata.return_value = None
@@ -129,8 +133,15 @@ class TestConsultarBenchmark:
         result = tools["consultar_benchmark"](benchmark_id="BENCH_001")
 
         expected_keys = {
-            "benchmark_id", "nome", "origem", "tags", "versao", "imutavel",
-            "criado_em", "execucoes_historico", "total_projetos_derivados",
+            "benchmark_id",
+            "nome",
+            "origem",
+            "tags",
+            "versao",
+            "imutavel",
+            "criado_em",
+            "execucoes_historico",
+            "total_projetos_derivados",
         }
         assert expected_keys.issubset(result.keys())
         assert result["benchmark_id"] == "BENCH_001"
@@ -210,6 +221,7 @@ class TestConsultarBenchmark:
 # listar_benchmarks_nep039
 # ---------------------------------------------------------------------------
 
+
 class TestListarBenchmarks:
     def test_empty_store_returns_zero(self, store, tools):
         store.list_all.return_value = []
@@ -263,6 +275,7 @@ class TestListarBenchmarks:
 # ---------------------------------------------------------------------------
 # executar_benchmark_nep039
 # ---------------------------------------------------------------------------
+
 
 class TestExecutarBenchmark:
     def test_not_found_returns_erro(self, store, tools):
@@ -342,6 +355,7 @@ class TestExecutarBenchmark:
 # editar_benchmark
 # ---------------------------------------------------------------------------
 
+
 class TestEditarBenchmark:
     def test_not_found_returns_erro(self, store, tools):
         store.get_metadata.return_value = None
@@ -416,6 +430,7 @@ class TestEditarBenchmark:
 # marcar_benchmark_imutavel
 # ---------------------------------------------------------------------------
 
+
 class TestMarcarBenchmarkImutavel:
     def test_not_found_returns_erro(self, store, tools):
         store.get_metadata.return_value = None
@@ -469,6 +484,7 @@ class TestMarcarBenchmarkImutavel:
 # comparar_execucoes_benchmark
 # ---------------------------------------------------------------------------
 
+
 class TestCompararExecucoes:
     def _setup_history(self, store, executions):
         """Prepare store.list_all and store.get_execution_history for comparar tool."""
@@ -482,6 +498,7 @@ class TestCompararExecucoes:
 
         # get_execution_history(bid) returns executions for that bid
         from collections import defaultdict
+
         by_bid = defaultdict(list)
         for e in executions:
             by_bid[e.benchmark_id].append(e)
@@ -489,9 +506,7 @@ class TestCompararExecucoes:
 
     def test_exec1_not_found(self, store, tools):
         self._setup_history(store, [])
-        result = tools["comparar_execucoes_benchmark"](
-            execution_1_id="MISSING-1", execution_2_id="MISSING-2"
-        )
+        result = tools["comparar_execucoes_benchmark"](execution_1_id="MISSING-1", execution_2_id="MISSING-2")
         assert "erro" in result
         assert "MISSING-1" in result["erro"]
 
@@ -499,9 +514,7 @@ class TestCompararExecucoes:
         exec1 = _make_execution("e1", benchmark_id="B1")
         self._setup_history(store, [exec1])
 
-        result = tools["comparar_execucoes_benchmark"](
-            execution_1_id="e1", execution_2_id="MISSING-2"
-        )
+        result = tools["comparar_execucoes_benchmark"](execution_1_id="e1", execution_2_id="MISSING-2")
         assert "erro" in result
         assert "MISSING-2" in result["erro"]
 
@@ -524,13 +537,9 @@ class TestCompararExecucoes:
             comparado_em=datetime(2025, 4, 1),
         )
 
-        with patch(
-            "concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService"
-        ) as MockDiffService:
+        with patch("concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService") as MockDiffService:
             MockDiffService.return_value.compare.return_value = diff_result
-            result = tools["comparar_execucoes_benchmark"](
-                execution_1_id="e1", execution_2_id="e2"
-            )
+            result = tools["comparar_execucoes_benchmark"](execution_1_id="e1", execution_2_id="e2")
 
         assert result == diff_result.to_dict()
         assert result["execution_1_id"] == "e1"
@@ -541,13 +550,9 @@ class TestCompararExecucoes:
         exec2 = _make_execution("e2", benchmark_id="B2")  # different benchmark
         self._setup_history(store, [exec1, exec2])
 
-        with patch(
-            "concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService"
-        ) as MockDiffService:
+        with patch("concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService") as MockDiffService:
             MockDiffService.return_value.compare.side_effect = ValueError("different benchmarks")
-            result = tools["comparar_execucoes_benchmark"](
-                execution_1_id="e1", execution_2_id="e2"
-            )
+            result = tools["comparar_execucoes_benchmark"](execution_1_id="e1", execution_2_id="e2")
 
         assert "erro" in result
         assert "different benchmarks" in result["erro"]
@@ -568,19 +573,21 @@ class TestCompararExecucoes:
             delta_margem_lucro_percentual=0.0,
         )
 
-        with patch(
-            "concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService"
-        ) as MockDiffService:
+        with patch("concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService") as MockDiffService:
             MockDiffService.return_value.compare.return_value = diff_result
-            result = tools["comparar_execucoes_benchmark"](
-                execution_1_id="e1", execution_2_id="e2"
-            )
+            result = tools["comparar_execucoes_benchmark"](execution_1_id="e1", execution_2_id="e2")
 
         expected_keys = {
-            "execution_1_id", "execution_2_id", "benchmark_id",
-            "versao_1", "versao_2",
-            "delta_custo_direto_percentual", "delta_cronograma_semanas",
-            "delta_margem_lucro_percentual", "itens_impactados", "interpretacao",
+            "execution_1_id",
+            "execution_2_id",
+            "benchmark_id",
+            "versao_1",
+            "versao_2",
+            "delta_custo_direto_percentual",
+            "delta_cronograma_semanas",
+            "delta_margem_lucro_percentual",
+            "itens_impactados",
+            "interpretacao",
         }
         assert expected_keys.issubset(result.keys())
 
@@ -602,12 +609,8 @@ class TestCompararExecucoes:
             delta_margem_lucro_percentual=0.0,
         )
 
-        with patch(
-            "concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService"
-        ) as MockDiffService:
+        with patch("concilium.presentation.mcp.tools.benchmark_nep039.BenchmarkDiffService") as MockDiffService:
             MockDiffService.return_value.compare.return_value = diff_result
-            result = tools["comparar_execucoes_benchmark"](
-                execution_1_id="e1", execution_2_id="e2"
-            )
+            result = tools["comparar_execucoes_benchmark"](execution_1_id="e1", execution_2_id="e2")
 
         assert "erro" not in result

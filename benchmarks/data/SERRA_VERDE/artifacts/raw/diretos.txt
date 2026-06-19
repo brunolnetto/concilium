@@ -1,0 +1,185 @@
+EQUIPE:			1º EQUIPE - Recebimento, espalhamento, compactação 													2,0667				 3.386.021,23 	03/08/2026	04/10/2026
+																						
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 478.397,37					PERMANÊNCIA - MÊS						CUSTO TOTAL		2 EQUIPES DIURNAS  ESCALA 12X36	
+			R$ 1.638.397,37			EQUIPAMENTOS		R$ 1.160.000,00					2,07						 3.386.021,23 		1 EQUIPES NOTURNAS  ESCALA 12x36	
+						VERBAS		R$ 0,00														
+																						
+																						
+MÃO DE OBRA																						
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL			
+																						#REF!
+P0046			Operador de Rolo Compactador	P0046	12	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		
+P0048			Operador de Trator de Esteiras	P0048	6	 R$4.813,80 		D	 1.203,45 								 3.670,52 		 9.687,77 	 DIURNO 		
+P0043			Operador de Motoniveladora	P0043	2	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0049			Operador de Trator de Pneu	P0049	2	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		 TURMA 
+P0033			Motorista de Caminhão Pipa	P0033	2	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	6	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0045			Operador de Pá Carregadeira	P0045	2	 R$4.085,60 		D	 1.021,40 								 3.115,27 		 8.222,27 	 DIURNO 		
+P0040			Operador de Escavadeira	P0040	2	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0029			Gredista	P0029	2	 R$3.205,60 		D	 801,40 								 2.444,27 		 6.451,27 	 DIURNO 		
+		TOTAL			36	 142.562,00 		 35.640,50 				 -   					 108.703,53 		 286.906,03 			
+P0046			Operador de Rolo Compactador	P0046	6	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		#REF!
+P0048			Operador de Trator de Esteiras	P0048	6	 R$5.343,27 		D	 1.335,82 								 4.074,24 		 10.753,33 	 NOTURNO 		60
+P0043			Operador de Motoniveladora	P0043	1	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		 3,60 
+P0049			Operador de Trator de Pneu	P0049	1	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		
+P0033			Motorista de Caminhão Pipa	P0033	1	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	3	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0045			Operador de Pá Carregadeira	P0045	1	 R$4.534,97 		D	 1.133,74 								 3.457,92 		 9.126,63 	 NOTURNO 		
+P0040			Operador de Escavadeira	P0040	1	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		
+P0029			Gredista	P0029	1	 R$3.558,18 		D	 889,55 								 2.713,11 		 7.160,84 	 NOTURNO 		
+		TOTAL			21	 95.150,98 		 23.787,74 				 -   					 72.552,62 		 191.491,34 		 237.712,98 	
+																						
+EQUIPAMENTOS																						
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL		
+														KM/L ou L/H								
+																						
+E0027			Rolo compactador liso	E0027	6	 50.000,00 			h		 600,00 			S1	 16,00 			 -   	 50.000,00 	 300.000,00 		
+E0035			Trator de esteiras 20T	E0035	3	 96.000,00 			h		 600,00 			S1	 26,00 			 -   	 96.000,00 	 288.000,00 		
+E0021			Motoniveladora 140K	E0021	1	 96.000,00 			h		 600,00 			S1	 22,00 			 -   	 96.000,00 	 96.000,00 		
+E0034			Trator de pneus com grade	E0034	1	 50.000,00 			h		 600,00 			S1	 18,00 			 -   	 50.000,00 	 50.000,00 		
+E0013			Caminhão Pipa 18.000 l	E0013	1	 60.000,00 			km		 1.680,00 			S1	 7,00 			 -   	 60.000,00 	 60.000,00 		12,5
+E0005			Caminhão basculante 20 m³	E0005	3	 70.000,00 			km		 1.680,00 			S1	 3,50 			 -   	 70.000,00 	 210.000,00 		
+E0024			Pá carregadeira 12t	E0024	1	 60.000,00 			h		 600,00 			S1	 16,00 			 -   	 60.000,00 	 60.000,00 		
+E0014			Escavadeira hidráulica sobre esteira 22T	E0014	1	 96.000,00 			h		 600,00 			S1	 22,00 			 -   	 96.000,00 	 96.000,00 		
+			TOTAL		17	 1.160.000,00 												 -   		 1.160.000,00 	 1.160.000,00 	
+
+EQUIPE:			2º EQUIPE - Recebimento, espalhamento, compactação													5,3667				 10.682.007,49 	01/10/2026	11/03/2027
+																						
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 679.436,18					PERMANÊNCIA - MÊS						CUSTO TOTAL		2 EQUIPES DIURNAS  ESCALA 12X36	
+			R$ 1.990.436,18			EQUIPAMENTOS		R$ 1.311.000,00					5,37						 10.682.007,49 		1 EQUIPES NOTURNAS  ESCALA 12x36	
+						VERBAS		R$ 0,00														
+																						
+																						
+MÃO DE OBRA																						
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL			
+																						#REF!
+P0046			Operador de Rolo Compactador	P0046	24	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		
+P0048			Operador de Trator de Esteiras	P0048	12	 R$4.813,80 		D	 1.203,45 								 3.670,52 		 9.687,77 	 DIURNO 		
+P0043			Operador de Motoniveladora	P0043	2	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0049			Operador de Trator de Pneu	P0049	2	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		
+P0033			Motorista de Caminhão Pipa	P0033	2	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	6	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0045			Operador de Pá Carregadeira	P0045	2	 R$4.085,60 		D	 1.021,40 								 3.115,27 		 8.222,27 	 DIURNO 		
+P0040			Operador de Escavadeira	P0040	2	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0029			Gredista	P0029	2	 R$3.205,60 		D	 801,40 								 2.444,27 		 6.451,27 	 DIURNO 		
+		TOTAL			54	 217.112,00 		 54.278,00 				 -   					 165.547,90 		 436.937,90 			
+P0046			Operador de Rolo Compactador	P0046	12	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		#REF!
+P0048			Operador de Trator de Esteiras	P0048	6	 R$5.343,27 		D	 1.335,82 								 4.074,24 		 10.753,33 	 NOTURNO 		60
+P0043			Operador de Motoniveladora	P0043	1	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		 3,60 
+P0049			Operador de Trator de Pneu	P0049	1	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		
+P0033			Motorista de Caminhão Pipa	P0033	1	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	3	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0045			Operador de Pá Carregadeira	P0045	1	 R$4.534,97 		D	 1.133,74 								 3.457,92 		 9.126,63 	 NOTURNO 		
+P0040			Operador de Escavadeira	P0040	1	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		
+P0029			Gredista	P0029	1	 R$3.558,18 		D	 889,55 								 2.713,11 		 7.160,84 	 NOTURNO 		
+		TOTAL			27	 120.496,04 		 30.124,01 				 -   					 91.878,23 		 242.498,28 			
+																						
+EQUIPAMENTOS																						
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL		
+														KM/L ou L/H								
+																						
+E0027			Rolo compactador liso	E0027	12	 37.500,00 			h		 600,00 			S1	 16,00 			 -   	 37.500,00 	 450.000,00 		
+E0035			Trator de esteiras 20T	E0035	6	 72.000,00 			h		 600,00 			S1	 26,00 			 -   	 72.000,00 	 432.000,00 		
+E0021			Motoniveladora 140K	E0021	1	 72.000,00 			h		 600,00 			S1	 22,00 			 -   	 72.000,00 	 72.000,00 		
+E0034			Trator de pneus com grade	E0034	1	 37.500,00 			h		 600,00 			S1	 18,00 			 -   	 37.500,00 	 37.500,00 		
+E0013			Caminhão Pipa 18.000 l	E0013	1	 45.000,00 			km		 1.680,00 			S1	 7,00 			 -   	 45.000,00 	 45.000,00 		
+E0005			Caminhão basculante 20 m³	E0005	3	 52.500,00 			km		 1.680,00 			S1	 3,50 			 -   	 52.500,00 	 157.500,00 		
+E0024			Pá carregadeira 12t	E0024	1	 45.000,00 			h		 600,00 			S1	 16,00 			 -   	 45.000,00 	 45.000,00 		
+E0014			Escavadeira hidráulica sobre esteira 22T	E0014	1	 72.000,00 			h		 600,00 			S1	 22,00 			 -   	 72.000,00 	 72.000,00 		
+			TOTAL		26	 1.311.000,00 												 -   		 1.311.000,00 		
+
+
+EQUIPE:			3º EQUIPE - Recebimento, espalhamento, compactação													7,2000				 17.105.394,14 	08/03/2027	10/10/2027
+																						
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 956.419,19					PERMANÊNCIA - MÊS						CUSTO TOTAL		2 EQUIPES DIURNAS  ESCALA 12X36	
+			R$ 2.375.749,19			EQUIPAMENTOS		R$ 1.419.330,00					7,20						 17.105.394,14 		1 EQUIPES NOTURNAS  ESCALA 12x36	
+						VERBAS		R$ 0,00														
+																						
+																						
+MÃO DE OBRA																						
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL			
+																						#REF!
+P0046			Operador de Rolo Compactador	P0046	32	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		
+P0048			Operador de Trator de Esteiras	P0048	16	 R$4.813,80 		D	 1.203,45 								 3.670,52 		 9.687,77 	 DIURNO 		
+P0043			Operador de Motoniveladora	P0043	4	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0049			Operador de Trator de Pneu	P0049	4	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		
+P0033			Motorista de Caminhão Pipa	P0033	4	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	6	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0045			Operador de Pá Carregadeira	P0045	2	 R$4.085,60 		D	 1.021,40 								 3.115,27 		 8.222,27 	 DIURNO 		
+P0040			Operador de Escavadeira	P0040	2	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0004			Apontador Lider	P0004	4	 R$3.300,00 		D	 825,00 								 2.516,25 		 6.641,25 	 DIURNO 		
+P0029			Gredista	P0029	4	 R$3.205,60 		D	 801,40 								 2.444,27 		 6.451,27 	 DIURNO 		
+		TOTAL			78	 310.332,40 		 77.583,10 				 -   					 236.628,46 		 624.543,96 			
+P0046			Operador de Rolo Compactador	P0046	16	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		#REF!
+P0048			Operador de Trator de Esteiras	P0048	8	 R$5.343,27 		D	 1.335,82 								 4.074,24 		 10.753,33 	 NOTURNO 		60
+P0043			Operador de Motoniveladora	P0043	2	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		 3,60 
+P0049			Operador de Trator de Pneu	P0049	2	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		
+P0033			Motorista de Caminhão Pipa	P0033	2	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	3	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0045			Operador de Pá Carregadeira	P0045	1	 R$4.534,97 		D	 1.133,74 								 3.457,92 		 9.126,63 	 NOTURNO 		
+P0040			Operador de Escavadeira	P0040	1	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		
+P0029			Gredista	P0029	2	 R$3.558,18 		D	 889,55 								 2.713,11 		 7.160,84 	 NOTURNO 		
+		TOTAL			37	 164.906,95 		 41.226,74 				 -   					 125.741,55 		 331.875,23 			
+																						
+EQUIPAMENTOS																						
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL		
+														KM/L ou L/H								
+																						
+E0027			Rolo compactador liso	E0027	16	 30.250,00 			h		 600,00 			S1	 16,00 			 -   	 30.250,00 	 484.000,00 		
+E0035			Trator de esteiras 20T	E0035	8	 58.080,00 			h		 600,00 			S1	 26,00 			 -   	 58.080,00 	 464.640,00 		
+E0021			Motoniveladora 140K	E0021	2	 58.080,00 			h		 600,00 			S1	 22,00 			 -   	 58.080,00 	 116.160,00 		
+E0034			Trator de pneus com grade	E0034	2	 30.250,00 			h		 600,00 			S1	 18,00 			 -   	 30.250,00 	 60.500,00 		
+E0013			Caminhão Pipa 18.000 l	E0013	2	 36.300,00 			km		 1.680,00 			S1	 7,00 			 -   	 36.300,00 	 72.600,00 		
+E0005			Caminhão basculante 20 m³	E0005	3	 42.350,00 			km		 1.680,00 			S1	 3,50 			 -   	 42.350,00 	 127.050,00 		
+E0024			Pá carregadeira 12t	E0024	1	 36.300,00 			h		 600,00 			S1	 16,00 			 -   	 36.300,00 	 36.300,00 		
+E0014			Escavadeira hidráulica sobre esteira 22T	E0014	1	 58.080,00 			h		 300,00 			S1	 22,00 			 -   	 58.080,00 	 58.080,00 		
+			TOTAL		35	 1.419.330,00 												 -   		 1.419.330,00 		
+
+EQUIPE:			4º EQUIPE - Recebimento, espalhamento, compactação													10,00				 22.849.754,50 	04/10/2027	30/07/2028
+																						
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 1.007.620,45					PERMANÊNCIA - MÊS						CUSTO TOTAL		2 EQUIPES DIURNAS  ESCALA 12X36	
+			R$ 2.284.975,45			EQUIPAMENTOS		R$ 1.277.355,00					10,00						 22.849.754,50 		1 EQUIPES NOTURNAS  ESCALA 12x36	
+						VERBAS		R$ 0,00														
+																						
+																						
+MÃO DE OBRA																						
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS									ENCARGOS E PROVISÃO		CUSTO TOTAL			
+																						#REF!
+P0046			Operador de Rolo Compactador	P0046	36	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		
+P0048			Operador de Trator de Esteiras	P0048	18	 R$4.813,80 		D	 1.203,45 								 3.670,52 		 9.687,77 	 DIURNO 		
+P0043			Operador de Motoniveladora	P0043	4	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0049			Operador de Trator de Pneu	P0049	4	 R$3.805,60 		D	 951,40 								 2.901,77 		 7.658,77 	 DIURNO 		
+P0033			Motorista de Caminhão Pipa	P0033	4	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	6	 R$3.305,60 		D	 826,40 								 2.520,52 		 6.652,52 	 DIURNO 		
+P0045			Operador de Pá Carregadeira	P0045	2	 R$4.085,60 		D	 1.021,40 								 3.115,27 		 8.222,27 	 DIURNO 		
+P0040			Operador de Escavadeira	P0040	2	 R$4.843,40 		D	 1.210,85 								 3.693,09 		 9.747,34 	 DIURNO 		
+P0029			Gredista	P0029	4	 R$3.205,60 		D	 801,40 								 2.444,27 		 6.451,27 	 DIURNO 		
+		TOTAL			80	 321.982,40 		 80.495,60 				 -   					 245.511,58 		 647.989,58 			
+P0046			Operador de Rolo Compactador	P0046	18	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		#REF!
+P0048			Operador de Trator de Esteiras	P0048	9	 R$5.343,27 		D	 1.335,82 								 4.074,24 		 10.753,33 	 NOTURNO 		60
+P0043			Operador de Motoniveladora	P0043	2	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		 3,60 
+P0049			Operador de Trator de Pneu	P0049	2	 R$4.224,18 		D	 1.056,04 								 3.220,93 		 8.501,16 	 NOTURNO 		
+P0033			Motorista de Caminhão Pipa	P0033	2	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0032			Motorista de Caminhão Basculante	P0032	3	 R$3.669,18 		D	 917,30 								 2.797,75 		 7.384,23 	 NOTURNO 		
+P0045			Operador de Pá Carregadeira	P0045	1	 R$4.534,97 		D	 1.133,74 								 3.457,92 		 9.126,63 	 NOTURNO 		
+P0040			Operador de Escavadeira	P0040	1	 R$5.376,12 		D	 1.344,03 								 4.099,29 		 10.819,45 	 NOTURNO 		
+P0029			Gredista	P0029	2	 R$3.558,18 		D	 889,55 								 2.713,11 		 7.160,84 	 NOTURNO 		
+		TOTAL			40	 178.698,57 		 44.674,64 				 -   					 136.257,66 		 359.630,87 		 500.680,97 	
+																						
+EQUIPAMENTOS																						
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL		
+														KM/L ou L/H								
+																						
+E0027			Rolo compactador liso	E0027	18	 25.125,00 			h		 600,00 			S1	 16,00 			 -   	 25.125,00 	 452.250,00 		
+E0035			Trator de esteiras 20T	E0035	9	 48.240,00 			h		 600,00 			S1	 26,00 			 -   	 48.240,00 	 434.160,00 		
+E0021			Motoniveladora 140K	E0021	2	 48.240,00 			h		 600,00 			S1	 22,00 			 -   	 48.240,00 	 96.480,00 		
+E0034			Trator de pneus com grade	E0034	2	 25.125,00 			h		 600,00 			S1	 18,00 			 -   	 25.125,00 	 50.250,00 		
+E0013			Caminhão Pipa 18.000 l	E0013	2	 30.150,00 			km		 1.680,00 			S1	 7,00 			 -   	 30.150,00 	 60.300,00 		
+E0005			Caminhão basculante 20 m³	E0005	3	 35.175,00 			km		 1.680,00 			S1	 3,50 			 -   	 35.175,00 	 105.525,00 		
+E0024			Pá carregadeira 12t	E0024	1	 30.150,00 			h		 600,00 			S1	 16,00 			 -   	 30.150,00 	 30.150,00 		
+E0014			Escavadeira hidráulica sobre esteira 22T	E0014	1	 48.240,00 			h		 300,00 			S1	 22,00 			 -   	 48.240,00 	 48.240,00 		
+			TOTAL		38	 1.277.355,00 												 -   		 1.277.355,00 	 1.277.355,00 	

@@ -9,46 +9,47 @@ from typing import Any
 from openpyxl import Workbook
 
 from concilium.domain.models.canonical import CanonicalModel
-from .styles import _auto_fit_columns, _C
+
+from .sheets.analise import (
+    render_curva_abc,
+    render_histograma_eq,
+    render_histograma_mo,
+    render_s_curve,
+)
+from .sheets.graficos import (
+    render_campanha_frota,
+    render_cubo_comp,
+    render_graficos,
+)
+from .sheets.memorial import (
+    render_memorial_bdi,
+    render_memorial_catalogo,
+    render_memorial_equipamentos,
+    render_memorial_mao_obra,
+    render_memorial_materiais,
+)
 from .sheets.operacional import (
+    render_cronograma,
     render_diretos,
     render_indiretos_ml,
     render_planejamento_ml,
-    render_cronograma,
-)
-from .sheets.resultado import (
-    render_fluxo_caixa,
-    render_resultado_ml,
-    render_bdi,
-    render_diretos_res,
-    render_indiretos_res,
-    render_cronograma_res,
-    render_equilibrio,
-    render_referencia,
 )
 from .sheets.recursos import (
     render_calendario_operacional,
     render_equipe,
     render_equipe_indireto,
 )
-from .sheets.analise import (
-    render_histograma_eq,
-    render_histograma_mo,
-    render_curva_abc,
-    render_s_curve,
+from .sheets.resultado import (
+    render_bdi,
+    render_cronograma_res,
+    render_diretos_res,
+    render_equilibrio,
+    render_fluxo_caixa,
+    render_indiretos_res,
+    render_referencia,
+    render_resultado_ml,
 )
-from .sheets.memorial import (
-    render_memorial_bdi,
-    render_memorial_mao_obra,
-    render_memorial_equipamentos,
-    render_memorial_materiais,
-    render_memorial_catalogo,
-)
-from .sheets.graficos import (
-    render_graficos,
-    render_cubo_comp,
-    render_campanha_frota,
-)
+from .styles import _C, _auto_fit_columns
 
 
 def _reorder_workbook_tabs(wb: Workbook, preferred_order: list[str]) -> None:
@@ -154,6 +155,7 @@ class ExcelRenderer:
     def _coerce_to_cell_value(self, value: Any) -> Any:
         """Converte valor para tipo compatível com célula Excel."""
         from .helpers import coerce_to_cell_value
+
         return coerce_to_cell_value(value)
 
 

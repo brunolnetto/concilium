@@ -243,10 +243,17 @@ def calcular_pu(
         if ins is None:
             bd.referencias_faltantes.append(eid)
             continue
-        preco_raw = float(ins.get("preco_unitario") or 0)
-        rental_unit = ins.get("rental_unit")
-        producao_h = float(eq.get("producao_horaria") or 1.0)
-        preco_h = _converter_rental_unit(preco_raw, rental_unit, producao_h)
+        # ADR-108: preco_h_unitario na entry de composição sobrepõe preco_unitario do
+        # insumo do catálogo, permitindo preços por-atividade sem duplicar insumos no catálogo.
+        # Já armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
+        preco_h_override = eq.get("preco_h_unitario")
+        if preco_h_override is not None and float(preco_h_override) > 0:
+            preco_h = float(preco_h_override)
+        else:
+            preco_raw = float(ins.get("preco_unitario") or 0)
+            rental_unit = ins.get("rental_unit")
+            producao_h = float(eq.get("producao_horaria") or 1.0)
+            preco_h = _converter_rental_unit(preco_raw, rental_unit, producao_h)
         bd.custo_equip_h += preco_h * num_un
         # Precedência de consumo: entry da produção → atributos_especificos do insumo
         consumo = float(eq.get("consumo_litros_hora") or 0)

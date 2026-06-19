@@ -79,7 +79,7 @@ def resolve_store_backend() -> str:
     return _BACKEND_ALIASES.get(value, value)
 
 
-def build_blob_storage(root_override: Path | None = None) -> "BlobStoragePort":
+def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
     """Constrói BlobStoragePort de acordo com CONCILIUM__STORE_BACKEND.
 
     Ponto único de instanciação do backend de storage — benchmark store,
@@ -113,7 +113,7 @@ def build_blob_storage(root_override: Path | None = None) -> "BlobStoragePort":
     raise ValueError(f"Backend não suportado: {backend}")
 
 
-def get_benchmark_store(slug: str | None = None) -> "FileSystemBenchmarkStore":  # type: ignore[name-defined]  # noqa: F821
+def get_benchmark_store(slug: str | None = None) -> FileSystemBenchmarkStore:  # type: ignore[name-defined]  # noqa: F821
     """Retorna BenchmarkStore usando o backend configurado."""
     from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
 
@@ -122,7 +122,7 @@ def get_benchmark_store(slug: str | None = None) -> "FileSystemBenchmarkStore": 
     return FileSystemBenchmarkStore(storage=storage, prefix=prefix)
 
 
-def get_campaign_store(project_slug: str) -> "CampaignRunStore":  # type: ignore[name-defined]  # noqa: F821
+def get_campaign_store(project_slug: str) -> CampaignRunStore:  # type: ignore[name-defined]  # noqa: F821
     """Retorna CampaignRunStore para um projeto usando o backend configurado."""
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
 

@@ -10,15 +10,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.pipeline_service import PipelineService
-from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES, ProjectFiles
-
+from concilium.application.services.project.audit_service import AuditService
+from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -890,14 +888,16 @@ class TestReadRunProgress:
     def test_valid_matching_line_appended(self):
         svc, project, audit, runtime = _make_svc()
         lines = [
-            json.dumps({
-                "run_id": "r1",
-                "skill": "05-bdi",
-                "status": "OK",
-                "duration_ms": 300,
-                "error_kind": None,
-                "avisos": ["aviso 1"],
-            }),
+            json.dumps(
+                {
+                    "run_id": "r1",
+                    "skill": "05-bdi",
+                    "status": "OK",
+                    "duration_ms": 300,
+                    "error_kind": None,
+                    "avisos": ["aviso 1"],
+                }
+            ),
         ]
         project.read_lines.return_value = lines
 
@@ -1138,6 +1138,7 @@ class TestStaticMethods:
         result = PipelineService._now_iso()
         # Should be parseable
         from datetime import datetime
+
         dt = datetime.fromisoformat(result)
         assert dt.year >= 2024
 

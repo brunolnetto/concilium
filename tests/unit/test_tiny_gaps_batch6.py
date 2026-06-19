@@ -3,18 +3,17 @@ flat_version_store, consolidation, engine_refs, memorial_bdi_markdown, mcp/serve
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-
 # ─── infrastructure/storage/flat_version_store.py ─────────────────────────────
+
 
 class TestFlatVersionStore:
     def _make_store(self, tmp_path):
         from concilium.infrastructure.storage.flat_version_store import FlatVersionStore
+
         proj_mock = MagicMock()
         proj_mock.meta = {
             "contexto_id": "ctx-1",
@@ -63,9 +62,11 @@ class TestFlatVersionStore:
 
 # ─── infrastructure/catalog/extraction/consolidation.py ───────────────────────
 
+
 class TestConsolidation:
     def test_consolidate_reference_no_project_returns_ref(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.consolidation import consolidate_reference
+
         bench_dir = tmp_path / "benchmarks" / "data" / "AGIS"
         bench_dir.mkdir(parents=True)
         (bench_dir / "referencia.json").write_text('{"slug": "AGIS", "projeto": "Proj Test"}')
@@ -75,6 +76,7 @@ class TestConsolidation:
 
     def test_find_project_dir_not_found(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.consolidation import _find_project_dir
+
         bench_dir = tmp_path / "benchmarks" / "data" / "AGIS"
         bench_dir.mkdir(parents=True)
         (bench_dir / "referencia.json").write_text('{"projeto": "Nonexistent"}')
@@ -84,33 +86,39 @@ class TestConsolidation:
 
     def test_find_project_dir_no_project_name(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.consolidation import _find_project_dir
+
         bench_dir = tmp_path / "benchmarks" / "data" / "AGIS"
         bench_dir.mkdir(parents=True)
-        (bench_dir / "referencia.json").write_text('{}')
+        (bench_dir / "referencia.json").write_text("{}")
         result = _find_project_dir("AGIS", tmp_path)
         assert result is None
 
 
 # ─── infrastructure/catalog/extraction/engine_refs.py ────────────────────────
 
+
 class TestEngineRefs:
     def test_normalize_project_token(self):
         from concilium.infrastructure.catalog.extraction.engine_refs import _normalize_project_token
+
         assert _normalize_project_token("agis_calibrado") == "AGIS"
 
     def test_iter_benchmark_reports_empty(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.engine_refs import iter_benchmark_reports
+
         result = iter_benchmark_reports(root=tmp_path)
         assert result == []
 
     def test_find_latest_project_not_found(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.engine_refs import _find_latest_project_by_name
+
         (tmp_path / "projetos").mkdir()
         with pytest.raises(FileNotFoundError):
             _find_latest_project_by_name("Nonexistent", tmp_path / "projetos")
 
     def test_check_project_dir_non_dir(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.engine_refs import _check_project_dir
+
         fake_file = tmp_path / "notadir.json"
         fake_file.write_text("{}")
         result = _check_project_dir(fake_file, "TARGET", None)
@@ -118,6 +126,7 @@ class TestEngineRefs:
 
     def test_check_project_dir_wrong_name(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.engine_refs import _check_project_dir
+
         d = tmp_path / "proj"
         d.mkdir()
         (d / "meta.json").write_text('{"nome": "Other Project"}')
@@ -126,6 +135,7 @@ class TestEngineRefs:
 
     def test_check_project_dir_match(self, tmp_path):
         from concilium.infrastructure.catalog.extraction.engine_refs import _check_project_dir
+
         d = tmp_path / "proj"
         d.mkdir()
         (d / "meta.json").write_text('{"nome": "Target Project", "criado_em": "2026-01-01"}')
@@ -136,17 +146,24 @@ class TestEngineRefs:
 
 # ─── application/runtime/deliverables/reports/memorial_bdi_markdown.py ────────
 
+
 class TestMemorialBdiMarkdown:
     def test_render_with_decomposicao(self):
         from concilium.application.runtime.deliverables.reports.memorial_bdi_markdown import (
             render_memorial_bdi_markdown,
         )
+
         memorial = {
             "decomposicao_por_categoria": {
                 "TERRA": {
-                    "custo_direto_pct": 0.7, "overhead_ac_pct": 0.03, "overhead_df_pct": 0.01,
-                    "overhead_r_pct": 0.01, "margem_l_pct": 0.10, "tributo_iss_pct": 0.02,
-                    "tributo_cssl_pct": 0.01, "tributo_ir_pct": 0.01,
+                    "custo_direto_pct": 0.7,
+                    "overhead_ac_pct": 0.03,
+                    "overhead_df_pct": 0.01,
+                    "overhead_r_pct": 0.01,
+                    "margem_l_pct": 0.10,
+                    "tributo_iss_pct": 0.02,
+                    "tributo_cssl_pct": 0.01,
+                    "tributo_ir_pct": 0.01,
                 }
             },
             "aplicacao_por_item": [],
@@ -158,25 +175,29 @@ class TestMemorialBdiMarkdown:
         from concilium.application.runtime.deliverables.reports.memorial_bdi_markdown import (
             render_memorial_bdi_markdown,
         )
+
         result = render_memorial_bdi_markdown({})
         assert isinstance(result, str)
 
 
 # ─── presentation/mcp/server.py ───────────────────────────────────────────────
 
+
 class TestMcpServer:
     def test_build_server_returns_fastmcp(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "config"))
         (tmp_path / "config").mkdir()
         from concilium.presentation.mcp.server import build_server
+
         server = build_server()
         assert server is not None
 
     def test_patch_mcp_with_auth(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "config"))
         (tmp_path / "config").mkdir()
-        from concilium.presentation.mcp.server import _patch_mcp_with_auth
         from concilium.presentation.mcp.middleware import McpAuthMiddleware
+        from concilium.presentation.mcp.server import _patch_mcp_with_auth
+
         server = MagicMock()
         original_http = MagicMock(return_value=MagicMock())
         original_sse = MagicMock(return_value=MagicMock())
@@ -189,6 +210,7 @@ class TestMcpServer:
     def test_main_config_not_found(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "nonexistent"))
         from concilium.presentation.mcp.server import main
+
         with pytest.raises(RuntimeError, match="não encontrado"):
             main()
 
@@ -197,34 +219,46 @@ class TestMcpServer:
         config_file.write_text("{}")
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_file))
         from concilium.presentation.mcp.server import main
+
         with pytest.raises(RuntimeError, match="não é diretório"):
             main()
 
 
 # ─── service_support.py (also covered in batch4, adding extra paths here) ─────
 
+
 class TestServiceSupport:
     def test_deep_merge_nested(self):
         from concilium.application.services.service_support import deep_merge
+
         result = deep_merge({"a": {"x": 1, "y": 2}}, {"a": {"y": 99}})
         assert result["a"]["x"] == 1
         assert result["a"]["y"] == 99
 
     def test_build_summary_none_returns_empty(self):
         from concilium.application.services.service_support import build_summary
+
         assert build_summary(None) == {}
 
 
 # ─── domain/validations/circular_deps.py ──────────────────────────────────────
 
+
 class TestCircularDeps:
     def test_no_cycles_simple(self):
         from concilium.domain.validations.circular_deps import verificar_ciclos_cpu
-        catalog = {"cpus": [{"codigo": "A", "composicao_itens": []}, {"codigo": "B", "composicao_itens": [], "cpu_referencia_id": "A"}]}
+
+        catalog = {
+            "cpus": [
+                {"codigo": "A", "composicao_itens": []},
+                {"codigo": "B", "composicao_itens": [], "cpu_referencia_id": "A"},
+            ]
+        }
         assert verificar_ciclos_cpu(catalog) == []
 
     def test_cycle_detected(self):
         from concilium.domain.validations.circular_deps import verificar_ciclos_cpu
+
         catalog = {
             "cpus": [
                 {"codigo": "A", "composicao_itens": [], "cpu_referencia_id": "B"},
@@ -236,6 +270,7 @@ class TestCircularDeps:
 
     def test_validar_sem_ciclos_raises(self):
         from concilium.domain.validations.circular_deps import validar_sem_ciclos
+
         catalog = {
             "cpus": [
                 {"codigo": "A", "composicao_itens": [], "cpu_referencia_id": "B"},

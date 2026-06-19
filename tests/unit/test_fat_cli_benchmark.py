@@ -20,8 +20,8 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 # Re-export the real app objects (they exist at module level in the CLI files)
 # ---------------------------------------------------------------------------
-from concilium.presentation.cli.commands_benchmark import app as bench_app  # noqa: E402
 from concilium.presentation.cli.commands_bdi import app as bdi_app  # noqa: E402
+from concilium.presentation.cli.commands_benchmark import app as bench_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers: shared patch targets
@@ -110,7 +110,7 @@ class TestMergeCatalog:
     def test_merge_catalog_with_alternativas(self, tmp_path):
         """alternativas.json present → merged into referencia.json."""
         bench_dir = self._make_bench_dir(tmp_path)
-        (bench_dir / "referencia.json").write_text('{}', encoding="utf-8")
+        (bench_dir / "referencia.json").write_text("{}", encoding="utf-8")
         (bench_dir / "alternativas.json").write_text('[{"id":"A1"}]', encoding="utf-8")
         with patch(f"{_BENCH_MOD}._DEFAULT_ROOT", tmp_path):
             result = runner.invoke(bench_app, ["merge-catalog", "MYSLUG"])
@@ -120,7 +120,7 @@ class TestMergeCatalog:
     def test_merge_catalog_keep_flag(self, tmp_path):
         """--keep prevents deletion of alternativas.json."""
         bench_dir = self._make_bench_dir(tmp_path)
-        (bench_dir / "referencia.json").write_text('{}', encoding="utf-8")
+        (bench_dir / "referencia.json").write_text("{}", encoding="utf-8")
         (bench_dir / "alternativas.json").write_text('[{"id":"A1"}]', encoding="utf-8")
         with patch(f"{_BENCH_MOD}._DEFAULT_ROOT", tmp_path):
             result = runner.invoke(bench_app, ["merge-catalog", "MYSLUG", "--keep"])
@@ -1007,13 +1007,13 @@ class TestHelperValidateAndApplyModo:
 
     def test_auto_without_rcpsp_spec_exits(self):
         ref = {}
-        import typer
+
         with pytest.raises((SystemExit, typer.Exit)):
             _validate_and_apply_modo("A1", "AUTO", ref)
 
     def test_invalid_modo_exits(self):
         ref = {}
-        import typer
+
         with pytest.raises((SystemExit, typer.Exit)):
             _validate_and_apply_modo("A1", "INVALID", ref)
 
@@ -1194,11 +1194,13 @@ class TestBdiShow:
 
 class TestBdiUpdate:
     def _make_bdi_file(self, tmp_path: Path, name: str = "perfil.json") -> Path:
-        _aplic = {"iss": {"aplicavel": False, "aliquota": 0.0},
-                  "cofins": {"aplicavel": False, "aliquota": 0.0},
-                  "pis": {"aplicavel": False, "aliquota": 0.0},
-                  "cssl": {"aplicavel": False, "aliquota": 0.0},
-                  "ir": {"aplicavel": False, "aliquota": 0.0}}
+        _aplic = {
+            "iss": {"aplicavel": False, "aliquota": 0.0},
+            "cofins": {"aplicavel": False, "aliquota": 0.0},
+            "pis": {"aplicavel": False, "aliquota": 0.0},
+            "cssl": {"aplicavel": False, "aliquota": 0.0},
+            "ir": {"aplicavel": False, "aliquota": 0.0},
+        }
         bdi_data = {
             "tributario": {
                 "regime": "lucro_real",
@@ -1263,20 +1265,27 @@ class TestBdiUpdate:
         # Write an existing perfil
         bdi_dir = mock_proj.root / "bdi"
         bdi_dir.mkdir()
-        _aplic = {"iss": {"aplicavel": False, "aliquota": 0.0},
-                  "cofins": {"aplicavel": False, "aliquota": 0.0},
-                  "pis": {"aplicavel": False, "aliquota": 0.0},
-                  "cssl": {"aplicavel": False, "aliquota": 0.0},
-                  "ir": {"aplicavel": False, "aliquota": 0.0}}
+        _aplic = {
+            "iss": {"aplicavel": False, "aliquota": 0.0},
+            "cofins": {"aplicavel": False, "aliquota": 0.0},
+            "pis": {"aplicavel": False, "aliquota": 0.0},
+            "cssl": {"aplicavel": False, "aliquota": 0.0},
+            "ir": {"aplicavel": False, "aliquota": 0.0},
+        }
         existing = {
             "versao": 1,
             "content_hash": "abc",
             "confirmado_por": "Old Eng",
             "confirmado_em": "2026-01-01T00:00:00+00:00",
             "tributario": {
-                "regime": "lucro_real", "municipio": "SP", "iss_aliquota_municipal": 0.03,
-                "mao_obra": _aplic, "material": _aplic, "servicos": _aplic,
-                "indireto": _aplic, "diesel": _aplic,
+                "regime": "lucro_real",
+                "municipio": "SP",
+                "iss_aliquota_municipal": 0.03,
+                "mao_obra": _aplic,
+                "material": _aplic,
+                "servicos": _aplic,
+                "indireto": _aplic,
+                "diesel": _aplic,
             },
             "lucro": {"mao_obra": 0.08, "material": 0.05, "servicos": 0.08, "indireto": 0.05, "diesel": 0.05},
             "projeto_id": "proj-uuid-001",
@@ -1296,7 +1305,6 @@ class TestBdiUpdate:
         bdi_file = self._make_bdi_file(tmp_path)
         mock_proj = self._make_project(tmp_path)
 
-        from concilium.domain.models.financial.bdi import PerfilBdiProjeto, PerfilLucroProjeto, PerfilTributarioProjeto
 
         with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
             result = runner.invoke(
@@ -1326,20 +1334,27 @@ class TestBdiUpdate:
         mock_proj = self._make_project(tmp_path)
         bdi_dir = mock_proj.root / "bdi"
         bdi_dir.mkdir()
-        _aplic = {"iss": {"aplicavel": False, "aliquota": 0.0},
-                  "cofins": {"aplicavel": False, "aliquota": 0.0},
-                  "pis": {"aplicavel": False, "aliquota": 0.0},
-                  "cssl": {"aplicavel": False, "aliquota": 0.0},
-                  "ir": {"aplicavel": False, "aliquota": 0.0}}
+        _aplic = {
+            "iss": {"aplicavel": False, "aliquota": 0.0},
+            "cofins": {"aplicavel": False, "aliquota": 0.0},
+            "pis": {"aplicavel": False, "aliquota": 0.0},
+            "cssl": {"aplicavel": False, "aliquota": 0.0},
+            "ir": {"aplicavel": False, "aliquota": 0.0},
+        }
         existing = {
             "versao": 1,
             "content_hash": "aabbcc",
             "confirmado_por": "Old Eng",
             "confirmado_em": "2026-01-01T00:00:00+00:00",
             "tributario": {
-                "regime": "lucro_real", "municipio": "SP", "iss_aliquota_municipal": 0.03,
-                "mao_obra": _aplic, "material": _aplic, "servicos": _aplic,
-                "indireto": _aplic, "diesel": _aplic,
+                "regime": "lucro_real",
+                "municipio": "SP",
+                "iss_aliquota_municipal": 0.03,
+                "mao_obra": _aplic,
+                "material": _aplic,
+                "servicos": _aplic,
+                "indireto": _aplic,
+                "diesel": _aplic,
             },
             "lucro": {"mao_obra": 0.08, "material": 0.05, "servicos": 0.08, "indireto": 0.05, "diesel": 0.05},
             "projeto_id": "proj-uuid-001",
@@ -1454,7 +1469,6 @@ class TestBuPersistBdiDiff:
 
     def test_persist_with_anterior_writes_file(self, tmp_path):
         """Valid models → diff JSON written."""
-        from concilium.domain.models.financial.bdi import PerfilLucroProjeto, PerfilTributarioProjeto
 
         # Build minimal anterior and novo objects that have model_dump
         ant = MagicMock()

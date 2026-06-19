@@ -308,10 +308,6 @@ class TestMultiplosItensPorFase:
         ]
         result = fn(items, duracao_semanas=duracao_semanas)
 
-        total_esperado = (
-            2_044_560.87
-            + custo_mensal * (duracao_semanas / SEMANAS_POR_MES)
-            + 408_912.17
-        )
+        total_esperado = 2_044_560.87 + custo_mensal * (duracao_semanas / SEMANAS_POR_MES) + 408_912.17
         soma = sum(result["semanal"].values())
         assert abs(soma - total_esperado) / total_esperado < 0.001

@@ -1,11 +1,13 @@
 """Tests for heatmap_top_n eficiencia visualization."""
+
 from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
-import pytest
 
 
 def _plot(campo, **kwargs):
     from concilium.application.runtime.deliverables.visualizations.eficiencia.heatmap_top_n import plot_heatmap_top_n
+
     return plot_heatmap_top_n(campo, **kwargs)
 
 

@@ -9,6 +9,7 @@ import pytest
 
 def _make_validator():
     from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo
+
     repo = MagicMock()
     repo.obter_insumo.return_value = None
     repo.obter_producao.return_value = None
@@ -22,10 +23,7 @@ class TestValidarFuncoesExistem:
     def test_all_funcoes_exist(self):
         v = _make_validator()
         v.repo.obter_producao.return_value = {
-            "composicao_padrao_equipe": {
-                "funcoes": [{"funcao_id": "OP"}],
-                "equipamentos": []
-            }
+            "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}], "equipamentos": []}
         }
         cpu = {"producao_id_ref": "P1"}
         result = v.validar_funcoes_existem(cpu)
@@ -35,10 +33,7 @@ class TestValidarFuncoesExistem:
         v = _make_validator()
         v.repo.funcao_existe.return_value = False
         v.repo.obter_producao.return_value = {
-            "composicao_padrao_equipe": {
-                "funcoes": [{"funcao_id": "MISSING"}],
-                "equipamentos": []
-            }
+            "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "MISSING"}], "equipamentos": []}
         }
         cpu = {"producao_id_ref": "P1"}
         result = v.validar_funcoes_existem(cpu)
@@ -50,10 +45,7 @@ class TestValidarEquipamentosExistem:
     def test_all_equipamentos_exist(self):
         v = _make_validator()
         v.repo.obter_producao.return_value = {
-            "composicao_padrao_equipe": {
-                "funcoes": [],
-                "equipamentos": [{"equip_id": "ESC-01"}]
-            }
+            "composicao_padrao_equipe": {"funcoes": [], "equipamentos": [{"equip_id": "ESC-01"}]}
         }
         cpu = {"producao_id_ref": "P1"}
         result = v.validar_equipamentos_existem(cpu)
@@ -63,10 +55,7 @@ class TestValidarEquipamentosExistem:
         v = _make_validator()
         v.repo.equipamento_existe.return_value = False
         v.repo.obter_producao.return_value = {
-            "composicao_padrao_equipe": {
-                "funcoes": [],
-                "equipamentos": [{"equip_id": "MISSING-EQ"}]
-            }
+            "composicao_padrao_equipe": {"funcoes": [], "equipamentos": [{"equip_id": "MISSING-EQ"}]}
         }
         cpu = {"producao_id_ref": "P1"}
         result = v.validar_equipamentos_existem(cpu)
@@ -100,6 +89,7 @@ class TestValidarEncoding:
 
     def test_mojibake_detected(self):
         from concilium.domain.validations.cpu_insumo import CARACTERES_PROIBIDOS
+
         if not CARACTERES_PROIBIDOS:
             pytest.skip("CARACTERES_PROIBIDOS empty")
         v = _make_validator()
@@ -147,6 +137,7 @@ class TestValidarUnidadeNormalizada:
 class TestValidarCategoriaPermitida:
     def test_valid_categoria(self):
         from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo  # noqa: F401
+
         v = _make_validator()
         cat = next(iter(ValidadorCPUInsumo.CATEGORIAS_PERMITIDAS))
         result = v.validar_categoria_permitida({"categoria": cat})

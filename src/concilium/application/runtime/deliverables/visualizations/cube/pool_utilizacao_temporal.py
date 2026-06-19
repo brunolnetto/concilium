@@ -7,12 +7,21 @@ de mobilização tardia e desmobilização antecipada do ADR-085/086.
 
 from __future__ import annotations
 
+import math
+
 from ..chart_markdown_support import weekly_to_monthly_labels
 from ._common import apply_monthly_ticks, init_mpl, is_weekly_labels
 
 _COLOR_PROD = "#1a6e3c"  # verde escuro — trabalho produtivo
 _COLOR_IDLE = "#e8a030"  # âmbar — ocioso (custo de MO/EQ sem operação)
 _COLOR_OFF = "#c8c8c8"  # cinza — desmobilizado (custo zero)
+_COLOR_MOB = "#155a9c"  # azul — eventos de mobilização
+_COLOR_DEMOB = "#8a2e0f"  # ferrugem — eventos de desmobilização
+
+
+def _sparse_series(values: list[int]) -> list[float]:
+    """Mantém apenas pontos >0 para evitar linha contínua em zero no eixo temporal."""
+    return [float(v) if v > 0 else math.nan for v in values]
 
 
 def build(canonical, cubo=None) -> bytes | None:
@@ -41,6 +50,8 @@ def build(canonical, cubo=None) -> bytes | None:
         prod = [int(r.get("prod", 0) or 0) for r in rows]
         idle = [int(r.get("idle", 0) or 0) for r in rows]
         off = [int(r.get("off", 0) or 0) for r in rows]
+        mob = [int(r.get("mob", 0) or 0) for r in rows]
+        demob = [int(r.get("demob", 0) or 0) for r in rows]
         x = list(range(len(periods)))
 
         fig, ax = plt.subplots(figsize=(13, 5))
@@ -51,6 +62,26 @@ def build(canonical, cubo=None) -> bytes | None:
         ax.bar(x, prod, color=_COLOR_PROD, alpha=0.85, label="Produtivo")
         ax.bar(x, idle, bottom=bottom_idle, color=_COLOR_IDLE, alpha=0.85, label="Ocioso (CLT+EQ)")
         ax.bar(x, off, bottom=bottom_off, color=_COLOR_OFF, alpha=0.65, label="Desmobilizado (off)")
+        if any(mob):
+            ax.plot(
+                x,
+                _sparse_series(mob),
+                color=_COLOR_MOB,
+                marker="o",
+                linewidth=1.5,
+                linestyle="--",
+                label="MOB (eventos)",
+            )
+        if any(demob):
+            ax.plot(
+                x,
+                _sparse_series(demob),
+                color=_COLOR_DEMOB,
+                marker="s",
+                linewidth=1.5,
+                linestyle=":",
+                label="DESMOB (eventos)",
+            )
 
         apply_monthly_ticks(ax, periods, weekly_to_monthly_labels)
         if not is_weekly_labels(periods):
@@ -69,6 +100,17 @@ def build(canonical, cubo=None) -> bytes | None:
         narrativa = proj.get("narrativa") or []
         if narrativa:
             fig.text(0.01, 0.01, narrativa[0], fontsize=7.5, color="#555", ha="left", wrap=True)
+        ax.text(
+            0.99,
+            0.01,
+            "MOB/DESMOB = contagem de eventos no período; Desmobilizado (off) = estado de slot sem contrato ativo.",
+            fontsize=7.2,
+            color="#555",
+            ha="right",
+            va="bottom",
+            transform=ax.transAxes,
+            wrap=True,
+        )
 
         fig.tight_layout(rect=(0, 0.08, 0.86, 1))
         return fig_to_bytes(fig)

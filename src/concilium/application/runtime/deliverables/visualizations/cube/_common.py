@@ -41,6 +41,16 @@ SERIE_LABEL_MAP: dict[str, str] = {
     # Natureza
     "direto": "Custo Direto",
     "indireto": "Custo Indireto",
+    # Categorias temporais (faces novas)
+    "MAO_OBRA": "Mão-de-obra",
+    "EQUIP": "Equipamento",
+    "MAT": "Material",
+    "COMB": "Combustível",
+    "ADM": "ADM",
+    "TOP": "TOP",
+    "LAB": "LAB",
+    "QSMS": "QSMS",
+    "MOB": "MOB",
 }
 
 

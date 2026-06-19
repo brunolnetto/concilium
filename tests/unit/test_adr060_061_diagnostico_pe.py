@@ -17,8 +17,8 @@ from dataclasses import replace
 
 import pytest
 
-from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
 from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio, FatorPE
+from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
 from concilium.domain.services.analytics.backtracking_pe_builder import BacktrackingPEBuilder
 from concilium.domain.services.analytics.diagnostico_pe_builder import DiagnosticoPEBuilder
 

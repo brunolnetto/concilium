@@ -11,7 +11,10 @@ e separando os desvios estruturais (escala + clima) do delta real de gestão.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Literal
+
+logger = logging.getLogger(__name__)
 
 from concilium.domain.models.canonical import (
     AtividadeCustoCompleto,
@@ -57,10 +60,10 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
         "eq_combustivel": 0.0,
     }
 
-    # NEP-043: mapa item_id → n_frentes para escalonar custo de 1-frente → todas as frentes.
-    # custo_inst_* armazena custo de 1 frente (ADR-091 divide por num_equipes_paralelas).
+    # ADR-091: custo_total já é o custo total de todas as frentes — não multiplicar por
+    # num_equipes_base para evitar dupla contagem (mesma correção de _br_build_venda_custo).
     nfrentes_por_item: dict[str, int] = {
-        eq.item_id: max(1, int(getattr(eq, "num_equipes_base", 1) or 1))
+        eq.item_id: 1  # custo_inst_* já incluem todas as frentes
         for eq in canonical_in.equipes_diretas
     }
 
@@ -94,15 +97,15 @@ def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str,
     for eq in canonical_in.equipes_diretas:
         if eq.item_id in contados:
             continue
-        _n_eq = max(1, int(getattr(eq, "num_equipes_base", 1) or 1))
-        ct = float(eq.custo_total or 0.0) * _n_eq
+        # ADR-091: custo_total já armazena o custo total de todas as frentes.
+        ct = float(eq.custo_total or 0.0)
 
         # ADR-106 F7: usar custo_inst_* diretamente quando preenchidos (F3 garantiu isso)
         if getattr(eq, "custo_inst_mo", None) is not None:
-            _ct_mo = float(eq.custo_inst_mo or 0.0) * _n_eq
-            _ct_eq = float(getattr(eq, "custo_inst_eq", 0.0) or 0.0) * _n_eq
-            _ct_comb = float(getattr(eq, "custo_inst_comb", 0.0) or 0.0) * _n_eq
-            _ct_mat = float(getattr(eq, "custo_inst_mat", 0.0) or 0.0) * _n_eq
+            _ct_mo = float(eq.custo_inst_mo or 0.0)
+            _ct_eq = float(getattr(eq, "custo_inst_eq", 0.0) or 0.0)
+            _ct_comb = float(getattr(eq, "custo_inst_comb", 0.0) or 0.0)
+            _ct_mat = float(getattr(eq, "custo_inst_mat", 0.0) or 0.0)
             cat["mao_obra"] += _ct_mo
             cat["eq_aluguel"] += _ct_eq
             cat["material"] += _ct_mat + _ct_comb  # ADR-090: combustivel funde em material
@@ -155,22 +158,31 @@ def _calc_venda_com_bdi(
     """
     cat = _build_custo_categorial_bottom_up(canonical_in)
 
+    def _bdi(categoria: str) -> float:
+        rate = bdi_rates.get(categoria)
+        if rate is None:
+            logger.warning(
+                "BDI sem taxa para '%s' — markup zero aplicado (preço de venda subavaliado)", categoria
+            )
+            return 0.0
+        return float(rate)
+
     # Direto: combina consumivel e combustivel em material (ambos BDI_material = 4%)
     custo_material_total = cat.get("material", 0.0)  # inclui consumivel + combustivel
     venda_direto_eq = (
-        cat["mao_obra"] * (1 + float(bdi_rates.get("mao_obra", 0.0)))
-        + cat["eq_aluguel"] * (1 + float(bdi_rates.get("equipamentos", 0.0)))
-        + custo_material_total * (1 + float(bdi_rates.get("material", 0.0)))
+        cat["mao_obra"] * (1 + _bdi("mao_obra"))
+        + cat["eq_aluguel"] * (1 + _bdi("equipamentos"))
+        + custo_material_total * (1 + _bdi("material"))
     )
 
     # Indireto: BDI por sub-categoria (ADR-090 D5)
-    r_mo = float(bdi_rates.get("mao_obra", 0.0))
-    r_eq = float(bdi_rates.get("equipamentos", 0.0))
-    r_mat = float(bdi_rates.get("material", 0.0))
+    r_mo = _bdi("mao_obra")
+    r_eq = _bdi("equipamentos")
+    r_mat = _bdi("material")
     r_indir = (
         float(bdi_indireto_efetivo)
         if isinstance(bdi_indireto_efetivo, (int, float))
-        else float(bdi_rates.get("indireto", 0.0))
+        else _bdi("indireto")
     )
 
     venda_indireto = 0.0
@@ -255,12 +267,11 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     """
     venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento)
     venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento)
-    # NEP-043: custo_total armazena custo de 1 frente (ADR-091 divide por num_equipes_paralelas).
-    # Para obter o custo operacional real da atividade, multiplicar pelo número de frentes.
-    custo_direto_equipe = sum(
-        float(e.custo_total or 0.0) * max(1, int(getattr(e, "num_equipes_base", 1) or 1))
-        for e in canonical_in.equipes_diretas
-    )
+
+    # ADR-091: custo_total já armazena o custo total de todas as frentes (normalizado
+    # em skill-05 por divisão por num_equipes_paralelas antes de armazenar).
+    # Não multiplicar por num_equipes_base — evitar dupla contagem.
+    custo_direto_equipe = sum(float(e.custo_total or 0.0) for e in canonical_in.equipes_diretas)
     custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
 
     # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
@@ -476,11 +487,13 @@ def _build_pe_for_equipe(
     custo_operacional_real = float(equipe.custo_total or 0.0)
     frentes = custo_operacional_real / custo_fixo_total if custo_fixo_total > 0 else 1.0
 
-    # NEP-043: custo_total armazena custo de 1 frente (ADR-091); multiplicar por n_frentes.
+    # ADR-091: custo_total já armazena o custo total de todas as frentes (normalizado em
+    # skill-05). _n_frentes mantido apenas para gap_escala e diagnóstico.
     _n_frentes = max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
 
     # ── ADR-076 campos quantitativos ──────────────────────────────────────────
-    # custo_total_autonomo: custo da equipe dedicada sem pool (1 frente × n_frentes = total)
+    # custo_total_autonomo: por ADR-091, custo_total_autonomo no canônico representa
+    # o custo de 1 frente autônoma → multiplicar por n_frentes para total.
     _custo_1fr_autonomo = float(getattr(equipe, "custo_total_autonomo", 0.0) or 0.0)
     if _custo_1fr_autonomo <= 0 and custo_operacional_real > 0:
         _custo_1fr_autonomo = custo_operacional_real
@@ -557,12 +570,11 @@ def _build_pe_for_equipe(
         machine_weeks_efetivas = round(machine_weeks_brutas * _feta, 4)
     eta_real = round(machine_weeks_efetivas / machine_weeks_brutas, 4) if machine_weeks_brutas > 0 else 1.0
 
-    # NEP-042 / NEP-043: Camada 3 — custo pool instancial agregado e PU pool.
-    # pool_total_por_item armazena custo de 1 frente (partição do contrato); multiplicar por n_frentes.
-    # C_pool = custo produtivo do pool × n_frentes (idle = 0 quando sem gaps entre atividades).
-    # Quando idle > 0 (recursos mobilizados sem produção), C_pool > C_ativo_pool.
+    # NEP-042 / ADR-091: Camada 3 — custo pool instancial agregado e PU pool.
+    # pool_total_por_item (particao_por_item) já armazena o custo total de todas as
+    # frentes — não multiplicar por n_frentes (evitar dupla contagem).
     _raw_pool = float((pool_total_por_item or {}).get(equipe.item_id, 0.0))
-    custo_pool_total = round(_raw_pool * _n_frentes, 2) if _raw_pool > 0 else 0.0
+    custo_pool_total = round(_raw_pool, 2) if _raw_pool > 0 else 0.0
     custo_pool_por_unidade = round(custo_pool_total / _Q, 4) if _Q > 0 and custo_pool_total > 0 else 0.0
     economia_pool_abs = round(custo_total_autonomo - custo_pool_total, 2)
 
@@ -573,11 +585,13 @@ def _build_pe_for_equipe(
     # fator_clima_v é a média ponderada de η por team-weeks; gap = 0 quando η = 1.
     if fator_clima_v < 0.9999 and plan is not None and _Q > 0:
         _pu = plan.preco_unitario if plan and plan.preco_unitario else None
-        _pu_mo_eq = float(
-            (getattr(_pu, "mao_obra", 0.0) or 0.0) + (getattr(_pu, "equipamentos", 0.0) or 0.0)
-        ) if _pu else 0.0
+        _pu_mo_eq = (
+            float((getattr(_pu, "mao_obra", 0.0) or 0.0) + (getattr(_pu, "equipamentos", 0.0) or 0.0)) if _pu else 0.0
+        )
         if _pu_mo_eq > 0:
-            gap_praticabilidade_abs = round(_pu_mo_eq * _Q * (1.0 / fator_clima_v - 1.0) * _n_frentes, 2)
+            # PU_mo_eq × Q já representa o custo total de MO+EQ para a atividade completa;
+            # não multiplicar por n_frentes (PU×Q é total, não por frente).
+            gap_praticabilidade_abs = round(_pu_mo_eq * _Q * (1.0 / fator_clima_v - 1.0), 2)
 
     # gap_escala_abs: custo adicional por usar N>1 equipes vs 1 equipe × perm.nominal
     perm_nom = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
@@ -1090,7 +1104,7 @@ def _build_cubo_pool_face(
     equipes_diretas: list,
     cronograma: list,
     projeto_id: str = "",
-) -> "Any":
+) -> Any:
     """Constrói a face de ocupação do pool por semana e tipo de recurso (ADR-106 F8 stub).
 
     Esta função é um stub para a implementação futura (ADR-106 F8).
@@ -1127,7 +1141,7 @@ def _build_cubo_pool_face(
 
     from concilium.domain.models.analytics.cubo_pool import CuboPoolFace
 
-    gerado_em = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    gerado_em = datetime.datetime.now(datetime.UTC).isoformat()
     return CuboPoolFace(
         projeto_id=projeto_id,
         gerado_em=gerado_em,

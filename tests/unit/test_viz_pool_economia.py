@@ -1,7 +1,8 @@
 """Tests for pool_economia visualization."""
+
 from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
-import pytest
 
 _RESOLVE = "concilium.application.services.analytics.cubo_pool_projection.resolve_cubo_pool_projection"
 _INIT_MPL = "concilium.application.runtime.deliverables.visualizations.cube.pool_economia.init_mpl"
@@ -9,6 +10,7 @@ _INIT_MPL = "concilium.application.runtime.deliverables.visualizations.cube.pool
 
 def _build(*args, **kwargs):
     from concilium.application.runtime.deliverables.visualizations.cube.pool_economia import build
+
     return build(*args, **kwargs)
 
 
@@ -69,8 +71,7 @@ class TestBuildEarlyReturns:
     def test_returns_none_when_matplotlib_unavailable(self):
         canonical = MagicMock()
         rows = _make_rows_positive()
-        with patch(_RESOLVE, return_value={"rows": rows}), \
-             patch(_INIT_MPL, side_effect=ImportError("no matplotlib")):
+        with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, side_effect=ImportError("no matplotlib")):
             assert _build(canonical) is None
 
     def test_returns_none_when_exception_inside_plot_body(self):
@@ -78,8 +79,7 @@ class TestBuildEarlyReturns:
         rows = _make_rows_positive()
         mock_plt = MagicMock()
         mock_plt.subplots.side_effect = RuntimeError("plotting exploded")
-        with patch(_RESOLVE, return_value={"rows": rows}), \
-             patch(_INIT_MPL, return_value=(mock_plt, MagicMock())):
+        with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, return_value=(mock_plt, MagicMock())):
             assert _build(canonical) is None
 
 
@@ -104,8 +104,7 @@ class TestBuildHappyPath:
         def fake_fig_to_bytes(fig):
             return b"PNG_BYTES"
 
-        with patch(_RESOLVE, return_value=proj), \
-             patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
+        with patch(_RESOLVE, return_value=proj), patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
             result = _build(canonical)
 
         assert result == b"PNG_BYTES"
@@ -130,8 +129,7 @@ class TestBuildHappyPath:
         def fake_fig_to_bytes(fig):
             return b"PNG_BYTES_MIXED"
 
-        with patch(_RESOLVE, return_value=proj), \
-             patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
+        with patch(_RESOLVE, return_value=proj), patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
             result = _build(canonical)
 
         assert result == b"PNG_BYTES_MIXED"
@@ -149,8 +147,7 @@ class TestBuildHappyPath:
         def fake_fig_to_bytes(fig):
             return b"PNG_NO_META"
 
-        with patch(_RESOLVE, return_value=proj), \
-             patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
+        with patch(_RESOLVE, return_value=proj), patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
             result = _build(canonical)
 
         assert result == b"PNG_NO_META"
@@ -169,8 +166,7 @@ class TestBuildHappyPath:
         def fake_fig_to_bytes(fig):
             return b"PNG_CUBO"
 
-        with patch(_RESOLVE, return_value=proj), \
-             patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
+        with patch(_RESOLVE, return_value=proj), patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
             result = _build(canonical, cubo=cubo)
 
         assert result == b"PNG_CUBO"

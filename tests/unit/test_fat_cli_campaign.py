@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
 import typer
 from typer.testing import CliRunner
 
@@ -25,6 +23,7 @@ runner = CliRunner()
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_app() -> typer.Typer:
     """Build a minimal Typer app wrapping the campaign command."""
@@ -92,6 +91,7 @@ PATCH_PROJ_ROOT = "concilium.presentation.cli.commands_campaign._default_project
 # Happy path: campaign_file provided, full pipeline runs
 # ---------------------------------------------------------------------------
 
+
 class TestCampaignHappyPath:
     def test_happy_path_full_pipeline(self, tmp_path: Path):
         """Lines 32-34, 39, 42-43, 45, 48, 55, 57, 62-63, 67, 73-74, 79-80,
@@ -117,10 +117,14 @@ class TestCampaignHappyPath:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
-                    "--workers", "2",
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
+                    "--workers",
+                    "2",
                 ],
             )
 
@@ -170,9 +174,12 @@ class TestCampaignHappyPath:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
                 ],
             )
 
@@ -207,9 +214,12 @@ class TestCampaignHappyPath:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
                 ],
             )
 
@@ -226,6 +236,7 @@ class TestCampaignHappyPath:
 # campaign_file auto-discovery
 # ---------------------------------------------------------------------------
 
+
 class TestCampaignAutoDiscovery:
     def test_auto_discovery_finds_candidate(self, tmp_path: Path):
         """Lines 48-55: campaign_file=None, auto-discovery finds first candidate."""
@@ -234,13 +245,18 @@ class TestCampaignAutoDiscovery:
         campaigns_dir = proj_root / "AGIS" / "campaigns"
         campaigns_dir.mkdir(parents=True)
         campaign_file = campaigns_dir / "campaign_v1.json"
-        campaign_file.write_text(json.dumps({
-            "descricao": "Auto-discovered",
-            "campaign_version": "v1",
-            "top_k": 2,
-            "perfil_expectativas": {},
-            "sweep": [],
-        }), encoding="utf-8")
+        campaign_file.write_text(
+            json.dumps(
+                {
+                    "descricao": "Auto-discovered",
+                    "campaign_version": "v1",
+                    "top_k": 2,
+                    "perfil_expectativas": {},
+                    "sweep": [],
+                }
+            ),
+            encoding="utf-8",
+        )
 
         base_spec = {"slug": "AGIS", "meta": {}}
         mock_result = _make_mock_result()
@@ -261,8 +277,10 @@ class TestCampaignAutoDiscovery:
                 app,
                 [
                     "AGIS",
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(proj_root),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(proj_root),
                 ],
             )
 
@@ -280,8 +298,10 @@ class TestCampaignAutoDiscovery:
             app,
             [
                 "NOEXIST",
-                "--config", str(tmp_path / "config"),
-                "--projects", str(proj_root),
+                "--config",
+                str(tmp_path / "config"),
+                "--projects",
+                str(proj_root),
             ],
         )
 
@@ -298,9 +318,12 @@ class TestCampaignAutoDiscovery:
             app,
             [
                 "AGIS",
-                "--campaign", str(missing),
-                "--config", str(tmp_path / "config"),
-                "--projects", str(tmp_path / "projetos"),
+                "--campaign",
+                str(missing),
+                "--config",
+                str(tmp_path / "config"),
+                "--projects",
+                str(tmp_path / "projetos"),
             ],
         )
 
@@ -318,9 +341,12 @@ class TestCampaignAutoDiscovery:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
                 ],
             )
 
@@ -331,6 +357,7 @@ class TestCampaignAutoDiscovery:
 # ---------------------------------------------------------------------------
 # _load_project_base_spec
 # ---------------------------------------------------------------------------
+
 
 class TestLoadProjectBaseSpec:
     def test_referencia_json_in_data(self, tmp_path: Path):
@@ -411,6 +438,7 @@ class TestLoadProjectBaseSpec:
 # _canonical_to_base_spec
 # ---------------------------------------------------------------------------
 
+
 class TestCanonicalToBaseSpec:
     def test_full_canonical(self):
         """Lines 175-185: full canonical → expected meta dict."""
@@ -448,6 +476,7 @@ class TestCanonicalToBaseSpec:
 # _default_config_root
 # ---------------------------------------------------------------------------
 
+
 class TestDefaultConfigRoot:
     def test_returns_path_ending_config(self):
         """Lines 191-195, 197-199: real repo structure → returns a Path."""
@@ -477,15 +506,19 @@ class TestDefaultConfigRoot:
             mock_here = MagicMock()
             # Simulate parents: [src/pkg, src, tmp_path]
             parent0 = MagicMock()
-            parent0.__truediv__ = MagicMock(side_effect=lambda x: MagicMock(
-                is_dir=MagicMock(return_value=False),
-                exists=MagicMock(return_value=False),
-            ))
+            parent0.__truediv__ = MagicMock(
+                side_effect=lambda x: MagicMock(
+                    is_dir=MagicMock(return_value=False),
+                    exists=MagicMock(return_value=False),
+                )
+            )
             parent1 = MagicMock()
-            parent1.__truediv__ = MagicMock(side_effect=lambda x: MagicMock(
-                is_dir=MagicMock(return_value=False),
-                exists=MagicMock(return_value=False),
-            ))
+            parent1.__truediv__ = MagicMock(
+                side_effect=lambda x: MagicMock(
+                    is_dir=MagicMock(return_value=False),
+                    exists=MagicMock(return_value=False),
+                )
+            )
             root_parent = MagicMock()
 
             def root_truediv(x):
@@ -528,9 +561,13 @@ class TestDefaultConfigRoot:
 
             # We need Path("config") to work
             fake_config = MagicMock(spec=Path)
-            MockPath.side_effect = lambda x: fake_here if False else MagicMock(
-                resolve=MagicMock(return_value=fake_here)
-            ) if x == "__file__" else MagicMock()
+            MockPath.side_effect = lambda x: (
+                fake_here
+                if False
+                else MagicMock(resolve=MagicMock(return_value=fake_here))
+                if x == "__file__"
+                else MagicMock()
+            )
 
             # Simpler: just assert the real function returns Path ending in "config"
             # when no structure is found (hard to fully mock Path.__file__)
@@ -544,6 +581,7 @@ class TestDefaultConfigRoot:
 # ---------------------------------------------------------------------------
 # _default_projects_root
 # ---------------------------------------------------------------------------
+
 
 class TestDefaultProjectsRoot:
     def test_benchmarks_projetos_structure(self, tmp_path: Path):
@@ -605,6 +643,7 @@ class TestDefaultProjectsRoot:
 # Additional edge-case tests for campaign()
 # ---------------------------------------------------------------------------
 
+
 class TestCampaignEdgeCases:
     def test_default_roots_used_when_not_provided(self, tmp_path: Path):
         """Lines 42-43: config_root/projects_root defaults resolved via helper functions."""
@@ -633,7 +672,8 @@ class TestCampaignEdgeCases:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
+                    "--campaign",
+                    str(campaign_file),
                     # No --config or --projects — use defaults
                 ],
             )
@@ -670,9 +710,12 @@ class TestCampaignEdgeCases:
                 app,
                 [
                     "agis",  # lowercase — should be uppercased
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
                 ],
             )
 
@@ -704,9 +747,12 @@ class TestCampaignEdgeCases:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
                 ],
             )
 
@@ -736,9 +782,12 @@ class TestCampaignEdgeCases:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
                 ],
             )
 
@@ -768,9 +817,12 @@ class TestCampaignEdgeCases:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
                 ],
             )
 
@@ -799,15 +851,17 @@ class TestCampaignEdgeCases:
                 app,
                 [
                     "AGIS",
-                    "--campaign", str(campaign_file),
-                    "--config", str(tmp_path / "config"),
-                    "--projects", str(tmp_path / "projetos"),
-                    "--workers", "8",
+                    "--campaign",
+                    str(campaign_file),
+                    "--config",
+                    str(tmp_path / "config"),
+                    "--projects",
+                    str(tmp_path / "projetos"),
+                    "--workers",
+                    "8",
                 ],
             )
 
         assert result.exit_code == 0, result.output
         call_kwargs = mock_exec.call_args
-        assert call_kwargs.kwargs.get("num_workers") == 8 or (
-            len(call_kwargs.args) >= 4 and call_kwargs.args[3] == 8
-        )
+        assert call_kwargs.kwargs.get("num_workers") == 8 or (len(call_kwargs.args) >= 4 and call_kwargs.args[3] == 8)

@@ -4,11 +4,12 @@ The module lives in src/concilium/domain/models/bdi/ (package).
 bdi_total uses the MULTIPLICATIVE TCU formula:
     (1+AC)*(1+DF)*(1+R)*(1+CR)*(1+L) / (1-T) - 1
 """
+
 from __future__ import annotations
 
-import pytest
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 
+import pytest
 from pydantic import ValidationError
 
 from concilium.domain.constants import (
@@ -17,11 +18,13 @@ from concilium.domain.constants import (
     BDI_IR,
     BDI_ISS,
     BDI_PIS,
-    BDI_TRIBUTOS_MATERIAL,
 )
 from concilium.domain.models.financial.bdi import (
     CENARIOS_TRIBUTARIOS,
     DEFAULT_BDI_TABELA,
+    AplicacaoTributaria,
+    BdiPerfilDiff,
+    CheckboxTributo,
     ComponentesBdi,
     DecomposicaoEquipamento,
     EncargosRegime,
@@ -29,9 +32,6 @@ from concilium.domain.models.financial.bdi import (
     PerfilBdiProjeto,
     PerfilLucroProjeto,
     PerfilTributarioProjeto,
-    AplicacaoTributaria,
-    BdiPerfilDiff,
-    CheckboxTributo,
     TabelaBdi,
     TabelaEncargos,
     TaxRegimeVersion,
@@ -41,16 +41,32 @@ from concilium.domain.models.financial.bdi import (
 )
 from concilium.domain.models.financial.bdi._profiles import resolve_bdi_tabela
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _make_comp(
-    ac=0.05, df=0.015, r=0.01, cr=0.0, l=0.09,
-    cofins=0.0, iss=BDI_ISS, pis=0.0, cssl=BDI_CSSL, ir=BDI_IR,
+    ac=0.05,
+    df=0.015,
+    r=0.01,
+    cr=0.0,
+    l=0.09,
+    cofins=0.0,
+    iss=BDI_ISS,
+    pis=0.0,
+    cssl=BDI_CSSL,
+    ir=BDI_IR,
 ) -> ComponentesBdi:
     return ComponentesBdi(
-        ac=ac, df=df, r=r, cr=cr, l=l,
-        cofins=cofins, iss=iss, pis=pis, cssl=cssl, ir=ir,
+        ac=ac,
+        df=df,
+        r=r,
+        cr=cr,
+        l=l,
+        cofins=cofins,
+        iss=iss,
+        pis=pis,
+        cssl=cssl,
+        ir=ir,
     )
 
 
@@ -58,12 +74,10 @@ def _make_tabela_bdi(vigencia=date(2026, 4, 1)) -> TabelaBdi:
     comp = _make_comp()
     return TabelaBdi(
         mao_obra=comp,
-        material=_make_comp(ac=0.0, df=0.0, r=0.0, cr=0.0, l=0.04,
-                             cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0),
+        material=_make_comp(ac=0.0, df=0.0, r=0.0, cr=0.0, l=0.04, cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0),
         servicos=comp,
         indireto=_make_comp(ac=0.05, df=0.015, r=0.01, cr=0.0, l=0.05),
-        diesel=_make_comp(ac=0.0, df=0.0, r=0.0, cr=0.0, l=0.04,
-                          cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0),
+        diesel=_make_comp(ac=0.0, df=0.0, r=0.0, cr=0.0, l=0.04, cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0),
         data_vigencia=vigencia,
     )
 
@@ -123,6 +137,7 @@ def _make_perfil(regime_version: TaxRegimeVersion = TaxRegimeVersion.PRE_REFORMA
 
 # ── TaxRegimeVersion (StrEnum) ─────────────────────────────────────────────
 
+
 def test_tax_regime_version_pre_reforma():
     assert TaxRegimeVersion.PRE_REFORMA == "pre_reforma"
 
@@ -145,6 +160,7 @@ def test_tax_regime_version_is_str():
 
 
 # ── TaxSimulationScenario ─────────────────────────────────────────────────
+
 
 def test_tributos_efetivos_pre_reforma_all_zero():
     scenario = TaxSimulationScenario(
@@ -301,6 +317,7 @@ def test_cenarios_tributarios_keys():
 
 # ── ComponentesBdi ────────────────────────────────────────────────────────
 
+
 def test_tributos_sum():
     comp = _make_comp(cofins=0.03, iss=0.05, pis=0.0065, cssl=0.0199, ir=0.0274)
     expected = round(0.03 + 0.05 + 0.0065 + 0.0199 + 0.0274, 6)
@@ -315,12 +332,12 @@ def test_overhead_sum():
 
 def test_bdi_total_multiplicative_formula():
     """bdi_total = (1+AC)*(1+DF)*(1+R)*(1+CR)*(1+L) / (1-T) - 1."""
-    comp = _make_comp(ac=0.05, df=0.015, r=0.01, cr=0.0, l=0.09,
-                      cofins=0.0, iss=BDI_ISS, pis=0.0, cssl=BDI_CSSL, ir=BDI_IR)
+    comp = _make_comp(
+        ac=0.05, df=0.015, r=0.01, cr=0.0, l=0.09, cofins=0.0, iss=BDI_ISS, pis=0.0, cssl=BDI_CSSL, ir=BDI_IR
+    )
     t = comp.tributos
     expected = round(
-        (1 + 0.05) * (1 + 0.015) * (1 + 0.01) * (1 + 0.0) * (1 + 0.09)
-        / (1 - t) - 1,
+        (1 + 0.05) * (1 + 0.015) * (1 + 0.01) * (1 + 0.0) * (1 + 0.09) / (1 - t) - 1,
         6,
     )
     assert comp.bdi_total == pytest.approx(expected, abs=1e-7)
@@ -333,15 +350,13 @@ def test_bdi_total_raises_when_tributos_gte_1():
 
 
 def test_bdi_total_zero_taxes_equals_overhead_product():
-    comp = _make_comp(ac=0.05, df=0.015, r=0.01, cr=0.0, l=0.09,
-                      cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0)
+    comp = _make_comp(ac=0.05, df=0.015, r=0.01, cr=0.0, l=0.09, cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0)
     expected = round((1.05) * (1.015) * (1.01) * (1.0) * (1.09) - 1, 6)
     assert comp.bdi_total == pytest.approx(expected, abs=1e-7)
 
 
 def test_bdi_total_all_zero():
-    comp = _make_comp(ac=0.0, df=0.0, r=0.0, cr=0.0, l=0.0,
-                      cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0)
+    comp = _make_comp(ac=0.0, df=0.0, r=0.0, cr=0.0, l=0.0, cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0)
     assert comp.bdi_total == pytest.approx(0.0, abs=1e-7)
 
 
@@ -356,9 +371,17 @@ def test_decomposicao_keys():
     comp = _make_comp()
     d = comp.decomposicao_no_preco()
     expected_keys = {
-        "custo_direto", "overhead_ac", "overhead_df", "overhead_r",
-        "overhead_cr", "margem_l", "tributo_cofins", "tributo_iss",
-        "tributo_pis", "tributo_cssl", "tributo_ir",
+        "custo_direto",
+        "overhead_ac",
+        "overhead_df",
+        "overhead_r",
+        "overhead_cr",
+        "margem_l",
+        "tributo_cofins",
+        "tributo_iss",
+        "tributo_pis",
+        "tributo_cssl",
+        "tributo_ir",
     }
     assert set(d.keys()) == expected_keys
 
@@ -379,6 +402,7 @@ def test_decomposicao_zero_overhead():
 
 
 # ── TabelaBdi.para_categoria ─────────────────────────────────────────────
+
 
 def test_para_categoria_mao_obra():
     tabela = _make_tabela_bdi()
@@ -414,6 +438,7 @@ def test_para_categoria_combustivel_delegates_to_material():
 
 # ── EncargosRegime.total ──────────────────────────────────────────────────
 
+
 def test_encargos_total_sum():
     enc = EncargosRegime(a=0.378, b=0.4784, c=0.4053, d=0.1907, e=0.1022, f=0.1924, judicial=0.03)
     expected = round(0.378 + 0.4784 + 0.4053 + 0.1907 + 0.1022 + 0.1924 + 0.03, 6)
@@ -431,6 +456,7 @@ def test_encargos_partial_fields():
 
 
 # ── IndiretoComBdi model_validator ────────────────────────────────────────
+
 
 def test_indireto_com_bdi_valid():
     bdi = 0.25
@@ -489,6 +515,7 @@ def test_indireto_com_bdi_all_categories():
 
 # ── DecomposicaoEquipamento ───────────────────────────────────────────────
 
+
 def _make_decomp(**kwargs) -> DecomposicaoEquipamento:
     defaults = dict(
         equip_id="EQ-001",
@@ -520,8 +547,9 @@ def test_decomposicao_equip_raises_on_mismatch():
 
 
 def test_fracao_mao_obra():
-    d = _make_decomp(custo_mao_obra_h=40.0, custo_capital_h=20.0, custo_hora_total=100.0,
-                     custo_diesel_h=30.0, custo_material_h=10.0)
+    d = _make_decomp(
+        custo_mao_obra_h=40.0, custo_capital_h=20.0, custo_hora_total=100.0, custo_diesel_h=30.0, custo_material_h=10.0
+    )
     # (40+20)/100 = 0.60
     assert d.fracao_mao_obra == pytest.approx(0.60, abs=1e-7)
 
@@ -545,8 +573,9 @@ def test_fracoes_sum_to_one():
 
 
 def test_fracao_zero_diesel():
-    d = _make_decomp(custo_diesel_h=0.0, custo_material_h=10.0, custo_mao_obra_h=70.0,
-                     custo_capital_h=20.0, custo_hora_total=100.0)
+    d = _make_decomp(
+        custo_diesel_h=0.0, custo_material_h=10.0, custo_mao_obra_h=70.0, custo_capital_h=20.0, custo_hora_total=100.0
+    )
     assert d.fracao_diesel == 0.0
 
 
@@ -564,6 +593,7 @@ def test_decomposicao_equip_near_tolerance():
 
 
 # ── resolver_componentes_bdi ──────────────────────────────────────────────
+
 
 def test_resolver_componentes_bdi_applies_lucro():
     base = _make_tabela_bdi()
@@ -653,6 +683,7 @@ def test_resolver_componentes_bdi_disabled_cofins():
 
 
 # ── resolver_bdi_cbs_ibs ─────────────────────────────────────────────────
+
 
 def test_resolver_bdi_cbs_ibs_pre_reforma_noop():
     base = _make_tabela_bdi()
@@ -765,6 +796,7 @@ def test_resolver_bdi_cbs_ibs_indireto_uses_servicos_ratio():
 
 # ── resolve_bdi_tabela ────────────────────────────────────────────────────
 
+
 def test_resolve_bdi_tabela_none_returns_default():
     result = resolve_bdi_tabela(None)
     assert result is DEFAULT_BDI_TABELA
@@ -786,6 +818,7 @@ def test_resolve_bdi_tabela_instance_passthrough():
 
 # ── DEFAULT_BDI_TABELA smoke test ─────────────────────────────────────────
 
+
 def test_default_bdi_tabela_exists():
     assert DEFAULT_BDI_TABELA is not None
 
@@ -804,12 +837,11 @@ def test_default_bdi_material_bdi_approx_4_pct():
 
 def test_default_bdi_diesel_equals_material_bdi():
     # ADR-090: diesel = material (same 4%)
-    assert DEFAULT_BDI_TABELA.diesel.bdi_total == pytest.approx(
-        DEFAULT_BDI_TABELA.material.bdi_total, abs=1e-7
-    )
+    assert DEFAULT_BDI_TABELA.diesel.bdi_total == pytest.approx(DEFAULT_BDI_TABELA.material.bdi_total, abs=1e-7)
 
 
 # ── BdiPerfilDiff ─────────────────────────────────────────────────────────
+
 
 def test_bdi_perfil_diff_construction():
     diff = BdiPerfilDiff(
@@ -890,13 +922,16 @@ def test_bdi_perfil_diff_multiple_campos_alterados():
 
 # ── TabelaEncargos / DEFAULT_ENCARGOS ────────────────────────────────────
 
+
 def test_default_encargos_exists():
     from concilium.domain.models.financial.bdi import DEFAULT_ENCARGOS
+
     assert DEFAULT_ENCARGOS is not None
 
 
 def test_default_encargos_horistas_total():
     from concilium.domain.models.financial.bdi import DEFAULT_ENCARGOS
+
     enc = DEFAULT_ENCARGOS.horistas
     expected = round(0.3780 + 0.4784 + 0.4053 + 0.1907 + 0.1022 + 0.1924 + 0.0300, 6)
     assert enc.total == pytest.approx(expected, abs=1e-6)
@@ -904,6 +939,7 @@ def test_default_encargos_horistas_total():
 
 def test_default_encargos_mensalistas_total():
     from concilium.domain.models.financial.bdi import DEFAULT_ENCARGOS
+
     enc = DEFAULT_ENCARGOS.mensalistas
     expected = round(0.3780 + 0.0994 + 0.4030 + 0.0474 + 0.1022 + 0.0000 + 0.0300, 6)
     assert enc.total == pytest.approx(expected, abs=1e-6)
@@ -911,16 +947,18 @@ def test_default_encargos_mensalistas_total():
 
 def test_default_encargos_horistas_greater_than_mensalistas():
     from concilium.domain.models.financial.bdi import DEFAULT_ENCARGOS
+
     assert DEFAULT_ENCARGOS.horistas.total > DEFAULT_ENCARGOS.mensalistas.total
 
 
 def test_default_encargos_data_vigencia():
     from concilium.domain.models.financial.bdi import DEFAULT_ENCARGOS
+
     assert DEFAULT_ENCARGOS.data_vigencia == date(2026, 4, 1)
 
 
 def test_tabela_encargos_construction():
-    from concilium.domain.models.financial.bdi import TabelaEncargos
+
     enc_h = EncargosRegime(a=0.20, b=0.10, c=0.05, d=0.02, e=0.03, f=0.04, judicial=0.01)
     enc_m = EncargosRegime(a=0.20, b=0.05, c=0.05, d=0.01, e=0.03, f=0.00, judicial=0.01)
     tabela = TabelaEncargos(
@@ -934,6 +972,7 @@ def test_tabela_encargos_construction():
 
 
 # ── PerfilBdiProjeto versioning / regime_version ──────────────────────────
+
 
 def test_perfil_bdi_projeto_default_regime():
     perfil = _make_perfil()
@@ -972,19 +1011,36 @@ def test_perfil_bdi_projeto_all_lucro_categories():
 
 # ── ComponentesBdi field validation ──────────────────────────────────────
 
+
 def test_componentes_bdi_rejects_ac_gt_1():
     with pytest.raises(Exception):
         ComponentesBdi(
-            ac=1.5, df=0.0, r=0.0, cr=0.0, l=0.0,
-            cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0,
+            ac=1.5,
+            df=0.0,
+            r=0.0,
+            cr=0.0,
+            l=0.0,
+            cofins=0.0,
+            iss=0.0,
+            pis=0.0,
+            cssl=0.0,
+            ir=0.0,
         )
 
 
 def test_componentes_bdi_rejects_negative_field():
     with pytest.raises(Exception):
         ComponentesBdi(
-            ac=-0.01, df=0.0, r=0.0, cr=0.0, l=0.0,
-            cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0,
+            ac=-0.01,
+            df=0.0,
+            r=0.0,
+            cr=0.0,
+            l=0.0,
+            cofins=0.0,
+            iss=0.0,
+            pis=0.0,
+            cssl=0.0,
+            ir=0.0,
         )
 
 
@@ -992,8 +1048,16 @@ def test_componentes_bdi_max_allowed_values():
     # All fields at their max allowed value (1.0 each for overhead, but tributos must not sum >= 1)
     # Only one tax at 0.99, rest zero
     comp = ComponentesBdi(
-        ac=1.0, df=0.0, r=0.0, cr=0.0, l=0.0,
-        cofins=0.99, iss=0.0, pis=0.0, cssl=0.0, ir=0.0,
+        ac=1.0,
+        df=0.0,
+        r=0.0,
+        cr=0.0,
+        l=0.0,
+        cofins=0.99,
+        iss=0.0,
+        pis=0.0,
+        cssl=0.0,
+        ir=0.0,
     )
     bdi = comp.bdi_total
     expected = round((1 + 1.0) / (1 - 0.99) - 1, 6)
@@ -1003,8 +1067,16 @@ def test_componentes_bdi_max_allowed_values():
 def test_bdi_total_with_all_overhead_components():
     # All overhead components set to verify multiplicative product
     comp = ComponentesBdi(
-        ac=0.05, df=0.02, r=0.01, cr=0.005, l=0.10,
-        cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0,
+        ac=0.05,
+        df=0.02,
+        r=0.01,
+        cr=0.005,
+        l=0.10,
+        cofins=0.0,
+        iss=0.0,
+        pis=0.0,
+        cssl=0.0,
+        ir=0.0,
     )
     expected = round((1.05) * (1.02) * (1.01) * (1.005) * (1.10) - 1, 6)
     assert comp.bdi_total == pytest.approx(expected, abs=1e-6)
@@ -1012,8 +1084,16 @@ def test_bdi_total_with_all_overhead_components():
 
 def test_decomposicao_with_nonzero_cr():
     comp = ComponentesBdi(
-        ac=0.05, df=0.015, r=0.01, cr=0.02, l=0.09,
-        cofins=0.03, iss=0.05, pis=0.0065, cssl=0.0199, ir=0.0274,
+        ac=0.05,
+        df=0.015,
+        r=0.01,
+        cr=0.02,
+        l=0.09,
+        cofins=0.03,
+        iss=0.05,
+        pis=0.0065,
+        cssl=0.0199,
+        ir=0.0274,
     )
     d = comp.decomposicao_no_preco()
     total = sum(d.values())
@@ -1022,6 +1102,7 @@ def test_decomposicao_with_nonzero_cr():
 
 
 # ── CENARIOS_TRIBUTARIOS smoke tests ────────────────────────────────────
+
 
 def test_cenarios_tributarios_pre_reforma_noop_rates():
     scenario = CENARIOS_TRIBUTARIOS[TaxRegimeVersion.PRE_REFORMA]
@@ -1048,6 +1129,7 @@ def test_cenarios_tributarios_pleno_rates():
 
 
 # ── DEFAULT_BDI_TABELA additional smoke tests ─────────────────────────────
+
 
 def test_default_bdi_tabela_data_vigencia():
     # Calibrated at 2026-03-01 from AGIS spreadsheet
@@ -1080,12 +1162,11 @@ def test_default_bdi_indireto_bdi_positive():
 
 def test_default_bdi_servicos_matches_mao_obra_bdi():
     # Both use the same overhead+taxes profile
-    assert DEFAULT_BDI_TABELA.servicos.bdi_total == pytest.approx(
-        DEFAULT_BDI_TABELA.mao_obra.bdi_total, abs=1e-7
-    )
+    assert DEFAULT_BDI_TABELA.servicos.bdi_total == pytest.approx(DEFAULT_BDI_TABELA.mao_obra.bdi_total, abs=1e-7)
 
 
 # ── TabelaBdi.para_categoria with DEFAULT_BDI_TABELA ────────────────────
+
 
 def test_para_categoria_diesel_on_default_is_material():
     # ADR-090: DIESEL always delegates to material (same 4%)
@@ -1098,6 +1179,7 @@ def test_para_categoria_combustivel_on_default_is_material():
 
 
 # ── IndiretoComBdi edge cases ─────────────────────────────────────────────
+
 
 def test_indireto_com_bdi_zero_bdi():
     obj = IndiretoComBdi(
@@ -1133,6 +1215,7 @@ def test_indireto_com_bdi_just_over_tolerance_raises():
 
 
 # ── DecomposicaoEquipamento edge cases ────────────────────────────────────
+
 
 def test_decomposicao_equip_single_component():
     # Only mao_obra, no diesel or material
@@ -1175,6 +1258,7 @@ def test_decomposicao_equip_just_over_tolerance_raises():
 
 
 # ── resolver_componentes_bdi: pis enabled ────────────────────────────────
+
 
 def test_resolver_componentes_bdi_pis_enabled():
     base = _make_tabela_bdi()
@@ -1241,6 +1325,7 @@ def test_resolver_componentes_bdi_simples_nacional_regime():
 
 
 # ── resolver_bdi_cbs_ibs: df capped at 0.99 ──────────────────────────────
+
 
 def test_resolver_bdi_cbs_ibs_df_capped_at_099():
     base = _make_tabela_bdi()

@@ -3,20 +3,20 @@
 Targets the scenarios specified in the task brief to push coverage from
 ~61% toward 80%+.  No I/O, no fixtures — pure unit tests.
 """
+
 from __future__ import annotations
 
 import pytest
 
 from concilium.application.benchmarks.inference import (
-    BenchmarkInferenceService,
     BenchmarkInferencePack,
-    BenchmarkInferenceTraceEntry,
+    BenchmarkInferenceService,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _rule_ids(pack: BenchmarkInferencePack) -> list[str]:
     return [e.rule_id for e in pack.trace]
@@ -254,9 +254,7 @@ def test_sum_planejamento_subtotal_empty_list_returns_none() -> None:
 
 
 def test_sum_planejamento_subtotal_explicit_empty_list_returns_none() -> None:
-    result = BenchmarkInferenceService._sum_planejamento_subtotal(
-        {"planejamento_detalhado": []}, "sem_bdi"
-    )
+    result = BenchmarkInferenceService._sum_planejamento_subtotal({"planejamento_detalhado": []}, "sem_bdi")
     assert result is None
 
 
@@ -327,8 +325,8 @@ def test_sum_indireto_sums_only_indireto_prefixed_keys() -> None:
     custo = {
         "indireto_salarios": 20.0,
         "indireto_equipamentos": 10.0,
-        "direto_equipes": 100.0,   # must NOT be included
-        "total": 130.0,            # must NOT be included
+        "direto_equipes": 100.0,  # must NOT be included
+        "total": 130.0,  # must NOT be included
     }
     result = BenchmarkInferenceService._sum_indireto(custo)
     assert result == 30.0
@@ -386,6 +384,7 @@ def test_apply_to_skill_inputs_creates_skill_key_when_absent() -> None:
 
 def test_apply_to_skill_inputs_empty_pack_returns_copy() -> None:
     from concilium.application.benchmarks.inference import BenchmarkInferencePack
+
     empty_pack = BenchmarkInferencePack(benchmark_mode=True, skill_inputs={})
     base = {"some-skill": {"x": 1}}
     merged = BenchmarkInferenceService.apply_to_skill_inputs(base, empty_pack)

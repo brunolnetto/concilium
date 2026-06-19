@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 def _make_celula(
-    contrato_id="C1", tipo_id="ESC", instancia_numero=1, semana_iso="2026-W01",
-    estado="prod", atividade_id="A1", custo_mo=100.0, custo_eq=50.0, custo_comb=20.0, custo_mat=10.0
+    contrato_id="C1",
+    tipo_id="ESC",
+    instancia_numero=1,
+    semana_iso="2026-W01",
+    estado="prod",
+    atividade_id="A1",
+    custo_mo=100.0,
+    custo_eq=50.0,
+    custo_comb=20.0,
+    custo_mat=10.0,
 ):
     from concilium.domain.models.analytics.cubo_pool import CelulaPoolInstancial
+
     return CelulaPoolInstancial(
         contrato_id=contrato_id,
         tipo_id=tipo_id,
@@ -26,47 +33,56 @@ def _make_celula(
 
 def _make_cubo(celulas):
     from concilium.domain.models.analytics.cubo_pool import CuboPoolInstancial
+
     return CuboPoolInstancial(projeto_id="proj-1", gerado_em="2026-01-01", celulas=tuple(celulas))
 
 
 class TestBucketPeriodo:
     def test_semana_returns_raw(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         assert bucket_periodo("2026-W23", "semana") == "2026-W23"
 
     def test_iso_mes(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         result = bucket_periodo("2026-W23", "mes")
         assert "2026" in result
 
     def test_iso_trimestre(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         result = bucket_periodo("2026-W01", "trimestre")
         assert "T" in result
 
     def test_iso_ano(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         result = bucket_periodo("2026-W10", "ano")
         # Week 10 of 2026 starts in 2026
         assert result in ("2026", "2025")  # ISO week boundary — just check it's a year string
 
     def test_seq_mes(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         result = bucket_periodo("S001", "mes")
         assert result.startswith("M")
 
     def test_seq_trimestre(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         result = bucket_periodo("S001", "trimestre")
         assert result.startswith("T")
 
     def test_seq_ano(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         result = bucket_periodo("S001", "ano")
         assert result.startswith("A")
 
     def test_invalid_iso_returns_raw(self):
         from concilium.domain.models.analytics.cubo_pool import bucket_periodo
+
         result = bucket_periodo("2026-W99", "mes")
         assert result == "2026-W99"
 

@@ -1,8 +1,8 @@
 """Tests for CLI commands_skills and BenchmarkFacade."""
+
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -75,14 +75,17 @@ class TestSkillsExportCommand:
 class TestBenchmarkFacade:
     def test_from_root(self, tmp_path):
         from concilium.application.benchmarks.execution.facade import BenchmarkFacade
+
         facade = BenchmarkFacade.from_root(tmp_path)
         assert facade.config_root == tmp_path / "config"
         assert facade.benchmarks_root == tmp_path / "benchmarks" / "data"
         assert facade.projects_root == tmp_path / "benchmarks" / "projetos"
 
     def test_from_env(self, tmp_path):
+        from unittest.mock import MagicMock, patch
+
         from concilium.application.benchmarks.execution.facade import BenchmarkFacade
-        from unittest.mock import patch, MagicMock
+
         storage_mock = MagicMock()
         storage_mock.root = tmp_path
         storage_mock.config_root = tmp_path / "config"
@@ -94,12 +97,14 @@ class TestBenchmarkFacade:
 
     def test_run_single_file_not_found(self, tmp_path):
         from concilium.application.benchmarks.execution.facade import BenchmarkFacade
+
         facade = BenchmarkFacade.from_root(tmp_path)
         with pytest.raises(FileNotFoundError, match="referencia.json"):
             facade.run_single("NONEXISTENT")
 
     def test_run_single_calls_runner(self, tmp_path):
         from concilium.application.benchmarks.execution.facade import BenchmarkFacade
+
         facade = BenchmarkFacade.from_root(tmp_path)
         slug = "BENCH-1"
         bench_dir = tmp_path / "benchmarks" / "data" / slug
@@ -116,8 +121,9 @@ class TestBenchmarkFacade:
         assert result == {"status_final": "VIAVEL"}
 
     def test_run_all_delegates_to_batch(self, tmp_path):
-        from concilium.application.benchmarks.execution.facade import BenchmarkFacade
         from concilium.application.benchmarks.execution.batch import BenchmarkBatchRunner
+        from concilium.application.benchmarks.execution.facade import BenchmarkFacade
+
         facade = BenchmarkFacade.from_root(tmp_path)
 
         with patch.object(BenchmarkBatchRunner, "run_all", return_value=[{"slug": "bench-1"}]) as mock_run:
@@ -126,8 +132,9 @@ class TestBenchmarkFacade:
         assert result == [{"slug": "bench-1"}]
 
     def test_build_summary_delegates_to_batch(self, tmp_path):
-        from concilium.application.benchmarks.execution.facade import BenchmarkFacade
         from concilium.application.benchmarks.execution.batch import BenchmarkBatchRunner
+        from concilium.application.benchmarks.execution.facade import BenchmarkFacade
+
         facade = BenchmarkFacade.from_root(tmp_path)
         reports = [{"status_final": "VIAVEL"}]
 
@@ -139,6 +146,7 @@ class TestBenchmarkFacade:
     def test_make_runner_returns_benchmark_runner(self, tmp_path):
         from concilium.application.benchmarks.execution.facade import BenchmarkFacade
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         facade = BenchmarkFacade.from_root(tmp_path)
         runner = facade._make_runner()
         assert isinstance(runner, BenchmarkRunner)

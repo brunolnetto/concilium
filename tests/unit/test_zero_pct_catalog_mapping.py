@@ -20,7 +20,6 @@ import pytest
 # ---------------------------------------------------------------------------
 # 1. cpu_fixer
 # ---------------------------------------------------------------------------
-
 from concilium.infrastructure.catalog.mapping.cpu_fixer import fix_referencia_mappings
 
 
@@ -88,9 +87,7 @@ class TestLoadMappingKeywords:
 
     def test_valid_mapping_keywords_key(self, tmp_path: Path) -> None:
         rules = tmp_path / "rules.json"
-        rules.write_text(
-            json.dumps({"mapping_keywords": {"ATI-001": ["ATERRO"]}}), encoding="utf-8"
-        )
+        rules.write_text(json.dumps({"mapping_keywords": {"ATI-001": ["ATERRO"]}}), encoding="utf-8")
         with patch(f"{_MAPPER_MODULE}._rules_file", return_value=rules):
             result = _load_mapping_keywords()
         assert "ATI-001" in result
@@ -98,9 +95,7 @@ class TestLoadMappingKeywords:
 
     def test_valid_direct_dict_without_mapping_keywords_key(self, tmp_path: Path) -> None:
         rules = tmp_path / "rules.json"
-        rules.write_text(
-            json.dumps({"CPU-X": ["ESCAVACAO"]}), encoding="utf-8"
-        )
+        rules.write_text(json.dumps({"CPU-X": ["ESCAVACAO"]}), encoding="utf-8")
         with patch(f"{_MAPPER_MODULE}._rules_file", return_value=rules):
             result = _load_mapping_keywords()
         assert "CPU-X" in result
@@ -121,9 +116,7 @@ class TestLoadMappingKeywords:
 
     def test_keywords_value_not_list_is_skipped(self, tmp_path: Path) -> None:
         rules = tmp_path / "rules.json"
-        rules.write_text(
-            json.dumps({"CPU-BAD": "not_a_list", "CPU-OK": ["CORTE"]}), encoding="utf-8"
-        )
+        rules.write_text(json.dumps({"CPU-BAD": "not_a_list", "CPU-OK": ["CORTE"]}), encoding="utf-8")
         with patch(f"{_MAPPER_MODULE}._rules_file", return_value=rules):
             result = _load_mapping_keywords()
         assert "CPU-BAD" not in result
@@ -131,9 +124,7 @@ class TestLoadMappingKeywords:
 
     def test_empty_keywords_list_is_excluded(self, tmp_path: Path) -> None:
         rules = tmp_path / "rules.json"
-        rules.write_text(
-            json.dumps({"CPU-EMPTY": [], "CPU-OK": ["TERRAPLENAGEM"]}), encoding="utf-8"
-        )
+        rules.write_text(json.dumps({"CPU-EMPTY": [], "CPU-OK": ["TERRAPLENAGEM"]}), encoding="utf-8")
         with patch(f"{_MAPPER_MODULE}._rules_file", return_value=rules):
             result = _load_mapping_keywords()
         assert "CPU-EMPTY" not in result
@@ -202,9 +193,7 @@ class TestApplyCpuMappings:
         result = apply_cpu_mappings(tmp_path)
         assert result == []
 
-    def test_referencia_with_missing_cpu_id_gets_mapped_and_logged(
-        self, tmp_path: Path
-    ) -> None:
+    def test_referencia_with_missing_cpu_id_gets_mapped_and_logged(self, tmp_path: Path) -> None:
         proj = tmp_path / "PROJ-001"
         proj.mkdir()
         referencia = {
@@ -212,9 +201,7 @@ class TestApplyCpuMappings:
                 {"descricao": "Aterro Compactado", "cpu_id": None},
             ]
         }
-        (proj / "referencia.json").write_text(
-            json.dumps(referencia), encoding="utf-8"
-        )
+        (proj / "referencia.json").write_text(json.dumps(referencia), encoding="utf-8")
         mappings = {"CPU-ATERRO": ["ATERRO"]}
         with patch(f"{_MAPPER_MODULE}._load_mapping_keywords", return_value=mappings):
             result = apply_cpu_mappings(tmp_path)
@@ -233,9 +220,7 @@ class TestApplyCpuMappings:
                 {"descricao": "Aterro Compactado", "cpu_id": "CPU-EXISTING"},
             ]
         }
-        (proj / "referencia.json").write_text(
-            json.dumps(referencia), encoding="utf-8"
-        )
+        (proj / "referencia.json").write_text(json.dumps(referencia), encoding="utf-8")
         mappings = {"CPU-ATERRO": ["ATERRO"]}
         with patch(f"{_MAPPER_MODULE}._load_mapping_keywords", return_value=mappings):
             result = apply_cpu_mappings(tmp_path)
@@ -454,9 +439,7 @@ class TestNormalizeEquipesFromProducoes:
         result = normalize_equipes_from_producoes(tmp_path)
         assert result == []
 
-    def test_cpu_with_producao_id_matching_producao_returns_audit_row(
-        self, tmp_path: Path
-    ) -> None:
+    def test_cpu_with_producao_id_matching_producao_returns_audit_row(self, tmp_path: Path) -> None:
         cpus_dir = tmp_path / "cpus"
         prods_dir = tmp_path / "producoes"
         cpus_dir.mkdir()
@@ -518,9 +501,7 @@ class TestHealCatalog:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_producao_composicao_padrao_equipe_renamed_to_equipe(
-        self, tmp_path: Path
-    ) -> None:
+    def test_producao_composicao_padrao_equipe_renamed_to_equipe(self, tmp_path: Path) -> None:
         cat = _setup_catalog(tmp_path)
         prod_data = {
             "id": "PROD-001",
@@ -529,9 +510,7 @@ class TestHealCatalog:
                 "equipamentos": [],
             },
         }
-        (cat / "producoes" / "PROD-001.json").write_text(
-            json.dumps(prod_data), encoding="utf-8"
-        )
+        (cat / "producoes" / "PROD-001.json").write_text(json.dumps(prod_data), encoding="utf-8")
 
         heal_catalog(cat)
 
@@ -539,15 +518,11 @@ class TestHealCatalog:
         assert "composicao_padrao_equipe" not in healed
         assert "equipe" in healed
 
-    def test_cpu_composicao_itens_insumo_ids_remapped_to_prefixed(
-        self, tmp_path: Path
-    ) -> None:
+    def test_cpu_composicao_itens_insumo_ids_remapped_to_prefixed(self, tmp_path: Path) -> None:
         cat = _setup_catalog(tmp_path)
         # Create an insumo file so the id_map is populated
         mo_data = {"codigo": "MO-001", "descricao": "Servente"}
-        (cat / "insumos" / "mao_obra" / "MO-001.json").write_text(
-            json.dumps(mo_data), encoding="utf-8"
-        )
+        (cat / "insumos" / "mao_obra" / "MO-001.json").write_text(json.dumps(mo_data), encoding="utf-8")
 
         cpu_data = {
             "codigo": "CPU-001",
@@ -555,9 +530,7 @@ class TestHealCatalog:
                 {"insumo_id": "001", "quantidade": 1.0},
             ],
         }
-        (cat / "cpus" / "CPU-001.json").write_text(
-            json.dumps(cpu_data), encoding="utf-8"
-        )
+        (cat / "cpus" / "CPU-001.json").write_text(json.dumps(cpu_data), encoding="utf-8")
 
         heal_catalog(cat)
 
@@ -574,9 +547,7 @@ class TestHealCatalog:
             "producao_id": "PROD-001",
             "equipe": {"funcoes": [{"funcao_id": "MO-001"}], "equipamentos": []},
         }
-        (cat / "cpus" / "CPU-001.json").write_text(
-            json.dumps(cpu_data), encoding="utf-8"
-        )
+        (cat / "cpus" / "CPU-001.json").write_text(json.dumps(cpu_data), encoding="utf-8")
 
         heal_catalog(cat)
 
@@ -590,9 +561,7 @@ class TestHealCatalog:
             "codigo": "CPU-001",
             "equipe": equipe,
         }
-        (cat / "cpus" / "CPU-001.json").write_text(
-            json.dumps(cpu_data), encoding="utf-8"
-        )
+        (cat / "cpus" / "CPU-001.json").write_text(json.dumps(cpu_data), encoding="utf-8")
 
         heal_catalog(cat)
 
@@ -608,9 +577,7 @@ class TestHealCatalog:
                 "equipamentos": [],
             },
         }
-        (cat / "cpus" / "CPU-002.json").write_text(
-            json.dumps(cpu_data), encoding="utf-8"
-        )
+        (cat / "cpus" / "CPU-002.json").write_text(json.dumps(cpu_data), encoding="utf-8")
 
         heal_catalog(cat)
 
@@ -624,8 +591,8 @@ class TestHealCatalog:
 # 5. updater.CatalogUpdater
 # ---------------------------------------------------------------------------
 
-from concilium.infrastructure.catalog.updater import CatalogUpdateResult, CatalogUpdater
 from concilium.domain.models.project.observacao import PropostaAtualizacao
+from concilium.infrastructure.catalog.updater import CatalogUpdater
 
 _UPDATER_MODULE = "concilium.infrastructure.catalog.updater"
 
@@ -734,9 +701,7 @@ class TestCatalogUpdaterUpdateInsumo:
         assert result.sucesso is False
         assert result.novo_artefato_id is None
 
-    def test_update_preco_unitario_updates_file_and_audit_trail(
-        self, tmp_path: Path
-    ) -> None:
+    def test_update_preco_unitario_updates_file_and_audit_trail(self, tmp_path: Path) -> None:
         insumos_dir = tmp_path / "insumos"
         insumos_dir.mkdir()
         prods_dir = tmp_path / "producoes"
@@ -767,9 +732,7 @@ class TestCatalogUpdaterUpdateInsumo:
         assert updated_insumo["auditoria_custo"][0]["custo_anterior"] == 100.0
         assert updated_insumo["auditoria_custo"][0]["custo_novo"] == 110.0
 
-    def test_update_capacidade_cobertura_updates_classe_compartilhamento(
-        self, tmp_path: Path
-    ) -> None:
+    def test_update_capacidade_cobertura_updates_classe_compartilhamento(self, tmp_path: Path) -> None:
         insumos_dir = tmp_path / "insumos"
         insumos_dir.mkdir()
         prods_dir = tmp_path / "producoes"
@@ -830,9 +793,7 @@ class TestCatalogUpdaterUpdateInsumo:
 
         insumo = {"codigo": "MO-002", "descricao": "Pedreiro", "preco_unitario": 200.0}
         insumo_file = insumos_dir / "bundle.json"
-        insumo_file.write_text(
-            json.dumps({"insumos": [insumo], "versao": "1.0"}), encoding="utf-8"
-        )
+        insumo_file.write_text(json.dumps({"insumos": [insumo], "versao": "1.0"}), encoding="utf-8")
 
         proposta = _make_proposta(
             artefato_id="MO-002",

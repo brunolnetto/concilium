@@ -11,6 +11,8 @@ FaceGranularity = Literal["semana", "mes", "bimestre", "trimestre", "semestre", 
 FACE_UNIT_TYPES: dict[str, str] = {
     "tempo_natureza": "currency_brl",
     "tempo_componente": "currency_brl",
+    "direto_temporal_categoria": "currency_brl",
+    "indireto_temporal_categoria": "currency_brl",
     "categoria_componente": "currency_brl",
     "atividade_componente": "currency_brl",
     "diesel_temporal": "volume_liters",
@@ -205,6 +207,19 @@ def _custo_indireto_por_periodo(canonical: Any, granularidade: FaceGranularity) 
     return dict(result)
 
 
+def _mob_eventos_por_periodo(canonical: Any, granularidade: FaceGranularity) -> dict[str, int]:
+    """Conta eventos de mobilização/desmobilização por bucket temporal a partir das instâncias."""
+    result: dict[str, int] = defaultdict(int)
+    for inst in getattr(canonical, "instancias_recurso", None) or []:
+        for key in ("semana_mobilizacao", "semana_desmobilizacao"):
+            semana_iso = str(getattr(inst, key, "") or "")
+            if not semana_iso:
+                continue
+            bucket = bucket_from_week_iso(semana_iso, granularidade)
+            result[bucket] += 1
+    return dict(result)
+
+
 def bucket_from_week_iso(week_iso: str, granularidade: FaceGranularity) -> str:
     if granularidade == "semana":
         return week_iso
@@ -233,6 +248,113 @@ def resolve_cubo_projection_rows(
     top_n: int,
     canonical: Any = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]], str]:
+    if face == "direto_temporal_categoria":
+        categories = ("MAO_OBRA", "EQUIP", "MAT", "COMB")
+        cat_map = {
+            "mao_obra": "MAO_OBRA",
+            "equipamento": "EQUIP",
+            "material": "MAT",
+            "diesel": "COMB",
+        }
+        aggregated: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        for celula, valor_cell in _iter_scaled_cubo_cells(canonical, cubo):
+            comp = str(getattr(celula, "componente_bdi", "") or "")
+            if comp != "custo_direto":
+                continue
+            cat_key = cat_map.get(str(getattr(celula, "categoria", "") or ""))
+            if not cat_key:
+                continue
+            bucket = bucket_from_week_iso(str(getattr(celula, "semana_iso", "") or ""), granularidade)
+            if bucket:
+                aggregated[bucket][cat_key] += float(valor_cell)
+        buckets = sorted(aggregated.keys())
+        rows: list[dict[str, Any]] = []
+        for bucket in buckets:
+            for cat in categories:
+                rows.append(
+                    {
+                        "periodo": bucket,
+                        "categoria_direto": cat,
+                        "valor_rs": float(aggregated[bucket].get(cat, 0.0)),
+                    }
+                )
+        columns = [
+            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+            {"id": "categoria_direto", "label": "Categoria Direta", "dtype": "str", "role": "series"},
+            {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
+        ]
+        return rows[:top_n], columns, "bar_stacked"
+
+    if face == "indireto_temporal_categoria":
+        categories = ("ADM", "TOP", "LAB", "QSMS", "MOB")
+        aggregated: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+
+        cubo_obj = getattr(canonical, "cubo_analitico", None)
+        cells = getattr(cubo_obj, "celulas", None) if cubo_obj is not None else None
+        if cells:
+            for celula in cells:
+                nat = str(getattr(celula, "natureza", "") or "")
+                comp = str(getattr(celula, "componente_bdi", "") or "")
+                if nat != "indireto" or comp != "custo_direto":
+                    continue
+                aid = str(getattr(celula, "atividade_id", "") or "")
+                cat = aid.replace("IND-", "", 1).upper() if aid.startswith("IND-") else aid.upper()
+                if cat not in categories:
+                    continue
+                bucket = bucket_from_week_iso(str(getattr(celula, "semana_iso", "") or ""), granularidade)
+                if bucket:
+                    aggregated[bucket][cat] += float(getattr(celula, "valor_rs", 0.0) or 0.0)
+
+        # Rebalance de MOB por eventos reais do pool quando houver instâncias com
+        # mobilizações/desmobilizações intermediárias: evita falso sinal de concentração
+        # apenas no início/fim quando o indireto semanal veio agregado por driver de projeto.
+        if canonical:
+            eventos_mob = _mob_eventos_por_periodo(canonical, granularidade)
+            total_eventos = sum(eventos_mob.values())
+            total_mob = sum(v.get("MOB", 0.0) for v in aggregated.values())
+            if total_eventos > 0 and total_mob > 0.0 and len(eventos_mob) > 2:
+                for b in list(aggregated.keys()):
+                    aggregated[b]["MOB"] = 0.0
+                for bucket, n_evt in eventos_mob.items():
+                    aggregated[bucket]["MOB"] += total_mob * (float(n_evt) / float(total_eventos))
+
+        # Fallback: se não houver células indiretas no cubo, distribui o indireto semanal
+        # por shares de categoria (ADM/TOP/LAB/QSMS/MOB) medidos em canonical.indiretos.
+        if not aggregated and canonical:
+            indireto_bucket = _custo_indireto_por_periodo(canonical, granularidade)
+            by_cat_total: dict[str, float] = {k: 0.0 for k in categories}
+            for ind in getattr(canonical, "indiretos", None) or []:
+                cat = str(getattr(ind, "categoria", "") or "").upper()
+                if cat in by_cat_total:
+                    by_cat_total[cat] += float(getattr(ind, "custo_total", 0.0) or 0.0)
+            total_ind = sum(by_cat_total.values())
+            shares = (
+                {k: (v / total_ind if total_ind > 0 else (1.0 / len(categories))) for k, v in by_cat_total.items()}
+                if by_cat_total
+                else {k: 1.0 / len(categories) for k in categories}
+            )
+            for bucket, total_bucket in indireto_bucket.items():
+                for cat in categories:
+                    aggregated[bucket][cat] += float(total_bucket) * float(shares.get(cat, 0.0))
+
+        buckets = sorted(aggregated.keys())
+        rows: list[dict[str, Any]] = []
+        for bucket in buckets:
+            for cat in categories:
+                rows.append(
+                    {
+                        "periodo": bucket,
+                        "categoria_indireto": cat,
+                        "valor_rs": float(aggregated[bucket].get(cat, 0.0)),
+                    }
+                )
+        columns = [
+            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+            {"id": "categoria_indireto", "label": "Categoria Indireta", "dtype": "str", "role": "series"},
+            {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
+        ]
+        return rows[:top_n], columns, "bar_stacked"
+
     if face == "tempo_natureza":
         # Usar cubo_analitico enriquecido (fonte primária analítica).
         # O cubo tem cells natureza='direto' (escalonadas ao PUxQ) e natureza='indireto'
@@ -244,9 +366,9 @@ def resolve_cubo_projection_rows(
         cubo_obj = getattr(canonical, "cubo_analitico", None)
         if cubo_obj is not None and getattr(cubo_obj, "celulas", None):
             for c in cubo_obj.celulas:
-                nat  = str(getattr(c, "natureza", "") or "")
+                nat = str(getattr(c, "natureza", "") or "")
                 comp = str(getattr(c, "componente_bdi", "") or "")
-                val  = float(getattr(c, "valor_rs", 0.0) or 0.0)
+                val = float(getattr(c, "valor_rs", 0.0) or 0.0)
                 bucket = bucket_from_week_iso(str(getattr(c, "semana_iso", "") or ""), granularidade)
                 if not bucket:
                     continue
@@ -257,6 +379,7 @@ def resolve_cubo_projection_rows(
         else:
             # Fallback: SCurveBuilder quando cubo não está disponível
             from concilium.domain.services.analytics.s_curve_builder import SCurveBuilder
+
             s_curve = SCurveBuilder().build(canonical)
             for agg in s_curve.agregacao_semanal:
                 bucket = bucket_from_week_iso(str(agg.semana_iso), granularidade)
@@ -265,15 +388,13 @@ def resolve_cubo_projection_rows(
 
         all_buckets = sorted(set(direto_por_bucket) | set(indireto_por_bucket))
         rows = [
-            {"periodo": b, "natureza": "direto",   "valor_rs": direto_por_bucket.get(b, 0.0)} for b in all_buckets
-        ] + [
-            {"periodo": b, "natureza": "indireto", "valor_rs": indireto_por_bucket.get(b, 0.0)} for b in all_buckets
-        ]
+            {"periodo": b, "natureza": "direto", "valor_rs": direto_por_bucket.get(b, 0.0)} for b in all_buckets
+        ] + [{"periodo": b, "natureza": "indireto", "valor_rs": indireto_por_bucket.get(b, 0.0)} for b in all_buckets]
         rows.sort(key=lambda row: (str(row["periodo"]), str(row["natureza"])))
         columns = [
-            {"id": "periodo",   "label": "Período",    "dtype": "str",   "role": "x"},
-            {"id": "natureza",  "label": "Natureza",   "dtype": "str",   "role": "series"},
-            {"id": "valor_rs",  "label": "Valor (R$)", "dtype": "float", "role": "value"},
+            {"id": "periodo", "label": "Período", "dtype": "str", "role": "x"},
+            {"id": "natureza", "label": "Natureza", "dtype": "str", "role": "series"},
+            {"id": "valor_rs", "label": "Valor (R$)", "dtype": "float", "role": "value"},
         ]
         return rows[:top_n], columns, "bar_stacked"
 
@@ -305,19 +426,37 @@ def resolve_cubo_projection_rows(
     if face == "categoria_componente":
         # Agrupa por {direto,indireto}.{categoria} com o mesmo breakdown de componentes.
         # Direto: células do cubo com natureza='direto' (via _iter_scaled_cubo_cells).
-        # Indireto: células do cubo com natureza='indireto' (via _iter_indireto_cubo_cells).
+        # Indireto: lido de canonical.indiretos decomposto em mao_obra/equipamento/verbas.
         aggregated_cat: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         bdi_multipliers = _build_bdi_multipliers_from_cubo(cubo)
         for celula, valor_cell in _iter_scaled_cubo_cells(canonical, cubo):
-            natureza_key = f"direto.{str(getattr(celula, 'categoria_insumo', '') or '')}"
+            natureza_key = f"direto.{str(getattr(celula, 'categoria', '') or '')}"
             agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
             aggregated_cat[natureza_key][agg_comp] += float(valor_cell)
-        # Células indiretas do cubo enriquecido (IND-* por categoria)
-        for celula, valor_cell in _iter_indireto_cubo_cells(cubo):
-            cat_prop = str(getattr(celula, "propriedade", "verbas") or "verbas")
-            cat_key  = f"indireto.{cat_prop}"
-            agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
-            aggregated_cat[cat_key][agg_comp] += float(valor_cell)
+        # Indiretos de canonical.indiretos, decompostos em mao_obra/equipamento/verbas
+        if canonical:
+            for ind in getattr(canonical, "indiretos", None) or []:
+                mao = sum(_extract_cost_from_entry(x) for x in (getattr(ind, "funcoes", None) or []))
+                eq = sum(_extract_cost_from_entry(x) for x in (getattr(ind, "equipamentos", None) or []))
+                verbas = sum(_extract_cost_from_entry(x) for x in (getattr(ind, "verbas_mensais", None) or []))
+                verbas += sum(_extract_cost_from_entry(x) for x in (getattr(ind, "verbas_fixas", None) or []))
+                verbas += sum(
+                    float(getattr(mob, "custo_total", 0.0) or 0.0) for mob in (getattr(ind, "mobilizacoes", None) or [])
+                )
+                sub = mao + eq + verbas
+                custo_total_ind = float(getattr(ind, "custo_total", 0.0) or 0.0)
+                if sub > 0.0 and custo_total_ind > 0.0:
+                    factor = custo_total_ind / sub
+                    mao *= factor
+                    eq *= factor
+                    verbas *= factor
+                elif custo_total_ind > 0.0:
+                    verbas += custo_total_ind
+                for cat_key, cat_cost in (("mao_obra", mao), ("equipamento", eq), ("verbas", verbas)):
+                    if cat_cost <= 0.0:
+                        continue
+                    for comp_name, comp_val in _split_operational_cost_with_bdi(cat_cost, bdi_multipliers).items():
+                        aggregated_cat[f"indireto.{cat_key}"][comp_name] += comp_val
         rows = [
             {"categoria": natureza_key, "componente_bdi": comp, "valor_rs": float(valor)}
             for natureza_key, comp_dict in aggregated_cat.items()
@@ -341,11 +480,16 @@ def resolve_cubo_projection_rows(
             natureza_key = f"direto.{str(getattr(celula, 'atividade_id', '') or '')}"
             agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
             aggregated_atv[natureza_key][agg_comp] += float(valor_cell)
-        # Células indiretas do cubo enriquecido
-        for celula, valor_cell in _iter_indireto_cubo_cells(cubo):
-            ind_key  = f"indireto.{str(getattr(celula, 'atividade_id', '') or '')}"
-            agg_comp = _normalize_bdi_component(str(getattr(celula, "componente_bdi", "")))
-            aggregated_atv[ind_key][agg_comp] += float(valor_cell)
+        # Indiretos de canonical.indiretos usando ind.categoria como chave
+        if canonical:
+            for ind in getattr(canonical, "indiretos", None) or []:
+                cat = str(getattr(ind, "categoria", "") or "")
+                custo_total_ind = float(getattr(ind, "custo_total", 0.0) or 0.0)
+                if not cat or custo_total_ind <= 0.0:
+                    continue
+                ind_key = f"indireto.{cat}"
+                for comp_name, comp_val in _split_operational_cost_with_bdi(custo_total_ind, bdi_multipliers).items():
+                    aggregated_atv[ind_key][comp_name] += comp_val
         rows = [
             {"atividade_id": natureza_key, "componente_bdi": comp, "valor_rs": float(valor)}
             for natureza_key, comp_dict in aggregated_atv.items()

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from concilium.application.services.concilium_service import ConciliumService
@@ -219,7 +222,20 @@ def _resolve_producao_horaria(eap_item: dict, cpu_lookup: dict, producao_lookup:
     cpu_id = eap_item.get("cpu_id", "")
     cpu = cpu_lookup.get(cpu_id, {})
     prod_id = cpu.get("producao_id_ref") or cpu.get("producao_id")
-    return float((producao_lookup.get(prod_id) or {}).get("valor_horario") or cpu.get("producao_horaria") or 0.0)
+    # Nível 1: tabela de produção (mais específica)
+    prod_entry = producao_lookup.get(prod_id) if prod_id else None
+    valor = prod_entry.get("valor_horario") if prod_entry is not None else None
+    if valor is not None:
+        return float(valor)
+    # Nível 2: campo direto na CPU
+    valor = cpu.get("producao_horaria")
+    if valor is not None:
+        return float(valor)
+    # Nível 3: ausente — 0 é fallback explícito (não valor calculado)
+    logger.debug(
+        "Produção horária não encontrada para cpu_id=%s prod_id=%s — retornando 0.0", cpu_id, prod_id
+    )
+    return 0.0
 
 
 def _build_wmp_codigo(curva: Any, policy: Any) -> str:

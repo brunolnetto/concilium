@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_ROOT = Path(__file__).resolve().parents[5]
 _TOL = 0.05
@@ -17,11 +20,23 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _norm_float(v: Any) -> float:
+def _safe_float(v: Any, default: float = 0.0) -> float:
+    """Converte v para float de forma segura, emitindo warning em caso de falha.
+
+    None é tratado como dado ausente (sem log); outros tipos não-numéricos emitem warning.
+    Substitui os padrões `float(v or 0)` e `_norm_float`/`_as_float` dispersos.
+    """
+    if v is None:
+        return default
     try:
-        return float(v or 0)
-    except Exception:
-        return 0.0
+        return float(v)
+    except (TypeError, ValueError) as e:
+        logger.warning("Conversão float falhou v=%r: %s", v, e)
+        return default
+
+
+def _norm_float(v: Any) -> float:
+    return _safe_float(v)
 
 
 def _normalize_project_token(value: str) -> str:
@@ -58,10 +73,7 @@ def _sum_dict_counter(entries: list[dict[str, Any]], key_id: str, key_qty: str) 
 
 
 def _as_float(v: Any) -> float:
-    try:
-        return float(v or 0)
-    except Exception:
-        return 0.0
+    return _safe_float(v)
 
 
 def _row_to_pe_entry(row: dict[str, Any]) -> dict[str, Any] | None:

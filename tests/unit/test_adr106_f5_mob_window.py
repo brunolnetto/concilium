@@ -170,12 +170,24 @@ class TestMobWindow:
         c_mo, c_eq = 1000.0, 500.0
 
         r2 = engine.calcular(
-            prod_weeks=10, idle_weeks=0, c_mo=c_mo, c_eq=c_eq,
-            c_comb=0, c_mat=0, c_idle_eq=c_eq, leadtime_mob_semanas=2,
+            prod_weeks=10,
+            idle_weeks=0,
+            c_mo=c_mo,
+            c_eq=c_eq,
+            c_comb=0,
+            c_mat=0,
+            c_idle_eq=c_eq,
+            leadtime_mob_semanas=2,
         )
         r4 = engine.calcular(
-            prod_weeks=10, idle_weeks=0, c_mo=c_mo, c_eq=c_eq,
-            c_comb=0, c_mat=0, c_idle_eq=c_eq, leadtime_mob_semanas=4,
+            prod_weeks=10,
+            idle_weeks=0,
+            c_mo=c_mo,
+            c_eq=c_eq,
+            c_comb=0,
+            c_mat=0,
+            c_idle_eq=c_eq,
+            leadtime_mob_semanas=4,
         )
         assert r4.mob_window == pytest.approx(r2.mob_window * 2, abs=0.01)
 

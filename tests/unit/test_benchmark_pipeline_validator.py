@@ -1,26 +1,27 @@
 """Tests for pipeline_validator.py — targets 80%+ coverage."""
+
 from __future__ import annotations
 
 import json
-import pytest
 from pathlib import Path
 
+import pytest
+
 from src.concilium.application.benchmarks.analysis.pipeline_validator import (
-    _lp_matches_name,
-    _lp_check_dir,
-    _latest_project_by_name,
-    _sum_subtotal,
-    _bet_sum_equipes_custo,
     _bet_build_indiretos,
     _bet_extract_resultado,
+    _bet_sum_equipes_custo,
     _build_etapas_from_canonical,
-    _vpi_load_etapas,
-    _vpi_partition_ref,
+    _latest_project_by_name,
+    _lp_check_dir,
+    _lp_matches_name,
+    _sum_subtotal,
     _vpi_build_checkpoints,
     _vpi_build_output,
+    _vpi_load_etapas,
+    _vpi_partition_ref,
     validate_pipeline_integrity,
 )
-
 
 # ---------------------------------------------------------------------------
 # _lp_matches_name

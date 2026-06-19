@@ -1,8 +1,24 @@
 from __future__ import annotations
+
 from typing import Any
+
 from openpyxl import Workbook
+
 from concilium.domain.models.canonical import CanonicalModel
-from ..styles import _fill, _font, _border, _align, _money, _label, _header_row, _title_row, _section_row, _set_col_widths, _auto_fit_columns, _freeze, _C
+
+from ..styles import (
+    _C,
+    _align,
+    _auto_fit_columns,
+    _border,
+    _fill,
+    _font,
+    _header_row,
+    _label,
+    _section_row,
+    _set_col_widths,
+    _title_row,
+)
 
 
 def _xl_memorial_encargos(ws: Any, row: int, memorial: Any, fills: list, NCOLS: int) -> int:
@@ -454,12 +470,26 @@ def render_memorial_catalogo(wb, canonical) -> None:
     # ── Seção 1: Parâmetros por item ─────────────────────────────────────────
     _section_row(ws, row, "1. PARÂMETROS DE CATÁLOGO — POR ITEM EAP", NCOLS)
     row += 1
-    _header_row(ws, row, [
-        "Item ID", "CPU ID", "Descrição", "Un.", "Qtd.",
-        "P_i (un/h)", "PU MO s/BDI", "PU EQ s/BDI", "PU Diesel s/BDI",
-        "PU Total s/BDI", "PU Total c/BDI", "nEq",
-        "Custo Fixo/Mês", "Perm. Efet. (m)",
-    ])
+    _header_row(
+        ws,
+        row,
+        [
+            "Item ID",
+            "CPU ID",
+            "Descrição",
+            "Un.",
+            "Qtd.",
+            "P_i (un/h)",
+            "PU MO s/BDI",
+            "PU EQ s/BDI",
+            "PU Diesel s/BDI",
+            "PU Total s/BDI",
+            "PU Total c/BDI",
+            "nEq",
+            "Custo Fixo/Mês",
+            "Perm. Efet. (m)",
+        ],
+    )
     row += 1
 
     for i, item in enumerate(eap):
@@ -491,8 +521,22 @@ def render_memorial_catalogo(wb, canonical) -> None:
             _fv(eq, "custo_fixo_mensal"),
             _fv(eq, "permanencia_efetiva_meses"),
         ]
-        fmts = [None, None, None, None, "#,##0.##", "0.0000", "#,##0.0000", "#,##0.0000",
-                "#,##0.0000", "#,##0.0000", "#,##0.0000", "0", "#,##0.00", "0.00"]
+        fmts = [
+            None,
+            None,
+            None,
+            None,
+            "#,##0.##",
+            "0.0000",
+            "#,##0.0000",
+            "#,##0.0000",
+            "#,##0.0000",
+            "#,##0.0000",
+            "#,##0.0000",
+            "0",
+            "#,##0.00",
+            "0.00",
+        ]
 
         for col, (v, fmt) in enumerate(zip(vals, fmts), 1):
             cell = ws.cell(row=row, column=col, value=v)
@@ -509,11 +553,26 @@ def render_memorial_catalogo(wb, canonical) -> None:
     # ── Seção 2: Composição de equipes (funcoes) ──────────────────────────────
     _section_row(ws, row, "2. COMPOSIÇÃO DE EQUIPES — FUNÇÕES (MÃO DE OBRA)", NCOLS)
     row += 1
-    _header_row(ws, row, [
-        "Item ID", "CPU ID", "Função ID", "Descrição", "Num. Pessoas",
-        "Custo Unit. Mensal (R$)", "Custo Total Mensal (R$)",
-        "Encargos Separados", "Cat. Sindical", "", "", "", "", "",
-    ])
+    _header_row(
+        ws,
+        row,
+        [
+            "Item ID",
+            "CPU ID",
+            "Função ID",
+            "Descrição",
+            "Num. Pessoas",
+            "Custo Unit. Mensal (R$)",
+            "Custo Total Mensal (R$)",
+            "Encargos Separados",
+            "Cat. Sindical",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ],
+    )
     row += 1
 
     for i, item in enumerate(eap):
@@ -553,11 +612,26 @@ def render_memorial_catalogo(wb, canonical) -> None:
     # ── Seção 3: Composição de equipes (equipamentos) ─────────────────────────
     _section_row(ws, row, "3. COMPOSIÇÃO DE EQUIPES — EQUIPAMENTOS", NCOLS)
     row += 1
-    _header_row(ws, row, [
-        "Item ID", "CPU ID", "Equip. ID", "Descrição", "Num. Unidades",
-        "Aluguel Mensal/Unid. (R$)", "Manutenção Mensal/Unid. (R$)", "Comb. Mensal/Unid. (R$)",
-        "Total Mensal (R$)", "", "", "", "", "",
-    ])
+    _header_row(
+        ws,
+        row,
+        [
+            "Item ID",
+            "CPU ID",
+            "Equip. ID",
+            "Descrição",
+            "Num. Unidades",
+            "Aluguel Mensal/Unid. (R$)",
+            "Manutenção Mensal/Unid. (R$)",
+            "Comb. Mensal/Unid. (R$)",
+            "Total Mensal (R$)",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ],
+    )
     row += 1
 
     for i, item in enumerate(eap):

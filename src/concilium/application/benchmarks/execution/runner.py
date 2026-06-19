@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import importlib
 import json
+import logging
 import shutil
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from concilium.application.runtime import Runtime
 
@@ -35,7 +39,7 @@ class BenchmarkRunner:
         cls,
         report_builder: BenchmarkReportBuilder | None = None,
         report_printer: BenchmarkReportPrinter | None = None,
-    ) -> "BenchmarkRunner":
+    ) -> BenchmarkRunner:
         """Constrói BenchmarkRunner a partir de concilium.infrastructure.settings.
 
         Usa CONCILIUM__CONFIG_ROOT e CONCILIUM__BENCHMARK_PROJECTS_ROOT (ou derivados).
@@ -73,6 +77,22 @@ class BenchmarkRunner:
         if store.current_version() is None:
             store.new_version()
 
+        # Sequência explícita de skills: 10-diagnostico antes de 09-relatorio para que
+        # cost_criticality_report esteja disponível quando o Excel for gerado.
+        _FULL_BENCHMARK_SKILLS = [
+            "01-escopo-e-eap",
+            "02-produtividade-climatica",
+            "03-catalogo-de-recursos",
+            "04-cronograma",
+            "05-equipes-e-alocacao",
+            "06-resultado-financeiro",
+            "10-diagnostico-criticidade",
+            "11-avaliacao-intervencoes",
+            "12-registro-decisoes",
+            "09-relatorio-e-artefatos",
+            "13-replanejamento-e-cenarios",
+        ]
+
         # Modo leve: pula skills pesadas de relatório/criticidade (usadas em campanhas de exploração)
         _skill_seq = None
         if skip_artifacts:
@@ -84,8 +104,11 @@ class BenchmarkRunner:
                 "05-equipes-e-alocacao",
                 "06-resultado-financeiro",
             ]
+        else:
+            _skill_seq = _FULL_BENCHMARK_SKILLS
         results_log = runtime.run_pipeline(
-            store, self._prepare_inputs(spec, ref_data, inference_pack),
+            store,
+            self._prepare_inputs(spec, ref_data, inference_pack),
             skill_sequence=_skill_seq,
         )
         report = self.report_builder.build(
@@ -179,9 +202,10 @@ class BenchmarkRunner:
         """
         try:
             import uuid
-            from datetime import datetime, timezone
-            from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+            from datetime import datetime
+
             from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
+            from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
 
             nep039_root = self.projects_root / ".nep039"
             nep039_root.mkdir(parents=True, exist_ok=True)
@@ -190,9 +214,7 @@ class BenchmarkRunner:
             gates = report.get("quality_gates") or {}
             decision = gates.get("decision") or "N/A"
             status = (
-                BenchmarkState.SUCESSO
-                if decision in {"APROVADO", "APROVADO_COM_RESSALVAS"}
-                else BenchmarkState.FALHA
+                BenchmarkState.SUCESSO if decision in {"APROVADO", "APROVADO_COM_RESSALVAS"} else BenchmarkState.FALHA
             )
 
             execution = BenchmarkExecution(
@@ -201,7 +223,7 @@ class BenchmarkRunner:
                 versao=1,
                 projeto_id=str(store_project.root) if store_project else "",
                 status=status,
-                executado_em=datetime.now(timezone.utc),
+                executado_em=datetime.now(UTC),
                 discrepancia_sumario={
                     "decision": decision,
                     "worst_severity": gates.get("worst_severity"),
@@ -209,8 +231,8 @@ class BenchmarkRunner:
                 },
             )
             benchmark_store.log_execution(execution)
-        except Exception:
-            pass  # Log de auditoria nunca deve quebrar o fluxo principal
+        except Exception as e:
+            logger.warning("Falha ao registrar execução no benchmark store (não bloqueia o fluxo): %s", e, exc_info=True)
 
     def _find_or_create(self, nome: str, benchmark_id: str, contexto_id: str, reset: bool):
 
@@ -227,8 +249,8 @@ class BenchmarkRunner:
                 meta = store.get_metadata(benchmark_id)
                 if meta:
                     benchmark_versao = meta.versao
-            except Exception:
-                pass  # If benchmark store fails, continue without linkage
+            except Exception as e:
+                logger.warning("Falha ao carregar metadata do benchmark store (continuando sem linkage): %s", e, exc_info=True)
 
         if self.projects_root.exists():
             for project_dir in self.projects_root.iterdir():

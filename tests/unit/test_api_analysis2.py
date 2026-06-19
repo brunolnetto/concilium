@@ -77,7 +77,7 @@ class _ErrorService(_FakeService):
 
 def _client(svc=None):
     app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: (svc or _FakeService())
+    app.dependency_overrides[get_concilium_service] = lambda: svc or _FakeService()
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -102,6 +102,7 @@ class TestCompareRoutes:
         class VESvc(_FakeService):
             def compare_versions(self, *a, **kw):
                 raise ValueError("bad")
+
         c = _client(VESvc())
         resp = c.get("/api/projects/proj-1/compare?left=v1&right=v2")
         assert resp.status_code == 400
@@ -153,6 +154,7 @@ class TestDiagnosticoPeRoute:
         class FNFSvc(_FakeService):
             def get_diagnostico_pe(self, *a, **kw):
                 raise FileNotFoundError("not found")
+
         c = _client(FNFSvc())
         resp = c.get("/api/projects/proj-1/diagnostico-pe")
         assert resp.status_code == 404
@@ -167,8 +169,7 @@ class TestCalendarioRoutes:
     def test_simulate_calendario_happy(self):
         c = _client()
         resp = c.post(
-            "/api/projects/proj-1/calendario-operacional/simular",
-            json={"fator_calendario_semanal": {"2026-W01": 0.5}}
+            "/api/projects/proj-1/calendario-operacional/simular", json={"fator_calendario_semanal": {"2026-W01": 0.5}}
         )
         assert resp.status_code == 200
 
@@ -198,6 +199,7 @@ class TestAnalysisErrorPaths:
         class FNFSvc(_FakeService):
             def compare_versions(self, *a, **kw):
                 raise FileNotFoundError("nf")
+
         c = _client(FNFSvc())
         resp = c.get("/api/projects/proj-1/compare?left=v1&right=v2")
         assert resp.status_code == 404
@@ -206,6 +208,7 @@ class TestAnalysisErrorPaths:
         class DownloadSvc(_FakeService):
             def get_artifact_bytes(self, project_id, version, kind, filename):
                 return b"data", "application/octet-stream"
+
         c = _client(DownloadSvc())
         resp = c.get("/api/projects/proj-1/artifacts/download?kind=json&filename=relatorio.json")
         assert resp.status_code == 200
@@ -214,6 +217,7 @@ class TestAnalysisErrorPaths:
         class DownloadSvc(_FakeService):
             def get_artifact_bytes(self, *a, **kw):
                 raise FileNotFoundError("no")
+
         c = _client(DownloadSvc())
         resp = c.get("/api/projects/proj-1/artifacts/download?kind=json&filename=missing.json")
         assert resp.status_code == 404
@@ -222,6 +226,7 @@ class TestAnalysisErrorPaths:
         class FNFSvc(_FakeService):
             def get_cubo_analitico(self, *a, **kw):
                 raise FileNotFoundError("no")
+
         c = _client(FNFSvc())
         resp = c.get("/api/projects/proj-1/cubo-analitico")
         assert resp.status_code == 404

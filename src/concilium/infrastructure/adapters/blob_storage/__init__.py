@@ -5,12 +5,13 @@ Public API (all backends re-exported):
     from concilium.infrastructure.adapters.blob_storage import SharePointBlobStorage
     ...
 """
-from .local import LocalBlobStorage
+
 from .azure import AzureBlobStorage
-from .sharepoint import SharePointBlobStorage, SharePointCredential, StorageConcurrencyError
-from .s3 import S3BlobStorage
-from .gdrive import GoogleDriveBlobStorage
 from .cloud import CloudBlobStorageAdapter
+from .gdrive import GoogleDriveBlobStorage
+from .local import LocalBlobStorage
+from .s3 import S3BlobStorage
+from .sharepoint import SharePointBlobStorage, SharePointCredential, StorageConcurrencyError
 
 __all__ = [
     "LocalBlobStorage",

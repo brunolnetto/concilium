@@ -18,8 +18,7 @@ Covers:
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -264,8 +263,15 @@ class TestSplitOperationalCostWithBdi:
 
 
 class TestBuildIndiretoComponentTotals:
-    def _make_ind(self, custo_total=100.0, funcoes=None, equipamentos=None, verbas_mensais=None,
-                  verbas_fixas=None, mobilizacoes=None):
+    def _make_ind(
+        self,
+        custo_total=100.0,
+        funcoes=None,
+        equipamentos=None,
+        verbas_mensais=None,
+        verbas_fixas=None,
+        mobilizacoes=None,
+    ):
         return SimpleNamespace(
             custo_total=custo_total,
             funcoes=funcoes or [],
@@ -547,9 +553,7 @@ class TestResolveCuboProjectionRows:
         cubo = _make_cubo(
             _make_celula(consumo_diesel_L=500.0, semana_iso="2026-W10"),
         )
-        _, columns, _ = resolve_cubo_projection_rows(
-            cubo, face="diesel_temporal", granularidade="mes", top_n=200
-        )
+        _, columns, _ = resolve_cubo_projection_rows(cubo, face="diesel_temporal", granularidade="mes", top_n=200)
         col_ids = {c["id"] for c in columns}
         assert col_ids == {"periodo", "atividade_id", "consumo_diesel_l"}
 
@@ -557,9 +561,7 @@ class TestResolveCuboProjectionRows:
         cubo = _make_cubo(
             _make_celula(consumo_diesel_L=0.0, semana_iso="2026-W10"),
         )
-        rows, _, _ = resolve_cubo_projection_rows(
-            cubo, face="diesel_temporal", granularidade="mes", top_n=200
-        )
+        rows, _, _ = resolve_cubo_projection_rows(cubo, face="diesel_temporal", granularidade="mes", top_n=200)
         assert rows == []
 
     def test_diesel_temporal_top_4_atividades(self):
@@ -569,9 +571,7 @@ class TestResolveCuboProjectionRows:
             for i in range(6)
         ]
         cubo = SimpleNamespace(celulas=celulas)
-        rows, _, _ = resolve_cubo_projection_rows(
-            cubo, face="diesel_temporal", granularidade="mes", top_n=200
-        )
+        rows, _, _ = resolve_cubo_projection_rows(cubo, face="diesel_temporal", granularidade="mes", top_n=200)
         atividades_in_rows = {r["atividade_id"] for r in rows}
         assert len(atividades_in_rows) <= 4
 
@@ -586,9 +586,7 @@ class TestResolveCuboProjectionRows:
 
     def test_invalid_face_raises_value_error(self):
         with pytest.raises(ValueError, match="Face de projeção não suportada"):
-            resolve_cubo_projection_rows(
-                self._cubo_stub(), face="nao_existe", granularidade="mes", top_n=200
-            )
+            resolve_cubo_projection_rows(self._cubo_stub(), face="nao_existe", granularidade="mes", top_n=200)
 
     # -- tempo_natureza (patched SCurveBuilder) ---------------------------
 
@@ -599,9 +597,7 @@ class TestResolveCuboProjectionRows:
             custo_indireto_semana=20.0,
         )
         s_curve_mock = SimpleNamespace(agregacao_semanal=[agg])
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSCurveBuilder:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSCurveBuilder:
             MockSCurveBuilder.return_value.build.return_value = s_curve_mock
             rows, columns, chart_hint = resolve_cubo_projection_rows(
                 _make_cubo(),
@@ -621,9 +617,7 @@ class TestResolveCuboProjectionRows:
         agg1 = SimpleNamespace(semana_iso="2026-W10", custo_direto_semana=50.0, custo_indireto_semana=10.0)
         agg2 = SimpleNamespace(semana_iso="2026-W11", custo_direto_semana=30.0, custo_indireto_semana=5.0)
         s_curve_mock = SimpleNamespace(agregacao_semanal=[agg1, agg2])
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSCurveBuilder:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSCurveBuilder:
             MockSCurveBuilder.return_value.build.return_value = s_curve_mock
             rows, _, _ = resolve_cubo_projection_rows(
                 _make_cubo(),
@@ -662,21 +656,24 @@ class TestResolveAbcCurvaRows:
         return SimpleNamespace(itens=items)
 
     def test_rows_contain_expected_keys(self):
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = self._make_curva(5)
             rows, columns, chart_hint, unit_type, operator_meta = resolve_abc_curva_rows(
                 SimpleNamespace(), top_n=200, threshold_a=0.80, threshold_b=0.95
             )
-        required_keys = {"insumo_id", "descricao", "categoria", "custo_total_rs", "pct_custo",
-                         "pct_custo_acumulado", "classe_abc"}
+        required_keys = {
+            "insumo_id",
+            "descricao",
+            "categoria",
+            "custo_total_rs",
+            "pct_custo",
+            "pct_custo_acumulado",
+            "classe_abc",
+        }
         assert all(required_keys.issubset(r.keys()) for r in rows)
 
     def test_chart_hint_is_bar(self):
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = self._make_curva(3)
             _, _, chart_hint, _, _ = resolve_abc_curva_rows(
                 SimpleNamespace(), top_n=200, threshold_a=0.80, threshold_b=0.95
@@ -684,9 +681,7 @@ class TestResolveAbcCurvaRows:
         assert chart_hint == "bar"
 
     def test_unit_type_is_currency_brl(self):
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = self._make_curva(3)
             _, _, _, unit_type, _ = resolve_abc_curva_rows(
                 SimpleNamespace(), top_n=200, threshold_a=0.80, threshold_b=0.95
@@ -694,9 +689,7 @@ class TestResolveAbcCurvaRows:
         assert unit_type == "currency_brl"
 
     def test_operator_meta_keys(self):
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = self._make_curva(5)
             _, _, _, _, operator_meta = resolve_abc_curva_rows(
                 SimpleNamespace(), top_n=200, threshold_a=0.80, threshold_b=0.95
@@ -707,31 +700,21 @@ class TestResolveAbcCurvaRows:
 
     def test_class_abc_classification(self):
         """Items below threshold_a are A, between A and B are B, else C."""
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = self._make_curva(10)
-            rows, _, _, _, _ = resolve_abc_curva_rows(
-                SimpleNamespace(), top_n=200, threshold_a=50.0, threshold_b=90.0
-            )
+            rows, _, _, _, _ = resolve_abc_curva_rows(SimpleNamespace(), top_n=200, threshold_a=50.0, threshold_b=90.0)
         classes = {r["classe_abc"] for r in rows}
         assert "A" in classes
         assert "C" in classes
 
     def test_top_n_limits_rows(self):
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = self._make_curva(10)
-            rows, _, _, _, _ = resolve_abc_curva_rows(
-                SimpleNamespace(), top_n=3, threshold_a=0.80, threshold_b=0.95
-            )
+            rows, _, _, _, _ = resolve_abc_curva_rows(SimpleNamespace(), top_n=3, threshold_a=0.80, threshold_b=0.95)
         assert len(rows) <= 3
 
     def test_class_counts_in_operator_meta(self):
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = self._make_curva(10)
             _, _, _, _, operator_meta = resolve_abc_curva_rows(
                 SimpleNamespace(), top_n=200, threshold_a=50.0, threshold_b=80.0
@@ -758,50 +741,38 @@ class TestResolveSCurveRows:
         )
 
     def test_row_keys(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve()
             rows, _, _, _, _ = resolve_s_curve_rows(SimpleNamespace(), "mes", top_n=200)
         required = {"periodo", "custo_semanal_rs", "custo_acumulado_rs", "pct_acumulado"}
         assert all(required.issubset(r.keys()) for r in rows)
 
     def test_chart_hint_line(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve()
             _, _, chart_hint, _, _ = resolve_s_curve_rows(SimpleNamespace(), "mes", top_n=200)
         assert chart_hint == "line"
 
     def test_unit_type_currency_brl(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve()
             _, _, _, unit_type, _ = resolve_s_curve_rows(SimpleNamespace(), "mes", top_n=200)
         assert unit_type == "currency_brl"
 
     def test_operator_meta_has_total(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve(total=999.0)
             _, _, _, _, operator_meta = resolve_s_curve_rows(SimpleNamespace(), "mes", top_n=200)
         assert operator_meta["total_projeto_rs"] == 999.0
 
     def test_pct_acumulado_zero_when_total_zero(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve(total=0.0)
             rows, _, _, _, _ = resolve_s_curve_rows(SimpleNamespace(), "mes", top_n=200)
         assert all(r["pct_acumulado"] == 0.0 for r in rows)
 
     def test_custo_acumulado_monotonically_increasing(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             # Weeks across two different months so we get multiple rows
             sc = SimpleNamespace(
                 semanas_iso=["2026-W05", "2026-W06", "2026-W09", "2026-W10"],
@@ -815,9 +786,7 @@ class TestResolveSCurveRows:
         assert acumulados == sorted(acumulados)
 
     def test_top_n_limits_rows(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             # 6 weeks across 3 months
             sc = SimpleNamespace(
                 semanas_iso=[f"2026-W{w:02d}" for w in range(5, 11)],
@@ -836,8 +805,9 @@ class TestResolveSCurveRows:
 
 
 class TestResolveRecursosAtivosRows:
-    def _make_agg(self, semana_iso: str, n_equipes: float = 5.0, n_equip_unicos: float = 3.0,
-                  equip_ativos: dict | None = None):
+    def _make_agg(
+        self, semana_iso: str, n_equipes: float = 5.0, n_equip_unicos: float = 3.0, equip_ativos: dict | None = None
+    ):
         return SimpleNamespace(
             semana_iso=semana_iso,
             n_equipes_totais=n_equipes,
@@ -855,34 +825,26 @@ class TestResolveRecursosAtivosRows:
         )
 
     def test_row_keys(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve()
             rows, _, _, _, _ = resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
         required = {"periodo", "n_equipes_totais", "n_equipamentos_unicos", "equipamentos_unidades_ativas"}
         assert all(required.issubset(r.keys()) for r in rows)
 
     def test_chart_hint_line(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve()
             _, _, chart_hint, _, _ = resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
         assert chart_hint == "line"
 
     def test_unit_type_is_count(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve()
             _, _, _, unit_type, _ = resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
         assert unit_type == "count"
 
     def test_operator_meta_keys(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve()
             _, _, _, _, operator_meta = resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
         assert "aggregation_rule" in operator_meta
@@ -898,17 +860,13 @@ class TestResolveRecursosAtivosRows:
             total_projeto=0.0,
             agregacao_semanal=[agg1, agg2],
         )
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = sc
             rows, _, _, _, _ = resolve_recursos_ativos_rows(SimpleNamespace(), "mes", top_n=200)
         assert rows[0]["n_equipamentos_unicos"] == 7
 
     def test_top_n_limits_rows(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._make_s_curve(n_weeks=6)
             rows, _, _, _, _ = resolve_recursos_ativos_rows(SimpleNamespace(), "semana", top_n=2)
         assert len(rows) <= 2
@@ -955,9 +913,7 @@ class TestBuildCubeProjectionPayload:
                 )
             ]
         )
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = curva
             payload = build_cube_projection_payload(
                 canonical=SimpleNamespace(),
@@ -973,9 +929,7 @@ class TestBuildCubeProjectionPayload:
     # -- s_curve_custo branch ----------------------------------------------
 
     def test_s_curve_custo_payload_keys(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._simple_s_curve()
             payload = build_cube_projection_payload(
                 canonical=SimpleNamespace(),
@@ -990,9 +944,7 @@ class TestBuildCubeProjectionPayload:
     # -- recursos_ativos_tempo branch -------------------------------------
 
     def test_recursos_ativos_tempo_payload_keys(self):
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = self._simple_s_curve()
             payload = build_cube_projection_payload(
                 canonical=SimpleNamespace(),
@@ -1062,9 +1014,7 @@ class TestBuildCubeProjectionPayload:
             custo_indireto_semana=20.0,
         )
         sc = SimpleNamespace(agregacao_semanal=[agg])
-        with patch(
-            "concilium.domain.services.analytics.s_curve_builder.SCurveBuilder"
-        ) as MockSC:
+        with patch("concilium.domain.services.analytics.s_curve_builder.SCurveBuilder") as MockSC:
             MockSC.return_value.build.return_value = sc
             payload = build_cube_projection_payload(
                 canonical=SimpleNamespace(),
@@ -1080,9 +1030,7 @@ class TestBuildCubeProjectionPayload:
 
     def test_abc_curva_custom_thresholds(self):
         curva = SimpleNamespace(itens=[])
-        with patch(
-            "concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder"
-        ) as MockABC:
+        with patch("concilium.domain.services.analytics.curva_abc_builder.CurvaABCBuilder") as MockABC:
             MockABC.return_value.build.return_value = curva
             payload = build_cube_projection_payload(
                 canonical=SimpleNamespace(),

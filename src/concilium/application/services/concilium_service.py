@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+logger = logging.getLogger(__name__)
+
 from concilium.application.benchmarks.execution.batch import discover_benchmark_slugs
 from concilium.application.runtime import Runtime
+from concilium.application.services.pipeline_service import PipelineService
 from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.project.override_service import OverrideService
-from concilium.application.services.pipeline_service import PipelineService
 from concilium.application.services.project.project_input_builder import ProjectInputBuilder
 from concilium.application.services.project.project_repository import ProjectRepository
 from concilium.application.services.project.project_service import ProjectService
@@ -125,7 +128,8 @@ class ConciliumService:
         for cid in cats:
             try:
                 self._search_catalog_in(cid, q_lower, results, limit)
-            except Exception:
+            except Exception as e:
+                logger.warning("Falha ao buscar no catálogo %s: %s", cid, e, exc_info=True)
                 continue
             if len(results) >= limit:
                 break
@@ -167,7 +171,8 @@ class ConciliumService:
         for catalog_id in self._candidate_catalog_ids(project):
             try:
                 master_cpu = self.get_catalog_cpu(catalog_id, cpu_id)
-            except Exception:
+            except Exception as e:
+                logger.error("Falha ao resolver CPU %s no catálogo %s: %s", cpu_id, catalog_id, e, exc_info=True)
                 master_cpu = None
             if master_cpu:
                 break
@@ -255,7 +260,8 @@ class ConciliumService:
 
         try:
             versions = self._dependencies.project_service.list_contexto_versions(contexto_id)
-        except Exception:
+        except Exception as e:
+            logger.error("Falha ao listar versões do contexto %s: %s", contexto_id, e, exc_info=True)
             versions = []
         if not versions:
             return contexto_id
@@ -564,8 +570,10 @@ class ConciliumService:
         simulado: list[dict[str, Any]] = []
         for row in base.get("semanas", []):
             semana = str(row.get("semana_iso", ""))
-            fator_clima = float(row.get("fator_clima", 1.0) or 1.0)
-            fator_cal = float(overrides.get(semana, row.get("fator_calendario", 1.0)) or 1.0)
+            _fc = row.get("fator_clima")
+            fator_clima = float(_fc if _fc is not None else 1.0)
+            _fk_raw = overrides.get(semana, row.get("fator_calendario"))
+            fator_cal = float(_fk_raw if _fk_raw is not None else 1.0)
             simulado.append(
                 {
                     **row,

@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -21,18 +19,19 @@ from concilium.application.runtime.deliverables.side_effects import (
     _load_output_image_bytes,
     _persist_typed_artifacts,
     _save_memorial_bdi_files,
-    _save_relatorio_graficos_files,
     _save_relatorio_files,
+    _save_relatorio_graficos_files,
 )
-
 
 # ---------------------------------------------------------------------------
 # _json_default
 # ---------------------------------------------------------------------------
 
+
 class TestJsonDefault:
     def test_uuid_converts_to_string(self):
         import uuid
+
         u = uuid.UUID("12345678-1234-5678-1234-567812345678")
         result = _json_default(u)
         assert result == "12345678-1234-5678-1234-567812345678"
@@ -43,6 +42,7 @@ class TestJsonDefault:
 
     def test_used_in_json_dumps_with_uuid(self):
         import uuid
+
         u = uuid.UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
         out = json.dumps({"id": u}, default=_json_default)
         assert "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" in out
@@ -51,6 +51,7 @@ class TestJsonDefault:
 # ---------------------------------------------------------------------------
 # _ingest_insumos
 # ---------------------------------------------------------------------------
+
 
 class TestIngestInsumos:
     def test_list_extends(self):
@@ -78,6 +79,7 @@ class TestIngestInsumos:
 # _load_insumos_subdir
 # ---------------------------------------------------------------------------
 
+
 class TestLoadInsumosSubdir:
     def test_loads_json_files(self, tmp_path):
         f = tmp_path / "item.json"
@@ -103,6 +105,7 @@ class TestLoadInsumosSubdir:
 # _dedup_insumos
 # ---------------------------------------------------------------------------
 
+
 class TestDedupInsumos:
     def test_deduplicates_by_id(self):
         items = [{"id": "x", "v": 1}, {"id": "x", "v": 2}, {"id": "y", "v": 3}]
@@ -124,6 +127,7 @@ class TestDedupInsumos:
 # ---------------------------------------------------------------------------
 # _append_png_gallery
 # ---------------------------------------------------------------------------
+
 
 class TestAppendPngGallery:
     def test_empty_list_returns_unchanged(self):
@@ -154,6 +158,7 @@ class TestAppendPngGallery:
 # _load_output_image_bytes
 # ---------------------------------------------------------------------------
 
+
 class TestLoadOutputImageBytes:
     def test_returns_bytes_on_success(self):
         project = MagicMock()
@@ -179,6 +184,7 @@ class TestLoadOutputImageBytes:
 # _save_memorial_bdi_files
 # ---------------------------------------------------------------------------
 
+
 class TestSaveMemorialBdiFiles:
     def test_no_memorial_returns_early(self):
         result = SimpleNamespace(memorial_bdi_json=None)
@@ -200,9 +206,7 @@ class TestSaveMemorialBdiFiles:
             return_value="# Markdown",
         ):
             _save_memorial_bdi_files(result, project, "v1", gerar_md=False, gerar_pdf=False)
-        project.save_intermediate_file.assert_called_once_with(
-            "memorial_bdi.json", memorial_bytes, "v1"
-        )
+        project.save_intermediate_file.assert_called_once_with("memorial_bdi.json", memorial_bytes, "v1")
 
     def test_saves_md_when_gerar_md_true(self):
         memorial_dict = {"meta": {"projeto": "Proj"}, "itens": []}
@@ -224,12 +228,15 @@ class TestSaveMemorialBdiFiles:
         result = SimpleNamespace(memorial_bdi_json=memorial_bytes)
         project = MagicMock()
         project.load_output_file.return_value = b"PNG"
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects.render_memorial_bdi_markdown",
-            return_value="# MD",
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects.render_markdown_pdf",
-            return_value=b"%PDF",
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_memorial_bdi_markdown",
+                return_value="# MD",
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_markdown_pdf",
+                return_value=b"%PDF",
+            ),
         ):
             _save_memorial_bdi_files(result, project, "v1", gerar_md=False, gerar_pdf=True)
         # pdf save_output_file should have been called with the pdf bytes
@@ -241,12 +248,15 @@ class TestSaveMemorialBdiFiles:
         memorial_bytes = json.dumps(memorial_dict).encode("utf-8")
         result = SimpleNamespace(memorial_bdi_json=memorial_bytes)
         project = MagicMock()
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects.render_memorial_bdi_markdown",
-            return_value="# MD",
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects.render_markdown_pdf",
-            return_value=None,
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_memorial_bdi_markdown",
+                return_value="# MD",
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_markdown_pdf",
+                return_value=None,
+            ),
         ):
             _save_memorial_bdi_files(result, project, "v1", gerar_md=False, gerar_pdf=True)
         # save_output_file should not be called (no pdf bytes)
@@ -263,11 +273,10 @@ class TestSaveMemorialBdiFiles:
 # _save_relatorio_graficos_files
 # ---------------------------------------------------------------------------
 
+
 class TestSaveRelatorioGraficosFiles:
     def test_returns_empty_when_gerar_md_and_gerar_pdf_both_false(self):
-        result = _save_relatorio_graficos_files(
-            {}, None, MagicMock(), "v1", gerar_md=False, gerar_pdf=False
-        )
+        result = _save_relatorio_graficos_files({}, None, MagicMock(), "v1", gerar_md=False, gerar_pdf=False)
         assert result == []
 
     def test_returns_empty_when_gerar_pngs_false(self):
@@ -277,9 +286,7 @@ class TestSaveRelatorioGraficosFiles:
         assert result == []
 
     def test_returns_empty_when_no_graficos_and_no_canonical(self):
-        result = _save_relatorio_graficos_files(
-            {}, None, MagicMock(), "v1", gerar_md=True, gerar_pdf=False
-        )
+        result = _save_relatorio_graficos_files({}, None, MagicMock(), "v1", gerar_md=True, gerar_pdf=False)
         assert result == []
 
     def test_saves_pngs_and_returns_sorted_filenames(self):
@@ -289,9 +296,7 @@ class TestSaveRelatorioGraficosFiles:
             "concilium.application.runtime.deliverables.side_effects.build_visualization_png_files",
             return_value={"b.png": b"PNG_B", "a.png": b"PNG_A"},
         ):
-            result = _save_relatorio_graficos_files(
-                rel_dict, None, project, "v1", gerar_md=True, gerar_pdf=False
-            )
+            result = _save_relatorio_graficos_files(rel_dict, None, project, "v1", gerar_md=True, gerar_pdf=False)
         assert result == ["a.png", "b.png"]
         # Both files saved
         assert project.save_output_file.call_count == 2
@@ -302,9 +307,7 @@ class TestSaveRelatorioGraficosFiles:
             "concilium.application.runtime.deliverables.side_effects.build_visualization_png_files",
             side_effect=RuntimeError("render failed"),
         ):
-            result = _save_relatorio_graficos_files(
-                rel_dict, None, MagicMock(), "v1", gerar_md=True, gerar_pdf=False
-            )
+            result = _save_relatorio_graficos_files(rel_dict, None, MagicMock(), "v1", gerar_md=True, gerar_pdf=False)
         assert result == []
 
     def test_returns_empty_when_build_returns_empty(self):
@@ -313,9 +316,7 @@ class TestSaveRelatorioGraficosFiles:
             "concilium.application.runtime.deliverables.side_effects.build_visualization_png_files",
             return_value={},
         ):
-            result = _save_relatorio_graficos_files(
-                rel_dict, None, MagicMock(), "v1", gerar_md=True, gerar_pdf=False
-            )
+            result = _save_relatorio_graficos_files(rel_dict, None, MagicMock(), "v1", gerar_md=True, gerar_pdf=False)
         assert result == []
 
     def test_uses_canonical_when_provided(self):
@@ -325,15 +326,14 @@ class TestSaveRelatorioGraficosFiles:
             "concilium.application.runtime.deliverables.side_effects.build_visualization_png_files",
             return_value={"c.png": b"data"},
         ) as mock_build:
-            _save_relatorio_graficos_files(
-                {}, canonical, project, "v1", gerar_md=True, gerar_pdf=False
-            )
+            _save_relatorio_graficos_files({}, canonical, project, "v1", gerar_md=True, gerar_pdf=False)
             mock_build.assert_called_once_with({}, canonical=canonical)
 
 
 # ---------------------------------------------------------------------------
 # _handle_skill_09_side_effects
 # ---------------------------------------------------------------------------
+
 
 class TestHandleSkill09SideEffects:
     def _make_result(self, **kwargs):
@@ -349,24 +349,20 @@ class TestHandleSkill09SideEffects:
         result = self._make_result(excel_bytes=b"XLSX")
         project = MagicMock()
         outputs_cfg = {"resultado_xlsx": True}
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_files"
+        with (
+            patch("concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"),
+            patch("concilium.application.runtime.deliverables.side_effects._save_relatorio_files"),
         ):
             _handle_skill_09_side_effects(result, project, "v1", outputs_cfg)
-        project.save_output_file.assert_called_once_with(
-            b"XLSX", "v1", "resultado_planejamento.xlsx"
-        )
+        project.save_output_file.assert_called_once_with(b"XLSX", "v1", "resultado_planejamento.xlsx")
 
     def test_does_not_save_xlsx_when_flag_false(self):
         result = self._make_result(excel_bytes=b"XLSX")
         project = MagicMock()
         outputs_cfg = {"resultado_xlsx": False}
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_files"
+        with (
+            patch("concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"),
+            patch("concilium.application.runtime.deliverables.side_effects._save_relatorio_files"),
         ):
             _handle_skill_09_side_effects(result, project, "v1", outputs_cfg)
         project.save_output_file.assert_not_called()
@@ -375,10 +371,9 @@ class TestHandleSkill09SideEffects:
         result = self._make_result(excel_bytes=None)
         project = MagicMock()
         outputs_cfg = {"resultado_xlsx": True}
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_files"
+        with (
+            patch("concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"),
+            patch("concilium.application.runtime.deliverables.side_effects._save_relatorio_files"),
         ):
             _handle_skill_09_side_effects(result, project, "v1", outputs_cfg)
         project.save_output_file.assert_not_called()
@@ -387,10 +382,9 @@ class TestHandleSkill09SideEffects:
         relatorio = {"meta": {"projeto": "Test"}, "custos": {}}
         result = self._make_result(relatorio=relatorio)
         project = MagicMock()
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_files"
+        with (
+            patch("concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"),
+            patch("concilium.application.runtime.deliverables.side_effects._save_relatorio_files"),
         ):
             _handle_skill_09_side_effects(result, project, "v1", {})
         project.save_intermediate_file.assert_called_once()
@@ -400,10 +394,9 @@ class TestHandleSkill09SideEffects:
     def test_no_relatorio_json_saved_when_none(self):
         result = self._make_result(relatorio=None)
         project = MagicMock()
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_files"
+        with (
+            patch("concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"),
+            patch("concilium.application.runtime.deliverables.side_effects._save_relatorio_files"),
         ):
             _handle_skill_09_side_effects(result, project, "v1", {})
         project.save_intermediate_file.assert_not_called()
@@ -413,10 +406,9 @@ class TestHandleSkill09SideEffects:
         project = MagicMock()
         # Should use cronograma_xlsx if resultado_xlsx not present
         outputs_cfg = {"cronograma_xlsx": True}
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_files"
+        with (
+            patch("concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"),
+            patch("concilium.application.runtime.deliverables.side_effects._save_relatorio_files"),
         ):
             _handle_skill_09_side_effects(result, project, "v1", outputs_cfg)
         project.save_output_file.assert_called_once()
@@ -424,10 +416,9 @@ class TestHandleSkill09SideEffects:
     def test_defaults_xlsx_to_true_when_key_absent(self):
         result = self._make_result(excel_bytes=b"XLSX")
         project = MagicMock()
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_files"
+        with (
+            patch("concilium.application.runtime.deliverables.side_effects._save_memorial_bdi_files"),
+            patch("concilium.application.runtime.deliverables.side_effects._save_relatorio_files"),
         ):
             _handle_skill_09_side_effects(result, project, "v1", {})
         project.save_output_file.assert_called_once()
@@ -436,6 +427,7 @@ class TestHandleSkill09SideEffects:
 # ---------------------------------------------------------------------------
 # _handle_skill_04_side_effects
 # ---------------------------------------------------------------------------
+
 
 class TestHandleSkill04SideEffects:
     def test_no_op_when_cronograma_none(self):
@@ -485,6 +477,7 @@ class TestHandleSkill04SideEffects:
 
     def test_saves_schedules_with_dates(self):
         from datetime import date
+
         sa = SimpleNamespace(
             activity_id="act-02",
             start_week=5,
@@ -514,6 +507,7 @@ class TestHandleSkill04SideEffects:
 # ---------------------------------------------------------------------------
 # _persist_typed_artifacts
 # ---------------------------------------------------------------------------
+
 
 class TestPersistTypedArtifacts:
     def test_no_op_when_artifacts_none(self):
@@ -546,11 +540,7 @@ class TestPersistTypedArtifacts:
 
         with patch.dict(
             "sys.modules",
-            {
-                "concilium.infrastructure.storage.artifact_store": MagicMock(
-                    FileSystemArtifactStore=mock_store_cls
-                )
-            },
+            {"concilium.infrastructure.storage.artifact_store": MagicMock(FileSystemArtifactStore=mock_store_cls)},
         ):
             # We need the actual write_text to work, so set up real path
             mock_store.root = artifacts_dir
@@ -576,11 +566,7 @@ class TestPersistTypedArtifacts:
 
         with patch.dict(
             "sys.modules",
-            {
-                "concilium.infrastructure.storage.artifact_store": MagicMock(
-                    FileSystemArtifactStore=mock_store_cls
-                )
-            },
+            {"concilium.infrastructure.storage.artifact_store": MagicMock(FileSystemArtifactStore=mock_store_cls)},
         ):
             mock_store.root = artifacts_dir
             _persist_typed_artifacts(result, project, "v1")
@@ -602,6 +588,7 @@ class TestPersistTypedArtifacts:
 # _save_relatorio_files
 # ---------------------------------------------------------------------------
 
+
 class TestSaveRelatorioFiles:
     def test_no_op_when_no_relatorio(self):
         result = SimpleNamespace(relatorio=None)
@@ -620,15 +607,19 @@ class TestSaveRelatorioFiles:
         project = MagicMock()
         project.load_canonical.side_effect = FileNotFoundError
 
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
-            return_value="# Relatorio",
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
-            return_value=[],
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects.render_resumo_executivo",
-            return_value="# Resumo",
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
+                return_value="# Relatorio",
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
+                return_value=[],
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_resumo_executivo",
+                return_value="# Resumo",
+            ),
         ):
             _save_relatorio_files(result, project, "v1", gerar_md=True, gerar_pdf=False)
 
@@ -641,15 +632,19 @@ class TestSaveRelatorioFiles:
         project = MagicMock()
         project.load_canonical.side_effect = FileNotFoundError
 
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
-            return_value="# Relatorio",
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
-            return_value=[],
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects.render_financial_report_pdf",
-            return_value=b"%PDF",
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
+                return_value="# Relatorio",
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
+                return_value=[],
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_financial_report_pdf",
+                return_value=b"%PDF",
+            ),
         ):
             _save_relatorio_files(result, project, "v1", gerar_md=False, gerar_pdf=True)
 
@@ -662,15 +657,19 @@ class TestSaveRelatorioFiles:
         result = SimpleNamespace(relatorio={"meta": {}}, canonical=canonical)
         project = MagicMock()
 
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
-            return_value="# MD",
-        ) as mock_render, patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
-            return_value=[],
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects.render_resumo_executivo",
-            return_value="# Resumo",
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
+                return_value="# MD",
+            ) as mock_render,
+            patch(
+                "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
+                return_value=[],
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_resumo_executivo",
+                return_value="# Resumo",
+            ),
         ):
             _save_relatorio_files(result, project, "v1", gerar_md=True, gerar_pdf=False)
 
@@ -683,15 +682,19 @@ class TestSaveRelatorioFiles:
         project = MagicMock()
         project.load_canonical.return_value = canonical
 
-        with patch(
-            "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
-            return_value="# MD",
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
-            return_value=[],
-        ), patch(
-            "concilium.application.runtime.deliverables.side_effects.render_resumo_executivo",
-            return_value="# Resumo",
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
+                return_value="# MD",
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
+                return_value=[],
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_resumo_executivo",
+                return_value="# Resumo",
+            ),
         ):
             _save_relatorio_files(result, project, "v1", gerar_md=True, gerar_pdf=False)
 

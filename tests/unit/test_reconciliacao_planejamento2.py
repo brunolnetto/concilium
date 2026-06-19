@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,24 +11,29 @@ import pytest
 class TestParseValor:
     def test_none_returns_zero(self):
         from concilium.application.benchmarks.reconciliacao_planejamento import _parse_valor
+
         assert _parse_valor(None) == 0.0
 
     def test_empty_string(self):
         from concilium.application.benchmarks.reconciliacao_planejamento import _parse_valor
+
         assert _parse_valor("") == 0.0
 
     def test_pt_number(self):
         from concilium.application.benchmarks.reconciliacao_planejamento import _parse_valor
+
         assert _parse_valor("1.234,56") == pytest.approx(1234.56)
 
     def test_invalid(self):
         from concilium.application.benchmarks.reconciliacao_planejamento import _parse_valor
+
         assert _parse_valor("abc") == 0.0
 
 
 class TestDisparityAnalysis:
     def test_empty(self):
         from concilium.application.benchmarks.reconciliacao_planejamento import DisparityAnalysis
+
         a = DisparityAnalysis()
         assert a.total_canonical_direto == 0.0
         assert a.disparidades == []
@@ -42,6 +45,7 @@ class TestGerarRelatorio:
             DisparityAnalysis,
             gerar_relatorio_reconciliacao,
         )
+
         analise = DisparityAnalysis()
         analise.disparidades = [
             {
@@ -65,6 +69,7 @@ class TestGerarRelatorio:
             DisparityAnalysis,
             gerar_relatorio_reconciliacao,
         )
+
         result = gerar_relatorio_reconciliacao(DisparityAnalysis())
         assert isinstance(result, str)
 
@@ -81,16 +86,24 @@ class TestReconciliadorPlanejamento:
             DisparityAnalysis,
             ReconciliadorPlanejamento,
         )
+
         canonical = self._make_canonical()
         reconciliador = ReconciliadorPlanejamento(canonical, Path("x.txt"))
 
         # Build analise manually to test _identificar_disparidades
         from concilium.application.benchmarks.reconciliacao_planejamento import CustoPlanejamento
+
         analise = DisparityAnalysis()
-        analise.planejamento = {"2.1": CustoPlanejamento(
-            item_id="2.1", descricao="Item", unidade="m³",
-            quantidade=100.0, total_sem_bdi=1000.0, total_com_bdi=1200.0
-        )}
+        analise.planejamento = {
+            "2.1": CustoPlanejamento(
+                item_id="2.1",
+                descricao="Item",
+                unidade="m³",
+                quantidade=100.0,
+                total_sem_bdi=1000.0,
+                total_com_bdi=1200.0,
+            )
+        }
         analise.canonical_direto = {}  # no canonical → NAO_EXECUTADO
 
         reconciliador._identificar_disparidades(analise)
@@ -101,6 +114,7 @@ class TestReconciliadorPlanejamento:
             DisparityAnalysis,
             ReconciliadorPlanejamento,
         )
+
         canonical = self._make_canonical()
         reconciliador = ReconciliadorPlanejamento(canonical, Path("x.txt"))
 
@@ -113,18 +127,25 @@ class TestReconciliadorPlanejamento:
 
     def test_identificar_disparidades_delta(self):
         from concilium.application.benchmarks.reconciliacao_planejamento import (
+            CustoPlanejamento,
             DisparityAnalysis,
             ReconciliadorPlanejamento,
-            CustoPlanejamento,
         )
+
         canonical = self._make_canonical()
         reconciliador = ReconciliadorPlanejamento(canonical, Path("x.txt"))
 
         analise = DisparityAnalysis()
-        analise.planejamento = {"2.1": CustoPlanejamento(
-            item_id="2.1", descricao="Item", unidade="m³",
-            quantidade=100.0, total_sem_bdi=1000.0, total_com_bdi=1200.0
-        )}
+        analise.planejamento = {
+            "2.1": CustoPlanejamento(
+                item_id="2.1",
+                descricao="Item",
+                unidade="m³",
+                quantidade=100.0,
+                total_sem_bdi=1000.0,
+                total_com_bdi=1200.0,
+            )
+        }
         analise.canonical_direto = {"2.1": 1200.0}  # delta = 200 > 1
 
         reconciliador._identificar_disparidades(analise)
@@ -136,6 +157,7 @@ class TestReconciliadorPlanejamento:
             DisparityAnalysis,
             ReconciliadorPlanejamento,
         )
+
         canonical = MagicMock()
         canonical.equipes_diretas = []
         canonical.resultado.custo.indireto_adm = 10000.0

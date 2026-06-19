@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -195,6 +193,7 @@ class TestRunCommand:
     def test_run_runtime_error_exits_1(self):
         project, ps, _ = self._project()
         from concilium.application.runtime import RuntimeError as ConciliumRuntimeError
+
         coordinator_mock = MagicMock()
         coordinator_mock.avancar_plano.side_effect = ConciliumRuntimeError("runtime failed")
 

@@ -1,0 +1,58 @@
+Descrição	Código	Quant Hrs/mês (R$)	Valor de Aquisição (R$)	Valor Loc. Comercial (R$)	Depreciação (R$/h)	Oportunidade de Capital (R$/h)	Seguros e Impostos (R$/h)	Manutenção (R$/h)	Mat. De Desgastes (R$/hr)	Operação (R$/h)	Mão de Obra de Operação (R$/h)	Custo Produtivo (R$/h)	Custo Improdutivo (R$/h)	Combustível	"Valor
+(R$/l)"	"Consumo
+(l/h)"
+Betoneira com motor a gasolina com capacidade de 600 l - 10 kW	E0001	200		R$ 600,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$3,00 	R$ 0,00	 R$3,00 	R$ 0,00	Gasolina	R$ 7,25	2,00
+Caminhão basculante 14 m³	E0002	200		R$ 22.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$110,00 	R$ 0,00	 R$110,00 	R$ 0,00	Diesel S10	R$ 7,00	2,50
+Caminhão basculante 16 m³	E0003	200		R$ 35.990,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$179,95 	R$ 0,00	 R$179,95 	R$ 0,00	Diesel S10	R$ 7,00	3,00
+Caminhão basculante 14 m³ - rochas	E0004	200		R$ 25.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$125,00 	R$ 0,00	 R$125,00 	R$ 0,00	Diesel S10	R$ 7,00	3,00
+Caminhão basculante 20 m³	E0005	200		R$ 35.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$175,00 	R$ 0,00	 R$175,00 	R$ 0,00	Diesel S10	R$ 7,00	3,50
+Caminhão carroceria	E0006	200		R$ 6.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$30,00 	R$ 0,00	 R$30,00 	R$ 0,00	Diesel S10	R$ 7,00	5,00
+Caminhão carroceria com guindauto	E0007	200		R$ 30.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$150,00 		 R$150,00 	R$ 0,00	Diesel S10	R$ 7,00	4,00
+Caminhão comboio	E0008	200		R$ 25.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$125,00 		 R$125,00 	R$ 0,00	Diesel S10	R$ 7,00	4,00
+Caminhão prancha	E0009	200		R$ 35.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$175,00 		 R$175,00 	R$ 0,00	Diesel S10	R$ 7,00	7,00
+Caminhão munck 23T	E0010	200		R$ 35.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$175,00 		 R$175,00 	R$ 0,00	Diesel S10	R$ 7,00	6,00
+Caminhão munck 45T	E0011	200		R$ 35.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$175,00 		 R$175,00 	R$ 0,00	Diesel S10	R$ 7,00	6,00
+Caminhão Pipa 10.000 l 	E0012	200		R$ 20.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$100,00 	R$ 0,00	 R$100,00 	R$ 0,00	Diesel S10	R$ 7,00	7,00
+Caminhão Pipa 18.000 l	E0013	200		R$ 30.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$150,00 	R$ 0,00	 R$150,00 	R$ 0,00	Diesel S10	R$ 7,00	7,00
+Escavadeira hidráulica sobre esteira 22T	E0014	200		R$ 48.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$240,00 	R$ 0,00	 R$240,00 	R$ 0,00	Diesel S10	R$ 7,00	22,00
+Escavadeira hidráulica sobre esteira 38T	E0015	200		R$ 45.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$225,00 	R$ 0,00	 R$225,00 	R$ 0,00	Diesel S10	R$ 7,00	26,00
+Escavadeira hidráulica sobre esteira 48T	E0016	200		R$ 60.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$300,00 	R$ 0,00	 R$300,00 	R$ 0,00	Diesel S10	R$ 7,00	30,00
+Extrusora	E0017	200		R$ 8.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$40,00 	R$ 0,00	 R$40,00 	R$ 0,00	Gasolina	R$ 7,25	3,00
+Motosserra a gasolina	E0018	200		R$ 6.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$30,00 	R$ 0,00	 R$30,00 	R$ 0,00	Gasolina	R$ 7,25	1,50
+Van 15 pessoas	E0019	200		R$ 16.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$80,00 	R$ 0,00	 R$80,00 	R$ 0,00	Diesel S10	R$ 7,00	5,00
+Motoniveladora 120K	E0020	200		R$ 37.200,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$186,00 	R$ 0,00	 R$186,00 	R$ 0,00	Diesel S10	R$ 7,00	22,00
+Motoniveladora 140K	E0021	200		R$ 48.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$240,00 	R$ 0,00	 R$240,00 	R$ 0,00	Diesel S10	R$ 7,00	22,00
+Micro onibus 32 pessoas	E0022	200		R$ 25.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$125,00 	R$ 0,00	 R$125,00 	R$ 0,00	Diesel S10	R$ 7,00	9,00
+Ônibus com capacidade para 52 passageiros 	E0023	200		R$ 38.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$190,00 	R$ 0,00	 R$190,00 	R$ 0,00	Diesel S10	R$ 7,00	9,00
+Pá carregadeira 12t	E0024	200		R$ 30.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$150,00 	R$ 0,00	 R$150,00 	R$ 0,00	Diesel S10	R$ 7,00	16,00
+Placa vibratória	E0025	200		R$ 2.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$10,00 	R$ 0,00	 R$10,00 	R$ 0,00	Gasolina	R$ 7,25	3,00
+Retroescavadeira	E0026	200		R$ 14.900,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$74,50 	R$ 0,00	 R$74,50 	R$ 0,00	Diesel S10	R$ 7,00	16,00
+Rolo compactador liso	E0027	200		R$ 25.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$125,00 	R$ 0,00	 R$125,00 	R$ 0,00	Diesel S10	R$ 7,00	16,00
+Rolo compactador pé de carneiro 10T	E0028	200		R$ 25.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$125,00 	R$ 0,00	 R$125,00 	R$ 0,00	Diesel S10	R$ 7,00	16,00
+Rolo compactador pequeno	E0029	200		R$ 9.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$45,00 	R$ 0,00	 R$45,00 	R$ 0,00	Diesel S10	R$ 7,00	10,00
+Sapo compactador	E0030	200		R$ 2.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$10,00 	R$ 0,00	 R$10,00 	R$ 0,00	Gasolina	R$ 7,25	3,00
+Spread	E0031	200		R$ 3.500,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$17,50 	R$ 0,00	 R$17,50 	R$ 0,00			
+Tanque de estocagem de material betuminoso	E0032	200		R$ 2.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$10,00 	R$ 0,00	 R$10,00 				
+Torre De Iluminação	E0033	200		R$ 2.500,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$12,50 	R$ 0,00	 R$12,50 	R$ 0,00			
+Trator de pneus com grade	E0034	200		R$ 25.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$125,00 	R$ 0,00	 R$125,00 	R$ 0,00	Diesel S10	R$ 7,00	18,00
+Trator de esteiras 20T	E0035	200		R$ 48.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$240,00 	R$ 0,00	 R$240,00 	R$ 0,00	Diesel S10	R$ 7,00	26,00
+Trator de esteiras 30T	E0036	200		R$ 65.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$325,00 	R$ 0,00	 R$325,00 	R$ 0,00	Diesel S10	R$ 7,00	32,00
+Trator de esteiras 40T	E0037	200		R$ 65.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$325,00 	R$ 0,00	 R$325,00 	R$ 0,00	Diesel S10	R$ 7,00	32,00
+Vassoura mecânica	E0038	200		R$ 3.500,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$17,50 	R$ 0,00	 R$17,50 	R$ 0,00			0,00
+Veículo leve	E0039	200		R$ 4.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$20,00 	R$ 0,00	 R$20,00 	R$ 0,00	Gasolina	R$ 7,25	9,00
+Veículo picape 4 x 4	E0040	200		R$ 10.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$50,00 	R$ 0,00	 R$50,00 	R$ 0,00	Diesel S10	R$ 7,00	9,00
+Vibroacabadora de asfalto sobre esteiras - 82 kW	E0041	200		R$ 19.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$95,00 	R$ 0,00	 R$95,00 	R$ 0,00	Diesel S10	R$ 7,00	17,22
+Vibroacabadora de asfalto sobre pneus - 82 kW	E0042	200		R$ 19.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$95,00 	R$ 0,00	 R$95,00 	R$ 0,00	Diesel S10	R$ 7,00	12,30
+Caminhão Espargidor	E0043	200		R$ 17.500,00						 R$87,50 		 R$87,50 	R$ 0,00	Diesel S10	R$ 7,00	8,00
+Pá carregadeira com mandíbula	E0044	200		R$ 50.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$250,00 	R$ 0,00	 R$250,00 	R$ 0,00	Diesel S10	R$ 7,00	16,00
+Roçadeira Costal	E0045	200		R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$-   	R$ 0,00	 R$-   	R$ 0,00	Gasolina	R$ 7,25	1,00
+Serra clipper	E0046	200		R$ 1.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$5,00 	R$ 0,00	 R$5,00 	R$ 0,00			
+Guindaste móvel sobre esteiras com capacidade de 40 t - 186 kW	E0047	200		R$ 85.000,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$425,00 	R$ 0,00	 R$425,00 	R$ 0,00	Diesel S10	R$ 7,00	25,00
+Miniescavadeira hidráulica	E0048	200		R$ 9.800,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$49,00 	R$ 0,00	 R$49,00 	R$ 0,00	Diesel S10	R$ 7,00	8,00
+Escavadeira 22t com rompedor	E0049	200		R$ 34.900,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$174,50 	R$ 0,00	 R$174,50 	R$ 0,00	Diesel S10	R$ 7,00	25,00
+Escavadeira 35t com rompedor	E0050	200		R$ 64.900,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$324,50 	R$ 0,00	 R$324,50 	R$ 0,00	Diesel S10	R$ 7,00	40,00
+Escavadeira hidráulica sobre esteira 35T	E0051	200		R$ 47.900,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$239,50 	R$ 0,00	 R$239,50 	R$ 0,00	Diesel S10	R$ 7,00	35,00
+Trator de esteiras 16,50T	E0052	200		R$ 40.900,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$204,50 	R$ 0,00	 R$204,50 	R$ 0,00	Diesel S10	R$ 7,00	20,00
+Trator de esteiras 22,75T	E0053	200		R$ 51.900,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$259,50 	R$ 0,00	 R$259,50 	R$ 0,00	Diesel S10	R$ 7,00	25,00
+Trator de esteiras 24T	E0054	200		R$ 54.900,00	R$ 0,00	R$ 0,00	R$ 0,00	R$ 0,00		 R$274,50 	R$ 0,00	 R$274,50 	R$ 0,00	Diesel S10	R$ 7,00	25,00
+s

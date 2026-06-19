@@ -14,8 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -27,13 +26,16 @@ matplotlib = pytest.importorskip("matplotlib")
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _import_module():
     import concilium.application.benchmarks.charts._chart_generator_helpers_b as m
+
     return m
 
 
 def _import_helpers_a():
     import concilium.application.benchmarks.charts._chart_generator_helpers_a as a
+
     return a
 
 
@@ -92,6 +94,7 @@ def _make_plt_mock():
 # 1. _build_cenario_record
 # ---------------------------------------------------------------------------
 
+
 class TestBuildCenarioRecord:
     def _setup(self, m):
         _inject_load_json(m)
@@ -116,7 +119,9 @@ class TestBuildCenarioRecord:
     def test_makespan_from_json(self, tmp_path):
         m = _import_module()
         self._setup(m)
-        _write_report(tmp_path, "S2", {"rcpsp_schedule": {"makespan_weeks": 40, "folga_semanas": 6, "is_feasible": True}})
+        _write_report(
+            tmp_path, "S2", {"rcpsp_schedule": {"makespan_weeks": 40, "folga_semanas": 6, "is_feasible": True}}
+        )
         result = m._build_cenario_record("S2", {}, tmp_path)
         assert result["makespan"] == 40
 
@@ -261,6 +266,7 @@ class TestBuildCenarioRecord:
 # 2. _load_cenarios
 # ---------------------------------------------------------------------------
 
+
 class TestLoadCenarios:
     def _setup(self, m, slugs, pool_def=None):
         _inject_load_json(m)
@@ -348,6 +354,7 @@ class TestLoadCenarios:
 # ---------------------------------------------------------------------------
 # 3. _chart_gantt — with mock plt
 # ---------------------------------------------------------------------------
+
 
 class TestChartGanttMocked:
     """Tests using a mock plt to avoid filesystem writes."""
@@ -510,15 +517,19 @@ class TestChartGanttMocked:
 # 4. _chart_gantt — with real Agg backend (integration)
 # ---------------------------------------------------------------------------
 
+
 class TestChartGanttRealMatplotlib:
     """Integration tests using the real matplotlib Agg backend."""
 
     def _setup_real_plt(self):
         import os
+
         os.environ["MPLBACKEND"] = "Agg"
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         return plt
 
     def test_gantt_creates_file_on_disk(self, tmp_path):
@@ -558,6 +569,7 @@ class TestChartGanttRealMatplotlib:
         _inject_gantt_globals(m)
         plt = self._setup_real_plt()
         import unittest.mock as mock
+
         with mock.patch.object(plt, "close", wraps=plt.close):
             result = m._chart_gantt(plt, tmp_path, "AGIS", np)
         # Just confirm file created — dpi testing done via mock suite

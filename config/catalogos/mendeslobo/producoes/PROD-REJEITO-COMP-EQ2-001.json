@@ -1,0 +1,210 @@
+{
+  "id": "PROD-REJEITO-COMP-EQ2-001",
+  "codigo": "REJEITO-COMP-EQ2-001",
+  "descricao": "2ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado",
+  "valor_horario": 189.5,
+  "custo_hora_total_referencia": 921.4982,
+  "unidade": "m3",
+  "origem": {
+    "tipo": "calibrado_contra_obra_real",
+    "fonte_id": "SERRA_VERDE_2026",
+    "data_calibracao": "2026-08-01",
+    "referencia": "Planilha Serra Verde; aba DIRETOS; 2ª Equipe — Recebimento, espalhamento e compactação de rejeito filtrado"
+  },
+  "condicoes_calibracao": {
+    "tipo_solo": "rejeito_filtrado",
+    "dmt_medio": 0.0,
+    "season": "seco",
+    "sequenciamento": "linear_continuo",
+    "notas": "ADR-108: 6 frentes (equipamentos via aluguel_mensal_unitario na composição). Regime 12×36: 2D+1N por bloco. vh=189.5 m³/h/frente, c_ref=921.50 R$/h/frente. Vigência: 2026-10-01 → 2027-03-11"
+  },
+  "qualidade": {
+    "confianca_pct": 88,
+    "intervalo_confianca": [
+      180.03,
+      198.97
+    ],
+    "quantidade_amostras": 1,
+    "desvio_padrao": 9.47
+  },
+  "historico_observacoes": [],
+  "categoria": "MINERACAO",
+  "composicao_padrao_equipe": {
+    "funcoes": [
+      {
+        "funcao_id": "SV-P0046-D",
+        "num_pessoas": 4.0,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0048-D",
+        "num_pessoas": 2.0,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0043-D",
+        "num_pessoas": 0.3333,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0049-D",
+        "num_pessoas": 0.3333,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0033-D",
+        "num_pessoas": 0.3333,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0032-D",
+        "num_pessoas": 1.0,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0045-D",
+        "num_pessoas": 0.3333,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0040-D",
+        "num_pessoas": 0.3333,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0029-D",
+        "num_pessoas": 0.3333,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0046-N",
+        "num_pessoas": 2.0,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0048-N",
+        "num_pessoas": 1.0,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0043-N",
+        "num_pessoas": 0.1667,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0049-N",
+        "num_pessoas": 0.1667,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0033-N",
+        "num_pessoas": 0.1667,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0032-N",
+        "num_pessoas": 0.5,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0045-N",
+        "num_pessoas": 0.1667,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0040-N",
+        "num_pessoas": 0.1667,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      },
+      {
+        "funcao_id": "SV-P0029-N",
+        "num_pessoas": 0.1667,
+        "custo_mobilizacao": 800.0,
+        "custo_desmobilizacao": 800.0
+      }
+    ],
+    "equipamentos": [
+      {
+        "equip_id": "E0027",
+        "num_unidades": 2.0,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 104.1667
+      },
+      {
+        "equip_id": "E0035",
+        "num_unidades": 1.0,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 200.0
+      },
+      {
+        "equip_id": "E0021",
+        "num_unidades": 0.1667,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 200.0
+      },
+      {
+        "equip_id": "E0034",
+        "num_unidades": 0.1667,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 104.1667
+      },
+      {
+        "equip_id": "E0013",
+        "num_unidades": 0.1667,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 125.0
+      },
+      {
+        "equip_id": "E0005",
+        "num_unidades": 0.5,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 145.8333
+      },
+      {
+        "equip_id": "E0024",
+        "num_unidades": 0.1667,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 125.0
+      },
+      {
+        "equip_id": "E0014",
+        "num_unidades": 0.1667,
+        "consumo_litros_hora": 0,
+        "custo_mobilizacao": 6500.0,
+        "custo_desmobilizacao": 6500.0,
+        "preco_h_unitario": 200.0
+      }
+    ]
+  }
+}

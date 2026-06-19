@@ -16,6 +16,7 @@ def _fake_projection() -> SimpleNamespace:
             "custo_total": 120.0,
             "preco_venda": 130.0,
         },
+        preco_venda_fonte=None,
         ponto_equilibrio_ferramenta=None,
         ferramenta_breakdown_direto=None,
         ferramenta_breakdown_indireto=None,

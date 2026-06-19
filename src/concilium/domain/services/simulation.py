@@ -1,6 +1,9 @@
+import logging
 from dataclasses import dataclass
 from math import ceil
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -28,7 +31,10 @@ def _sim_calc_funcoes(equipe: dict, insumos: dict, horas_totais: float, fator: f
     custo_mo_encargos = 0.0
     for f in equipe.get("funcoes", []):
         insumo = insumos.get(f["funcao_id"], {})
-        preco_base = insumo.get("preco_unitario", 0)
+        preco_base = insumo.get("preco_unitario")
+        if preco_base is None:
+            logger.warning("Função %s sem preco_unitario no catálogo — custo MO zerado", f.get("funcao_id", "?"))
+            preco_base = 0
         if insumo.get("unidade") == "mes":
             preco_base = preco_base / 208.0
         subtotal_base = f["num_pessoas"] * preco_base * horas_totais
@@ -41,7 +47,10 @@ def _sim_calc_equipamentos(equipe: dict, insumos: dict, horas_totais: float, fat
     eq_cap = eq_manut = diesel = mo_eq = mo_eq_enc = 0.0
     for e in equipe.get("equipamentos", []):
         insumo = insumos.get(e["equip_id"], {})
-        preco_total_h = insumo.get("preco_unitario", 0)
+        preco_total_h = insumo.get("preco_unitario")
+        if preco_total_h is None:
+            logger.warning("Equipamento %s sem preco_unitario no catálogo — custo equip zerado", e.get("equip_id", "?"))
+            preco_total_h = 0
         decomp = (insumo.get("atributos_especificos") or {}).get("decomposicao_equip", {})
         contribuicao = e["num_unidades"] * preco_total_h * horas_totais
         if decomp:
@@ -64,7 +73,11 @@ def _sim_calc_materiais(cpu: dict, insumos: dict, producao_total: float) -> floa
     custo_mat = 0.0
     for item in cpu.get("composicao_itens", []):
         insumo = insumos.get(item["insumo_id"], {})
-        custo_mat += item["coeficiente"] * producao_total * insumo.get("preco_unitario", 0)
+        preco = insumo.get("preco_unitario")
+        if preco is None:
+            logger.warning("Material %s sem preco_unitario no catálogo — custo material zerado", item.get("insumo_id", "?"))
+            preco = 0
+        custo_mat += item["coeficiente"] * producao_total * preco
     return custo_mat
 
 

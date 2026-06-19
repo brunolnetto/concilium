@@ -1,22 +1,22 @@
 """Tests for infrastructure/storage/benchmark_store.py."""
+
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from pathlib import Path
-from unittest.mock import MagicMock
+from datetime import UTC, datetime
 
 import pytest
 
 
 def _make_meta(bid="bench-1", versao=1, imutavel=False):
     from concilium.domain.benchmark.models import BenchmarkMetadata
+
     return BenchmarkMetadata(
         benchmark_id=bid,
         nome="Test",
         origem="manual",
         tags=["t1"],
-        criado_em=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        criado_em=datetime(2026, 1, 1, tzinfo=UTC),
         versao=versao,
         imutavel=imutavel,
     )
@@ -24,19 +24,21 @@ def _make_meta(bid="bench-1", versao=1, imutavel=False):
 
 def _make_exec(bid="bench-1", status="SUCESSO"):
     from concilium.domain.benchmark.models import BenchmarkExecution
+
     return BenchmarkExecution(
         execution_id="exec-1",
         benchmark_id=bid,
         versao=1,
         projeto_id="proj-1",
         status=status,
-        executado_em=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        executado_em=datetime(2026, 1, 2, tzinfo=UTC),
         discrepancia_sumario={"decision": status},
     )
 
 
 def _make_store(tmp_path):
     from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
     return FileSystemBenchmarkStore(root=tmp_path)
 
 
@@ -47,11 +49,13 @@ class TestFromPath:
 
     def test_from_root_kwarg(self, tmp_path):
         from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
         store = FileSystemBenchmarkStore(root=tmp_path)
         assert store.root == tmp_path
 
     def test_no_storage_no_root_raises(self):
         from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
         with pytest.raises(TypeError, match="storage"):
             FileSystemBenchmarkStore()
 
@@ -133,6 +137,7 @@ class TestLogExecution:
 
     def test_multiple_executions(self, tmp_path):
         from concilium.domain.benchmark.models import BenchmarkExecution
+
         store = _make_store(tmp_path)
         for i in range(3):
             store.log_execution(
@@ -142,7 +147,7 @@ class TestLogExecution:
                     versao=1,
                     projeto_id="proj-1",
                     status="SUCESSO",
-                    executado_em=datetime(2026, 1, i + 1, tzinfo=timezone.utc),
+                    executado_em=datetime(2026, 1, i + 1, tzinfo=UTC),
                 )
             )
         history = store.get_execution_history("bench-1", limit=50)
@@ -161,6 +166,7 @@ class TestLogExecution:
 
     def test_history_limit(self, tmp_path):
         from concilium.domain.benchmark.models import BenchmarkExecution
+
         store = _make_store(tmp_path)
         for i in range(10):
             store.log_execution(
@@ -170,7 +176,7 @@ class TestLogExecution:
                     versao=1,
                     projeto_id="proj-1",
                     status="SUCESSO",
-                    executado_em=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                    executado_em=datetime(2026, 1, 1, tzinfo=UTC),
                 )
             )
         history = store.get_execution_history("bench-1", limit=5)
@@ -206,7 +212,7 @@ class TestUpdateMetadata:
             store.update_metadata("nonexistent", {})
 
     def test_update_metadata_immutable_raises(self, tmp_path):
-        from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
         store = _make_store(tmp_path)
         # Save a mutable version first
         meta = _make_meta(imutavel=False)
@@ -224,6 +230,7 @@ class TestUpdateMetadata:
 class TestSerialisation:
     def test_to_dict_and_from_dict_roundtrip(self):
         from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
         meta = _make_meta()
         d = FileSystemBenchmarkStore._to_dict(meta)
         assert d["benchmark_id"] == "bench-1"
@@ -233,6 +240,7 @@ class TestSerialisation:
 
     def test_exec_to_dict_and_from_dict_roundtrip(self):
         from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
+
         exec_ = _make_exec()
         d = FileSystemBenchmarkStore._exec_to_dict(exec_)
         assert d["execution_id"] == "exec-1"

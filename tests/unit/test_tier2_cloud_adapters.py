@@ -8,18 +8,17 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 import builtins
 import importlib
 import sys
-from types import ModuleType
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_aioboto3_mock():
     """Return a minimal aioboto3 mock whose Session().client() is an async ctx manager."""
@@ -48,9 +47,11 @@ def _make_botocore_mock():
 # 1. CloudBlobStorageAdapter
 # ---------------------------------------------------------------------------
 
+
 class TestCloudBlobStorageAdapter:
     def _cls(self):
         from concilium.infrastructure.adapters.blob_storage.cloud import CloudBlobStorageAdapter
+
         return CloudBlobStorageAdapter
 
     def test_init_default_provider(self):
@@ -92,11 +93,13 @@ class TestCloudBlobStorageAdapter:
 # 2. GoogleDriveBlobStorage
 # ---------------------------------------------------------------------------
 
+
 class TestGoogleDriveBlobStorage:
     """Tests for gdrive_blob_storage.GoogleDriveBlobStorage."""
 
     def _cls(self):
         from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
+
         return GoogleDriveBlobStorage
 
     def _make(self, **kwargs):
@@ -338,7 +341,6 @@ class TestGoogleDriveBlobStorage:
         downloader_mock = MagicMock()
         downloader_mock.next_chunk.return_value = (None, True)
 
-        import io as _io
 
         def fake_download_ctor(buf, request):
             buf.write(b"file-content")
@@ -498,6 +500,7 @@ class TestGoogleDriveBlobStorage:
 # 3. S3BlobStorage
 # ---------------------------------------------------------------------------
 
+
 def _make_s3_instance(**override):
     """Instantiate S3BlobStorage with aioboto3 and botocore mocked."""
     aioboto3_mock, _, _ = _make_aioboto3_mock()
@@ -512,6 +515,7 @@ def _make_s3_instance(**override):
         },
     ):
         from concilium.infrastructure.adapters.blob_storage import s3 as s3_blob_storage
+
         importlib.reload(s3_blob_storage)
         from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
 
@@ -651,6 +655,7 @@ class TestS3BlobStorage:
             {"aioboto3": aioboto3_mock, "botocore": botocore_mock, "botocore.config": botocore_mock.config},
         ):
             from concilium.infrastructure.adapters.blob_storage import s3 as s3_blob_storage
+
             importlib.reload(s3_blob_storage)
             from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
 
@@ -677,6 +682,7 @@ class TestS3BlobStorage:
             {"aioboto3": aioboto3_mock, "botocore": botocore_mock, "botocore.config": botocore_mock.config},
         ):
             from concilium.infrastructure.adapters.blob_storage import s3 as s3_blob_storage
+
             importlib.reload(s3_blob_storage)
             from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
 

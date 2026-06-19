@@ -9,10 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
 
 import pytest
-
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -20,10 +18,7 @@ import pytest
 def _load_replan():
     import importlib.util
 
-    path = (
-        Path(__file__).resolve().parents[2]
-        / "src/concilium/presentation/mcp/tools/replan.py"
-    )
+    path = Path(__file__).resolve().parents[2] / "src/concilium/presentation/mcp/tools/replan.py"
     spec = importlib.util.spec_from_file_location("replan_tools", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

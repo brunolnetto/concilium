@@ -11,11 +11,9 @@ import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp.tools.analise import register
-
 
 # ---------------------------------------------------------------------------
 # Module-level patch paths
@@ -280,9 +278,7 @@ class TestAuditarPlano:
 
 
 class TestCompararPlanos:
-    def _make_comparar_store(
-        self, canonical_a: MagicMock | None, canonical_b: MagicMock | None
-    ) -> MagicMock:
+    def _make_comparar_store(self, canonical_a: MagicMock | None, canonical_b: MagicMock | None) -> MagicMock:
         """Build store where plan('PL-A') -> canonical_a and plan('PL-B') -> canonical_b."""
         store = MagicMock()
         escopo = MagicMock()

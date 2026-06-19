@@ -391,7 +391,7 @@ def render_pool_economia_origem(canonical: object | None) -> list[str]:
     lines: list[str] = [
         "## Origem da Economia por Atividade",
         "",
-        f"Baseline autônomo: **{_brl(tot_aut)}** | Instancial (pool): **{_brl(tot_inst)}** | "
+        f"Baseline homogênea (planejamento sem BDI): **{_brl(tot_aut)}** | Instancial (pool): **{_brl(tot_inst)}** | "
         f"Economia líquida: **{_brl(tot_eco)}**.",
         "",
     ]

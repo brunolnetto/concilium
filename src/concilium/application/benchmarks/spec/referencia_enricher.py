@@ -8,12 +8,16 @@ Uses semantic CPU mapping to match cronograma items to actual catalog CPUs.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import json
 from pathlib import Path
 from typing import Any
 
-from ..validation.cpu_mapper import CpuMapper
 from ..cronograma_parser import CronogramaParser
+from ..validation.cpu_mapper import CpuMapper
 
 
 def _infer_cpu_from_section(section_id: str, item_num: int) -> str:
@@ -59,9 +63,9 @@ def _enrich_eap_with_produtividade(eap_items: list[dict], produtividade_path: Pa
                 prod_str = parts[3].replace(".", "").replace(",", ".")
                 produtividade_map[item_id] = float(prod_str)
             except (ValueError, IndexError):
-                pass
-    except Exception:
-        pass
+                logger.debug("Linha ignorada ao enriquecer EAP (item %s): valor de produtividade inválido", item_id)
+    except Exception as e:
+        logger.warning("Falha ao ler arquivo de produtividade para enriquecimento de EAP: %s", e, exc_info=True)
 
     # Enrich items with productivity info
     for item in eap_items:

@@ -1,11 +1,10 @@
 """Tests for PriceSurveyExporter — covers export() and _aplicar_estilo_survey()."""
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -37,6 +36,7 @@ def _make_exporter(catalogo=None):
     cat = catalogo or _minimal_catalogo()
     with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
         from concilium.infrastructure.exporters.price_survey import PriceSurveyExporter
+
         return PriceSurveyExporter(cat)
 
 
@@ -318,9 +318,15 @@ class TestExportRowFields:
 
         df = captured_df["Material"]
         expected_cols = {
-            "ID", "Categoria", "Descrição", "Unidade",
-            "Preço Atual (Benchmark)", "Novo Preço (Cotação)",
-            "Fornecedor", "Data Cotação", "Observações",
+            "ID",
+            "Categoria",
+            "Descrição",
+            "Unidade",
+            "Preço Atual (Benchmark)",
+            "Novo Preço (Cotação)",
+            "Fornecedor",
+            "Data Cotação",
+            "Observações",
         }
         assert expected_cols.issubset(set(df.columns))
 
@@ -415,7 +421,13 @@ class TestAplicarEstiloSurvey:
                 return cells[key[0]]
             return MagicMock()
 
-        ws.__getitem__ = MagicMock(side_effect=lambda key: cells.get(key[0], MagicMock()) if isinstance(key, str) and len(key) >= 2 and key[0] in cells else MagicMock())
+        ws.__getitem__ = MagicMock(
+            side_effect=lambda key: (
+                cells.get(key[0], MagicMock())
+                if isinstance(key, str) and len(key) >= 2 and key[0] in cells
+                else MagicMock()
+            )
+        )
 
         with patch.object(exp, "_aplicar_estilo"):
             exp._aplicar_estilo_survey(writer)
@@ -440,6 +452,7 @@ class TestAplicarEstiloSurvey:
                     if isinstance(key, str) and len(key) >= 2 and key[0] in c:
                         return c[key[0]]
                     return MagicMock()
+
                 return getitem
 
             ws.__getitem__ = MagicMock(side_effect=make_getitem(cells))
@@ -474,9 +487,7 @@ class TestAplicarEstiloSurvey:
         import openpyxl.styles as oxl_styles
 
         custom_color = "AABBCC"
-        cat = _minimal_catalogo(
-            identidade_visual={"cores": {"destaque": custom_color}}
-        )
+        cat = _minimal_catalogo(identidade_visual={"cores": {"destaque": custom_color}})
         exp = _make_exporter(cat)
         writer = self._make_style_writer(["Sheet1"])
 
@@ -501,7 +512,7 @@ class TestAplicarEstiloSurvey:
         exp = _make_exporter(cat)
 
         # Directly inspect: call the method and read the fill color off the cell
-        import openpyxl
+
         writer = _make_mock_writer(["Sheet1"])
 
         # We track what fill is set on the F1 cell by capturing .fill assignments
@@ -527,7 +538,10 @@ class TestAplicarEstiloSurvey:
         """Verify the 'FFC000' fallback by running export with no destaque key.
 
         The cell fill start_color on a real file must contain FFC000."""
-        import openpyxl, tempfile, os
+        import os
+        import tempfile
+
+        import openpyxl
 
         cat = _minimal_catalogo(
             identidade_visual={"cores": {}},  # no destaque key
@@ -552,6 +566,7 @@ class TestAplicarEstiloSurvey:
         cat = {}  # no identidade_visual at all
         with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
             from concilium.infrastructure.exporters.price_survey import PriceSurveyExporter
+
             exp = PriceSurveyExporter(cat)
 
         writer = MagicMock()
@@ -563,12 +578,12 @@ class TestAplicarEstiloSurvey:
 
     def test_font_is_bold(self):
         """The Font applied to F-I cells must have bold=True after a real export."""
-        import openpyxl
-        import tempfile, os
+        import os
+        import tempfile
 
-        cat = _minimal_catalogo(
-            insumos=[_make_insumo("MATERIAL", codigo="M-1")]
-        )
+        import openpyxl
+
+        cat = _minimal_catalogo(insumos=[_make_insumo("MATERIAL", codigo="M-1")])
         exp = _make_exporter(cat)
 
         with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f:
@@ -626,9 +641,7 @@ class TestExportIntegration:
         """F1-I1 cells must have a non-None fill after export."""
         import openpyxl
 
-        cat = _minimal_catalogo(
-            insumos=[_make_insumo("MATERIAL", codigo="M-1")]
-        )
+        cat = _minimal_catalogo(insumos=[_make_insumo("MATERIAL", codigo="M-1")])
         exp = _make_exporter(cat)
         out = tmp_path / "survey_style.xlsx"
         exp.export(out)

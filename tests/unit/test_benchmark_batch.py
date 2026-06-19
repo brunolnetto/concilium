@@ -6,14 +6,11 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from concilium.application.benchmarks.execution.batch import (
     BenchmarkBatchRunner,
     discover_benchmark_slugs,
     find_benchmark_reference,
 )
-
 
 # ══ find_benchmark_reference ══════════════════════════════════════════════════
 
@@ -226,11 +223,10 @@ class TestDiscoverSpecs:
         }
         (bench / "referencia.json").write_text(json.dumps(ref_data), encoding="utf-8")
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.load_spec_from_dict"
-        ) as mock_load, patch(
-            "concilium.application.benchmarks.execution.batch.normalize_referencia_weeks"
-        ) as mock_norm:
+        with (
+            patch("concilium.application.benchmarks.execution.batch.load_spec_from_dict") as mock_load,
+            patch("concilium.application.benchmarks.execution.batch.normalize_referencia_weeks") as mock_norm,
+        ):
             mock_spec = MagicMock()
             mock_spec.slug = "AGIS"
             mock_load.return_value = mock_spec
@@ -258,14 +254,11 @@ class TestDiscoverSpecs:
         bench = runner.benchmarks_root / "PROJ"
         (bench / "artifacts" / "inputs").mkdir(parents=True)
         ref_data = {"projeto": "PROJ", "slug": "PROJ"}
-        (bench / "artifacts" / "inputs" / "referencia.json").write_text(
-            json.dumps(ref_data), encoding="utf-8"
-        )
+        (bench / "artifacts" / "inputs" / "referencia.json").write_text(json.dumps(ref_data), encoding="utf-8")
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.load_spec_from_dict"
-        ) as mock_load, patch(
-            "concilium.application.benchmarks.execution.batch.normalize_referencia_weeks"
+        with (
+            patch("concilium.application.benchmarks.execution.batch.load_spec_from_dict") as mock_load,
+            patch("concilium.application.benchmarks.execution.batch.normalize_referencia_weeks"),
         ):
             mock_spec = MagicMock()
             mock_spec.slug = "PROJ"
@@ -283,18 +276,13 @@ class TestDiscoverSpecs:
         for name in ["CHARLIE", "ALPHA", "BETA"]:
             d = runner.benchmarks_root / name
             d.mkdir()
-            (d / "referencia.json").write_text(
-                json.dumps({"projeto": name, "slug": name}), encoding="utf-8"
-            )
+            (d / "referencia.json").write_text(json.dumps({"projeto": name, "slug": name}), encoding="utf-8")
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.load_spec_from_dict"
-        ) as mock_load, patch(
-            "concilium.application.benchmarks.execution.batch.normalize_referencia_weeks"
+        with (
+            patch("concilium.application.benchmarks.execution.batch.load_spec_from_dict") as mock_load,
+            patch("concilium.application.benchmarks.execution.batch.normalize_referencia_weeks"),
         ):
-            mock_load.side_effect = lambda ref, path: MagicMock(
-                slug=ref.get("slug", "?")
-            )
+            mock_load.side_effect = lambda ref, path: MagicMock(slug=ref.get("slug", "?"))
 
             specs = runner.discover_specs()
 
@@ -337,9 +325,7 @@ class TestRunAll:
         for name in ["ALPHA", "BETA"]:
             d = runner.benchmarks_root / name
             d.mkdir()
-            (d / "referencia.json").write_text(
-                json.dumps({"projeto": name, "slug": name}), encoding="utf-8"
-            )
+            (d / "referencia.json").write_text(json.dumps({"projeto": name, "slug": name}), encoding="utf-8")
 
     def test_run_all_returns_one_report_per_spec(self, tmp_path: Path, capsys):
         """run_all retorna tantos reports quanto specs descobertos."""
@@ -357,12 +343,15 @@ class TestRunAll:
         mock_runner_instance = MagicMock()
         mock_runner_instance.run.side_effect = [report_alpha, report_beta]
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
-            return_value=mock_runner_instance,
-        ), patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
-            return_value=[spec_alpha, spec_beta],
+        with (
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
+                return_value=mock_runner_instance,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
+                return_value=[spec_alpha, spec_beta],
+            ),
         ):
             reports = runner.run_all(reset=True, quiet=False)
 
@@ -381,12 +370,15 @@ class TestRunAll:
         mock_runner_instance = MagicMock()
         mock_runner_instance.run.return_value = report
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
-            return_value=mock_runner_instance,
-        ), patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
-            return_value=[spec],
+        with (
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
+                return_value=mock_runner_instance,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
+                return_value=[spec],
+            ),
         ):
             runner.run_all(reset=False, quiet=False)
 
@@ -405,12 +397,15 @@ class TestRunAll:
         mock_runner_instance = MagicMock()
         mock_runner_instance.run.return_value = report
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
-            return_value=mock_runner_instance,
-        ), patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
-            return_value=[spec],
+        with (
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
+                return_value=mock_runner_instance,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
+                return_value=[spec],
+            ),
         ):
             runner.run_all(reset=True, quiet=True)
 
@@ -428,12 +423,15 @@ class TestRunAll:
         mock_runner_instance = MagicMock()
         mock_runner_instance.run.side_effect = reports
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
-            return_value=mock_runner_instance,
-        ), patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
-            return_value=specs,
+        with (
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
+                return_value=mock_runner_instance,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
+                return_value=specs,
+            ),
         ):
             runner.run_all(quiet=True)
 
@@ -448,12 +446,15 @@ class TestRunAll:
 
         mock_runner_instance = MagicMock()
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
-            return_value=mock_runner_instance,
-        ), patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
-            return_value=[],
+        with (
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
+                return_value=mock_runner_instance,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
+                return_value=[],
+            ),
         ):
             reports = runner.run_all()
 
@@ -471,20 +472,21 @@ class TestRunAll:
         mock_runner_instance = MagicMock()
         mock_runner_instance.run.return_value = report
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
-            return_value=mock_runner_instance,
-        ), patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
-            return_value=[spec],
+        with (
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
+                return_value=mock_runner_instance,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
+                return_value=[spec],
+            ),
         ):
             runner.run_all(reset=False)
 
         mock_runner_instance.run.assert_called_once_with(spec, reset=False)
 
-    def test_run_all_uses_quality_gates_when_no_status_final(
-        self, tmp_path: Path, capsys
-    ):
+    def test_run_all_uses_quality_gates_when_no_status_final(self, tmp_path: Path, capsys):
         """Quando status_final ausente, usa quality_gates.decision no quiet mode."""
         runner = self._make_runner(tmp_path)
 
@@ -499,12 +501,15 @@ class TestRunAll:
         mock_runner_instance = MagicMock()
         mock_runner_instance.run.return_value = report
 
-        with patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
-            return_value=mock_runner_instance,
-        ), patch(
-            "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
-            return_value=[spec],
+        with (
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkRunner",
+                return_value=mock_runner_instance,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.batch.BenchmarkBatchRunner.discover_specs",
+                return_value=[spec],
+            ),
         ):
             runner.run_all(quiet=True)
 

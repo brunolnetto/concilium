@@ -305,9 +305,7 @@ class TestReplan001Pool:
         canonical = _canonical(resultado=_resultado(0.03, "VERMELHO"), conflitos_pico=conflitos)
         result = run_assessor_replanejamento(canonical, {}, _perfil())
 
-        sugestao_001 = next(
-            (s for s in result.canonical.replan_suggestions.sugestoes if s.id == "REPLAN-001"), None
-        )
+        sugestao_001 = next((s for s in result.canonical.replan_suggestions.sugestoes if s.id == "REPLAN-001"), None)
         assert sugestao_001 is not None
         # At most 3 params from _build_sugestao_pool (conflitos_com_aquisicao[:3])
         assert len(sugestao_001.parametros_sugeridos) <= 3
@@ -421,9 +419,7 @@ class TestReplan003Cronograma:
         canonical = _canonical(resultado=resultado, indiretos=[indireto])
         result = run_assessor_replanejamento(canonical, {}, _perfil())
 
-        sugestao = next(
-            (s for s in result.canonical.replan_suggestions.sugestoes if s.id == "REPLAN-003"), None
-        )
+        sugestao = next((s for s in result.canonical.replan_suggestions.sugestoes if s.id == "REPLAN-003"), None)
         assert sugestao is not None
         assert sugestao.checkpoint_skill == "04-cronograma"
 

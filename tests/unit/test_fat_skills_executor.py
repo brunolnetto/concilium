@@ -10,10 +10,7 @@ from __future__ import annotations
 
 import sys
 import types
-from contextlib import nullcontext
-from unittest.mock import MagicMock, call, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from concilium.application.skills.executor import (
     ExecutionRecord,
@@ -24,7 +21,6 @@ from concilium.application.skills.executor import (
     _get_skill_span,
     critical_path,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
@@ -250,9 +246,7 @@ class TestEmitSkillTelemetry:
         with patch.dict(sys.modules, {"concilium.infrastructure.telemetry": fake_telemetry}):
             _emit_skill_telemetry("s1", "OK", 42)
         fake_telemetry.record_skill_duration.assert_called_once_with("s1", "OK", 42)
-        fake_telemetry.set_current_span_attrs.assert_called_once_with(
-            {"skill.status": "OK", "skill.duration_ms": 42}
-        )
+        fake_telemetry.set_current_span_attrs.assert_called_once_with({"skill.status": "OK", "skill.duration_ms": 42})
 
     def test_silently_swallows_exception(self):
         # lines 193-194 — best-effort; exception must not propagate

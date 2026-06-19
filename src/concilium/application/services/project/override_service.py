@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..service_support import deep_merge
 from .audit_service import AuditService
 from .project_files import DEFAULT_DELIVERABLES, DEFAULT_PROJECT_FILES, ProjectFiles
 from .project_repository import ProjectRepository
-from ..service_support import deep_merge
 
 
 class OverrideService:

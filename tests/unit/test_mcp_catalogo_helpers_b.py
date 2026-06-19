@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import dataclasses
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from concilium.presentation.mcp.tools._catalogo_tools_helpers_b import (
     _catalog_root,
-    _impl_tendencia_precos_catalogo,
-    _impl_comparar_rfi_catalogo,
-    _impl_calcular_pu_producao,
     _impl_avaliar_plausibilidade_catalogo,
+    _impl_calcular_pu_producao,
+    _impl_comparar_rfi_catalogo,
+    _impl_tendencia_precos_catalogo,
     _impl_verificar_integridade_catalogo,
 )
 
@@ -24,6 +21,7 @@ MODULE = "concilium.presentation.mcp.tools._catalogo_tools_helpers_b"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _identity(x):
     """Use as _wrap_response to keep assertions simple."""
@@ -97,7 +95,7 @@ class TestImplTendenciaPrecosCatalogo:
         _write_bundle(bundle_path, _make_bundle(insumos=insumos))
 
         # Build a real RelatorioTendencia-like dataclass result
-        from concilium.application.catalog.price_trend import RelatorioTendencia, IndiceCategoria
+        from concilium.application.catalog.price_trend import IndiceCategoria, RelatorioTendencia
 
         fake_relatorio = RelatorioTendencia(
             contexto_id="mendeslobo",
@@ -136,7 +134,7 @@ class TestImplTendenciaPrecosCatalogo:
         bundle_path = config_dir / "catalogos" / "ctx" / ".catalog_bundle.json"
         _write_bundle(bundle_path, _make_bundle(insumos=[]))
 
-        from concilium.application.catalog.price_trend import RelatorioTendencia, IndiceCategoria, TendenciaInsumo
+        from concilium.application.catalog.price_trend import IndiceCategoria, RelatorioTendencia, TendenciaInsumo
 
         # 15 insumos — truncation logic should keep 10 and set insumos_omitidos=5
         fake_insumos = [
@@ -249,6 +247,7 @@ class TestImplCompararRfiCatalogo:
         merge_path.write_text("# stub", encoding="utf-8")
 
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
@@ -306,6 +305,7 @@ class TestImplCompararRfiCatalogo:
             with patch("importlib.util.spec_from_file_location", return_value=mock_spec):
                 with patch("importlib.util.module_from_spec", return_value=mock_mod):
                     import openpyxl as _openpyxl  # noqa — ensure available
+
                     result = _impl_comparar_rfi_catalogo("ctx")
 
         assert "erro" in result
@@ -724,7 +724,9 @@ class TestImplVerificarIntegridadeCatalogo:
         _write_bundle(bundle_path, bundle)
 
         pu_result = self._base_pu_result(
-            pu_divergentes=[{"producao_id": "PROD-001", "pu_calculado": 100.0, "pu_referencia": 50.0, "delta_pct": 100.0}],
+            pu_divergentes=[
+                {"producao_id": "PROD-001", "pu_calculado": 100.0, "pu_referencia": 50.0, "delta_pct": 100.0}
+            ],
         )
 
         with patch(f"{MODULE}._config_root", return_value=config_dir):

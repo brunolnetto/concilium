@@ -4,7 +4,7 @@ Cobre:
   A. Modelo CelulaPoolInstancial / CuboPoolInstancial (slice, group_by, projeções físicas)
   B. Builder + invariantes H1 (soma) / H3 (off zero)
   C. As 7 faces (físicas + causais + estruturais) + narração + separação física/causal (H4)
-  D. Honestidade: off não faturado, idle com MO integral, economia com baseline autônomo
+    D. Honestidade: off não faturado, idle com MO integral, economia com baseline homogênea
 """
 
 from __future__ import annotations
@@ -222,14 +222,55 @@ def test_ciclo_vida_narra_mob_e_custo():
     assert "mobilizada" in txt and ("mo " in txt or "integral" in txt)
 
 
-def test_economia_pool_cita_baseline_autonomo():
-    """H4: economia sempre apresentada contra baseline autônomo explícito."""
+def test_economia_pool_cita_baseline_homogenea():
+    """H4: economia sempre apresentada contra baseline homogênea explícita."""
     canonical, _, _ = _build_pool([f"S{n:03d}" for n in range(20, 26)])
+    canonical.planejamento = [
+        SimpleNamespace(item_id="eap-A", subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=320.0))),
+        SimpleNamespace(item_id="eap-B", subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=480.0))),
+    ]
     proj = resolve_cubo_pool_projection(canonical, face="economia_pool")
-    assert any("autônomo" in n.lower() or "autonomo" in n.lower() for n in proj["narrativa"])
+    assert any("baseline homogênea" in n.lower() for n in proj["narrativa"])
     assert "economia_total" in proj["operator_meta"]
     for r in proj["rows"]:
         assert "custo_autonomo" in r and "custo_instancial" in r
+
+
+def test_economia_pool_fallback_operacional_expande_por_frentes():
+    canonical, _, _ = _build_pool([f"S{n:03d}" for n in range(20, 26)])
+    canonical.equipes_diretas = [
+        SimpleNamespace(item_id="eap-A", custo_total_autonomo=100.0, num_equipes_base=3),
+        SimpleNamespace(item_id="eap-B", custo_total_autonomo=200.0, num_equipes_base=2),
+    ]
+    proj = resolve_cubo_pool_projection(canonical, face="economia_pool")
+    rows = {r["atividade_id"]: r for r in proj["rows"]}
+    assert rows["eap-A"]["custo_autonomo"] == pytest.approx(300.0)
+    assert rows["eap-B"]["custo_autonomo"] == pytest.approx(400.0)
+
+
+def test_economia_pool_prefere_planejamento_sem_bdi_quando_disponivel():
+    canonical, _, _ = _build_pool([f"S{n:03d}" for n in range(20, 26)])
+    canonical.planejamento = [
+        SimpleNamespace(item_id="eap-A", subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=900.0))),
+        SimpleNamespace(item_id="eap-B", subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=700.0))),
+    ]
+    canonical.equipes_diretas = [
+        SimpleNamespace(item_id="eap-A", custo_total_autonomo=100.0, num_equipes_base=3),
+        SimpleNamespace(item_id="eap-B", custo_total_autonomo=200.0, num_equipes_base=2),
+    ]
+    proj = resolve_cubo_pool_projection(canonical, face="economia_pool")
+    rows = {r["atividade_id"]: r for r in proj["rows"]}
+    assert rows["eap-A"]["custo_autonomo"] == pytest.approx(900.0)
+    assert rows["eap-B"]["custo_autonomo"] == pytest.approx(700.0)
+    assert rows["eap-A"]["baseline_source"] == "planejamento_sem_bdi"
+
+
+def test_utilizacao_temporal_explica_eventos_mob_demob():
+    canonical, _, _ = _build_pool([f"S{n:03d}" for n in range(20, 26)])
+    proj = resolve_cubo_pool_projection(canonical, face="utilizacao_temporal", granularidade="semana")
+    assert any("mob" in r and "demob" in r for r in proj["rows"])
+    assert sum(int(r.get("mob", 0) or 0) for r in proj["rows"]) > 0
+    assert sum(int(r.get("demob", 0) or 0) for r in proj["rows"]) > 0
 
 
 def test_atividade_instancia_so_fisica_sem_imputacao():

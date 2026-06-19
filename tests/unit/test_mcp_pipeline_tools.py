@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from mcp.server.fastmcp import FastMCP
-
 
 _PIPELINE_MOD = "concilium.presentation.mcp.tools.pipeline"
 
 
 def _register_tools(monkeypatch, tmp_path: Path) -> dict:
     import importlib
+
     config_dir = tmp_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_dir))
@@ -32,6 +32,7 @@ def _register_tools(monkeypatch, tmp_path: Path) -> dict:
 
 def _make_job_dto(job_id="job-1", status="CONCLUIDO"):
     from concilium.application.jobs.service import JobDTO
+
     dto = MagicMock(spec=JobDTO)
     dto.job_id = job_id
     dto.status = status
@@ -132,6 +133,7 @@ class TestCancelarJobPipeline:
 class TestPipelineHelpers:
     def test_rpl_executadas_ok(self):
         from concilium.presentation.mcp.tools.pipeline import _rpl_executadas_ok
+
         log = [
             {"skill": "01-escopo-e-eap", "status": "OK"},
             {"skill": "02-prod", "status": "ERRO"},
@@ -142,6 +144,7 @@ class TestPipelineHelpers:
 
     def test_rpl_next_pending(self):
         from concilium.presentation.mcp.tools.pipeline import _rpl_next_pending
+
         executadas = {"01-escopo-e-eap"}
         result = _rpl_next_pending(executadas)
         assert "01-escopo-e-eap" not in result
@@ -149,24 +152,28 @@ class TestPipelineHelpers:
 
     def test_rpl_next_sugerida_has_next(self):
         from concilium.presentation.mcp.tools.pipeline import _rpl_next_sugerida
+
         result = _rpl_next_sugerida(set())
         assert result is not None
 
     def test_rpl_next_sugerida_all_done(self):
-        from concilium.presentation.mcp.tools.pipeline import _rpl_next_sugerida
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+        from concilium.presentation.mcp.tools.pipeline import _rpl_next_sugerida
+
         result = _rpl_next_sugerida(set(CANONICAL_SKILL_ORDER))
         assert result is None
 
     def test_rpl_artifacts_out(self):
+        from datetime import datetime
+
         from concilium.presentation.mcp.tools.pipeline import _rpl_artifacts_out
-        from datetime import datetime, timezone
+
         art = MagicMock()
         art.meta.artifact_id = "art-1"
         art.meta.kind.value = "report"
         art.meta.schema_name = "relatorio"
         art.meta.schema_version = "1.0"
-        art.meta.created_at = datetime.now(timezone.utc)
+        art.meta.created_at = datetime.now(UTC)
         art.meta.content_hash = "abc"
         result = _rpl_artifacts_out([art])
         assert len(result) == 1
@@ -174,8 +181,9 @@ class TestPipelineHelpers:
 
     def test_run_pipeline_on_plano_no_pending(self):
         """Cover lines 254-257: pipeline completo → info message."""
-        from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
         from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+        from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
+
         # All skills already executed
         all_done = set(CANONICAL_SKILL_ORDER)
         ps = MagicMock()
@@ -186,8 +194,9 @@ class TestPipelineHelpers:
 
     def test_run_pipeline_on_plano_precondition_error(self):
         """Cover lines 265-266: ConciliumRuntimeError → ERRO_PRECONDICAO."""
-        from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
         from concilium.presentation.mcp._context import ConciliumRuntimeError
+        from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
+
         ps = MagicMock()
         ps.read_invocations.return_value = []
         ps.plano_id = "plano-1"
@@ -201,6 +210,7 @@ class TestPipelineHelpers:
     def test_run_pipeline_on_plano_generic_exception(self):
         """Cover lines 267-268: generic Exception → ERRO_EXCECAO."""
         from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
+
         ps = MagicMock()
         ps.read_invocations.return_value = []
         ps.plano_id = "plano-1"
@@ -213,6 +223,7 @@ class TestPipelineHelpers:
 
     def test_rpl_build_result(self):
         from concilium.presentation.mcp.tools.pipeline import _rpl_build_result
+
         r = MagicMock()
         r.has_errors = False
         r.validacoes = []

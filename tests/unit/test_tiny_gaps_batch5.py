@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
-
+from unittest.mock import MagicMock
 
 # ─── infrastructure/storage/campaign_store.py ─────────────────────────────────
 
+
 def _make_store(tmp_path):
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
     project_root = tmp_path / "projetos" / "AGIS"
     project_root.mkdir(parents=True)
     return CampaignRunStore(project_root)
@@ -110,6 +109,7 @@ class TestCampaignRunStore:
 
     def test_from_project_root_classmethod(self, tmp_path):
         from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
         proj = tmp_path / "proj"
         proj.mkdir()
         store = CampaignRunStore.from_project_root(proj)
@@ -117,6 +117,7 @@ class TestCampaignRunStore:
 
     def test_from_project_root_with_slug(self, tmp_path):
         from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+
         store = CampaignRunStore.from_project_root(tmp_path, slug="AGIS")
         assert store is not None
 
@@ -129,28 +130,35 @@ class TestCampaignRunStore:
 
 # ─── application/services/analytics/cube_projection_views.py ──────────────────
 
+
 class TestCubeProjectionViews:
     def test_bucket_from_week_iso(self):
         from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+
         result = bucket_from_week_iso("2026-W10", "mes")
         assert isinstance(result, str)
 
     def test_bucket_from_week_iso_semana(self):
         from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+
         result = bucket_from_week_iso("2026-W10", "semana")
         assert result == "2026-W10"
 
     def test_resolve_cubo_projection_rows_with_canonical(self):
         from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
         canonical = MagicMock()
         canonical.cronograma.scheduled_activities = []
         canonical.cronograma.makespan_weeks = 0
         canonical.equipes_diretas = []
-        rows, cols, label = resolve_cubo_projection_rows(None, face="tempo_natureza", granularidade="semana", top_n=10, canonical=canonical)
+        rows, cols, label = resolve_cubo_projection_rows(
+            None, face="tempo_natureza", granularidade="semana", top_n=10, canonical=canonical
+        )
         assert isinstance(rows, list)
 
     def test_resolve_recursos_ativos_rows_mock_canonical(self):
         from concilium.application.services.analytics.cube_projection_views import resolve_recursos_ativos_rows
+
         canonical = MagicMock()
         canonical.cronograma.scheduled_activities = []
         canonical.cronograma.makespan_weeks = 0
@@ -160,6 +168,7 @@ class TestCubeProjectionViews:
 
     def test_resolve_s_curve_rows_mock_canonical(self):
         from concilium.application.services.analytics.cube_projection_views import resolve_s_curve_rows
+
         canonical = MagicMock()
         canonical.cronograma.scheduled_activities = []
         canonical.cronograma.makespan_weeks = 0
@@ -170,6 +179,7 @@ class TestCubeProjectionViews:
 
     def test_resolve_abc_curva_rows_mock_canonical(self):
         from concilium.application.services.analytics.cube_projection_views import resolve_abc_curva_rows
+
         canonical = MagicMock()
         canonical.equipes_diretas = []
         rows, cols, label, meta, extra = resolve_abc_curva_rows(canonical, top_n=10, threshold_a=0.8, threshold_b=0.95)
@@ -177,10 +187,13 @@ class TestCubeProjectionViews:
 
     def test_build_cube_projection_payload_empty(self):
         from concilium.application.services.analytics.cube_projection_views import build_cube_projection_payload
+
         canonical = MagicMock()
         canonical.cronograma.scheduled_activities = []
         canonical.cronograma.makespan_weeks = 0
         canonical.equipes_diretas = []
         canonical.resultado = None
-        result = build_cube_projection_payload(canonical=canonical, cubo=None, face="tempo_natureza", granularidade="semana", top_n=5)
+        result = build_cube_projection_payload(
+            canonical=canonical, cubo=None, face="tempo_natureza", granularidade="semana", top_n=5
+        )
         assert isinstance(result, dict)

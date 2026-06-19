@@ -1,7 +1,8 @@
 """Tests for catalog, catalogs, runs, projects API routes."""
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -13,9 +14,11 @@ def _svc():
 
 # ─── catalog.py routes ──────────────────────────────────────────────────────
 
+
 class TestCatalogRoutes:
     def test_get_project_catalog_overrides(self):
         from concilium.presentation.api.routes.catalog import get_project_catalog_overrides
+
         svc = _svc()
         svc.get_project_catalog_overrides.return_value = {"cpu-1": {"field": "val"}}
         result = get_project_catalog_overrides("proj-1", service=svc)
@@ -23,6 +26,7 @@ class TestCatalogRoutes:
 
     def test_get_project_catalog_overrides_not_found(self):
         from concilium.presentation.api.routes.catalog import get_project_catalog_overrides
+
         svc = _svc()
         svc.get_project_catalog_overrides.side_effect = FileNotFoundError("not found")
         with pytest.raises(HTTPException) as exc:
@@ -31,6 +35,7 @@ class TestCatalogRoutes:
 
     def test_extend_cpu_ok(self):
         from concilium.presentation.api.routes.catalog import extend_cpu
+
         svc = _svc()
         req = MagicMock()
         req.cpu_id = "cpu-1"
@@ -42,6 +47,7 @@ class TestCatalogRoutes:
 
     def test_extend_cpu_propagates_exception(self):
         from concilium.presentation.api.routes.catalog import extend_cpu
+
         svc = _svc()
         svc.extend_cpu.side_effect = ValueError("bad cpu")
         with pytest.raises(ValueError, match="bad cpu"):
@@ -49,6 +55,7 @@ class TestCatalogRoutes:
 
     def test_resolve_cpu_found(self):
         from concilium.presentation.api.routes.catalog import resolve_cpu
+
         svc = _svc()
         svc.resolve_cpu.return_value = {"id": "cpu-1", "descricao": "Terraplenagem"}
         result = resolve_cpu("proj-1", "cpu-1", service=svc)
@@ -56,6 +63,7 @@ class TestCatalogRoutes:
 
     def test_resolve_cpu_not_found(self):
         from concilium.presentation.api.routes.catalog import resolve_cpu
+
         svc = _svc()
         svc.resolve_cpu.return_value = None
         with pytest.raises(HTTPException) as exc:
@@ -65,9 +73,11 @@ class TestCatalogRoutes:
 
 # ─── catalogs.py routes ─────────────────────────────────────────────────────
 
+
 class TestCatalogsRoutes:
     def test_list_catalogs(self):
         from concilium.presentation.api.routes.catalogs import list_catalogs
+
         svc = _svc()
         svc.list_catalogs.return_value = [{"id": "mendeslobo"}]
         result = list_catalogs(service=svc)
@@ -75,6 +85,7 @@ class TestCatalogsRoutes:
 
     def test_get_catalog_ok(self):
         from concilium.presentation.api.routes.catalogs import get_catalog
+
         svc = _svc()
         svc.get_catalog.return_value = {"id": "mendeslobo", "n_cpus": 50}
         result = get_catalog("mendeslobo", service=svc)
@@ -82,6 +93,7 @@ class TestCatalogsRoutes:
 
     def test_get_catalog_not_found(self):
         from concilium.presentation.api.routes.catalogs import get_catalog
+
         svc = _svc()
         svc.get_catalog.side_effect = FileNotFoundError("not found")
         with pytest.raises(HTTPException) as exc:
@@ -90,6 +102,7 @@ class TestCatalogsRoutes:
 
     def test_list_catalog_cpus(self):
         from concilium.presentation.api.routes.catalogs import list_catalog_cpus
+
         svc = _svc()
         svc.list_catalog_cpus.return_value = {"items": [], "total": 0}
         result = list_catalog_cpus("mendeslobo", q=None, limit=10, service=svc)
@@ -97,6 +110,7 @@ class TestCatalogsRoutes:
 
     def test_list_catalog_cpus_not_found(self):
         from concilium.presentation.api.routes.catalogs import list_catalog_cpus
+
         svc = _svc()
         svc.list_catalog_cpus.side_effect = FileNotFoundError("cat not found")
         with pytest.raises(HTTPException) as exc:
@@ -105,6 +119,7 @@ class TestCatalogsRoutes:
 
     def test_get_catalog_cpu_found(self):
         from concilium.presentation.api.routes.catalogs import get_catalog_cpu
+
         svc = _svc()
         svc.get_catalog_cpu.return_value = {"codigo": "CPU-1"}
         result = get_catalog_cpu("cat", "CPU-1", service=svc)
@@ -112,6 +127,7 @@ class TestCatalogsRoutes:
 
     def test_get_catalog_cpu_not_found(self):
         from concilium.presentation.api.routes.catalogs import get_catalog_cpu
+
         svc = _svc()
         svc.get_catalog_cpu.return_value = None
         with pytest.raises(HTTPException) as exc:
@@ -120,6 +136,7 @@ class TestCatalogsRoutes:
 
     def test_upsert_catalog_cpu_ok(self):
         from concilium.presentation.api.routes.catalogs import upsert_catalog_cpu
+
         svc = _svc()
         svc.upsert_catalog_cpu.return_value = {"id": "CPU-1", "status": "ok"}
         req = MagicMock()
@@ -130,6 +147,7 @@ class TestCatalogsRoutes:
 
     def test_upsert_catalog_cpu_error(self):
         from concilium.presentation.api.routes.catalogs import upsert_catalog_cpu
+
         svc = _svc()
         svc.upsert_catalog_cpu.side_effect = ValueError("invalid")
         req = MagicMock()
@@ -141,6 +159,7 @@ class TestCatalogsRoutes:
 
     def test_list_catalog_insumos(self):
         from concilium.presentation.api.routes.catalogs import list_catalog_insumos
+
         svc = _svc()
         svc.list_catalog_insumos.return_value = {"items": [], "total": 0}
         result = list_catalog_insumos("cat", q=None, limit=20, service=svc)
@@ -148,6 +167,7 @@ class TestCatalogsRoutes:
 
     def test_search_catalog(self):
         from concilium.presentation.api.routes.catalogs import search_catalog
+
         svc = _svc()
         svc.search_catalog.return_value = {"items": [{"id": "CPU-1"}], "total": 1}
         result = search_catalog("terraplenagem", catalog_id=None, limit=10, service=svc)
@@ -156,9 +176,11 @@ class TestCatalogsRoutes:
 
 # ─── runs.py routes ─────────────────────────────────────────────────────────
 
+
 class TestRunsRoutes:
     def test_list_runs(self):
         from concilium.presentation.api.routes.runs import list_runs
+
         svc = _svc()
         svc.list_versions.return_value = ["v1", "v2"]
         result = list_runs("proj-1", service=svc)
@@ -166,6 +188,7 @@ class TestRunsRoutes:
 
     def test_get_run(self):
         from concilium.presentation.api.routes.runs import get_run
+
         svc = _svc()
         svc.get_run.return_value = {"version": "v1"}
         result = get_run("proj-1", "v1", service=svc)
@@ -173,6 +196,7 @@ class TestRunsRoutes:
 
     def test_get_run_not_found(self):
         from concilium.presentation.api.routes.runs import get_run
+
         svc = _svc()
         svc.get_run.side_effect = FileNotFoundError("not found")
         with pytest.raises(HTTPException) as exc:
@@ -181,6 +205,7 @@ class TestRunsRoutes:
 
     def test_fork_version_ok(self):
         from concilium.presentation.api.routes.runs import fork_version
+
         svc = _svc()
         svc.fork_version.return_value = {"new_version": "v3"}
         req = MagicMock()
@@ -189,6 +214,7 @@ class TestRunsRoutes:
 
     def test_fork_version_not_found(self):
         from concilium.presentation.api.routes.runs import fork_version
+
         svc = _svc()
         svc.fork_version.side_effect = FileNotFoundError("not found")
         req = MagicMock()
@@ -199,9 +225,11 @@ class TestRunsRoutes:
 
 # ─── projects.py routes ─────────────────────────────────────────────────────
 
+
 class TestProjectsRoutes:
     def test_list_projects(self):
         from concilium.presentation.api.routes.projects import list_projects
+
         svc = _svc()
         svc.list_projects.return_value = [{"id": "proj-1"}]
         result = list_projects(service=svc)
@@ -209,9 +237,13 @@ class TestProjectsRoutes:
 
     def test_create_project_ok(self):
         from concilium.presentation.api.routes.projects import create_project
+
         svc = _svc()
         svc.create_project.return_value = {
-            "project_id": "new-proj", "nome": "Test", "contexto_id": "mendeslobo", "current_version": "v1"
+            "project_id": "new-proj",
+            "nome": "Test",
+            "contexto_id": "mendeslobo",
+            "current_version": "v1",
         }
         req = MagicMock()
         result = create_project(req, x_user="eng", service=svc)
@@ -219,6 +251,7 @@ class TestProjectsRoutes:
 
     def test_create_project_error(self):
         from concilium.presentation.api.routes.projects import create_project
+
         svc = _svc()
         svc.create_project.side_effect = Exception("invalid")
         req = MagicMock()
@@ -228,6 +261,7 @@ class TestProjectsRoutes:
 
     def test_get_project_ok(self):
         from concilium.presentation.api.routes.projects import get_project
+
         svc = _svc()
         svc.get_project.return_value = {"id": "proj-1"}
         result = get_project("proj-1", service=svc)
@@ -235,6 +269,7 @@ class TestProjectsRoutes:
 
     def test_get_project_not_found(self):
         from concilium.presentation.api.routes.projects import get_project
+
         svc = _svc()
         svc.get_project.side_effect = FileNotFoundError("not found")
         with pytest.raises(HTTPException) as exc:
@@ -243,6 +278,7 @@ class TestProjectsRoutes:
 
     def test_delete_project_ok(self):
         from concilium.presentation.api.routes.projects import delete_project
+
         svc = _svc()
         svc.delete_project.return_value = {"status": "deleted"}
         result = delete_project("proj-1", x_user="eng", service=svc)
@@ -250,6 +286,7 @@ class TestProjectsRoutes:
 
     def test_delete_project_not_found(self):
         from concilium.presentation.api.routes.projects import delete_project
+
         svc = _svc()
         svc.delete_project.side_effect = FileNotFoundError("not found")
         with pytest.raises(HTTPException) as exc:
@@ -258,6 +295,7 @@ class TestProjectsRoutes:
 
     def test_list_versions(self):
         from concilium.presentation.api.routes.projects import list_versions
+
         svc = _svc()
         svc.list_versions.return_value = ["v1", "v2"]
         result = list_versions("proj-1", service=svc)
@@ -265,6 +303,7 @@ class TestProjectsRoutes:
 
     def test_delete_version_ok(self):
         from concilium.presentation.api.routes.projects import delete_version
+
         svc = _svc()
         svc.delete_version.return_value = {"deleted": "v2"}
         result = delete_version("proj-1", "v2", service=svc)
@@ -272,6 +311,7 @@ class TestProjectsRoutes:
 
     def test_delete_version_error(self):
         from concilium.presentation.api.routes.projects import delete_version
+
         svc = _svc()
         svc.delete_version.side_effect = Exception("cannot delete last version")
         with pytest.raises(HTTPException) as exc:

@@ -12,14 +12,12 @@ Coverage targets:
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id, register
-
 
 # ---------------------------------------------------------------------------
 # Fixture: build server and extract tool callables
@@ -202,6 +200,7 @@ class TestConsultarEstruturaProjeto:
 
     def test_multiple_escopos(self, tools):
         """Multiple escopos are all returned in output list."""
+
         def _make_es(nome: str, typ: str, plan_ids: list[str]) -> MagicMock:
             es = MagicMock()
             es.meta = {"nome": nome, "tipo_obra": typ, "status": "ativo"}

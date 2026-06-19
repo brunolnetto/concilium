@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from . import _common
 from ..chart_markdown_support import weekly_to_monthly_labels
+from . import _common
 
 
 def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
@@ -85,26 +85,26 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
         sched_acts = getattr(cron, "scheduled_activities", None) or []
         equipes_by_atv: dict[str, list[float]] = {}
         for sa in sched_acts:
-            atv_id  = str(getattr(sa, "activity_id", "") or "")
-            dist    = getattr(sa, "distribuicao_semanal", None) or {}
+            atv_id = str(getattr(sa, "activity_id", "") or "")
+            dist = getattr(sa, "distribuicao_semanal", None) or {}
             if atv_id and isinstance(dist, dict):
                 equipes_by_atv[atv_id] = [
-                    float((dist.get(p) and getattr(dist[p], "num_equipes", 0)) or 0.0)
-                    for p in periods
+                    float((dist.get(p) and getattr(dist[p], "num_equipes", 0)) or 0.0) for p in periods
                 ]
         atv_ids_ordered = sorted(equipes_by_atv.keys())
 
         if atv_ids_ordered:
             import matplotlib.pyplot as _plt
+
             cmap = _plt.get_cmap("tab20")
             colors_atv = [cmap(i / max(len(atv_ids_ordered), 1)) for i in range(len(atv_ids_ordered))]
             bottoms = [0.0] * len(x_axis)
             for idx, atv in enumerate(atv_ids_ordered):
                 vals = equipes_by_atv[atv]
                 tops = [b + v for b, v in zip(bottoms, vals)]
-                ax_team.fill_between(x_axis, bottoms, tops,
-                                     alpha=0.6, color=colors_atv[idx],
-                                     label=atv.replace("eap-1_", "#"))
+                ax_team.fill_between(
+                    x_axis, bottoms, tops, alpha=0.6, color=colors_atv[idx], label=atv.replace("eap-1_", "#")
+                )
                 bottoms = tops
             ax_team.legend(fontsize=6, loc="upper right", ncol=3)
         else:
@@ -124,9 +124,7 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
         # Clipar o eixo X na última semana com recursos ativos para evitar que
         # o período de pós-obra (indiretos após atividades diretas) estenda o gráfico.
         ultima_semana_ativa = max(
-            (i for i, t in enumerate(teams) if t > 0
-             or equip_unidades[i] > 0
-             or (has_mo and mo_aligned[i] > 0)),
+            (i for i, t in enumerate(teams) if t > 0 or equip_unidades[i] > 0 or (has_mo and mo_aligned[i] > 0)),
             default=len(x_axis) - 1,
         )
         if ultima_semana_ativa < len(x_axis) - 1:
@@ -145,4 +143,3 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
         else:
             plt.close()
         return None
-

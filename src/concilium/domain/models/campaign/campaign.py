@@ -1,4 +1,5 @@
 """ADR-070 — Campaign model: typed contracts for GO configuration space exploration."""
+
 from __future__ import annotations
 
 import hashlib
@@ -28,11 +29,11 @@ CampaignStatus = Literal[
 
 @dataclass
 class ParametroSweep:
-    campo: str        # dot-path into the spec dict, e.g. "spec.inputs_cronograma.rcpsp_spec.pool_config.objetivo"
+    campo: str  # dot-path into the spec dict, e.g. "spec.inputs_cronograma.rcpsp_spec.pool_config.objetivo"
     valores: list[Any]
-    scope: str = "global"           # "global" = mesma valor para todos (padrão)
-                                    # "per_item" = varia independentemente por item_id (k^n cenários)
-                                    # "cpu_alternativo" = substitui cpu_id no EAP para item_ids
+    scope: str = "global"  # "global" = mesma valor para todos (padrão)
+    # "per_item" = varia independentemente por item_id (k^n cenários)
+    # "cpu_alternativo" = substitui cpu_id no EAP para item_ids
     item_ids: list[str] | None = None  # para per_item / cpu_alternativo: quais item_ids variar
 
 
@@ -45,7 +46,7 @@ class PerfilExpectativas:
 
 @dataclass
 class GoResearchCampaignBundle:
-    base_spec: dict                                    # referencia.json or ProjetoSpec dict
+    base_spec: dict  # referencia.json or ProjetoSpec dict
     sweep: list[ParametroSweep]
     perfil_expectativas: PerfilExpectativas = field(default_factory=PerfilExpectativas)
     constraints: list[str] = field(default_factory=list)
@@ -83,8 +84,16 @@ class GoResearchCampaignBundle:
             if s.scope in ("per_item", "cpu_alternativo") and s.item_ids:
                 contrib = k ** len(s.item_ids)
                 acc *= contrib
-                rows.append({"campo": s.campo, "k": k, "n_items": len(s.item_ids),
-                              "contrib": contrib, "acumulado": acc, "scope": s.scope})
+                rows.append(
+                    {
+                        "campo": s.campo,
+                        "k": k,
+                        "n_items": len(s.item_ids),
+                        "contrib": contrib,
+                        "acumulado": acc,
+                        "scope": s.scope,
+                    }
+                )
             else:
                 acc *= k
                 rows.append({"campo": s.campo, "k": k, "acumulado": acc, "scope": s.scope})
@@ -94,15 +103,15 @@ class GoResearchCampaignBundle:
 @dataclass
 class VetorEspacoO:
     prazo_semanas: int | None = None
-    folga_semanas: float | None = None          # prazo_contratual - prazo_semanas (positive = on time)
+    folga_semanas: float | None = None  # prazo_contratual - prazo_semanas (positive = on time)
     fe_nec_medio: float | None = None
-    itens_criticos_pct: float | None = None     # fraction of items with fe_nec > 1.25
+    itens_criticos_pct: float | None = None  # fraction of items with fe_nec > 1.25
     gap_pool_total: float | None = None
     custo_mob_window_total: float | None = None
     # ADR-108: métricas do cronograma
     utilizacao_recursos_pct: float | None = None  # semanas produtivas / semanas mobilizadas
-    paralelismo_medio: float | None = None         # atividades ativas em simultâneo (média semanal)
-    idle_pool_pct: float | None = None             # cubo_pool_face quando disponível
+    paralelismo_medio: float | None = None  # atividades ativas em simultâneo (média semanal)
+    idle_pool_pct: float | None = None  # cubo_pool_face quando disponível
 
 
 @dataclass
@@ -111,12 +120,12 @@ class VetorEspacoEF:
     custo_execucao_pool: float | None = None
     custo_indireto: float | None = None
     preco_venda: float | None = None
-    ratio_pool_vs_cat: float | None = None      # custo_execucao_pool / PU_cat_Q (< 1.0 = good)
+    ratio_pool_vs_cat: float | None = None  # custo_execucao_pool / PU_cat_Q (< 1.0 = good)
     fidelidade_gates: bool | None = None
     # ADR-108: composição de custo do cubo_analitico
-    share_mo_pct: float | None = None           # MO / custo_direto_total
-    share_eq_pct: float | None = None           # equipamento / custo_direto_total
-    share_comb_pct: float | None = None         # combustivel / custo_direto_total
+    share_mo_pct: float | None = None  # MO / custo_direto_total
+    share_eq_pct: float | None = None  # equipamento / custo_direto_total
+    share_comb_pct: float | None = None  # combustivel / custo_direto_total
     concentracao_atividade: float | None = None  # HHI de concentração por atividade (1/N..1)
 
 
@@ -176,19 +185,19 @@ TendenciaMarginal = Literal["crescente", "decrescente", "nao_monotona", "indeter
 class CuboDimensao:
     """Uma dimensão do espaço de exploração (= um ParametroSweep)."""
 
-    nome: str          # label legível, ex: "regime_trabalho" ou "deadline_weeks"
-    campo: str         # campo do ProjetoSpec, ex: "meta.regime_trabalho"
-    valores: list[Any] # valores únicos ordenados nesta dimensão
+    nome: str  # label legível, ex: "regime_trabalho" ou "deadline_weeks"
+    campo: str  # campo do ProjetoSpec, ex: "meta.regime_trabalho"
+    valores: list[Any]  # valores únicos ordenados nesta dimensão
 
 
 @dataclass
 class CelulaAnalitica:
     """Grão mínimo do cubo: uma combinação de valores de dimensões + métricas."""
 
-    dimensoes: dict[str, Any]          # {nome_dim: valor} para esta célula
-    cenario_id: str | None             # None se esta célula não foi avaliada
-    vetor_O: "VetorEspacoO | None"
-    vetor_EF: "VetorEspacoEF | None"
+    dimensoes: dict[str, Any]  # {nome_dim: valor} para esta célula
+    cenario_id: str | None  # None se esta célula não foi avaliada
+    vetor_O: VetorEspacoO | None
+    vetor_EF: VetorEspacoEF | None
     classificacao_O: ClassificacaoO | None
     classificacao_EF: ClassificacaoEF | None
     viabilidade: ViabilidadeStatus | None
@@ -205,12 +214,12 @@ class FaceAnalitica:
     de dois parâmetros do sweep, mantendo os demais fixos no valor mediano.
     """
 
-    dim_x: str                              # nome da dimensão no eixo X
-    dim_y: str                              # nome da dimensão no eixo Y
-    metrica: str                            # métrica exibida (ex: "prazo_semanas")
-    valores_x: list[Any]                    # valores únicos da dim X (colunas)
-    valores_y: list[Any]                    # valores únicos da dim Y (linhas)
-    grade: list[list[float | None]]         # grade[i_y][i_x] = valor da métrica
+    dim_x: str  # nome da dimensão no eixo X
+    dim_y: str  # nome da dimensão no eixo Y
+    metrica: str  # métrica exibida (ex: "prazo_semanas")
+    valores_x: list[Any]  # valores únicos da dim X (colunas)
+    valores_y: list[Any]  # valores únicos da dim Y (linhas)
+    grade: list[list[float | None]]  # grade[i_y][i_x] = valor da métrica
 
 
 @dataclass
@@ -219,8 +228,8 @@ class ResumoMarginal:
 
     dimensao: str
     metrica: str
-    valores: list[Any]                      # valores da dimensão, em ordem
-    medias: list[float | None]              # média da métrica para cada valor
+    valores: list[Any]  # valores da dimensão, em ordem
+    medias: list[float | None]  # média da métrica para cada valor
     tendencia: TendenciaMarginal
 
 
@@ -241,10 +250,10 @@ class CampaignBundleCube:
     campaign_id: str
     dimensoes: list[CuboDimensao]
     celulas: list[CelulaAnalitica]
-    faces: list[FaceAnalitica]              # uma face por par de dimensões
+    faces: list[FaceAnalitica]  # uma face por par de dimensões
     resumos_marginais: list[ResumoMarginal]  # uma por (dimensão × métrica)
     n_celulas_total: int
     n_celulas_avaliadas: int
     n_celulas_viaveis: int
     n_celulas_pareto: int
-    cobertura_pct: float                    # n_avaliadas / n_total
+    cobertura_pct: float  # n_avaliadas / n_total

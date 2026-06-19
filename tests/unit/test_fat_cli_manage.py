@@ -10,10 +10,9 @@ Targets:
 from __future__ import annotations
 
 import json
-import textwrap
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import typer
@@ -238,7 +237,14 @@ class TestCmrPrintInnerLow:
 
         console = MagicMock()
         items = [
-            ({"catalog": {"codigo": "C1", "descricao": "d1"}, "rfi": {"codigo": "R1", "descricao": "r1"}, "score": 0.6}, "INSUMO")
+            (
+                {
+                    "catalog": {"codigo": "C1", "descricao": "d1"},
+                    "rfi": {"codigo": "R1", "descricao": "r1"},
+                    "score": 0.6,
+                },
+                "INSUMO",
+            )
         ]
         _cmr_print_inner_low(items, console)
         assert console.print.called
@@ -248,7 +254,14 @@ class TestCmrPrintInnerLow:
 
         console = MagicMock()
         items = [
-            ({"catalog": {"codigo": f"C{i}", "descricao": "d"}, "rfi": {"codigo": f"R{i}", "descricao": "r"}, "score": 0.6}, "INSUMO")
+            (
+                {
+                    "catalog": {"codigo": f"C{i}", "descricao": "d"},
+                    "rfi": {"codigo": f"R{i}", "descricao": "r"},
+                    "score": 0.6,
+                },
+                "INSUMO",
+            )
             for i in range(20)
         ]
         _cmr_print_inner_low(items, console)
@@ -322,6 +335,7 @@ class TestCmrLoadBundle:
 
         mod = SimpleNamespace(ROOT=tmp_path)
         import typer
+
         with pytest.raises((SystemExit, typer.Exit)):
             _cmr_load_bundle("testctx", mod)
 
@@ -362,9 +376,7 @@ class TestCmrApplyChanges:
         mod = MagicMock()
         mod._apply_merge.side_effect = [["new_ins"], ["new_prod"]]
 
-        _cmr_apply_changes(
-            mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), False, console
-        )
+        _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), False, console)
         data = json.loads(bundle_path.read_text())
         assert data["producoes"] == ["new_prod"]
         assert data["insumos"] == ["new_ins"]
@@ -379,9 +391,7 @@ class TestCmrApplyChanges:
         mod = MagicMock()
         mod._apply_merge.side_effect = [["new_ins"], ["new_prod"]]
 
-        _cmr_apply_changes(
-            mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), False, console
-        )
+        _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), False, console)
         data = json.loads(bundle_path.read_text())
         assert data["produtividades"] == ["new_prod"]
 
@@ -398,9 +408,7 @@ class TestCmrApplyChanges:
         mock_resultado = {"referencias_faltantes": [{"producao_id": "P1", "faltantes": ["I1"]}], "com_composicao": 0}
         with patch("concilium.application.catalog.pu_calculator.calcular_catalogo", return_value=mock_resultado):
             with patch("concilium.application.catalog.pu_calculator.ParametrosCalculo"):
-                _cmr_apply_changes(
-                    mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), True, console
-                )
+                _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), True, console)
 
     def test_verify_pu_without_faltantes(self, tmp_path):
         from concilium.presentation.cli._commands_manage_helpers_c import _cmr_apply_changes
@@ -415,9 +423,7 @@ class TestCmrApplyChanges:
         mock_resultado = {"referencias_faltantes": [], "com_composicao": 5}
         with patch("concilium.application.catalog.pu_calculator.calcular_catalogo", return_value=mock_resultado):
             with patch("concilium.application.catalog.pu_calculator.ParametrosCalculo"):
-                _cmr_apply_changes(
-                    mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), True, console
-                )
+                _cmr_apply_changes(mod, bundle, bundle_path, [], [], [], [], MagicMock(), MagicMock(), True, console)
 
 
 class TestCcpPrintFixed:
@@ -629,6 +635,7 @@ class TestImplCatalogCureSchema:
 
         monkeypatch.chdir(tmp_path)
         import typer
+
         with pytest.raises((SystemExit, typer.Exit)) as exc_info:
             _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
         exc = exc_info.value
@@ -645,6 +652,7 @@ class TestImplCatalogCureSchema:
         monkeypatch.chdir(tmp_path)
 
         import typer
+
         with pytest.raises((SystemExit, typer.Exit)) as exc_info:
             _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
         exc = exc_info.value
@@ -716,8 +724,11 @@ class TestImplCatalogTendencia:
     def test_raises_exit_when_bundle_missing(self, tmp_path, monkeypatch):
         from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_tendencia
 
-        with patch("concilium.presentation.cli._commands_manage_helpers_d._config_root", return_value=tmp_path / "config"):
+        with patch(
+            "concilium.presentation.cli._commands_manage_helpers_d._config_root", return_value=tmp_path / "config"
+        ):
             import typer
+
             with pytest.raises((SystemExit, typer.Exit)) as exc_info:
                 _impl_catalog_tendencia(contexto_id="missing", jurisdicao_id=None, output="")
             exc = exc_info.value

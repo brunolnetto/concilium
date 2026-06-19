@@ -1,18 +1,19 @@
 """Tests for service-layer modules to boost coverage."""
+
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ─── BenchmarkDiffService ───────────────────────────────────────────────────
+
 
 class TestBenchmarkDiffService:
     def _make_exec(self, exec_id, benchmark_id, versao, discrepancia=None):
         from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
+
         return BenchmarkExecution(
             execution_id=exec_id,
             benchmark_id=benchmark_id,
@@ -25,9 +26,15 @@ class TestBenchmarkDiffService:
 
     def test_compare_happy_path(self):
         from concilium.application.benchmarks.diff_service import BenchmarkDiffService
+
         svc = BenchmarkDiffService()
         e1 = self._make_exec("e1", "BENCH", 1)
-        e2 = self._make_exec("e2", "BENCH", 2, {"delta_custo_direto": 5.0, "delta_cronograma": 2, "delta_margem_lucro": -1.5, "itens_impactados": 3})
+        e2 = self._make_exec(
+            "e2",
+            "BENCH",
+            2,
+            {"delta_custo_direto": 5.0, "delta_cronograma": 2, "delta_margem_lucro": -1.5, "itens_impactados": 3},
+        )
         result = svc.compare(e1, e2)
         assert result.delta_custo_direto_percentual == 5.0
         assert result.delta_cronograma_semanas == 2
@@ -38,6 +45,7 @@ class TestBenchmarkDiffService:
 
     def test_compare_different_benchmark_raises(self):
         from concilium.application.benchmarks.diff_service import BenchmarkDiffService
+
         svc = BenchmarkDiffService()
         e1 = self._make_exec("e1", "A", 1)
         e2 = self._make_exec("e2", "B", 2)
@@ -46,6 +54,7 @@ class TestBenchmarkDiffService:
 
     def test_compare_zero_deltas(self):
         from concilium.application.benchmarks.diff_service import BenchmarkDiffService
+
         svc = BenchmarkDiffService()
         e1 = self._make_exec("e1", "B", 1)
         e2 = self._make_exec("e2", "B", 2)
@@ -55,12 +64,19 @@ class TestBenchmarkDiffService:
 
     def test_to_dict(self):
         from concilium.application.benchmarks.diff_service import BenchmarkDiffResult
+
         r = BenchmarkDiffResult(
-            execution_1_id="e1", execution_2_id="e2", benchmark_id="B",
-            versao_1=1, versao_2=2,
-            delta_custo_direto_percentual=3.0, delta_cronograma_semanas=1,
-            delta_margem_lucro_percentual=-0.5, itens_impactados=2,
-            interpretacao="test", comparado_em=datetime(2026, 1, 1),
+            execution_1_id="e1",
+            execution_2_id="e2",
+            benchmark_id="B",
+            versao_1=1,
+            versao_2=2,
+            delta_custo_direto_percentual=3.0,
+            delta_cronograma_semanas=1,
+            delta_margem_lucro_percentual=-0.5,
+            itens_impactados=2,
+            interpretacao="test",
+            comparado_em=datetime(2026, 1, 1),
         )
         d = r.to_dict()
         assert d["benchmark_id"] == "B"
@@ -69,10 +85,15 @@ class TestBenchmarkDiffService:
 
     def test_to_dict_no_comparado_em(self):
         from concilium.application.benchmarks.diff_service import BenchmarkDiffResult
+
         r = BenchmarkDiffResult(
-            execution_1_id="e1", execution_2_id="e2", benchmark_id="B",
-            versao_1=1, versao_2=2,
-            delta_custo_direto_percentual=0.0, delta_cronograma_semanas=0,
+            execution_1_id="e1",
+            execution_2_id="e2",
+            benchmark_id="B",
+            versao_1=1,
+            versao_2=2,
+            delta_custo_direto_percentual=0.0,
+            delta_cronograma_semanas=0,
             delta_margem_lucro_percentual=0.0,
         )
         assert r.to_dict()["comparado_em"] is None
@@ -80,9 +101,11 @@ class TestBenchmarkDiffService:
 
 # ─── OverrideService ────────────────────────────────────────────────────────
 
+
 class TestOverrideService:
     def _make_svc(self):
         from concilium.application.services.project.override_service import OverrideService
+
         repo = MagicMock()
         audit = MagicMock()
         return OverrideService(repo, audit), repo, audit
@@ -141,9 +164,11 @@ class TestOverrideService:
 
 # ─── ProjectInputBuilder ────────────────────────────────────────────────────
 
+
 class TestProjectInputBuilder:
     def _make_builder(self, tmp_path):
         from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+
         return ProjectInputBuilder(config_root=tmp_path / "config", benchmarks_root=tmp_path / "benchmarks")
 
     def test_prepare_without_benchmark_builds_inputs(self, tmp_path):
@@ -174,7 +199,9 @@ class TestProjectInputBuilder:
         req = MagicMock()
         req.benchmark_slug = "MISSING"
         req.referencia_path = None
-        with patch("concilium.application.services.project.project_input_builder.find_benchmark_reference", return_value=None):
+        with patch(
+            "concilium.application.services.project.project_input_builder.find_benchmark_reference", return_value=None
+        ):
             with pytest.raises(FileNotFoundError):
                 builder.prepare(req)
 
@@ -188,8 +215,10 @@ class TestProjectInputBuilder:
 
     def test_prepare_with_valid_referencia_path(self, tmp_path):
         import json
+
         ref_data = {
-            "slug": "TEST", "contexto_id": "mendeslobo",
+            "slug": "TEST",
+            "contexto_id": "mendeslobo",
             "meta": {"nome": "Test", "tipo_obra": "terraplenagem"},
             "spec": {"eap": [], "cronograma": []},
         }
@@ -209,7 +238,9 @@ class TestProjectInputBuilder:
         mock_spec.inputs_cronograma = None
         mock_spec.inputs_indiretos = None
         mock_spec.extra_inputs = {}
-        with patch("concilium.application.services.project.project_input_builder.BenchmarkSpecLoader") as mock_loader_cls:
+        with patch(
+            "concilium.application.services.project.project_input_builder.BenchmarkSpecLoader"
+        ) as mock_loader_cls:
             mock_loader = MagicMock()
             mock_loader.load.return_value = mock_spec
             mock_loader_cls.return_value = mock_loader

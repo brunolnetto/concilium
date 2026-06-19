@@ -24,15 +24,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from concilium.application.orchestrators.lifecycle_coordinator import LifecycleCoordinator
 from concilium.infrastructure.storage.project import ProjectStore
-
 
 # ---------------------------------------------------------------------------
 # Helpers / Fixtures
@@ -44,9 +40,7 @@ def _make_project_store(tmp_path: Path, meta: dict | None = None) -> ProjectStor
     root = tmp_path / "project"
     root.mkdir(parents=True, exist_ok=True)
     effective_meta = meta if meta is not None else {}
-    (root / ProjectStore.META_FILE).write_text(
-        json.dumps(effective_meta, ensure_ascii=False), encoding="utf-8"
-    )
+    (root / ProjectStore.META_FILE).write_text(json.dumps(effective_meta, ensure_ascii=False), encoding="utf-8")
     return ProjectStore(root)
 
 
@@ -89,9 +83,7 @@ class TestAvancarPlano:
         plano = _make_plano_store()
 
         coordinator = LifecycleCoordinator(runtime)
-        result = coordinator.avancar_plano(
-            "skill-01", project, plano, inputs={}, force_data_gate=False
-        )
+        result = coordinator.avancar_plano("skill-01", project, plano, inputs={}, force_data_gate=False)
 
         assert result is expected
 
@@ -147,9 +139,7 @@ class TestForceDataGate:
 
         coordinator = LifecycleCoordinator(runtime)
 
-        with patch(
-            "concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog"
-        ) as mock_audit:
+        with patch("concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog") as mock_audit:
             coordinator.avancar_plano("s", project, plano, force_data_gate=True)
 
         runtime.load_catalogo.assert_called_once_with("snap-123")
@@ -162,9 +152,7 @@ class TestForceDataGate:
 
         coordinator = LifecycleCoordinator(runtime)
 
-        with patch(
-            "concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog"
-        ) as mock_audit:
+        with patch("concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog") as mock_audit:
             coordinator.avancar_plano("s", project, plano, force_data_gate=False)
 
         runtime.load_catalogo.assert_not_called()
@@ -183,9 +171,7 @@ class TestAuditDataGovernance:
         plano = _make_plano_store({"snapshot_catalogo_id": "snap-abc"})
 
         coordinator = LifecycleCoordinator(runtime)
-        with patch(
-            "concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog"
-        ) as mock_audit:
+        with patch("concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog") as mock_audit:
             coordinator._audit_data_governance(project, plano)
 
         runtime.load_catalogo.assert_called_once_with("snap-abc")
@@ -198,9 +184,7 @@ class TestAuditDataGovernance:
         plano = _make_plano_store({"snapshot_catalogo_id": "snap-abc", "contexto_id": "ctx-999"})
 
         coordinator = LifecycleCoordinator(runtime)
-        with patch(
-            "concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog"
-        ) as mock_audit:
+        with patch("concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog") as mock_audit:
             coordinator._audit_data_governance(project, plano)
 
         # load_and_audit_catalog must receive snap-abc, not ctx-999
@@ -212,9 +196,7 @@ class TestAuditDataGovernance:
         plano = _make_plano_store({"contexto_id": "ctx-111"})
 
         coordinator = LifecycleCoordinator(runtime)
-        with patch(
-            "concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog"
-        ) as mock_audit:
+        with patch("concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog") as mock_audit:
             coordinator._audit_data_governance(project, plano)
 
         # load_catalogo should NOT be called (snapshot path skipped)
@@ -227,9 +209,7 @@ class TestAuditDataGovernance:
         plano = _make_plano_store({})  # no contexto_id in escopo_meta
 
         coordinator = LifecycleCoordinator(runtime)
-        with patch(
-            "concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog"
-        ) as mock_audit:
+        with patch("concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog") as mock_audit:
             coordinator._audit_data_governance(project, plano)
 
         mock_audit.assert_called_once_with(runtime, "ctx-from-meta")
@@ -240,9 +220,7 @@ class TestAuditDataGovernance:
         plano = _make_plano_store({})
 
         coordinator = LifecycleCoordinator(runtime)
-        with patch(
-            "concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog"
-        ) as mock_audit:
+        with patch("concilium.application.orchestrators.lifecycle_coordinator.load_and_audit_catalog") as mock_audit:
             coordinator._audit_data_governance(project, plano)
 
         runtime.load_catalogo.assert_not_called()
@@ -263,9 +241,7 @@ class TestInjectInsumos:
         overrides_dir = project.root / "overrides"
         overrides_dir.mkdir(parents=True, exist_ok=True)
         override_data = {"item-01": {"preco": 100.0}}
-        (overrides_dir / "insumos_override.json").write_text(
-            json.dumps(override_data), encoding="utf-8"
-        )
+        (overrides_dir / "insumos_override.json").write_text(json.dumps(override_data), encoding="utf-8")
 
         coordinator = LifecycleCoordinator(runtime)
         result = coordinator._inject_project_catalog_layers(project, {})
@@ -279,9 +255,7 @@ class TestInjectInsumos:
 
         overrides_dir = project.root / "overrides"
         overrides_dir.mkdir(parents=True, exist_ok=True)
-        (overrides_dir / "insumos_override.json").write_text(
-            json.dumps({"disk-value": 1}), encoding="utf-8"
-        )
+        (overrides_dir / "insumos_override.json").write_text(json.dumps({"disk-value": 1}), encoding="utf-8")
 
         caller_value = {"caller-value": 99}
         coordinator = LifecycleCoordinator(runtime)
@@ -368,9 +342,7 @@ class TestInjectJurisdicao:
         project = _make_project_store(tmp_path, {"contexto_id": "ctx-x"})
         coordinator = LifecycleCoordinator(runtime)
 
-        result = coordinator._inject_project_catalog_layers(
-            project, {"jurisdicao_id": "jur-existing"}
-        )
+        result = coordinator._inject_project_catalog_layers(project, {"jurisdicao_id": "jur-existing"})
 
         runtime.load_contexto.assert_not_called()
         assert result["jurisdicao_id"] == "jur-existing"
@@ -404,9 +376,7 @@ class TestInjectJurisdicao:
         project = _make_project_store(tmp_path, {"contexto_id": "ctx-from-meta"})
         coordinator = LifecycleCoordinator(runtime)
 
-        result = coordinator._inject_project_catalog_layers(
-            project, {"contexto_id": "ctx-from-input"}
-        )
+        result = coordinator._inject_project_catalog_layers(project, {"contexto_id": "ctx-from-input"})
 
         # Should be called with the enriched/inputs contexto_id, not the meta one
         runtime.load_contexto.assert_called_once_with("ctx-from-input")

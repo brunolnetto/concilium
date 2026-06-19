@@ -8,7 +8,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import sys
 from pathlib import Path
@@ -34,7 +33,6 @@ def proxy_module():
         "concilium.infrastructure.settings.get_mcp_proxy",
         return_value=_fake_proxy_settings,
     ):
-        import importlib
 
         import concilium.presentation.mcp.proxy as _proxy_mod
 
@@ -197,7 +195,6 @@ class TestPlotEtaObra:
             "sys.modules",
             {"matplotlib": None, "matplotlib.pyplot": None},
         ):
-            import importlib
 
             # Force reimport without matplotlib
             mod_name = "concilium.application.runtime.deliverables.visualizations.eficiencia.eta_obra"
@@ -369,9 +366,7 @@ class TestPlotParetoPerdas:
                 plot_pareto_perdas,
             )
 
-            campo = _make_campo_pareto(
-                [{"item_id": "eap-X", "pct_perda": 50.0, "perda_fisica_total": 200.0}]
-            )
+            campo = _make_campo_pareto([{"item_id": "eap-X", "pct_perda": 50.0, "perda_fisica_total": 200.0}])
             plot_pareto_perdas(campo)
 
         campo.pareto_perdas.assert_called_once_with(top_n=10)

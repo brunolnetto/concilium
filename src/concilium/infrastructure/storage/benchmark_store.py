@@ -22,10 +22,10 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
 
     def __init__(
         self,
-        storage: "BlobStoragePort | None" = None,
+        storage: BlobStoragePort | None = None,
         prefix: str = ".nep039",
         *,
-        root: "Path | None" = None,
+        root: Path | None = None,
     ) -> None:
         """
         Args:
@@ -62,7 +62,7 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
     # ── Backward-compat classmethod ──────────────────────────────────────────
 
     @classmethod
-    def from_path(cls, root: Path) -> "FileSystemBenchmarkStore":
+    def from_path(cls, root: Path) -> FileSystemBenchmarkStore:
         """Cria store usando LocalBlobStorage apontando para *root*.
 
         *root* é o diretório raiz do store (ex: ``.nep039/``).
@@ -94,9 +94,7 @@ class FileSystemBenchmarkStore(BenchmarkRepositoryPort):
         all_blobs = self._storage.listar_blobs(self._metadata_prefix)
         prefix_strip = self._metadata_prefix + "/"
         matching = [
-            b for b in all_blobs
-            if b.removeprefix(prefix_strip).startswith(f"{benchmark_id}-v")
-            and b.endswith(".json")
+            b for b in all_blobs if b.removeprefix(prefix_strip).startswith(f"{benchmark_id}-v") and b.endswith(".json")
         ]
         if not matching:
             return None

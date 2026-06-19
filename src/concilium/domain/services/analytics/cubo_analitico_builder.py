@@ -24,8 +24,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.constants import SEMANAS_POR_MES
-from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 from concilium.domain.models.analytics.cubo_analitico import CelulaAnalitica, CuboAnalitico
+from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 
 # ADR-087/089: mapeamento (campo_equipe, categoria_insumo, propriedade, cat_bdi, unidade_fisica)
 # A coluna cat_bdi referencia o campo na TabelaBdi para obter BDI e decomposição.
@@ -255,9 +255,7 @@ class CuboAnaliticoBuilder:
             celulas=tuple(celulas),
         )
 
-    def _enrich_with_financial_data(
-        self, canonical_in: Any, celulas: list[CelulaAnalitica]
-    ) -> list[CelulaAnalitica]:
+    def _enrich_with_financial_data(self, canonical_in: Any, celulas: list[CelulaAnalitica]) -> list[CelulaAnalitica]:
         """Escala células diretas ao custo PUxQ e adiciona células de indireto.
 
         O pool captura apenas a fatia rastreável (estado=prod); o planejamento contém
@@ -266,10 +264,10 @@ class CuboAnaliticoBuilder:
         """
         # 1. Escalar células diretas ao custo PUxQ por atividade
         plan_total_by_item: dict[str, float] = {}
-        for item in (getattr(canonical_in, "planejamento", None) or []):
+        for item in getattr(canonical_in, "planejamento", None) or []:
             item_id = str(getattr(item, "item_id", "") or "")
             subtotal = getattr(item, "subtotal", None)
-            sem_bdi  = getattr(subtotal, "sem_bdi", None) if subtotal else None
+            sem_bdi = getattr(subtotal, "sem_bdi", None) if subtotal else None
             total_rs = float(getattr(sem_bdi, "total", 0.0) or 0.0) if sem_bdi else 0.0
             if item_id and total_rs > 0:
                 plan_total_by_item[item_id] = total_rs
@@ -278,9 +276,7 @@ class CuboAnaliticoBuilder:
             pool_total_by_item: dict[str, float] = {}
             for c in celulas:
                 if c.natureza == "direto" and c.componente_bdi == "custo_direto":
-                    pool_total_by_item[c.atividade_id] = (
-                        pool_total_by_item.get(c.atividade_id, 0.0) + c.valor_rs
-                    )
+                    pool_total_by_item[c.atividade_id] = pool_total_by_item.get(c.atividade_id, 0.0) + c.valor_rs
             scale_factors: dict[str, float] = {
                 item_id: plan_val / pool_total_by_item[item_id]
                 for item_id, plan_val in plan_total_by_item.items()
@@ -308,6 +304,7 @@ class CuboAnaliticoBuilder:
         if ind_sem and data_inicio_str:
             try:
                 from datetime import date, timedelta
+
                 data_inicio = date.fromisoformat(data_inicio_str)
                 for item in ind_sem:
                     semana_offset = getattr(item, "semana", None)
@@ -317,13 +314,13 @@ class CuboAnaliticoBuilder:
                     if custo_sem <= self._min:
                         continue
                     cat = str(getattr(item, "categoria", "ADM") or "ADM")
-                    dt  = data_inicio + timedelta(weeks=int(semana_offset))
+                    dt = data_inicio + timedelta(weeks=int(semana_offset))
                     iso = f"{dt.isocalendar()[0]}-W{dt.isocalendar()[1]:02d}"
                     celulas.append(
                         CelulaAnalitica(
                             natureza="indireto",
                             atividade_id=f"IND-{cat}",
-                            categoria_insumo="verba",   # Literal válido; natureza='indireto' diferencia
+                            categoria_insumo="verba",  # Literal válido; natureza='indireto' diferencia
                             propriedade=cat.lower(),
                             semana_iso=iso,
                             componente_bdi="custo_direto",

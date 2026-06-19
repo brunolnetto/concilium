@@ -25,7 +25,14 @@ class _FakeSvc:
         return {"perfil_id": perfil_id, "version": "v2", "motivo": motivo}
 
     def compare_perfil_versions(self, perfil_id, va, vb):
-        return {"entity_id": perfil_id, "subdir": "perfis", "version_a": va, "version_b": vb, "changed": {}, "unchanged": []}
+        return {
+            "entity_id": perfil_id,
+            "subdir": "perfis",
+            "version_a": va,
+            "version_b": vb,
+            "changed": {},
+            "unchanged": [],
+        }
 
     def list_contextos(self):
         return [{"contexto_id": "ctx1"}]
@@ -37,7 +44,14 @@ class _FakeSvc:
         return {"contexto_id": contexto_id, "version": "v2"}
 
     def compare_contexto_versions(self, contexto_id, va, vb):
-        return {"entity_id": contexto_id, "subdir": "contextos", "version_a": va, "version_b": vb, "changed": {}, "unchanged": []}
+        return {
+            "entity_id": contexto_id,
+            "subdir": "contextos",
+            "version_a": va,
+            "version_b": vb,
+            "changed": {},
+            "unchanged": [],
+        }
 
     def list_temas(self):
         return [{"tema_id": "t1"}]
@@ -49,7 +63,14 @@ class _FakeSvc:
         return {"tema_id": tema_id, "version": "v2"}
 
     def compare_tema_versions(self, tema_id, va, vb):
-        return {"entity_id": tema_id, "subdir": "temas", "version_a": va, "version_b": vb, "changed": {}, "unchanged": []}
+        return {
+            "entity_id": tema_id,
+            "subdir": "temas",
+            "version_a": va,
+            "version_b": vb,
+            "changed": {},
+            "unchanged": [],
+        }
 
     def list_jurisdicoes(self):
         return [{"jurisdicao_id": "j1"}]
@@ -61,7 +82,14 @@ class _FakeSvc:
         return {"jurisdicao_id": jurisdicao_id, "version": "v2"}
 
     def compare_jurisdicao_versions(self, jurisdicao_id, va, vb):
-        return {"entity_id": jurisdicao_id, "subdir": "jurisdicoes", "version_a": va, "version_b": vb, "changed": {}, "unchanged": []}
+        return {
+            "entity_id": jurisdicao_id,
+            "subdir": "jurisdicoes",
+            "version_a": va,
+            "version_b": vb,
+            "changed": {},
+            "unchanged": [],
+        }
 
 
 class _ErrorSvc(_FakeSvc):
@@ -80,7 +108,7 @@ class _ErrorSvc(_FakeSvc):
 
 def _client(svc=None):
     app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: (svc or _FakeSvc())
+    app.dependency_overrides[get_concilium_service] = lambda: svc or _FakeSvc()
     return TestClient(app, raise_server_exceptions=False)
 
 

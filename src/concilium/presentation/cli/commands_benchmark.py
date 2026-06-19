@@ -26,8 +26,8 @@ from concilium.application.benchmarks.algorithm_comparison import AlgorithmCompa
 from concilium.application.benchmarks.analysis import build_stage_discrepancy_summary
 from concilium.application.benchmarks.analysis.audit_six_questions import run_audit
 from concilium.application.benchmarks.analysis.pipeline_validator import validate_pipeline_integrity
-from concilium.application.benchmarks.execution.batch import discover_benchmark_slugs, find_benchmark_reference
 from concilium.application.benchmarks.charts.output_packager import empacotar_outputs
+from concilium.application.benchmarks.execution.batch import discover_benchmark_slugs, find_benchmark_reference
 from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
 from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
 from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
@@ -40,6 +40,7 @@ from concilium.presentation.cli.shared import (
     benchmark_projects_root,
     config_root,
 )
+
 from ._commands_benchmark_helpers import (
     _empacotar_benchmark_cli,
     _execute_plan_space_tasks,
@@ -120,7 +121,6 @@ def run_benchmarks_batch(
 ) -> None:
     """Executa todos os benchmarks em modo batch silencioso e eficiente."""
     from datetime import UTC, datetime
-
 
     root = _tools_root()
     batch_runner = BenchmarkBatchRunner(
@@ -251,7 +251,6 @@ def pack_benchmark(
 ) -> None:
     """Empacota artefatos de saída do benchmark (PNGs, relatórios, audit) em ZIP."""
     from pathlib import Path as _Path
-
 
     rprint(f"[cyan]Empacotando benchmark {slug.upper()}...[/cyan]")
 

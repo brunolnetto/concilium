@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import sys
 from types import ModuleType
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers to build an AzureBlobStorage without touching real Azure
@@ -166,7 +165,6 @@ class TestClientLazyInit:
 
 class TestFromEnv:
     def test_from_env_happy_path(self, monkeypatch):
-        import concilium.infrastructure.settings as _settings
 
         class _FakeAzure:
             container = "mycontainer"
@@ -189,7 +187,6 @@ class TestFromEnv:
         assert s._root_prefix == "pfx"
 
     def test_from_env_empty_container_raises_oserror(self, monkeypatch):
-        import concilium.infrastructure.settings as _settings
 
         class _FakeAzure:
             container = "  "
@@ -209,7 +206,6 @@ class TestFromEnv:
             AzureBlobStorage.from_env()
 
     def test_from_env_connection_string_preferred(self, monkeypatch):
-        import concilium.infrastructure.settings as _settings
 
         class _FakeAzure:
             container = "c"
@@ -229,7 +225,6 @@ class TestFromEnv:
         assert s._connection_string == "DefaultEndpointsProtocol=https;..."
 
     def test_from_env_empty_key_becomes_none(self, monkeypatch):
-        import concilium.infrastructure.settings as _settings
 
         class _FakeAzure:
             container = "c"

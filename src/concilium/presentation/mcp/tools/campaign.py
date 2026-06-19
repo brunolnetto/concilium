@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from concilium.domain.constants import META_MARGEM_PADRAO
+
 from mcp.server.fastmcp import FastMCP
 
 
@@ -14,7 +16,7 @@ def register(server: FastMCP) -> None:
     def explorar_configuracoes_go(
         project_id: str,
         parametros_sweep: list[dict],
-        meta_margem_pct: float = 0.10,
+        meta_margem_pct: float = META_MARGEM_PADRAO,
         prazo_contratual_semanas: int | None = None,
         top_k: int = 5,
         workers: int = 4,
@@ -41,7 +43,6 @@ def register(server: FastMCP) -> None:
             workers: Workers paralelos para avaliação de cenários (default 4).
             reset: Se True, reavalia todos os cenários mesmo que já existam em cache.
         """
-        import json
         from pathlib import Path
 
         from concilium.application.services.campaign.campaign_report import (
@@ -50,7 +51,11 @@ def register(server: FastMCP) -> None:
             serialize_campaign_report,
         )
         from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
-        from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
+        from concilium.domain.models.campaign.campaign import (
+            GoResearchCampaignBundle,
+            ParametroSweep,
+            PerfilExpectativas,
+        )
         from concilium.infrastructure.settings import get_storage
         from concilium.infrastructure.storage.campaign_store import CampaignRunStore
         from concilium.presentation.cli.commands_campaign import _load_project_base_spec

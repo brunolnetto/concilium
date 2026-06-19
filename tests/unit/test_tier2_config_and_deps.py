@@ -13,6 +13,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _reset_singleton() -> None:
     """Reset ConfigurationManager singleton so each test starts clean."""
     from concilium.infrastructure import config as cfg_module
@@ -38,6 +39,7 @@ class TestCoerceEnvValue:
 
     def setup_method(self):
         from concilium.infrastructure.config import ConfigurationManager
+
         self.coerce = ConfigurationManager._coerce_env_value
 
     def test_empty_string_returns_empty_string(self):
@@ -96,6 +98,7 @@ class TestSetNestedValue:
 
     def setup_method(self):
         from concilium.infrastructure.config import ConfigurationManager
+
         self.setter = ConfigurationManager._set_nested_value
 
     def test_single_key(self):
@@ -134,6 +137,7 @@ class TestLoadFile:
 
     def setup_method(self):
         from concilium.infrastructure.config import ConfigurationManager
+
         self.loader = ConfigurationManager._load_file
 
     def test_json_file(self, tmp_path):
@@ -178,6 +182,7 @@ class TestApplyEnvOverrides:
 
     def setup_method(self):
         from concilium.infrastructure.config import ConfigurationManager
+
         self.apply = ConfigurationManager._apply_env_overrides
 
     def test_applies_override_from_env(self):
@@ -217,6 +222,7 @@ class TestResolveConfigPath:
 
     def setup_method(self):
         from concilium.infrastructure.config import ConfigurationManager
+
         self.resolve = ConfigurationManager._resolve_config_path
 
     def test_uses_runtime_config_file_when_set(self, tmp_path):
@@ -259,6 +265,7 @@ class TestConfigurationManagerFull:
         mock_st = _make_mock_storage(tmp_path, runtime_config_file=cfg_file)
         with patch("concilium.infrastructure.config.get_storage", return_value=mock_st):
             from concilium.infrastructure.config import ConfigurationManager
+
             return ConfigurationManager()
 
     def test_get_top_level_key(self, tmp_path):
@@ -297,6 +304,7 @@ class TestConfigurationManagerFull:
         mock_st = _make_mock_storage(tmp_path, runtime_config_file=cfg_file)
         with patch("concilium.infrastructure.config.get_storage", return_value=mock_st):
             from concilium.infrastructure.config import ConfigurationManager
+
             a = ConfigurationManager()
             b = ConfigurationManager()
         assert a is b
@@ -306,6 +314,7 @@ class TestConfigurationManagerFull:
         mock_st = _make_mock_storage(tmp_path, runtime_config_file=missing_file)
         with patch("concilium.infrastructure.config.get_storage", return_value=mock_st):
             from concilium.infrastructure.config import ConfigurationManager
+
             with pytest.raises(FileNotFoundError, match="Configuration file not found"):
                 ConfigurationManager()
 
@@ -316,6 +325,7 @@ class TestConfigurationManagerFull:
         mock_st = _make_mock_storage(tmp_path, runtime_config_file=cfg_file)
         with patch("concilium.infrastructure.config.get_storage", return_value=mock_st):
             from concilium.infrastructure.config import ConfigurationManager
+
             with pytest.raises(ValueError, match="Invalid configuration root"):
                 ConfigurationManager()
 

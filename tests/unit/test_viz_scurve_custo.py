@@ -13,9 +13,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Module path
 # ---------------------------------------------------------------------------
@@ -25,6 +22,7 @@ _MOD = "concilium.application.runtime.deliverables.visualizations.cube.scurve_cu
 
 def _import_build():
     import importlib
+
     mod = importlib.import_module(_MOD)
     return mod.build
 
@@ -32,6 +30,7 @@ def _import_build():
 # ---------------------------------------------------------------------------
 # Fixtures helpers
 # ---------------------------------------------------------------------------
+
 
 def _fig_to_bytes_stub(fig) -> bytes:
     return b"PNG"
@@ -114,6 +113,7 @@ def _patched_build_payload(nat_rows=None, comp_rows=None):
 # 1. Early-return: rows_nat empty
 # ---------------------------------------------------------------------------
 
+
 class TestRowsNatEmpty:
     def test_empty_rows_nat_returns_none(self):
         """build_payload returns rows=[] → build() returns None immediately."""
@@ -163,6 +163,7 @@ class TestRowsNatEmpty:
 # 2. ImportError from init_mpl
 # ---------------------------------------------------------------------------
 
+
 class TestImportErrorPath:
     def test_import_error_returns_none(self):
         """ImportError during init_mpl → build() returns None."""
@@ -178,6 +179,7 @@ class TestImportErrorPath:
 # ---------------------------------------------------------------------------
 # 3. Happy path — returns bytes
 # ---------------------------------------------------------------------------
+
 
 class TestHappyPath:
     def test_basic_happy_path_returns_bytes(self):
@@ -268,6 +270,7 @@ class TestHappyPath:
 # 4. preco_pool_bdi > 0 branch (axhline red)
 # ---------------------------------------------------------------------------
 
+
 class TestPrecoBranch:
     def test_preco_pool_bdi_positive_draws_red_axhline(self):
         """When acc_total_bdi[-1] > 0, ax_line.axhline is called with red color."""
@@ -339,6 +342,7 @@ class TestPrecoBranch:
 # 5. Inner exception → returns None
 # ---------------------------------------------------------------------------
 
+
 class TestInnerException:
     def test_subplots_raises_returns_none(self):
         """When plt.subplots raises, except block returns None."""
@@ -347,8 +351,7 @@ class TestInnerException:
         mock_plt = MagicMock()
         mock_plt.subplots.side_effect = RuntimeError("display error")
 
-        with patch(f"{_MOD}.init_mpl", return_value=(mock_plt, _fig_to_bytes_stub)), \
-             _patched_build_payload():
+        with patch(f"{_MOD}.init_mpl", return_value=(mock_plt, _fig_to_bytes_stub)), _patched_build_payload():
             result = build(canonical, cubo=None)
 
         assert result is None
@@ -362,8 +365,7 @@ class TestInnerException:
         def _bad_fig_to_bytes(fig):
             raise OSError("disk full")
 
-        with patch(f"{_MOD}.init_mpl", return_value=(mock_plt, _bad_fig_to_bytes)), \
-             _patched_build_payload():
+        with patch(f"{_MOD}.init_mpl", return_value=(mock_plt, _bad_fig_to_bytes)), _patched_build_payload():
             result = build(canonical, cubo=None)
 
         assert result is None
@@ -394,6 +396,7 @@ class TestInnerException:
 # 6. resultado attribute variations
 # ---------------------------------------------------------------------------
 
+
 class TestResultadoAttributes:
     def test_resultado_none_does_not_crash(self):
         """If canonical.resultado is None, getattr guards prevent crash."""
@@ -422,6 +425,7 @@ class TestResultadoAttributes:
 # ---------------------------------------------------------------------------
 # 7. Multiple periods — covers bar/fill_between loop iterations
 # ---------------------------------------------------------------------------
+
 
 class TestMultiplePeriods:
     def test_many_periods(self):

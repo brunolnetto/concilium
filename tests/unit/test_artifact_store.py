@@ -25,10 +25,10 @@ from concilium.infrastructure.storage.artifact_store import (
     FileSystemArtifactStore,
 )
 
-
 # ---------------------------------------------------------------------------
 # Stub payload model
 # ---------------------------------------------------------------------------
+
 
 class StubPayload(BaseModel):
     value: str = "hello"
@@ -38,6 +38,7 @@ class StubPayload(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_meta(
     artifact_id: str = "test-artifact-001",
@@ -87,6 +88,7 @@ def _make_ref(meta: ArtifactMeta) -> ArtifactRef:
 # Base interface: ArtifactStore raises NotImplementedError
 # ---------------------------------------------------------------------------
 
+
 class TestArtifactStoreInterface:
     def test_save_raises(self):
         store = ArtifactStore()
@@ -115,6 +117,7 @@ class TestArtifactStoreInterface:
 # FileSystemArtifactStore.__init__
 # ---------------------------------------------------------------------------
 
+
 class TestFileSystemArtifactStoreInit:
     def test_creates_root_directory(self, tmp_path: Path):
         root = tmp_path / "new_dir" / "nested"
@@ -138,6 +141,7 @@ class TestFileSystemArtifactStoreInit:
 # ---------------------------------------------------------------------------
 # FileSystemArtifactStore.save
 # ---------------------------------------------------------------------------
+
 
 class TestFileSystemArtifactStoreSave:
     def test_save_writes_payload_json(self, tmp_path: Path):
@@ -218,6 +222,7 @@ class TestFileSystemArtifactStoreSave:
 # FileSystemArtifactStore.save_meta_sidecar
 # ---------------------------------------------------------------------------
 
+
 class TestSaveMetaSidecar:
     def test_sidecar_written_without_payload(self, tmp_path: Path):
         store = FileSystemArtifactStore(tmp_path)
@@ -259,6 +264,7 @@ class TestSaveMetaSidecar:
 # ---------------------------------------------------------------------------
 # FileSystemArtifactStore.get
 # ---------------------------------------------------------------------------
+
 
 class TestFileSystemArtifactStoreGet:
     def test_get_returns_populated_envelope(self, tmp_path: Path):
@@ -308,6 +314,7 @@ class TestFileSystemArtifactStoreGet:
 # FileSystemArtifactStore.list_by_trace
 # ---------------------------------------------------------------------------
 
+
 class TestListByTrace:
     def test_returns_matching_trace_refs(self, tmp_path: Path):
         store = FileSystemArtifactStore(tmp_path)
@@ -350,14 +357,13 @@ class TestListByTrace:
 # FileSystemArtifactStore.list_by_kind
 # ---------------------------------------------------------------------------
 
+
 class TestListByKind:
     def test_returns_matching_kind_refs(self, tmp_path: Path):
         store = FileSystemArtifactStore(tmp_path)
         e1 = _make_envelope(artifact_id="k1", kind=ArtifactKind.RESULTADO)
         e2 = _make_envelope(artifact_id="k2", kind=ArtifactKind.RESULTADO)
-        e3 = _make_envelope(
-            artifact_id="k3", kind=ArtifactKind.RELATORIO
-        )
+        e3 = _make_envelope(artifact_id="k3", kind=ArtifactKind.RELATORIO)
         # Rebuild e3 with a different kind
         meta3 = _make_meta(artifact_id="k3", kind=ArtifactKind.RELATORIO)
         e3 = ArtifactEnvelope(meta=meta3, payload=StubPayload())
@@ -396,6 +402,7 @@ class TestListByKind:
 # ---------------------------------------------------------------------------
 # Malformed JSONL lines are silently skipped
 # ---------------------------------------------------------------------------
+
 
 class TestMalformedIndexLines:
     def test_malformed_lines_skipped_in_list_by_trace(self, tmp_path: Path):

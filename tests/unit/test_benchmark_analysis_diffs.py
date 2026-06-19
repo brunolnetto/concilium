@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from concilium.application.benchmarks.analysis.diffs import (
     _ce_compare_item,
     _compare_equipes,
@@ -14,7 +12,6 @@ from concilium.application.benchmarks.analysis.diffs import (
     _gdfs_load_canonical,
     generate_diffs_for_slug,
 )
-
 
 # ---------------------------------------------------------------------------
 # _ce_compare_item
@@ -281,7 +278,9 @@ class TestGdfsLoadCanonical:
 # ---------------------------------------------------------------------------
 
 
-def _setup_full_fixture(root: Path, slug: str, bench_data: dict, extracted_data: dict, canonical_data: dict | None = None):
+def _setup_full_fixture(
+    root: Path, slug: str, bench_data: dict, extracted_data: dict, canonical_data: dict | None = None
+):
     """Helper to wire all necessary files for generate_diffs_for_slug."""
     # extracted_references
     ext_dir = root / "benchmarks" / "extracted_references"
@@ -325,17 +324,11 @@ class TestGenerateDiffsForSlug:
     def test_happy_path_no_diffs(self, tmp_path):
         slug = "happy"
         canonical_data = {
-            "equipes_diretas": [
-                {"item_id": "E1", "funcoes": ["a"], "equipamentos": [], "custo_total": 100.0}
-            ]
+            "equipes_diretas": [{"item_id": "E1", "funcoes": ["a"], "equipamentos": [], "custo_total": 100.0}]
         }
         bench_data = {"projeto": "Projeto Happy"}
         extracted_data = {
-            "equipes": {
-                "equipes": [
-                    {"item_id": "E1", "funcoes": ["a"], "equipamentos": [], "custo_total": 100.0}
-                ]
-            }
+            "equipes": {"equipes": [{"item_id": "E1", "funcoes": ["a"], "equipamentos": [], "custo_total": 100.0}]}
         }
         _setup_full_fixture(tmp_path, slug, bench_data, extracted_data, canonical_data)
         result = generate_diffs_for_slug(slug, root=tmp_path)
@@ -347,17 +340,11 @@ class TestGenerateDiffsForSlug:
     def test_happy_path_with_diffs(self, tmp_path):
         slug = "withdiffs"
         canonical_data = {
-            "equipes_diretas": [
-                {"item_id": "E1", "funcoes": ["a", "b", "c"], "equipamentos": [], "custo_total": 999.0}
-            ]
+            "equipes_diretas": [{"item_id": "E1", "funcoes": ["a", "b", "c"], "equipamentos": [], "custo_total": 999.0}]
         }
         bench_data = {"projeto": "Projeto WithDiffs"}
         extracted_data = {
-            "equipes": {
-                "equipes": [
-                    {"item_id": "E1", "funcoes": [], "equipamentos": [], "custo_total": 0.0}
-                ]
-            }
+            "equipes": {"equipes": [{"item_id": "E1", "funcoes": [], "equipamentos": [], "custo_total": 0.0}]}
         }
         _setup_full_fixture(tmp_path, slug, bench_data, extracted_data, canonical_data)
         result = generate_diffs_for_slug(slug, root=tmp_path)
@@ -384,11 +371,7 @@ class TestGenerateDiffsForSlug:
         slug = "emptycan"
         bench_data = {"projeto": "Proj Empty"}
         extracted_data = {
-            "equipes": {
-                "equipes": [
-                    {"item_id": "E1", "funcoes": ["a"], "equipamentos": [], "custo_total": 50.0}
-                ]
-            }
+            "equipes": {"equipes": [{"item_id": "E1", "funcoes": ["a"], "equipamentos": [], "custo_total": 50.0}]}
         }
         _setup_full_fixture(tmp_path, slug, bench_data, extracted_data, canonical_data=None)
         (tmp_path / "projetos").mkdir(parents=True, exist_ok=True)

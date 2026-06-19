@@ -235,6 +235,15 @@ ZSCORE_EXTREMO: float = 3.5  # desvios-padrão — threshold de erro (outlier se
 # Referência: política de precificação MendesLobo (Revisão 2024).
 MARGEM_MINIMA: float = 0.05  # 5 % — margem mínima sobre preço de venda por item
 
+# ── Política de precificação padrão ──────────────────────────────────────────
+#
+# Defaults de política de margem e tributação usados quando PerfilExpectativas
+# não é fornecido explicitamente.  Altere AQUI — nunca diretamente nos callers.
+# Referência: política de precificação MendesLobo (revisão 2024).
+META_MARGEM_PADRAO: float = 0.10       # 10 % — meta de margem líquida
+TOLERANCIA_MARGEM_PADRAO: float = 0.03 # 3 %  — tolerância de desvio de margem
+ISS_PADRAO: float = 0.05               # 5 %  — ISS máximo legal (varia por município; configurar no contexto)
+
 
 # ── ADR-097 Fase 3 — Tabelas progressivas INSS/IRRF 2026 ─────────────────────
 #

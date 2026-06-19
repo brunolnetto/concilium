@@ -1,11 +1,27 @@
 from __future__ import annotations
+
 from datetime import date
-from typing import Any
+
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, Reference
+
 from concilium.domain.models.canonical import CanonicalModel
-from ..styles import _fill, _font, _border, _align, _money, _label, _header_row, _title_row, _section_row, _set_col_widths, _auto_fit_columns, _freeze, _C, MESES_PT
+
 from ..cash_flow import _cash_flow
+from ..styles import (
+    _C,
+    MESES_PT,
+    _align,
+    _auto_fit_columns,
+    _border,
+    _fill,
+    _font,
+    _header_row,
+    _label,
+    _section_row,
+    _set_col_widths,
+    _title_row,
+)
 
 
 def _rg_week_label(week_key: str) -> str:

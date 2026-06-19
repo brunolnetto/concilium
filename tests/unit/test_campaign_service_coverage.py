@@ -11,29 +11,27 @@ Cobre:
   listar_cpus_alternativos
   construir_cubo (faces, resumos, single dim)
 """
+
 from __future__ import annotations
 
 import json
+from datetime import UTC
+
 import pytest
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
 
 from concilium.application.services.campaign.campaign_service import (
-    _apply_overrides,
     _apply_cpu_alt_override,
+    _apply_overrides,
     _apply_scalar,
-    _set_path,
-    _tendencia,
     _get_metrica,
     _label_variados,
-    listar_cpus_alternativos,
-    construir_cubo,
-    classificar_O,
-    classificar_EF,
-    calcular_pareto,
-    curar_shortlist,
+    _set_path,
+    _tendencia,
     cenario_id,
+    classificar_EF,
+    classificar_O,
+    construir_cubo,
+    listar_cpus_alternativos,
 )
 from concilium.domain.models.campaign.campaign import (
     CenarioAvaliado,
@@ -44,12 +42,14 @@ from concilium.domain.models.campaign.campaign import (
     VetorEspacoO,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_cenario(cid, *, margem=0.12, prazo=40, fe_nec=0.9, gap=0.0, custo_ind=10_000.0, erro=None, viabilidade="APROVADO"):
+
+def _make_cenario(
+    cid, *, margem=0.12, prazo=40, fe_nec=0.9, gap=0.0, custo_ind=10_000.0, erro=None, viabilidade="APROVADO"
+):
     perfil = PerfilExpectativas()
     v_O = VetorEspacoO(prazo_semanas=prazo, fe_nec_medio=fe_nec, itens_criticos_pct=0.0, gap_pool_total=gap)
     v_EF = VetorEspacoEF(margem_pct=margem, custo_indireto=custo_ind, ratio_pool_vs_cat=0.95)
@@ -71,6 +71,7 @@ def _make_cenario(cid, *, margem=0.12, prazo=40, fe_nec=0.9, gap=0.0, custo_ind=
 # _apply_overrides — branches não cobertos
 # ---------------------------------------------------------------------------
 
+
 class TestApplyOverrides:
     def test_inputs_prefix_skipped(self):
         """Chaves que começam com 'inputs_' são ignoradas."""
@@ -87,11 +88,7 @@ class TestApplyOverrides:
 
     def test_cpu_alt_prefix_delegates(self):
         """Chaves _cpu_alt_: delegam para _apply_cpu_alt_override."""
-        spec = {
-            "spec": {
-                "eap": [{"item_id": "eap-1", "cpu_id": "CPU-OLD"}]
-            }
-        }
+        spec = {"spec": {"eap": [{"item_id": "eap-1", "cpu_id": "CPU-OLD"}]}}
         result = _apply_overrides(spec, {"_cpu_alt_:eap.cpu_id:eap-1": "CPU-NEW"})
         assert result["spec"]["eap"][0]["cpu_id"] == "CPU-NEW"
 
@@ -151,6 +148,7 @@ class TestApplyCpuAltOverride:
 # _apply_scalar
 # ---------------------------------------------------------------------------
 
+
 class TestApplyScalar:
     def test_scale_int_existing(self):
         """__scale__ em campo int → arredonda para cima, preserva int."""
@@ -202,6 +200,7 @@ class TestApplyScalar:
 # _set_path
 # ---------------------------------------------------------------------------
 
+
 class TestSetPath:
     def test_wildcard_applies_to_list(self):
         """[*] aplica a todos os itens de uma lista."""
@@ -245,6 +244,7 @@ class TestSetPath:
 # _tendencia
 # ---------------------------------------------------------------------------
 
+
 class TestTendencia:
     def test_crescente(self):
         assert _tendencia([1, 2, 3], [0.1, 0.2, 0.3]) == "crescente"
@@ -267,6 +267,7 @@ class TestTendencia:
 # ---------------------------------------------------------------------------
 # _get_metrica e _label_variados
 # ---------------------------------------------------------------------------
+
 
 class TestGetMetricaELabelVariados:
     def test_get_metrica_from_vetor_O(self):
@@ -301,6 +302,7 @@ class TestGetMetricaELabelVariados:
 # ---------------------------------------------------------------------------
 # listar_cpus_alternativos
 # ---------------------------------------------------------------------------
+
 
 class TestListarCpusAlternativos:
     def test_cpu_not_found_returns_empty(self, tmp_path):
@@ -354,6 +356,7 @@ class TestListarCpusAlternativos:
 # construir_cubo
 # ---------------------------------------------------------------------------
 
+
 class TestConstruirCubo:
     _BASE_SPEC = {"meta": {"equipes": 1, "prazo": 40}}
 
@@ -379,12 +382,14 @@ class TestConstruirCubo:
         return bundle
 
     def _make_output(self, bundle, cenarios):
+        from datetime import datetime
+
         from concilium.domain.models.campaign.campaign import CampaignOutputBundle
-        from datetime import datetime, timezone
+
         return CampaignOutputBundle(
             campaign_id=bundle.campaign_id,
             campaign_version=bundle.campaign_version,
-            gerado_em=datetime.now(timezone.utc),
+            gerado_em=datetime.now(UTC),
             n_cenarios_avaliados=len(cenarios),
             n_cenarios_viaveis=sum(1 for c in cenarios if c.viabilidade in {"APROVADO", "APROVADO_COM_RESSALVAS"}),
             n_falhas=sum(1 for c in cenarios if c.erro),
@@ -455,12 +460,14 @@ class TestConstruirCubo:
             sweep=[],
             perfil_expectativas=PerfilExpectativas(),
         )
+        from datetime import datetime
+
         from concilium.domain.models.campaign.campaign import CampaignOutputBundle
-        from datetime import datetime, timezone
+
         output = CampaignOutputBundle(
             campaign_id=bundle.campaign_id,
             campaign_version=bundle.campaign_version,
-            gerado_em=datetime.now(timezone.utc),
+            gerado_em=datetime.now(UTC),
             n_cenarios_avaliados=0,
             n_cenarios_viaveis=0,
             n_falhas=0,

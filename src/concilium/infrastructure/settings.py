@@ -824,7 +824,7 @@ class CampaignSettings:
     usada no cálculo de aviso de tratabilidade (default: 6)."""
 
     @classmethod
-    def from_env(cls) -> "CampaignSettings":
+    def from_env(cls) -> CampaignSettings:
         return cls(
             cardinality_threshold=_int("CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD", 10_000),
             max_workers=_int("CONCILIUM__CAMPAIGN_MAX_WORKERS", 6),

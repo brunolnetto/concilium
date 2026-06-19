@@ -10,21 +10,25 @@ import pytest
 class TestSelectSchedulingAlgorithm:
     def test_small_n_selects_cpsat(self):
         from concilium.application.scheduling.selector import select_scheduling_algorithm
+
         strategy = select_scheduling_algorithm(100, 3, 20, 0.1)
         assert strategy.algorithm == "CP-SAT"
 
     def test_large_n_selects_lns(self):
         from concilium.application.scheduling.selector import select_scheduling_algorithm
+
         strategy = select_scheduling_algorithm(300, 5, 30, 0.1)
         assert strategy.algorithm == "LNS"
 
     def test_boundary_n_200_uses_cpsat(self):
         from concilium.application.scheduling.selector import select_scheduling_algorithm
+
         strategy = select_scheduling_algorithm(200, 3, 20, 0.1)
         assert strategy.algorithm == "CP-SAT"
 
     def test_rationale_is_set(self):
         from concilium.application.scheduling.selector import select_scheduling_algorithm
+
         strategy = select_scheduling_algorithm(50, 2, 10, 0.0)
         assert strategy.rationale
 
@@ -40,10 +44,14 @@ class TestExploreSchedules:
 
     def _make_strategy(self, algorithm="CP-SAT"):
         from concilium.application.scheduling.models import SchedulingStrategy
-        return SchedulingStrategy(algorithm=algorithm, heuristics=[], timeout_seconds=60, leveling_pass=False, rationale="test")
+
+        return SchedulingStrategy(
+            algorithm=algorithm, heuristics=[], timeout_seconds=60, leveling_pass=False, rationale="test"
+        )
 
     def test_cpsat_success(self):
         from concilium.application.scheduling.selector import explore_schedules
+
         dag = self._make_dag()
         pool = self._make_pool()
 
@@ -60,14 +68,18 @@ class TestExploreSchedules:
             return_value=cpsat_mock,
         ):
             results = explore_schedules(
-                activities=[], dag=dag, pool=pool, deadline_weeks=10,
+                activities=[],
+                dag=dag,
+                pool=pool,
+                deadline_weeks=10,
                 strategy=self._make_strategy("CP-SAT"),
             )
         assert len(results) == 1
         assert results[0].heuristic == "CP-SAT"
 
     def test_cpsat_infeasible_raises_schedule_error(self):
-        from concilium.application.scheduling.selector import explore_schedules, ScheduleError
+        from concilium.application.scheduling.selector import ScheduleError, explore_schedules
+
         dag = self._make_dag()
         pool = self._make_pool()
 
@@ -81,10 +93,13 @@ class TestExploreSchedules:
             patch("concilium.application.scheduling.cpsat_scheduler.CpSatScheduler", return_value=cpsat_mock),
             pytest.raises(ScheduleError),
         ):
-            explore_schedules(activities=[], dag=dag, pool=pool, deadline_weeks=10, strategy=self._make_strategy("CP-SAT"))
+            explore_schedules(
+                activities=[], dag=dag, pool=pool, deadline_weeks=10, strategy=self._make_strategy("CP-SAT")
+            )
 
     def test_serial_scheduler_heuristic(self):
         from concilium.application.scheduling.selector import explore_schedules
+
         dag = self._make_dag()
         pool = self._make_pool()
 
@@ -98,7 +113,10 @@ class TestExploreSchedules:
 
         with patch("concilium.application.scheduling.selector.SerialScheduler", return_value=scheduler_mock):
             results = explore_schedules(
-                activities=[], dag=dag, pool=pool, deadline_weeks=10,
+                activities=[],
+                dag=dag,
+                pool=pool,
+                deadline_weeks=10,
                 heuristics=["MINSLK"],
                 # no strategy → falls through to SerialScheduler path
             )
@@ -106,6 +124,7 @@ class TestExploreSchedules:
 
     def test_no_strategy_uses_serial(self):
         from concilium.application.scheduling.selector import explore_schedules
+
         dag = self._make_dag()
         pool = self._make_pool()
 
@@ -119,7 +138,10 @@ class TestExploreSchedules:
             return_value=MagicMock(schedule=MagicMock(return_value=sched_mock)),
         ):
             results = explore_schedules(
-                activities=[], dag=dag, pool=pool, deadline_weeks=10,
+                activities=[],
+                dag=dag,
+                pool=pool,
+                deadline_weeks=10,
                 heuristics=["MINSLK"],
             )
         assert isinstance(results, list)
@@ -128,6 +150,7 @@ class TestExploreSchedules:
 class TestCompareAllAlgorithms:
     def test_compare_serial_algorithm(self):
         from concilium.application.scheduling.selector import compare_all_algorithms
+
         dag = MagicMock()
         dag.activities = {}
         pool = MagicMock()
@@ -142,7 +165,10 @@ class TestCompareAllAlgorithms:
             return_value=MagicMock(schedule=MagicMock(return_value=sched_mock)),
         ):
             results = compare_all_algorithms(
-                activities=[], dag=dag, pool=pool, deadline_weeks=10,
+                activities=[],
+                dag=dag,
+                pool=pool,
+                deadline_weeks=10,
                 algorithms=["MINSLK"],
             )
         assert isinstance(results, list)
@@ -158,10 +184,14 @@ class TestExploreLnsPaths:
 
     def _make_strategy(self, algorithm="LNS"):
         from concilium.application.scheduling.models import SchedulingStrategy
-        return SchedulingStrategy(algorithm=algorithm, heuristics=[], timeout_seconds=0, leveling_pass=False, rationale="test")
+
+        return SchedulingStrategy(
+            algorithm=algorithm, heuristics=[], timeout_seconds=0, leveling_pass=False, rationale="test"
+        )
 
     def test_lns_feasible(self):
         from concilium.application.scheduling.selector import explore_schedules
+
         dag, pool = self._make_dag_pool()
         sched = MagicMock(feasible=True, makespan=10)
         sched.metrics.quality_score.return_value = 0.8
@@ -176,7 +206,8 @@ class TestExploreLnsPaths:
         assert results[0].heuristic == "LNS"
 
     def test_lns_infeasible_raises_schedule_error(self):
-        from concilium.application.scheduling.selector import explore_schedules, ScheduleError
+        from concilium.application.scheduling.selector import ScheduleError, explore_schedules
+
         dag, pool = self._make_dag_pool()
         sched = MagicMock(feasible=False)
         lns_mock = MagicMock(schedule=MagicMock(return_value=sched))
@@ -189,7 +220,8 @@ class TestExploreLnsPaths:
             explore_schedules([], dag, pool, deadline_weeks=10, strategy=self._make_strategy("LNS"))
 
     def test_lns_exception_raises_schedule_error(self):
-        from concilium.application.scheduling.selector import explore_schedules, ScheduleError
+        from concilium.application.scheduling.selector import ScheduleError, explore_schedules
+
         dag, pool = self._make_dag_pool()
         with (
             patch("concilium.application.scheduling.lns_scheduler.LnsScheduler", side_effect=RuntimeError("lns fail")),
@@ -200,6 +232,7 @@ class TestExploreLnsPaths:
 
     def test_compare_lns_infeasible_appends_error_result(self):
         from concilium.application.scheduling.selector import compare_all_algorithms
+
         dag, pool = self._make_dag_pool()
         sched = MagicMock(feasible=False, makespan=0)
         lns_mock = MagicMock(schedule=MagicMock(return_value=sched))
@@ -213,6 +246,7 @@ class TestExploreLnsPaths:
 
     def test_compare_cpsat_infeasible_appends_error_result(self):
         from concilium.application.scheduling.selector import compare_all_algorithms
+
         dag, pool = self._make_dag_pool()
         sched = MagicMock(feasible=False, makespan=0)
         cpsat_mock = MagicMock(schedule=MagicMock(return_value=sched))

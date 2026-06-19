@@ -397,7 +397,6 @@ class TestExtractEngineIterationReferences:
 # excel
 # ---------------------------------------------------------------------------
 
-import openpyxl
 from openpyxl import Workbook
 
 from concilium.infrastructure.catalog.extraction.excel import (

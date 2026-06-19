@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
-import pytest
-
 from concilium.application.progress.models import ActivityProgress, WeeklyProgressReport
 from concilium.application.replanning.assessor import ImpactAssessor
 from concilium.application.replanning.detector import ReplannTriggerDetector
@@ -161,42 +159,32 @@ class TestReplannTriggerDetector:
 
     def test_t2_delay_atividade_atrasada(self):
         canonical = self._canonical_com_atividade()
-        report = _report(
-            activities=[_activity_progress("EAP-01", pct_completude=0.2, delay_weeks=2.0)]
-        )
+        report = _report(activities=[_activity_progress("EAP-01", pct_completude=0.2, delay_weeks=2.0)])
         triggers = self.detector.check_triggers(canonical, report, current_week=5)
         codes = [t.code for t in triggers]
         assert "T2-DELAY" in codes
 
     def test_t1_early_atividade_completa_adiantada(self):
         canonical = self._canonical_com_atividade()
-        report = _report(
-            activities=[_activity_progress("EAP-01", pct_completude=1.0, delay_weeks=-2.0)]
-        )
+        report = _report(activities=[_activity_progress("EAP-01", pct_completude=1.0, delay_weeks=-2.0)])
         triggers = self.detector.check_triggers(canonical, report, current_week=5)
         codes = [t.code for t in triggers]
         assert "T1-EARLY" in codes
 
     def test_t1_slack_adiantada_nao_completa(self):
         canonical = self._canonical_com_atividade()
-        report = _report(
-            activities=[_activity_progress("EAP-01", pct_completude=0.7, delay_weeks=-2.0)]
-        )
+        report = _report(activities=[_activity_progress("EAP-01", pct_completude=0.7, delay_weeks=-2.0)])
         triggers = self.detector.check_triggers(canonical, report, current_week=5)
         codes = [t.code for t in triggers]
         assert "T1-SLACK" in codes
 
     def test_t2_productivity_drift_spi_baixo(self):
-        triggers = self.detector.check_triggers(
-            _canonical(), _report(spi=0.5), current_week=5
-        )
+        triggers = self.detector.check_triggers(_canonical(), _report(spi=0.5), current_week=5)
         codes = [t.code for t in triggers]
         assert "T2-PRODUCTIVITY-DRIFT" in codes
 
     def test_t2_productivity_drift_nao_dispara_se_spi_zero(self):
-        triggers = self.detector.check_triggers(
-            _canonical(), _report(spi=0.0), current_week=5
-        )
+        triggers = self.detector.check_triggers(_canonical(), _report(spi=0.0), current_week=5)
         codes = [t.code for t in triggers]
         assert "T2-PRODUCTIVITY-DRIFT" not in codes
 
@@ -211,9 +199,7 @@ class TestReplannTriggerDetector:
 
     def test_t3_cascade_muitas_atividades_atrasadas(self):
         canonical = _canonical()
-        activities = [
-            _activity_progress(f"EAP-{i:02d}", delay_weeks=2.0) for i in range(10)
-        ]
+        activities = [_activity_progress(f"EAP-{i:02d}", delay_weeks=2.0) for i in range(10)]
         report = _report(activities=activities)
         triggers = self.detector.check_triggers(canonical, report, current_week=5)
         codes = [t.code for t in triggers]
@@ -221,9 +207,7 @@ class TestReplannTriggerDetector:
 
     def test_atividade_completa_nao_dispara_t2_delay(self):
         canonical = self._canonical_com_atividade()
-        report = _report(
-            activities=[_activity_progress("EAP-01", pct_completude=1.0, delay_weeks=5.0)]
-        )
+        report = _report(activities=[_activity_progress("EAP-01", pct_completude=1.0, delay_weeks=5.0)])
         triggers = self.detector.check_triggers(canonical, report, current_week=5)
         codes = [t.code for t in triggers]
         assert "T2-DELAY" not in codes
@@ -231,9 +215,7 @@ class TestReplannTriggerDetector:
     def test_sem_cronograma_skips_t1(self):
         canonical = _canonical()
         canonical.cronograma.scheduled_activities = []
-        report = _report(
-            activities=[_activity_progress("EAP-01", pct_completude=1.0, delay_weeks=-3.0)]
-        )
+        report = _report(activities=[_activity_progress("EAP-01", pct_completude=1.0, delay_weeks=-3.0)])
         triggers = self.detector.check_triggers(canonical, report, current_week=5)
         codes = [t.code for t in triggers]
         assert "T1-EARLY" not in codes

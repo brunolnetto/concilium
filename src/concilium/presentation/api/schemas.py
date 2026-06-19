@@ -138,8 +138,14 @@ class SimulateRequest(BaseModel):
     policy: MobilizacaoPolicyIn
     quantitativo: float = Field(gt=0)
     producao_horaria: float = Field(ge=0)
-    dias_semana: int = Field(default=6, ge=1, le=7)
-    horas_dia: int = Field(default=8, ge=1, le=24)
+    dias_semana: int = Field(
+        default=6, ge=1, le=7,
+        description="Dias úteis por semana (default 6 = regime 6×1 MendesLobo). Use 5 para regime 5×2, 7 para contínuo."
+    )
+    horas_dia: int = Field(
+        default=8, ge=1, le=24,
+        description="Horas de trabalho por dia (default 8h). Outros regimes: 9h (5×9), 12h (12×36)."
+    )
     semana_inicio: str | None = Field(
         default=None,
         description="ISO week key 'AAAA-Www' — anchors simulation to calendar for praticabilidade lookup.",

@@ -9,16 +9,13 @@ Each test covers one complete execution path (happy path or specific error path)
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from concilium.application.services.concilium_service import (
-    ConciliumDependencies,
     ConciliumService,
 )
-
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -298,9 +295,12 @@ class TestAuditCatalogReasonability:
             "produtividades": [{"id": "PROD-1"}],
             "producoes": [],
         }
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT, patch(
-            "concilium.application.services.concilium_service.build_catalog_reasonability_artifact"
-        ) as mock_build:
+        with (
+            patch("concilium.application.services.concilium_service.Runtime") as MockRT,
+            patch(
+                "concilium.application.services.concilium_service.build_catalog_reasonability_artifact"
+            ) as mock_build,
+        ):
             MockRT.return_value.load_catalogo.return_value = fake_cat
             mock_build.return_value = {"catalog_id": "cat1", "issues": []}
             result = svc.audit_catalog_reasonability("cat1")
@@ -319,9 +319,12 @@ class TestAuditCatalogReasonability:
             "produtividades": [{"id": "PROD-1", "valor_horario": 10}],
             "producoes": [{"id": "PROD-2", "valor_horario": 20}],
         }
-        with patch("concilium.application.services.concilium_service.Runtime") as MockRT, patch(
-            "concilium.application.services.concilium_service.build_catalog_reasonability_artifact"
-        ) as mock_build:
+        with (
+            patch("concilium.application.services.concilium_service.Runtime") as MockRT,
+            patch(
+                "concilium.application.services.concilium_service.build_catalog_reasonability_artifact"
+            ) as mock_build,
+        ):
             MockRT.return_value.load_catalogo.return_value = fake_cat
             mock_build.return_value = {}
             svc.audit_catalog_reasonability("cat1")
@@ -881,9 +884,7 @@ class TestPerfis:
     def test_create_perfil_version_delegates(self):
         svc, deps = _make_svc()
         deps.project_service.create_perfil_version.return_value = {"version": "2"}
-        result = svc.create_perfil_version(
-            "perf-1", {"field": "val"}, "test motivo", "author1", make_current=True
-        )
+        result = svc.create_perfil_version("perf-1", {"field": "val"}, "test motivo", "author1", make_current=True)
         deps.project_service.create_perfil_version.assert_called_once_with(
             "perf-1", {"field": "val"}, "test motivo", "author1", make_current=True
         )

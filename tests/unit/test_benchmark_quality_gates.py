@@ -9,6 +9,7 @@ from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
 def _fake_projection(**kwargs):
     defaults = {
         "ferramenta": {},
+        "preco_venda_fonte": None,
         "ponto_equilibrio_ferramenta": None,
         "ferramenta_breakdown_direto": None,
         "ferramenta_breakdown_indireto": None,

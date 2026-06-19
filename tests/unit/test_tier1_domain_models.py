@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -15,6 +15,11 @@ from concilium.domain.models.catalog.jurisdicao import (
     MotorEncargosSociais,
     MotorTributarioBdi,
     ProvedorReferencia,
+)
+from concilium.domain.models.catalog.referencia import (
+    ComposicaoReferencia,
+    InsumoReferencia,
+    TabelaReferencia,
 )
 from concilium.domain.models.project.overrides import (
     BDIOverride,
@@ -29,15 +34,10 @@ from concilium.domain.models.project.perfil import (
     PoliticaAprovacao,
     TransicaoAprovacao,
 )
-from concilium.domain.models.catalog.referencia import (
-    ComposicaoReferencia,
-    InsumoReferencia,
-    TabelaReferencia,
-)
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
-_NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 def _provedor() -> ProvedorReferencia:
@@ -198,9 +198,7 @@ class TestJurisdicao:
         assert j.motor_tributario_bdi is None
 
     def test_com_motor_tributario(self):
-        j = self._make(
-            motor_tributario_bdi=MotorTributarioBdi(versao="v1", aliquotas=_aliquotas_bdi())
-        )
+        j = self._make(motor_tributario_bdi=MotorTributarioBdi(versao="v1", aliquotas=_aliquotas_bdi()))
         assert j.motor_tributario_bdi is not None
         assert j.motor_tributario_bdi.versao == "v1"
 
@@ -396,9 +394,7 @@ class TestPoliticaAprovacao:
     def test_instanciacao(self):
         pol = PoliticaAprovacao(
             tipo="rigida",
-            transicoes=[
-                TransicaoAprovacao(de="rascunho", para="aprovado", papel_requerido="diretor")
-            ],
+            transicoes=[TransicaoAprovacao(de="rascunho", para="aprovado", papel_requerido="diretor")],
         )
         assert pol.tipo == "rigida"
         assert len(pol.transicoes) == 1
@@ -490,8 +486,6 @@ class TestTabelaReferencia:
             versao="x",
             regiao="GO",
             data_vigencia=date(2026, 1, 1),
-            composicoes_referencia=[
-                ComposicaoReferencia(codigo_referencia="A", descricao="A", unidade="m³")
-            ],
+            composicoes_referencia=[ComposicaoReferencia(codigo_referencia="A", descricao="A", unidade="m³")],
         )
         assert len(t.composicoes_referencia) == 1

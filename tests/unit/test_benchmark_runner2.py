@@ -1,15 +1,14 @@
 """Tests for BenchmarkRunner to boost coverage."""
+
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 
 def _make_spec(tmp_path, slug="bench-test", nome="Bench Test", contexto_id="ctx"):
     from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
+
     return ProjectSpec(
         nome=nome,
         slug=slug,
@@ -27,6 +26,7 @@ def _make_runner(tmp_path):
     from concilium.application.benchmarks.execution.runner import BenchmarkRunner
     from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
     from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
+
     return BenchmarkRunner(
         config_root=tmp_path / "config",
         projects_root=tmp_path / "projetos",
@@ -38,26 +38,32 @@ def _make_runner(tmp_path):
 class TestGetOutputSubdir:
     def test_png_goes_to_visualizations(self):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         assert BenchmarkRunner._get_output_subdir("chart.png") == "visualizations"
 
     def test_jpg_goes_to_visualizations(self):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         assert BenchmarkRunner._get_output_subdir("photo.jpg") == "visualizations"
 
     def test_pdf_goes_to_reports(self):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         assert BenchmarkRunner._get_output_subdir("report.pdf") == "reports"
 
     def test_xlsx_goes_to_reports(self):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         assert BenchmarkRunner._get_output_subdir("data.xlsx") == "reports"
 
     def test_json_fallback_to_reports(self):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         assert BenchmarkRunner._get_output_subdir("output.json") == "reports"
 
     def test_svg_goes_to_visualizations(self):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         assert BenchmarkRunner._get_output_subdir("graph.svg") == "visualizations"
 
 
@@ -70,26 +76,38 @@ class TestLoadReferencia:
 
     def test_returns_none_when_path_missing(self, tmp_path):
         from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
+
         runner = _make_runner(tmp_path)
         spec = ProjectSpec(
-            nome="x", slug="x", contexto_id="ctx",
+            nome="x",
+            slug="x",
+            contexto_id="ctx",
             referencia_path=tmp_path / "nonexistent.json",
-            inputs_escopo=None, inputs_01A=None, inputs_cronograma=None,
-            inputs_indiretos=None, extra_inputs={},
+            inputs_escopo=None,
+            inputs_01A=None,
+            inputs_cronograma=None,
+            inputs_indiretos=None,
+            extra_inputs={},
         )
         result = runner._load_referencia(spec)
         assert result is None
 
     def test_loads_json_when_file_exists(self, tmp_path):
         from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
+
         ref_file = tmp_path / "ref.json"
         ref_file.write_text('{"key": "value"}', encoding="utf-8")
         runner = _make_runner(tmp_path)
         spec = ProjectSpec(
-            nome="x", slug="x", contexto_id="ctx",
+            nome="x",
+            slug="x",
+            contexto_id="ctx",
             referencia_path=ref_file,
-            inputs_escopo=None, inputs_01A=None, inputs_cronograma=None,
-            inputs_indiretos=None, extra_inputs={},
+            inputs_escopo=None,
+            inputs_01A=None,
+            inputs_cronograma=None,
+            inputs_indiretos=None,
+            extra_inputs={},
         )
         result = runner._load_referencia(spec)
         assert result == {"key": "value"}
@@ -248,6 +266,7 @@ class TestLogExecution:
 class TestFindOrCreate:
     def test_creates_new_when_projects_root_missing(self, tmp_path):
         from concilium.application.benchmarks.execution.runner import BenchmarkRunner
+
         runner = BenchmarkRunner(
             config_root=tmp_path / "config",
             projects_root=tmp_path / "projetos_nonexistent",
@@ -284,7 +303,7 @@ class TestFindOrCreate:
         (proj_dir / "meta.json").write_text('{"nome": "Bench Test"}', encoding="utf-8")
         overrides_dir = proj_dir / "overrides"
         overrides_dir.mkdir()
-        (overrides_dir / "cpus_overlay.json").write_bytes(b'{}')
+        (overrides_dir / "cpus_overlay.json").write_bytes(b"{}")
 
         store_mock = MagicMock()
         with patch(

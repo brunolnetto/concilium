@@ -5,6 +5,10 @@ import sys
 import typer
 from rich import print as rprint
 
+from concilium.infrastructure.observability.logging_config import configure_logging
+
+configure_logging(level="INFO", json_format=False)
+
 app = typer.Typer(
     name="concilium",
     help="Framework determinístico de planejamento de obras.",
@@ -72,11 +76,14 @@ configuration_app.add_typer(app_perfil)
 configuration_app.add_typer(app_temas)
 configuration_app.add_typer(app_jurisdicao)
 
+from concilium.presentation.cli.commands_observability import observability_app  # noqa: E402
+
 app.add_typer(catalog_app)
 app.add_typer(project_app)
 app.add_typer(configuration_app)
 app.add_typer(benchmark_app)
 app.add_typer(auth_app)
+app.add_typer(observability_app)
 
 
 # ── Loaders por grupo ────────────────────────────────────────────────────────
@@ -123,6 +130,7 @@ def _load_project() -> None:
     project_app.command("approve")(commands_run.approve)
 
     from concilium.presentation.cli import commands_campaign
+
     project_app.command("campaign")(commands_campaign.campaign)
 
     project_catalog = typer.Typer(
@@ -162,7 +170,7 @@ def _load_benchmark() -> None:
     # run-batch: CI/automação, raramente manual
     benchmark_app.command("run-batch", hidden=True)(commands_benchmark.run_benchmarks_batch)
     # trace/cleanup/iterate/summary: ciclo de calibração interna
-    benchmark_app.command("trace",   hidden=True)(commands_benchmark.extract_trace)
+    benchmark_app.command("trace", hidden=True)(commands_benchmark.extract_trace)
     benchmark_app.command("cleanup", hidden=True)(commands_benchmark.cleanup)
     benchmark_app.command("iterate", hidden=True)(commands_benchmark.iterate_correction)
     benchmark_app.command("summary", hidden=True)(commands_benchmark.stage_summary)

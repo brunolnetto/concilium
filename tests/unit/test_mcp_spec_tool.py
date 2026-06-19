@@ -114,9 +114,10 @@ class TestValidateSpec:
 
         schema_text = '{"type": "object"}'
 
-        with patch.dict("sys.modules", {"jsonschema": mock_jsonschema}), patch(
-            "concilium.presentation.mcp.tools.spec._schema_path"
-        ) as mock_sp:
+        with (
+            patch.dict("sys.modules", {"jsonschema": mock_jsonschema}),
+            patch("concilium.presentation.mcp.tools.spec._schema_path") as mock_sp,
+        ):
             mock_sp.return_value.read_text.return_value = schema_text
             result = _validate_spec({"any": "data"})
 
@@ -137,9 +138,10 @@ class TestValidateSpec:
         mock_jsonschema = MagicMock()
         mock_jsonschema.Draft202012Validator = mock_validator_class
 
-        with patch.dict("sys.modules", {"jsonschema": mock_jsonschema}), patch(
-            "concilium.presentation.mcp.tools.spec._schema_path"
-        ) as mock_sp:
+        with (
+            patch.dict("sys.modules", {"jsonschema": mock_jsonschema}),
+            patch("concilium.presentation.mcp.tools.spec._schema_path") as mock_sp,
+        ):
             mock_sp.return_value.read_text.return_value = '{"type": "object"}'
             result = _validate_spec({})
 
@@ -258,11 +260,7 @@ class TestResolveTributario:
 
     def test_partial_fields_in_spec_respected(self):
         """When only some fields set in spec, missing ones are filled from jurisdiction."""
-        jur_data = {
-            "motor_tributario_bdi": {
-                "aliquotas": {"ISS": 0.02, "PIS": 0.001, "COFINS": 0.01, "CPRB": 0.02}
-            }
-        }
+        jur_data = {"motor_tributario_bdi": {"aliquotas": {"ISS": 0.02, "PIS": 0.001, "COFINS": 0.01, "CPRB": 0.02}}}
         meta = {
             "regime_tributario": {
                 "jurisdicao_id": "BR-CE",
@@ -337,13 +335,9 @@ def _make_tool_with_patches(tmp_path, mock_rt, mock_coord, mock_store, extra_pat
     patches = {
         "concilium.presentation.mcp.tools.spec._runtime": mock_rt,
         "concilium.presentation.mcp.tools.spec._projetos_root": MagicMock(return_value=tmp_path),
-        "concilium.presentation.mcp.tools.spec._lifecycle_coordinator": MagicMock(
-            return_value=mock_coord
-        ),
+        "concilium.presentation.mcp.tools.spec._lifecycle_coordinator": MagicMock(return_value=mock_coord),
         "concilium.presentation.mcp.tools.spec._wrap_response": MagicMock(side_effect=lambda d: d),
-        "concilium.infrastructure.storage.project.ProjectStore.init": MagicMock(
-            return_value=mock_store
-        ),
+        "concilium.infrastructure.storage.project.ProjectStore.init": MagicMock(return_value=mock_store),
     }
     if extra_patches:
         patches.update(extra_patches)
@@ -363,14 +357,16 @@ class TestCriarProjetoSpec:
         register(server)
         tool = _get_tools(server)["criar_projeto_spec"]
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=["campo obrigatorio faltando"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime"
-        ) as mock_rt_fn, patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=["campo obrigatorio faltando"],
+            ),
+            patch("concilium.presentation.mcp.tools.spec._runtime") as mock_rt_fn,
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
         ):
             result = tool(spec={"meta": {}, "escopos": []})
 
@@ -387,12 +383,15 @@ class TestCriarProjetoSpec:
 
         erros = [f"erro {i}" for i in range(20)]
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=erros,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=erros,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
         ):
             result = tool(spec={})
 
@@ -411,15 +410,19 @@ class TestCriarProjetoSpec:
         mock_rt = MagicMock()
         mock_rt.load_contexto.side_effect = ValueError("contexto not found")
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mock_rt,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mock_rt,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
         ):
             result = tool(spec=_VALID_SPEC)
 
@@ -440,24 +443,31 @@ class TestCriarProjetoSpec:
             mock_store=mocks["mock_store"],
         )
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             result = tool(spec=_VALID_SPEC)
 
@@ -480,31 +490,36 @@ class TestCriarProjetoSpec:
             "escopos": [
                 {
                     **_VALID_SPEC["escopos"][0],
-                    "cronograma": [
-                        {"item_id": "it-01", "n_equipes": 2, "producao_diaria": 50.0}
-                    ],
+                    "cronograma": [{"item_id": "it-01", "n_equipes": 2, "producao_diaria": 50.0}],
                 }
             ],
         }
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             server = _make_server()
             register(server)
@@ -526,24 +541,31 @@ class TestCriarProjetoSpec:
         mocks = _base_mocks
         mocks["mock_store"].create_escopo.side_effect = RuntimeError("disk error")
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             server = _make_server()
             register(server)
@@ -562,24 +584,31 @@ class TestCriarProjetoSpec:
         mocks = _base_mocks
         mocks["mock_coord"].avancar_plano.side_effect = ValueError("pipeline error!")
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             server = _make_server()
             register(server)
@@ -609,24 +638,31 @@ class TestCriarProjetoSpec:
         mocks["mock_r"].has_errors = True
         mocks["mock_r"].validacoes = [val1]
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             server = _make_server()
             register(server)
@@ -694,24 +730,31 @@ class TestCriarProjetoSpec:
 
         mocks["mock_store"].create_escopo.side_effect = create_escopo_side_effect
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             server = _make_server()
             register(server)
@@ -763,24 +806,31 @@ class TestCriarProjetoSpec:
 
         mocks["mock_store"].create_escopo.side_effect = create_escopo_side_effect
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             server = _make_server()
             register(server)
@@ -804,24 +854,31 @@ class TestCriarProjetoSpec:
             "escopos": _VALID_SPEC["escopos"],
         }
 
-        with patch(
-            "concilium.presentation.mcp.tools.spec._validate_spec",
-            return_value=[],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._runtime",
-            return_value=mocks["mock_rt"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
-            return_value=mocks["mock_coord"],
-        ), patch(
-            "concilium.presentation.mcp.tools.spec._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mocks["mock_store"],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.spec._validate_spec",
+                return_value=[],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._runtime",
+                return_value=mocks["mock_rt"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                return_value=mocks["mock_coord"],
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.spec._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mocks["mock_store"],
+            ),
         ):
             server = _make_server()
             register(server)

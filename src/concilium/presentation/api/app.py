@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from concilium.infrastructure.observability.logging_config import configure_logging
 from concilium.infrastructure.telemetry import setup_telemetry
 
 from .config import resolve_api_bind
@@ -17,6 +18,7 @@ from .routes import (
     configuration_router,
     formulario_router,
     mobilization_router,
+    observability_router,
     overrides_router,
     projects_router,
     runs_router,
@@ -26,6 +28,8 @@ from .routes import (
 _TAGS_METADATA = [
     # ── Auth ───────────────────────────────────────────────────────────────────
     {"name": "auth", "description": "Autenticação JWT RS256 — emissão de tokens (ADR-094)."},
+    # ── Observability ──────────────────────────────────────────────────────────
+    {"name": "observability", "description": "Pipeline de observabilidade (ADR-112): Bronze/Silver/Gold paginados — SLIs, fallback rates, alertas, records raw."},
     # ── System ─────────────────────────────────────────────────────────────────
     {"name": "system", "description": "Health check and API entry point."},
     # ── Configuration ──────────────────────────────────────────────────────────
@@ -42,12 +46,16 @@ _TAGS_METADATA = [
     # ── Benchmarks ─────────────────────────────────────────────────────────────
     {"name": "benchmarks", "description": "Benchmark templates and project-scoped artifact download/pack."},
     # ── Campaign ───────────────────────────────────────────────────────────────
-    {"name": "projects - campaign", "description": "ADR-070: parametric GO-space sweep — campaign runs, bundles, reports."},
+    {
+        "name": "projects - campaign",
+        "description": "ADR-070: parametric GO-space sweep — campaign runs, bundles, reports.",
+    },
 ]
 
 
 def create_app() -> FastAPI:
     setup_telemetry()
+    configure_logging(json_format=True)
 
     app = FastAPI(
         title="Concilium API",
@@ -98,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(mobilization_router)
     app.include_router(benchmarks_router)
     app.include_router(campaign_router)
+    app.include_router(observability_router)
 
     return app
 

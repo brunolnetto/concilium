@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -39,7 +38,7 @@ def _make_canonical(activities: list | None = None, progresso: dict | None = Non
     canonical.progresso = progresso or {}
 
     eap_items = []
-    for act in (activities or []):
+    for act in activities or []:
         item = MagicMock()
         item.item_id = act["id"]
         item.quantitativo = act.get("qtd", 100.0)
@@ -48,7 +47,7 @@ def _make_canonical(activities: list | None = None, progresso: dict | None = Non
 
     # Cronograma com scheduled_activities correspondentes
     sched_acts = []
-    for act in (activities or []):
+    for act in activities or []:
         sa = MagicMock()
         sa.activity_id = act["id"]
         sa.distribuicao_semanal = act.get("dist", {})

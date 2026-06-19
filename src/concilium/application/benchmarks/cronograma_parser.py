@@ -12,7 +12,10 @@ Transforms cronograma.txt (TSV schedule data) into spec.eap format with:
 from __future__ import annotations
 
 import csv
+import logging
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Any
 
@@ -77,10 +80,10 @@ def _load_produtividade_map(produtividade_path: Path) -> dict[str, float]:
                 prod_str = parts[3].replace(".", "").replace(",", ".")
                 produtividade[item_id] = float(prod_str)
             except (ValueError, IndexError):
-                pass
+                logger.debug("Linha ignorada ao parsear produtividade (item %s): valor inválido", item_id)
 
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Falha ao ler arquivo de produtividade %s: %s", produtividade_path, e, exc_info=True)
 
     return produtividade
 

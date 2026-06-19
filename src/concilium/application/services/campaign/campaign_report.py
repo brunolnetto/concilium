@@ -5,6 +5,7 @@ Three public functions:
 - render_campaign_report_md(report) -> str
 - render_campaign_report_pdf(report, md_text) -> bytes | None
 """
+
 from __future__ import annotations
 
 import html
@@ -12,10 +13,10 @@ from io import BytesIO
 
 from concilium.domain.models.campaign.campaign import CampaignBundleCube, CampaignOutputBundle
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _safe(v: object) -> str:
     return html.escape(str(v or ""), quote=False)
@@ -75,6 +76,7 @@ def _vetor_EF_dict(v) -> dict:
 # Task 1.1 — serialize_campaign_report
 # ---------------------------------------------------------------------------
 
+
 def serialize_campaign_report(
     bundle: CampaignOutputBundle,
     cube: CampaignBundleCube,
@@ -99,39 +101,40 @@ def serialize_campaign_report(
     for ranked in bundle.shortlist:
         c = ranked.cenario
         j = ranked.justificativa
-        shortlist.append({
-            "rank": ranked.rank,
-            "cenario_id": c.cenario_id,
-            "motivo_inclusao": j.motivo_inclusao,
-            "destaques_O": j.destaques_O,
-            "destaques_EF": j.destaques_EF,
-            "alertas": j.alertas,
-            "parametros_chave": j.parametros_chave,
-            "vetor_O": _vetor_O_dict(c.vetor_O),
-            "vetor_EF": _vetor_EF_dict(c.vetor_EF),
-        })
+        shortlist.append(
+            {
+                "rank": ranked.rank,
+                "cenario_id": c.cenario_id,
+                "motivo_inclusao": j.motivo_inclusao,
+                "destaques_O": j.destaques_O,
+                "destaques_EF": j.destaques_EF,
+                "alertas": j.alertas,
+                "parametros_chave": j.parametros_chave,
+                "vetor_O": _vetor_O_dict(c.vetor_O),
+                "vetor_EF": _vetor_EF_dict(c.vetor_EF),
+            }
+        )
 
     cenarios = []
     for c in bundle.cenarios:
-        cenarios.append({
-            "cenario_id": c.cenario_id,
-            "viabilidade": c.viabilidade,
-            "classificacao_O": c.classificacao_O,
-            "classificacao_EF": c.classificacao_EF,
-            "pareto_O": c.pareto_O,
-            "pareto_EF": c.pareto_EF,
-            "pareto_intersecao": c.pareto_intersecao,
-            "rank_final": c.rank_final,
-            "vetor_O": _vetor_O_dict(c.vetor_O),
-            "vetor_EF": _vetor_EF_dict(c.vetor_EF),
-            "parametros_variados": c.parametros_variados,
-            "erro": c.erro,
-        })
+        cenarios.append(
+            {
+                "cenario_id": c.cenario_id,
+                "viabilidade": c.viabilidade,
+                "classificacao_O": c.classificacao_O,
+                "classificacao_EF": c.classificacao_EF,
+                "pareto_O": c.pareto_O,
+                "pareto_EF": c.pareto_EF,
+                "pareto_intersecao": c.pareto_intersecao,
+                "rank_final": c.rank_final,
+                "vetor_O": _vetor_O_dict(c.vetor_O),
+                "vetor_EF": _vetor_EF_dict(c.vetor_EF),
+                "parametros_variados": c.parametros_variados,
+                "erro": c.erro,
+            }
+        )
 
-    dimensoes = [
-        {"nome": d.nome, "campo": d.campo, "valores": d.valores}
-        for d in cube.dimensoes
-    ]
+    dimensoes = [{"nome": d.nome, "campo": d.campo, "valores": d.valores} for d in cube.dimensoes]
 
     resumos_marginais = [
         {
@@ -171,6 +174,7 @@ def serialize_campaign_report(
 # ---------------------------------------------------------------------------
 # Task 1.2 — render_campaign_report_md
 # ---------------------------------------------------------------------------
+
 
 def render_campaign_report_md(report: dict) -> str:
     """Generates Markdown from the serialized campaign report dict."""
@@ -326,10 +330,7 @@ def _derive_insights(cubo: dict, cenarios: list[dict]) -> list[str]:
             prazo_resumos,
             key=lambda r: _marginal_range(r.get("medias", [])),
         )
-        insights.append(
-            f"Lever mais impactante em prazo: **{best['dimensao']}** "
-            f"(tendência: {best['tendencia']})"
-        )
+        insights.append(f"Lever mais impactante em prazo: **{best['dimensao']}** (tendência: {best['tendencia']})")
 
     # Lever mais impactante em margem
     margem_resumos = [r for r in resumos if r.get("metrica") == "margem_pct"]
@@ -338,10 +339,7 @@ def _derive_insights(cubo: dict, cenarios: list[dict]) -> list[str]:
             margem_resumos,
             key=lambda r: _marginal_range(r.get("medias", [])),
         )
-        insights.append(
-            f"Lever mais impactante em margem: **{best['dimensao']}** "
-            f"(tendência: {best['tendencia']})"
-        )
+        insights.append(f"Lever mais impactante em margem: **{best['dimensao']}** (tendência: {best['tendencia']})")
 
     # Paralelismo médio
     para_resumos = [r for r in resumos if r.get("metrica") == "paralelismo_medio"]
@@ -397,6 +395,7 @@ def _marginal_range(medias: list) -> float:
 # ---------------------------------------------------------------------------
 # Task 1.3 — render_campaign_report_pdf
 # ---------------------------------------------------------------------------
+
 
 def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
     """Generates PDF using ReportLab Platypus. Returns None if unavailable."""
@@ -571,9 +570,7 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
         story: list = []
 
         # ── Page 1: title + meta + shortlist ──────────────────────────────
-        story.append(
-            Paragraph(f"Relatório de Campanha GO — {_safe(campaign_id)}", st_title)
-        )
+        story.append(Paragraph(f"Relatório de Campanha GO — {_safe(campaign_id)}", st_title))
         sc = _status_color(status)
         story.append(
             Paragraph(
@@ -599,17 +596,19 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
         for item in shortlist:
             vO = item.get("vetor_O", {})
             vEF = item.get("vetor_EF", {})
-            sl_data.append([
-                Paragraph(str(item.get("rank", "-")), st_small_c),
-                Paragraph(_safe(item.get("cenario_id", "-")), st_small),
-                Paragraph(_safe(str(item.get("motivo_inclusao", "-")))[:30], st_small),
-                Paragraph(_fmt_int(vO.get("prazo_semanas")), st_small_c),
-                Paragraph(_fmt_f3(vO.get("fe_nec_medio")), st_small_c),
-                Paragraph(_fmt_pct(vEF.get("margem_pct")), st_small_r),
-                Paragraph(_fmt_pct(vEF.get("share_mo_pct")), st_small_r),
-                Paragraph(_fmt_pct(vEF.get("share_eq_pct")), st_small_r),
-                Paragraph(_fmt_pct(vO.get("utilizacao_recursos_pct")), st_small_r),
-            ])
+            sl_data.append(
+                [
+                    Paragraph(str(item.get("rank", "-")), st_small_c),
+                    Paragraph(_safe(item.get("cenario_id", "-")), st_small),
+                    Paragraph(_safe(str(item.get("motivo_inclusao", "-")))[:30], st_small),
+                    Paragraph(_fmt_int(vO.get("prazo_semanas")), st_small_c),
+                    Paragraph(_fmt_f3(vO.get("fe_nec_medio")), st_small_c),
+                    Paragraph(_fmt_pct(vEF.get("margem_pct")), st_small_r),
+                    Paragraph(_fmt_pct(vEF.get("share_mo_pct")), st_small_r),
+                    Paragraph(_fmt_pct(vEF.get("share_eq_pct")), st_small_r),
+                    Paragraph(_fmt_pct(vO.get("utilizacao_recursos_pct")), st_small_r),
+                ]
+            )
 
         col_w_sl = [usable_w * x for x in [0.06, 0.14, 0.22, 0.07, 0.09, 0.10, 0.10, 0.10, 0.12]]
         sl_tbl = Table(sl_data, colWidths=col_w_sl, repeatRows=1)
@@ -621,8 +620,16 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
         story.append(Paragraph("Todos os Cenários", st_h2))
 
         sc_headers = [
-            "ID", "Parâmetros", "Prazo", "fe_nec", "Margem",
-            "MO%", "EQ%", "O-class", "EF-class", "Pareto",
+            "ID",
+            "Parâmetros",
+            "Prazo",
+            "fe_nec",
+            "Margem",
+            "MO%",
+            "EQ%",
+            "O-class",
+            "EF-class",
+            "Pareto",
         ]
         sc_data = [[Paragraph(f"<b>{h}</b>", st_small_c) for h in sc_headers]]
 
@@ -633,9 +640,7 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
         for c in sorted_c:
             vO = c.get("vetor_O", {})
             vEF = c.get("vetor_EF", {})
-            params = "; ".join(
-                f"{k}={v}" for k, v in list(c.get("parametros_variados", {}).items())[:2]
-            )
+            params = "; ".join(f"{k}={v}" for k, v in list(c.get("parametros_variados", {}).items())[:2])
             if c.get("pareto_intersecao"):
                 pareto_mark = "★"
             elif c.get("pareto_O"):
@@ -666,9 +671,7 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
             ]
             sc_data.append(row)
 
-        col_w_sc = [
-            usable_w * x for x in [0.11, 0.19, 0.07, 0.08, 0.09, 0.07, 0.07, 0.12, 0.13, 0.07]
-        ]
+        col_w_sc = [usable_w * x for x in [0.11, 0.19, 0.07, 0.08, 0.09, 0.07, 0.07, 0.12, 0.13, 0.07]]
         sc_tbl = Table(sc_data, colWidths=col_w_sc, repeatRows=1)
         sc_style = _tbl_style_base()
         for i, c in enumerate(sorted_c, start=1):
@@ -714,9 +717,7 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
                     mg_medias = [Paragraph("<b>Média</b>", st_small_c)] + [
                         Paragraph(_fmt_f3(m), st_small_c) for m in medias
                     ]
-                    col_w_mg = (
-                        [usable_w * 0.20] + [usable_w * 0.80 / len(valores)] * len(valores)
-                    )
+                    col_w_mg = [usable_w * 0.20] + [usable_w * 0.80 / len(valores)] * len(valores)
                     mg_tbl = Table([mg_headers, mg_medias], colWidths=col_w_mg)
                     mg_tbl.setStyle(TableStyle(_tbl_style_base()))
                     story.append(mg_tbl)
@@ -751,18 +752,14 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
                             f"<b>{_safe(str(dim_y)[:8])}\\{_safe(str(dim_x)[:8])}</b>",
                             st_small_c,
                         )
-                    ] + [
-                        Paragraph(_safe(str(vx))[:8], st_small_c) for vx in valores_x
-                    ]
+                    ] + [Paragraph(_safe(str(vx))[:8], st_small_c) for vx in valores_x]
                     f_data = [f_header]
                     for vy, row in zip(valores_y, grade):
                         f_row = [Paragraph(_safe(str(vy))[:10], st_small)] + [
                             Paragraph(_fmt_f2(v), st_small_c) for v in row
                         ]
                         f_data.append(f_row)
-                    col_w_f = (
-                        [usable_w * 0.22] + [usable_w * 0.78 / len(valores_x)] * len(valores_x)
-                    )
+                    col_w_f = [usable_w * 0.22] + [usable_w * 0.78 / len(valores_x)] * len(valores_x)
                     f_tbl = Table(f_data, colWidths=col_w_f)
                     f_tbl.setStyle(TableStyle(_tbl_style_base()))
                     story.append(f_tbl)

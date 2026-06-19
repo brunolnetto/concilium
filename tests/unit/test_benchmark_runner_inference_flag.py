@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from concilium.application.benchmarks.execution.runner import BenchmarkRunner
 from concilium.application.benchmarks.inference import BenchmarkInferencePack
 from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
 from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
-from concilium.application.benchmarks.execution.runner import BenchmarkRunner
 from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
 
 

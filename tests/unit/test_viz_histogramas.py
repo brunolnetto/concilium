@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_init_mpl_patch():
     """Return a patch that makes init_mpl() return a mock plt and a fig_to_bytes stub."""
@@ -40,6 +40,7 @@ def _patch_weekly_labels():
 # ---------------------------------------------------------------------------
 # Tests for _build_hist — empty / missing labels returns None (lines 16-19)
 # ---------------------------------------------------------------------------
+
 
 class TestBuildHistEmptyInputs:
     def test_empty_labels_returns_none(self):
@@ -75,6 +76,7 @@ class TestBuildHistEmptyInputs:
 # Tests for _build_hist — ImportError from init_mpl returns None (lines 22-25)
 # ---------------------------------------------------------------------------
 
+
 class TestBuildHistImportError:
     def test_import_error_from_init_mpl_returns_none(self):
         from concilium.application.runtime.deliverables.visualizations.charts.histogramas import _build_hist
@@ -91,6 +93,7 @@ class TestBuildHistImportError:
 # ---------------------------------------------------------------------------
 # Tests for _build_hist — exception inside render returns None (lines 61-63)
 # ---------------------------------------------------------------------------
+
 
 class TestBuildHistRenderException:
     def test_exception_in_render_returns_none(self):
@@ -115,6 +118,7 @@ class TestBuildHistRenderException:
 # Tests for _build_hist — simple flat bar (no breakdown) (lines 49, 50-60)
 # ---------------------------------------------------------------------------
 
+
 class TestBuildHistFlatBar:
     def test_flat_bar_returns_bytes(self):
         from concilium.application.runtime.deliverables.visualizations.charts.histogramas import _build_hist
@@ -122,10 +126,13 @@ class TestBuildHistFlatBar:
         mock_plt, fig_to_bytes_fn = _make_init_mpl_patch()
         section = {"labels": ["A", "B", "C"], "values": [10.0, 20.0, 30.0]}
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = _build_hist(section, "My Title", "Units", "#1a3a5c", "by_type")
 
         assert result == b"PNG"
@@ -136,10 +143,13 @@ class TestBuildHistFlatBar:
         mock_plt, fig_to_bytes_fn = _make_init_mpl_patch()
         section = {"labels": ["A", "B"], "values": [None, 5.0]}
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = _build_hist(section, "Title", "Y", "#000", "by_type")
 
         assert result == b"PNG"
@@ -148,6 +158,7 @@ class TestBuildHistFlatBar:
 # ---------------------------------------------------------------------------
 # Tests for _build_hist — stacked bar with breakdown dict (lines 29-47)
 # ---------------------------------------------------------------------------
+
 
 class TestBuildHistStackedBar:
     def test_stacked_bar_returns_bytes(self):
@@ -163,10 +174,13 @@ class TestBuildHistStackedBar:
             },
         }
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = _build_hist(section, "Hist Equip", "Units", "#1a3a5c", "by_type")
 
         assert result == b"PNG"
@@ -198,10 +212,13 @@ class TestBuildHistStackedBar:
         mock_ax = mock_plt.subplots.return_value[1]
         mock_ax.bar.side_effect = capturing_bar
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             _build_hist(section, "Title", "Y", "#000", "by_type")
 
         assert len(captured_labels) == 1
@@ -223,10 +240,13 @@ class TestBuildHistStackedBar:
             },
         }
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = _build_hist(section, "Title", "Y", "#000", "by_type")
 
         assert result == b"PNG"
@@ -244,10 +264,13 @@ class TestBuildHistStackedBar:
             },
         }
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = _build_hist(section, "Title", "Y", "#000", "by_type")
 
         assert result == b"PNG"
@@ -263,10 +286,13 @@ class TestBuildHistStackedBar:
             "by_type": "not_a_dict",  # non-dict breakdown
         }
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = _build_hist(section, "Title", "Y", "#000", "by_type")
 
         assert result == b"PNG"
@@ -278,6 +304,7 @@ class TestBuildHistStackedBar:
 # ---------------------------------------------------------------------------
 # Tests for build_hist_equipamentos (lines 66-70)
 # ---------------------------------------------------------------------------
+
 
 class TestBuildHistEquipamentos:
     def test_delegates_with_correct_key(self):
@@ -291,10 +318,13 @@ class TestBuildHistEquipamentos:
             }
         }
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = build_hist_equipamentos(graficos)
 
         assert result == b"PNG"
@@ -323,6 +353,7 @@ class TestBuildHistEquipamentos:
 # Tests for build_hist_mao_obra (lines 73-77)
 # ---------------------------------------------------------------------------
 
+
 class TestBuildHistMaoObra:
     def test_delegates_with_correct_key(self):
         from concilium.application.runtime.deliverables.visualizations.charts.histogramas import build_hist_mao_obra
@@ -335,10 +366,13 @@ class TestBuildHistMaoObra:
             }
         }
 
-        with patch(
-            "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
-            return_value=(mock_plt, fig_to_bytes_fn),
-        ), _patch_weekly_labels():
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.charts.histogramas.init_mpl",
+                return_value=(mock_plt, fig_to_bytes_fn),
+            ),
+            _patch_weekly_labels(),
+        ):
             result = build_hist_mao_obra(graficos)
 
         assert result == b"PNG"

@@ -17,13 +17,13 @@ Mapeamento de categorias ADR-023 -> modelo flat Planejamento.bdi:
 
 from __future__ import annotations
 
+from concilium.domain.models.canonical import (
+    ValidacaoItem,
+)
 from concilium.domain.models.financial.bdi import (
     DEFAULT_BDI_TABELA,
     TaxSimulationScenario,
     resolver_bdi_cbs_ibs,
-)
-from concilium.domain.models.canonical import (
-    ValidacaoItem,
 )
 
 

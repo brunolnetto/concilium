@@ -1,7 +1,6 @@
 """Tests for src/concilium/application/benchmarks/report_printer.py"""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from concilium.application.benchmarks.report.report_printer import (
     BenchmarkReportPrinter,
@@ -9,10 +8,10 @@ from concilium.application.benchmarks.report.report_printer import (
     _print_pe_referencia,
 )
 
-
 # ---------------------------------------------------------------------------
 # _print_pe_referencia
 # ---------------------------------------------------------------------------
+
 
 class TestPrintPeReferencia:
     def test_none_returns_early(self, capsys):
@@ -60,6 +59,7 @@ class TestPrintPeReferencia:
 # _print_pe_ferramenta
 # ---------------------------------------------------------------------------
 
+
 class TestPrintPeFerramenta:
     def test_none_returns_early(self, capsys):
         _print_pe_ferramenta(None)
@@ -75,11 +75,13 @@ class TestPrintPeFerramenta:
         assert "Ponto de Equilibrio Estrutural (Ferramenta)" in out
 
     def test_prints_hc_fields(self, capsys):
-        _print_pe_ferramenta({
-            "total_hc_operacional": 10,
-            "total_hc_indireto": 2,
-            "total_hc": 12,
-        })
+        _print_pe_ferramenta(
+            {
+                "total_hc_operacional": 10,
+                "total_hc_indireto": 2,
+                "total_hc": 12,
+            }
+        )
         out = capsys.readouterr().out
         assert "10" in out
         assert "2" in out
@@ -109,6 +111,7 @@ class TestPrintPeFerramenta:
 # ---------------------------------------------------------------------------
 # BenchmarkReportPrinter._print_header
 # ---------------------------------------------------------------------------
+
 
 class TestPrintHeader:
     def setup_method(self):
@@ -184,6 +187,7 @@ class TestPrintHeader:
 # BenchmarkReportPrinter._print_referencia
 # ---------------------------------------------------------------------------
 
+
 class TestPrintReferencia:
     def setup_method(self):
         self.printer = BenchmarkReportPrinter()
@@ -218,6 +222,7 @@ class TestPrintReferencia:
 # ---------------------------------------------------------------------------
 # BenchmarkReportPrinter._print_ferramenta
 # ---------------------------------------------------------------------------
+
 
 class TestPrintFerramenta:
     def setup_method(self):
@@ -318,6 +323,7 @@ class TestPrintFerramenta:
 # BenchmarkReportPrinter._print_composicao_final
 # ---------------------------------------------------------------------------
 
+
 class TestPrintComposicaoFinal:
     def setup_method(self):
         self.printer = BenchmarkReportPrinter()
@@ -380,6 +386,7 @@ class TestPrintComposicaoFinal:
 # ---------------------------------------------------------------------------
 # BenchmarkReportPrinter._print_breakdown
 # ---------------------------------------------------------------------------
+
 
 class TestPrintBreakdown:
     def setup_method(self):
@@ -468,6 +475,7 @@ class TestPrintBreakdown:
 # BenchmarkReportPrinter._print_ponto_equilibrio
 # ---------------------------------------------------------------------------
 
+
 class TestPrintPontoEquilibrio:
     def setup_method(self):
         self.printer = BenchmarkReportPrinter()
@@ -491,6 +499,7 @@ class TestPrintPontoEquilibrio:
 # ---------------------------------------------------------------------------
 # BenchmarkReportPrinter._print_insights
 # ---------------------------------------------------------------------------
+
 
 class TestPrintInsights:
     def setup_method(self):
@@ -533,6 +542,7 @@ class TestPrintInsights:
 # ---------------------------------------------------------------------------
 # BenchmarkReportPrinter._print_acoes
 # ---------------------------------------------------------------------------
+
 
 class TestPrintAcoes:
     def setup_method(self):
@@ -629,6 +639,7 @@ class TestPrintAcoes:
 # ---------------------------------------------------------------------------
 # BenchmarkReportPrinter.print (integration)
 # ---------------------------------------------------------------------------
+
 
 class TestPrint:
     def setup_method(self):

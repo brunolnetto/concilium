@@ -1,4 +1,5 @@
 """Tests for FileProjectRepository and manage_helpers_c to boost coverage."""
+
 from __future__ import annotations
 
 import json
@@ -7,12 +8,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ─── FileProjectRepository helpers ──────────────────────────────────────────
+
 
 class TestFileProjectRepositoryHelpers:
     def test_rc_try_file_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+
         data = {"id": "CPU-1"}
         cpu_file = tmp_path / "CPU-1.json"
         cpu_file.write_text(json.dumps(data), encoding="utf-8")
@@ -21,12 +23,15 @@ class TestFileProjectRepositoryHelpers:
 
     def test_rc_try_file_not_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+
         result = _rc_try_file(tmp_path / "nope.json")
         assert result is None
 
     def test_rc_try_override_found(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
         import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
         override = {"CPU-1": {"field": "override_val"}}
         override_path = tmp_path / "cpus_overlay.json"
         override_path.write_text(json.dumps(override), encoding="utf-8")
@@ -34,22 +39,28 @@ class TestFileProjectRepositoryHelpers:
         assert result == {"field": "override_val"}
 
     def test_rc_try_override_cpu_not_in_file(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
         import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
         override_path = tmp_path / "cpus_overlay.json"
         override_path.write_text(json.dumps({"OTHER": {}}), encoding="utf-8")
         result = _rc_try_override(override_path, "CPU-1", json_mod)
         assert result is None
 
     def test_rc_try_override_file_missing(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
         import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
         result = _rc_try_override(tmp_path / "nonexistent.json", "CPU-1", json_mod)
         assert result is None
 
     def test_rc_try_aggregate_found(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
         import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         agg = [{"codigo": "CPU-1", "descricao": "Test"}]
         agg_file = tmp_path / "cpus_aggregate.json"
         agg_file.write_text(json.dumps(agg), encoding="utf-8")
@@ -58,16 +69,20 @@ class TestFileProjectRepositoryHelpers:
         assert result["codigo"] == "CPU-1"
 
     def test_rc_try_aggregate_not_found(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
         import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         agg_file = tmp_path / "cpus_aggregate.json"
         agg_file.write_text(json.dumps([{"codigo": "OTHER"}]), encoding="utf-8")
         result = _rc_try_aggregate(agg_file, "CPU-1", json_mod)
         assert result is None
 
     def test_rc_try_snapshots_found(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
         import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
         # Snapshots are catalogo-*.json files containing {cpus: [...]}
@@ -78,8 +93,10 @@ class TestFileProjectRepositoryHelpers:
         assert result == cpu_data
 
     def test_rc_try_snapshots_dir_missing(self, tmp_path):
-        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
         import json as json_mod
+
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
         result = _rc_try_snapshots(tmp_path / "missing_snaps", "CPU-1", json_mod)
         assert result is None
 
@@ -88,6 +105,7 @@ class TestFileProjectHandle:
     def _make_handle(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "Test Project", "ctx-01")
         return FileProjectHandle(store), store
 
@@ -146,18 +164,24 @@ class TestFileProjectHandle:
 
 # ─── _commands_manage_helpers_c ─────────────────────────────────────────────
 
+
 class TestManageHelpersCBundleLoader:
     def test_cmr_load_bundle_missing_raises(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_bundle
         from types import SimpleNamespace
+
         import typer
+
+        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_bundle
+
         mod = SimpleNamespace(ROOT=tmp_path)
         with pytest.raises((typer.Exit, SystemExit)):
             _cmr_load_bundle("missing_ctx", mod)
 
     def test_cmr_load_bundle_ok(self, tmp_path):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_bundle
         from types import SimpleNamespace
+
+        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_bundle
+
         # mod.ROOT is used to build path: ROOT / "config/catalogos/{ctx}/.catalog_bundle.json"
         bundle_dir = tmp_path / "config" / "catalogos" / "ctx1"
         bundle_dir.mkdir(parents=True)
@@ -173,6 +197,7 @@ class TestManageHelpersCBundleLoader:
 
     def test_cmr_build_all_low_with_reports(self):
         from concilium.presentation.cli._commands_manage_helpers_c import _cmr_build_all_low
+
         mock_ins = MagicMock()
         mock_ins.inner_low = [{"id": "I1"}]
         mock_prod = MagicMock()
@@ -183,8 +208,10 @@ class TestManageHelpersCBundleLoader:
         assert any(r[1] == "PROD" for r in result)
 
     def test_cmr_add_table_row(self):
-        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_add_table_row
         from rich.table import Table
+
+        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_add_table_row
+
         table = Table()
         table.add_column("Label")
         table.add_column("Value")
@@ -199,8 +226,11 @@ class TestManageHelpersCBundleLoader:
 
     def test_impl_structure_list_no_project(self):
         from concilium.presentation.cli._commands_manage_helpers_c import _impl_structure_list
-        with patch("concilium.presentation.cli._commands_manage_helpers_c.resolve_project",
-                   side_effect=FileNotFoundError("not found")):
+
+        with patch(
+            "concilium.presentation.cli._commands_manage_helpers_c.resolve_project",
+            side_effect=FileNotFoundError("not found"),
+        ):
             # Should handle gracefully
             try:
                 _impl_structure_list("nonexistent_project")

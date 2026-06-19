@@ -1,14 +1,33 @@
 from __future__ import annotations
+
 from datetime import date
 from typing import Any
+
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
+
 from concilium.domain.models.canonical import CanonicalModel
-from ..styles import _fill, _font, _border, _align, _money, _label, _header_row, _title_row, _section_row, _set_col_widths, _auto_fit_columns, _freeze, _C, MESES_PT
-from ..helpers import _fmt_mes, _week_to_month, _project_months, _find_eap_item
+
 from ..cash_flow import _monthly_indirect_costs
+from ..helpers import _find_eap_item, _fmt_mes, _project_months
+from ..styles import (
+    _C,
+    MESES_PT,
+    _align,
+    _auto_fit_columns,
+    _border,
+    _fill,
+    _font,
+    _freeze,
+    _header_row,
+    _label,
+    _money,
+    _section_row,
+    _set_col_widths,
+    _title_row,
+)
 
 
 def _xl_diretos_labor(ws: object, row: int, eq: object, fill_base: object, PAPEL_COLOR: dict) -> int:
@@ -496,7 +515,7 @@ def render_planejamento_ml(wb: Workbook, canonical: CanonicalModel) -> int | Non
     _CRIT_HEX = {"A+": "FF4444", "A": "FFA500", "B": "FFFF33"}
 
     # Ordenação topológica pelo campo EapItem.ordem
-    eap_ordem: dict[str, int] = {e.item_id: e.ordem for e in canonical.eap}
+    eap_ordem: dict[str, int] = {e.item_id: (e.ordem if e.ordem is not None else 9999) for e in canonical.eap}
     planejamento_sorted = sorted(
         canonical.planejamento,
         key=lambda p: eap_ordem.get(p.item_id, 9999),

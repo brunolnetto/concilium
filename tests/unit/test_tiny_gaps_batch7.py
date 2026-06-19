@@ -6,25 +6,29 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ─── presentation/mcp/__main__.py (1 missing: line 6) ─────────────────────────
+
 
 class TestMcpMain:
     def test_module_has_main(self):
         import concilium.presentation.mcp.__main__ as mod
+
         assert hasattr(mod, "main")
 
     def test_main_importable_from_module(self):
         from concilium.presentation.mcp.__main__ import main
+
         assert callable(main)
 
 
 # ─── presentation/api/routes/formulario.py ────────────────────────────────────
 
+
 class TestFormularioRoutes:
     def _client(self, svc=None):
         pytest.importorskip("fastapi")
         from fastapi.testclient import TestClient
+
         try:
             from concilium.presentation.api.app import create_app
             from concilium.presentation.api.container import get_concilium_service
@@ -39,10 +43,17 @@ class TestFormularioRoutes:
         c = self._client()
         with patch(
             "concilium.application.services.project.formulario_service.build_eap",
-            return_value={"mapeados": [{"descricao": "Esc", "cpu_id": "CPU-1", "_confianca": 0.9, "item_id": "1.1"}], "nao_mapeados": [], "total": 1},
+            return_value={
+                "mapeados": [{"descricao": "Esc", "cpu_id": "CPU-1", "_confianca": 0.9, "item_id": "1.1"}],
+                "nao_mapeados": [],
+                "total": 1,
+            },
         ):
             with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
-                resp = c.post("/api/formulario/sugerir-cpus", json={"servicos": [{"descricao": "Escavação", "quantidade": 100, "unidade": "m³"}]})
+                resp = c.post(
+                    "/api/formulario/sugerir-cpus",
+                    json={"servicos": [{"descricao": "Escavação", "quantidade": 100, "unidade": "m³"}]},
+                )
         assert resp.status_code == 200
         data = resp.json()
         assert "mapeados" in data
@@ -54,11 +65,17 @@ class TestFormularioRoutes:
             side_effect=ValueError("missing field"),
         ):
             with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
-                resp = c.post("/api/formulario/projeto", json={
-                    "nome": "Test", "contexto_id": "ctx", "tipo_obra": "terra",
-                    "localizacao": "SP", "data_inicio": "2026-01-01",
-                    "servicos": []
-                })
+                resp = c.post(
+                    "/api/formulario/projeto",
+                    json={
+                        "nome": "Test",
+                        "contexto_id": "ctx",
+                        "tipo_obra": "terra",
+                        "localizacao": "SP",
+                        "data_inicio": "2026-01-01",
+                        "servicos": [],
+                    },
+                )
         assert resp.status_code == 400
 
     def test_criar_projeto_formulario_status_erro(self):
@@ -68,20 +85,28 @@ class TestFormularioRoutes:
             return_value={"status": "erro", "erro": "cpu not found"},
         ):
             with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
-                resp = c.post("/api/formulario/projeto", json={
-                    "nome": "Test", "contexto_id": "ctx", "tipo_obra": "terra",
-                    "localizacao": "SP", "data_inicio": "2026-01-01",
-                    "servicos": []
-                })
+                resp = c.post(
+                    "/api/formulario/projeto",
+                    json={
+                        "nome": "Test",
+                        "contexto_id": "ctx",
+                        "tipo_obra": "terra",
+                        "localizacao": "SP",
+                        "data_inicio": "2026-01-01",
+                        "servicos": [],
+                    },
+                )
         assert resp.status_code == 400
 
 
 # ─── presentation/api/routes/benchmarks.py (6 missing: 76-77, 104-107) ────────
 
+
 class TestBenchmarkRoutes:
     def _client(self, svc=None):
         pytest.importorskip("fastapi")
         from fastapi.testclient import TestClient
+
         try:
             from concilium.presentation.api.app import create_app
             from concilium.presentation.api.container import get_concilium_service
@@ -109,10 +134,12 @@ class TestBenchmarkRoutes:
 
 # ─── presentation/api/routes/projects.py (10 missing — patch_project_config error) ──
 
+
 class TestProjectsRouteErrors:
     def _client(self, svc=None):
         pytest.importorskip("fastapi")
         from fastapi.testclient import TestClient
+
         try:
             from concilium.presentation.api.app import create_app
             from concilium.presentation.api.container import get_concilium_service
@@ -140,6 +167,7 @@ class TestProjectsRouteErrors:
 
 # ─── infrastructure/catalog/query_engine.py (88 missing) ─────────────────────
 
+
 class TestQueryEngine:
     def _catalog(self):
         return {
@@ -147,18 +175,28 @@ class TestQueryEngine:
                 {"codigo": "CPU-ESC", "descricao": "Escavação de solo", "unidade": "m³", "categoria": "TERRA"},
                 {"codigo": "CPU-PAV", "descricao": "Pavimentação asfáltica", "unidade": "m²", "categoria": "PAVE"},
             ],
-            "insumos": [{"codigo": "INS-DIESEL", "descricao": "Diesel", "tipo": "COMBUSTIVEL", "preco_unitario": 6.5, "unidade": "litro"}],
+            "insumos": [
+                {
+                    "codigo": "INS-DIESEL",
+                    "descricao": "Diesel",
+                    "tipo": "COMBUSTIVEL",
+                    "preco_unitario": 6.5,
+                    "unidade": "litro",
+                }
+            ],
             "producoes": [],
             "funcoes": [],
         }
 
     def test_catalog_session_from_resolved(self):
         from concilium.infrastructure.catalog.query_engine import CatalogSession
+
         session = CatalogSession.from_resolved(self._catalog())
         assert session is not None
 
     def test_catalog_session_find_cpu(self):
         from concilium.infrastructure.catalog.query_engine import CatalogSession
+
         session = CatalogSession.from_resolved(self._catalog())
         result = session.find_cpus_by_categoria("TERRA")
         assert len(result) >= 1
@@ -166,12 +204,14 @@ class TestQueryEngine:
 
     def test_catalog_session_get_composicao_empty(self):
         from concilium.infrastructure.catalog.query_engine import CatalogSession
+
         session = CatalogSession.from_resolved(self._catalog())
         result = session.get_composicao_com_precos("CPU-MISSING")
         assert result == []
 
     def test_catalog_session_get_equipe_missing(self):
         from concilium.infrastructure.catalog.query_engine import CatalogSession
+
         session = CatalogSession.from_resolved(self._catalog())
         result = session.get_equipe_com_precos("PROD-MISSING")
         assert isinstance(result, dict)

@@ -1,13 +1,14 @@
 """Tests for AuthStore to boost coverage."""
+
 from __future__ import annotations
 
 import pytest
-from unittest.mock import patch
 
 
 class TestAuthStore:
     def _make_store(self, tmp_path):
         from concilium.infrastructure.auth.auth_store import AuthStore
+
         return AuthStore(data_dir=tmp_path)
 
     def test_add_and_list_clients(self, tmp_path):
@@ -113,18 +114,22 @@ class TestAuthStore:
 class TestAuthHelpers:
     def test_hash_and_verify(self):
         from concilium.infrastructure.auth.auth_store import _hash, _verify
+
         h = _hash("mysecret")
         assert _verify("mysecret", h) is True
         assert _verify("wrong", h) is False
 
     def test_now_returns_datetime(self):
-        from concilium.infrastructure.auth.auth_store import _now
         from datetime import datetime
+
+        from concilium.infrastructure.auth.auth_store import _now
+
         result = _now()
         assert isinstance(result, datetime)
 
     def test_iso_and_parse_roundtrip(self):
         from concilium.infrastructure.auth.auth_store import _iso, _now, _parse
+
         dt = _now()
         s = _iso(dt)
         assert isinstance(s, str)

@@ -24,7 +24,6 @@ from concilium.application.scheduling.models import (
     ScheduleMetrics,
     ScheduleOutput,
 )
-from concilium.domain.models.canonical import OportunidadeCompartilhamentoParalelo
 
 _HELPERS_PRE = (
     Path(__file__).parent.parent.parent
@@ -49,6 +48,7 @@ def helpers():
 # ─────────────────────────────────────────────────────────────────────────────
 # Factories
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _metrics() -> ScheduleMetrics:
     return ScheduleMetrics(
@@ -123,15 +123,15 @@ class TestCpmEarlyStart:
         dag = _dag([a, b, c], [("A", "B"), ("B", "C")])
         es = helpers._cpm_early_start(dag)
         assert es["A"] == 0
-        assert es["B"] == 3   # após A (dur=3)
-        assert es["C"] == 8   # após B (dur=5)
+        assert es["B"] == 3  # após A (dur=3)
+        assert es["C"] == 8  # após B (dur=5)
 
     def test_convergencia_usa_maximo(self, helpers):
         """C depende de A e B; ES(C) = max(EF(A), EF(B))."""
         a, b, c = _act("A", 4, {}), _act("B", 6, {}), _act("C", 2, {})
         dag = _dag([a, b, c], [("A", "C"), ("B", "C")])
         es = helpers._cpm_early_start(dag)
-        assert es["C"] == 6   # EF(B)=6 > EF(A)=4
+        assert es["C"] == 6  # EF(B)=6 > EF(A)=4
 
     def test_paralelas_sem_predecessores_es_zero(self, helpers):
         a, b = _act("A", 3, {}), _act("B", 5, {})
@@ -156,9 +156,7 @@ class TestCriteriosCandidatura:
         pool = _pool({"ESC-22T": 1})
         # Solver serializou: A[0,4) B[4,8)
         sched = _sched([_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 4, 4, {"ESC-22T": 1})], 8)
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         assert len(result) == 1
         opp = result[0]
         assert {opp.atividade_i, opp.atividade_j} == {"A", "B"}
@@ -170,9 +168,7 @@ class TestCriteriosCandidatura:
         dag = _dag([a, b], [("A", "B")])  # precedência lógica
         pool = _pool({"ESC-22T": 1})
         sched = _sched([_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 4, 4, {"ESC-22T": 1})], 8)
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         assert result == []
 
     def test_par_com_pool_2_ignorado(self, helpers):
@@ -181,9 +177,7 @@ class TestCriteriosCandidatura:
         dag = _dag([a, b])
         pool = _pool({"ESC-22T": 2})  # pool suficiente
         sched = _sched([_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 4, 4, {"ESC-22T": 1})], 8)
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         assert result == []
 
     def test_sem_gap_entre_atividades_nao_adjacentes_ignorado(self, helpers):
@@ -193,9 +187,7 @@ class TestCriteriosCandidatura:
         pool = _pool({"ESC-22T": 1})
         # Gap de 2 semanas entre elas → não foi escassez imediata
         sched = _sched([_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 6, 4, {"ESC-22T": 1})], 10)
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         assert result == []
 
     def test_par_sem_cpf_slack_suficiente_ignorado(self, helpers):
@@ -213,9 +205,7 @@ class TestCriteriosCandidatura:
             [_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 4, 4, {"ESC-22T": 1}), _sa("C", 4, 2, {})],
             makespan=8,
         )
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         # A tem slack=0 (schedulado em ES=0) → par descartado
         assert result == []
 
@@ -235,7 +225,10 @@ class TestBalancoCustoPrazo:
         pool = _pool({"ESC-22T": 1})
         sched = _sched([_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 4, 4, {"ESC-22T": 1})], 8)
         result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC,
+            sched,
+            dag,
+            pool,
+            _COSTS_ESC,
             custo_indireto_semana=10_000.0,
             limite_producao_por_tipo={"ESC-22T": "equipamento"},
         )
@@ -252,24 +245,36 @@ class TestBalancoCustoPrazo:
         # Solver serializa B então A (B mais longo primeiro — LPT)
         sched = _sched([_sa("B", 0, 5, {"ESC-22T": 1}), _sa("A", 5, 3, {"ESC-22T": 1})], 8)
         result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC,
+            sched,
+            dag,
+            pool,
+            _COSTS_ESC,
             custo_indireto_semana=0.0,
             limite_producao_por_tipo={"ESC-22T": "equipamento"},
         )
         assert len(result) == 1
-        assert result[0].delta_makespan_semanas == 2   # max(10,6) - 8 = 2
+        assert result[0].delta_makespan_semanas == 2  # max(10,6) - 8 = 2
 
     def test_recurso_suporte_delta_makespan_zero(self, helpers):
         """Recurso de suporte: duração não muda → delta_makespan=0."""
         a, b = _act("A", 4, {"PIPA": 1}), _act("B", 4, {"PIPA": 1})
         dag = _dag([a, b])
         pool = _pool({"PIPA": 1})
-        costs = {"PIPA": {"custo_mob_unit": 10_000.0, "custo_demob_unit": 5_000.0,
-                           "custo_idle_semanal_unit": 1_000.0, "custo_contrato_semana_unit": 3_000.0,
-                           "unidade_faturamento": "mes"}}
+        costs = {
+            "PIPA": {
+                "custo_mob_unit": 10_000.0,
+                "custo_demob_unit": 5_000.0,
+                "custo_idle_semanal_unit": 1_000.0,
+                "custo_contrato_semana_unit": 3_000.0,
+                "unidade_faturamento": "mes",
+            }
+        }
         sched = _sched([_sa("A", 0, 4, {"PIPA": 1}), _sa("B", 4, 4, {"PIPA": 1})], 8)
         result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, costs,
+            sched,
+            dag,
+            pool,
+            costs,
             custo_indireto_semana=10_000.0,
             limite_producao_por_tipo={"PIPA": "mao_obra"},
         )
@@ -285,9 +290,7 @@ class TestBalancoCustoPrazo:
         dag = _dag([a, b])
         pool = _pool({"ESC-22T": 1})
         sched = _sched([_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 4, 4, {"ESC-22T": 1})], 8)
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         assert len(result) == 1
         # custo_contrato_semana_unit=20_000 × 4 semanas = 80_000
         assert result[0].delta_custo_frota == pytest.approx(80_000.0)
@@ -301,7 +304,10 @@ class TestBalancoCustoPrazo:
         # d_i=d_j=4, gargalo, delta_makespan=0 → delta_indiretos=0
         # delta_custo_frota = 80_000 → delta_liquido = 80_000 > 0
         result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC,
+            sched,
+            dag,
+            pool,
+            _COSTS_ESC,
             custo_indireto_semana=10_000.0,
             limite_producao_por_tipo={"ESC-22T": "equipamento"},
         )
@@ -319,7 +325,10 @@ class TestBalancoCustoPrazo:
         pool = _pool({"ESC-22T": 1})
         sched = _sched([_sa("A", 0, 2, {"ESC-22T": 1}), _sa("B", 2, 6, {"ESC-22T": 1})], 8)
         result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC,
+            sched,
+            dag,
+            pool,
+            _COSTS_ESC,
             custo_indireto_semana=100_000.0,
             limite_producao_por_tipo={"ESC-22T": "equipamento"},
         )
@@ -343,9 +352,7 @@ class TestMultiplosPares:
             [_sa("A", 0, 3, {"ESC-22T": 1}), _sa("B", 3, 3, {"ESC-22T": 1}), _sa("C", 6, 3, {"ESC-22T": 1})],
             makespan=9,
         )
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         assert len(result) == 3
         pares = [{r.atividade_i, r.atividade_j} for r in result]
         assert {"A", "B"} in pares
@@ -360,17 +367,19 @@ class TestMultiplosPares:
         pool = _pool({"ESC-22T": 1, "PIPA": 1})
         costs = {
             **_COSTS_ESC,
-            "PIPA": {"custo_mob_unit": 5_000.0, "custo_demob_unit": 2_000.0,
-                     "custo_idle_semanal_unit": 500.0, "custo_contrato_semana_unit": 2_000.0,
-                     "unidade_faturamento": "mes"},
+            "PIPA": {
+                "custo_mob_unit": 5_000.0,
+                "custo_demob_unit": 2_000.0,
+                "custo_idle_semanal_unit": 500.0,
+                "custo_contrato_semana_unit": 2_000.0,
+                "unidade_faturamento": "mes",
+            },
         }
         sched = _sched(
             [_sa("A", 0, 4, {"ESC-22T": 1, "PIPA": 1}), _sa("B", 4, 4, {"ESC-22T": 1, "PIPA": 1})],
             makespan=8,
         )
-        result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, costs, custo_indireto_semana=0.0
-        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, costs, custo_indireto_semana=0.0)
         tipos = {r.tipo_recurso_id for r in result}
         assert tipos == {"ESC-22T", "PIPA"}
 
@@ -381,7 +390,10 @@ class TestMultiplosPares:
         pool = _pool({"MOTOR": 1})
         sched = _sched([_sa("A", 0, 4, {"MOTOR": 1}), _sa("B", 4, 4, {"MOTOR": 1})], 8)
         result = helpers._detectar_oportunidades_paralelo(
-            sched, dag, pool, _COSTS_ESC,  # MOTOR não está em _COSTS_ESC
+            sched,
+            dag,
+            pool,
+            _COSTS_ESC,  # MOTOR não está em _COSTS_ESC
             custo_indireto_semana=0.0,
         )
         assert result == []

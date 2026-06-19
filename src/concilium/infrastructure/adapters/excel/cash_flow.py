@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import math
 from typing import Any
+
 from concilium.domain.models.canonical import CanonicalModel
-from .helpers import _fmt_mes, _week_to_month, _project_months
+
+from .helpers import _fmt_mes, _project_months, _week_to_month
 
 
 def _mdc_accumulate_act(act, cost_per_unit: dict, result: dict) -> None:

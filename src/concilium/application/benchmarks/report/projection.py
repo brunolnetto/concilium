@@ -34,25 +34,31 @@ def _bfc_custo_direto_total(
     return custo_direto, getattr(custo, "total", None), instancial
 
 
-def _bfc_preco_venda(venda: object, custo_total: float | None) -> tuple[float | None, float | None]:
-    """Retorna (raw_bdi_lucro, preco_venda).
+def _bfc_preco_venda(
+    venda: object, custo_total: float | None
+) -> tuple[float | None, float | None, str]:
+    """Retorna (raw_bdi_lucro, preco_venda, fonte).
 
-    Fonte primária: ``total_com_bdi`` — o preço operacional honesto (custo instancial × BDI,
-    conforme ADR-085 D5 / refactoring de pricing). O catálogo (``total_custo_plus_catalogo``)
-    fica como campo diagnóstico ``preco_venda_catalogo`` no ferramenta.
+    fonte indica qual campo originou o preco_venda, permitindo que comparações downstream
+    filtrem por fonte == "total_com_bdi" para garantir homogeneidade (ADR-110 F7):
+      - "total_com_bdi"           — preço operacional honesto (custo instancial × BDI)
+      - "total_custo_plus_catalogo" — fallback: catálogo PU×Q×BDI (diagnóstico)
+      - "derivado"                — fallback: custo_total × (1 + bdi_lucro) estimado
+      - "indisponivel"            — nenhuma fonte disponível
     """
     raw_bdi_lucro = getattr(venda, "bdi_lucro_impostos", None) if venda else None
-    # Preço operacional honesto (total_com_bdi = venda_plus após refactoring)
+    # Nível 1: preço operacional honesto (total_com_bdi = venda_plus após refactoring)
     preco_venda_op = getattr(venda, "total_com_bdi", None) if venda else None
     if preco_venda_op is not None:
-        return raw_bdi_lucro, round(preco_venda_op, 2)
-    # Fallback: catálogo ou derivado do markup
+        return raw_bdi_lucro, round(preco_venda_op, 2), "total_com_bdi"
+    # Nível 2: catálogo (PU×Q×BDI) — usado apenas quando total_com_bdi não existe
     preco_venda_cat = getattr(venda, "total_custo_plus_catalogo", None) if venda else None
     if preco_venda_cat is not None:
-        return raw_bdi_lucro, round(preco_venda_cat, 2)
+        return raw_bdi_lucro, round(preco_venda_cat, 2), "total_custo_plus_catalogo"
+    # Nível 3: derivado a partir do markup estimado
     if raw_bdi_lucro is not None and custo_total is not None:
-        return raw_bdi_lucro, round(custo_total * (1 + raw_bdi_lucro), 2)
-    return raw_bdi_lucro, None
+        return raw_bdi_lucro, round(custo_total * (1 + raw_bdi_lucro), 2), "derivado"
+    return raw_bdi_lucro, None, "indisponivel"
 
 
 def _bfc_bdi_lucro(preco_venda: float | None, custo_total: float | None, raw_bdi_lucro: float | None) -> float:
@@ -80,7 +86,7 @@ def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], flo
     """
     custo_indireto = _bfc_custo_indireto(custo)
     custo_direto, custo_total, instancial = _bfc_custo_direto_total(custo, custo_indireto, venda)
-    raw_bdi_lucro, preco_venda = _bfc_preco_venda(venda, custo_total)
+    raw_bdi_lucro, preco_venda, preco_venda_fonte = _bfc_preco_venda(venda, custo_total)
     bdi_lucro = _bfc_bdi_lucro(preco_venda, custo_total, raw_bdi_lucro)
     ferramenta = {
         "custo_direto": custo_direto,  # PU×Q — comparável à referência
@@ -88,6 +94,7 @@ def _build_ferramenta_custo(custo: Any, venda: Any) -> tuple[dict[str, Any], flo
         "custo_indireto": custo_indireto,
         "custo_total": custo_total,
         "preco_venda": preco_venda,
+        "preco_venda_fonte": preco_venda_fonte,  # ADR-110 F7: rastreabilidade da fonte
         "preco_venda_plus_eq": getattr(venda, "total_custo_plus", None) if venda else None,
         # preco_venda_catalogo: referência de benchmarking (PU×Q×BDI) — total_custo_plus_catalogo
         # total_com_bdi agora é o preço operacional honesto (custo instancial × BDI)
@@ -148,11 +155,11 @@ def _accumulate_planejamento(planejamento: list) -> tuple[bool, dict[str, float]
         if sem_bdi is None:
             continue
         has_catalog = True
-        totals["mao_obra"] += float(getattr(sem_bdi, "mao_obra", 0.0) or 0.0)
-        totals["equipamentos"] += float(getattr(sem_bdi, "equipamentos", 0.0) or 0.0)
-        totals["diesel"] += float(getattr(sem_bdi, "diesel", 0.0) or 0.0)
-        totals["materiais"] += float(getattr(sem_bdi, "material", 0.0) or 0.0)
-        totals["total"] += float(getattr(sem_bdi, "total", 0.0) or 0.0)
+        totals["mao_obra"] += float(getattr(sem_bdi, "mao_obra", 0.0))
+        totals["equipamentos"] += float(getattr(sem_bdi, "equipamentos", 0.0))
+        totals["diesel"] += float(getattr(sem_bdi, "diesel", 0.0))
+        totals["materiais"] += float(getattr(sem_bdi, "material", 0.0))
+        totals["total"] += float(getattr(sem_bdi, "total", 0.0))
     return has_catalog, totals
 
 
@@ -182,11 +189,14 @@ def _accumulate_equipes(equipes_diretas: list) -> dict[str, float]:
                 totals["diesel"] += equipe.custo_combustivel_total_mensal * fator
                 totals["materiais"] += getattr(equipe, "custo_material_mensal", 0.0) * fator
 
-    # NEP-043: custo_total = custo de 1 frente → multiplicar por num_equipes_base
-    totals["total"] = sum(
-        equipe.custo_total * max(1, int(getattr(equipe, "num_equipes_base", 1) or 1))
-        for equipe in equipes_diretas
-    )
+    # NEP-043 original: "custo_total = custo de 1 frente → multiplicar por num_equipes_base".
+    # ADR-091: a normalização de custo_total em skill-05 já divide pelo número de frentes
+    # paralelas ANTES de armazenar, garantindo que custo_total represente o custo total
+    # da atividade (todas as frentes pelo período). Multiplicar novamente por num_equipes_base
+    # gera dupla contagem quando num_equipes_base > 1.
+    # Quando custo_inst_* está disponível (PATH 1), o total já está correto via inst fields;
+    # quando não está (PATH 2), custo_total é o valor correto diretamente.
+    totals["total"] = sum(equipe.custo_total for equipe in equipes_diretas)
     return totals
 
 
@@ -233,6 +243,7 @@ class BenchmarkProjection:
     ferramenta_breakdown_direto: dict[str, Any] | None = None
     ferramenta_breakdown_indireto: dict[str, Any] | None = None
     actionable_insights: dict[str, Any] | None = None
+    preco_venda_fonte: str | None = None  # ADR-110 F7: "total_com_bdi" | "total_custo_plus_catalogo" | "derivado" | "indisponivel"
 
     def _populate_resultado(self, resultado: Any) -> tuple[Any, Any]:
         """Popula ferramenta, breakdown_indireto e PE. Retorna (custo_direto, custo_indireto)."""
@@ -242,6 +253,7 @@ class BenchmarkProjection:
         custo_indireto = None
         if custo is not None:
             self.ferramenta, custo_direto, custo_indireto = _build_ferramenta_custo(custo, venda)
+            self.preco_venda_fonte = self.ferramenta.get("preco_venda_fonte")
             self.ferramenta_breakdown_indireto = _build_breakdown_indireto(custo, custo_indireto)
         balanco_pe = getattr(resultado, "balanco_ponto_equilibrio", None)
         if balanco_pe:

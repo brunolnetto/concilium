@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from concilium.domain.constants import META_MARGEM_PADRAO
+
 from mcp.server.fastmcp import FastMCP
 
 
@@ -18,16 +20,16 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
     """
     fator_eq = float(parametros.get("fator_equipes", 1.0))
     horas_dia = int(parametros.get("horas_dia", 0)) or None
-    dias_sem   = int(parametros.get("dias_semana", 0)) or None
-    meta_margem = float(parametros.get("meta_margem_pct", 0.10))
+    dias_sem = int(parametros.get("dias_semana", 0)) or None
+    meta_margem = float(parametros.get("meta_margem_pct", META_MARGEM_PADRAO))
 
     regime = getattr(canonical, "projeto", None)
     regime = getattr(regime, "regime_trabalho", None) if regime else None
     base_horas = float(getattr(regime, "horas_dia", 8) or 8)
-    base_dias  = float(getattr(regime, "dias_semana", 6) or 6)
+    base_dias = float(getattr(regime, "dias_semana", 6) or 6)
 
     horas_novo = float(horas_dia) if horas_dia else base_horas
-    dias_novo  = float(dias_sem)  if dias_sem  else base_dias
+    dias_novo = float(dias_sem) if dias_sem else base_dias
 
     prod_factor = (fator_eq * horas_novo * dias_novo) / (1.0 * base_horas * base_dias)
 
@@ -36,29 +38,31 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
 
     itens_sim = []
     total_custo_atual = 0.0
-    total_custo_novo  = 0.0
+    total_custo_novo = 0.0
 
     for pe in pes:
         fe_atual = float(getattr(pe, "frentes_equivalentes_necessarias", 1.0) or 1.0)
-        fe_novo  = fe_atual / prod_factor if prod_factor > 0 else fe_atual
-        c_atual  = float(getattr(pe, "custo_operacional_real", 0.0) or 0.0)
-        c_novo   = c_atual * prod_factor
+        fe_novo = fe_atual / prod_factor if prod_factor > 0 else fe_atual
+        c_atual = float(getattr(pe, "custo_operacional_real", 0.0) or 0.0)
+        c_novo = c_atual * prod_factor
         total_custo_atual += c_atual
-        total_custo_novo  += c_novo
+        total_custo_novo += c_novo
         status_novo = "OK" if fe_novo <= 1.25 else ("AVISO" if fe_novo <= 1.5 else "CRITICO")
-        itens_sim.append({
-            "item_id": pe.item_id,
-            "fe_nec_atual":  round(fe_atual, 3),
-            "fe_nec_estimado": round(fe_novo, 3),
-            "custo_atual": round(c_atual, 2),
-            "custo_estimado": round(c_novo, 2),
-            "status_frentes_estimado": status_novo,
-        })
+        itens_sim.append(
+            {
+                "item_id": pe.item_id,
+                "fe_nec_atual": round(fe_atual, 3),
+                "fe_nec_estimado": round(fe_novo, 3),
+                "custo_atual": round(c_atual, 2),
+                "custo_estimado": round(c_novo, 2),
+                "status_frentes_estimado": status_novo,
+            }
+        )
 
     n_crit_atual = sum(1 for it in itens_sim if it["fe_nec_atual"] > 1.25)
-    n_crit_novo  = sum(1 for it in itens_sim if it["fe_nec_estimado"] > 1.25)
+    n_crit_novo = sum(1 for it in itens_sim if it["fe_nec_estimado"] > 1.25)
     fe_med_atual = (sum(it["fe_nec_atual"] for it in itens_sim) / len(itens_sim)) if itens_sim else 0
-    fe_med_novo  = (sum(it["fe_nec_estimado"] for it in itens_sim) / len(itens_sim)) if itens_sim else 0
+    fe_med_novo = (sum(it["fe_nec_estimado"] for it in itens_sim) / len(itens_sim)) if itens_sim else 0
 
     custo_indireto = 0.0
     if resultado and resultado.custo:
@@ -67,7 +71,7 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
 
     venda = float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) if resultado else 0.0
     margem_atual = (venda - total_custo_atual - custo_indireto) / venda if venda > 0 else 0.0
-    margem_nova  = (venda - total_custo_novo  - custo_indireto) / venda if venda > 0 else 0.0
+    margem_nova = (venda - total_custo_novo - custo_indireto) / venda if venda > 0 else 0.0
 
     return {
         "tipo": "lever_adjust",

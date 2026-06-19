@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ._audit_utils import _safe_float
+
 _DEFAULT_ROOT = Path(__file__).resolve().parents[5]
 
 
@@ -171,10 +173,7 @@ def _vpi_build_checkpoints(e4: dict, e6: dict) -> list:
     """Builds pipeline integrity checkpoints for stages 04->06."""
 
     def _f(v: object) -> float:
-        try:
-            return float(v or 0)
-        except Exception:
-            return 0.0
+        return _safe_float(v)
 
     return [
         {

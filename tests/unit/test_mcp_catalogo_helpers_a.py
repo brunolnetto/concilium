@@ -19,7 +19,6 @@ from concilium.presentation.mcp.tools._catalogo_tools_helpers_a import (
     _impl_pesquisar_catalogo,
 )
 
-
 # ---------------------------------------------------------------------------
 # Shared fixture helpers
 # ---------------------------------------------------------------------------
@@ -359,7 +358,9 @@ class TestImplAtualizarPrecoInsumo:
         assert "INS-001::BASE" in saved
         assert saved["INS-001::BASE"]["preco"] == 55.0
 
-    def test_projeto_happy_path_merges_existing_overrides(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_projeto_happy_path_merges_existing_overrides(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         # lines 184-199 — merges with existing overrides
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
@@ -418,7 +419,9 @@ class TestImplAtualizarPrecoInsumo:
         data = json.loads(insumo_file.read_text(encoding="utf-8"))
         assert data["preco_unitario"] == 42.0
 
-    def test_master_with_jurisdicao_writes_regionalizacao(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_master_with_jurisdicao_writes_regionalizacao(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
         # lines 206-209 — master layer with jurisdicao_id
         rt = _make_rt("ctx1", "cat1")
         projects_dir = tmp_path / "projetos"
@@ -510,9 +513,7 @@ class TestImplConsultarPrecoInsumoTemporal:
         mock_repo = MagicMock()
         mock_repo.resolver_preco.return_value = (10.0, "MASTER_BASE")
         with patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo", return_value=mock_repo):
-            result = _impl_consultar_preco_insumo_temporal(
-                "ctx1", "INS-001", "2025-01-01", projeto_id="MISSING-PROJ"
-            )
+            result = _impl_consultar_preco_insumo_temporal("ctx1", "INS-001", "2025-01-01", projeto_id="MISSING-PROJ")
         assert "erro" in result
         assert "MISSING-PROJ" in result["erro"]
 
@@ -530,9 +531,7 @@ class TestImplConsultarPrecoInsumoTemporal:
         mock_repo = MagicMock()
         mock_repo.resolver_preco.return_value = (99.0, "PROJECT_OVERRIDE")
         with patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo", return_value=mock_repo):
-            result = _impl_consultar_preco_insumo_temporal(
-                "ctx1", "INS-001", "2025-01-01", projeto_id="PROJ-001"
-            )
+            result = _impl_consultar_preco_insumo_temporal("ctx1", "INS-001", "2025-01-01", projeto_id="PROJ-001")
         assert result["status"] == "SUCESSO"
         assert result["preco_unitario"] == 99.0
         assert result["fonte_preco"] == "PROJECT_OVERRIDE"
@@ -553,9 +552,7 @@ class TestImplConsultarPrecoInsumoTemporal:
         mock_repo = MagicMock()
         mock_repo.resolver_preco.return_value = (5.0, "MASTER_BASE")
         with patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo", return_value=mock_repo):
-            result = _impl_consultar_preco_insumo_temporal(
-                "ctx1", "INS-001", "2025-01-01", projeto_id="PROJ-001"
-            )
+            result = _impl_consultar_preco_insumo_temporal("ctx1", "INS-001", "2025-01-01", projeto_id="PROJ-001")
         # overrides=None was passed
         call_kwargs = mock_repo.resolver_preco.call_args
         assert call_kwargs.kwargs.get("overrides") is None
@@ -602,9 +599,7 @@ class TestImplConsultarPrecoInsumoTemporal:
         mock_repo = MagicMock()
         mock_repo.resolver_preco.return_value = (123.45, "SICRO_REGIONAL")
         with patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo", return_value=mock_repo):
-            result = _impl_consultar_preco_insumo_temporal(
-                "ctx1", "INS-001", "2025-03-15", jurisdicao_id="CE"
-            )
+            result = _impl_consultar_preco_insumo_temporal("ctx1", "INS-001", "2025-03-15", jurisdicao_id="CE")
         assert result["preco_unitario"] == 123.45
         assert result["fonte_preco"] == "SICRO_REGIONAL"
         assert result["data_referencia"] == "2025-03-15"
@@ -640,9 +635,7 @@ class TestImplAdicionarVarianteProducao:
         projects_dir.mkdir(parents=True)
         self._setup(monkeypatch, rt, tmp_path, projects_dir)
 
-        result = _impl_adicionar_variante_producao(
-            "ctx1", "PROD-001", "V1", "Variante 1", 150.0, "NOT_JSON"
-        )
+        result = _impl_adicionar_variante_producao("ctx1", "PROD-001", "V1", "Variante 1", 150.0, "NOT_JSON")
         assert "erro" in result
         assert "Erro ao adicionar variante" in result["erro"]
 
@@ -654,8 +647,7 @@ class TestImplAdicionarVarianteProducao:
         self._setup(monkeypatch, rt, tmp_path, projects_dir)
 
         result = _impl_adicionar_variante_producao(
-            "ctx1", "PROD-001", "V1", "Variante 1", 150.0,
-            json.dumps({"funcoes": []}), projeto_id="MISSING-PROJ"
+            "ctx1", "PROD-001", "V1", "Variante 1", 150.0, json.dumps({"funcoes": []}), projeto_id="MISSING-PROJ"
         )
         assert "erro" in result
         assert "MISSING-PROJ" in result["erro"]

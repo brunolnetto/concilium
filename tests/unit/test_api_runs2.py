@@ -15,8 +15,18 @@ except TypeError as exc:
 
 
 class _FakeService:
-    def run_project(self, project_id, *, base_version, fork_version, skill_inputs_override,
-                    use_saved_overrides, use_mobilizacao_policy, use_strict_catalog_baseline, actor):
+    def run_project(
+        self,
+        project_id,
+        *,
+        base_version,
+        fork_version,
+        skill_inputs_override,
+        use_saved_overrides,
+        use_mobilizacao_policy,
+        use_strict_catalog_baseline,
+        actor,
+    ):
         return {
             "project_id": project_id,
             "run_id": "run-1",
@@ -29,10 +39,25 @@ class _FakeService:
             "use_strict_catalog_baseline": use_strict_catalog_baseline,
         }
 
-    def start_run_project(self, project_id, *, base_version, fork_version, skill_inputs_override,
-                          use_saved_overrides, use_mobilizacao_policy, use_strict_catalog_baseline, actor):
-        return {"project_id": project_id, "run_id": "run-1", "status": "queued",
-                "use_mobilizacao_policy": False, "use_strict_catalog_baseline": False}
+    def start_run_project(
+        self,
+        project_id,
+        *,
+        base_version,
+        fork_version,
+        skill_inputs_override,
+        use_saved_overrides,
+        use_mobilizacao_policy,
+        use_strict_catalog_baseline,
+        actor,
+    ):
+        return {
+            "project_id": project_id,
+            "run_id": "run-1",
+            "status": "queued",
+            "use_mobilizacao_policy": False,
+            "use_strict_catalog_baseline": False,
+        }
 
     def list_runs(self, project_id):
         return [{"run_id": "run-1", "status": "done"}]
@@ -63,7 +88,7 @@ class _ErrorService(_FakeService):
 
 def _client(svc=None):
     app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: (svc or _FakeService())
+    app.dependency_overrides[get_concilium_service] = lambda: svc or _FakeService()
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -84,6 +109,7 @@ class TestRunProjectRoute:
         class FailSvc(_FakeService):
             def run_project(self, *a, **kw):
                 raise ValueError("bad input")
+
         c = _client(FailSvc())
         resp = c.post("/api/projects/proj-1/runs", json={})
         assert resp.status_code == 400
@@ -104,6 +130,7 @@ class TestRerunProjectRoute:
         class RerunErrorSvc(_FakeService):
             def run_project(self, *a, **kw):
                 raise FileNotFoundError("not found")
+
         c = _client(RerunErrorSvc())
         resp = c.post("/api/projects/proj-1/rerun", json={})
         assert resp.status_code == 404

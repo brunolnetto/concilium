@@ -10,7 +10,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
 import typer
 from typer.testing import CliRunner
 
@@ -83,16 +82,12 @@ def _make_device_code_record(
 def _make_store(**kwargs) -> MagicMock:
     """Return a MagicMock AuthStore with sensible defaults."""
     store = MagicMock()
-    store.add_client.return_value = kwargs.get(
-        "add_client_return", _make_client_record()
-    )
+    store.add_client.return_value = kwargs.get("add_client_return", _make_client_record())
     store.list_clients.return_value = kwargs.get("list_clients_return", [])
     store.remove_client.return_value = kwargs.get("remove_client_return", True)
     store.list_devices.return_value = kwargs.get("list_devices_return", [])
     store.revoke_device.return_value = kwargs.get("revoke_device_return", 0)
-    store.create_device_code.return_value = kwargs.get(
-        "create_device_code_return", _make_device_code_record()
-    )
+    store.create_device_code.return_value = kwargs.get("create_device_code_return", _make_device_code_record())
     return store
 
 
@@ -148,9 +143,7 @@ class TestAddUser:
 
     def test_add_user_role_passed_to_store(self):
         """Role is passed correctly to add_client."""
-        store = _make_store(
-            add_client_return=_make_client_record(roles=["admin"])
-        )
+        store = _make_store(add_client_return=_make_client_record(roles=["admin"]))
 
         with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
@@ -165,9 +158,7 @@ class TestAddUser:
 
     def test_add_user_notes_passed_to_store(self):
         """Notes are passed through to store.add_client."""
-        store = _make_store(
-            add_client_return=_make_client_record(notes="CI service")
-        )
+        store = _make_store(add_client_return=_make_client_record(notes="CI service"))
 
         with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
@@ -309,8 +300,10 @@ class TestNewDevice:
                 app,
                 [
                     "new-device",
-                    "--user", "alice",
-                    "--device", "macbook-alice",
+                    "--user",
+                    "alice",
+                    "--device",
+                    "macbook-alice",
                     "--no-config",
                 ],
             )
@@ -334,8 +327,10 @@ class TestNewDevice:
                 app,
                 [
                     "new-device",
-                    "--user", "alice",
-                    "--device", "macbook-alice",
+                    "--user",
+                    "alice",
+                    "--device",
+                    "macbook-alice",
                     "--config",
                 ],
             )
@@ -358,8 +353,10 @@ class TestNewDevice:
                 app,
                 [
                     "new-device",
-                    "--user", "alice",
-                    "--device", "macbook-alice",
+                    "--user",
+                    "alice",
+                    "--device",
+                    "macbook-alice",
                     # no flag → default is --config (show_config=True)
                 ],
             )
@@ -381,8 +378,10 @@ class TestNewDevice:
                 app,
                 [
                     "new-device",
-                    "--user", "alice",
-                    "--device", "laptop-x",
+                    "--user",
+                    "alice",
+                    "--device",
+                    "laptop-x",
                     "--config",
                 ],
             )

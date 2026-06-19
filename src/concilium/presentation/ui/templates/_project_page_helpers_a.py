@@ -97,7 +97,11 @@ def _deserialize_backtracking(data: dict | None):
     if not data:
         return None
     try:
-        from concilium.domain.models.financial.backtracking_pe import BacktrackingPEItem, BacktrackingPERelatorio, SolucaoInversa
+        from concilium.domain.models.financial.backtracking_pe import (
+            BacktrackingPEItem,
+            BacktrackingPERelatorio,
+            SolucaoInversa,
+        )
 
         itens = []
         for it in data.get("itens", []):

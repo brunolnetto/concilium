@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 
 from concilium.presentation.cli.commands_configuration import app_jurisdicao, app_temas
@@ -190,10 +188,10 @@ class TestJurisdicaoList:
         result = runner.invoke(app_jurisdicao, [])
 
         assert result.exit_code == 0, result.output
-        assert "5.00%" in result.output   # ISS
-        assert "0.65%" in result.output   # PIS
-        assert "3.00%" in result.output   # COFINS
-        assert "4.50%" in result.output   # CPRB
+        assert "5.00%" in result.output  # ISS
+        assert "0.65%" in result.output  # PIS
+        assert "3.00%" in result.output  # COFINS
+        assert "4.50%" in result.output  # CPRB
         # Total = 0.05 + 0.0065 + 0.03 + 0.045 = 0.1315 → 13.15%
         assert "13.15%" in result.output
 

@@ -1,0 +1,15 @@
+{
+  "codigo": "SV-P0029-N",
+  "tipo": "MAO_OBRA",
+  "descricao": "Gredista (Noturno, 12×36)",
+  "unidade": "h",
+  "preco_unitario": 19.8912,
+  "fonte_preco": "PLANILHA_SERRA_VERDE_2026",
+  "data_referencia_preco": "2026-08-01",
+  "categoria": "MINERACAO",
+  "atributos_especificos": {
+    "nota": "inclui encargos — taxa horária all-in (custo_total_planilha/360h)",
+    "custo_total_mensal": 7160.84,
+    "turno": "N"
+  }
+}

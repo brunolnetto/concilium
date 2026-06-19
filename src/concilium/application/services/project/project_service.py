@@ -11,6 +11,7 @@ from concilium.domain.services.project_rules import (
     resolve_compare_version,
 )
 
+from ..service_support import build_summary
 from ._project_service_helpers import (
     _enrich_payload_bdi,
     _enrich_payload_catalog,
@@ -23,7 +24,6 @@ from ._project_service_helpers import (
 from .audit_service import AuditService
 from .project_files import DEFAULT_PROJECT_FILES, ProjectFiles
 from .project_repository import ProjectRepository
-from ..service_support import build_summary
 
 logger = logging.getLogger(__name__)
 
@@ -138,7 +138,8 @@ def _latest_version_with_eap(project: Any) -> tuple[list[dict[str, Any]], str | 
     for version in reversed(versions):
         try:
             canonical = project.load_canonical(version)
-        except Exception:
+        except Exception as e:
+            logger.warning("Falha ao carregar canonical da versão %s: %s", version, e, exc_info=True)
             canonical = None
         if canonical is None:
             continue

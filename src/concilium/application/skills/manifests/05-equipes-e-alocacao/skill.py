@@ -294,6 +294,7 @@ def run_equipes_e_alocacao(
                 ScheduleMetrics,
                 ScheduleOutput,
             )
+
             from ._skill_helpers_pre import _detectar_oportunidades_paralelo
 
             # Reconstruir ScheduleOutput a partir do cronograma canônico

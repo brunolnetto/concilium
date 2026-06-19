@@ -6,7 +6,6 @@ Uses an in-memory BlobStoragePort stub — no filesystem or cloud dependency.
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import pytest
 
@@ -15,7 +14,6 @@ from concilium.infrastructure.storage.storage_project_repository import (
     StorageProjectHandle,
     StorageProjectRepository,
 )
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  In-memory stub for BlobStoragePort
@@ -88,6 +86,7 @@ class TestPathResolution:
 
     def test_root_property(self, handle: StorageProjectHandle, project_id: str) -> None:
         from pathlib import Path
+
         assert handle.root == Path(project_id)
 
 
@@ -235,6 +234,7 @@ class TestNewVersion:
 class TestVersionPath:
     def test_version_path_returns_path_object(self, handle: StorageProjectHandle, project_id: str) -> None:
         from pathlib import Path
+
         p = handle.version_path("v1")
         assert p == Path(project_id) / "v1"
 
@@ -247,6 +247,7 @@ class TestVersionPath:
 def _minimal_canonical_dict() -> dict:
     """Return a minimal valid CanonicalModel-like dict (only what the model requires)."""
     from datetime import date, datetime
+
     return {
         "meta": {
             "versao_schema": "1.0.0",
@@ -285,6 +286,7 @@ class TestLoadSaveCanonical:
 
     def test_save_canonical_raises_without_active_version(self, handle: StorageProjectHandle) -> None:
         from concilium.domain.models.canonical import CanonicalModel
+
         try:
             model = CanonicalModel.model_validate(_minimal_canonical_dict())
             with pytest.raises(RuntimeError, match="Nenhuma versão ativa"):
@@ -293,6 +295,7 @@ class TestLoadSaveCanonical:
             # If CanonicalModel.model_validate fails (missing required fields),
             # test the runtime error with a mock
             from unittest.mock import MagicMock
+
             mock_model = MagicMock()
             mock_model.model_dump_json.return_value = "{}"
             with pytest.raises(RuntimeError, match="Nenhuma versão ativa"):
@@ -340,7 +343,9 @@ class TestReadLinesReadBytesExists:
     def test_read_lines_returns_empty_list_on_missing(self, handle: StorageProjectHandle) -> None:
         assert handle.read_lines("nonexistent.log") == []
 
-    def test_read_lines_splits_on_newlines(self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str) -> None:
+    def test_read_lines_splits_on_newlines(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
         storage.gravar_blob(f"{project_id}/file.log", b"line1\nline2\nline3")
         lines = handle.read_lines("file.log")
         assert lines == ["line1", "line2", "line3"]
@@ -393,9 +398,7 @@ class TestListFileNames:
         assert "nested.json" not in names
         assert all("/" not in n for n in names)
 
-    def test_returns_sorted(
-        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
-    ) -> None:
+    def test_returns_sorted(self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str) -> None:
         for name in ["c.json", "a.json", "b.json"]:
             storage.gravar_blob(f"{project_id}/v1/{name}", b"")
         names = handle.list_file_names("v1")
@@ -675,6 +678,7 @@ class TestDeleteTree:
 class TestCreateProject:
     def test_create_project_generates_uuid(self, repo: StorageProjectRepository) -> None:
         import uuid
+
         handle = repo.create_project("Obra Norte", "mendeslobo")
         # project_id must be a valid UUID
         parsed = uuid.UUID(handle._project_id)

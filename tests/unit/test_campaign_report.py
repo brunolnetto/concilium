@@ -3,12 +3,11 @@
 Uses the same _make_cenario helper pattern from test_adr070_campaign.py.
 No real pipeline execution — all data is built from domain model constructors.
 """
+
 from __future__ import annotations
 
 import json
 from datetime import datetime
-
-import pytest
 
 from concilium.application.services.campaign.campaign_report import (
     render_campaign_report_md,
@@ -120,7 +119,9 @@ def _make_bundle(cenarios: list[CenarioAvaliado], shortlist: list[CenarioRankead
 
 
 def _make_cube(campaign_id: str = "test-abc123") -> CampaignBundleCube:
-    dim1 = CuboDimensao(nome="deadline_weeks", campo="inputs_cronograma.rcpsp_spec.deadline_weeks", valores=[48, 52, 56])
+    dim1 = CuboDimensao(
+        nome="deadline_weeks", campo="inputs_cronograma.rcpsp_spec.deadline_weeks", valores=[48, 52, 56]
+    )
     dim2 = CuboDimensao(nome="regime_trabalho", campo="meta.regime_trabalho", valores=["normal", "intensivo"])
 
     resumos = [
@@ -179,6 +180,7 @@ def _make_report():
 # 1. serialize_campaign_report — output is JSON-serializable, has required keys
 # ---------------------------------------------------------------------------
 
+
 class TestSerializeCampaignReport:
     def test_output_is_json_serializable(self):
         report = _make_report()
@@ -197,8 +199,16 @@ class TestSerializeCampaignReport:
     def test_meta_has_required_fields(self):
         report = _make_report()
         meta = report["meta"]
-        for key in ["campaign_id", "campaign_version", "gerado_em", "status",
-                    "n_avaliados", "n_viaveis", "n_falhas", "cobertura_pct"]:
+        for key in [
+            "campaign_id",
+            "campaign_version",
+            "gerado_em",
+            "status",
+            "n_avaliados",
+            "n_viaveis",
+            "n_falhas",
+            "cobertura_pct",
+        ]:
             assert key in meta, f"meta missing: {key}"
 
     def test_meta_values_correct(self):
@@ -215,8 +225,17 @@ class TestSerializeCampaignReport:
         report = _make_report()
         assert len(report["shortlist"]) == 2
         item = report["shortlist"][0]
-        for key in ["rank", "cenario_id", "motivo_inclusao", "destaques_O",
-                    "destaques_EF", "alertas", "parametros_chave", "vetor_O", "vetor_EF"]:
+        for key in [
+            "rank",
+            "cenario_id",
+            "motivo_inclusao",
+            "destaques_O",
+            "destaques_EF",
+            "alertas",
+            "parametros_chave",
+            "vetor_O",
+            "vetor_EF",
+        ]:
             assert key in item, f"shortlist item missing: {key}"
 
     def test_shortlist_rank_order(self):
@@ -228,32 +247,65 @@ class TestSerializeCampaignReport:
         report = _make_report()
         assert len(report["cenarios"]) == 3
         c = report["cenarios"][0]
-        for key in ["cenario_id", "viabilidade", "classificacao_O", "classificacao_EF",
-                    "pareto_O", "pareto_EF", "pareto_intersecao", "rank_final",
-                    "vetor_O", "vetor_EF", "parametros_variados"]:
+        for key in [
+            "cenario_id",
+            "viabilidade",
+            "classificacao_O",
+            "classificacao_EF",
+            "pareto_O",
+            "pareto_EF",
+            "pareto_intersecao",
+            "rank_final",
+            "vetor_O",
+            "vetor_EF",
+            "parametros_variados",
+        ]:
             assert key in c, f"cenario missing: {key}"
 
     def test_vetor_O_fields(self):
         report = _make_report()
         vO = report["cenarios"][0]["vetor_O"]
-        for key in ["prazo_semanas", "folga_semanas", "fe_nec_medio", "itens_criticos_pct",
-                    "gap_pool_total", "custo_mob_window_total", "utilizacao_recursos_pct",
-                    "paralelismo_medio", "idle_pool_pct"]:
+        for key in [
+            "prazo_semanas",
+            "folga_semanas",
+            "fe_nec_medio",
+            "itens_criticos_pct",
+            "gap_pool_total",
+            "custo_mob_window_total",
+            "utilizacao_recursos_pct",
+            "paralelismo_medio",
+            "idle_pool_pct",
+        ]:
             assert key in vO, f"vetor_O missing: {key}"
 
     def test_vetor_EF_fields(self):
         report = _make_report()
         vEF = report["cenarios"][0]["vetor_EF"]
-        for key in ["margem_pct", "custo_execucao_pool", "custo_indireto", "preco_venda",
-                    "ratio_pool_vs_cat", "fidelidade_gates", "share_mo_pct",
-                    "share_eq_pct", "share_comb_pct", "concentracao_atividade"]:
+        for key in [
+            "margem_pct",
+            "custo_execucao_pool",
+            "custo_indireto",
+            "preco_venda",
+            "ratio_pool_vs_cat",
+            "fidelidade_gates",
+            "share_mo_pct",
+            "share_eq_pct",
+            "share_comb_pct",
+            "concentracao_atividade",
+        ]:
             assert key in vEF, f"vetor_EF missing: {key}"
 
     def test_cubo_structure(self):
         report = _make_report()
         cubo = report["cubo"]
-        for key in ["dimensoes", "n_celulas_total", "n_celulas_avaliadas",
-                    "cobertura_pct", "resumos_marginais", "faces"]:
+        for key in [
+            "dimensoes",
+            "n_celulas_total",
+            "n_celulas_avaliadas",
+            "cobertura_pct",
+            "resumos_marginais",
+            "faces",
+        ]:
             assert key in cubo, f"cubo missing: {key}"
 
     def test_cubo_dimensoes(self):
@@ -305,6 +357,7 @@ class TestSerializeCampaignReport:
 # ---------------------------------------------------------------------------
 # 2. render_campaign_report_md — contains expected sections
 # ---------------------------------------------------------------------------
+
 
 class TestRenderCampaignReportMd:
     def _md(self):
@@ -423,6 +476,7 @@ class TestRenderCampaignReportMd:
 # 3. render_campaign_report_pdf — returns bytes or None
 # ---------------------------------------------------------------------------
 
+
 class TestRenderCampaignReportPdf:
     def _pdf(self):
         report = _make_report()
@@ -454,10 +508,7 @@ class TestRenderCampaignReportPdf:
 
     def test_multiple_cenarios_render_without_crash(self):
         """Stress test with more scenarios to exercise page-break logic."""
-        cenarios = [
-            _make_cenario(f"c{i}", prazo=30 + i, margem=0.10 + i * 0.01)
-            for i in range(10)
-        ]
+        cenarios = [_make_cenario(f"c{i}", prazo=30 + i, margem=0.10 + i * 0.01) for i in range(10)]
         sl = [_make_ranked(cenarios[0], 1), _make_ranked(cenarios[1], 2)]
         bundle = _make_bundle(cenarios, sl)
         cube = _make_cube()

@@ -29,22 +29,22 @@ def projeto_analitico(tmp_path_factory, _session_pipeline_sk09):
     PERFORMANCE: ~3-5s copytree × 1 ao invés de × 7 testes = economia de ~20-28s.
     """
     import time
-    
+
     _start = time.time()
     proj_base, _ = _session_pipeline_sk09
     dest = tmp_path_factory.mktemp("analitico") / "projeto"
-    
+
     # Ignore patterns otimizados: não copiar arquivos grandes/temporários
     def _ignore(dir_path, names):
         ignore = set()
         for name in names:
             # CRÍTICO: NÃO ignorar .log! O runtime usa invocations.log para tracking de dependências
-            if name.endswith(('.pdf', '.zip', '.tar.gz')):
+            if name.endswith((".pdf", ".zip", ".tar.gz")):
                 ignore.add(name)
-            if name in ('__pycache__', '.pytest_cache', 'referencias'):
+            if name in ("__pycache__", ".pytest_cache", "referencias"):
                 ignore.add(name)
         return ignore
-    
+
     shutil.copytree(proj_base.root, dest, ignore=_ignore)
     print(f"\n[PERF] copytree projeto_analitico: {time.time() - _start:.2f}s")
     return ProjectStore(dest)

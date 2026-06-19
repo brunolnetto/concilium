@@ -23,7 +23,6 @@ from concilium.presentation.mcp.guards.catalog_guard import (
     CatalogMutationGuard,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -223,9 +222,7 @@ class TestRule3EmExecucaoTTL:
         fixed_now = datetime(2025, 6, 1, 10, 0, 0, tzinfo=UTC)
         # started 60 seconds before fixed_now → (TTL - 60) seconds remain
         run_started_at = fixed_now - timedelta(seconds=60)
-        with patch(
-            "concilium.presentation.mcp.guards.catalog_guard.datetime"
-        ) as mock_dt:
+        with patch("concilium.presentation.mcp.guards.catalog_guard.datetime") as mock_dt:
             mock_dt.now.return_value = fixed_now
             with pytest.raises(CatalogMutationConflict) as exc_info:
                 self.guard.check_can_mutate(
@@ -287,9 +284,7 @@ class TestRule3EmExecucaoTTL:
         fixed_now = datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC)
         run_started_at = fixed_now - timedelta(seconds=TTL_LOCK_SECONDS)
         # At boundary: now == lock_until, condition is strictly <, so no raise
-        with patch(
-            "concilium.presentation.mcp.guards.catalog_guard.datetime"
-        ) as mock_dt:
+        with patch("concilium.presentation.mcp.guards.catalog_guard.datetime") as mock_dt:
             mock_dt.now.return_value = fixed_now
             result = self.guard.check_can_mutate(
                 project_id="proj-3",
@@ -303,9 +298,7 @@ class TestRule3EmExecucaoTTL:
         canonical = _make_canonical(status_projeto="EM_EXECUCAO")
         fixed_now = datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC)
         run_started_at = fixed_now - timedelta(seconds=TTL_LOCK_SECONDS - 1)
-        with patch(
-            "concilium.presentation.mcp.guards.catalog_guard.datetime"
-        ) as mock_dt:
+        with patch("concilium.presentation.mcp.guards.catalog_guard.datetime") as mock_dt:
             mock_dt.now.return_value = fixed_now
             with pytest.raises(CatalogMutationConflict):
                 self.guard.check_can_mutate(
@@ -389,15 +382,11 @@ class TestAssertSafeToMutate:
         assert result is None
 
     def test_returns_none_with_catalog_name(self):
-        result = self.guard.assert_safe_to_mutate(
-            project_id="proj-x", catalog_name="mendeslobo"
-        )
+        result = self.guard.assert_safe_to_mutate(project_id="proj-x", catalog_name="mendeslobo")
         assert result is None
 
     def test_returns_none_empty_catalog_name(self):
-        result = self.guard.assert_safe_to_mutate(
-            project_id="proj-x", catalog_name=""
-        )
+        result = self.guard.assert_safe_to_mutate(project_id="proj-x", catalog_name="")
         assert result is None
 
     def test_does_not_raise(self):

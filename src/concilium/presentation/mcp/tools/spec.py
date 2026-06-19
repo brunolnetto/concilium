@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from concilium.domain.constants import ISS_PADRAO
+
 from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.storage.project import ProjectStore
@@ -47,7 +49,7 @@ def _resolve_tributario(meta: dict, rt: Any) -> dict:
             except Exception:
                 pass
         aliq = (jur_data.get("motor_tributario_bdi") or {}).get("aliquotas") or {}
-        tributario.setdefault("iss", aliq.get("ISS", 0.05))
+        tributario.setdefault("iss", aliq.get("ISS", ISS_PADRAO))
         tributario.setdefault("pis", aliq.get("PIS", 0.0065))
         tributario.setdefault("cofins", aliq.get("COFINS", 0.03))
         tributario.setdefault("cprb", aliq.get("CPRB", 0.045))

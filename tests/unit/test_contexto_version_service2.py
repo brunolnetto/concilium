@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
-import pytest
 
 
 def _make_svc(tmp_path, subdir="contextos", include_flat_files=False):
     from concilium.application.services.catalog.contexto_version_service import ConfigVersionService
+
     return ConfigVersionService(tmp_path, subdir, include_flat_files=include_flat_files)
 
 
@@ -38,10 +36,16 @@ class TestConfigVersionServiceResolve:
 
     def test_resolve_specific_version(self, tmp_path):
         svc = _make_svc(tmp_path)
-        _setup_entity(tmp_path, "contextos", "ctx-1", versions={
-            "v1": {"id": "ctx-1", "nome": "v1"},
-            "v2": {"id": "ctx-1", "nome": "v2"},
-        }, current="v2")
+        _setup_entity(
+            tmp_path,
+            "contextos",
+            "ctx-1",
+            versions={
+                "v1": {"id": "ctx-1", "nome": "v1"},
+                "v2": {"id": "ctx-1", "nome": "v2"},
+            },
+            current="v2",
+        )
         result = svc.resolve("ctx-1", version="v1")
         assert result["nome"] == "v1"
 
@@ -75,10 +79,15 @@ class TestConfigVersionServiceResolve:
 class TestListVersions:
     def test_list_versions_versioned(self, tmp_path):
         svc = _make_svc(tmp_path)
-        _setup_entity(tmp_path, "contextos", "ctx-1", versions={
-            "v1": {"id": "ctx-1", "version": "v1", "motivo": "initial"},
-            "v2": {"id": "ctx-1", "version": "v2", "motivo": "update"},
-        })
+        _setup_entity(
+            tmp_path,
+            "contextos",
+            "ctx-1",
+            versions={
+                "v1": {"id": "ctx-1", "version": "v1", "motivo": "initial"},
+                "v2": {"id": "ctx-1", "version": "v2", "motivo": "update"},
+            },
+        )
         result = svc.list_versions("ctx-1")
         assert len(result) == 2
         assert result[0]["version"] == "v1"
@@ -148,19 +157,29 @@ class TestCreateVersion:
 class TestCompare:
     def test_compare_same_versions(self, tmp_path):
         svc = _make_svc(tmp_path)
-        _setup_entity(tmp_path, "contextos", "ctx-1", versions={
-            "v1": {"id": "ctx-1", "nome": "Test"},
-            "v2": {"id": "ctx-1", "nome": "Test"},  # same nome
-        })
+        _setup_entity(
+            tmp_path,
+            "contextos",
+            "ctx-1",
+            versions={
+                "v1": {"id": "ctx-1", "nome": "Test"},
+                "v2": {"id": "ctx-1", "nome": "Test"},  # same nome
+            },
+        )
         result = svc.compare("ctx-1", "v1", "v2")
         assert "nome" not in result["changed"]
 
     def test_compare_different_versions(self, tmp_path):
         svc = _make_svc(tmp_path)
-        _setup_entity(tmp_path, "contextos", "ctx-1", versions={
-            "v1": {"id": "ctx-1", "nome": "Old"},
-            "v2": {"id": "ctx-1", "nome": "New"},
-        })
+        _setup_entity(
+            tmp_path,
+            "contextos",
+            "ctx-1",
+            versions={
+                "v1": {"id": "ctx-1", "nome": "Old"},
+                "v2": {"id": "ctx-1", "nome": "New"},
+            },
+        )
         result = svc.compare("ctx-1", "v1", "v2")
         assert "nome" in result["changed"]
         assert result["changed"]["nome"]["de"] == "Old"
@@ -168,10 +187,15 @@ class TestCompare:
 
     def test_compare_nested_diff(self, tmp_path):
         svc = _make_svc(tmp_path)
-        _setup_entity(tmp_path, "contextos", "ctx-1", versions={
-            "v1": {"config": {"a": 1, "b": 2}},
-            "v2": {"config": {"a": 1, "b": 99}},
-        })
+        _setup_entity(
+            tmp_path,
+            "contextos",
+            "ctx-1",
+            versions={
+                "v1": {"config": {"a": 1, "b": 2}},
+                "v2": {"config": {"a": 1, "b": 99}},
+            },
+        )
         result = svc.compare("ctx-1", "v1", "v2")
         assert "config.b" in result["changed"]
 
@@ -197,6 +221,7 @@ class TestListEntitiesWithFlatFiles:
 class TestConcreteServices:
     def test_contexto_version_service(self, tmp_path):
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+
         (tmp_path / "contextos").mkdir()
         svc = ContextoVersionService(tmp_path)
         result = svc.list_contexts()
@@ -204,12 +229,14 @@ class TestConcreteServices:
 
     def test_perfil_version_service(self, tmp_path):
         from concilium.application.services.catalog.contexto_version_service import PerfilVersionService
+
         (tmp_path / "perfis").mkdir()
         svc = PerfilVersionService(tmp_path)
         assert isinstance(svc.list_perfis(), list)
 
     def test_jurisdiction_version_service(self, tmp_path):
         from concilium.application.services.catalog.contexto_version_service import JurisdictionVersionService
+
         (tmp_path / "jurisdicoes").mkdir()
         svc = JurisdictionVersionService(tmp_path)
         assert isinstance(svc.list_jurisdicoes(), list)
@@ -218,24 +245,28 @@ class TestConcreteServices:
 class TestDiffValues:
     def test_same_values_no_diff(self):
         from concilium.application.services.catalog.contexto_version_service import _diff_values
+
         out: dict = {}
         _diff_values("key", 1, 1, out)
         assert out == {}
 
     def test_scalar_diff(self):
         from concilium.application.services.catalog.contexto_version_service import _diff_values
+
         out: dict = {}
         _diff_values("key", "old", "new", out)
         assert out["key"] == {"de": "old", "para": "new"}
 
     def test_list_diff(self):
         from concilium.application.services.catalog.contexto_version_service import _diff_values
+
         out: dict = {}
         _diff_values("items", [1, 2], [1, 3], out)
         assert "items" in out
 
     def test_dict_recursive(self):
         from concilium.application.services.catalog.contexto_version_service import _diff_values
+
         out: dict = {}
         _diff_values("parent", {"a": 1, "b": 2}, {"a": 1, "b": 99}, out)
         assert "parent.b" in out

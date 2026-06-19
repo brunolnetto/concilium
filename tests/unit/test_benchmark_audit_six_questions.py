@@ -7,6 +7,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from concilium.application.benchmarks.analysis._audit_utils import (
+    _is_close,
+    _norm_float,
+    _sum_dict_counter,
+)
 from concilium.application.benchmarks.analysis.audit_six_questions import (
     Answer,
     _aq1_build_eq_map,
@@ -32,13 +37,6 @@ from concilium.application.benchmarks.analysis.audit_six_questions import (
     _resolve_ref_indireto,
     run_audit,
 )
-from concilium.application.benchmarks.analysis._audit_utils import (
-    _TOL,
-    _is_close,
-    _norm_float,
-    _sum_dict_counter,
-)
-
 
 # ---------------------------------------------------------------------------
 # Answer dataclass
@@ -937,13 +935,17 @@ class TestRunAudit:
                 return False
             return True
 
-        with patch(
-            "concilium.application.benchmarks.analysis.audit_six_questions._load_json",
-            side_effect=[ref_data, cur_data],
-        ), patch(
-            "concilium.application.benchmarks.analysis.audit_six_questions._resolve_canonical_path",
-            return_value=mock_path,
-        ), patch.object(Path, "exists", _mock_exists):
+        with (
+            patch(
+                "concilium.application.benchmarks.analysis.audit_six_questions._load_json",
+                side_effect=[ref_data, cur_data],
+            ),
+            patch(
+                "concilium.application.benchmarks.analysis.audit_six_questions._resolve_canonical_path",
+                return_value=mock_path,
+            ),
+            patch.object(Path, "exists", _mock_exists),
+        ):
             return run_audit("TEST-SLUG")
 
     def test_resumo_all_passa(self):
@@ -1008,12 +1010,15 @@ class TestRunAudit:
         mock_canonical = MagicMock(spec=Path)
         mock_canonical.exists.return_value = True
 
-        with patch(
-            "concilium.application.benchmarks.analysis.audit_six_questions._load_json",
-            side_effect=_load_side_effect,
-        ), patch(
-            "concilium.application.benchmarks.analysis.audit_six_questions._resolve_canonical_path",
-            return_value=mock_canonical,
+        with (
+            patch(
+                "concilium.application.benchmarks.analysis.audit_six_questions._load_json",
+                side_effect=_load_side_effect,
+            ),
+            patch(
+                "concilium.application.benchmarks.analysis.audit_six_questions._resolve_canonical_path",
+                return_value=mock_canonical,
+            ),
         ):
             # Make referencia.json exist but extracao_intermediarios.json not exist
             original_exists = Path.exists

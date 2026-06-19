@@ -1,9 +1,21 @@
 from __future__ import annotations
-from typing import Any
+
 from openpyxl import Workbook
+
 from concilium.domain.models.canonical import CanonicalModel
-from ..styles import _fill, _font, _border, _align, _money, _label, _header_row, _title_row, _section_row, _set_col_widths, _auto_fit_columns, _freeze, _C
-from ..helpers import _fmt_mes, _week_to_month
+
+from ..styles import (
+    _C,
+    _align,
+    _border,
+    _fill,
+    _font,
+    _freeze,
+    _header_row,
+    _label,
+    _set_col_widths,
+    _title_row,
+)
 from .operacional import _wk_label
 
 

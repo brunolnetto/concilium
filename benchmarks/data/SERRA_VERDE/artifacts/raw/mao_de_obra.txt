@@ -1,0 +1,96 @@
+Descrição	Código	Unidade	Salário (R$)	Custo C/ Encargos (R$)
+Ajudante	P0001	mês	R$ 1.623,60	R$ 3.344,62
+Ajudante especializado	P0002	mês	R$ 1.674,20	R$ 3.448,85
+Almoxarife	P0003	mês	R$ 2.805,60	R$ 5.779,54
+Apontador Lider	P0004	mês	R$ 3.300,00	R$ 6.798,00
+Armador	P0005	mês	R$ 2.305,60	R$ 4.749,54
+Auxiliar administrativo	P0006	mês	R$ 1.674,20	R$ 3.448,85
+Auxiliar de almoxarife	P0007	mês	R$ 1.674,20	R$ 3.448,85
+Auxiliar de escritorio	P0008	mês	R$ 1.674,20	R$ 3.448,85
+Auxiliar de laboratório	P0009	mês	R$ 1.674,20	R$ 3.448,85
+Auxiliar de topografia	P0010	mês	R$ 2.805,60	R$ 5.779,54
+Auxiliar mecânico	P0011	mês	R$ 2.374,20	R$ 4.890,85
+Auxiliar pessoal	P0012	mês	R$ 1.674,20	R$ 3.448,85
+Administrativo	P0013	pj	R$ 9.000,00	R$ 9.000,00
+Borracheiro	P0014	mês	R$ 2.305,60	R$ 4.749,54
+Carpinteiro	P0015	mês	R$ 2.305,60	R$ 4.749,54
+Eletricista	P0016	mês	R$ 2.305,60	R$ 4.749,54
+Encanador	P0017	mês	R$ 2.305,60	R$ 4.749,54
+Encarregado Geral	P0018	pj	R$ 15.000,00	R$ 15.000,00
+Encarregado Geral Senior	P0019	pj	R$ 12.000,00	R$ 12.000,00
+Encarregado de Drenagem	P0020	mês	R$ 10.000,00	R$ 20.600,00
+Encarregado de Agua/Esgoto	P0021	mês	R$ 3.843,40	R$ 7.917,40
+Encarregado de Terraplenagem	P0022	mês	R$ 12.000,00	R$ 24.720,00
+Encarregado de Capa	P0023	mês	R$ 3.843,40	R$ 7.917,40
+Engenheiro Civil	P0024	pj	R$ 22.000,00	R$ 22.000,00
+Engenheiro de Segurança	P0025	pj	R$ 12.000,00	R$ 12.000,00
+Engenheiro Trainee	P0026	pj	R$ 6.870,00	R$ 6.870,00
+Gerente de Contrato	P0027	pj	R$ 30.000,00	R$ 30.000,00
+Gerente de Contrato Senior 	P0028	pj	R$ 18.000,00	R$ 18.000,00
+Gredista	P0029	mês	R$ 3.205,60	R$ 6.603,54
+Laboratorista	P0030	pj	R$ 9.000,00	R$ 9.000,00
+Lubrificador	P0031	mês	R$ 2.605,60	R$ 5.367,54
+Motorista de Caminhão Basculante	P0032	mês	R$ 3.305,60	R$ 6.809,54
+Motorista de Caminhão Pipa	P0033	mês	R$ 3.305,60	R$ 6.809,54
+Motorista de Caminhão Comboio	P0034	mês	R$ 3.305,60	R$ 6.809,54
+Motorista de Caminhão	P0035	mês	R$ 2.813,80	R$ 5.796,43
+Motorista de ônibus	P0036	mês	R$ 3.305,60	R$ 6.809,54
+Montador	P0037	mês	R$ 3.843,40	R$ 7.917,40
+Montador de Água/Esgoto	P0038	mês	R$ 3.843,40	R$ 7.917,40
+Montador de Meio Fio	P0039	mês	R$ 3.843,40	R$ 7.917,40
+Operador de Escavadeira	P0040	mês	R$ 4.843,40	R$ 9.977,40
+Operador de Espargidor	P0041	mês	R$ 2.305,60	R$ 4.749,54
+Operador de Mini Escavadeira	P0042	mês	R$ 2.305,60	R$ 4.749,54
+Operador de Motoniveladora	P0043	mês	R$ 4.843,40	R$ 9.977,40
+Operador de Retro Escavadeira	P0044	mês	R$ 2.813,80	R$ 5.796,43
+Operador de Pá Carregadeira	P0045	mês	R$ 4.085,60	R$ 8.416,34
+Operador de Rolo Compactador	P0046	mês	R$ 3.805,60	R$ 7.839,54
+Operador de Rolo de Pneu	P0047	mês	R$ 2.305,60	R$ 4.749,54
+Operador de Trator de Esteiras	P0048	mês	R$ 4.813,80	R$ 9.916,43
+Operador de Trator de Pneu	P0049	mês	R$ 3.805,60	R$ 7.839,54
+Operador de Betoneira	P0050	mês	R$ 2.305,60	R$ 4.749,54
+Operador de Valetadeira	P0051	mês	R$ 2.813,80	R$ 5.796,43
+Oficial	P0052	mês	R$ 2.305,60	R$ 4.749,54
+Pintor	P0053	mês	R$ 2.305,60	R$ 4.749,54
+Vigia	P0054	mês	R$ 1.623,60	R$ 3.344,62
+Servente	P0055	mês	R$ 1.823,60	R$ 3.756,62
+Técnico de Segurança	P0056	pj	R$ 7.500,00	R$ 7.500,00
+Topógrafo	P0057	pj	R$ 16.000,00	R$ 16.000,00
+Sala Técnica	P0058	pj	R$ 12.000,00	R$ 12.000,00
+Operador de Motoscraper	P0059	mês	R$ 2.813,80	
+Técnico de QSMS	P0059	pj	R$ 7.000,00	R$ 7.000,00
+Motorista de ônibus	P0060	mês	R$ 2.813,80	R$ 5.796,43
+Suprimentos	P0061	mês	R$ 3.000,00	R$ 6.180,00
+Operador de motosserra	P0062	mês	R$ 1.785,96	R$ 3.679,08
+Auxiliar de Serviços Gerais	P0063	mês	R$ 1.874,20	R$ 3.860,85
+Cerqueiro	P0064	mês	R$ 3.445,93	R$ 7.098,62
+Encarregado de Frente	P0065	pj	R$ 7.500,00	R$ 7.500,00
+Encarregado de Obras	P0066	mês	R$ 3.737,80	R$ 7.699,87
+Técnico de Enfermagem do Trabalho	P0067	mês	R$ 2.594,04	R$ 5.343,72
+Auxiliar administrativo de obras II	P0068	mês	R$ 2.525,77	R$ 5.203,09
+Operador de maquinas da Const Civil	P0069	mês	R$ 3.335,20	R$ 6.870,51
+Estagiário	P0070	mês	R$ 1.000,00	R$ 2.060,00
+Motorista de caminhão munck	P0071	mês	R$ 2.813,80	R$ 5.796,43
+Apontador	P0072	mês	R$ 2.305,60	R$ 4.749,54
+MECÂNICO	P0073	mês	R$ 6.000,00	R$ 12.360,00
+Engenheiro Florestal	P0074	pj	R$ 15.000,00	R$ 15.000,00
+Técnico de Planejamento	P0075	pj	R$ 14.000,00	R$ 14.000,00
+Porteiro	P0076	mês	R$ 2.305,60	R$ 4.749,54
+Mestre de obras	P0077	mês	R$ 5.060,00	R$ 10.423,60
+Técnico de enfermagem	P0078	mês	R$ 3.325,00	R$ 6.849,50
+Sinaleiro	P0079	mês	R$ 1.674,20	R$ 3.448,85
+Rasteleiro	P0080	mês	R$ 2.565,20	R$ 5.284,31
+Operador de vibroacabadora	P0081	mês	R$ 2.305,60	R$ 4.749,54
+Operador de Bobcat	P0082	mês	R$ 2.813,80	R$ 5.796,43
+Soldador	P0083	mês	R$ 2.305,60	R$ 4.749,54
+Biólogo	P0084	pj	R$ 7.500,00	R$ 7.500,00
+Operador de guindaste	P0085	mês	R$ 2.813,80	R$ 5.796,43
+Encarregado de mecânica	P0086	mês	R$ 3.737,80	R$ 7.699,87
+Controlador	P0087	mês	R$ 3.300,00	R$ 6.798,00
+Auxiliar de Borracheiro	P0088	mês	R$ 1.674,20	R$ 3.448,85
+Motorista de caminhão prancha	P0089	mês	R$ 2.813,80	R$ 5.796,43
+Operador de Guindaste	P0090	mês	R$ 3.843,40	R$ 7.917,40
+Operador de Perfuratriz	P0091	mês	R$ 3.843,40	R$ 7.917,40
+Operador de fresadora	P0092	mês	R$ 2.813,80	R$ 5.796,43
+Gerente de QSMS	P0093	mês	R$ 14.000,00	R$ 28.840,00
+Motorista Caminhão Prancha	P0094	mês	R$ 3.305,60	R$ 6.809,54

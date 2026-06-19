@@ -1,14 +1,32 @@
 from __future__ import annotations
+
 import math
 import re as _re
 from typing import Any
+
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
+
 from concilium.domain.models.canonical import CanonicalModel
-from ..styles import _fill, _font, _border, _align, _money, _label, _header_row, _title_row, _section_row, _set_col_widths, _auto_fit_columns, _freeze, _C
+
+from ..cash_flow import _cash_flow
 from ..helpers import _fmt_mes, _project_months
-from ..cash_flow import _cash_flow, _monthly_direct_costs, _monthly_indirect_costs
+from ..styles import (
+    _C,
+    _align,
+    _auto_fit_columns,
+    _border,
+    _fill,
+    _font,
+    _freeze,
+    _header_row,
+    _label,
+    _money,
+    _section_row,
+    _set_col_widths,
+    _title_row,
+)
 
 
 def _xl_cashflow_row_styling(rec: dict) -> tuple:
@@ -291,7 +309,7 @@ def render_resultado_ml(
     bloco("PROJETO")
     linha("Nome", proj.nome, is_money=False)
     linha("Tipo de obra", proj.tipo_obra, is_money=False)
-    linha("Localização", proj.localizacao, is_money=False)
+    linha("Localização", str(proj.localizacao) if proj.localizacao is not None else "", is_money=False)
     linha("Período", f"{proj.data_inicio} -> {proj.data_termino}", is_money=False)
     linha(
         "Regime",
@@ -539,7 +557,7 @@ def _xl_dr_write_data_row(
 def render_diretos_res(wb: Workbook, canonical: CanonicalModel) -> int | None:
     """DIRETOS.RES — Custos diretos resumidos por EAP (MO/EQ/COMB/MAT s/BDI e c/BDI)."""
     ws = wb.create_sheet("DIRETOS.RES")
-    eap_ordem = {e.item_id: e.ordem for e in canonical.eap}
+    eap_ordem = {e.item_id: (e.ordem if e.ordem is not None else 9999) for e in canonical.eap}
     plan_sorted = sorted(canonical.planejamento, key=lambda p: eap_ordem.get(p.item_id, 9999))
     NCOLS = 14
     _set_col_widths(ws, [12, 42, 6, 13, 15, 15, 13, 13, 17, 15, 15, 13, 13, 17])
@@ -714,6 +732,7 @@ def _rcr_build_qty_by_item(canonical, project_months: list) -> dict:
             qty_by_item[act.activity_id] = {ym: 0.0 for ym in project_months}
         for wk, dist in act.distribuicao_semanal.items():
             from ..helpers import _week_to_month
+
             ym = _week_to_month(wk)
             if ym in qty_by_item[act.activity_id]:
                 qty_by_item[act.activity_id][ym] += getattr(dist, "qtd_executada", 0.0)
@@ -861,20 +880,38 @@ def render_referencia(wb, canonical) -> None:
 
     items = [
         # (label, value, formula_note, is_pct)
-        ("Custo Direto — Equipes (catálogo)", _sv(custo, "direto_equipes"),
-         "Σ(custo_fixo_mensal × permanência_efetiva_meses × nEq) por atividade", False),
-        ("Custo Direto — Pool instancial (N3)", _sv(custo, "direto_pool") or _sv(custo, "direto_equipes"),
-         "Σ(custo_pool_imputado × nEq) via contratos de pool (ADR-071)", False),
-        ("Custo Indireto", indireto_total if indireto_total > 0 else _sv(custo, "indireto_total"),
-         "Σ(custo_fixo_mensal × permanência) por categoria indireta", False),
-        ("Custo Total (direto + indireto)", _sv(custo, "total"),
-         "custo_direto + custo_indireto (sem BDI)", False),
-        ("Preço de Venda — sem BDI", _sv(venda, "total_sem_bdi"),
-         "Σ(quantitativo × PU_cat) por item EAP + indiretos s/BDI", False),
-        ("Preço de Venda — com BDI", _sv(venda, "total_com_bdi"),
-         "Σ(quantitativo × PU_cat × (1+BDI_cat)) por categoria + indiretos×(1+BDI_ind)", False),
-        ("Margem Bruta", _sv(res, "margem_pct"),
-         "(preco_venda_com_bdi - custo_total) / preco_venda_com_bdi", True),
+        (
+            "Custo Direto — Equipes (catálogo)",
+            _sv(custo, "direto_equipes"),
+            "Σ(custo_fixo_mensal × permanência_efetiva_meses × nEq) por atividade",
+            False,
+        ),
+        (
+            "Custo Direto — Pool instancial (N3)",
+            _sv(custo, "direto_pool") or _sv(custo, "direto_equipes"),
+            "Σ(custo_pool_imputado × nEq) via contratos de pool (ADR-071)",
+            False,
+        ),
+        (
+            "Custo Indireto",
+            indireto_total if indireto_total > 0 else _sv(custo, "indireto_total"),
+            "Σ(custo_fixo_mensal × permanência) por categoria indireta",
+            False,
+        ),
+        ("Custo Total (direto + indireto)", _sv(custo, "total"), "custo_direto + custo_indireto (sem BDI)", False),
+        (
+            "Preço de Venda — sem BDI",
+            _sv(venda, "total_sem_bdi"),
+            "Σ(quantitativo × PU_cat) por item EAP + indiretos s/BDI",
+            False,
+        ),
+        (
+            "Preço de Venda — com BDI",
+            _sv(venda, "total_com_bdi"),
+            "Σ(quantitativo × PU_cat × (1+BDI_cat)) por categoria + indiretos×(1+BDI_ind)",
+            False,
+        ),
+        ("Margem Bruta", _sv(res, "margem_pct"), "(preco_venda_com_bdi - custo_total) / preco_venda_com_bdi", True),
     ]
 
     for i, (label, value, note, is_pct) in enumerate(items):
@@ -915,16 +952,19 @@ def render_referencia(wb, canonical) -> None:
     n3 = n2 + gap_prat
 
     bridge_rows = [
-        ("N1 — Catálogo puro (Σ PU_cat × Q)", n1,
-         "Base de mercado: preço de referência sem considerar execução real"),
-        (f"  Δ Gap de Escala (+ R$ {gap_escala:,.0f})", gap_escala,
-         "Custo de paralelismo: frentes adicionais com produtividade marginal"),
-        ("N2 — Autônomo escalado", n2,
-         "Custo se equipes fossem dedicadas (sem compartilhamento de pool)"),
-        (f"  Δ Gap de Praticabilidade (+ R$ {gap_prat:,.0f})", gap_prat,
-         "Perdas climáticas e de eficiência absorvidas pelo pool"),
-        ("N3 — Pool instancial", n3,
-         "Custo real projetado com pool compartilhado (= N2 ± economia/custo pool)"),
+        ("N1 — Catálogo puro (Σ PU_cat × Q)", n1, "Base de mercado: preço de referência sem considerar execução real"),
+        (
+            f"  Δ Gap de Escala (+ R$ {gap_escala:,.0f})",
+            gap_escala,
+            "Custo de paralelismo: frentes adicionais com produtividade marginal",
+        ),
+        ("N2 — Autônomo escalado", n2, "Custo se equipes fossem dedicadas (sem compartilhamento de pool)"),
+        (
+            f"  Δ Gap de Praticabilidade (+ R$ {gap_prat:,.0f})",
+            gap_prat,
+            "Perdas climáticas e de eficiência absorvidas pelo pool",
+        ),
+        ("N3 — Pool instancial", n3, "Custo real projetado com pool compartilhado (= N2 ± economia/custo pool)"),
     ]
 
     for i, (label, value, note) in enumerate(bridge_rows):

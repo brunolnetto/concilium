@@ -9,8 +9,8 @@ from openpyxl import Workbook
 
 from concilium.infrastructure.catalog.excel_ingestion import ExcelIngestionPipeline
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _make_excel_bytes(sheets: dict) -> bytes:
     wb = Workbook()
@@ -32,10 +32,12 @@ def _make_pipeline() -> ExcelIngestionPipeline:
 
 # ── _extract_rows_from_sheet ──────────────────────────────────────────────────
 
+
 def test_extract_rows_sheet_not_in_workbook():
     excel = _make_excel_bytes({"Insumos": [["codigo", "descricao"], ["INS-01", "Cimento"]]})
     pipeline = _make_pipeline()
     from openpyxl import load_workbook
+
     wb = load_workbook(filename=BytesIO(excel), read_only=True, data_only=True)
     result = pipeline._extract_rows_from_sheet(wb, "NaoExiste")
     wb.close()
@@ -46,6 +48,7 @@ def test_extract_rows_empty_sheet():
     excel = _make_excel_bytes({"Insumos": []})
     pipeline = _make_pipeline()
     from openpyxl import load_workbook
+
     wb = load_workbook(filename=BytesIO(excel), read_only=True, data_only=True)
     result = pipeline._extract_rows_from_sheet(wb, "Insumos")
     wb.close()
@@ -57,6 +60,7 @@ def test_extract_rows_all_none_header():
     excel = _make_excel_bytes({"Insumos": [[None, None, None]]})
     pipeline = _make_pipeline()
     from openpyxl import load_workbook
+
     wb = load_workbook(filename=BytesIO(excel), read_only=True, data_only=True)
     result = pipeline._extract_rows_from_sheet(wb, "Insumos")
     wb.close()
@@ -64,15 +68,18 @@ def test_extract_rows_all_none_header():
 
 
 def test_extract_rows_normal():
-    excel = _make_excel_bytes({
-        "Insumos": [
-            ["codigo", "descricao"],
-            ["INS-01", "Cimento Portland"],
-            ["INS-02", "Areia"],
-        ]
-    })
+    excel = _make_excel_bytes(
+        {
+            "Insumos": [
+                ["codigo", "descricao"],
+                ["INS-01", "Cimento Portland"],
+                ["INS-02", "Areia"],
+            ]
+        }
+    )
     pipeline = _make_pipeline()
     from openpyxl import load_workbook
+
     wb = load_workbook(filename=BytesIO(excel), read_only=True, data_only=True)
     result = pipeline._extract_rows_from_sheet(wb, "Insumos")
     wb.close()
@@ -82,16 +89,19 @@ def test_extract_rows_normal():
 
 
 def test_extract_rows_skips_empty_rows():
-    excel = _make_excel_bytes({
-        "Insumos": [
-            ["codigo", "descricao"],
-            [None, None],         # all-None → skipped
-            ["INS-01", "Cimento"],
-            [None, ""],           # all None/"" → skipped
-        ]
-    })
+    excel = _make_excel_bytes(
+        {
+            "Insumos": [
+                ["codigo", "descricao"],
+                [None, None],  # all-None → skipped
+                ["INS-01", "Cimento"],
+                [None, ""],  # all None/"" → skipped
+            ]
+        }
+    )
     pipeline = _make_pipeline()
     from openpyxl import load_workbook
+
     wb = load_workbook(filename=BytesIO(excel), read_only=True, data_only=True)
     result = pipeline._extract_rows_from_sheet(wb, "Insumos")
     wb.close()
@@ -101,12 +111,15 @@ def test_extract_rows_skips_empty_rows():
 
 # ── parse_planilha ────────────────────────────────────────────────────────────
 
+
 def test_parse_planilha_returns_dict_keys():
-    excel = _make_excel_bytes({
-        "Insumos": [["codigo"], ["INS-01"]],
-        "CPUs": [["cpu_id"], ["CPU-01"]],
-        "Jurisdição": [["sigla"], ["BR"]],
-    })
+    excel = _make_excel_bytes(
+        {
+            "Insumos": [["codigo"], ["INS-01"]],
+            "CPUs": [["cpu_id"], ["CPU-01"]],
+            "Jurisdição": [["sigla"], ["BR"]],
+        }
+    )
     pipeline = _make_pipeline()
     result = pipeline.parse_planilha(excel)
     assert "insumos" in result
@@ -116,10 +129,12 @@ def test_parse_planilha_returns_dict_keys():
 
 def test_parse_planilha_missing_sheet():
     # xlsx without "CPUs" sheet → cpus key returns []
-    excel = _make_excel_bytes({
-        "Insumos": [["codigo"], ["INS-01"]],
-        "Jurisdição": [["sigla"], ["BR"]],
-    })
+    excel = _make_excel_bytes(
+        {
+            "Insumos": [["codigo"], ["INS-01"]],
+            "Jurisdição": [["sigla"], ["BR"]],
+        }
+    )
     pipeline = _make_pipeline()
     result = pipeline.parse_planilha(excel)
     assert result["cpus"] == []
@@ -127,13 +142,16 @@ def test_parse_planilha_missing_sheet():
 
 # ── processar_catalogo ────────────────────────────────────────────────────────
 
+
 def test_processar_catalogo_happy_path():
     """Pipeline runs end-to-end with mocked validators and storage."""
     # Minimal valid xlsx: Insumos + CPUs (no insumo refs so no validation errors)
-    excel = _make_excel_bytes({
-        "Insumos": [["codigo", "descricao"], ["INS-01", "Cimento"]],
-        "CPUs": [["cpu_id", "descricao"], ["CPU-01", "Escavação"]],
-    })
+    excel = _make_excel_bytes(
+        {
+            "Insumos": [["codigo", "descricao"], ["INS-01", "Cimento"]],
+            "CPUs": [["cpu_id", "descricao"], ["CPU-01", "Escavação"]],
+        }
+    )
     storage = MagicMock()
     storage.gravar_blob.return_value = None
     pipeline = ExcelIngestionPipeline(storage)
@@ -161,10 +179,12 @@ def test_processar_catalogo_happy_path():
 
 def test_processar_catalogo_validation_error():
     """When validator returns ERRO validations, processar_catalogo raises ValueError."""
-    excel = _make_excel_bytes({
-        "Insumos": [["codigo", "descricao"], ["INS-01", "Cimento"]],
-        "CPUs": [["cpu_id", "descricao"], ["CPU-01", "Escavação"]],
-    })
+    excel = _make_excel_bytes(
+        {
+            "Insumos": [["codigo", "descricao"], ["INS-01", "Cimento"]],
+            "CPUs": [["cpu_id", "descricao"], ["CPU-01", "Escavação"]],
+        }
+    )
     storage = MagicMock()
     pipeline = ExcelIngestionPipeline(storage)
 

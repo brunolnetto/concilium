@@ -6,14 +6,11 @@ from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal import (
     _week_months_contribution,
     _week_of_month_index,
     build,
 )
-
 
 # ---------------------------------------------------------------------------
 # _week_of_month_index — boundary cases
@@ -178,10 +175,12 @@ class TestBuild:
         assert result is None
 
     def test_returns_none_when_all_diesel_zero(self):
-        cubo = SimpleNamespace(celulas=[
-            _make_celula("2026-W10", 0.0),
-            _make_celula("2026-W11", 0.0),
-        ])
+        cubo = SimpleNamespace(
+            celulas=[
+                _make_celula("2026-W10", 0.0),
+                _make_celula("2026-W11", 0.0),
+            ]
+        )
         canonical = SimpleNamespace()
         with patch(
             "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",
@@ -191,9 +190,11 @@ class TestBuild:
         assert result is None
 
     def test_returns_bytes_when_fuel_positive(self):
-        cubo = SimpleNamespace(celulas=[
-            _make_celula("2026-W10", 1000.0),
-        ])
+        cubo = SimpleNamespace(
+            celulas=[
+                _make_celula("2026-W10", 1000.0),
+            ]
+        )
         canonical = SimpleNamespace()
         with patch(
             "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",
@@ -203,12 +204,45 @@ class TestBuild:
         assert isinstance(result, bytes)
         assert result == b"PNG"
 
+    def test_uses_canonical_fallback_when_cube_diesel_is_zero(self):
+        # cubo sem litros monetários; fallback físico usa cronograma + equipes.
+        cubo = SimpleNamespace(celulas=[_make_celula("2026-W10", 0.0)])
+        canonical = SimpleNamespace(
+            projeto=SimpleNamespace(regime_trabalho=SimpleNamespace(horas_dia=10, dias_semana=6)),
+            cronograma=SimpleNamespace(
+                scheduled_activities=[
+                    SimpleNamespace(
+                        activity_id="act-1",
+                        distribuicao_semanal={
+                            "2026-W10": SimpleNamespace(num_equipes=1, eficiencia=1.0),
+                        },
+                    )
+                ]
+            ),
+            equipes_diretas=[
+                SimpleNamespace(
+                    item_id="act-1",
+                    equipamentos=[
+                        SimpleNamespace(consumo_litros_hora=10.0, num_unidades=1),
+                    ],
+                )
+            ],
+        )
+        with patch(
+            "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",
+            side_effect=_fake_init_mpl,
+        ):
+            result = build(canonical, cubo)
+        assert isinstance(result, bytes)
+
     def test_returns_bytes_with_multiple_weeks_across_months(self):
-        cubo = SimpleNamespace(celulas=[
-            _make_celula("2026-W10", 500.0),
-            _make_celula("2026-W14", 700.0),  # crosses March/April boundary
-            _make_celula("2026-W18", 300.0),
-        ])
+        cubo = SimpleNamespace(
+            celulas=[
+                _make_celula("2026-W10", 500.0),
+                _make_celula("2026-W14", 700.0),  # crosses March/April boundary
+                _make_celula("2026-W18", 300.0),
+            ]
+        )
         canonical = SimpleNamespace()
         with patch(
             "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",
@@ -228,11 +262,13 @@ class TestBuild:
         assert result is None
 
     def test_mix_of_zero_and_nonzero_fuel_returns_bytes(self):
-        cubo = SimpleNamespace(celulas=[
-            _make_celula("2026-W10", 0.0),
-            _make_celula("2026-W11", 800.0),
-            _make_celula("2026-W12", 0.0),
-        ])
+        cubo = SimpleNamespace(
+            celulas=[
+                _make_celula("2026-W10", 0.0),
+                _make_celula("2026-W11", 800.0),
+                _make_celula("2026-W12", 0.0),
+            ]
+        )
         canonical = SimpleNamespace()
         with patch(
             "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",
@@ -243,9 +279,11 @@ class TestBuild:
 
     def test_none_consumo_diesel_treated_as_zero(self):
         # consumo_diesel_L = None should be treated as 0.0 (not raise)
-        cubo = SimpleNamespace(celulas=[
-            _make_celula("2026-W10", None),
-        ])
+        cubo = SimpleNamespace(
+            celulas=[
+                _make_celula("2026-W10", None),
+            ]
+        )
         canonical = SimpleNamespace()
         with patch(
             "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",

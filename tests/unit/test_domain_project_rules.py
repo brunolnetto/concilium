@@ -1,13 +1,14 @@
 """Tests for src/concilium/domain/services/project_rules.py"""
-import pytest
+
 from unittest.mock import MagicMock
 
-from concilium.domain.services.project_rules import (
-    validate_delete_version,
-    resolve_compare_version,
-    calculate_deltas,
-)
+import pytest
 
+from concilium.domain.services.project_rules import (
+    calculate_deltas,
+    resolve_compare_version,
+    validate_delete_version,
+)
 
 # ---------------------------------------------------------------------------
 # validate_delete_version

@@ -13,6 +13,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from concilium.domain.models.canonical import (
+    CanonicalModel,
+    ValidacaoItem,
+)
 from concilium.domain.models.financial.bdi import (
     DEFAULT_BDI_TABELA,
     PerfilBdiProjeto,
@@ -20,10 +24,6 @@ from concilium.domain.models.financial.bdi import (
     TaxSimulationScenario,
     resolver_bdi_cbs_ibs,
     resolver_componentes_bdi,
-)
-from concilium.domain.models.canonical import (
-    CanonicalModel,
-    ValidacaoItem,
 )
 
 

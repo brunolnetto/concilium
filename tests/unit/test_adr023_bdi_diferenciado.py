@@ -16,6 +16,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
+from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 from concilium.domain.models.financial.bdi import (
     DEFAULT_BDI_TABELA,
     ComponentesBdi,
@@ -24,7 +25,6 @@ from concilium.domain.models.financial.bdi import (
     TabelaBdi,
     resolver_componentes_bdi,
 )
-from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -502,8 +502,8 @@ class TestDecomposicaoEquipamento:
         assert abs(total - 1.0) < 1e-5
 
     def test_atributos_insumo_carries_decomposicao(self):
-        from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
         from concilium.domain.models.catalog.catalogo import AtributosInsumo
+        from concilium.domain.models.financial.bdi import DecomposicaoEquipamento
 
         decomp = DecomposicaoEquipamento(
             equip_id="EQ-003",

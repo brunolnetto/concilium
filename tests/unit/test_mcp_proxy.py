@@ -12,14 +12,10 @@ Covers:
 from __future__ import annotations
 
 import asyncio
-import io
 import json
-import sys
 import threading
 import time
-import types
-from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -47,7 +43,6 @@ def _make_response(status_code: int = 200, body: dict | str = "", headers=None):
 
 import concilium.presentation.mcp.proxy as proxy_mod
 
-
 # ---------------------------------------------------------------------------
 # _load_cache / _save_cache
 # ---------------------------------------------------------------------------
@@ -56,9 +51,7 @@ import concilium.presentation.mcp.proxy as proxy_mod
 class TestLoadSaveCache:
     def test_save_creates_file_with_correct_content(self, tmp_path):
         """_save_cache writes JSON and sets chmod 600."""
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "test-device"
-        ):
+        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "test-device"):
             data = {"refresh_token": "abc123", "scopes": ["read"]}
             proxy_mod._save_cache(data)
 
@@ -71,9 +64,7 @@ class TestLoadSaveCache:
 
     def test_load_reads_saved_data(self, tmp_path):
         """_load_cache returns what _save_cache wrote."""
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "test-device"
-        ):
+        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "test-device"):
             data = {"refresh_token": "tok", "scopes": []}
             proxy_mod._save_cache(data)
             result = proxy_mod._load_cache()
@@ -81,17 +72,13 @@ class TestLoadSaveCache:
 
     def test_load_returns_empty_dict_when_file_missing(self, tmp_path):
         """_load_cache returns {} if file does not exist."""
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "no-such-device"
-        ):
+        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "no-such-device"):
             result = proxy_mod._load_cache()
             assert result == {}
 
     def test_load_returns_empty_dict_on_corrupt_json(self, tmp_path):
         """_load_cache gracefully returns {} for malformed JSON."""
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "broken"
-        ):
+        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "broken"):
             bad_file = tmp_path / "broken.json"
             bad_file.write_text("{not valid json", encoding="utf-8")
             result = proxy_mod._load_cache()
@@ -99,9 +86,7 @@ class TestLoadSaveCache:
 
     def test_save_overwrites_existing_file(self, tmp_path):
         """_save_cache replaces previous content."""
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "dev"
-        ):
+        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "dev"):
             proxy_mod._save_cache({"refresh_token": "old"})
             proxy_mod._save_cache({"refresh_token": "new"})
             result = proxy_mod._load_cache()
@@ -117,16 +102,13 @@ class TestActivate:
     def test_happy_path_writes_refresh_token_and_returns_it(self, tmp_path):
         """_activate POSTs to /auth/device/activate, saves refresh_token, returns it."""
         http = MagicMock()
-        http.post.return_value = _make_response(
-            200, {"refresh_token": "rt-xxx", "scopes": ["*"]}
-        )
+        http.post.return_value = _make_response(200, {"refresh_token": "rt-xxx", "scopes": ["*"]})
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "dev1"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
-        ), patch.object(
-            proxy_mod, "_DEVICE_CODE", "RCODE-test"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "dev1"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
         ):
             result = proxy_mod._activate(http)
 
@@ -136,9 +118,7 @@ class TestActivate:
         assert "/auth/device/activate" in call_kwargs[0][0]
 
         # Verify cache was written
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "dev1"
-        ):
+        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "dev1"):
             cache = proxy_mod._load_cache()
         assert cache["refresh_token"] == "rt-xxx"
         assert cache["scopes"] == ["*"]
@@ -148,12 +128,11 @@ class TestActivate:
         http = MagicMock()
         http.post.return_value = _make_response(403, "Forbidden")
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "dev2"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
-        ), patch.object(
-            proxy_mod, "_DEVICE_CODE", "RCODE-test"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "dev2"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
         ):
             with pytest.raises(SystemExit):
                 proxy_mod._activate(http)
@@ -162,12 +141,11 @@ class TestActivate:
         """_activate calls sys.exit when _DEVICE_CODE is empty."""
         http = MagicMock()
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "dev3"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
-        ), patch.object(
-            proxy_mod, "_DEVICE_CODE", ""
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "dev3"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_DEVICE_CODE", ""),
         ):
             with pytest.raises(SystemExit):
                 proxy_mod._activate(http)
@@ -178,21 +156,19 @@ class TestActivate:
         """_activate stores scopes=[] when the response omits the key."""
         http = MagicMock()
         http.post.return_value = _make_response(
-            200, {"refresh_token": "rt-yyy"}  # no 'scopes' key
+            200,
+            {"refresh_token": "rt-yyy"},  # no 'scopes' key
         )
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "dev4"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
-        ), patch.object(
-            proxy_mod, "_DEVICE_CODE", "RCODE-test"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "dev4"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
         ):
             proxy_mod._activate(http)
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "dev4"
-        ):
+        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "dev4"):
             cache = proxy_mod._load_cache()
         assert cache["scopes"] == []
 
@@ -206,14 +182,12 @@ class TestGetAccessToken:
     def test_uses_cached_refresh_token_on_200(self, tmp_path):
         """Happy path: cached refresh_token → POST /auth/token/refresh → access_token."""
         http = MagicMock()
-        http.post.return_value = _make_response(
-            200, {"access_token": "at-abc", "expires_in": 3600}
-        )
+        http.post.return_value = _make_response(200, {"access_token": "at-abc", "expires_in": 3600})
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "devA"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devA"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
         ):
             # pre-populate cache
             proxy_mod._save_cache({"refresh_token": "rt-cached"})
@@ -229,13 +203,14 @@ class TestGetAccessToken:
         """expires_in defaults to 28800 (8 h) when the server omits it."""
         http = MagicMock()
         http.post.return_value = _make_response(
-            200, {"access_token": "at-def"}  # no expires_in
+            200,
+            {"access_token": "at-def"},  # no expires_in
         )
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "devB"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devB"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
         ):
             proxy_mod._save_cache({"refresh_token": "rt-cached"})
             before = time.time()
@@ -253,16 +228,15 @@ class TestGetAccessToken:
         # First call: refresh fails; second call: activate; third call: refresh ok
         http.post.side_effect = [
             _make_response(401, "Unauthorized"),  # first refresh fails
-            activate_resp,                         # activate
-            refresh_ok,                            # refresh after activate
+            activate_resp,  # activate
+            refresh_ok,  # refresh after activate
         ]
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "devC"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
-        ), patch.object(
-            proxy_mod, "_DEVICE_CODE", "RCODE-test"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devC"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
         ):
             proxy_mod._save_cache({"refresh_token": "rt-old"})
             token, _ = proxy_mod._get_access_token(http)
@@ -278,12 +252,11 @@ class TestGetAccessToken:
         http = MagicMock()
         http.post.side_effect = [activate_resp, refresh_ok]
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "devD"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
-        ), patch.object(
-            proxy_mod, "_DEVICE_CODE", "RCODE-new"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devD"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-new"),
         ):
             token, _ = proxy_mod._get_access_token(http)
 
@@ -297,12 +270,11 @@ class TestGetAccessToken:
         http = MagicMock()
         http.post.side_effect = [activate_resp, fail_resp]
 
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(
-            proxy_mod, "_DEVICE_ID", "devE"
-        ), patch.object(
-            proxy_mod, "_SERVER_URL", "https://test.example.com"
-        ), patch.object(
-            proxy_mod, "_DEVICE_CODE", "RCODE-x"
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devE"),
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-x"),
         ):
             with pytest.raises(SystemExit):
                 proxy_mod._get_access_token(http)
@@ -337,8 +309,9 @@ class TestRefreshLoop:
                 raise StopIteration("done")
             original_sleep(0)  # yield
 
-        with patch.object(proxy_mod, "_get_access_token", side_effect=mock_get_access_token), patch.object(
-            proxy_mod.time, "sleep", side_effect=mock_sleep
+        with (
+            patch.object(proxy_mod, "_get_access_token", side_effect=mock_get_access_token),
+            patch.object(proxy_mod.time, "sleep", side_effect=mock_sleep),
         ):
             try:
                 proxy_mod._refresh_loop(state, http)
@@ -364,8 +337,9 @@ class TestRefreshLoop:
 
         http = MagicMock()
 
-        with patch.object(proxy_mod, "_get_access_token", side_effect=mock_get_access_token), patch.object(
-            proxy_mod.time, "sleep", side_effect=mock_sleep
+        with (
+            patch.object(proxy_mod, "_get_access_token", side_effect=mock_get_access_token),
+            patch.object(proxy_mod.time, "sleep", side_effect=mock_sleep),
         ):
             try:
                 proxy_mod._refresh_loop(state, http)
@@ -421,9 +395,7 @@ class TestBridge:
         state = proxy_mod._State(access_token="token-xyz", expire_at=time.time() + 3600)
         http = MagicMock()
 
-        server_resp = _make_response(
-            200, {"result": "ok"}, headers={"content-type": "application/json"}
-        )
+        server_resp = _make_response(200, {"result": "ok"}, headers={"content-type": "application/json"})
         http.post.return_value = server_resp
 
         lines_iter = iter(['{"id":1,"method":"ping"}\n', ""])  # EOF on second read
@@ -451,9 +423,7 @@ class TestBridge:
         state = proxy_mod._State(access_token="bearer-tok", expire_at=time.time() + 3600)
         http = MagicMock()
 
-        server_resp = _make_response(
-            200, {"result": "done"}, headers={"content-type": "application/json"}
-        )
+        server_resp = _make_response(200, {"result": "done"}, headers={"content-type": "application/json"})
         http.post.return_value = server_resp
 
         lines_iter = iter(['{"id":2,"method":"list"}\n', ""])
@@ -484,7 +454,7 @@ class TestBridge:
         state = proxy_mod._State(access_token="tok", expire_at=time.time() + 3600)
         http = MagicMock()
 
-        sse_body = "data: {\"event\":\"a\"}\ndata: {\"event\":\"b\"}\ndata: [DONE]\n"
+        sse_body = 'data: {"event":"a"}\ndata: {"event":"b"}\ndata: [DONE]\n'
         server_resp = _make_response(200, "", headers={"content-type": "text/event-stream"})
         server_resp.text = sse_body
         server_resp.json.side_effect = Exception("not json")
@@ -517,9 +487,7 @@ class TestBridge:
         http = MagicMock()
 
         resp_401 = _make_response(401, "Unauthorized")
-        resp_ok = _make_response(
-            200, {"result": "retried"}, headers={"content-type": "application/json"}
-        )
+        resp_ok = _make_response(200, {"result": "retried"}, headers={"content-type": "application/json"})
         http.post.side_effect = [resp_401, resp_ok]
 
         lines_iter = iter(['{"id":4,"method":"ping"}\n', ""])
@@ -530,8 +498,9 @@ class TestBridge:
         async def patched_run_in_executor(executor, func, *args):
             return next(lines_iter)
 
-        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"), patch.object(
-            proxy_mod, "_get_access_token", return_value=("fresh-tok", time.time() + 7200)
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_get_access_token", return_value=("fresh-tok", time.time() + 7200)),
         ):
             loop.run_in_executor = patched_run_in_executor
             try:

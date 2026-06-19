@@ -8,8 +8,8 @@ from typing import Any
 from ..input_derivation import normalize_referencia_weeks
 from ..report.report_builder import BenchmarkReportBuilder
 from ..report.report_printer import BenchmarkReportPrinter
-from .runner import BenchmarkRunner
 from ..spec.spec_loader import ProjectSpec, load_spec_from_dict
+from .runner import BenchmarkRunner
 
 
 def _reference_candidates(benchmark_dir: Path) -> tuple[Path, ...]:

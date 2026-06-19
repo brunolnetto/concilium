@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 
 def _make_store(tmp_path):
     from concilium.infrastructure.storage.project import ProjectStore
+
     return ProjectStore.init(tmp_path, "Test Project", "ctx-1")
 
 
 def _make_handle(tmp_path):
     from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+
     store = _make_store(tmp_path)
     return FileProjectHandle(store)
 
@@ -23,6 +23,7 @@ def _make_handle(tmp_path):
 class TestRcHelpers:
     def test_rc_try_override_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
         override_file = tmp_path / "cpus_override.json"
         override_file.write_text('{"CPU-1": {"codigo": "CPU-1"}}')
         result = _rc_try_override(override_file, "CPU-1", json)
@@ -30,11 +31,13 @@ class TestRcHelpers:
 
     def test_rc_try_override_missing_file(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
         result = _rc_try_override(tmp_path / "nonexistent.json", "CPU-1", json)
         assert result is None
 
     def test_rc_try_override_cpu_not_in_file(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
         f = tmp_path / "cpus.json"
         f.write_text('{"CPU-2": {}}')
         result = _rc_try_override(f, "CPU-1", json)
@@ -42,6 +45,7 @@ class TestRcHelpers:
 
     def test_rc_try_file_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+
         f = tmp_path / "cpu.json"
         f.write_text('{"codigo": "CPU-1"}')
         result = _rc_try_file(f)
@@ -49,11 +53,13 @@ class TestRcHelpers:
 
     def test_rc_try_file_missing(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+
         result = _rc_try_file(tmp_path / "nonexistent.json")
         assert result is None
 
     def test_rc_try_aggregate_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         agg = tmp_path / "cpus.json"
         agg.write_text('{"cpus": [{"codigo": "CPU-1"}, {"codigo": "CPU-2"}]}')
         result = _rc_try_aggregate(agg, "CPU-1", json)
@@ -61,6 +67,7 @@ class TestRcHelpers:
 
     def test_rc_try_aggregate_not_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         agg = tmp_path / "cpus.json"
         agg.write_text('{"cpus": [{"codigo": "CPU-2"}]}')
         result = _rc_try_aggregate(agg, "CPU-MISSING", json)
@@ -68,11 +75,13 @@ class TestRcHelpers:
 
     def test_rc_try_aggregate_missing_file(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         result = _rc_try_aggregate(tmp_path / "missing.json", "CPU-1", json)
         assert result is None
 
     def test_rc_try_snapshots_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
         (snaps_dir / "catalogo-v1.json").write_text('{"cpus": [{"codigo": "CPU-1"}]}')
@@ -81,6 +90,7 @@ class TestRcHelpers:
 
     def test_rc_try_snapshots_missing_dir(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
         result = _rc_try_snapshots(tmp_path / "missing", "CPU-1", json)
         assert result is None
 
@@ -203,12 +213,14 @@ class TestFileProjectHandle:
 class TestFileProjectRepository:
     def test_list_projects_empty(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+
         repo = FileProjectRepository(tmp_path / "projects")
         assert repo.list_projects() == []
 
     def test_list_projects_with_projects(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
         from concilium.infrastructure.storage.project import ProjectStore
+
         projects_root = tmp_path / "projects"
         projects_root.mkdir()
         ProjectStore.init(projects_root, "Proj 1", "ctx")
@@ -219,6 +231,7 @@ class TestFileProjectRepository:
     def test_get_project_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
         from concilium.infrastructure.storage.project import ProjectStore
+
         projects_root = tmp_path / "projects"
         projects_root.mkdir()
         store = ProjectStore.init(projects_root, "Proj 1", "ctx")
@@ -229,6 +242,7 @@ class TestFileProjectRepository:
 
     def test_get_project_not_found(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+
         repo = FileProjectRepository(tmp_path)
         with pytest.raises(FileNotFoundError):
             repo.get_project("nonexistent-id")

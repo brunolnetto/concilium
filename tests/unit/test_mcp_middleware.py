@@ -17,7 +17,6 @@ from concilium.presentation.mcp.middleware import (
     _send_json_response,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -54,17 +53,13 @@ class TestAuthEnabled:
     def test_returns_true_when_auth_enabled(self):
         mock_auth = MagicMock()
         mock_auth.enabled = True
-        with patch(
-            "concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth
-        ):
+        with patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth):
             assert _auth_enabled() is True
 
     def test_returns_false_when_auth_disabled(self):
         mock_auth = MagicMock()
         mock_auth.enabled = False
-        with patch(
-            "concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth
-        ):
+        with patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth):
             assert _auth_enabled() is False
 
 
@@ -180,9 +175,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
     def _patch_auth_enabled(self, enabled: bool):
         mock_auth = MagicMock()
         mock_auth.enabled = enabled
-        return patch(
-            "concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth
-        )
+        return patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth)
 
     @pytest.mark.asyncio
     async def test_missing_authorization_header_returns_401(self):
@@ -293,9 +286,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
                         "concilium.infrastructure.auth.permission_guard.set_roles",
                         return_value=fake_token_var,
                     ) as mock_set_roles:
-                        with patch(
-                            "concilium.infrastructure.auth.permission_guard._current_roles"
-                        ) as mock_var:
+                        with patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_var:
                             await mw(scope, receive, send)
 
         inner.assert_awaited_once_with(scope, receive, send)
@@ -383,9 +374,7 @@ class TestMcpAuthMiddlewareHttpAuthDisabled:
     def _patch_auth_disabled(self):
         mock_auth = MagicMock()
         mock_auth.enabled = False
-        return patch(
-            "concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth
-        )
+        return patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth)
 
     @pytest.mark.asyncio
     async def test_missing_auth_header_calls_inner_app(self):
@@ -496,16 +485,12 @@ async def test_authorization_header_without_bearer_prefix_auth_enabled():
     """Header like 'Basic xxx' (not Bearer) triggers 401 when auth enabled."""
     inner = AsyncMock()
     mw = McpAuthMiddleware(inner)
-    scope = _make_scope(
-        "http", headers=[(b"authorization", b"Basic dXNlcjpwYXNz")]
-    )
+    scope = _make_scope("http", headers=[(b"authorization", b"Basic dXNlcjpwYXNz")])
     receive = AsyncMock()
     send = _CapturingSend()
     mock_auth = MagicMock()
     mock_auth.enabled = True
-    with patch(
-        "concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth
-    ):
+    with patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth):
         await mw(scope, receive, send)
     assert send.messages[0]["status"] == 401
     inner.assert_not_awaited()
@@ -516,16 +501,12 @@ async def test_authorization_header_without_bearer_prefix_auth_disabled():
     """Header like 'Basic xxx' with auth disabled → inner app called (no token)."""
     inner = AsyncMock()
     mw = McpAuthMiddleware(inner)
-    scope = _make_scope(
-        "http", headers=[(b"authorization", b"Basic dXNlcjpwYXNz")]
-    )
+    scope = _make_scope("http", headers=[(b"authorization", b"Basic dXNlcjpwYXNz")])
     receive = AsyncMock()
     send = AsyncMock()
     mock_auth = MagicMock()
     mock_auth.enabled = False
-    with patch(
-        "concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth
-    ):
+    with patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth):
         await mw(scope, receive, send)
     inner.assert_awaited_once_with(scope, receive, send)
 

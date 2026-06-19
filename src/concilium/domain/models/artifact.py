@@ -165,6 +165,7 @@ class ConciliumArtifactRegistry:
 
 
 def _register_defaults() -> None:
+    from concilium.domain.models.catalog.producao import Producao
     from concilium.domain.models.project.observacao import (
         ObservacaoClasseRecurso,
         ObservacaoCPUAusente,
@@ -172,7 +173,6 @@ def _register_defaults() -> None:
         ObservacaoProdutividade,
         PropostaAtualizacao,
     )
-    from concilium.domain.models.catalog.producao import Producao
 
     ConciliumArtifactRegistry.register("Producao", Producao)
     ConciliumArtifactRegistry.register("ObservacaoProdutividade", ObservacaoProdutividade)

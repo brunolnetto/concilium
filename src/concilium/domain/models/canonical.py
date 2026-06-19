@@ -8,17 +8,17 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from statemachine import State, StateMachine
 
 from concilium.domain.models.analytics.analitica import CurvaABCInsumo, SCurve  # ADR-058
-from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio  # ADR-061
-from concilium.domain.models.financial.bdi import IndiretoComBdi, TabelaBdi  # ADR-023 §D4
-from concilium.domain.models.planning.calendario_operacional import CalendarioOperacionalSemanal
+from concilium.domain.models.analytics.cubo_analitico import CuboAnalitico  # ADR-058 ext.
+from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio  # ADR-060
 from concilium.domain.models.campaign.campanha_equipamento import AnaliseFrequenciaCampanhas  # ADR-059
 from concilium.domain.models.catalog.catalogo import PapelFuncao
-from concilium.domain.models.project.constraint_violation import ConstraintViolation
-from concilium.domain.models.analytics.cubo_analitico import CuboAnalitico  # ADR-058 ext.
-from concilium.domain.models.project.decision_variables import DecisionVariables
-from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio  # ADR-060
+from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio  # ADR-061
+from concilium.domain.models.financial.bdi import IndiretoComBdi, TabelaBdi  # ADR-023 §D4
 from concilium.domain.models.financial.memorial_bdi import MemorialCalculoBDI  # ADR-057
+from concilium.domain.models.planning.calendario_operacional import CalendarioOperacionalSemanal
 from concilium.domain.models.planning.mobilizacao import CurvaForca, MobilizacaoPolicy  # ADR-054
+from concilium.domain.models.project.constraint_violation import ConstraintViolation
+from concilium.domain.models.project.decision_variables import DecisionVariables
 
 StatusValidacao = Literal["OK", "AVISO", "ERRO", "INFO"]
 StatusMargem = Literal["VERDE", "AMARELO", "VERMELHO"]
@@ -375,6 +375,7 @@ class EquipamentoEquipeDireta(BaseModel):
     num_unidades: int = 0
     custo_mensal: float = 0.0
     consumo_litros_hora: float | None = None
+    tipo_combustivel: str | None = None
     custo_combustivel_mensal: float = 0.0
     custo_mensal_total: float = 0.0
     # NEP-031 L1: modo de cobrança de aluguel (§8.2 da formalização — u_q)
@@ -1021,14 +1022,16 @@ class OportunidadeCompartilhamentoParalelo(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    atividade_i: str          # item_id — uma das atividades do par
-    atividade_j: str          # item_id — outra atividade do par
-    tipo_recurso_id: str      # tipo de recurso compartilhável
-    recurso_e_gargalo: bool   # True → compartilhar estende duration (limite_producao == "equipamento" e r é equip principal)
+    atividade_i: str  # item_id — uma das atividades do par
+    atividade_j: str  # item_id — outra atividade do par
+    tipo_recurso_id: str  # tipo de recurso compartilhável
+    recurso_e_gargalo: (
+        bool  # True → compartilhar estende duration (limite_producao == "equipamento" e r é equip principal)
+    )
     delta_makespan_semanas: int  # semanas adicionais no makespan total (0 se r é suporte)
     delta_custo_frota: float  # R$ economizado em frota (1 unidade poupada) — positivo = economia
-    delta_indiretos: float    # R$ adicional em indiretos pelo Δ_makespan — positivo = custo extra
-    delta_liquido: float      # delta_custo_frota − delta_indiretos
+    delta_indiretos: float  # R$ adicional em indiretos pelo Δ_makespan — positivo = custo extra
+    delta_liquido: float  # delta_custo_frota − delta_indiretos
     economicamente_viavel: bool  # delta_liquido > 0
 
 

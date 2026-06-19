@@ -1,0 +1,175 @@
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	2.1	junho, 2026	Espalhamento, recebimento e compactação						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador liso			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 0,33 	 1,00 	 -   	 125,00 	 125,00 	 41,67 	
+	Caminhão Pipa 18.000 l			 0,33 	 1,00 	 -   	 150,00 	 150,00 	 50,00 	
+	Caminhão basculante 20 m³			 0,33 	 1,00 	 -   	 175,00 	 175,00 	 58,33 	
+	Pá carregadeira 12t			 0,33 	 1,00 	 -   	 150,00 	 150,00 	 50,00 	
+								TOTAL	 690,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Rolo Compactador						 2,00 	 35,63 	 71,27 	
+	Operador de Trator de Esteiras						 1,00 	 45,07 	 45,07 	
+	Operador de Trator de Pneu						 0,33 	 35,63 	 11,88 	
+	Motorista de Caminhão Pipa						 0,33 	 30,95 	 10,32 	
+	Motorista de Caminhão Basculante						 0,33 	 30,95 	 10,32 	
+	Operador de Pá Carregadeira						 0,33 	 38,26 	 12,75 	
+	Gredista						 0,33 	 30,02 	 10,01 	
+								TOTAL	 171,61 	
+										
+	PRODUÇÃO DA EQUIPE (C)			158,40	M3			CUSTO HORÁRIO TOTAL (A+B)     	 861,61 	
+										
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 5,44 	
+										
+										
+	CUSTO DIRETO TOTAL: R$								5,44	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								5,44	
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+	2.5	junho, 2026	2º EQUIPE - Recebimento, espalhamento, compactação						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador liso			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 0,17 	 1,00 	 -   	 125,00 	 125,00 	 20,83 	
+	Caminhão Pipa 18.000 l			 0,17 	 1,00 	 -   	 150,00 	 150,00 	 25,00 	
+	Caminhão basculante 20 m³			 0,17 	 1,00 	 -   	 175,00 	 175,00 	 29,17 	
+	Pá carregadeira 12t			 0,17 	 1,00 	 -   	 150,00 	 150,00 	 25,00 	
+								TOTAL	 590,00 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Rolo Compactador						 2,00 	 35,63 	 71,27 	
+	Operador de Trator de Esteiras						 1,00 	 45,07 	 45,07 	
+	Operador de Trator de Pneu						 0,17 	 35,63 	 5,94 	
+	Motorista de Caminhão Pipa						 0,17 	 30,95 	 5,16 	
+	Motorista de Caminhão Basculante						 0,50 	 30,95 	 15,48 	
+	Operador de Pá Carregadeira						 0,17 	 38,26 	 6,38 	
+	Gredista						 0,17 	 30,02 	 5,00 	
+								TOTAL	 154,30 	
+										
+	PRODUÇÃO DA EQUIPE (C)			153,00	M3			CUSTO HORÁRIO TOTAL (A+B)     	 744,30 	
+										
+										
+	CUSTO DIRETO TOTAL: R$								4,86	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								4,86	
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+		junho, 2026	3º EQUIPE - Recebimento, espalhamento, compactação						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador liso			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 0,11 	 1,00 	 -   	 125,00 	 125,00 	 13,89 	
+	Caminhão Pipa 18.000 l			 0,11 	 1,00 	 -   	 150,00 	 150,00 	 16,67 	
+	Caminhão basculante 20 m³			 0,11 	 1,00 	 -   	 175,00 	 175,00 	 19,44 	
+	Pá carregadeira 12t			 0,11 	 1,00 	 -   	 150,00 	 150,00 	 16,67 	
+								TOTAL	 556,67 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Rolo Compactador						 2,00 	 35,63 	 71,27 	
+	Operador de Trator de Esteiras						 1,00 	 45,07 	 45,07 	
+	Operador de Trator de Pneu						 0,11 	 35,63 	 3,96 	
+	Motorista de Caminhão Pipa						 0,11 	 30,95 	 3,44 	
+	Motorista de Caminhão Basculante						 0,11 	 30,95 	 3,44 	
+	Operador de Pá Carregadeira						 0,11 	 38,26 	 4,25 	
+	Gredista						 0,11 	 30,02 	 3,34 	
+								TOTAL	 134,77 	
+										
+	PRODUÇÃO DA EQUIPE (C)			225,00	M3			CUSTO HORÁRIO TOTAL (A+B)     	 691,43 	
+										
+	COMBUSTÍVEL				CÓDIGO	UNID.	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+	Rolo compactador liso				Diesel S10	L	 7,00 	 16,00 	 -   	
+	Escavadeira hidráulica sobre esteira 22T				Diesel S10	L	 7,00 	 22,00 	 -   	
+	Caminhão comboio				Diesel S10	L	 7,00 	 4,00 	 -   	
+										
+								TOTAL	 -   	
+										
+	ATIVIDADES AUXILIARES / ALIMENTAÇÃO					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+										
+	TOTAL								 -   	
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 3,07 	
+										
+	MATERIAIS / ATIVIDADES AUXILIARES					QUANTIDADE	UND	CUSTO	CUSTO UNITÁRIO	
+										
+									 -   	
+									 -   	
+									 -   	
+								TOTAL	 -   	
+										
+	TRANSPORTE 				QUANTIDADE	D.M.T                 (TOT)	CUSTO	CONSUMO	CUSTO UNITÁRIO	
+										
+					 -   	 -   	 -   	 -   	 -   	
+								TOTAL	 -   	
+										
+	CUSTO DIRETO TOTAL: R$								3,07	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								3,07	
+										
+										
+										
+	OBRA:		COMPOSIÇÃO UNITÁRIA DE SERVIÇO							
+										
+	CÓDIGO	DATA BASE	SERVIÇO						UNIDADE	
+		junho, 2026	4º EQUIPE - Recebimento, espalhamento, compactação						M3	
+										
+	EQUIPAMENTO (A)		CÓDIGO	QUANT.	UTILIZAÇÃO		CUSTO OPERACIONAL		CUSTO	
+					PROD.	IMPROD.	PROD.	IMPROD.	HORÁRIO	
+	Rolo compactador liso			 2,00 	 1,00 	 -   	 125,00 	 125,00 	 250,00 	
+	Trator de esteiras 20T			 1,00 	 1,00 	 -   	 240,00 	 240,00 	 240,00 	
+	Trator de pneus com grade			 0,11 	 1,00 	 -   	 125,00 	 125,00 	 13,89 	
+	Caminhão Pipa 18.000 l			 0,11 	 1,00 	 -   	 150,00 	 150,00 	 16,67 	
+	Caminhão basculante 20 m³			 0,11 	 1,00 	 -   	 175,00 	 175,00 	 19,44 	
+	Pá carregadeira 12t			 0,11 	 1,00 	 -   	 150,00 	 150,00 	 16,67 	
+								TOTAL	 556,67 	
+										
+	MÃO DE OBRA SUPLEMENTAR (B)				CÓDIGO		QUANT	SALÁRIO BASE	CUSTO HORÁRIO	
+	Operador de Rolo Compactador						 2,00 	 35,63 	 71,27 	
+	Operador de Trator de Esteiras						 1,00 	 45,07 	 45,07 	
+	Operador de Trator de Pneu						 0,11 	 35,63 	 3,96 	
+	Motorista de Caminhão Pipa						 0,11 	 30,95 	 3,44 	
+	Motorista de Caminhão Basculante						 0,11 	 30,95 	 3,44 	
+	Operador de Pá Carregadeira						 0,11 	 38,26 	 4,25 	
+	Gredista						 0,11 	 30,02 	 3,34 	
+								TOTAL	 134,77 	
+										
+	PRODUÇÃO DA EQUIPE (C)			217,80	M3			CUSTO HORÁRIO TOTAL (A+B)     	 691,43 	
+										
+										
+	CUSTO UNITÁRIO DA EXECUÇÃO (D) {[(A)+(B)]/(C)=(D)}								 3,17 	
+										
+										
+	CUSTO DIRETO TOTAL: R$								3,17	
+										
+	BDI:								 -   	
+										
+	CUSTO TOTAL UNITÁRIO: R$								3,17	
+										
+										

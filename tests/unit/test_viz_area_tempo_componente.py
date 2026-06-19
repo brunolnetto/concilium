@@ -13,8 +13,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Module paths
 # ---------------------------------------------------------------------------
@@ -29,8 +27,10 @@ _RENDER_PATCH = f"{_MOD}.render_stacked_area"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _import_module():
     import importlib
+
     return importlib.import_module(_MOD)
 
 
@@ -57,6 +57,7 @@ def _minimal_payload(unit_type: str = "currency_brl") -> dict:
 # ---------------------------------------------------------------------------
 # 1. build() early-return paths
 # ---------------------------------------------------------------------------
+
 
 class TestBuildEarlyReturns:
     def test_build_payload_raises_returns_none(self):
@@ -92,14 +93,17 @@ class TestBuildEarlyReturns:
 # 2. build() happy path — unit_type currency_brl → use_millions=True
 # ---------------------------------------------------------------------------
 
+
 class TestBuildHappyPathCurrencyBrl:
     def test_returns_bytes(self):
         """unit_type == 'currency_brl' → render_stacked_area called with use_millions=True."""
         mod = _import_module()
         mock_fig = MagicMock()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, return_value=mock_fig) as mock_render:
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, return_value=mock_fig) as mock_render,
+        ):
             result = mod.build(MagicMock(), MagicMock())
 
         assert result == b"PNG"
@@ -113,9 +117,11 @@ class TestBuildHappyPathCurrencyBrl:
         """render_stacked_area receives the expected title string."""
         mod = _import_module()
         mock_fig = MagicMock()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, return_value=mock_fig) as mock_render:
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, return_value=mock_fig) as mock_render,
+        ):
             mod.build(MagicMock(), MagicMock())
 
         _args, _kwargs = mock_render.call_args
@@ -129,14 +135,17 @@ class TestBuildHappyPathCurrencyBrl:
 # 3. build() happy path — non-currency unit_type → use_millions=False
 # ---------------------------------------------------------------------------
 
+
 class TestBuildHappyPathOtherUnit:
     def test_use_millions_false_for_non_currency_unit(self):
         """unit_type != 'currency_brl' → render_stacked_area called with use_millions=False."""
         mod = _import_module()
         mock_fig = MagicMock()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("unit_count")), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, return_value=mock_fig) as mock_render:
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("unit_count")),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, return_value=mock_fig) as mock_render,
+        ):
             result = mod.build(MagicMock(), MagicMock())
 
         assert result == b"PNG"
@@ -149,9 +158,11 @@ class TestBuildHappyPathOtherUnit:
         mod = _import_module()
         mock_fig = MagicMock()
         payload = {"rows": [{"mes": "2024-01", "componente": "X", "valor_rs": 100.0}], "columns": ["X"]}
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=payload), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, return_value=mock_fig) as mock_render:
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=payload),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, return_value=mock_fig) as mock_render,
+        ):
             result = mod.build(MagicMock(), MagicMock())
 
         assert result == b"PNG"
@@ -164,13 +175,16 @@ class TestBuildHappyPathOtherUnit:
 # 4. render_stacked_area returns None → build returns None
 # ---------------------------------------------------------------------------
 
+
 class TestRenderReturnsNone:
     def test_render_none_returns_none(self):
         """render_stacked_area returning None → build() returns None."""
         mod = _import_module()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, return_value=None):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, return_value=None),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
 
@@ -179,14 +193,17 @@ class TestRenderReturnsNone:
 # 5. render_stacked_area raises → cleanup attempted, returns None
 # ---------------------------------------------------------------------------
 
+
 class TestRenderRaises:
     def test_render_raises_returns_none(self):
         """render_stacked_area raises → except block runs, returns None."""
         mod = _import_module()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, side_effect=RuntimeError("render exploded")), \
-             patch("matplotlib.pyplot.close") as mock_close:
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, side_effect=RuntimeError("render exploded")),
+            patch("matplotlib.pyplot.close") as mock_close,
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
 
@@ -194,6 +211,7 @@ class TestRenderRaises:
         """When render raises, matplotlib.pyplot.close('all') is attempted."""
         mod = _import_module()
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as real_plt
 
@@ -204,10 +222,12 @@ class TestRenderRaises:
         def tracking_close(arg=None):
             closed.append(arg)
 
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, side_effect=OSError("disk full")), \
-             patch("matplotlib.pyplot.close", side_effect=tracking_close):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, side_effect=OSError("disk full")),
+            patch("matplotlib.pyplot.close", side_effect=tracking_close),
+        ):
             result = mod.build(MagicMock(), MagicMock())
 
         assert result is None
@@ -216,10 +236,12 @@ class TestRenderRaises:
     def test_render_raises_matplotlib_close_also_raises(self):
         """Even if matplotlib.pyplot.close raises, build() still returns None."""
         mod = _import_module()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             _make_init_mpl_mock(), \
-             patch(_RENDER_PATCH, side_effect=RuntimeError("render fail")), \
-             patch("matplotlib.pyplot.close", side_effect=ImportError("no mpl")):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            _make_init_mpl_mock(),
+            patch(_RENDER_PATCH, side_effect=RuntimeError("render fail")),
+            patch("matplotlib.pyplot.close", side_effect=ImportError("no mpl")),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
 
@@ -228,12 +250,15 @@ class TestRenderRaises:
 # 6. init_mpl raises → exception path returns None
 # ---------------------------------------------------------------------------
 
+
 class TestInitMplRaises:
     def test_init_mpl_raises_returns_none(self):
         """init_mpl raising ImportError → build() returns None via except block."""
         mod = _import_module()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             patch(_INIT_MPL_PATCH, side_effect=ImportError("no matplotlib")):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            patch(_INIT_MPL_PATCH, side_effect=ImportError("no matplotlib")),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
 
@@ -242,17 +267,21 @@ class TestInitMplRaises:
 # 7. fig_to_bytes raises → exception path returns None
 # ---------------------------------------------------------------------------
 
+
 class TestFigToBytesRaises:
     def test_fig_to_bytes_raises_returns_none(self):
         """fig_to_bytes raising → build() returns None via except block."""
+
         def bad_fig_to_bytes(fig):
             raise OSError("disk full")
 
         mod = _import_module()
         mock_plt = MagicMock()
         mock_fig = MagicMock()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")), \
-             patch(_INIT_MPL_PATCH, return_value=(mock_plt, bad_fig_to_bytes)), \
-             patch(_RENDER_PATCH, return_value=mock_fig):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
+            patch(_INIT_MPL_PATCH, return_value=(mock_plt, bad_fig_to_bytes)),
+            patch(_RENDER_PATCH, return_value=mock_fig),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None

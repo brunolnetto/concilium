@@ -1,6 +1,8 @@
 """Tests for concilium.domain.services.simulation — targets 80%+ coverage."""
-import pytest
+
 from math import ceil
+
+import pytest
 
 from concilium.domain.services.simulation import (
     ResultadoSimulacao,
@@ -10,10 +12,10 @@ from concilium.domain.services.simulation import (
     _sim_calc_materiais,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
+
 
 def make_catalogo(
     cpus=None,
@@ -54,6 +56,7 @@ def make_insumo(codigo, preco_unitario=100.0, unidade="h", atributos_especificos
 # ---------------------------------------------------------------------------
 # SimuladorEngenharia.__init__
 # ---------------------------------------------------------------------------
+
 
 class TestSimuladorInit:
     def test_empty_catalog_creates_empty_dicts(self):
@@ -96,6 +99,7 @@ class TestSimuladorInit:
 # SimuladorEngenharia._calcular_dias_trabalhados
 # ---------------------------------------------------------------------------
 
+
 class TestCalcularDiasTrabalhados:
     @pytest.fixture
     def sim(self):
@@ -136,6 +140,7 @@ class TestCalcularDiasTrabalhados:
 # simular_cpu — basic validation
 # ---------------------------------------------------------------------------
 
+
 class TestSimularCpuValidation:
     def test_missing_cpu_raises_value_error(self):
         sim = SimuladorEngenharia(make_catalogo())
@@ -164,6 +169,7 @@ class TestSimularCpuValidation:
 # ---------------------------------------------------------------------------
 # simular_cpu — regime variants
 # ---------------------------------------------------------------------------
+
 
 class TestSimularCpuRegimes:
     """Verify dias_trabalhados for each supported regime."""
@@ -199,6 +205,7 @@ class TestSimularCpuRegimes:
 # simular_cpu — producao_total
 # ---------------------------------------------------------------------------
 
+
 class TestSimularCpuProducao:
     def test_producao_total_equals_prod_h_times_horas(self):
         prod = make_producao("PROD-A", valor_horario=5.0)
@@ -227,6 +234,7 @@ class TestSimularCpuProducao:
 # simular_cpu — no producao_id_ref → zero labor costs
 # ---------------------------------------------------------------------------
 
+
 class TestSimularCpuNoProdRef:
     def test_no_prod_ref_yields_zero_labor_costs(self):
         cpu = make_cpu("CPU-Z")
@@ -248,6 +256,7 @@ class TestSimularCpuNoProdRef:
 # ---------------------------------------------------------------------------
 # simular_cpu — contratacao CLT vs PJ
 # ---------------------------------------------------------------------------
+
 
 class TestSimularCpuEncargos:
     """FATOR_ENCARGOS CLT=0.77, PJ=0.06."""
@@ -295,6 +304,7 @@ class TestSimularCpuEncargos:
 # simular_cpu — total_direto is sum of all components
 # ---------------------------------------------------------------------------
 
+
 class TestSimularCpuTotalDireto:
     def test_total_direto_equals_sum_of_components(self):
         ins_func = make_insumo("FUNC-A", preco_unitario=50.0, unidade="h")
@@ -306,9 +316,7 @@ class TestSimularCpuTotalDireto:
             producao_id_ref="PROD-A",
             composicao_itens=[{"insumo_id": "MAT-A", "coeficiente": 0.5}],
         )
-        sim = SimuladorEngenharia(
-            make_catalogo(cpus=[cpu], insumos=[ins_func, ins_mat], producoes=[prod])
-        )
+        sim = SimuladorEngenharia(make_catalogo(cpus=[cpu], insumos=[ins_func, ins_mat], producoes=[prod]))
         r = sim.simular_cpu("CPU-A", 7, "7x0", 8.0)
         computed_total = round(
             r.custo_material
@@ -331,6 +339,7 @@ class TestSimularCpuTotalDireto:
 # ---------------------------------------------------------------------------
 # _sim_calc_funcoes — unit tests
 # ---------------------------------------------------------------------------
+
 
 class TestSimCalcFuncoes:
     def test_empty_equipe(self):
@@ -391,6 +400,7 @@ class TestSimCalcFuncoes:
 # _sim_calc_equipamentos — unit tests
 # ---------------------------------------------------------------------------
 
+
 class TestSimCalcEquipamentos:
     def test_empty_equipe(self):
         eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos({}, {}, 10.0, 0.77)
@@ -403,9 +413,7 @@ class TestSimCalcEquipamentos:
         equipe = {"equipamentos": [{"equip_id": "EQ-A", "num_unidades": 1}]}
         insumos = {"EQ-A": {"preco_unitario": 100.0}}
         horas = 10.0
-        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(
-            equipe, insumos, horas, 0.77
-        )
+        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(equipe, insumos, horas, 0.77)
         contribuicao = 1 * 100.0 * horas  # = 1000
         assert mo == pytest.approx(contribuicao * 0.7)
         assert eq_manut == pytest.approx(contribuicao * 0.1)
@@ -431,9 +439,7 @@ class TestSimCalcEquipamentos:
         }
         horas = 5.0
         contribuicao = 2 * 100.0 * horas  # = 1000
-        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(
-            equipe, insumos, horas, 0.77
-        )
+        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(equipe, insumos, horas, 0.77)
         assert diesel == pytest.approx(contribuicao * 20 / 100)
         assert eq_manut == pytest.approx(contribuicao * 10 / 100)
         assert eq_cap == pytest.approx(contribuicao * 30 / 100)
@@ -442,9 +448,7 @@ class TestSimCalcEquipamentos:
 
     def test_missing_insumo_uses_zero_price(self):
         equipe = {"equipamentos": [{"equip_id": "GHOST", "num_unidades": 1}]}
-        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(
-            equipe, {}, 10.0, 0.77
-        )
+        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(equipe, {}, 10.0, 0.77)
         assert mo == 0.0
         assert diesel == 0.0
 
@@ -452,9 +456,7 @@ class TestSimCalcEquipamentos:
         """atributos_especificos=None should not blow up — should use fallback."""
         equipe = {"equipamentos": [{"equip_id": "EQ-C", "num_unidades": 1}]}
         insumos = {"EQ-C": {"preco_unitario": 200.0, "atributos_especificos": None}}
-        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(
-            equipe, insumos, 4.0, 0.06
-        )
+        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(equipe, insumos, 4.0, 0.06)
         contribuicao = 1 * 200.0 * 4.0  # = 800
         assert mo == pytest.approx(contribuicao * 0.7)
         assert diesel == pytest.approx(contribuicao * 0.2)
@@ -476,9 +478,7 @@ class TestSimCalcEquipamentos:
             }
         }
         # Should not raise ZeroDivisionError
-        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(
-            equipe, insumos, 2.0, 0.77
-        )
+        eq_cap, eq_manut, diesel, mo, mo_enc = _sim_calc_equipamentos(equipe, insumos, 2.0, 0.77)
         # contribuicao = 1 * 10 * 2 = 20; total_h = 1.0 (guard); diesel = 20 * 5/1 = 100
         assert diesel == pytest.approx(100.0)
 
@@ -486,6 +486,7 @@ class TestSimCalcEquipamentos:
 # ---------------------------------------------------------------------------
 # _sim_calc_materiais — unit tests
 # ---------------------------------------------------------------------------
+
 
 class TestSimCalcMateriais:
     def test_empty_composicao(self):
@@ -533,6 +534,7 @@ class TestSimCalcMateriais:
 # Integration: simular_cpu with materials
 # ---------------------------------------------------------------------------
 
+
 class TestSimularCpuMateriais:
     def test_custo_material_computed(self):
         prod = make_producao("PROD-A", valor_horario=1.0)
@@ -542,9 +544,7 @@ class TestSimularCpuMateriais:
             producao_id_ref="PROD-A",
             composicao_itens=[{"insumo_id": "MAT-A", "coeficiente": 2.0}],
         )
-        sim = SimuladorEngenharia(
-            make_catalogo(cpus=[cpu], insumos=[ins_mat], producoes=[prod])
-        )
+        sim = SimuladorEngenharia(make_catalogo(cpus=[cpu], insumos=[ins_mat], producoes=[prod]))
         r = sim.simular_cpu("CPU-A", 7, "7x0", 8.0)
         # producao_total = 1 * 7 * 8 = 56; mat = 2 * 56 * 3 = 336
         assert r.custo_material == pytest.approx(336.0, abs=0.01)
@@ -557,9 +557,7 @@ class TestSimularCpuMateriais:
             producao_id_ref="PROD-B",
             composicao_itens=[{"insumo_id": "MAT-A", "coeficiente": 1.0}],
         )
-        sim = SimuladorEngenharia(
-            make_catalogo(cpus=[cpu], insumos=[ins_mat], producoes=[prod])
-        )
+        sim = SimuladorEngenharia(make_catalogo(cpus=[cpu], insumos=[ins_mat], producoes=[prod]))
         r1 = sim.simular_cpu("CPU-B", 7, "7x0", 8.0)
         r2 = sim.simular_cpu("CPU-B", 14, "7x0", 8.0)
         assert r2.custo_material == pytest.approx(r1.custo_material * 2, abs=0.01)
@@ -568,6 +566,7 @@ class TestSimularCpuMateriais:
 # ---------------------------------------------------------------------------
 # Integration: simular_cpu with full equipe (funcoes + equipamentos)
 # ---------------------------------------------------------------------------
+
 
 class TestSimularCpuFullEquipe:
     def _make_full_sim(self):

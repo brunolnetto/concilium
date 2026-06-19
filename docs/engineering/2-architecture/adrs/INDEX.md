@@ -218,6 +218,9 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [107](adr-107-generalizacao-tipo-combustivel.md) | Generalização do Tipo de Combustível: DIESEL → COMBUSTIVEL + tipo_combustivel | ✅ Implementado _(D1-D4, D6 ✅ 2026-06-10; D5 analytics aguarda ADR-106)_ | ADR-030, ADR-082, ADR-085, ADR-090, ADR-092 |
 | [108](ADR-108-campaign-bundle-cube-alimentado-por-cubos-existentes.md) | CampaignBundleCube alimentado pelos Cubos de Custo e Cronograma | ✅ Implementado 2026-06-12 | ADR-069, ADR-070, ADR-086, ADR-087 |
 | [109](ADR-109-cardinalidade-espaco-campanha-go.md) | Cardinalidade do Espaço de Campanha GO — Produto Cartesiano de Discretizações | ✅ Implementado 2026-06-12 | ADR-070, ADR-108 |
+| [110](adr-110-remediacao-fallbacks-silenciosos.md) | Remediação de Fallbacks Silenciosos — 7 Fases: logging, None/0.0, fatores, constantes, float utils, modelo, fonte de venda | ✅ Implementado 2026-06-18 | ADR-043, ADR-085, ADR-060, ADR-090 |
+| [111](adr-111-logging-centralizado-otel-bridge.md) | Logging Centralizado e Ponte Python → OTel — `_setup_logging()`, `LoggingHandler`, `_JsonFormatter`, `configure_logging()` nos 3 entry points | ✅ Implementado 2026-06-18 _(TDD · 28 testes)_ | ADR-095, ADR-110, ADR-096, ADR-112 |
+| [112](adr-112-pipeline-observabilidade-medalhao.md) | Pipeline Assíncrona de Observabilidade Medalhão — Bronze/Silver/Gold, backfill-incremental (fast-forward), checkpoints, DuckDB, SLIs, alertas, cross-domain | ⚠️ Parcial _(F1–F6 ✅ 2026-06-19 · TDD · 40 testes; F7-F8 pendentes)_ | ADR-095, ADR-111, ADR-047, ADR-102, ADR-103 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 

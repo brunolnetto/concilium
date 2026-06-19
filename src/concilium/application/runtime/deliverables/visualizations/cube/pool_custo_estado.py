@@ -18,6 +18,30 @@ _COMP_LABELS = {
 _ESTADO_LABELS = {"prod": "Produtivo", "idle": "Ocioso", "off": "Desmobilizado"}
 
 
+def _normalize_component_key(raw: str) -> str:
+    txt = str(raw or "").strip().lower()
+    if txt in {"mo", "mão-de-obra", "mao-de-obra", "mao_obra", "mão de obra", "mao de obra"}:
+        return "mo"
+    if txt in {"eq", "equipamento", "equipamentos"}:
+        return "eq"
+    if txt in {"comb", "combustivel", "combustível", "diesel"}:
+        return "comb"
+    if txt in {"mat", "material", "materiais"}:
+        return "mat"
+    return txt
+
+
+def _normalize_state_key(raw: str) -> str:
+    txt = str(raw or "").strip().lower()
+    if txt in {"prod", "produtivo"}:
+        return "prod"
+    if txt in {"idle", "ocioso"}:
+        return "idle"
+    if txt in {"off", "desmobilizado"}:
+        return "off"
+    return txt
+
+
 def build(canonical, cubo=None) -> bytes | None:
     try:
         from concilium.application.services.analytics.cubo_pool_projection import resolve_cubo_pool_projection
@@ -41,16 +65,15 @@ def build(canonical, cubo=None) -> bytes | None:
 
         matrix: dict[str, dict[str, float]] = defaultdict(dict)
         for r in rows:
-            estado = r.get("estado", "")
-            comp = r.get("componente", "")
+            estado = _normalize_state_key(r.get("estado", ""))
+            comp = _normalize_component_key(r.get("componente", ""))
             val = float(r.get("valor_rs", 0.0) or 0.0)
             matrix[estado][comp] = val
 
-        estados = [e for e in ("Produtivo", "Ocioso") if e in matrix and sum(matrix[e].values()) > 0]
+        estados = [e for e in ("prod", "idle") if e in matrix and sum(matrix[e].values()) > 0]
         if not estados:
             return None
 
-        comps = list(_COMP_LABELS.values())
         comp_keys = list(_COMP_LABELS.keys())
 
         fig, ax = plt.subplots(figsize=(9, 5))
@@ -58,13 +81,14 @@ def build(canonical, cubo=None) -> bytes | None:
         x = list(range(len(estados)))
         bottoms = [0.0] * len(estados)
 
-        for ci, (comp_key, comp_label) in enumerate(zip(comp_keys, comps)):
-            vals = [matrix[e].get(comp_label, matrix[e].get(comp_key, 0.0)) / 1e6 for e in estados]
+        for ci, comp_key in enumerate(comp_keys):
+            comp_label = _COMP_LABELS[comp_key]
+            vals = [matrix[e].get(comp_key, 0.0) / 1e6 for e in estados]
             ax.bar(x, vals, bar_width, bottom=bottoms, color=COLORS[ci % len(COLORS)], alpha=0.85, label=comp_label)
             bottoms = [b + v for b, v in zip(bottoms, vals)]
 
         ax.set_xticks(x)
-        ax.set_xticklabels(estados, fontsize=10)
+        ax.set_xticklabels([_ESTADO_LABELS[e] for e in estados], fontsize=10)
         ax.set_ylabel("Custo (R$ M)", fontsize=10)
         ax.set_title("Custo do Pool por Estado e Componente", fontsize=11, fontweight="bold")
         ax.legend(fontsize=9, loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=4, frameon=False)
@@ -79,6 +103,23 @@ def build(canonical, cubo=None) -> bytes | None:
                 fontsize=7.5,
                 color="#555",
                 ha="left",
+                wrap=True,
+            )
+        total_comb = sum(matrix[e].get("comb", 0.0) for e in estados)
+        total_mat = sum(matrix[e].get("mat", 0.0) for e in estados)
+        if total_comb <= 0.0 or total_mat <= 0.0:
+            notas = []
+            if total_comb <= 0.0:
+                notas.append("Combustível = R$ 0")
+            if total_mat <= 0.0:
+                notas.append("Material = R$ 0")
+            fig.text(
+                0.99,
+                0.01,
+                " · ".join(notas) + " no dataset desta execução.",
+                fontsize=7.3,
+                color="#555",
+                ha="right",
                 wrap=True,
             )
 

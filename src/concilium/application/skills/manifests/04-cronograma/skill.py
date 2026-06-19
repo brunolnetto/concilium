@@ -18,6 +18,7 @@ DEPRECATION NOTICE (ADR-105):
 from __future__ import annotations
 
 import math
+from hashlib import sha1
 from datetime import date, timedelta
 from typing import Any
 
@@ -401,7 +402,8 @@ def _build_fator_calendario_semanal(
                 if not isinstance(evento, dict):
                     continue
                 if _event_occurs_on_day(evento, dia):
-                    fator_evt = float(evento.get("fator_operacao", 0.0) or 0.0)
+                    _fo = evento.get("fator_operacao")
+                    fator_evt = float(_fo if _fo is not None else 0.0)
                     fator_dia = min(fator_dia, max(0.0, min(1.0, fator_evt)))
                     if evento.get("id"):
                         eventos_aplicados.add(str(evento["id"]))
@@ -714,6 +716,29 @@ def _enrich_spec_resources_from_catalog(
     eap_by_id = {item.item_id: item for item in (canonical_in.eap or [])}
     enriquecidas = 0
 
+    def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
+        """Deriva tipo fungível por assinatura de composição (não por regex de CPU id)."""
+        equip = composicao.get("equipamentos") or []
+        funcs = composicao.get("funcoes") or []
+        if equip or funcs:
+            tokens: list[str] = []
+            for f in sorted(funcs, key=lambda x: str(x.get("funcao_id") or "")):
+                fid = str(f.get("funcao_id") or "").strip().upper()
+                qtd = round(float(f.get("num_pessoas", 1) or 1), 4)
+                if fid:
+                    tokens.append(f"F:{fid}:{qtd}")
+            for e in sorted(equip, key=lambda x: str(x.get("equip_id") or "")):
+                eid = str(e.get("equip_id") or "").strip().upper()
+                qtd = round(float(e.get("num_unidades", 1) or 1), 4)
+                if eid:
+                    tokens.append(f"E:{eid}:{qtd}")
+            if tokens:
+                signature = "|".join(tokens)
+                digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
+                return f"EQUIPE-COMP-{digest}"
+        raw = str(cpu_id or "").strip().upper()
+        return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
+
     for a in activities:
         item = eap_by_id.get(a.get("item_id"))
         if item is None:
@@ -745,7 +770,7 @@ def _enrich_spec_resources_from_catalog(
         # tipo de recurso. required_resources = nº de frentes paralelas.
         if not (comp.get("equipamentos") or comp.get("funcoes")):
             continue
-        tipo = f"EQUIPE-{item.cpu_id}"
+        tipo = _tipo_recurso_fungivel(str(item.cpu_id or ""), comp)
         rr = {tipo: n_frentes}
 
         a["required_resources"] = rr
@@ -919,8 +944,6 @@ def _to_canonical_candidate(
         },
         relaxed=relaxed,
     )
-
-
 
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -2080,7 +2103,7 @@ def run_cronograma(
     semanas_obra = _semanas_entre(canonical_in.projeto.data_inicio, canonical_in.projeto.data_termino)
     cpu_lookup = _build_cpu_lookup(catalogo)
     producao_lookup = _build_producao_lookup(catalogo)
-    # NEP-029 D2: enriquecer producao_lookup com P_canonico = custo_hora / PU_sbdi.
+
     # NEP-029 D2: enriquece producao_lookup com P_canonico = custo_hora/PU_sbdi.
     # IMPORTANTE: P_canonico fica em 'valor_horario_canonico' mas NÃO substitui
     # 'valor_horario' para o scheduling (_resolve_productivity não o consome).
@@ -2089,7 +2112,12 @@ def run_cronograma(
     insumos_lookup = _build_insumos_lookup(catalogo)
     horas_mes = regime.horas_dia * regime.dias_semana * 4.345  # semanas/mês
     taxa_encargos = float(inputs.get("taxa_encargos_mo", 1.0))  # default 100% encargos
-    _enrich_producao_canonico(cpu_lookup, producao_lookup, insumos_lookup, horas_mes, taxa_encargos, validacoes)
+
+    # Restringir validação de P_canonico apenas às CPUs do EAP deste projeto,
+    # evitando avisos espúrios de CPUs do catálogo não usadas aqui.
+    eap_cpu_ids = {item.cpu_id for item in (canonical_in.eap or []) if getattr(item, "cpu_id", None)}
+    eap_cpu_lookup = {k: v for k, v in cpu_lookup.items() if k in eap_cpu_ids} if eap_cpu_ids else cpu_lookup
+    _enrich_producao_canonico(eap_cpu_lookup, producao_lookup, insumos_lookup, horas_mes, taxa_encargos, validacoes)
     prat_semanal, prat_mensal = _extract_praticabilidade(canonical_in)
     calendario_config = (
         inputs.get("calendario_operacional") if isinstance(inputs.get("calendario_operacional"), dict) else {}
@@ -2182,7 +2210,7 @@ def run_cronograma(
             ValidacaoItem(
                 codigo="VAL-MOB-SCHEDULE-OK",
                 status="OK",
-                mensagem="Janelas de mobilização inferidas com sucesso (ADR-105).",
+                mensagem="Janelas de mobilização inferidas com sucesso.",
             )
         )
     except Exception as e:

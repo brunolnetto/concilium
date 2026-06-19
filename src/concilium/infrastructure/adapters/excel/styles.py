@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from functools import cache
 from typing import Any
+
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 

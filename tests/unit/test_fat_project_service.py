@@ -12,14 +12,12 @@ import pytest
 
 from concilium.application.services.project._project_service_helpers import (
     _build_catalog_from_snapshot,
-    _build_joined_cpus,
     _compute_bdi_for_categoria,
     _compute_flat_bdi,
     _count_orphaned_runs,
     _cp_build_meta_kwargs,
     _cp_save_perfil_context,
     _enrich_payload_bdi,
-    _enrich_payload_encargos,
     _resolve_catalogo_base_from_context,
     _sort_versions,
     _try_enrich_cpu_with_prod,
@@ -34,7 +32,6 @@ from concilium.application.services.project.project_service import (
     _is_valid_canonical_eap,
     _resolve_project_type,
 )
-
 
 # ---------------------------------------------------------------------------
 # Factories
@@ -326,9 +323,16 @@ class TestListProjects:
         p = _make_project("p1")
         repo.list_projects.return_value = [p]
         item = svc.list_projects()[0]
-        assert {"project_id", "nome", "contexto_id", "tipo_projeto", "status_eap", "current_version", "versions", "benchmark_slug"}.issubset(
-            item.keys()
-        )
+        assert {
+            "project_id",
+            "nome",
+            "contexto_id",
+            "tipo_projeto",
+            "status_eap",
+            "current_version",
+            "versions",
+            "benchmark_slug",
+        }.issubset(item.keys())
 
     def test_benchmark_slug_propagated(self):
         svc, repo, _ = _make_service()
@@ -518,10 +522,12 @@ class TestCompareVersions:
         right_can = MagicMock()
         p.load_canonical.side_effect = [left_can, right_can]
 
-        from concilium.domain.services.project_rules import calculate_deltas, resolve_compare_version
 
         with (
-            patch("concilium.application.services.project.project_service.resolve_compare_version", side_effect=["v1", "v2"]),
+            patch(
+                "concilium.application.services.project.project_service.resolve_compare_version",
+                side_effect=["v1", "v2"],
+            ),
             patch("concilium.application.services.project.project_service.build_summary", return_value={"total": 0}),
             patch("concilium.application.services.project.project_service.calculate_deltas", return_value={}),
         ):
@@ -536,7 +542,10 @@ class TestCompareVersions:
         p = _make_project("p1")
         p.load_canonical.return_value = None
         with (
-            patch("concilium.application.services.project.project_service.resolve_compare_version", side_effect=["v1", "v2"]),
+            patch(
+                "concilium.application.services.project.project_service.resolve_compare_version",
+                side_effect=["v1", "v2"],
+            ),
         ):
             repo.get_project.return_value = p
             with pytest.raises(ValueError):
@@ -844,16 +853,12 @@ class TestTemasAndJurisdicoes:
 class TestValidateJurisdicaoFields:
     def test_valid_date_reference(self):
         svc, _, _ = _make_service()
-        svc._validate_jurisdicao_fields(
-            {"provedores_referencia": [{"data_referencia": "2024-03"}]}
-        )
+        svc._validate_jurisdicao_fields({"provedores_referencia": [{"data_referencia": "2024-03"}]})
 
     def test_invalid_date_format_raises(self):
         svc, _, _ = _make_service()
         with pytest.raises(ValueError, match="data_referencia"):
-            svc._validate_jurisdicao_fields(
-                {"provedores_referencia": [{"data_referencia": "03/2024"}]}
-            )
+            svc._validate_jurisdicao_fields({"provedores_referencia": [{"data_referencia": "03/2024"}]})
 
     def test_non_dict_provedor_raises(self):
         svc, _, _ = _make_service()
@@ -970,13 +975,7 @@ class TestResolveEapSource:
         assert "01-escopo-e-eap.eap" in (ProjectService._resolve_eap_source(payload) or "")
 
     def test_skill_inputs_nested_detected(self):
-        payload = {
-            "skill_inputs": {
-                "01-escopo-e-eap": {
-                    "inputs_escopo": {"eap": [{"item_id": "A"}]}
-                }
-            }
-        }
+        payload = {"skill_inputs": {"01-escopo-e-eap": {"inputs_escopo": {"eap": [{"item_id": "A"}]}}}}
         result = ProjectService._resolve_eap_source(payload)
         assert result is not None and "inputs_escopo" in result
 
@@ -1091,7 +1090,18 @@ class TestResolveCatalogoBase:
 
 class TestComputeBdi:
     def test_basic_bdi_calculation(self):
-        comps = {"ac": 0.05, "df": 0.02, "r": 0.01, "cr": 0.0, "l": 0.10, "cofins": 0.03, "iss": 0.05, "pis": 0.0, "cssl": 0.0, "ir": 0.0}
+        comps = {
+            "ac": 0.05,
+            "df": 0.02,
+            "r": 0.01,
+            "cr": 0.0,
+            "l": 0.10,
+            "cofins": 0.03,
+            "iss": 0.05,
+            "pis": 0.0,
+            "cssl": 0.0,
+            "ir": 0.0,
+        }
         bdi = _compute_bdi_for_categoria(comps)
         assert bdi is not None
         assert bdi > 0.0
@@ -1104,7 +1114,18 @@ class TestComputeBdi:
 
     def test_compute_flat_bdi_adds_equipamentos_fallback(self):
         tabela = {
-            "servicos": {"ac": 0.05, "df": 0.02, "r": 0.0, "cr": 0.0, "l": 0.10, "cofins": 0.03, "iss": 0.05, "pis": 0.0, "cssl": 0.0, "ir": 0.0}
+            "servicos": {
+                "ac": 0.05,
+                "df": 0.02,
+                "r": 0.0,
+                "cr": 0.0,
+                "l": 0.10,
+                "cofins": 0.03,
+                "iss": 0.05,
+                "pis": 0.0,
+                "cssl": 0.0,
+                "ir": 0.0,
+            }
         }
         flat = _compute_flat_bdi(tabela)
         assert "equipamentos" in flat
@@ -1112,7 +1133,18 @@ class TestComputeBdi:
 
     def test_compute_flat_bdi_adds_servicos_fallback_from_mao_obra(self):
         tabela = {
-            "mao_obra": {"ac": 0.05, "df": 0.02, "r": 0.0, "cr": 0.0, "l": 0.10, "cofins": 0.03, "iss": 0.05, "pis": 0.0, "cssl": 0.0, "ir": 0.0}
+            "mao_obra": {
+                "ac": 0.05,
+                "df": 0.02,
+                "r": 0.0,
+                "cr": 0.0,
+                "l": 0.10,
+                "cofins": 0.03,
+                "iss": 0.05,
+                "pis": 0.0,
+                "cssl": 0.0,
+                "ir": 0.0,
+            }
         }
         flat = _compute_flat_bdi(tabela)
         assert "servicos" in flat
@@ -1125,7 +1157,18 @@ class TestEnrichPayloadBdi:
             "skill_inputs": {
                 "06-resultado-financeiro": {
                     "tabela_bdi": {
-                        "servicos": {"ac": 0.05, "df": 0.02, "r": 0.0, "cr": 0.0, "l": 0.10, "cofins": 0.03, "iss": 0.05, "pis": 0.0, "cssl": 0.0, "ir": 0.0}
+                        "servicos": {
+                            "ac": 0.05,
+                            "df": 0.02,
+                            "r": 0.0,
+                            "cr": 0.0,
+                            "l": 0.10,
+                            "cofins": 0.03,
+                            "iss": 0.05,
+                            "pis": 0.0,
+                            "cssl": 0.0,
+                            "ir": 0.0,
+                        }
                     }
                 }
             }
@@ -1199,9 +1242,7 @@ class TestPsCreateProject:
         project.meta["id"] = "new-p1"
         project.new_version.return_value = "v1"
         project.root = MagicMock()
-        project.root.__truediv__ = lambda s, x: MagicMock(
-            **{"glob.return_value": [], "exists.return_value": False}
-        )
+        project.root.__truediv__ = lambda s, x: MagicMock(**{"glob.return_value": [], "exists.return_value": False})
         repo.create_project.return_value = project
 
         req = SimpleNamespace(
@@ -1238,9 +1279,7 @@ class TestPsCreateProject:
         project.meta["id"] = "hot-p1"
         project.new_version.return_value = "v1"
         project.root = MagicMock()
-        project.root.__truediv__ = lambda s, x: MagicMock(
-            **{"glob.return_value": [], "exists.return_value": False}
-        )
+        project.root.__truediv__ = lambda s, x: MagicMock(**{"glob.return_value": [], "exists.return_value": False})
         repo.create_project.return_value = project
 
         req = SimpleNamespace(

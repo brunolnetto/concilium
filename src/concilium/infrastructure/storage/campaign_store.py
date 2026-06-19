@@ -26,7 +26,7 @@ isso garante reprodutibilidade — cada run é auto-contido.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
@@ -46,21 +46,21 @@ class CampaignRunStore:
     """
 
     # Estrutura medalhão: inputs/ → outputs/reports/
-    CONFIG_FILE   = "inputs/campaign_config.json"
-    BUNDLE_FILE   = "outputs/bundle.json"
-    CUBE_FILE     = "outputs/cube.json"
-    REPORT_JSON   = "outputs/reports/campaign_report.json"
-    REPORT_MD     = "outputs/reports/campaign_report.md"
-    REPORT_PDF    = "outputs/reports/campaign_report.pdf"
-    META_FILE     = "meta.json"
-    CURRENT_FILE  = "current"
+    CONFIG_FILE = "inputs/campaign_config.json"
+    BUNDLE_FILE = "outputs/bundle.json"
+    CUBE_FILE = "outputs/cube.json"
+    REPORT_JSON = "outputs/reports/campaign_report.json"
+    REPORT_MD = "outputs/reports/campaign_report.md"
+    REPORT_PDF = "outputs/reports/campaign_report.pdf"
+    META_FILE = "meta.json"
+    CURRENT_FILE = "current"
 
     def __init__(
         self,
-        storage_or_project_root: "BlobStoragePort | Path | None" = None,
+        storage_or_project_root: BlobStoragePort | Path | None = None,
         prefix: str | None = None,
         *,
-        storage: "BlobStoragePort | None" = None,
+        storage: BlobStoragePort | None = None,
         project_root: Path | None = None,
     ) -> None:
         """Construtor flexível para compatibilidade com código legado e nova API.
@@ -72,7 +72,9 @@ class CampaignRunStore:
             CampaignRunStore(project_root=Path("/..."))       # legado keyword
         """
         # Resolve storage from positional or keyword arg
-        _storage = storage or (storage_or_project_root if isinstance(storage_or_project_root, BlobStoragePort) else None)
+        _storage = storage or (
+            storage_or_project_root if isinstance(storage_or_project_root, BlobStoragePort) else None
+        )
 
         if _storage is not None:
             # New API: storage + prefix
@@ -87,6 +89,7 @@ class CampaignRunStore:
                 raise ValueError("Forneça storage+prefix ou project_root como Path.")
             _path = Path(_path)
             from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
             # _path is the "project root" (e.g. projetos/AGIS).
             # campaigns live at _path/campaigns/runs/
             # We root the storage at _path.parent so that _path.name/campaigns/... works
@@ -99,7 +102,7 @@ class CampaignRunStore:
     # ── Backward-compat classmethod ──────────────────────────────────────────
 
     @classmethod
-    def from_project_root(cls, project_root: Path, slug: str | None = None) -> "CampaignRunStore":
+    def from_project_root(cls, project_root: Path, slug: str | None = None) -> CampaignRunStore:
         """Cria store usando LocalBlobStorage enraizado em *project_root*.
 
         Mantém compatibilidade com código que passa um Path diretamente.
@@ -235,7 +238,7 @@ class CampaignRunStore:
     def save_meta(self, run: str, meta: dict) -> None:
         """Persiste metadados do run (campaign_version, status, n_avaliados, gerado_em)."""
         if "gerado_em" not in meta:
-            meta = {**meta, "gerado_em": datetime.now(timezone.utc).isoformat()}
+            meta = {**meta, "gerado_em": datetime.now(UTC).isoformat()}
         self._write_json(self._run_blob(run, self.META_FILE), meta)
 
     # ── Leitura ─────────────────────────────────────────────────────────────

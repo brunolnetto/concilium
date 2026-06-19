@@ -15,13 +15,9 @@ Strategy:
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures / helpers
@@ -84,6 +80,7 @@ SAMPLE_INDIR_COR_DATA = {
 
 def _import_module():
     import concilium.application.benchmarks.charts._chart_generator_helpers_a as m
+
     return m
 
 
@@ -122,6 +119,7 @@ def _make_plt_mock():
 # 1. _load_json
 # ---------------------------------------------------------------------------
 
+
 class TestLoadJson:
     def _fn(self):
         return _import_module()._load_json
@@ -155,12 +153,14 @@ class TestLoadJson:
 # 2. _setup_matplotlib
 # ---------------------------------------------------------------------------
 
+
 class TestSetupMatplotlib:
     def test_returns_plt_object(self):
         m = _import_module()
         with patch("matplotlib.use"), patch("matplotlib.pyplot.rcParams") as mock_rc:
             mock_rc.update = MagicMock()
             import matplotlib.pyplot as real_plt
+
             result = m._setup_matplotlib()
             # Should be the real plt module (or something with rcParams)
             assert result is real_plt
@@ -172,20 +172,19 @@ class TestSetupMatplotlib:
             mock_rc.update = MagicMock()
             m._setup_matplotlib()
             import os
+
             assert os.environ.get("MPLBACKEND") == "Agg"
 
     def test_calls_matplotlib_use_agg(self):
         m = _import_module()
-        with patch("matplotlib.use") as mock_use, \
-             patch("matplotlib.pyplot.rcParams") as mock_rc:
+        with patch("matplotlib.use") as mock_use, patch("matplotlib.pyplot.rcParams") as mock_rc:
             mock_rc.update = MagicMock()
             m._setup_matplotlib()
             mock_use.assert_called_once_with("Agg")
 
     def test_calls_rcparams_update(self):
         m = _import_module()
-        with patch("matplotlib.use"), \
-             patch("matplotlib.pyplot.rcParams") as mock_rc:
+        with patch("matplotlib.use"), patch("matplotlib.pyplot.rcParams") as mock_rc:
             mock_rc.update = MagicMock()
             m._setup_matplotlib()
             mock_rc.update.assert_called_once()
@@ -197,6 +196,7 @@ class TestSetupMatplotlib:
 # ---------------------------------------------------------------------------
 # 3. _compute_times_totaux
 # ---------------------------------------------------------------------------
+
 
 class TestComputeTimesTotaux:
     def _setup(self):
@@ -218,12 +218,15 @@ class TestComputeTimesTotaux:
         m = self._setup()
         nomes_t, tot_mes, cor_b, y_t = m._compute_times_totaux(np)
         # ADM: (448861 + 268331 + 324300) / 1e3 = 1041.492
-        adm_val = (SAMPLE_TIMES_DATA[0]["custo_mo"] + SAMPLE_TIMES_DATA[0]["custo_eq"] + SAMPLE_TIMES_DATA[0]["verbas"]) / 1e3
+        adm_val = (
+            SAMPLE_TIMES_DATA[0]["custo_mo"] + SAMPLE_TIMES_DATA[0]["custo_eq"] + SAMPLE_TIMES_DATA[0]["verbas"]
+        ) / 1e3
         assert abs(tot_mes[0] - adm_val) < 1e-6
 
     def test_sazonal_teams_get_azul_claro_color(self):
         m = self._setup()
         from concilium.application.benchmarks.charts._chart_colors import _CORES
+
         nomes_t, tot_mes, cor_b, y_t = m._compute_times_totaux(np)
         # BIOLOGO is sazonal → azul_claro
         assert cor_b[2] == _CORES["azul_claro"]
@@ -231,6 +234,7 @@ class TestComputeTimesTotaux:
     def test_permanent_teams_get_azul_escuro_color(self):
         m = self._setup()
         from concilium.application.benchmarks.charts._chart_colors import _CORES
+
         nomes_t, tot_mes, cor_b, y_t = m._compute_times_totaux(np)
         # ADM is not sazonal → azul_escuro
         assert cor_b[0] == _CORES["azul_escuro"]
@@ -244,6 +248,7 @@ class TestComputeTimesTotaux:
 # ---------------------------------------------------------------------------
 # 4. _compute_perm_breakdown
 # ---------------------------------------------------------------------------
+
 
 class TestComputePermBreakdown:
     def _setup(self):
@@ -307,6 +312,7 @@ class TestComputePermBreakdown:
 # ---------------------------------------------------------------------------
 # 5. _times_build_ax0
 # ---------------------------------------------------------------------------
+
 
 class TestTimesBuildAx0:
     def _setup(self):
@@ -399,6 +405,7 @@ class TestTimesBuildAx0:
 # 6. _times_build_ax1
 # ---------------------------------------------------------------------------
 
+
 class TestTimesBuildAx1:
     def _setup(self):
         m = _import_module()
@@ -470,6 +477,7 @@ class TestTimesBuildAx1:
 # 7. _times_build_ax2
 # ---------------------------------------------------------------------------
 
+
 class TestTimesBuildAx2:
     def _setup(self):
         m = _import_module()
@@ -532,6 +540,7 @@ class TestTimesBuildAx2:
 # ---------------------------------------------------------------------------
 # 8. _chart_waterfall
 # ---------------------------------------------------------------------------
+
 
 class TestChartWaterfall:
     def test_returns_path_to_png(self, tmp_path):
@@ -614,6 +623,7 @@ class TestChartWaterfall:
 # ---------------------------------------------------------------------------
 # 9. _chart_eap_crit
 # ---------------------------------------------------------------------------
+
 
 class TestChartEapCrit:
     def _setup(self):
@@ -721,6 +731,7 @@ class TestChartEapCrit:
 # ---------------------------------------------------------------------------
 # 10. _chart_indiretos
 # ---------------------------------------------------------------------------
+
 
 class TestChartIndiretos:
     def _setup(self):
@@ -830,6 +841,7 @@ class TestChartIndiretos:
 # 11. _chart_times
 # ---------------------------------------------------------------------------
 
+
 class TestChartTimes:
     def _setup(self):
         m = _import_module()
@@ -891,6 +903,7 @@ class TestChartTimes:
 # ---------------------------------------------------------------------------
 # 12. _chart_plan_space
 # ---------------------------------------------------------------------------
+
 
 class TestChartPlanSpace:
     def _setup(self):
@@ -1030,6 +1043,7 @@ class TestChartPlanSpace:
 # 13. Edge-case / integration tests
 # ---------------------------------------------------------------------------
 
+
 class TestComputeTimesTotauxSingleSazonal:
     """Edge case: all teams are sazonal."""
 
@@ -1039,6 +1053,7 @@ class TestComputeTimesTotauxSingleSazonal:
             {"nome": "X", "pessoas": 1, "custo_mo": 5000, "custo_eq": 0, "verbas": 0, "perm": 3.0, "sazonal": True},
         ]
         from concilium.application.benchmarks.charts._chart_colors import _CORES
+
         nomes_t, tot_mes, cor_b, y_t = m._compute_times_totaux(np)
         assert cor_b[0] == _CORES["azul_claro"]
 

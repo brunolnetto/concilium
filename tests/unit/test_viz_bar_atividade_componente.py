@@ -32,8 +32,10 @@ _INIT_MLP_PATCH = f"{_MOD}.init_mpl"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _import_module():
     import importlib
+
     return importlib.import_module(_MOD)
 
 
@@ -78,6 +80,7 @@ def _multi_abc_rows():
 # 1. build() early-return paths
 # ---------------------------------------------------------------------------
 
+
 class TestBuildEarlyReturns:
     def test_build_payload_raises_returns_none(self):
         """build_payload raises → build() returns None."""
@@ -112,13 +115,13 @@ class TestBuildEarlyReturns:
 # 2. build() happy path
 # ---------------------------------------------------------------------------
 
+
 class TestBuildHappyPath:
     def test_returns_bytes(self):
         """Valid rows → build() returns bytes."""
         mod = _import_module()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}), \
-             _patched_init_mpl(mock_plt):
+        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}), _patched_init_mpl(mock_plt):
             result = mod.build(MagicMock(), MagicMock())
         assert result == b"PNG"
 
@@ -126,8 +129,7 @@ class TestBuildHappyPath:
         """Multiple activities spanning ABC classes → build() returns bytes."""
         mod = _import_module()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _multi_abc_rows()}), \
-             _patched_init_mpl(mock_plt):
+        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _multi_abc_rows()}), _patched_init_mpl(mock_plt):
             result = mod.build(MagicMock(), MagicMock())
         assert result == b"PNG"
 
@@ -137,8 +139,7 @@ class TestBuildHappyPath:
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
         # Make subplots raise so _render returns None via exception path in build
         mock_plt.subplots.side_effect = RuntimeError("render fail")
-        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}), \
-             _patched_init_mpl(mock_plt):
+        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}), _patched_init_mpl(mock_plt):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
 
@@ -147,24 +148,30 @@ class TestBuildHappyPath:
 # 3. build() exception in plotting block
 # ---------------------------------------------------------------------------
 
+
 class TestBuildExceptionPath:
     def test_init_mpl_raises_returns_none(self):
         """init_mpl raises ImportError → build() returns None."""
         mod = _import_module()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}), \
-             patch(_INIT_MLP_PATCH, side_effect=ImportError("no matplotlib")):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}),
+            patch(_INIT_MLP_PATCH, side_effect=ImportError("no matplotlib")),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
 
     def test_fig_to_bytes_raises_returns_none(self):
         """fig_to_bytes raises → build() except block returns None."""
+
         def bad_fig_to_bytes(fig):
             raise OSError("disk full")
 
         mod = _import_module()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}), \
-             patch(_INIT_MLP_PATCH, return_value=(mock_plt, bad_fig_to_bytes)):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}),
+            patch(_INIT_MLP_PATCH, return_value=(mock_plt, bad_fig_to_bytes)),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
 
@@ -173,14 +180,17 @@ class TestBuildExceptionPath:
 # 4. _render() direct tests — use real Agg matplotlib for real execution
 # ---------------------------------------------------------------------------
 
+
 class TestRenderDirect:
     """Call _render directly with real matplotlib Agg so all lines execute."""
 
     @pytest.fixture(autouse=True)
     def _setup_agg(self):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         self.plt = plt
         yield
         plt.close("all")
@@ -316,11 +326,13 @@ class TestRenderDirect:
         # Create 20 activities
         rows = []
         for i in range(20):
-            rows.append({
-                "atividade_id": f"act{i}",
-                "componente_bdi": "Custo operacional",
-                "valor_rs": float((20 - i) * 1_000_000),
-            })
+            rows.append(
+                {
+                    "atividade_id": f"act{i}",
+                    "componente_bdi": "Custo operacional",
+                    "valor_rs": float((20 - i) * 1_000_000),
+                }
+            )
         fig = mod._render(self.plt, rows)
         assert fig is not None
         self.plt.close(fig)
@@ -337,6 +349,7 @@ class TestRenderDirect:
     def test_render_tight_layout_warning_suppressed(self):
         """tight_layout is called inside warnings.catch_warnings context (no crash)."""
         import warnings
+
         mod = _import_module()
         rows = _minimal_rows()
         # Should not emit any UserWarning to the test
@@ -369,15 +382,18 @@ class TestRenderDirect:
 # 5. build() with real Agg rendering (integration-style, no mocks)
 # ---------------------------------------------------------------------------
 
+
 class TestBuildWithRealRendering:
     """Use real matplotlib Agg but mock build_payload and init_mpl returns real plt."""
 
     def test_build_returns_bytes_with_real_render(self):
         """Patch build_payload but use real init_mpl so _render runs on real figure."""
         import matplotlib
+
         matplotlib.use("Agg")
-        import matplotlib.pyplot as _plt
         import io
+
+        import matplotlib.pyplot as _plt
 
         def _real_fig_to_bytes(fig) -> bytes:
             buf = io.BytesIO()
@@ -387,8 +403,10 @@ class TestBuildWithRealRendering:
             return buf.read()
 
         mod = _import_module()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}), \
-             patch(_INIT_MLP_PATCH, return_value=(_plt, _real_fig_to_bytes)):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _minimal_rows()}),
+            patch(_INIT_MLP_PATCH, return_value=(_plt, _real_fig_to_bytes)),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert isinstance(result, bytes)
         assert len(result) > 0
@@ -396,9 +414,11 @@ class TestBuildWithRealRendering:
     def test_build_multi_abc_real_render_returns_bytes(self):
         """Multi-activity real render produces bytes."""
         import matplotlib
+
         matplotlib.use("Agg")
-        import matplotlib.pyplot as _plt
         import io
+
+        import matplotlib.pyplot as _plt
 
         def _real_fig_to_bytes(fig) -> bytes:
             buf = io.BytesIO()
@@ -408,8 +428,10 @@ class TestBuildWithRealRendering:
             return buf.read()
 
         mod = _import_module()
-        with patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _multi_abc_rows()}), \
-             patch(_INIT_MLP_PATCH, return_value=(_plt, _real_fig_to_bytes)):
+        with (
+            patch(_BUILD_PAYLOAD_PATCH, return_value={"rows": _multi_abc_rows()}),
+            patch(_INIT_MLP_PATCH, return_value=(_plt, _real_fig_to_bytes)),
+        ):
             result = mod.build(MagicMock(), MagicMock())
         assert isinstance(result, bytes)
         assert len(result) > 0

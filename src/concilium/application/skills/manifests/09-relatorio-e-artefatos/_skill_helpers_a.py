@@ -323,9 +323,23 @@ def _bgs_accumulate_week(
             equip_by_id[eid][wk] = equip_by_id[eid].get(wk, 0.0) + (n / min_units) * float(e.num_unidades or 0.0)
     if mo_by_funcao is not None:
         for f in eq.funcoes:
-            fid = f.descricao or f.funcao_id or "?"
+            fid = _bgs_normalize_funcao_label(f.descricao or f.funcao_id or "?")
             mo_by_funcao.setdefault(fid, {})
             mo_by_funcao[fid][wk] = mo_by_funcao[fid].get(wk, 0.0) + (n / min_units) * float(f.num_pessoas or 0.0)
+
+
+def _bgs_normalize_funcao_label(label: str) -> str:
+    """Agrupa variantes diurno/noturno sob a função-base para leitura operacional."""
+    txt = str(label or "?").strip()
+    if not txt:
+        return "?"
+    if "(" not in txt or not txt.endswith(")"):
+        return txt
+    base, _, suffix = txt.rpartition("(")
+    suffix_norm = suffix[:-1].strip().lower()
+    if suffix_norm.startswith("diurno") or suffix_norm.startswith("noturno"):
+        return base.rstrip(" ,-—")
+    return txt
 
 
 def _bgs_build_graficos_dict(

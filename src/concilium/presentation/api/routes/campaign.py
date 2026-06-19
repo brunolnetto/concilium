@@ -9,6 +9,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from concilium.application.services.concilium_service import ConciliumService
+from concilium.domain.constants import META_MARGEM_PADRAO, TOLERANCIA_MARGEM_PADRAO
 from concilium.presentation.api.container import get_concilium_service
 
 router = APIRouter(prefix="/api/projects", tags=["projects - campaign"])
@@ -159,8 +160,8 @@ def run_campaign(
     # Build bundle
     perf_raw = cfg.get("perfil_expectativas") or {}
     perfil = PerfilExpectativas(
-        meta_margem_pct=perf_raw.get("meta_margem_pct", 0.10),
-        tolerancia_margem=perf_raw.get("tolerancia_margem", 0.03),
+        meta_margem_pct=perf_raw.get("meta_margem_pct", META_MARGEM_PADRAO),
+        tolerancia_margem=perf_raw.get("tolerancia_margem", TOLERANCIA_MARGEM_PADRAO),
         prazo_contratual_semanas=perf_raw.get("prazo_contratual_semanas"),
     )
     sweep = [ParametroSweep(campo=s["campo"], valores=s["valores"]) for s in (cfg.get("sweep") or [])]

@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 from datetime import date
 from typing import Any
+
 from concilium.domain.models.canonical import CanonicalModel
+
 from .styles import MESES_PT
 
 

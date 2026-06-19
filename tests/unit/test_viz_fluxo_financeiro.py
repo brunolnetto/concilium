@@ -13,9 +13,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -28,8 +25,10 @@ _INIT_MLP_PATCH = f"{_MOD}.init_mpl"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _import_fn():
     import importlib
+
     mod = importlib.import_module(_MOD)
     return mod.build_fluxo_financeiro
 
@@ -83,6 +82,7 @@ def _minimal_financeiro(**kwargs):
 # 1. Early-return paths
 # ---------------------------------------------------------------------------
 
+
 class TestEarlyReturns:
     def test_not_a_dict_returns_none(self):
         """financeiro is not a dict → return None immediately."""
@@ -129,6 +129,7 @@ class TestEarlyReturns:
 # ---------------------------------------------------------------------------
 # 2. Happy path with receita and saldo
 # ---------------------------------------------------------------------------
+
 
 class TestHappyPathWithReceita:
     def test_returns_bytes(self):
@@ -183,6 +184,7 @@ class TestHappyPathWithReceita:
 # ---------------------------------------------------------------------------
 # 3. Break-even (saldo_acum) path — negative before positive
 # ---------------------------------------------------------------------------
+
 
 class TestBreakEvenSaldoAcum:
     def test_breakeven_line_drawn_when_saldo_turns_positive(self):
@@ -240,6 +242,7 @@ class TestBreakEvenSaldoAcum:
 # 4. be_idx (receita >= despesa break-even) path
 # ---------------------------------------------------------------------------
 
+
 class TestBeIdx:
     def test_be_idx_axvline_and_annotate_called(self):
         """When receita_acum >= despesa_acum at some point → ax2.axvline + ax2.annotate called."""
@@ -277,6 +280,7 @@ class TestBeIdx:
 # 5. No receita path — ax_saldo and ax2 set_visible(False)
 # ---------------------------------------------------------------------------
 
+
 class TestNoReceita:
     def test_no_receita_hides_ax_saldo_and_ax2(self):
         """When receita key is absent (empty list) → ax_saldo and ax2 set_visible(False)."""
@@ -313,6 +317,7 @@ class TestNoReceita:
 # 6. Exception inside plotting block → returns None
 # ---------------------------------------------------------------------------
 
+
 class TestExceptionPath:
     def test_subplots_raises_returns_none(self):
         """When plt.subplots raises, the except block catches it and returns None."""
@@ -325,6 +330,7 @@ class TestExceptionPath:
 
     def test_fig_to_bytes_raises_returns_none(self):
         """When fig_to_bytes raises, the except block catches it and returns None."""
+
         def _bad_fig_to_bytes(fig):
             raise OSError("disk full")
 
@@ -347,6 +353,7 @@ class TestExceptionPath:
 # ---------------------------------------------------------------------------
 # 7. Negative saldo values affect bar colors
 # ---------------------------------------------------------------------------
+
 
 class TestBarColors:
     def test_negative_saldo_values_use_red_color(self):
@@ -387,6 +394,7 @@ class TestBarColors:
 # 8. Labels with only one period
 # ---------------------------------------------------------------------------
 
+
 class TestSinglePeriod:
     def test_single_period_returns_bytes(self):
         """Single period should work without list index errors."""
@@ -405,6 +413,7 @@ class TestSinglePeriod:
 # ---------------------------------------------------------------------------
 # 9. fig.suptitle and tight_layout are called
 # ---------------------------------------------------------------------------
+
 
 class TestFigSuptitle:
     def test_fig_suptitle_called(self):

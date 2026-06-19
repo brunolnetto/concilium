@@ -5,15 +5,12 @@ All functions are pure transformations on plain dicts — no mocks needed.
 
 from __future__ import annotations
 
-import pytest
-
 from concilium.application.benchmarks.input_derivation.week_mapper import (
     build_numeric_to_iso_map,
     is_numeric_week_scheme,
     normalize_referencia_weeks,
     remap_activity_semanas,
 )
-
 
 # ---------------------------------------------------------------------------
 # is_numeric_week_scheme

@@ -1,0 +1,252 @@
+{
+  "slug": "SERRA_VERDE",
+  "meta": {
+    "projeto": "Serra Verde - Empilhamento de Rejeito Filtrado (Minaçu, GO)",
+    "data_inicio": "2026-08-03",
+    "data_termino": "2028-07-30",
+    "localizacao": {
+      "lat": -13.5311,
+      "lng": -48.2262
+    },
+    "regime_trabalho": {
+      "horas_dia": 12,
+      "dias_semana": 7
+    },
+    "mode": "benchmark_config"
+  },
+  "spec": {
+    "eap": [
+      {
+        "item_id": "eap-1_0",
+        "cpu_id": "CPU-REJEITO-COMP-EQ1",
+        "quantitativo": 623587.55,
+        "predecessores": [],
+        "descricao": "1ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      },
+      {
+        "item_id": "eap-1_1",
+        "cpu_id": "CPU-REJEITO-COMP-EQ2",
+        "quantitativo": 2196862.84,
+        "predecessores": [
+          {
+            "item_id": "eap-1_0",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "descricao": "2ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      },
+      {
+        "item_id": "eap-1_2",
+        "cpu_id": "CPU-REJEITO-COMP-EQ3",
+        "quantitativo": 5575545.70,
+        "predecessores": [
+          {
+            "item_id": "eap-1_1",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "descricao": "3ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      },
+      {
+        "item_id": "eap-1_3",
+        "cpu_id": "CPU-REJEITO-COMP-EQ4",
+        "quantitativo": 7201823.98,
+        "predecessores": [
+          {
+            "item_id": "eap-1_2",
+            "tipo": "FS",
+            "lag": 0,
+            "completion_threshold_pct": 1.0
+          }
+        ],
+        "descricao": "4ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      }
+    ],
+    "cronograma": [
+      {
+        "item_id": "eap-1_0",
+        "equipes": {
+          "n_inicial": 3,
+          "n_max": 3,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "1ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      },
+      {
+        "item_id": "eap-1_1",
+        "equipes": {
+          "n_inicial": 6,
+          "n_max": 6,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "2ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      },
+      {
+        "item_id": "eap-1_2",
+        "equipes": {
+          "n_inicial": 8,
+          "n_max": 8,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "3ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      },
+      {
+        "item_id": "eap-1_3",
+        "equipes": {
+          "n_inicial": 9,
+          "n_max": 9,
+          "taxa_mobilizacao": 0.0,
+          "taxa_desmobilizacao": 0.0
+        },
+        "descricao": "4ª EQUIPE - Recebimento, espalhamento, compactação",
+        "unidade": "m3"
+      }
+    ],
+    "bdi": {
+      "mao_obra": {
+        "ac": 0.04,
+        "df": 0.01,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.10,
+        "cofins": 0.03,
+        "iss": 0.05,
+        "pis": 0.0065,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "material": {
+        "ac": 0.04,
+        "df": 0.01,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.10,
+        "cofins": 0.03,
+        "iss": 0.05,
+        "pis": 0.0065,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "servicos": {
+        "ac": 0.04,
+        "df": 0.01,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.10,
+        "cofins": 0.03,
+        "iss": 0.05,
+        "pis": 0.0065,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "indireto": {
+        "ac": 0.04,
+        "df": 0.01,
+        "r": 0.01,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.03,
+        "iss": 0.05,
+        "pis": 0.0065,
+        "cssl": 0.0199,
+        "ir": 0.0274
+      },
+      "diesel": {
+        "ac": 0.0,
+        "df": 0.0,
+        "r": 0.0,
+        "cr": 0.0,
+        "lucro": 0.04,
+        "cofins": 0.0,
+        "iss": 0.0,
+        "pis": 0.0,
+        "cssl": 0.0,
+        "ir": 0.0
+      }
+    },
+    "indiretos": [
+      {
+        "categoria": "ADM",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 1996344.75,
+        "mao_obra": [
+          {"codigo": "P0013", "funcao": "ADMINISTRATIVO",                    "quantidade": 1, "salario_base": 9000.0,   "custo_unitario": 10800.0,  "tipo_contratacao": "PJ"},
+          {"codigo": "P0068", "funcao": "AUXILIAR ADMINISTRATIVO DE OBRAS II","quantidade": 1, "salario_base": 2525.77, "custo_unitario": 5866.49},
+          {"codigo": "P0003", "funcao": "ALMOXARIFE",                         "quantidade": 1, "salario_base": 2805.60, "custo_unitario": 7446.27},
+          {"codigo": "P0027", "funcao": "GERENTE DE CONTRATO",                "quantidade": 1, "salario_base": 30000.0, "custo_unitario": 31800.0,  "tipo_contratacao": "PJ"},
+          {"codigo": "P0018", "funcao": "ENCARREGADO GERAL",                  "quantidade": 1, "salario_base": 15000.0, "custo_unitario": 16800.0,  "tipo_contratacao": "PJ"},
+          {"codigo": "P0073", "funcao": "MECÂNICO",                           "quantidade": 4, "salario_base": 6000.0,  "custo_unitario": 7800.0,   "tipo_contratacao": "PJ"},
+          {"codigo": "P0011", "funcao": "AUXILIAR MECÂNICO",                  "quantidade": 4, "salario_base": 2374.20, "custo_unitario": 5622.46},
+          {"codigo": "P0072", "funcao": "APONTADOR",                          "quantidade": 2, "salario_base": 2305.60, "custo_unitario": 7175.02},
+          {"codigo": "P0063", "funcao": "AUXILIAR DE SERVIÇOS GERAIS",        "quantidade": 5, "salario_base": 1874.20, "custo_unitario": 6306.83},
+          {"codigo": "P0036", "funcao": "MOTORISTA DE ÔNIBUS",                "quantidade": 6, "salario_base": 3305.60, "custo_unitario": 9187.52},
+          {"codigo": "P0033", "funcao": "MOTORISTA DE CAMINHÃO PIPA",         "quantidade": 1, "salario_base": 3305.60, "custo_unitario": 9187.52},
+          {"codigo": "P0034", "funcao": "MOTORISTA DE CAMINHÃO COMBOIO",      "quantidade": 1, "salario_base": 3305.60, "custo_unitario": 9187.52}
+        ]
+      },
+      {
+        "categoria": "TOP",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 63781.27,
+        "mao_obra": [
+          {"codigo": "P0057", "funcao": "TOPÓGRAFO",              "quantidade": 1, "salario_base": 16000.0, "custo_unitario": 17800.0, "tipo_contratacao": "PJ"},
+          {"codigo": "P0010", "funcao": "AUXILIAR DE TOPOGRAFIA", "quantidade": 1, "salario_base": 2805.60, "custo_unitario": 8181.27},
+          {"codigo": "P0058", "funcao": "SALA TÉCNICA",           "quantidade": 1, "salario_base": 12000.0, "custo_unitario": 13800.0, "tipo_contratacao": "PJ"}
+        ]
+      },
+      {
+        "categoria": "LAB",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 257439.33,
+        "mao_obra": [
+          {"codigo": "P0030", "funcao": "LABORATORISTA",          "quantidade": 1, "salario_base": 9000.0,  "custo_unitario": 11535.0, "tipo_contratacao": "PJ"},
+          {"codigo": "P0009", "funcao": "AUXILIAR DE LABORATÓRIO","quantidade": 1, "salario_base": 1674.20, "custo_unitario": 5904.33}
+        ]
+      },
+      {
+        "categoria": "QSMS",
+        "driver": "mensal",
+        "custo_fixo_mensal_total": 77000.0,
+        "mao_obra": [
+          {"codigo": "P0056", "funcao": "TÉCNICO DE SEGURANÇA (DIURNO)", "quantidade": 2, "salario_base": 7500.0,  "custo_unitario": 9300.0,  "tipo_contratacao": "PJ"},
+          {"codigo": "P0056", "funcao": "TÉCNICO DE SEGURANÇA (NOTURNO)","quantidade": 2, "salario_base": 7500.0,  "custo_unitario": 9300.0,  "tipo_contratacao": "PJ"},
+          {"codigo": "P0093", "funcao": "GERENTE DE QSMS",               "quantidade": 1, "salario_base": 14000.0, "custo_unitario": 15800.0, "tipo_contratacao": "PJ"}
+        ]
+      },
+      {
+        "categoria": "MOB",
+        "driver": "projeto",
+        "custo_fixo_total": 10689489.96,
+        "mao_obra": [],
+        "detalhamento": {
+          "equipamentos": {"quantidade_mob": 33, "custo_km": 13.0, "distancia_km": 500.0, "subtotal": 442000.0},
+          "pessoal":      {"quantidade_pessoas": 126, "custo_por_pessoa": 800.0, "subtotal": 202240.0},
+          "verbas":       {"subtotal": 10045249.96, "itens": []}
+        }
+      }
+    ]
+  },
+  "resultado": {
+    "benchmark_confronto_referencia": {
+      "custo_direto": 54023177.36,
+      "custo_indireto": 68159058.19,
+      "custo_total": 122182235.54,
+      "preco_venda": 159555446.25
+    }
+  },
+  "_schema_version": "1.0"
+}

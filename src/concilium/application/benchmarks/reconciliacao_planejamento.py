@@ -185,10 +185,10 @@ class ReconciliadorPlanejamento:
         """Agrupa dados do canonical por item."""
         # Diretos
         for eq in self.canonical.equipes_diretas:
-            analise.canonical_direto[eq.item_id] = analise.canonical_direto.get(eq.item_id, 0.0) + eq.custo_total * max(
-                1, getattr(eq, "num_equipes_base", 1) or 1
-            )
-            analise.total_canonical_direto += eq.custo_total * max(1, getattr(eq, "num_equipes_base", 1) or 1)
+            _neb = getattr(eq, "num_equipes_base", None)
+            n_base = max(1, _neb if _neb is not None else 1)
+            analise.canonical_direto[eq.item_id] = analise.canonical_direto.get(eq.item_id, 0.0) + eq.custo_total * n_base
+            analise.total_canonical_direto += eq.custo_total * n_base
 
         # Indiretos (do resultado)
         if self.canonical.resultado:

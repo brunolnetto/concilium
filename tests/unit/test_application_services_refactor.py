@@ -5,8 +5,8 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="fastapi não instalado — pule este módulo de teste")
 from fastapi.testclient import TestClient  # noqa: E402
 
-from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.pipeline_service import PipelineService
+from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.project.project_service import ProjectService
 from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
 from concilium.presentation.api.app import create_app

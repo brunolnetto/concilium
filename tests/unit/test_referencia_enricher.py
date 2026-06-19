@@ -88,13 +88,7 @@ class TestEnrichEapWithProdutividade:
     def test_valid_file_enriches_item(self, tmp_path):
         path = tmp_path / "produtividade.txt"
         # 4 header rows + 1 data row
-        content = (
-            "header1\n"
-            "header2\n"
-            "header3\n"
-            "header4\n"
-            "2.1\tEscavação\tM3\t1.234,56\n"
-        )
+        content = "header1\nheader2\nheader3\nheader4\n2.1\tEscavação\tM3\t1.234,56\n"
         path.write_text(content, encoding="utf-8")
 
         items = [_make_eap_item(item_id="2.1")]
@@ -196,8 +190,7 @@ class TestEnrichReferenciaWithEap:
 
         item = _make_eap_item(item_id="2.1")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-ESCA-001")
 
@@ -218,8 +211,7 @@ class TestEnrichReferenciaWithEap:
 
         item = _make_eap_item(item_id="2.1")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper()
 
@@ -244,8 +236,7 @@ class TestEnrichReferenciaWithEap:
         }
         item = _make_eap_item(item_id="2.1")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper()
 
@@ -262,8 +253,7 @@ class TestEnrichReferenciaWithEap:
         item = _make_eap_item(item_id="2.1")
         project_meta = {"cliente": "VALE", "data_inicio": "2024-01-01"}
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper()
 
@@ -276,8 +266,7 @@ class TestEnrichReferenciaWithEap:
         cronograma_path = tmp_path / "cronograma.txt"
         cronograma_path.write_text("dummy", encoding="utf-8")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper"):
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper"):
             MockParser.return_value = self._mock_parser([])
             result = enrich_referencia_with_eap({}, cronograma_path)
 
@@ -290,8 +279,10 @@ class TestEnrichReferenciaWithEap:
 
         item = _make_eap_item(item_id="2.1", cpu_id="CPU-UNKNOWN")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper", side_effect=Exception("catalog unavailable")):
+        with (
+            patch(f"{MODULE}.CronogramaParser") as MockParser,
+            patch(f"{MODULE}.CpuMapper", side_effect=Exception("catalog unavailable")),
+        ):
             MockParser.return_value = self._mock_parser([item])
             result = enrich_referencia_with_eap({}, cronograma_path)
 
@@ -305,8 +296,7 @@ class TestEnrichReferenciaWithEap:
 
         item = _make_eap_item(item_id="4.2", cpu_id="CPU-UNKNOWN")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-ESCA-REAL-001")
 
@@ -320,8 +310,7 @@ class TestEnrichReferenciaWithEap:
 
         item = _make_eap_item(item_id="3.5", cpu_id="CPU-UNKNOWN")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu=None)
 
@@ -336,8 +325,7 @@ class TestEnrichReferenciaWithEap:
 
         item = _make_eap_item(item_id="2.1", cpu_id="CPU-ALREADY-SET")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             mock_mapper = self._mock_mapper()
             MockMapper.return_value = mock_mapper
@@ -355,8 +343,7 @@ class TestEnrichReferenciaWithEap:
         item = _make_eap_item(item_id="2.1")
         item["producao_horaria"] = 25.0
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-X")
 
@@ -374,8 +361,7 @@ class TestEnrichReferenciaWithEap:
             _make_eap_item(item_id="1.3"),
         ]
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser(items)
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-MOB-001")
 
@@ -390,8 +376,7 @@ class TestEnrichReferenciaWithEap:
 
         item = _make_eap_item(item_id="2.1")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-X")
 
@@ -410,8 +395,7 @@ class TestEnrichReferenciaWithEap:
         referencia = {"spec": {"rcpsp_spec": {"existing": True}}}
         item = _make_eap_item(item_id="2.1")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-X")
 
@@ -427,8 +411,7 @@ class TestEnrichReferenciaWithEap:
 
         stats = {"total_items_processed": 5, "successfully_mapped": 4, "success_rate": 80.0}
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-X", stats=stats)
 
@@ -444,8 +427,7 @@ class TestEnrichReferenciaWithEap:
         item = _make_eap_item(item_id="2.1")
         stats = {"total_items_processed": 0, "successfully_mapped": 0, "success_rate": 0.0}
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-X", stats=stats)
 
@@ -469,8 +451,7 @@ class TestEnrichReferenciaWithEap:
         item = _make_eap_item(item_id="2.1")
         item["producao_horaria"] = 0.0
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser([item])
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-X")
 
@@ -483,12 +464,11 @@ class TestEnrichReferenciaWithEap:
         cronograma_path.write_text("dummy", encoding="utf-8")
 
         items = [
-            _make_eap_item(item_id="2"),   # no dot — section header
+            _make_eap_item(item_id="2"),  # no dot — section header
             _make_eap_item(item_id="2.1"),
         ]
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = self._mock_parser(items)
             MockMapper.return_value = self._mock_mapper(mapped_cpu="CPU-X")
 
@@ -553,18 +533,24 @@ class TestExtractEapFromCpusTxt:
         assert result == []
 
     def test_duplicate_ids_deduplicated(self, tmp_path):
-        path = self._write_cpus_txt(tmp_path, [
-            "2.1\tFirst\tM3\t100",
-            "2.1\tSecond\tM3\t200",
-        ])
+        path = self._write_cpus_txt(
+            tmp_path,
+            [
+                "2.1\tFirst\tM3\t100",
+                "2.1\tSecond\tM3\t200",
+            ],
+        )
         result = _extract_eap_from_cpus_txt(path)
         assert len(result) == 1
 
     def test_predecessor_inferred_for_sequential_items(self, tmp_path):
-        path = self._write_cpus_txt(tmp_path, [
-            "2.1\tFirst\tM3\t100",
-            "2.2\tSecond\tM3\t200",
-        ])
+        path = self._write_cpus_txt(
+            tmp_path,
+            [
+                "2.1\tFirst\tM3\t100",
+                "2.2\tSecond\tM3\t200",
+            ],
+        )
         result = _extract_eap_from_cpus_txt(path)
         assert len(result) == 2
         # 2.2 should have 2.1 as predecessor
@@ -577,11 +563,14 @@ class TestExtractEapFromCpusTxt:
         assert result[0]["predecessores"] == []
 
     def test_ordem_increments(self, tmp_path):
-        path = self._write_cpus_txt(tmp_path, [
-            "1.1\tA\tM3\t10",
-            "1.2\tB\tM3\t20",
-            "1.3\tC\tM3\t30",
-        ])
+        path = self._write_cpus_txt(
+            tmp_path,
+            [
+                "1.1\tA\tM3\t10",
+                "1.2\tB\tM3\t20",
+                "1.3\tC\tM3\t30",
+            ],
+        )
         result = _extract_eap_from_cpus_txt(path)
         assert [r["ordem"] for r in result] == [1, 2, 3]
 
@@ -607,10 +596,13 @@ class TestExtractEapFromCpusTxt:
         assert result == []
 
     def test_predecessor_type_is_FS(self, tmp_path):
-        path = self._write_cpus_txt(tmp_path, [
-            "4.1\tFirst\tM3\t100",
-            "4.2\tSecond\tM3\t200",
-        ])
+        path = self._write_cpus_txt(
+            tmp_path,
+            [
+                "4.1\tFirst\tM3\t100",
+                "4.2\tSecond\tM3\t200",
+            ],
+        )
         result = _extract_eap_from_cpus_txt(path)
         pred = result[1]["predecessores"][0]
         assert pred["tipo"] == "FS"
@@ -652,13 +644,14 @@ class TestEnrichBenchmarkReferencia:
 
         item = _make_eap_item(item_id="2.1")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper") as MockMapper:
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper") as MockMapper:
             MockParser.return_value = MagicMock(parse_file=MagicMock(return_value=[item]))
             mock_m = MagicMock()
             mock_m.map_item_to_cpu.return_value = "CPU-X"
             mock_m.get_mapping_stats.return_value = {
-                "total_items_processed": 1, "successfully_mapped": 1, "success_rate": 100.0
+                "total_items_processed": 1,
+                "successfully_mapped": 1,
+                "success_rate": 100.0,
             }
             MockMapper.return_value = mock_m
 
@@ -696,8 +689,7 @@ class TestEnrichBenchmarkReferencia:
         cpus_path = artifacts_raw / "cpus.txt"
         cpus_path.write_text("3.1\tLimpeza\tM2\t500", encoding="utf-8")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper"):
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper"):
             MockParser.return_value = MagicMock(parse_file=MagicMock(side_effect=RuntimeError("parse fail")))
 
             result = enrich_benchmark_referencia(benchmark_dir)
@@ -757,8 +749,7 @@ class TestEnrichBenchmarkReferencia:
         cpus_path = artifacts_raw / "cpus.txt"
         cpus_path.write_text("2.1\tEscav\tM3\t100", encoding="utf-8")
 
-        with patch(f"{MODULE}.CronogramaParser") as MockParser, \
-             patch(f"{MODULE}.CpuMapper"):
+        with patch(f"{MODULE}.CronogramaParser") as MockParser, patch(f"{MODULE}.CpuMapper"):
             # parse_file returns empty list -> warning printed, returns early
             MockParser.return_value = MagicMock(parse_file=MagicMock(return_value=[]))
 
@@ -824,7 +815,7 @@ class TestEnrichEapWithProdutividadeEmptyLineAfterHeaders:
             "h2\n"
             "h3\n"
             "h4\n"
-            "\n"            # empty data line — hits line 48
+            "\n"  # empty data line — hits line 48
             "2.1\tItem\tM3\t30,00\n"
         )
         path.write_text(content, encoding="utf-8")

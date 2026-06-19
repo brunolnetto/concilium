@@ -22,9 +22,7 @@ Covers:
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from unittest.mock import MagicMock, call
-
-import pytest
+from unittest.mock import MagicMock
 
 from concilium.application.skills import load_skill_stage
 from concilium.application.skills.base import SkillResult
@@ -100,7 +98,7 @@ class _PatchSkill:
         self._orig_exp = None
         self._orig_ass = None
 
-    def __enter__(self) -> "_PatchSkill":
+    def __enter__(self) -> _PatchSkill:
         self._orig_exp = _SKILL_GLOBALS["run_explorador_cenarios"]
         self._orig_ass = _SKILL_GLOBALS["run_assessor_replanejamento"]
         _SKILL_GLOBALS["run_explorador_cenarios"] = self._mock_exp

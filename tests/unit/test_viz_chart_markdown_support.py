@@ -1,6 +1,5 @@
 """Tests for chart_markdown_support module — covers all missing lines."""
 
-import pytest
 from concilium.application.runtime.deliverables.visualizations.chart_markdown_support import (
     _append_histogram,
     _gantt_block,
@@ -13,7 +12,6 @@ from concilium.application.runtime.deliverables.visualizations.chart_markdown_su
     render_chart_markdown_sections,
     weekly_to_monthly_labels,
 )
-
 
 # ---------------------------------------------------------------------------
 # _is_nullish — line 12
@@ -203,7 +201,9 @@ def test_gantt_block_skips_task_without_start():
     ]
     result = _gantt_block("G", tasks)
     assert result is not None
-    lines_with_tasks = [l for l in result if "task" in l.lower() and "datef" not in l.lower() and "axisf" not in l.lower()]
+    lines_with_tasks = [
+        l for l in result if "task" in l.lower() and "datef" not in l.lower() and "axisf" not in l.lower()
+    ]
     # Only the second task should appear
     assert any("OK Task" in l for l in result)
     assert not any("No Start" in l for l in result)
@@ -395,11 +395,7 @@ def test_render_chart_markdown_sections_with_mao_obra():
 
 
 def test_render_chart_markdown_sections_with_cronograma():
-    graficos = {
-        "cronograma": {
-            "tasks": [{"name": "T1", "start": "2024-01-01", "duration_days": 7}]
-        }
-    }
+    graficos = {"cronograma": {"tasks": [{"name": "T1", "start": "2024-01-01", "duration_days": 7}]}}
     result = render_chart_markdown_sections(graficos)
     assert any("Cronograma" in l for l in result)
 
@@ -434,9 +430,7 @@ def test_build_chart_markdown_docs_empty():
 
 
 def test_build_chart_markdown_docs_with_equipamentos():
-    graficos = {
-        "equipamentos": {"labels": ["2024-W01", "2024-W02"], "values": [10, 20]}
-    }
+    graficos = {"equipamentos": {"labels": ["2024-W01", "2024-W02"], "values": [10, 20]}}
     result = build_chart_markdown_docs(graficos)
     assert "grafico_equipamentos.md" in result
     assert "```mermaid" in result["grafico_equipamentos.md"]
@@ -450,20 +444,14 @@ def test_build_chart_markdown_docs_without_equipamentos_no_key():
 
 
 def test_build_chart_markdown_docs_with_mao_obra():
-    graficos = {
-        "mao_obra": {"labels": ["2024-W01"], "values": [3]}
-    }
+    graficos = {"mao_obra": {"labels": ["2024-W01"], "values": [3]}}
     result = build_chart_markdown_docs(graficos)
     assert "grafico_mao_obra.md" in result
     assert "Mao de Obra" in result["grafico_mao_obra.md"]
 
 
 def test_build_chart_markdown_docs_with_cronograma():
-    graficos = {
-        "cronograma": {
-            "tasks": [{"name": "T1", "start": "2024-01-01", "duration_days": 5}]
-        }
-    }
+    graficos = {"cronograma": {"tasks": [{"name": "T1", "start": "2024-01-01", "duration_days": 5}]}}
     result = build_chart_markdown_docs(graficos)
     assert "grafico_cronograma.md" in result
     assert "gantt" in result["grafico_cronograma.md"]
@@ -506,9 +494,7 @@ def test_build_chart_markdown_docs_all_sections():
     graficos = {
         "equipamentos": {"labels": ["2024-W01"], "values": [5]},
         "mao_obra": {"labels": ["2024-W02"], "values": [2]},
-        "cronograma": {
-            "tasks": [{"name": "T", "start": "2024-01-01", "duration_days": 3}]
-        },
+        "cronograma": {"tasks": [{"name": "T", "start": "2024-01-01", "duration_days": 3}]},
         "financeiro": {
             "labels": ["W1"],
             "receita": [100],

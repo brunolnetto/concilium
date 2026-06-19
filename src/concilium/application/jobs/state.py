@@ -59,9 +59,7 @@ class PipelineJobStateMachine(StateMachine):
     def on_enter_state(self, event: str, state: State) -> None:
         """Hook chamado ao entrar em qualquer estado."""
         # Log de auditoria para debugging
-        logger.debug(
-            f"Job {self.job_data['job_id'][:8]}... → {state.value} via {event}"
-        )
+        logger.debug(f"Job {self.job_data['job_id'][:8]}... → {state.value} via {event}")
 
     def on_iniciar(self) -> None:
         """Hook executado ao iniciar execução."""

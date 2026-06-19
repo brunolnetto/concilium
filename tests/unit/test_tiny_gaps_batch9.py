@@ -6,58 +6,66 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 # ─── application/catalog/pu_calculator.py ─────────────────────────────────────
+
 
 class TestPuCalculatorHelpers:
     def _params(self):
         from concilium.application.catalog.pu_calculator import ParametrosCalculo
+
         return ParametrosCalculo()
 
     def test_alpha_clt_default(self):
-        from concilium.application.catalog.pu_calculator import _alpha, ParametrosCalculo
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, _alpha
+
         insumo = {}
         result = _alpha(insumo, ParametrosCalculo())
         assert result > 1.0  # CLT encargos
 
     def test_alpha_pj_contract(self):
-        from concilium.application.catalog.pu_calculator import _alpha, ParametrosCalculo
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, _alpha
+
         insumo = {"atributos_especificos": {"tipo_contrato": "PJ"}}
         params = ParametrosCalculo(alpha_pj=1.06)
         result = _alpha(insumo, params)
         assert result == 1.06
 
     def test_alpha_local_encargo(self):
-        from concilium.application.catalog.pu_calculator import _alpha, ParametrosCalculo
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, _alpha
+
         insumo = {"atributos_especificos": {"percentual_encargos_local": 0.80}}
         result = _alpha(insumo, ParametrosCalculo())
         assert result == pytest.approx(1.80)
 
     def test_alpha_invalid_local_falls_back(self):
-        from concilium.application.catalog.pu_calculator import _alpha, ParametrosCalculo
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, _alpha
+
         insumo = {"atributos_especificos": {"percentual_encargos_local": "invalid"}}
         result = _alpha(insumo, ParametrosCalculo())
         assert result > 1.0  # falls back to CLT
 
     def test_horas_mes_default(self):
-        from concilium.application.catalog.pu_calculator import _horas_mes, ParametrosCalculo
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, _horas_mes
+
         params = ParametrosCalculo(horas_mes=208)
         result = _horas_mes({}, params)
         assert result == 208
 
     def test_horas_mes_from_insumo(self):
-        from concilium.application.catalog.pu_calculator import _horas_mes, ParametrosCalculo
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, _horas_mes
+
         insumo = {"atributos_especificos": {"horas_mes": 176.0}}
         result = _horas_mes(insumo, ParametrosCalculo())
         assert result == 176.0
 
     def test_calcular_pu_composicao_itens_basic(self):
         from concilium.application.catalog.pu_calculator import calcular_pu_composicao_itens
+
         cpu = {
             "codigo": "CPU-1",
             "composicao_itens": [
                 {"insumo_id": "INS-DIESEL", "coeficiente": 2.0, "categoria_custo": "COMBUSTIVEL"},
-            ]
+            ],
         }
         insumo_index = {"INS-DIESEL": {"preco_unitario": 6.5}}
         result = calcular_pu_composicao_itens(cpu, insumo_index)
@@ -66,40 +74,46 @@ class TestPuCalculatorHelpers:
 
     def test_calcular_pu_composicao_itens_missing_insumo(self):
         from concilium.application.catalog.pu_calculator import calcular_pu_composicao_itens
+
         cpu = {"codigo": "CPU-1", "composicao_itens": [{"insumo_id": "MISSING", "coeficiente": 1.0}]}
         result = calcular_pu_composicao_itens(cpu, {})
         assert len(result["refs_faltantes"]) == 1
 
     def test_calcular_pu_composicao_itens_empty(self):
         from concilium.application.catalog.pu_calculator import calcular_pu_composicao_itens
+
         result = calcular_pu_composicao_itens({"codigo": "CPU-1"}, {})
         assert result["pu_fixo"] == 0.0
 
     def test_converter_rental_unit_mensal(self):
         from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
         # R$/mes → R$/hora
         result = _converter_rental_unit(10000.0, "mes", horas_mes=200.0)
         assert result == pytest.approx(50.0)
 
     def test_converter_rental_unit_diaria(self):
         from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
         result = _converter_rental_unit(800.0, "hora")
         assert result == pytest.approx(800.0)
 
     def test_converter_rental_unit_none(self):
         from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
         result = _converter_rental_unit(50.0, None)
         assert result == 50.0
 
     def test_calcular_pu_with_producao(self):
-        from concilium.application.catalog.pu_calculator import calcular_pu, ParametrosCalculo, _build_insumo_index
+        from concilium.application.catalog.pu_calculator import _build_insumo_index, calcular_pu
+
         producao = {
             "id": "PROD-1",
             "valor_horario": 50.0,
             "composicao_padrao_equipe": {
                 "funcoes": [],
                 "equipamentos": [],
-            }
+            },
         }
         insumo_index = _build_insumo_index([])
         bd = calcular_pu(producao, insumo_index)
@@ -108,13 +122,15 @@ class TestPuCalculatorHelpers:
 
     def test_build_insumo_index(self):
         from concilium.application.catalog.pu_calculator import _build_insumo_index
+
         insumos = [{"codigo": "INS-1", "preco_unitario": 5.0}, {"codigo": "INS-2"}]
         index = _build_insumo_index(insumos)
         assert "INS-1" in index
 
     def test_calcular_pu_with_funcoes(self):
         """Cover lines 226-269: calcular_pu with funcoes, equipamentos, materiais."""
-        from concilium.application.catalog.pu_calculator import calcular_pu, _build_insumo_index, ParametrosCalculo
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, _build_insumo_index, calcular_pu
+
         producao = {
             "id": "PROD-1",
             "valor_horario": 50.0,
@@ -122,7 +138,7 @@ class TestPuCalculatorHelpers:
                 "funcoes": [{"funcao_id": "OP", "num_pessoas": 1, "salario_mensal": 3000.0}],
                 "equipamentos": [{"equip_id": "ESC", "num_unidades": 1, "rental_unit": None}],
                 "materiais": [],
-            }
+            },
         }
         insumos = [
             {"codigo": "OP", "tipo": "MAO_DE_OBRA", "preco_unitario": 3000.0},
@@ -137,6 +153,7 @@ class TestPuCalculatorHelpers:
     def test_calcular_catalogo_basic(self):
         """Cover calcular_catalogo function."""
         from concilium.application.catalog.pu_calculator import calcular_catalogo
+
         producoes = [{"id": "P1", "valor_horario": 50.0}]
         result = calcular_catalogo(producoes, [])
         assert "total_producoes" in result
@@ -144,12 +161,14 @@ class TestPuCalculatorHelpers:
 
     def test_converter_rental_unit_mensal(self):
         from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
         # R$/mes → R$/hora: price / horas_mes
         result = _converter_rental_unit(10000.0, "mes", horas_mes=200.0)
         assert result == pytest.approx(50.0)
 
     def test_check_pu_divergencia_no_divergence(self):
-        from concilium.application.catalog.pu_calculator import _check_pu_divergencia, BreakdownPU
+        from concilium.application.catalog.pu_calculator import _check_pu_divergencia
+
         bd = MagicMock()
         bd.pu = 100.0
         prod = {"preco_referencia_sbdi": 100.0}
@@ -159,6 +178,7 @@ class TestPuCalculatorHelpers:
 
     def test_check_pu_divergencia_with_divergence(self):
         from concilium.application.catalog.pu_calculator import _check_pu_divergencia
+
         bd = MagicMock()
         bd.pu = 150.0
         bd.producao_id = "P1"
@@ -171,11 +191,9 @@ class TestPuCalculatorHelpers:
 
     def test_cpu_get_equipe_composicao(self):
         from concilium.application.catalog.pu_calculator import _cpu_get_equipe
+
         producao = {
-            "composicao_padrao_equipe": {
-                "funcoes": [{"funcao_id": "OP"}],
-                "equipamentos": [{"equip_id": "ESC"}]
-            }
+            "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}], "equipamentos": [{"equip_id": "ESC"}]}
         }
         result = _cpu_get_equipe(producao)
         assert isinstance(result, tuple)
@@ -183,9 +201,11 @@ class TestPuCalculatorHelpers:
 
 # ─── infrastructure/repositories/insumo.py ────────────────────────────────────
 
+
 class TestRepositorioInsumo:
     def _make_repo(self, insumos=None, producoes=None):
         from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
         catalog = {
             "insumos": insumos if insumos is not None else [{"codigo": "DIESEL", "preco_unitario": 6.5}],
             "producoes": producoes or [],
@@ -194,6 +214,7 @@ class TestRepositorioInsumo:
 
     def test_import(self):
         from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
         assert RepositorioInsumo is not None
 
     def test_obter_insumo_found(self):
@@ -244,6 +265,7 @@ class TestRepositorioInsumo:
 
     def test_atualizar_preco(self):
         from datetime import date
+
         repo = self._make_repo()
         repo.atualizar_preco("DIESEL", 7.5, data_vigencia=date(2026, 1, 1), fonte="PROJECT_OVERRIDE")
         assert repo.obter_insumo("DIESEL") is not None  # still exists
@@ -251,23 +273,28 @@ class TestRepositorioInsumo:
 
 # ─── rp helper functions ───────────────────────────────────────────────────────
 
+
 class TestRpHelpers:
     def test_rp_check_override_found(self):
         from concilium.infrastructure.repositories.insumo import _rp_check_override
+
         result = _rp_check_override("DIESEL", {"DIESEL": {"preco_calibrado": 7.0}}, None)
         assert result is not None
         assert result[0] == 7.0
 
     def test_rp_check_override_not_found(self):
         from concilium.infrastructure.repositories.insumo import _rp_check_override
+
         assert _rp_check_override("MISSING", {"DIESEL": {}}, None) is None
 
     def test_rp_check_override_empty(self):
         from concilium.infrastructure.repositories.insumo import _rp_check_override
+
         assert _rp_check_override("DIESEL", None, None) is None
 
     def test_rp_sicro_regional_found(self):
         from concilium.infrastructure.repositories.insumo import _rp_sicro_regional
+
         insumo = {"regionalizacao": {"JUR-1": {"preco": 8.0}}}
         result = _rp_sicro_regional(insumo, "JUR-1")
         assert result is not None
@@ -275,11 +302,14 @@ class TestRpHelpers:
 
     def test_rp_sicro_regional_not_applicable(self):
         from concilium.infrastructure.repositories.insumo import _rp_sicro_regional
+
         assert _rp_sicro_regional({"preco_unitario": 5.0}, None) is None
 
     def test_rp_historico_scd2(self):
-        from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
         from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
+
         insumo = {
             "historico_precos": [
                 {"data_inicio_vigencia": "2026-01-01", "data_fim_vigencia": "2026-06-30", "preco_unitario": 6.5},
@@ -293,18 +323,21 @@ class TestRpHelpers:
 
     def test_rp_historico_scd2_none_date(self):
         from concilium.infrastructure.repositories.insumo import _rp_historico_scd2
+
         assert _rp_historico_scd2({"historico_precos": []}, None) is None
 
     def test_repositorio_preco_na_data_with_historico(self):
-        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
         from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
         catalog = {
-            "insumos": [{
-                "codigo": "DIESEL",
-                "historico_precos": [
-                    {"data_inicio_vigencia": "2026-01-01", "preco_unitario": 6.5}
-                ]
-            }],
+            "insumos": [
+                {
+                    "codigo": "DIESEL",
+                    "historico_precos": [{"data_inicio_vigencia": "2026-01-01", "preco_unitario": 6.5}],
+                }
+            ],
             "producoes": [],
         }
         repo = RepositorioInsumo(catalog)
@@ -313,6 +346,7 @@ class TestRpHelpers:
 
     def test_repositorio_resolver_preco_sicro(self):
         from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
         catalog = {
             "insumos": [{"codigo": "DIESEL", "preco_unitario": 5.0, "regionalizacao": {"JUR-1": {"preco": 8.0}}}],
             "producoes": [],
@@ -323,13 +357,17 @@ class TestRpHelpers:
         assert fonte == "SICRO_REGIONAL"
 
     def test_repositorio_resolver_preco_historico(self):
-        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
         from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
         catalog = {
-            "insumos": [{
-                "codigo": "DIESEL",
-                "historico_precos": [{"data_inicio_vigencia": "2026-01-01", "preco_unitario": 7.5}]
-            }],
+            "insumos": [
+                {
+                    "codigo": "DIESEL",
+                    "historico_precos": [{"data_inicio_vigencia": "2026-01-01", "preco_unitario": 7.5}],
+                }
+            ],
             "producoes": [],
         }
         repo = RepositorioInsumo(catalog)
@@ -338,16 +376,20 @@ class TestRpHelpers:
         assert fonte == "HISTORICO_SCD2"
 
     def test_repositorio_atualizar_preco_scd2(self):
-        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
         from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
         catalog = {"insumos": [{"codigo": "DIESEL", "preco_unitario": 6.5}], "producoes": []}
         repo = RepositorioInsumo(catalog)
         result = repo.atualizar_preco("DIESEL", 7.0, date(2026, 7, 1), fonte="PROJECT_OVERRIDE")
         assert result is True
 
     def test_repositorio_atualizar_preco_not_found(self):
-        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
         from datetime import date
+
+        from concilium.infrastructure.repositories.insumo import RepositorioInsumo
+
         repo = RepositorioInsumo({"insumos": [], "producoes": []})
         result = repo.atualizar_preco("MISSING", 7.0, date(2026, 1, 1))
         assert result is False

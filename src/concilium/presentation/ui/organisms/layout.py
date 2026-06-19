@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 if TYPE_CHECKING:
-    from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio
     from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
+    from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio
 
 from ..helpers.helpers import (
     build_team_adjustment_rows,

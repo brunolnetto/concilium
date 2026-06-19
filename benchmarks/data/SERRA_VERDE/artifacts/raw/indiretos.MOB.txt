@@ -1,0 +1,57 @@
+EQUIPE			MOBILIZAÇÃO/DESMOBILIZAÇÃO																																																							
+																																																										
+															EQUIPAMENTOS							R$ 442.000,00									CUSTO TOTAL MOBILIZAÇÃO/DESMOBILIZAÇÃO																											
+															MÃO DE OBRA							R$ 202.240,00									R$ 10.689.489,96																											
+															VERBAS							R$ 10.045.249,96																																				
+																																																										
+																																																										
+EQUIPAMENTOS																																																										
+ITEM		MOBILIZAÇÃO DE EQUIPAMENTOS													UNID		QUANT		TRANSPORTE					ORIGEM					DESTINO					"DISTÂNCIA
+(ida e volta)
+(km)"						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES						
+																																																										
+1		MOBILIZAÇÃO DE EQUIPAMENTOS 													VB		 33,00 							 GOIANIA 					 MINAÇU 					 500,00 						 13,00 						 214.500,00 												
+2		DESMOBILIZAÇÃO DE EQUIPAMENTOS													VB		 33,00 							 MINAÇU 					 GOIANIA 					 500,00 						 13,00 						 214.500,00 												
+3		MOB CONTEINER													VB		 4,00 							 GOIANIA 					 MINAÇU 					 500,00 						 13,00 						 6.500,00 												
+4		DESMOB CONTEINER													VB		 4,00 							 MINAÇU 					 GOIANIA 					 500,00 						 13,00 						 6.500,00 												
+																																																										
+																																																										
+																																														 442.000,00 												
+																																																										
+MÃO DE OBRA																																																										
+TRANSPORTE											UNID			ORIGEM						DESTINO						"CUSTO UNIT.
+(R$/km)"						"CUSTO MOB.
+(R$)"						OBSERVAÇÕES																				
+																																																										
+Equipe											126			 GOIANIA 						 MINAÇU 						 800,00 						101.120,00																										
+Equipe											126			 MINAÇU 						 GOIANIA 						800,00						101.120,00						  																				
+																																 202.240,00 																										
+																																																										
+VERBAS																																																										
+ITEM		DESCRIÇÃO																							UNID.			QUANTIDADE						PREÇO UNITÁRIO						VALOR						OBSERVAÇÕES												
+1		INTEGRAÇÃO EQUIPE DIRETA																							VB			 0,10 						 237.712,98 						 23.771,30 						3 DIA												
+2		MOBILIZAÇÃO DE EQUIPAMENTOS																							VB			 0,03 						 1.160.000,00 						 38.666,67 						3 DIA												
+																																								 62.437,96 																		
+																																																										
+DESPESAS COM VIAGEM																																																										
+							CUSTO UNITÁRIO		MOB			mês 1		mês 2		mês 3		mês 4		mês 5		mês 6		mês 7		mês 8		mês 9		mês 10		mês 11		mês 12		mês 13		mês 14		mês 15		mês 16		mês 17		mês 18		mês 19		mês 20		mês 21		mês 24		CUSTO TOTAL		
+ADMINISTRATIVO (60 dias)						1	 2.500,00 							X				X				X				X				X				X				X				X				X				X				X		 27.500,00 		
+ENCARREGADO (60 dias)						4	 2.500,00 							X	x			X	x			X				X				X			x	X				X				X				X				X				X		 140.000,00 		
+GERENTE DE CONTRATO (30 dias) 						1	 2.500,00 					X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		X		 55.000,00 		
+EQUIPE DIRETA						 96 	 1.500,00 							X				X				X				X				X				X				X				X				X				X				X		 1.584.000,00 		
+EQUIPE INDIRETA						25,6	 2.000,00 							X				X				X				X				X				X				X				X				X				X				X		 563.200,00 		
+																																																										 2.369.700,00 
+																																																										
+ALIMENTAÇÃO/ SEGURO DE VIDA/CESTA BASICA																																																										
+						QUANTIDADE			CUSTO UNITÁRIO									PERMANÊNCIA						CUSTO TOTAL																																		
+1º EQUIPE - Recebimento, espalhamento, compactação 						 57,00 			 2.535,00 									2,07						 298.623,00 																																		
+2º EQUIPE - Recebimento, espalhamento, compactação						 81,00 			 2.535,00 									5,37						 1.101.964,50 																																		
+3º EQUIPE - Recebimento, espalhamento, compactação						 115,00 			 2.535,00 									7,20						 2.098.980,00 																																		
+4º EQUIPE - Recebimento, espalhamento, compactação						 120,00 			 2.535,00 									9,90						 3.011.580,00 																																		
+																																																										
+																																																										
+																																																										
+																																																										
+																																																										 7.613.112,00 

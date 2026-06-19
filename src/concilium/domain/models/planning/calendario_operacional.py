@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,7 +19,7 @@ class EventoCalendario(BaseModel):
     inicio: date
     fim: date
     recorrencia: Literal["anual", "unica"] = "anual"
-    fator_operacao: float = Field(default=0.0, ge=0.0, le=1.0)
+    fator_operacao: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
 
 class CalendarioOperacionalSemanal(BaseModel):

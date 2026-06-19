@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 from concilium.infrastructure.catalog.catalog_loader import CatalogLoader
 
+from ..input_derivation import BenchmarkInputDeriver
 from ._spec_loader_helpers_a import (
     _ebr_apply_fallbacks,
     _ebr_from_por_item,
@@ -27,7 +31,6 @@ from ._spec_loader_helpers_b import (
     _eei_find_best_match,
     _lfd_parse_raw_row,
 )
-from ..input_derivation import BenchmarkInputDeriver
 
 
 @dataclass
@@ -229,7 +232,8 @@ class BenchmarkSpecLoader:
 
             svc = ContextoVersionService(self._config_root)
             return svc.resolve(contexto_id, version)
-        except Exception:
+        except Exception as e:
+            logger.error("Falha ao resolver contexto %s (versão=%s): %s", contexto_id, version, e, exc_info=True)
             return None
 
     def load(self, path: Path | str) -> ProjectSpec:
@@ -303,7 +307,7 @@ class BenchmarkSpecLoader:
         data_fim = ref.get("data_termino", "2025-06-30")
         weeks = iso_weeks(data_ini, data_fim)
         eap = self._extract_eap(ref)
-        eap = self._enrich_eap_with_cpu_ids(eap)
+        eap = self._enrich_eap_with_cpu_ids(eap, contexto_id)
 
         res = ref.get("resultado", {})
         bdi_meta = res.get("bdi_lucro_impostos", 0.15)
@@ -480,7 +484,7 @@ class BenchmarkSpecLoader:
         _ebr_apply_fallbacks(mapped)
         return mapped
 
-    def _enrich_eap_with_cpu_ids(self, eap: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _enrich_eap_with_cpu_ids(self, eap: list[dict[str, Any]], contexto_id: str = "mendeslobo") -> list[dict[str, Any]]:
         if not eap:
             return eap
         if all(item.get("cpu_id") for item in eap):
@@ -492,10 +496,13 @@ class BenchmarkSpecLoader:
                 offline=False,
                 force_refresh=False,
             )
-            snapshot, _ = loader.load("mendeslobo")
+            snapshot, _ = loader.load(contexto_id)
         except Exception as exc:
-            print(f"  [WARN] Falha ao carregar catalogo para normalizar EAP: {exc}")
-            return eap
+            try:
+                snapshot, _ = loader.load("mendeslobo")
+            except Exception:
+                print(f"  [WARN] Falha ao carregar catalogo para normalizar EAP ({contexto_id}): {exc}")
+                return eap
         cpus = snapshot.cpus or []
         cpu_by_codigo = {cpu.get("codigo"): cpu for cpu in cpus if cpu.get("codigo")}
         for item in eap:

@@ -6,8 +6,11 @@ from . import (
     area_tempo_componente,
     bar_atividade_componente,
     bar_categoria_componente,
+    bar_combustivel_tipo_temporal,
     bar_diesel_temporal,
     bar_direto_atividade_temporal,
+    bar_tempo_direto_categoria,
+    bar_tempo_indireto_categoria,
     bar_tempo_natureza,
     linha_recursos_tempo,
     pool_ciclo_vida,
@@ -22,11 +25,14 @@ from ._relatorio_fallback import build_relatorio_fallback
 _FACE_MODULES = [
     # ── Cubo analítico (ADR-069) ─────────────────────────────────────────
     (bar_tempo_natureza, "bar_tempo_natureza.png"),
+    (bar_tempo_direto_categoria, "bar_tempo_direto_categoria.png"),
+    (bar_tempo_indireto_categoria, "bar_tempo_indireto_categoria.png"),
     (area_tempo_componente, "area_tempo_componente.png"),
     (bar_categoria_componente, "bar_categoria_componente.png"),
     (bar_atividade_componente, "bar_atividade_componente.png"),
     (bar_direto_atividade_temporal, "bar_direto_atividade_temporal.png"),
     (bar_diesel_temporal, "bar_diesel_temporal.png"),
+    (bar_combustivel_tipo_temporal, "bar_combustivel_tipo_temporal.png"),
     (scurve_custo, "scurve_custo.png"),
     (linha_recursos_tempo, "linha_recursos_tempo.png"),
     # ── Cubo pool instancial (ADR-086) ────────────────────────────────────

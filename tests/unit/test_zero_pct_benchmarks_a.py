@@ -9,14 +9,13 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
+from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # 1. _chart_colors
 # ---------------------------------------------------------------------------
+
 
 class TestChartColors:
     def test_cores_is_dict_with_at_least_10_keys(self):
@@ -43,9 +42,11 @@ class TestChartColors:
 # 2. cronograma_parser
 # ---------------------------------------------------------------------------
 
+
 class TestCronogramaParserParseValor:
     def _fn(self):
         from concilium.application.benchmarks.cronograma_parser import _parse_valor
+
         return _parse_valor
 
     def test_empty_string_returns_zero(self):
@@ -67,6 +68,7 @@ class TestCronogramaParserParseValor:
 class TestFindCpuForItem:
     def _fn(self):
         from concilium.application.benchmarks.cronograma_parser import _find_cpu_for_item
+
         return _find_cpu_for_item
 
     def test_exact_substring_match_returns_cpu_id(self):
@@ -90,6 +92,7 @@ class TestFindCpuForItem:
 class TestLoadProdutividadeMap:
     def _fn(self):
         from concilium.application.benchmarks.cronograma_parser import _load_produtividade_map
+
         return _load_produtividade_map
 
     def test_nonexistent_path_returns_empty(self, tmp_path):
@@ -100,11 +103,7 @@ class TestLoadProdutividadeMap:
         # 4 header lines then a data row
         tsv_file = tmp_path / "produtividade.txt"
         tsv_file.write_text(
-            "HEADER1\n"
-            "HEADER2\n"
-            "HEADER3\n"
-            "ITEM\tSERVIÇO\tUNID\tPRODUÇÃO HORARIA\n"
-            "2.1\tEscavação\tm³\t12,50\n",
+            "HEADER1\nHEADER2\nHEADER3\nITEM\tSERVIÇO\tUNID\tPRODUÇÃO HORARIA\n2.1\tEscavação\tm³\t12,50\n",
             encoding="utf-8",
         )
         result = self._fn()(tsv_file)
@@ -115,9 +114,7 @@ class TestLoadProdutividadeMap:
         # line with fewer than 4 parts after header
         tsv_file = tmp_path / "produtividade.txt"
         tsv_file.write_text(
-            "H\nH\nH\nH\n"
-            "only_two\tcolumns\n"
-            "3.1\tOk\tm²\t5,0\n",
+            "H\nH\nH\nH\nonly_two\tcolumns\n3.1\tOk\tm²\t5,0\n",
             encoding="utf-8",
         )
         result = self._fn()(tsv_file)
@@ -129,8 +126,7 @@ class TestLoadProdutividadeMap:
     def test_non_numeric_item_id_skipped(self, tmp_path):
         tsv_file = tmp_path / "produtividade.txt"
         tsv_file.write_text(
-            "H\nH\nH\nH\n"
-            "TOTAL\tAgg\t-\t999\n",
+            "H\nH\nH\nH\nTOTAL\tAgg\t-\t999\n",
             encoding="utf-8",
         )
         result = self._fn()(tsv_file)
@@ -139,7 +135,8 @@ class TestLoadProdutividadeMap:
 
 class TestInferPredecessores:
     def _fn(self):
-        from concilium.application.benchmarks.cronograma_parser import _infer_predecessores, CronogramaItem
+        from concilium.application.benchmarks.cronograma_parser import CronogramaItem, _infer_predecessores
+
         return _infer_predecessores, CronogramaItem
 
     def _item(self, item_id, CronogramaItem):
@@ -209,10 +206,12 @@ class TestCronogramaParserParseLines:
     def test_basic_parse_returns_eap_items(self):
         from concilium.application.benchmarks.cronograma_parser import CronogramaParser
 
-        lines = self._make_lines([
-            "1\tObra\t\t\t\t\n",           # section header → skipped
-            "1.1\tEscavação\tm³\t100,0\t5,0\t40,0\n",
-        ])
+        lines = self._make_lines(
+            [
+                "1\tObra\t\t\t\t\n",  # section header → skipped
+                "1.1\tEscavação\tm³\t100,0\t5,0\t40,0\n",
+            ]
+        )
         parser = CronogramaParser(cpus_map={"CPU-ESC": "Escavação"})
         items = parser.parse_lines(lines)
         assert len(items) == 1
@@ -223,10 +222,12 @@ class TestCronogramaParserParseLines:
     def test_items_with_zero_quantitativo_excluded(self):
         from concilium.application.benchmarks.cronograma_parser import CronogramaParser
 
-        lines = self._make_lines([
-            "1.1\tServico A\tm³\t0\t\t\n",
-            "1.2\tServico B\tm³\t50\t\t\n",
-        ])
+        lines = self._make_lines(
+            [
+                "1.1\tServico A\tm³\t0\t\t\n",
+                "1.2\tServico B\tm³\t50\t\t\n",
+            ]
+        )
         parser = CronogramaParser()
         items = parser.parse_lines(lines)
         item_ids = [i["item_id"] for i in items]
@@ -237,10 +238,12 @@ class TestCronogramaParserParseLines:
         from concilium.application.benchmarks.cronograma_parser import CronogramaParser
 
         # Line with only 1 part (< 3) → skipped without error
-        lines = self._make_lines([
-            "only_one_field\n",
-            "1.1\tOK\tm\t10\t\t\n",
-        ])
+        lines = self._make_lines(
+            [
+                "only_one_field\n",
+                "1.1\tOK\tm\t10\t\t\n",
+            ]
+        )
         parser = CronogramaParser()
         items = parser.parse_lines(lines)
         assert len(items) == 1
@@ -248,10 +251,12 @@ class TestCronogramaParserParseLines:
     def test_section_headers_skipped(self):
         from concilium.application.benchmarks.cronograma_parser import CronogramaParser
 
-        lines = self._make_lines([
-            "2\tSeção 2\t\t\t\t\n",
-            "2.1\tServico\tm\t20\t\t\n",
-        ])
+        lines = self._make_lines(
+            [
+                "2\tSeção 2\t\t\t\t\n",
+                "2.1\tServico\tm\t20\t\t\n",
+            ]
+        )
         parser = CronogramaParser()
         items = parser.parse_lines(lines)
         item_ids = [i["item_id"] for i in items]
@@ -261,9 +266,11 @@ class TestCronogramaParserParseLines:
     def test_unknown_cpu_falls_back_to_cpu_unknown(self):
         from concilium.application.benchmarks.cronograma_parser import CronogramaParser
 
-        lines = self._make_lines([
-            "1.1\tAlgum Serviço Desconhecido\tm\t10\t\t\n",
-        ])
+        lines = self._make_lines(
+            [
+                "1.1\tAlgum Serviço Desconhecido\tm\t10\t\t\n",
+            ]
+        )
         parser = CronogramaParser(cpus_map={})
         items = parser.parse_lines(lines)
         assert items[0]["cpu_id"] == "CPU-UNKNOWN"
@@ -281,9 +288,7 @@ class TestCronogramaParserLoadCpusMap:
 
         cpus_file = tmp_path / "cpus.txt"
         cpus_file.write_text(
-            "CODIGO\tDESCRICAO\n"
-            "CPU-001\tEscavação em solo\n"
-            "CPU-002\tAterro compactado\n",
+            "CODIGO\tDESCRICAO\nCPU-001\tEscavação em solo\nCPU-002\tAterro compactado\n",
             encoding="utf-8",
         )
         result = CronogramaParser.load_cpus_map(cpus_file)
@@ -298,9 +303,7 @@ class TestCronogramaParserLoadCpusMap:
         cpus_file = tmp_path / "cpus.txt"
         # second row has empty codigo
         cpus_file.write_text(
-            "CODIGO\tDESCRICAO\n"
-            "\tDescricao Sem Codigo\n"
-            "CPU-003\tValido\n",
+            "CODIGO\tDESCRICAO\n\tDescricao Sem Codigo\nCPU-003\tValido\n",
             encoding="utf-8",
         )
         result = CronogramaParser.load_cpus_map(cpus_file)
@@ -312,9 +315,11 @@ class TestCronogramaParserLoadCpusMap:
 # 3. reconciliacao_planejamento
 # ---------------------------------------------------------------------------
 
+
 class TestReconciliacaoParseValor:
     def _fn(self):
         from concilium.application.benchmarks.reconciliacao_planejamento import _parse_valor
+
         return _parse_valor
 
     def test_none_returns_zero(self):
@@ -489,9 +494,8 @@ class TestGerarRelatorioReconciliacao:
 class TestReconciliadorPlanejamento:
     def test_analisar_returns_disparity_analysis(self, tmp_path):
         from concilium.application.benchmarks.reconciliacao_planejamento import (
-            ReconciliadorPlanejamento,
-            PlanejamentoParser,
             DisparityAnalysis,
+            ReconciliadorPlanejamento,
         )
 
         # Headers must include tabs so csv.Sniffer can detect the delimiter
@@ -509,7 +513,6 @@ class TestReconciliadorPlanejamento:
     def test_analisar_aggregates_equipes_diretas(self, tmp_path):
         from concilium.application.benchmarks.reconciliacao_planejamento import (
             ReconciliadorPlanejamento,
-            DisparityAnalysis,
         )
 
         p = tmp_path / "planejamento.txt"
@@ -528,5 +531,3 @@ class TestReconciliadorPlanejamento:
         result = rec.analisar()
         assert result.total_canonical_direto == 10000.0
         assert result.canonical_direto["1.1"] == 10000.0
-
-

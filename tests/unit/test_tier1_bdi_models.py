@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime
 import pytest
 from pydantic import ValidationError
 
+from concilium.domain.constants import BDI_CSSL, BDI_IR
 from concilium.domain.models.financial.bdi import (
     CENARIOS_TRIBUTARIOS,
     DEFAULT_BDI_TABELA,
@@ -14,17 +15,14 @@ from concilium.domain.models.financial.bdi import (
     BdiPerfilDiff,
     ComponentesBdi,
     DecomposicaoEquipamento,
-    EncargosRegime,
     IndiretoComBdi,
     PerfilBdiProjeto,
     TabelaBdi,
-    TabelaEncargos,
     TaxRegimeVersion,
     TaxSimulationScenario,
     resolver_bdi_cbs_ibs,
     resolver_componentes_bdi,
 )
-from concilium.domain.constants import BDI_COFINS, BDI_CSSL, BDI_IR, BDI_ISS, BDI_PIS
 
 # ── TaxRegimeVersion ──────────────────────────────────────────────────────────
 
@@ -100,8 +98,16 @@ class TestComponentesBdi:
     def test_bdi_total_formula_tcu(self):
         # Sem tributos: BDI = overhead puro (fórmula simplificada exata)
         c = ComponentesBdi(
-            ac=0.10, df=0.0, r=0.0, cr=0.0, l=0.0,
-            cofins=0.0, iss=0.0, pis=0.0, cssl=0.0, ir=0.0,
+            ac=0.10,
+            df=0.0,
+            r=0.0,
+            cr=0.0,
+            l=0.0,
+            cofins=0.0,
+            iss=0.0,
+            pis=0.0,
+            cssl=0.0,
+            ir=0.0,
         )
         assert abs(c.bdi_total - 0.10) < 1e-9
 
@@ -115,8 +121,16 @@ class TestComponentesBdi:
 
     def test_bdi_total_raises_se_tributos_iguais_1(self):
         c = ComponentesBdi(
-            ac=0.0, df=0.0, r=0.0, cr=0.0, l=0.0,
-            cofins=0.3, iss=0.3, pis=0.3, cssl=0.05, ir=0.05,
+            ac=0.0,
+            df=0.0,
+            r=0.0,
+            cr=0.0,
+            l=0.0,
+            cofins=0.3,
+            iss=0.3,
+            pis=0.3,
+            cssl=0.05,
+            ir=0.05,
         )
         with pytest.raises(ValueError, match="Tributos totais"):
             _ = c.bdi_total
@@ -130,9 +144,17 @@ class TestComponentesBdi:
     def test_decomposicao_chaves_esperadas(self):
         d = DEFAULT_BDI_TABELA.mao_obra.decomposicao_no_preco()
         chaves = {
-            "custo_direto", "overhead_ac", "overhead_df", "overhead_r",
-            "overhead_cr", "margem_l", "tributo_cofins", "tributo_iss",
-            "tributo_pis", "tributo_cssl", "tributo_ir",
+            "custo_direto",
+            "overhead_ac",
+            "overhead_df",
+            "overhead_r",
+            "overhead_cr",
+            "margem_l",
+            "tributo_cofins",
+            "tributo_iss",
+            "tributo_pis",
+            "tributo_cssl",
+            "tributo_ir",
         }
         assert chaves == set(d.keys())
 

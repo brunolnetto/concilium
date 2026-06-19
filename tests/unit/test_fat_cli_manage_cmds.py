@@ -14,8 +14,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
-import typer
 from typer.testing import CliRunner
 
 from concilium.presentation.cli.commands_manage import app_catalog, app_structure
@@ -127,18 +125,14 @@ class TestCatalogBrowse:
     def test_browse_insumo_tipo(self, tmp_path):
         rt = _make_fake_runtime(tmp_path)
         with patch(_RUNTIME_PATCH, return_value=rt):
-            result = runner.invoke(
-                app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "insumo"]
-            )
+            result = runner.invoke(app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "insumo"])
         assert result.exit_code == 0
         assert "INS-01" in result.output
 
     def test_browse_unknown_tipo_exits_1(self, tmp_path):
         rt = _make_fake_runtime(tmp_path)
         with patch(_RUNTIME_PATCH, return_value=rt):
-            result = runner.invoke(
-                app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "producao"]
-            )
+            result = runner.invoke(app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "producao"])
         assert result.exit_code == 1
 
     def test_browse_pagination_second_page(self, tmp_path):
@@ -146,8 +140,7 @@ class TestCatalogBrowse:
         cat_dir = tmp_path / "catalogos" / "testcat"
         cat_dir.mkdir(parents=True)
         cpus = [
-            {"codigo": f"CPU-{i:03d}", "descricao": f"Desc {i}", "unidade": "m", "categoria": "X"}
-            for i in range(30)
+            {"codigo": f"CPU-{i:03d}", "descricao": f"Desc {i}", "unidade": "m", "categoria": "X"} for i in range(30)
         ]
         catalogo = {"cpus": cpus, "producoes": [], "insumos": []}
         ctx = SimpleNamespace(catalogo_id="testcat")
@@ -157,9 +150,7 @@ class TestCatalogBrowse:
             load_contexto=lambda c: ctx,
         )
         with patch(_RUNTIME_PATCH, return_value=rt):
-            result = runner.invoke(
-                app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "cpu", "--pagina", "2"]
-            )
+            result = runner.invoke(app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "cpu", "--pagina", "2"])
         assert result.exit_code == 0
         # Page 2/2 — CPU-025 through CPU-029 should appear
         assert "CPU-025" in result.output
@@ -168,9 +159,7 @@ class TestCatalogBrowse:
         """Requesting page 999 should be clamped to the last page."""
         rt = _make_fake_runtime(tmp_path)
         with patch(_RUNTIME_PATCH, return_value=rt):
-            result = runner.invoke(
-                app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "cpu", "--pagina", "999"]
-            )
+            result = runner.invoke(app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "cpu", "--pagina", "999"])
         assert result.exit_code == 0
 
     def test_browse_empty_insumos(self, tmp_path):
@@ -185,9 +174,7 @@ class TestCatalogBrowse:
             load_contexto=lambda c: ctx,
         )
         with patch(_RUNTIME_PATCH, return_value=rt):
-            result = runner.invoke(
-                app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "insumo"]
-            )
+            result = runner.invoke(app_catalog, ["browse", "--contexto", "ctx1", "--tipo", "insumo"])
         assert result.exit_code == 0
 
 
@@ -243,9 +230,7 @@ class TestCatalogExport:
 
     def test_with_output_option(self):
         with patch(f"{_PATCH_BASE}._impl_catalog_export") as mock_impl:
-            result = runner.invoke(
-                app_catalog, ["export", "--contexto", "mycat", "--output", "/tmp/out.xlsx"]
-            )
+            result = runner.invoke(app_catalog, ["export", "--contexto", "mycat", "--output", "/tmp/out.xlsx"])
         assert result.exit_code == 0
         mock_impl.assert_called_once_with("mycat", "/tmp/out.xlsx")
 
@@ -281,9 +266,7 @@ class TestCatalogSurvey:
                 ],
             )
         assert result.exit_code == 0
-        mock_impl.assert_called_once_with(
-            "ctx1", "BR-CE", "productivity", "out.xlsx", "master", "proj1", True, "bot"
-        )
+        mock_impl.assert_called_once_with("ctx1", "BR-CE", "productivity", "out.xlsx", "master", "proj1", True, "bot")
 
 
 class TestCatalogPromote:
@@ -302,9 +285,7 @@ class TestCatalogPromote:
                 ],
             )
         assert result.exit_code == 0
-        mock_impl.assert_called_once_with(
-            "myprojeto", "INS-01", "atualização de mercado", None, None, "cli", False
-        )
+        mock_impl.assert_called_once_with("myprojeto", "INS-01", "atualização de mercado", None, None, "cli", False)
 
     def test_optional_args_forwarded(self):
         with patch(f"{_PATCH_BASE}._impl_catalog_promote") as mock_impl:
@@ -328,17 +309,13 @@ class TestCatalogPromote:
                 ],
             )
         assert result.exit_code == 0
-        mock_impl.assert_called_once_with(
-            "proj", "INS-02", "ok", "ctx1", "2026-01-01", "user", True
-        )
+        mock_impl.assert_called_once_with("proj", "INS-02", "ok", "ctx1", "2026-01-01", "user", True)
 
 
 class TestCatalogSearch:
     def test_delegates_with_args(self):
         with patch(f"{_PATCH_BASE}._impl_catalog_search") as mock_impl:
-            result = runner.invoke(
-                app_catalog, ["search", "--contexto", "ctx1", "escavadeira"]
-            )
+            result = runner.invoke(app_catalog, ["search", "--contexto", "ctx1", "escavadeira"])
         assert result.exit_code == 0
         mock_impl.assert_called_once_with("ctx1", "escavadeira")
 
@@ -346,17 +323,13 @@ class TestCatalogSearch:
 class TestCatalogValidateSchema:
     def test_defaults_forwarded(self):
         with patch(f"{_PATCH_BASE}._impl_catalog_validate_schema") as mock_impl:
-            result = runner.invoke(
-                app_catalog, ["validate", "--contexto", "ctx1"]
-            )
+            result = runner.invoke(app_catalog, ["validate", "--contexto", "ctx1"])
         assert result.exit_code == 0
         mock_impl.assert_called_once_with("ctx1", False)
 
     def test_strict_flag_forwarded(self):
         with patch(f"{_PATCH_BASE}._impl_catalog_validate_schema") as mock_impl:
-            result = runner.invoke(
-                app_catalog, ["validate", "--contexto", "ctx1", "--strict"]
-            )
+            result = runner.invoke(app_catalog, ["validate", "--contexto", "ctx1", "--strict"])
         assert result.exit_code == 0
         mock_impl.assert_called_once_with("ctx1", True)
 
@@ -370,9 +343,7 @@ class TestCatalogCureSchema:
 
     def test_dry_run_flag(self):
         with patch(f"{_PATCH_BASE}._impl_catalog_cure_schema") as mock_impl:
-            result = runner.invoke(
-                app_catalog, ["cure", "--contexto", "ctx1", "--dry-run"]
-            )
+            result = runner.invoke(app_catalog, ["cure", "--contexto", "ctx1", "--dry-run"])
         assert result.exit_code == 0
         mock_impl.assert_called_once_with("ctx1", False)
 

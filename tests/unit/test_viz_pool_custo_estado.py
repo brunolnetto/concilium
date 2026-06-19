@@ -1,7 +1,8 @@
 """Tests for pool_custo_estado visualization."""
+
 from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
-import pytest
 
 _RESOLVE = "concilium.application.services.analytics.cubo_pool_projection.resolve_cubo_pool_projection"
 _INIT_MPL = "concilium.application.runtime.deliverables.visualizations.cube.pool_custo_estado.init_mpl"
@@ -9,6 +10,7 @@ _INIT_MPL = "concilium.application.runtime.deliverables.visualizations.cube.pool
 
 def _build(*args, **kwargs):
     from concilium.application.runtime.deliverables.visualizations.cube.pool_custo_estado import build
+
     return build(*args, **kwargs)
 
 
@@ -26,8 +28,7 @@ class TestBuildEarlyReturns:
     def test_returns_none_when_matplotlib_unavailable(self):
         canonical = MagicMock()
         rows = [{"estado": "Produtivo", "componente": "mo", "valor_rs": 100}]
-        with patch(_RESOLVE, return_value={"rows": rows}), \
-             patch(_INIT_MPL, side_effect=ImportError):
+        with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, side_effect=ImportError):
             assert _build(canonical) is None
 
     def test_returns_none_when_no_valid_estados(self):
@@ -36,8 +37,7 @@ class TestBuildEarlyReturns:
         rows = [{"estado": "Produtivo", "componente": "mo", "valor_rs": 0}]
         mock_plt = MagicMock()
         mock_plt.subplots.return_value = (MagicMock(), MagicMock())
-        with patch(_RESOLVE, return_value={"rows": rows}), \
-             patch(_INIT_MPL, return_value=(mock_plt, MagicMock())):
+        with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, return_value=(mock_plt, MagicMock())):
             assert _build(canonical) is None
 
 
@@ -58,8 +58,7 @@ class TestBuildHappyPath:
         def fake_fig_to_bytes(fig):
             return b"PNG_BYTES"
 
-        with patch(_RESOLVE, return_value={"rows": rows}), \
-             patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
+        with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
             result = _build(canonical)
         assert result == b"PNG_BYTES"
 
@@ -68,6 +67,5 @@ class TestBuildHappyPath:
         rows = [{"estado": "Produtivo", "componente": "mo", "valor_rs": 50_000}]
         mock_plt = MagicMock()
         mock_plt.subplots.side_effect = RuntimeError("plotting error")
-        with patch(_RESOLVE, return_value={"rows": rows}), \
-             patch(_INIT_MPL, return_value=(mock_plt, MagicMock())):
+        with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, return_value=(mock_plt, MagicMock())):
             assert _build(canonical) is None

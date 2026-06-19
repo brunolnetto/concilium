@@ -17,7 +17,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Module-level import helper
 # ---------------------------------------------------------------------------
@@ -27,6 +26,7 @@ _MOD = "concilium.application.runtime.deliverables.visualizations.charts.gantt"
 
 def _import_fn():
     import importlib
+
     mod = importlib.import_module(_MOD)
     return mod.build_gantt
 
@@ -34,6 +34,7 @@ def _import_fn():
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
+
 
 def _fig_to_bytes_stub(fig) -> bytes:
     return b"PNG"
@@ -80,6 +81,7 @@ def _one_task(
 # ---------------------------------------------------------------------------
 # 1. Early-return guard clauses (no matplotlib needed)
 # ---------------------------------------------------------------------------
+
 
 class TestEarlyReturns:
     def test_non_dict_input_returns_none(self):
@@ -128,6 +130,7 @@ class TestEarlyReturns:
 # 2. ImportError path
 # ---------------------------------------------------------------------------
 
+
 class TestImportErrorPath:
     def test_import_error_returns_none(self):
         """ImportError during init_mpl → return None."""
@@ -142,6 +145,7 @@ class TestImportErrorPath:
 # ---------------------------------------------------------------------------
 # 3. Happy path — one task
 # ---------------------------------------------------------------------------
+
 
 class TestHappyPathOneTask:
     def test_returns_bytes_one_task(self):
@@ -196,6 +200,7 @@ class TestHappyPathOneTask:
 # 4. Multiple tasks (loop coverage, sorting, ytick range)
 # ---------------------------------------------------------------------------
 
+
 class TestMultipleTasks:
     def test_two_tasks_rendered(self):
         """Two tasks both get broken_barh calls."""
@@ -244,6 +249,7 @@ class TestMultipleTasks:
 # ---------------------------------------------------------------------------
 # 5. Task name fallback logic
 # ---------------------------------------------------------------------------
+
 
 class TestTaskNameFallback:
     def test_name_key_used_when_present(self):
@@ -294,6 +300,7 @@ class TestTaskNameFallback:
 # 6. Long name truncation (> 38 chars → "name[:38]...")
 # ---------------------------------------------------------------------------
 
+
 class TestLongNameTruncation:
     def test_long_name_truncated(self):
         """Name longer than 38 chars is truncated with '...' suffix."""
@@ -334,12 +341,14 @@ class TestLongNameTruncation:
 # 7. Level color cycling through _GANTT_LEVEL_COLORS
 # ---------------------------------------------------------------------------
 
+
 class TestLevelColors:
     def test_level_0_uses_first_color(self):
         """level=0 → first color from _GANTT_LEVEL_COLORS."""
         from concilium.application.runtime.deliverables.visualizations.charts.gantt import (
             _GANTT_LEVEL_COLORS,
         )
+
         build = _import_fn()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
@@ -352,6 +361,7 @@ class TestLevelColors:
         from concilium.application.runtime.deliverables.visualizations.charts.gantt import (
             _GANTT_LEVEL_COLORS,
         )
+
         n = len(_GANTT_LEVEL_COLORS)
         build = _import_fn()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
@@ -365,12 +375,10 @@ class TestLevelColors:
         from concilium.application.runtime.deliverables.visualizations.charts.gantt import (
             _GANTT_LEVEL_COLORS,
         )
+
         build = _import_fn()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
-        tasks = [
-            _one_task(start=f"2024-0{i+1}-01", name=f"Task {i}", level=i)
-            for i in range(1, 6)
-        ]
+        tasks = [_one_task(start=f"2024-0{i + 1}-01", name=f"Task {i}", level=i) for i in range(1, 6)]
         with _patched_init_mpl(mock_plt):
             result = build({"tasks": tasks})
         assert result == b"PNG"
@@ -383,6 +391,7 @@ class TestLevelColors:
 # ---------------------------------------------------------------------------
 # 8. Duration defaults (missing duration_days → 7)
 # ---------------------------------------------------------------------------
+
 
 class TestDurationDefaults:
     def test_missing_duration_defaults_to_7(self):
@@ -413,6 +422,7 @@ class TestDurationDefaults:
 # 9. Error path (rendering exception → returns None)
 # ---------------------------------------------------------------------------
 
+
 class TestErrorPath:
     def test_subplots_raises_returns_none(self):
         """When plt.subplots raises, the except block catches it and returns None."""
@@ -434,6 +444,7 @@ class TestErrorPath:
 
     def test_fig_to_bytes_raises_returns_none(self):
         """When fig_to_bytes raises, the except block catches it and returns None."""
+
         def _bad_fig_to_bytes(fig):
             raise OSError("disk full")
 
@@ -460,12 +471,13 @@ class TestErrorPath:
 # 10. figsize scales with number of tasks
 # ---------------------------------------------------------------------------
 
+
 class TestFigsize:
     def test_figsize_height_scales_with_tasks(self):
         """figsize height = max(4, n_tasks * 0.7 + 2)."""
         build = _import_fn()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
-        tasks = [_one_task(start=f"2024-0{i+1}-01", name=f"T{i}") for i in range(1, 4)]
+        tasks = [_one_task(start=f"2024-0{i + 1}-01", name=f"T{i}") for i in range(1, 4)]
         with _patched_init_mpl(mock_plt):
             build({"tasks": tasks})
         call_args = mock_plt.subplots.call_args

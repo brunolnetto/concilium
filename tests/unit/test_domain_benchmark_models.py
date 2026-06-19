@@ -1,17 +1,19 @@
 """Tests for domain/benchmark/models.py."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def _make_meta(**kwargs):
     from concilium.domain.benchmark.models import BenchmarkMetadata
+
     defaults = dict(
         benchmark_id="bench-1",
         nome="Test Bench",
         origem="manual",
         tags=["tag1"],
-        criado_em=datetime.now(timezone.utc),
+        criado_em=datetime.now(UTC),
         versao=1,
         imutavel=False,
     )
@@ -21,13 +23,14 @@ def _make_meta(**kwargs):
 
 def _make_exec(**kwargs):
     from concilium.domain.benchmark.models import BenchmarkExecution
+
     defaults = dict(
         execution_id="exec-1",
         benchmark_id="bench-1",
         versao=1,
         projeto_id="proj-1",
         status="SUCESSO",
-        executado_em=datetime.now(timezone.utc),
+        executado_em=datetime.now(UTC),
     )
     defaults.update(kwargs)
     return BenchmarkExecution(**defaults)
@@ -36,6 +39,7 @@ def _make_exec(**kwargs):
 class TestBenchmarkState:
     def test_values(self):
         from concilium.domain.benchmark.models import BenchmarkState
+
         assert BenchmarkState.PENDENTE == "PENDENTE"
         assert BenchmarkState.EM_PROGRESSO == "EM_PROGRESSO"
         assert BenchmarkState.SUCESSO == "SUCESSO"
@@ -72,5 +76,6 @@ class TestBenchmarkExecution:
 
     def test_status_field(self):
         from concilium.domain.benchmark.models import BenchmarkState
+
         e = _make_exec(status=BenchmarkState.FALHA)
         assert e.status == "FALHA"

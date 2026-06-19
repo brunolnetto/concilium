@@ -1,4 +1,5 @@
 """Tests for _audit_utils.py — coverage boost toward 80%+."""
+
 from __future__ import annotations
 
 import json
@@ -8,10 +9,10 @@ from pathlib import Path
 import pytest
 
 from concilium.application.benchmarks.analysis._audit_utils import (
-    _as_float,
     _aq_lp_check_dir,
     _aq_lp_load_meta,
     _aq_lp_matches_name,
+    _as_float,
     _build_c_fixo_candidates,
     _extract_pe_from_list_block,
     _extract_ref_ponto_equilibrio,
@@ -26,10 +27,10 @@ from concilium.application.benchmarks.analysis._audit_utils import (
     _sum_dict_counter,
 )
 
-
 # ---------------------------------------------------------------------------
 # _load_json
 # ---------------------------------------------------------------------------
+
 
 class TestLoadJson:
     def test_reads_valid_json(self, tmp_path: Path) -> None:
@@ -53,16 +54,20 @@ class TestLoadJson:
 # _norm_float
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("value,expected", [
-    (0, 0.0),
-    (1.5, 1.5),
-    ("3.14", 3.14),
-    (None, 0.0),
-    ("", 0.0),
-    (False, 0.0),
-    ("abc", 0.0),
-    (42, 42.0),
-])
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (0, 0.0),
+        (1.5, 1.5),
+        ("3.14", 3.14),
+        (None, 0.0),
+        ("", 0.0),
+        (False, 0.0),
+        ("abc", 0.0),
+        (42, 42.0),
+    ],
+)
 def test_norm_float(value, expected):
     assert _norm_float(value) == pytest.approx(expected)
 
@@ -71,18 +76,22 @@ def test_norm_float(value, expected):
 # _normalize_project_token
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("value,expected", [
-    ("hello_world", "HELLO WORLD"),
-    ("calibrado_test", "TEST"),
-    ("CALIBRADO", ""),
-    ("abc--123", "ABC 123"),
-    ("  spaces  ", "SPACES"),
-    (None, ""),
-    ("", ""),
-    ("PROJETO CALIBRADO FINAL", "PROJETO FINAL"),
-    ("projeto_CALIBRADO_final", "PROJETO FINAL"),
-    ("abc_def_ghi", "ABC DEF GHI"),
-])
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("hello_world", "HELLO WORLD"),
+        ("calibrado_test", "TEST"),
+        ("CALIBRADO", ""),
+        ("abc--123", "ABC 123"),
+        ("  spaces  ", "SPACES"),
+        (None, ""),
+        ("", ""),
+        ("PROJETO CALIBRADO FINAL", "PROJETO FINAL"),
+        ("projeto_CALIBRADO_final", "PROJETO FINAL"),
+        ("abc_def_ghi", "ABC DEF GHI"),
+    ],
+)
 def test_normalize_project_token(value, expected):
     assert _normalize_project_token(value) == expected
 
@@ -90,6 +99,7 @@ def test_normalize_project_token(value, expected):
 # ---------------------------------------------------------------------------
 # _get_ref_confronto
 # ---------------------------------------------------------------------------
+
 
 class TestGetRefConfronto:
     def test_returns_benchmark_confronto_when_present(self):
@@ -120,17 +130,21 @@ class TestGetRefConfronto:
 # _is_close
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("ref_val,cur_val,expected", [
-    (100.0, 100.0, True),
-    (100.0, 100.04, True),   # within default abs_tol=0.05
-    (100.0, 100.06, True),   # within rel_tol=0.001 * 100=0.1
-    (100.0, 100.2, False),   # outside both tolerances
-    (0.0, 0.0, True),
-    (0.0, 0.04, True),       # within abs_tol=0.05
-    (0.0, 0.06, False),      # outside rel_tol * max(0,0,1)=0.001, but abs_tol=0.05 → 0.06>0.05 so False
-    (1000.0, 1001.0, True),  # rel_tol=0.001 * 1000 = 1.0, delta=1.0 ≤ 1.0
-    (1000.0, 1001.1, False), # delta=1.1 > max(0.05, 1.0)
-])
+
+@pytest.mark.parametrize(
+    "ref_val,cur_val,expected",
+    [
+        (100.0, 100.0, True),
+        (100.0, 100.04, True),  # within default abs_tol=0.05
+        (100.0, 100.06, True),  # within rel_tol=0.001 * 100=0.1
+        (100.0, 100.2, False),  # outside both tolerances
+        (0.0, 0.0, True),
+        (0.0, 0.04, True),  # within abs_tol=0.05
+        (0.0, 0.06, False),  # outside rel_tol * max(0,0,1)=0.001, but abs_tol=0.05 → 0.06>0.05 so False
+        (1000.0, 1001.0, True),  # rel_tol=0.001 * 1000 = 1.0, delta=1.0 ≤ 1.0
+        (1000.0, 1001.1, False),  # delta=1.1 > max(0.05, 1.0)
+    ],
+)
 def test_is_close(ref_val, cur_val, expected):
     assert _is_close(ref_val, cur_val) is expected
 
@@ -143,6 +157,7 @@ def test_is_close_custom_tol():
 # ---------------------------------------------------------------------------
 # _sum_dict_counter
 # ---------------------------------------------------------------------------
+
 
 class TestSumDictCounter:
     def test_basic_sum(self):
@@ -180,15 +195,19 @@ class TestSumDictCounter:
 # _as_float
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("value,expected", [
-    (1, 1.0),
-    ("2.5", 2.5),
-    (None, 0.0),
-    ("", 0.0),
-    (False, 0.0),
-    ("not_a_number", 0.0),
-    (0, 0.0),
-])
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (1, 1.0),
+        ("2.5", 2.5),
+        (None, 0.0),
+        ("", 0.0),
+        (False, 0.0),
+        ("not_a_number", 0.0),
+        (0, 0.0),
+    ],
+)
 def test_as_float(value, expected):
     assert _as_float(value) == pytest.approx(expected)
 
@@ -196,6 +215,7 @@ def test_as_float(value, expected):
 # ---------------------------------------------------------------------------
 # _row_to_pe_entry
 # ---------------------------------------------------------------------------
+
 
 class TestRowToPeEntry:
     def test_returns_none_when_no_item_id(self):
@@ -262,6 +282,7 @@ class TestRowToPeEntry:
 # _extract_pe_from_list_block
 # ---------------------------------------------------------------------------
 
+
 class TestExtractPeFromListBlock:
     def test_returns_none_for_non_list(self):
         assert _extract_pe_from_list_block("string") is None
@@ -302,6 +323,7 @@ class TestExtractPeFromListBlock:
 # _build_c_fixo_candidates
 # ---------------------------------------------------------------------------
 
+
 class TestBuildCFixoCandidates:
     def test_pe_block_dict_with_all_keys(self):
         pe_block = {"c_fixo": [1], "benchmark_referencia": [2], "benchmark_referencia_itemizado": [3]}
@@ -336,16 +358,13 @@ class TestBuildCFixoCandidates:
 # _extract_ref_ponto_equilibrio
 # ---------------------------------------------------------------------------
 
+
 class TestExtractRefPontoEquilibrio:
     def test_returns_empty_when_no_pe_block(self):
         assert _extract_ref_ponto_equilibrio({}) == []
 
     def test_pe_block_as_list_with_valid_rows(self):
-        ref = {
-            "ponto_equilibrio": [
-                {"item_id": "A1", "custo_fixo_equipe": 10.0, "custo_venda_cpu": 20.0}
-            ]
-        }
+        ref = {"ponto_equilibrio": [{"item_id": "A1", "custo_fixo_equipe": 10.0, "custo_venda_cpu": 20.0}]}
         result = _extract_ref_ponto_equilibrio(ref)
         assert len(result) == 1
         assert result[0]["item_id"] == "A1"
@@ -360,9 +379,7 @@ class TestExtractRefPontoEquilibrio:
 
     def test_pe_block_dict_with_canonical(self):
         canonical_list = [{"item_id": "X"}]
-        ref = {
-            "ponto_equilibrio": {"canonical": canonical_list}
-        }
+        ref = {"ponto_equilibrio": {"canonical": canonical_list}}
         result = _extract_ref_ponto_equilibrio(ref)
         assert result == canonical_list
 
@@ -379,11 +396,7 @@ class TestExtractRefPontoEquilibrio:
         assert result[0]["item_id"] == "B1"
 
     def test_pe_block_dict_with_c_fixo_candidate(self):
-        ref = {
-            "ponto_equilibrio": {
-                "c_fixo": [{"item_id": "C1", "custo_fixo_equipe": 1.0, "custo_venda_cpu": 2.0}]
-            }
-        }
+        ref = {"ponto_equilibrio": {"c_fixo": [{"item_id": "C1", "custo_fixo_equipe": 1.0, "custo_venda_cpu": 2.0}]}}
         result = _extract_ref_ponto_equilibrio(ref)
         assert len(result) == 1
         assert result[0]["item_id"] == "C1"
@@ -407,6 +420,7 @@ class TestExtractRefPontoEquilibrio:
 # _aq_lp_load_meta
 # ---------------------------------------------------------------------------
 
+
 class TestAqLpLoadMeta:
     def test_loads_valid_meta(self, tmp_path: Path) -> None:
         meta_file = tmp_path / "meta.json"
@@ -429,14 +443,18 @@ class TestAqLpLoadMeta:
 # _aq_lp_matches_name
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("nome_meta,nome_norm,project_name,target_norm,expected", [
-    ("Projeto A", "PROJETO A", "Projeto A", "PROJETO A", True),   # exact nome_meta match
-    ("Outro", "PROJETO A", "Outro2", "PROJETO A", True),          # nome_norm == target_norm
-    ("Outro", "PROJETO A B", "Outro2", "PROJETO A", True),        # target_norm in nome_norm
-    ("Outro", "PROJETO", "Outro2", "PROJETO A B", True),          # nome_norm in target_norm
-    ("X", "X NORM", "Y", "Y NORM", False),                        # no match
-    ("", "", "", "", True),                                        # empty strings match
-])
+
+@pytest.mark.parametrize(
+    "nome_meta,nome_norm,project_name,target_norm,expected",
+    [
+        ("Projeto A", "PROJETO A", "Projeto A", "PROJETO A", True),  # exact nome_meta match
+        ("Outro", "PROJETO A", "Outro2", "PROJETO A", True),  # nome_norm == target_norm
+        ("Outro", "PROJETO A B", "Outro2", "PROJETO A", True),  # target_norm in nome_norm
+        ("Outro", "PROJETO", "Outro2", "PROJETO A B", True),  # nome_norm in target_norm
+        ("X", "X NORM", "Y", "Y NORM", False),  # no match
+        ("", "", "", "", True),  # empty strings match
+    ],
+)
 def test_aq_lp_matches_name(nome_meta, nome_norm, project_name, target_norm, expected):
     assert _aq_lp_matches_name(nome_meta, nome_norm, project_name, target_norm) is expected
 
@@ -444,6 +462,7 @@ def test_aq_lp_matches_name(nome_meta, nome_norm, project_name, target_norm, exp
 # ---------------------------------------------------------------------------
 # _aq_lp_check_dir
 # ---------------------------------------------------------------------------
+
 
 class TestAqLpCheckDir:
     def test_returns_none_for_non_directory(self, tmp_path: Path) -> None:
@@ -485,6 +504,7 @@ class TestAqLpCheckDir:
 # ---------------------------------------------------------------------------
 # _latest_project_by_name
 # ---------------------------------------------------------------------------
+
 
 class TestLatestProjectByName:
     def _make_project_dir(self, root: Path, name: str, criado_em: str) -> Path:
@@ -536,6 +556,7 @@ class TestLatestProjectByName:
 # ---------------------------------------------------------------------------
 # _resolve_canonical_path
 # ---------------------------------------------------------------------------
+
 
 class TestResolveCanonicalPath:
     def test_returns_valid_candidate_raw_path(self, tmp_path: Path) -> None:

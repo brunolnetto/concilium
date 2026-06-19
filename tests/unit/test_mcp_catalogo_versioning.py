@@ -1,18 +1,18 @@
 """Tests for MCP catalogo.py — version tools and wrapper coverage."""
+
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from mcp.server.fastmcp import FastMCP
-
 
 _CATALOGO_MOD = "concilium.presentation.mcp.tools.catalogo"
 
 
 def _register_tools(monkeypatch, tmp_path: Path) -> dict:
     import importlib
+
     config_dir = tmp_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_dir))
@@ -30,13 +30,16 @@ def _register_tools(monkeypatch, tmp_path: Path) -> dict:
 
 # ─── _catalog_root helper ──────────────────────────────────────────────────────
 
+
 def test_catalog_root(tmp_path):
     from concilium.presentation.mcp.tools.catalogo import _catalog_root
+
     result = _catalog_root(tmp_path / "config", "mendeslobo")
     assert result == tmp_path / "config" / "catalogos" / "mendeslobo"
 
 
 # ─── Wrapper tools (thin delegation) ──────────────────────────────────────────
+
 
 class TestCatalogoWrappers:
     def test_listar_contextos(self, monkeypatch, tmp_path):

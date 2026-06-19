@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
-import pytest
-
-_NOW = datetime.now(timezone.utc).isoformat()
+_NOW = datetime.now(UTC).isoformat()
 
 
 def _make_proj():
@@ -26,6 +24,7 @@ _MODULE_PATH = (
 def _load_executivo_mod():
     import importlib.util
     from pathlib import Path
+
     path = Path(_MODULE_PATH)
     spec = importlib.util.spec_from_file_location("_skill_helpers_executivo", path)
     mod = importlib.util.module_from_spec(spec)
@@ -76,9 +75,7 @@ class TestRreHelpers:
 
     def test_rre_build_sensibilidade_no_rp(self):
         mod = self._load()
-        relatorio, artifact, validacao = mod._rre_build_sensibilidade(
-            None, _make_proj(), _NOW, "VERDE", 0.15
-        )
+        relatorio, artifact, validacao = mod._rre_build_sensibilidade(None, _make_proj(), _NOW, "VERDE", 0.15)
         assert relatorio.status_margem == "VERDE"
         assert validacao.status == "OK"
 
@@ -96,17 +93,13 @@ class TestRreHelpers:
         rp.margem_alvo_min = 0.10
         rp.repair_viavel = True
         rp.margem_projetada = 0.12
-        relatorio, artifact, validacao = mod._rre_build_sensibilidade(
-            rp, _make_proj(), _NOW, "VERMELHO", 0.02
-        )
+        relatorio, artifact, validacao = mod._rre_build_sensibilidade(rp, _make_proj(), _NOW, "VERMELHO", 0.02)
         assert relatorio.status_margem == "VERMELHO"
         assert len(relatorio.passos_repair) == 1  # VERMELHO → passos
 
     def test_rre_build_intervencao_no_psr(self):
         mod = self._load()
-        relatorio, artifact, validacao = mod._rre_build_intervencao(
-            None, _make_proj(), _NOW, "VERDE"
-        )
+        relatorio, artifact, validacao = mod._rre_build_intervencao(None, _make_proj(), _NOW, "VERDE")
         assert relatorio.status_entrada == "VERDE"
         assert validacao.status == "OK"
 
@@ -124,9 +117,7 @@ class TestRreHelpers:
         psr.repair_path = repair_path
         psr.oportunidades = []
         psr.status_entrada = "VERMELHO"
-        relatorio, artifact, validacao = mod._rre_build_intervencao(
-            psr, _make_proj(), _NOW, "VERMELHO"
-        )
+        relatorio, artifact, validacao = mod._rre_build_intervencao(psr, _make_proj(), _NOW, "VERMELHO")
         assert len(relatorio.eixos_intervencao) >= 1
         assert validacao.status == "OK"
 

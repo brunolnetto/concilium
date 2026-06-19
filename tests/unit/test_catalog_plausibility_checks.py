@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import date, timedelta
 from unittest.mock import patch
 
-import pytest
-
 from concilium.application.catalog._plausibility_checks import (
     Anomalia,
     _is_estagiario,
@@ -29,14 +27,15 @@ from concilium.application.catalog._plausibility_checks import (
 )
 from concilium.domain.constants import (
     DIESEL_L_POR_CV_PONT,
-    DIESEL_TOLERANCIA,
-    HORAS_MES_CLT as HORAS_MES_PADRAO,
     SMH,
-    VALIDADE_PRECO_DIAS as VALIDADE_DIAS,
     VH_MAX,
-    ZSCORE_EXTREMO,
 )
-
+from concilium.domain.constants import (
+    HORAS_MES_CLT as HORAS_MES_PADRAO,
+)
+from concilium.domain.constants import (
+    VALIDADE_PRECO_DIAS as VALIDADE_DIAS,
+)
 
 # ── Anomalia ─────────────────────────────────────────────────────────────────
 
@@ -117,7 +116,7 @@ class TestToday:
             "concilium.application.catalog._plausibility_checks._today",
             return_value=fixed_date,
         ):
-            from concilium.application.catalog._plausibility_checks import _today as _t
+
             # The patch replaces the function itself in module scope
             assert fixed_date == date(2025, 1, 15)
 
@@ -187,10 +186,7 @@ class TestZscoreMap:
 
 class TestPcMoZscore:
     def _make_mo(self, precos: list[float]) -> list[dict]:
-        return [
-            {"codigo": f"MO-{i:03d}", "preco_unitario": p, "descricao": f"desc {i}"}
-            for i, p in enumerate(precos)
-        ]
+        return [{"codigo": f"MO-{i:03d}", "preco_unitario": p, "descricao": f"desc {i}"} for i, p in enumerate(precos)]
 
     def test_uniform_list_triggers_nothing(self):
         mo = self._make_mo([1000.0, 1000.0, 1000.0, 1000.0])
@@ -252,12 +248,14 @@ class TestPcMoSalarioMinimo:
         # With horas_mes=100, threshold = SMH * 0.95 * 100
         horas = 100.0
         below_threshold = SMH * 0.90 * horas
-        mo = [{
-            "codigo": "MO-002",
-            "descricao": "Auxiliar",
-            "preco_unitario": below_threshold,
-            "atributos_especificos": {"horas_mes": horas},
-        }]
+        mo = [
+            {
+                "codigo": "MO-002",
+                "descricao": "Auxiliar",
+                "preco_unitario": below_threshold,
+                "atributos_especificos": {"horas_mes": horas},
+            }
+        ]
         result = _pc_mo_salario_minimo(mo)
         assert len(result) == 1
         assert result[0].tipo == "FISICO"
@@ -518,13 +516,15 @@ class TestPcEqDiesel:
         # potencia_hp used when potencia_cv absent
         potencia = 100.0
         consumo = DIESEL_L_POR_CV_PONT * potencia
-        eq = [{
-            "codigo": "EQ-001",
-            "atributos_especificos": {
-                "consumo_litros_hora": consumo,
-                "potencia_hp": potencia,
-            },
-        }]
+        eq = [
+            {
+                "codigo": "EQ-001",
+                "atributos_especificos": {
+                    "consumo_litros_hora": consumo,
+                    "potencia_hp": potencia,
+                },
+            }
+        ]
         result = _pc_eq_diesel(eq)
         assert result == []
 
@@ -545,10 +545,7 @@ class TestPcEqDiesel:
 
 class TestPcEqZscore:
     def _make_eq(self, precos: list[float]) -> list[dict]:
-        return [
-            {"codigo": f"EQ-{i:03d}", "preco_unitario": p, "descricao": f"equip {i}"}
-            for i, p in enumerate(precos)
-        ]
+        return [{"codigo": f"EQ-{i:03d}", "preco_unitario": p, "descricao": f"equip {i}"} for i, p in enumerate(precos)]
 
     def test_uniform_prices_no_anomalia(self):
         eq = self._make_eq([500.0, 500.0, 500.0])
@@ -581,11 +578,13 @@ class TestPcEqLocacao:
         assert result[0].severidade == "INFO"
 
     def test_has_valor_locacao_is_clean(self):
-        eq = [{
-            "codigo": "EQ-001",
-            "preco_unitario": 100.0,
-            "atributos_especificos": {"valor_locacao_mensal": 5000.0},
-        }]
+        eq = [
+            {
+                "codigo": "EQ-001",
+                "preco_unitario": 100.0,
+                "atributos_especificos": {"valor_locacao_mensal": 5000.0},
+            }
+        ]
         result = _pc_eq_locacao(eq)
         assert result == []
 

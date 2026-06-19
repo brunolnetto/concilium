@@ -7,10 +7,10 @@ import pytest
 
 from concilium.application.skills.registry import SkillMetadata, SkillRegistry
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_skill_toml(tmp_path: Path, folder: str, content: str) -> Path:
     """Create a skill.toml inside a subdirectory of tmp_path."""

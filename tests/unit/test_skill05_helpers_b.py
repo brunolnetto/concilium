@@ -14,25 +14,21 @@ Covers:
 
 from __future__ import annotations
 
-import uuid
-from collections import defaultdict
-from datetime import date, datetime, timezone
-from unittest.mock import MagicMock, patch
-
-import pytest
-
 # ── Import the module under test ────────────────────────────────────────────
 # The module lives in "05-equipes-e-alocacao/" which is not a valid Python
 # identifier, so we load it via importlib below instead of a direct import.
-
 # ---------------------------------------------------------------------------
 # Helpers to import from the actual file path since the module lives in a
 # directory whose name starts with a digit ("05-equipes-e-alocacao") and the
 # public entrypoint re-exports everything.
 # ---------------------------------------------------------------------------
 import importlib.util
-import sys
-import types
+import uuid
+from collections import defaultdict
+from datetime import UTC, date, datetime
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 _HELPERS_PATH = (
     "/home/pingu/github/agente-gerente-de-engenharia"
@@ -64,12 +60,11 @@ _processar_equipamentos_requisitos = _mod._processar_equipamentos_requisitos
 
 # ── Domain model imports ─────────────────────────────────────────────────────
 from concilium.domain.models.canonical import (
-    Alocacao,
     Atividade,
     CanonicalModel,
-    CronogramaItem,
-    EquipeDireta,
+    Coordenadas,
     EquipamentoEquipeDireta,
+    EquipeDireta,
     FuncaoEquipeDireta,
     Meta,
     Projeto,
@@ -77,8 +72,6 @@ from concilium.domain.models.canonical import (
     RegimeTrabalho,
     RequisitoRecurso,
     TipoRecurso,
-    ValidacaoItem,
-    Coordenadas,
 )
 
 # ── ConversorUnidades path ───────────────────────────────────────────────────
@@ -87,6 +80,7 @@ _CONV_PATH = "concilium.domain.services.conversor_unidades.ConversorUnidades"
 # ============================================================================
 # Shared fixtures
 # ============================================================================
+
 
 def _make_projeto() -> Projeto:
     return Projeto(
@@ -105,7 +99,7 @@ def _make_projeto() -> Projeto:
 
 def _make_meta() -> Meta:
     return Meta(
-        gerado_em=datetime(2025, 1, 1, tzinfo=timezone.utc),
+        gerado_em=datetime(2025, 1, 1, tzinfo=UTC),
         contexto_id="ctx-001",
     )
 
@@ -146,8 +140,9 @@ def _make_equipe(item_id: str, funcoes=None, equipamentos=None) -> EquipeDireta:
     )
 
 
-def _make_funcao(funcao_id: str = "F1", descricao: str = "Operador", num_pessoas: int = 2,
-                 custo_mensal_unitario: float = 3000.0) -> FuncaoEquipeDireta:
+def _make_funcao(
+    funcao_id: str = "F1", descricao: str = "Operador", num_pessoas: int = 2, custo_mensal_unitario: float = 3000.0
+) -> FuncaoEquipeDireta:
     return FuncaoEquipeDireta(
         funcao_id=funcao_id,
         descricao=descricao,
@@ -156,8 +151,9 @@ def _make_funcao(funcao_id: str = "F1", descricao: str = "Operador", num_pessoas
     )
 
 
-def _make_equipamento(equip_id: str = "E1", descricao: str = "Escavadeira",
-                      num_unidades: int = 1, custo_mensal: float = 10000.0) -> EquipamentoEquipeDireta:
+def _make_equipamento(
+    equip_id: str = "E1", descricao: str = "Escavadeira", num_unidades: int = 1, custo_mensal: float = 10000.0
+) -> EquipamentoEquipeDireta:
     return EquipamentoEquipeDireta(
         equip_id=equip_id,
         descricao=descricao,
@@ -169,6 +165,7 @@ def _make_equipamento(equip_id: str = "E1", descricao: str = "Escavadeira",
 # ============================================================================
 # Tests for _resolve_salario
 # ============================================================================
+
 
 class TestResolveSalario:
     def test_salario_override_returns_override(self):
@@ -200,6 +197,7 @@ class TestResolveSalario:
 # ============================================================================
 # Tests for _resolve_encargo_funcao
 # ============================================================================
+
 
 class TestResolveEncargoFuncao:
     def test_encargo_override_takes_priority(self):
@@ -247,6 +245,7 @@ class TestResolveEncargoFuncao:
 # Tests for _calcular_custo_funcao
 # ============================================================================
 
+
 class TestCalcularCustoFuncao:
     def _base_insumo(self, preco=3000.0, unidade="mes", atrib=None):
         return {
@@ -259,8 +258,7 @@ class TestCalcularCustoFuncao:
         insumo = self._base_insumo(atrib={"categoria_sindical": "PJ"})
         with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=None,
-                enc_mensalista=0.6
+                insumo, num_pessoas=1, enc_horista=0.8, he_override=None, enc_mensalista=0.6
             )
         assert salario == 3000.0
         assert custo == 3000.0
@@ -270,8 +268,7 @@ class TestCalcularCustoFuncao:
         insumo = self._base_insumo(atrib={"custo_com_encargos": 4000.0})
         with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.0,
-                enc_mensalista=0.6
+                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.0, enc_mensalista=0.6
             )
         assert custo == 4000.0
 
@@ -280,8 +277,7 @@ class TestCalcularCustoFuncao:
         insumo = self._base_insumo(atrib={"custo_com_encargos": 4000.0})
         with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.20,
-                enc_mensalista=0.6
+                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.20, enc_mensalista=0.6
             )
         assert custo == pytest.approx(4800.0)
 
@@ -290,8 +286,7 @@ class TestCalcularCustoFuncao:
         insumo = self._base_insumo(atrib={"categoria_sindical": "mensalista"})
         with patch(f"{_CONV_PATH}.converter_preco", return_value=2000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.10,
-                enc_mensalista=0.60
+                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.10, enc_mensalista=0.60
             )
         # 2000 * 1.60 * 1.10 = 3520
         assert custo == pytest.approx(3520.0)
@@ -302,22 +297,27 @@ class TestCalcularCustoFuncao:
         insumo = self._base_insumo(atrib={"categoria_sindical": "horista"})
         with patch(f"{_CONV_PATH}.converter_preco", return_value=2000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=None,
-                enc_mensalista=0.6, custo_unitario_override=9999.99
+                insumo,
+                num_pessoas=1,
+                enc_horista=0.8,
+                he_override=None,
+                enc_mensalista=0.6,
+                custo_unitario_override=9999.99,
             )
         assert custo == 9999.99
         # salario and he_pct are still computed even with override
         assert salario == 2000.0
 
     def test_he_override_none_uses_atrib_default(self):
-        insumo = self._base_insumo(atrib={
-            "categoria_sindical": "mensalista",
-            "horas_extras_pct_padrao": 0.05,
-        })
+        insumo = self._base_insumo(
+            atrib={
+                "categoria_sindical": "mensalista",
+                "horas_extras_pct_padrao": 0.05,
+            }
+        )
         with patch(f"{_CONV_PATH}.converter_preco", return_value=2000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=None,
-                enc_mensalista=0.60
+                insumo, num_pessoas=1, enc_horista=0.8, he_override=None, enc_mensalista=0.60
             )
         assert he_pct == 0.05
         # 2000 * 1.60 * 1.05 = 3360
@@ -327,8 +327,7 @@ class TestCalcularCustoFuncao:
         insumo = self._base_insumo(atrib={"categoria_sindical": "pj-autonomo"})
         with patch(f"{_CONV_PATH}.converter_preco", return_value=5000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.0,
-                enc_mensalista=0.6
+                insumo, num_pessoas=1, enc_horista=0.8, he_override=0.0, enc_mensalista=0.6
             )
         assert custo == 5000.0  # PJ path: custo_unit = salario (he not applied for PJ)
 
@@ -336,8 +335,7 @@ class TestCalcularCustoFuncao:
         insumo = self._base_insumo(atrib={"categoria_sindical": "PJ"})
         with patch(f"{_CONV_PATH}.converter_preco", return_value=3000.0):
             salario, he_pct, custo = _calcular_custo_funcao(
-                insumo, num_pessoas=1, enc_horista=0.8, he_override=None,
-                enc_mensalista=0.6, salario_override=8000.0
+                insumo, num_pessoas=1, enc_horista=0.8, he_override=None, enc_mensalista=0.6, salario_override=8000.0
             )
         assert salario == 8000.0
         assert custo == 8000.0
@@ -346,6 +344,7 @@ class TestCalcularCustoFuncao:
 # ============================================================================
 # Tests for _converter_preco_equip
 # ============================================================================
+
 
 class TestConverterPrecoEquip:
     def test_successful_conversion(self):
@@ -387,6 +386,7 @@ class TestConverterPrecoEquip:
 # Tests for _consumo_from_decomposicao
 # ============================================================================
 
+
 class TestConsumoFromDecomposicao:
     def test_with_custo_diesel_h_and_preco_diesel(self):
         decomp = {"custo_diesel_h": 50.0}
@@ -423,6 +423,7 @@ class TestConsumoFromDecomposicao:
 # Tests for _processar_funcoes_requisitos
 # ============================================================================
 
+
 class TestProcessarFuncoesRequisitos:
     def test_creates_tipo_for_new_funcao(self):
         eq = _make_equipe("item-1", funcoes=[_make_funcao("F1", "Operador", 2, 3000.0)])
@@ -449,8 +450,7 @@ class TestProcessarFuncoesRequisitos:
         tipos = {}
         requisitos = []
 
-        _processar_funcoes_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31),
-                                      atvs_por_item, tipos, requisitos)
+        _processar_funcoes_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31), atvs_por_item, tipos, requisitos)
 
         assert len(requisitos) == 2
         for req in requisitos:
@@ -458,15 +458,13 @@ class TestProcessarFuncoesRequisitos:
             assert req.quantidade == 3.0
 
     def test_does_not_overwrite_existing_tipo(self):
-        existing_tipo = TipoRecurso(id="FUNC-F1", nome="Existente", categoria="EQUIPE",
-                                    custo_unitario_dia=99.0)
+        existing_tipo = TipoRecurso(id="FUNC-F1", nome="Existente", categoria="EQUIPE", custo_unitario_dia=99.0)
         eq = _make_equipe("item-1", funcoes=[_make_funcao("F1", "Novo")])
         atvs_por_item = defaultdict(list, {"item-1": []})
         tipos = {"FUNC-F1": existing_tipo}
         requisitos = []
 
-        _processar_funcoes_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31),
-                                      atvs_por_item, tipos, requisitos)
+        _processar_funcoes_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31), atvs_por_item, tipos, requisitos)
 
         assert tipos["FUNC-F1"].nome == "Existente"
 
@@ -474,6 +472,7 @@ class TestProcessarFuncoesRequisitos:
 # ============================================================================
 # Tests for _processar_equipamentos_requisitos
 # ============================================================================
+
 
 class TestProcessarEquipamentosRequisitos:
     def test_creates_tipo_for_new_equip(self):
@@ -483,8 +482,7 @@ class TestProcessarEquipamentosRequisitos:
         tipos = {}
         requisitos = []
 
-        _processar_equipamentos_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31),
-                                           atvs_por_item, tipos, requisitos)
+        _processar_equipamentos_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31), atvs_por_item, tipos, requisitos)
 
         assert "EQUIP-E1" in tipos
         t = tipos["EQUIP-E1"]
@@ -499,8 +497,7 @@ class TestProcessarEquipamentosRequisitos:
         tipos = {}
         requisitos = []
 
-        _processar_equipamentos_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31),
-                                           atvs_por_item, tipos, requisitos)
+        _processar_equipamentos_requisitos(eq, date(2025, 1, 1), date(2025, 12, 31), atvs_por_item, tipos, requisitos)
 
         assert len(requisitos) == 1
         assert requisitos[0].quantidade == 3.0
@@ -509,6 +506,7 @@ class TestProcessarEquipamentosRequisitos:
 # ============================================================================
 # Tests for _build_requisitos_e_tipos
 # ============================================================================
+
 
 class TestBuildRequisitosETipos:
     def _cron_lookup_with_dist(self, item_id: str) -> dict:
@@ -611,8 +609,7 @@ class TestBuildRequisitosETipos:
     def test_existing_tipos_recurso_preserved(self):
         """Tipos already in canonical_in are included in returned tipos dict."""
         item_id = "item-C"
-        existing = TipoRecurso(id="EXISTING-001", nome="Existente", categoria="EQUIPE",
-                               custo_unitario_dia=100.0)
+        existing = TipoRecurso(id="EXISTING-001", nome="Existente", categoria="EQUIPE", custo_unitario_dia=100.0)
         canonical = _make_canonical(atividades=[], tipos_recurso=[existing])
         validacoes = []
 
@@ -630,9 +627,11 @@ class TestBuildRequisitosETipos:
 # Tests for _build_alocacoes_pool
 # ============================================================================
 
+
 class TestBuildAlocacoesPool:
-    def _make_requisito(self, tipo_recurso_id: str, atividade_id: str = "atv-1",
-                        quantidade: float = 2.0) -> RequisitoRecurso:
+    def _make_requisito(
+        self, tipo_recurso_id: str, atividade_id: str = "atv-1", quantidade: float = 2.0
+    ) -> RequisitoRecurso:
         return RequisitoRecurso(
             requisito_id=str(uuid.uuid4()),
             atividade_id=atividade_id,
@@ -646,10 +645,7 @@ class TestBuildAlocacoesPool:
     def test_pool_auto_created_for_new_tipo(self):
         canonical = _make_canonical()
         tid = "FUNC-F99"
-        tipos = {
-            tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE",
-                             custo_unitario_dia=100.0)
-        }
+        tipos = {tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE", custo_unitario_dia=100.0)}
         requisitos = [self._make_requisito(tid)]
 
         alocacoes, pool_dict = _build_alocacoes_pool(requisitos, canonical, tipos)
@@ -663,10 +659,7 @@ class TestBuildAlocacoesPool:
     def test_alocacao_fields_are_correct(self):
         canonical = _make_canonical()
         tid = "EQUIP-E99"
-        tipos = {
-            tid: TipoRecurso(id=tid, nome="Trator", categoria="EQUIPAMENTO",
-                             custo_unitario_dia=500.0)
-        }
+        tipos = {tid: TipoRecurso(id=tid, nome="Trator", categoria="EQUIPAMENTO", custo_unitario_dia=500.0)}
         req = self._make_requisito(tid, atividade_id="atv-42", quantidade=3.0)
         alocacoes, pool_dict = _build_alocacoes_pool([req], canonical, tipos)
 
@@ -690,10 +683,7 @@ class TestBuildAlocacoesPool:
             quantidade_disponivel=5,
         )
         canonical = _make_canonical(recurso_pool=[existing_pool])
-        tipos = {
-            tid: TipoRecurso(id=tid, nome="Encarregado", categoria="EQUIPE",
-                             custo_unitario_dia=200.0)
-        }
+        tipos = {tid: TipoRecurso(id=tid, nome="Encarregado", categoria="EQUIPE", custo_unitario_dia=200.0)}
         req = self._make_requisito(tid)
         alocacoes, pool_dict = _build_alocacoes_pool([req], canonical, tipos)
 
@@ -713,10 +703,7 @@ class TestBuildAlocacoesPool:
     def test_multiple_requisitos_sorted_by_data_inicio(self):
         canonical = _make_canonical()
         tid = "FUNC-F20"
-        tipos = {
-            tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE",
-                             custo_unitario_dia=150.0)
-        }
+        tipos = {tid: TipoRecurso(id=tid, nome="Operador", categoria="EQUIPE", custo_unitario_dia=150.0)}
         req_late = RequisitoRecurso(
             requisito_id=str(uuid.uuid4()),
             atividade_id="atv-late",

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from mcp.server.fastmcp import FastMCP
@@ -403,8 +402,10 @@ class TestConsultarStatus:
         version_dir.mkdir()
         log_path = version_dir / "invocations.log"
         log_path.write_text(
-            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"}) + "\n"
-            + json.dumps({"skill": "02-produtividade-climatica", "status": "ERRO", "ts": "2026-01-01T11:00:00"}) + "\n",
+            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"})
+            + "\n"
+            + json.dumps({"skill": "02-produtividade-climatica", "status": "ERRO", "ts": "2026-01-01T11:00:00"})
+            + "\n",
             encoding="utf-8",
         )
 
@@ -577,7 +578,9 @@ class TestAprovarVersao:
             patch(
                 "concilium.presentation.mcp.tools.projeto.concilium.presentation.mcp.tools.escopo._resolve_escopo_id",
                 return_value="esc-001",
-            ) if False else patch(
+            )
+            if False
+            else patch(
                 "concilium.presentation.mcp.tools.escopo._resolve_escopo_id",
                 return_value="esc-001",
             ),
@@ -801,9 +804,7 @@ class TestSalvarPerfilBdi:
             "lucro": LUCRO_VALID,
             "perfil_id": "old-perfil-id",
         }
-        (bdi_dir / "perfil_bdi.json").write_text(
-            json.dumps(existing_perfil, ensure_ascii=False), encoding="utf-8"
-        )
+        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(existing_perfil, ensure_ascii=False), encoding="utf-8")
 
         with patch("concilium.presentation.mcp.tools.projeto._project", return_value=store):
             result = tools["salvar_perfil_bdi"](
@@ -827,12 +828,13 @@ class TestSalvarPerfilBdi:
         bdi_dir.mkdir()
 
         # First, create a valid PerfilBdiProjeto to serialize as the existing version
+        from datetime import UTC, datetime
+
         from concilium.domain.models.financial.bdi import (
             PerfilBdiProjeto,
-            PerfilTributarioProjeto,
             PerfilLucroProjeto,
+            PerfilTributarioProjeto,
         )
-        from datetime import datetime, UTC
 
         trib = PerfilTributarioProjeto.model_validate(TRIBUTARIO_VALID)
         lucro = PerfilLucroProjeto.model_validate(LUCRO_VALID)
@@ -847,9 +849,7 @@ class TestSalvarPerfilBdi:
         )
         existing_payload = existing_perfil.model_dump(mode="json")
         existing_payload["motivo_revisao"] = None
-        (bdi_dir / "perfil_bdi.json").write_text(
-            json.dumps(existing_payload, ensure_ascii=False), encoding="utf-8"
-        )
+        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(existing_payload, ensure_ascii=False), encoding="utf-8")
 
         # New lucro with changed mao_obra
         new_lucro = {**LUCRO_VALID, "mao_obra": 0.12}
@@ -881,8 +881,9 @@ class TestSalvarPerfilBdi:
         bdi_dir = tmp_path / "bdi"
         bdi_dir.mkdir()
 
-        from concilium.domain.models.financial.bdi import PerfilBdiProjeto, PerfilTributarioProjeto, PerfilLucroProjeto
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
+
+        from concilium.domain.models.financial.bdi import PerfilBdiProjeto, PerfilLucroProjeto, PerfilTributarioProjeto
 
         trib = PerfilTributarioProjeto.model_validate(TRIBUTARIO_VALID)
         lucro = PerfilLucroProjeto.model_validate(LUCRO_VALID)
@@ -897,9 +898,7 @@ class TestSalvarPerfilBdi:
         )
         existing_payload = existing_perfil.model_dump(mode="json")
         existing_payload["motivo_revisao"] = None
-        (bdi_dir / "perfil_bdi.json").write_text(
-            json.dumps(existing_payload, ensure_ascii=False), encoding="utf-8"
-        )
+        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(existing_payload, ensure_ascii=False), encoding="utf-8")
 
         with patch("concilium.presentation.mcp.tools.projeto._project", return_value=store):
             result = tools["salvar_perfil_bdi"](
@@ -950,9 +949,7 @@ class TestSalvarPerfilBdi:
             "lucro": LUCRO_VALID,
             # Missing required fields: content_hash, confirmado_em, confirmado_por, perfil_id
         }
-        (bdi_dir / "perfil_bdi.json").write_text(
-            json.dumps(existing_payload, ensure_ascii=False), encoding="utf-8"
-        )
+        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(existing_payload, ensure_ascii=False), encoding="utf-8")
 
         with patch("concilium.presentation.mcp.tools.projeto._project", return_value=store):
             result = tools["salvar_perfil_bdi"](
@@ -984,7 +981,8 @@ class TestConsultarStatusEdgeCases:
         log_path = version_dir / "invocations.log"
         # Write one valid and one invalid JSON line
         log_path.write_text(
-            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"}) + "\n"
+            json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"})
+            + "\n"
             + "NOT VALID JSON !!!\n",
             encoding="utf-8",
         )

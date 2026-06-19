@@ -83,6 +83,10 @@ import pytest
 
 os.environ.setdefault("CONCILIUM__PDF_RENDERER", "fpdf2")
 
+from concilium.infrastructure.observability.logging_config import configure_logging
+
+configure_logging(level="WARNING", json_format=False)
+
 from concilium.application.runtime import Runtime
 from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, OpenMeteoClient
 from concilium.infrastructure.storage.project import ProjectStore
@@ -254,7 +258,7 @@ def _session_pipeline_sk03(tmp_path_factory, runtime, inputs_escopo_terraplenage
     _t = time.time()
     runtime.run_skill("01-escopo-e-eap", proj, inputs=inputs_escopo_terraplenagem)
     print(f"\n[PERF] sk03/01-escopo-e-eap: {time.time() - _t:.2f}s")
-    
+
     _t = time.time()
     with patch(
         "concilium.infrastructure.clients.openmeteo.OpenMeteoClient",
@@ -304,6 +308,9 @@ def _session_pipeline_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
     print(f"[PERF] sk09/06-resultado-financeiro: {time.time() - _t:.2f}s")
     _t = time.time()
+    runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
+    print(f"[PERF] sk09/10-diagnostico: {time.time() - _t:.2f}s")
+    _t = time.time()
     r = runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
     print(f"[PERF] sk09/09-relatorio: {time.time() - _t:.2f}s")
     print(f"[PERF] Pipeline sk09 completo: {time.time() - _start:.2f}s")
@@ -330,6 +337,7 @@ def _session_edge_case_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
     runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
     runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
+    runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
     runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
     print(f"\n[PERF] Pipeline edge case sk09: {time.time() - _start:.2f}s")
     return proj
@@ -394,6 +402,7 @@ def _session_pipeline_mendeslobo_sk09(tmp_path_factory, runtime, inputs_escopo_t
     runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
     runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
     runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
+    runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
     runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
     print(f"[PERF] Pipeline mendeslobo completo: {time.time() - _start:.2f}s")
     return proj
@@ -406,7 +415,7 @@ def _wb_sk09(_session_pipeline_sk09):
     Evita N invocações independentes de load_workbook (cada uma ~12–23 s)
     sobre os mesmos bytes. Todos os consumidores são read-only (sheetnames,
     iter_rows) — sem risco de estado compartilhado entre testes.
-    
+
     LAZY IMPORT: openpyxl só é importado quando fixture é realmente usada,
     reduzindo tempo de inicialização para testes que não precisam de Excel.
     """

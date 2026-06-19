@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -10,7 +10,6 @@ import pytest
 from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
 from concilium.infrastructure.storage.campaign_store import CampaignRunStore
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -48,7 +47,7 @@ class TestBenchmarkStoreUsesBlobPort:
             nome="Teste",
             origem="unittest",
             tags=["test"],
-            criado_em=datetime.now(timezone.utc),
+            criado_em=datetime.now(UTC),
             versao=1,
             imutavel=False,
         )
@@ -67,7 +66,7 @@ class TestBenchmarkStoreUsesBlobPort:
                 nome=f"v{versao}",
                 origem="unittest",
                 tags=[],
-                criado_em=datetime.now(timezone.utc),
+                criado_em=datetime.now(UTC),
                 versao=versao,
                 imutavel=False,
             )
@@ -87,7 +86,7 @@ class TestBenchmarkStoreUsesBlobPort:
                 versao=1,
                 projeto_id="proj-x",
                 status=BenchmarkState.SUCESSO,
-                executado_em=datetime.now(timezone.utc),
+                executado_em=datetime.now(UTC),
             )
             benchmark_store.log_execution(exec_)
 
@@ -273,7 +272,7 @@ class TestStoreFactoryGetBenchmarkStore:
             nome="Factory Test",
             origem="pytest",
             tags=[],
-            criado_em=datetime.now(timezone.utc),
+            criado_em=datetime.now(UTC),
             versao=1,
             imutavel=False,
         )

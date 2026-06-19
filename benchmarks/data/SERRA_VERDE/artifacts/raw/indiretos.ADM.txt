@@ -1,0 +1,66 @@
+EQUIPE:			ADMINISTRAÇÃO																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 245.786,95					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 1.996.344,75			EQUIPAMENTOS		R$ 349.000,00					24,00						 47.912.273,88 	
+						VERBAS		R$ 1.401.557,80												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0013	PJ		ADMINISTRATIVO	P0013	1	 R$9.000,00 			 -   			J	 1.800,00 				 -   		 10.800,00 	 HORARIO ADM 
+P0068			Auxiliar administrativo de obras II	P0068	1	 R$2.525,77 			 -   			J	 1.800,00 				 1.540,72 		 5.866,49 	 HORARIO ADM 
+P0003			ALMOXARIFE	P0003	1	 R$2.805,60 		D	 701,40 			J	 1.800,00 				 2.139,27 		 7.446,27 	 HORARIO ADM 
+P0027	PJ		GERENTE DE CONTRATO	P0027	1	 R$30.000,00 			 -   			J	 1.800,00 				 -   		 31.800,00 	 HORARIO ADM 
+P0018	PJ		ENCARREGADO GERAL	P0018	1	 R$15.000,00 			 -   			J	 1.800,00 				 -   		 16.800,00 	 HORARIO ADM 
+P0073	PJ		MECÂNICO	P0073	4	 R$6.000,00 			 -   			J	 1.800,00 				 -   		 7.800,00 	 DIURNO E NOTURNO 
+P0011			Auxiliar mecânico	P0011	4	 R$2.374,20 			 -   			J	 1.800,00 				 1.448,26 		 5.622,46 	 DIURNO E NOTURNO 
+P0072			APONTADOR	P0072	2	 R$2.305,60 		D	 576,40 			J	 2.535,00 				 1.758,02 		 7.175,02 	
+P0063			AUXILIAR DE SERVIÇOS GERAIS	P0063	5	 R$1.874,20 		D	 468,55 			J	 2.535,00 				 1.429,08 		 6.306,83 	 HORARIO ADM 
+P0036			MOTORISTA DE ÔNIBUS	P0036	6	 R$3.305,60 		D	 826,40 			J	 2.535,00 				 2.520,52 		 9.187,52 	 DIURNO E NOTURNO 
+P0033			Motorista de Caminhão Pipa	P0033	1	 R$3.305,60 		D	 826,40 			J	 2.535,00 				 2.520,52 		 9.187,52 	 DIURNO E NOTURNO 
+P0034			Motorista de Caminhão Comboio	P0034	1	 R$3.305,60 		D	 826,40 			J	 2.535,00 				 2.520,52 		 9.187,52 	 DIURNO E NOTURNO 
+		TOTAL			28	 133.255,17 		 10.808,15 				 61.425,00 					 40.298,63 		 245.786,95 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0023			Ônibus com capacidade para 52 passageiros 	E0023	6	 38.000,00 			km		 4.500,00 			S1	 9,00 			 3.500,00 	 41.500,00 	 249.000,00 
+E0040			Veículo picape 4 x 4	E0040	1	 10.000,00 			km		 900,00 			S1	 9,00 			 -   	 10.000,00 	 10.000,00 
+E0008			CAMINHÃO COMBOIO	E0008	1	 25.000,00 			km		 6.000,00 			S1	 4,00 			 -   	 25.000,00 	 25.000,00 
+E0009			CAMINHÃO PRANCHA	E0009	1	 35.000,00 			km		 6.000,00 			S1	 7,00 			 -   	 35.000,00 	 35.000,00 
+E0013			Caminhão Pipa 18.000 l	E0013	1	 30.000,00 			km		 150,00 			s1	 7,00 			 -   	 30.000,00 	 30.000,00 
+			TOTAL		10	 328.000,00 												 21.000,00 		 349.000,00 
+																				
+VERBAS - MENSAIS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		CONTEINER 6X2,4X2,6 PARA BANHEIRO			VB		 2,00 			 1.800,00 					 3.600,00 					
+2		CONTEINER VESTIÁRIO			VB		 2,00 			 1.000,00 					 2.000,00 					
+3		BANHEIRO QUÍMICO (higienização, deslocamento, descarte)			VB		 4,00 			 1.800,00 					 7.200,00 					
+4		LAVATÓRIO			VB		 2,00 			 650,00 					 1.300,00 					
+5		ALUGUEL DE CONTEINER 			UNID.		 4,00 			 1.650,00 					 6.600,00 					
+6		ALOJAMENTO			UNID.		 15,00 			 4.000,00 					 60.000,00 					
+7		ENERGIA ELÉTRICA - ALOJAMENTO			UNID.		 15,00 			 1.500,00 					 22.500,00 					
+8		ÁGUA - ALOJAMENTO			UNID.		 15,00 			 600,00 					 9.000,00 					
+9		ÁGUA MINERAL 			L		 32.700,00 			 1,50 					 49.050,00 					
+10		MATERIAL DE EXPEDIENTE			VB		 1,00 			 200,00 					 200,00 					
+11		DESPESAS COM MALOTE			VB		 1,00 			 300,00 					 300,00 					
+12		STARLINK			VB		 4,00 			 600,00 					 2.400,00 					
+13		VISITA GERÊNCIA			VB		 2,00 			 3.000,00 					 6.000,00 					
+14		RADIO DE COMUNICAÇÃO PORTÁTIL			UNID.		 60,00 			 200,00 					 12.000,00 					
+															 182.150,00 					
+																				
+VERBAS 																				
+ITEM		DESCRIÇÃO			UNID.					PREÇO UNITÁRIO					VALOR					
+1		INSTALAÇÕES PROVISÓRIAS DE CANTEIRO			VB		 1,00 			 15.000,00 					 15.000,00 					
+2		COMPUTADOR			VB		 8,00 			 4.500,00 					 36.000,00 					
+3		ESTRUTURA DE VIVENCIA (TENDA 6x6/MESAS E CADEIRAS)			UNID.		 3,00 			 8.740,00 					 26.220,00 					
+4		FERRAMENTAS			VB		 1,00 			 10.000,00 					 10.000,00 					
+5		EPIS			UNID.		 1,00 			 584.380,00 					 584.380,00 					
+6		EXAMES/TREINAMENTOS			VB		 1,00 			 190.407,80 					 190.407,80 					
+7		IMPRESSORA			VB		 2,00 			 1.800,00 					 3.600,00 					
+8		MOBILIA DE ESCRITORIO			VB		 4,00 			 1.200,00 					 4.800,00 					
+10		MOBILIA ALOJAMENTO			VB		 15,00 			 7.000,00 					 105.000,00 					
+11		MATERIAL DESGASTE 			VB		 24,00 			 10.000,00 					 240.000,00 					
+															 1.219.407,80 					

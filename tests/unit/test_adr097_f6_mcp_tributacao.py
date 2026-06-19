@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -89,9 +88,7 @@ class TestModuloImportaEToolsRegistradas:
             "calcular_inss_empregado",
             "calcular_irrf",
         }
-        assert expected.issubset(tool_names), (
-            f"Tools registradas: {tool_names}; esperadas: {expected}"
-        )
+        assert expected.issubset(tool_names), f"Tools registradas: {tool_names}; esperadas: {expected}"
 
 
 # ---------------------------------------------------------------------------
@@ -125,9 +122,7 @@ class TestCalcularCustoEmpregadorClt:
         """Grupos A (5 itens) + B + C + D + E + F + Judicial = 11 itens."""
         result = _call_clt(5000.0, categoria="horista")
         itens = result["itens"]
-        assert len(itens) == 11, (
-            f"Esperado 11 itens (Grupos A-F + Judicial), encontrado {len(itens)}"
-        )
+        assert len(itens) == 11, f"Esperado 11 itens (Grupos A-F + Judicial), encontrado {len(itens)}"
 
     def test_mensalista_diferente_de_horista(self):
         r_h = _call_clt(5000.0, categoria="horista")

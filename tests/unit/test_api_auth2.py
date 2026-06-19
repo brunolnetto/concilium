@@ -18,6 +18,7 @@ def _client():
     # Reset SlowAPI in-memory rate limiter to avoid cross-test bleeding
     try:
         from concilium.presentation.api.rate_limit import limiter
+
         if hasattr(limiter, "_storage") and hasattr(limiter._storage, "reset"):
             limiter._storage.reset()
     except Exception:
@@ -28,6 +29,7 @@ def _client():
 class TestIssueToken:
     def test_invalid_credentials_returns_401(self):
         from unittest.mock import MagicMock, patch
+
         c = _client()
         store_mock = MagicMock()
         store_mock.get_client_roles.return_value = None
@@ -37,6 +39,7 @@ class TestIssueToken:
 
     def test_valid_credentials_returns_token(self):
         from unittest.mock import MagicMock, patch
+
         c = _client()
         store_mock = MagicMock()
         store_mock.get_client_roles.return_value = ["viewer"]
@@ -50,6 +53,7 @@ class TestIssueToken:
 
     def test_valid_credentials_with_ttl_days(self):
         from unittest.mock import MagicMock, patch
+
         c = _client()
         store_mock = MagicMock()
         store_mock.get_client_roles.return_value = ["operator"]
@@ -64,6 +68,7 @@ class TestIssueToken:
 class TestActivateDevice:
     def test_invalid_device_code_returns_401(self):
         from unittest.mock import MagicMock, patch
+
         c = _client()
         store_mock = MagicMock()
         store_mock.activate_device_code.return_value = None
@@ -73,6 +78,7 @@ class TestActivateDevice:
 
     def test_valid_device_code_returns_refresh_token(self):
         from unittest.mock import MagicMock, patch
+
         c = _client()
         store_mock = MagicMock()
         rt = MagicMock()
@@ -91,6 +97,7 @@ class TestActivateDevice:
 class TestRefreshToken:
     def test_invalid_refresh_token_returns_401(self):
         from unittest.mock import MagicMock, patch
+
         c = _client()
         store_mock = MagicMock()
         store_mock.use_refresh_token.return_value = None
@@ -100,6 +107,7 @@ class TestRefreshToken:
 
     def test_valid_refresh_token_returns_access_token(self):
         from unittest.mock import MagicMock, patch
+
         c = _client()
         store_mock = MagicMock()
         record = MagicMock()

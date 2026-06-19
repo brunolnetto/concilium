@@ -28,7 +28,9 @@ def resolve_compare_version(project, version: str) -> str:
 
 def calculate_deltas(left_summary: dict[str, Any], right_summary: dict[str, Any]) -> dict[str, float]:
     def _delta(key: str) -> float:
-        return float(right_summary.get(key, 0.0) or 0.0) - float(left_summary.get(key, 0.0) or 0.0)
+        _r = right_summary.get(key)
+        _l = left_summary.get(key)
+        return float(_r if _r is not None else 0.0) - float(_l if _l is not None else 0.0)
 
     return {
         "preco_venda_total": _delta("preco_venda_total"),

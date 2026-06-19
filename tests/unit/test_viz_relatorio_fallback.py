@@ -15,8 +15,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -29,8 +27,10 @@ _INIT_MLP_PATCH = f"{_MOD}.init_mpl"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _import_fn():
     import importlib
+
     mod = importlib.import_module(_MOD)
     return mod.build_relatorio_fallback
 
@@ -67,6 +67,7 @@ def _patched_init_mpl(mock_plt):
 # ---------------------------------------------------------------------------
 # Fixtures — minimal data for each section
 # ---------------------------------------------------------------------------
+
 
 def _resumo_row(**kwargs):
     base = {"tipo_id": "EQ-01", "machine_weeks_usados": 5, "machine_weeks_standby": 2}
@@ -112,6 +113,7 @@ def _pe_row(**kwargs):
 # 1. Early-return paths
 # ---------------------------------------------------------------------------
 
+
 class TestEarlyReturns:
     def test_not_a_dict_returns_empty(self):
         """relatorio is not a dict -> return {}."""
@@ -146,6 +148,7 @@ class TestEarlyReturns:
 # ---------------------------------------------------------------------------
 # 2. Chart 1 — resumo_utilizacao_contratos -> bar_tempo_natureza.png
 # ---------------------------------------------------------------------------
+
 
 class TestChart1ResumoUtilizacaoContratos:
     def test_produces_bar_tempo_natureza(self):
@@ -244,6 +247,7 @@ class TestChart1ResumoUtilizacaoContratos:
 # 3. Chart 2 — instancias_recurso -> linha_recursos_tempo.png
 # ---------------------------------------------------------------------------
 
+
 class TestChart2InstanciasRecurso:
     def _make_instancias_plt(self):
         """plt mock whose subplots returns (fig, 2D axes array)."""
@@ -294,8 +298,13 @@ class TestChart2InstanciasRecurso:
         """None semanas values default to 0."""
         build = _import_fn()
         mock_plt, mock_fig, axes_2d, inner_ax = self._make_instancias_plt()
-        row = {"tipo_id": "T1", "numero": None, "instancia_id": "T1-001",
-               "semanas_ativas": None, "semanas_standby": None}
+        row = {
+            "tipo_id": "T1",
+            "numero": None,
+            "instancia_id": "T1-001",
+            "semanas_ativas": None,
+            "semanas_standby": None,
+        }
         relatorio = {"instancias_recurso": [row]}
         with _patched_init_mpl(mock_plt):
             result = build(relatorio)
@@ -353,6 +362,7 @@ class TestChart2InstanciasRecurso:
 # ---------------------------------------------------------------------------
 # 4. Chart 3 — PLANEJAMENTO -> bar_categoria_componente.png
 # ---------------------------------------------------------------------------
+
 
 class TestChart3Planejamento:
     def test_produces_bar_categoria_componente(self):
@@ -454,6 +464,7 @@ class TestChart3Planejamento:
 # 5. Chart 4 — ponto_equilibrio -> bar_atividade_componente.png
 # ---------------------------------------------------------------------------
 
+
 class TestChart4PontoEquilibrio:
     def test_produces_bar_atividade_componente(self):
         """Valid pe_rows -> bar_atividade_componente.png in output."""
@@ -484,11 +495,7 @@ class TestChart4PontoEquilibrio:
         """None custo_venda_cpu treated as 0.0 -> filtered out."""
         build = _import_fn()
         mock_plt, *_ = _make_plt_mock()
-        relatorio = {
-            "ponto_equilibrio": [
-                {"item_id": "Z", "custo_venda_cpu": None, "custo_operacional_real": 500_000}
-            ]
-        }
+        relatorio = {"ponto_equilibrio": [{"item_id": "Z", "custo_venda_cpu": None, "custo_operacional_real": 500_000}]}
         with _patched_init_mpl(mock_plt):
             result = build(relatorio)
         assert "bar_atividade_componente.png" not in result
@@ -498,11 +505,7 @@ class TestChart4PontoEquilibrio:
         build = _import_fn()
         mock_plt, mock_fig, mock_ax = _make_plt_mock()
         mock_plt.subplots.return_value = (mock_fig, mock_ax)
-        relatorio = {
-            "ponto_equilibrio": [
-                _pe_row(custo_venda_cpu=5_000_000, custo_operacional_real=3_000_000)
-            ]
-        }
+        relatorio = {"ponto_equilibrio": [_pe_row(custo_venda_cpu=5_000_000, custo_operacional_real=3_000_000)]}
         with _patched_init_mpl(mock_plt):
             result = build(relatorio)
         assert "bar_atividade_componente.png" in result
@@ -588,6 +591,7 @@ class TestChart4PontoEquilibrio:
 # 6. All charts together
 # ---------------------------------------------------------------------------
 
+
 class TestAllChartsTogther:
     def test_all_four_charts_produced(self):
         """All four data sections present -> all four chart keys in output."""
@@ -600,12 +604,14 @@ class TestAllChartsTogther:
         mock_plt = MagicMock()
         # Return 2D axes for chart2, simple ax for others
         call_count = [0]
+
         def _subplots_side_effect(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] == 2:
                 # instancias_recurso (chart 2) uses 2D axes
                 return (mock_fig, axes_2d)
             return (mock_fig, inner_ax)
+
         mock_plt.subplots.side_effect = _subplots_side_effect
 
         relatorio = {

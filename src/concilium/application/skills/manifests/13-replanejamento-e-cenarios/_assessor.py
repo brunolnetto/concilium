@@ -152,7 +152,6 @@ def _build_sugestao_cronograma(canonical_in: "CanonicalModel", delta_necessario:
     )
 
 
-
 def _build_sugestao_bdi(margem_atual: float, delta_necessario: float) -> ReplanSugestao:
     return ReplanSugestao(
         id="REPLAN-005",

@@ -12,6 +12,8 @@ Objetivo: Reduzir fragmentação e garantir consistência atômica entre dimensi
 from __future__ import annotations
 
 import math
+from hashlib import sha1
+import unicodedata
 
 from concilium.application.skills.manifests._05_equipes_custo_helpers import (
     calcular_custo_instancia_composicional,
@@ -219,14 +221,64 @@ def _consumo_from_decomposicao(decomposicao: dict, preco_diesel: float) -> float
     return 0.0
 
 
+def _to_positive_float_or_none(v) -> float | None:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f > 0.0 else None
+
+
+def _normalize_text_key(txt: str) -> str:
+    base = unicodedata.normalize("NFKD", str(txt or "")).encode("ascii", "ignore").decode("ascii")
+    return " ".join("".join(ch if ch.isalnum() else " " for ch in base).lower().split())
+
+
+def _best_alias_equip_attrs(ctx: _RepoCtx, equip_id: str, descricao: str) -> dict:
+    """Busca atributos de consumo em aliases quando o código principal está incompleto."""
+    try:
+        insumos_all = list(getattr(ctx.repo, "_insumos", {}).values())
+    except Exception:
+        return {}
+
+    desc_key = _normalize_text_key(descricao)
+    best_score = -1.0
+    best_attrs: dict = {}
+    for ins in insumos_all:
+        if str(ins.get("tipo") or "").upper() != "EQUIPAMENTO":
+            continue
+        attrs = ins.get("atributos_especificos") or {}
+        consumo = _to_positive_float_or_none(attrs.get("consumo_litros_hora"))
+        if consumo is None:
+            continue
+        score = 0.0
+        cod_plan = str(attrs.get("codigo_planilha") or "").upper().strip()
+        if cod_plan and cod_plan == str(equip_id or "").upper().strip():
+            score += 50.0
+        desc_i = _normalize_text_key(ins.get("descricao") or "")
+        if desc_key and desc_i:
+            if desc_i == desc_key:
+                score += 40.0
+            else:
+                a = set(desc_key.split())
+                b = set(desc_i.split())
+                inter = len(a & b)
+                union = len(a | b) or 1
+                score += 25.0 * (inter / union)
+        if score > best_score:
+            best_score = score
+            best_attrs = attrs
+    return best_attrs if best_score >= 35.0 else {}
+
+
 def _resolve_consumo_equip(atrib: dict, consumo_override_proj, consumo_override_cpu, preco_diesel: float) -> tuple:
     """Resolve consumo de combustível e código de validação (ADR-030 D1)."""
-    consumo_insumo = atrib.get("consumo_litros_hora") or 0.0
+    consumo_insumo = _to_positive_float_or_none(atrib.get("consumo_litros_hora")) or 0.0
     decomposicao = atrib.get("decomposicao_equip") or {}
     consumo_decomposicao = _consumo_from_decomposicao(decomposicao, preco_diesel) if decomposicao else 0.0
-    if consumo_override_proj is not None:
+    if _to_positive_float_or_none(consumo_override_proj) is not None:
         return consumo_override_proj, "VAL-EQUIP-COMB-01"
-    if consumo_override_cpu is not None:
+    if _to_positive_float_or_none(consumo_override_cpu) is not None:
         return consumo_override_cpu, "VAL-EQUIP-COMB-01"
     if consumo_insumo > 0:
         return consumo_insumo, "VAL-EQUIP-COMB-02"
@@ -245,6 +297,7 @@ def _calcular_custo_equipamento(
     consumo_override_cpu=None,
     custo_mensal_override=None,
     custo_comb_override=None,
+    tipo_combustivel_override=None,
 ):
     custo_base = _converter_preco_equip(insumo, horas_dia, dias_uteis)
     horas_mes_calculadas = horas_dia * dias_uteis
@@ -256,6 +309,14 @@ def _calcular_custo_equipamento(
         float(custo_comb_override) if custo_comb_override is not None else consumo * horas_mes_calculadas * preco_diesel
     )
     _atrib = insumo.get("atributos_especificos") or {}
+    _tipo_comb = str(
+        tipo_combustivel_override
+        or _atrib.get("tipo_combustivel")
+        or _atrib.get("combustivel")
+        or ""
+    ).strip()
+    if not _tipo_comb and (consumo and consumo > 0):
+        _tipo_comb = "Diesel S10"
     _rental_unit = (_atrib.get("rental_unit") or "hora_produtiva").strip().lower()
     _num_un_int = max(1, round(float(num_unidades)))
 
@@ -273,6 +334,7 @@ def _calcular_custo_equipamento(
             num_unidades=_num_un_int,
             custo_mensal=round(custo_base, 2),
             consumo_litros_hora=consumo if consumo > 0 else None,
+            tipo_combustivel=_tipo_comb or None,
             custo_combustivel_mensal=round(custo_comb, 2),
             custo_mensal_total=round(custo_base + custo_comb, 2),
             rental_unit=_rental_unit,
@@ -466,15 +528,42 @@ def _processar_equipamentos_item(
             )
             continue
         equip_custom = item_custom.get("equipamentos", {}).get(e["equip_id"], {})
-        consumo_proj = equip_custom.get("consumo_litros_hora") or e.get("consumo_litros_hora")
-        consumo_cpu = e.get("consumo_litros_hora_estimado")
-        custo_mensal_override = equip_custom.get("custo_mensal")
+        # Ignora overrides zerados: zero explícito não deve bloquear fallback de catálogo.
+        consumo_proj = _to_positive_float_or_none(equip_custom.get("consumo_litros_hora"))
+        if consumo_proj is None:
+            consumo_proj = _to_positive_float_or_none(e.get("consumo_litros_hora"))
+        consumo_cpu = _to_positive_float_or_none(e.get("consumo_litros_hora_estimado"))
+
+        # Enriquecimento robusto: quando o insumo principal não traz consumo/tipo,
+        # tenta alias por codigo_planilha/descrição (catálogos híbridos AGIS/EQ-*).
+        _attrs = insumo.get("atributos_especificos") or {}
+        if _to_positive_float_or_none(_attrs.get("consumo_litros_hora")) is None:
+            alias_attrs = _best_alias_equip_attrs(ctx, e.get("equip_id", ""), insumo.get("descricao", ""))
+            if alias_attrs:
+                _attrs = {**alias_attrs, **_attrs}
+        tipo_combustivel = (
+            equip_custom.get("tipo_combustivel")
+            or e.get("tipo_combustivel")
+            or _attrs.get("tipo_combustivel")
+            or _attrs.get("combustivel")
+        )
+        # ADR-108: preco_h_unitario na composição sobrepõe preco_unitario do catálogo.
+        # Armazenado em R$/h para evitar ambiguidade de horas_mes entre regimes.
+        # Convertemos para custo_mensal usando as horas efetivas do regime do projeto.
+        _preco_h_comp = e.get("preco_h_unitario")
+        _custo_mensal_comp = (
+            float(_preco_h_comp) * horas_dia * dias_uteis
+            if _preco_h_comp is not None and float(_preco_h_comp) > 0
+            else None
+        )
+        custo_mensal_override = equip_custom.get("custo_mensal") or _custo_mensal_comp
         custo_comb_override = equip_custom.get("custo_combustivel_mensal")
         if consumo_proj is not None:
             modo_est = "refinado"
         num_un_raw = float(e.get("num_unidades", 1) or 1)
         insumo_e = {
             **insumo,
+            "atributos_especificos": _attrs,
             "preco_unitario": _resolve_preco(ctx, e["equip_id"], float(insumo.get("preco_unitario", 0.0) or 0.0)),
         }
         # _calcular_custo_equipamento usa num_un_raw (float) para custo preciso.
@@ -489,6 +578,7 @@ def _processar_equipamentos_item(
             consumo_cpu,
             custo_mensal_override=custo_mensal_override,
             custo_comb_override=custo_comb_override,
+            tipo_combustivel_override=tipo_combustivel,
         )
         equips_mod.append(eq_mod)
         custo_eq += eq_mod.custo_mensal * num_un_raw  # float para custo preciso
@@ -1307,9 +1397,9 @@ def _build_item_tipo_map(activities: list) -> dict:
 def _derive_rcpsp_from_canonical(canonical_in: object, catalogo: dict) -> dict | None:
     """Deriva rcpsp_spec a partir do canônico quando não fornecido nos inputs.
 
-    Convenção de tipo_id: equip_id da composicao_padrao_equipe.equipamentos da producao
-    associada ao cpu_id do item da EAP. Quando a producao não tiver equipamentos,
-    usa o cpu_id como tipo escalar (ex.: serviços sem frotas próprias).
+    Convenção de tipo_id: família fungível da equipe, derivada da assinatura da
+    composição padrão (funções + equipamentos + quantidades). Assim, CPUs iguais
+    ou com mesma composição compartilham recurso sem depender de regex sobre cpu_id.
 
     resource_costs é omitido propositalmente → custo_unit_semanal derivado de
     custo_hora_total_referencia do catálogo via _resolve_custo_hora_ref_sem.
@@ -1327,7 +1417,8 @@ def _derive_rcpsp_from_canonical(canonical_in: object, catalogo: dict) -> dict |
     if not eap_items:
         return None
 
-    sched_ids = {sa.activity_id for sa in sched_acts}
+    sched_lookup = {sa.activity_id: sa for sa in sched_acts}
+    sched_ids = set(sched_lookup)
 
     cpu_lookup: dict = {c["codigo"]: c for c in catalogo.get("cpus", []) if c.get("codigo")}
     prod_lookup: dict = {
@@ -1335,46 +1426,62 @@ def _derive_rcpsp_from_canonical(canonical_in: object, catalogo: dict) -> dict |
         for p in (catalogo.get("producoes") or catalogo.get("produtividades") or [])
     }
 
-    # Capacidades declaradas explicitamente pelo usuário em skill 03
-    canonical_capacities: dict[str, int] = {
-        rp.tipo_id: rp.quantidade_total
-        for rp in (canonical_in.recurso_pool or [])  # type: ignore[union-attr]
-    }
+    item_tipo_ids: dict[str, tuple[str, int]] = {}
+    pool_caps: dict[str, int] = {}
 
-    item_equip_ids: dict[str, list[tuple[str, int]]] = {}
-    all_equip_ids: dict[str, int] = {}  # equip_id → max num_unidades
+    def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, object]) -> str:
+        equip = composicao.get("equipamentos") or []
+        funcs = composicao.get("funcoes") or []
+        if equip or funcs:
+            tokens: list[str] = []
+            for f in sorted(funcs, key=lambda x: str((x or {}).get("funcao_id") or "")):
+                f_safe = f or {}
+                fid = str(f_safe.get("funcao_id") or "").strip().upper()
+                qtd = round(float(f_safe.get("num_pessoas", 1) or 1), 4)
+                if fid:
+                    tokens.append(f"F:{fid}:{qtd}")
+            for e in sorted(equip, key=lambda x: str((x or {}).get("equip_id") or "")):
+                e_safe = e or {}
+                eid = str(e_safe.get("equip_id") or "").strip().upper()
+                qtd = round(float(e_safe.get("num_unidades", 1) or 1), 4)
+                if eid:
+                    tokens.append(f"E:{eid}:{qtd}")
+            if tokens:
+                signature = "|".join(tokens)
+                digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
+                return f"EQUIPE-COMP-{digest}"
+        raw = str(cpu_id or "").strip().upper()
+        return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
 
     for item in eap_items:
         if item.item_id not in sched_ids:
+            continue
+        sa = sched_lookup.get(item.item_id)
+        if sa is None:
             continue
         cpu = cpu_lookup.get(item.cpu_id, {})
         prod_id = cpu.get("producao_id_ref")
         prod = prod_lookup.get(prod_id or "", {})
         equipe = prod.get("composicao_padrao_equipe", {}) if prod else {}
-        equip_entries = [
-            (e.get("equip_id"), max(1, int(e.get("num_unidades") or 1)))
-            for e in equipe.get("equipamentos", [])
-            if e.get("equip_id")
-        ]
-        if not equip_entries:
-            equip_entries = [(item.cpu_id, 1)]
-        item_equip_ids[item.item_id] = equip_entries
-        for eid, n_units in equip_entries:
-            all_equip_ids[eid] = max(all_equip_ids.get(eid, 0), n_units)
+        if not (equipe.get("equipamentos") or equipe.get("funcoes")):
+            continue
+        dist = getattr(sa, "distribuicao_semanal", None) or {}
+        required = max((int(math.ceil(float(getattr(d, "num_equipes", 0) or 0.0))) for d in dist.values()), default=1)
+        required = max(1, required)
+        tipo = _tipo_recurso_fungivel(str(item.cpu_id or ""), equipe)
+        item_tipo_ids[item.item_id] = (tipo, required)
+        pool_caps[tipo] = max(pool_caps.get(tipo, 0), required)
 
-    if not all_equip_ids:
+    if not pool_caps:
         return None
 
-    # Pool capacity: máximo de unidades declarado explicitamente (skill 03) ou
-    # derivado de num_unidades do catálogo
-    resource_pool = {eid: canonical_capacities.get(eid) or max_units for eid, max_units in all_equip_ids.items()}
+    resource_pool = dict(pool_caps)
     activities = [
         {
             "item_id": iid,
-            "required_resources": {eid: n_units for eid, n_units in equip_entries},
+            "required_resources": {tipo: required},
         }
-        for iid, equip_entries in item_equip_ids.items()
-        if equip_entries
+        for iid, (tipo, required) in item_tipo_ids.items()
     ]
 
     if not activities:

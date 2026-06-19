@@ -1,4 +1,4 @@
-"""Testes end-to-end com samples reais: carrega JSON, executa pipeline 00→07, valida output."""
+"""Testes end-to-end com samples reais: carrega JSON, executa pipeline analítica, valida output."""
 
 import json
 from pathlib import Path
@@ -63,8 +63,8 @@ class TestPipelineComSamples:
         assert log_path.exists()
         log_content = log_path.read_text()
         n_invocacoes = len([ln for ln in log_content.strip().splitlines() if ln])
-        assert n_invocacoes == 7, (
-            f"Esperadas 7 invocações (NEP-041 F4: 01-05 + 06-unificada + 09), encontradas {n_invocacoes}"
+        assert n_invocacoes == 8, (
+            f"Esperadas 8 invocações (01-05 + 06-unificada + 10-diagnostico + 09), encontradas {n_invocacoes}"
         )
 
 

@@ -11,13 +11,10 @@ from datetime import date
 import pytest
 
 from concilium.application.catalog.price_trend import (
-    IndiceCategoria,
     RelatorioTendencia,
-    TendenciaInsumo,
     _mediana,
     calcular_tendencia,
 )
-
 
 # ── _mediana helper ────────────────────────────────────────────────────────────
 
@@ -364,9 +361,7 @@ class TestMultiplosTipos:
 
     def test_material_category_has_two_insumos(self):
         result = calcular_tendencia(self._make_insumos())
-        material_idx = next(
-            i for i in result.indices_por_categoria if i.tipo == "MATERIAL"
-        )
+        material_idx = next(i for i in result.indices_por_categoria if i.tipo == "MATERIAL")
         assert material_idx.n_insumos_total == 2
 
     def test_resumo_total_insumos(self):
@@ -387,27 +382,21 @@ class TestIndiceCategoriaStatistics:
                 "tipo": "MATERIAL",
                 "unidade": "m3",
                 "preco_unitario": 110.0,
-                "historico_precos": [
-                    {"data_inicio_vigencia": "2022-01-01", "preco_unitario": 100.0}
-                ],
+                "historico_precos": [{"data_inicio_vigencia": "2022-01-01", "preco_unitario": 100.0}],
             },
             {
                 "codigo": "M-B",
                 "tipo": "MATERIAL",
                 "unidade": "m3",
                 "preco_unitario": 120.0,
-                "historico_precos": [
-                    {"data_inicio_vigencia": "2022-01-01", "preco_unitario": 100.0}
-                ],
+                "historico_precos": [{"data_inicio_vigencia": "2022-01-01", "preco_unitario": 100.0}],
             },
             {
                 "codigo": "M-C",
                 "tipo": "MATERIAL",
                 "unidade": "m3",
                 "preco_unitario": 130.0,
-                "historico_precos": [
-                    {"data_inicio_vigencia": "2022-01-01", "preco_unitario": 100.0}
-                ],
+                "historico_precos": [{"data_inicio_vigencia": "2022-01-01", "preco_unitario": 100.0}],
             },
         ]
 

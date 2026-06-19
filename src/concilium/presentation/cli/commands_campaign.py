@@ -6,12 +6,15 @@ from pathlib import Path
 
 import typer
 
+from concilium.domain.constants import META_MARGEM_PADRAO, TOLERANCIA_MARGEM_PADRAO
+
 
 def campaign(
     project_id: str = typer.Argument(..., help="ID ou slug do projeto (ex: AGIS)"),
     campaign_file: Path = typer.Option(
         None,
-        "--campaign", "-c",
+        "--campaign",
+        "-c",
         help="Arquivo campaign_v{i}.json. Default: projetos/{slug}/campaigns/campaign_v1.json",
     ),
     config_root: Path = typer.Option(None, "--config", help="Diretório de configuração"),
@@ -30,12 +33,13 @@ def campaign(
         concilium project campaign AGIS --campaign projetos/AGIS/campaigns/campaign_v2.json
     """
     import json
-    from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
+
     from concilium.application.services.campaign.campaign_report import (
         render_campaign_report_md,
         render_campaign_report_pdf,
         serialize_campaign_report,
     )
+    from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
     from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
 
     # Resolver paths
@@ -72,8 +76,8 @@ def campaign(
     # Montar bundle
     perf_raw = cfg.get("perfil_expectativas") or {}
     perfil = PerfilExpectativas(
-        meta_margem_pct=perf_raw.get("meta_margem_pct", 0.10),
-        tolerancia_margem=perf_raw.get("tolerancia_margem", 0.03),
+        meta_margem_pct=perf_raw.get("meta_margem_pct", META_MARGEM_PADRAO),
+        tolerancia_margem=perf_raw.get("tolerancia_margem", TOLERANCIA_MARGEM_PADRAO),
         prazo_contratual_semanas=perf_raw.get("prazo_contratual_semanas"),
     )
     sweep = [ParametroSweep(campo=s["campo"], valores=s["valores"]) for s in (cfg.get("sweep") or [])]
@@ -102,8 +106,8 @@ def campaign(
             typer.echo(f"  #{r.rank} {r.cenario.cenario_id} ({j.motivo_inclusao}): {destaques}")
 
     # Persistir como artefato de projeto versionado
+
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
-    import dataclasses
 
     store = CampaignRunStore(_proj / slug)
     run = store.new_run()
@@ -120,13 +124,16 @@ def campaign(
     store.save_bundle(run, report)
     store.save_cube(run, report.get("cubo") or {})
     store.save_report(run, report, md, pdf)
-    store.save_meta(run, {
-        "campaign_version": result.campaign_version,
-        "status": result.status,
-        "n_avaliados": result.n_cenarios_avaliados,
-        "n_viaveis": result.n_cenarios_viaveis,
-        "n_falhas": result.n_falhas,
-    })
+    store.save_meta(
+        run,
+        {
+            "campaign_version": result.campaign_version,
+            "status": result.status,
+            "n_avaliados": result.n_cenarios_avaliados,
+            "n_viaveis": result.n_cenarios_viaveis,
+            "n_falhas": result.n_falhas,
+        },
+    )
 
     for f in store.list_run_files(run):
         typer.echo(f"[SAVE] {store.run_path(run) / f}")

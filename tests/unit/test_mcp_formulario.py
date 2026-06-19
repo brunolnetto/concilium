@@ -92,17 +92,18 @@ class TestSuggestCpu:
         }
         cat_dir = tmp_path / "catalogos" / "meu-catalogo" / "cpus"
         cat_dir.mkdir(parents=True)
-        (cat_dir / "CPU-ATERRO-001.json").write_text(
-            json.dumps(cpu_json), encoding="utf-8"
-        )
+        (cat_dir / "CPU-ATERRO-001.json").write_text(json.dumps(cpu_json), encoding="utf-8")
 
         # Patch _load_mapping_keywords to raise so we enter the except branch
-        with patch(
-            "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
-            side_effect=RuntimeError("boom"),
-        ), patch(
-            "concilium.presentation.mcp._context._storage_live",
-        ) as mock_storage:
+        with (
+            patch(
+                "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+                side_effect=RuntimeError("boom"),
+            ),
+            patch(
+                "concilium.presentation.mcp._context._storage_live",
+            ) as mock_storage,
+        ):
             settings = MagicMock()
             settings.config_root = tmp_path
             mock_storage.return_value = settings
@@ -117,12 +118,15 @@ class TestSuggestCpu:
     def test_no_match_returns_none_zero(self):
         """Returns (None, 0) when no keyword rule or catalog entry matches."""
         keywords_map: dict = {}
-        with patch(
-            "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
-            return_value=keywords_map,
-        ), patch(
-            "concilium.presentation.mcp._context._storage_live",
-        ) as mock_storage:
+        with (
+            patch(
+                "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+                return_value=keywords_map,
+            ),
+            patch(
+                "concilium.presentation.mcp._context._storage_live",
+            ) as mock_storage,
+        ):
             settings = MagicMock()
             # Point config_root to a place with no catalogos
             settings.config_root = Path("/nonexistent/path/xyz")
@@ -140,12 +144,15 @@ class TestSuggestCpu:
         cat_dir.mkdir(parents=True)
         (cat_dir / "CPU-XYZ.json").write_text(json.dumps(cpu_json), encoding="utf-8")
 
-        with patch(
-            "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
-            return_value={},
-        ), patch(
-            "concilium.presentation.mcp._context._storage_live",
-        ) as mock_storage:
+        with (
+            patch(
+                "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+                return_value={},
+            ),
+            patch(
+                "concilium.presentation.mcp._context._storage_live",
+            ) as mock_storage,
+        ):
             settings = MagicMock()
             settings.config_root = tmp_path
             mock_storage.return_value = settings
@@ -331,30 +338,31 @@ class TestCriarProjetoFormulario:
         """If any service is unmapped, return pendente_mapeamento without touching storage."""
         servicos = [{"descricao": "Servico X", "quantidade": 10.0, "unidade": "m"}]
 
-        with patch(
-            "concilium.presentation.mcp.tools.formulario._build_eap_items",
-            return_value=(
-                [],  # mapeados
-                [
-                    {
-                        "item_id": "eap-1_1",
-                        "ordem": 1,
-                        "descricao": "Servico X",
-                        "unidade": "m",
-                        "quantitativo": 10.0,
-                        "predecessores": [],
-                        "cpu_id": None,
-                        "_score": 0,
-                    }
-                ],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.formulario._build_eap_items",
+                return_value=(
+                    [],  # mapeados
+                    [
+                        {
+                            "item_id": "eap-1_1",
+                            "ordem": 1,
+                            "descricao": "Servico X",
+                            "unidade": "m",
+                            "quantitativo": 10.0,
+                            "predecessores": [],
+                            "cpu_id": None,
+                            "_score": 0,
+                        }
+                    ],
+                ),
             ),
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._runtime"
-        ) as mock_rt, patch(
-            "concilium.presentation.mcp.tools.formulario._projetos_root"
-        ) as mock_pr, patch(
-            "concilium.presentation.mcp.tools.formulario._wrap_response",
-            side_effect=lambda d: d,
+            patch("concilium.presentation.mcp.tools.formulario._runtime") as mock_rt,
+            patch("concilium.presentation.mcp.tools.formulario._projetos_root") as mock_pr,
+            patch(
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
+                side_effect=lambda d: d,
+            ),
         ):
             result = tool_criar(servicos=servicos, **_COMMON_KWARGS)
 
@@ -407,21 +415,27 @@ class TestCriarProjetoFormulario:
         mock_rt = MagicMock()
         mock_rt.load_contexto.return_value = mock_contexto
 
-        with patch(
-            "concilium.presentation.mcp.tools.formulario._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._runtime",
-            return_value=mock_rt,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
-            return_value=mock_coord,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mock_store,
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._runtime",
+                return_value=mock_rt,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
+                return_value=mock_coord,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mock_store,
+            ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
 
@@ -467,21 +481,27 @@ class TestCriarProjetoFormulario:
         mock_rt = MagicMock()
         mock_rt.load_contexto.return_value = mock_contexto
 
-        with patch(
-            "concilium.presentation.mcp.tools.formulario._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._runtime",
-            return_value=mock_rt,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
-            return_value=mock_coord,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mock_store,
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._runtime",
+                return_value=mock_rt,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
+                return_value=mock_coord,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mock_store,
+            ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
 
@@ -538,21 +558,27 @@ class TestCriarProjetoFormulario:
         mock_rt = MagicMock()
         mock_rt.load_contexto.return_value = mock_contexto
 
-        with patch(
-            "concilium.presentation.mcp.tools.formulario._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._runtime",
-            return_value=mock_rt,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
-            return_value=mock_coord,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mock_store,
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._runtime",
+                return_value=mock_rt,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
+                return_value=mock_coord,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mock_store,
+            ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
 
@@ -569,26 +595,29 @@ class TestCriarProjetoFormulario:
 
         servicos = [{"descricao": "Unknown", "quantidade": 1.0, "unidade": "un"}]
 
-        with patch(
-            "concilium.presentation.mcp.tools.formulario._build_eap_items",
-            return_value=(
-                [],
-                [
-                    {
-                        "item_id": "eap-1_1",
-                        "ordem": 1,
-                        "descricao": "Unknown",
-                        "unidade": "un",
-                        "quantitativo": 1.0,
-                        "predecessores": [],
-                        "cpu_id": None,
-                        "_score": 0,
-                    }
-                ],
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.formulario._build_eap_items",
+                return_value=(
+                    [],
+                    [
+                        {
+                            "item_id": "eap-1_1",
+                            "ordem": 1,
+                            "descricao": "Unknown",
+                            "unidade": "un",
+                            "quantitativo": 1.0,
+                            "predecessores": [],
+                            "cpu_id": None,
+                            "_score": 0,
+                        }
+                    ],
+                ),
             ),
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._wrap_response",
-            side_effect=lambda d: d,
+            patch(
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
+                side_effect=lambda d: d,
+            ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
 
@@ -636,24 +665,31 @@ class TestCriarProjetoFormulario:
         mock_rt = MagicMock()
         mock_rt.load_contexto.return_value = mock_contexto
 
-        with patch(
-            "concilium.presentation.mcp.tools.formulario._suggest_cpu",
-            return_value=("CPU-B", 1),
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._wrap_response",
-            side_effect=lambda d: d,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._runtime",
-            return_value=mock_rt,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._projetos_root",
-            return_value=tmp_path,
-        ), patch(
-            "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
-            return_value=mock_coord,
-        ), patch(
-            "concilium.infrastructure.storage.project.ProjectStore.init",
-            return_value=mock_store,
+        with (
+            patch(
+                "concilium.presentation.mcp.tools.formulario._suggest_cpu",
+                return_value=("CPU-B", 1),
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
+                side_effect=lambda d: d,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._runtime",
+                return_value=mock_rt,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
+                return_value=tmp_path,
+            ),
+            patch(
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
+                return_value=mock_coord,
+            ),
+            patch(
+                "concilium.infrastructure.storage.project.ProjectStore.init",
+                return_value=mock_store,
+            ),
         ):
             result = tool(servicos=servicos, **_COMMON_KWARGS)
 

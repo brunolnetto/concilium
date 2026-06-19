@@ -1,11 +1,10 @@
 """Tests for ProductivitySurveyExporter — covers export() and _aplicar_estilo_survey_prod()."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -64,6 +63,7 @@ def _make_exporter(catalogo=None):
     cat = catalogo or _minimal_catalogo()
     with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
         from concilium.infrastructure.exporters.productivity_survey import ProductivitySurveyExporter
+
         return ProductivitySurveyExporter(cat)
 
 
@@ -588,7 +588,6 @@ class TestExportIntegration:
     """End-to-end export with a real openpyxl workbook on disk."""
 
     def test_export_creates_file(self, tmp_path):
-        import openpyxl
 
         equipe = _make_equipe(
             funcoes=[_make_funcao("OP-01", 1)],
@@ -660,7 +659,6 @@ class TestExportIntegration:
     def test_columns_g_to_k_highlighted_in_real_file(self, tmp_path):
         """Columns 7-11 (G to K) data cells must have a fill applied."""
         import openpyxl
-        from openpyxl.styles import PatternFill
 
         equipe = _make_equipe()
         prod = _make_producao(equipe=equipe)

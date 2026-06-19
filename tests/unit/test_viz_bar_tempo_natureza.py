@@ -1,9 +1,8 @@
 """Unit tests for bar_tempo_natureza.build()."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 MODULE = "concilium.application.runtime.deliverables.visualizations.cube.bar_tempo_natureza"
 COMMON_MODULE = "concilium.application.runtime.deliverables.visualizations.cube._common"

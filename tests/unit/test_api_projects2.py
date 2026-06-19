@@ -72,7 +72,7 @@ class _ErrorService(_FakeService):
 
 def _client(svc=None):
     app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: (svc or _FakeService())
+    app.dependency_overrides[get_concilium_service] = lambda: svc or _FakeService()
     return TestClient(app, raise_server_exceptions=False)
 
 

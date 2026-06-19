@@ -1,19 +1,20 @@
 """Tests for CatalogExporterExcel and _apply_body_row."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
 
 
-def _make_sim_result(total_direto=1000.0, custo_mao_obra_base=400.0,
-                     custo_mao_obra_encargos=200.0, custo_diesel_total=100.0):
+def _make_sim_result(
+    total_direto=1000.0, custo_mao_obra_base=400.0, custo_mao_obra_encargos=200.0, custo_diesel_total=100.0
+):
     return SimpleNamespace(
         total_direto=total_direto,
         custo_mao_obra_base=custo_mao_obra_base,
@@ -124,6 +125,7 @@ class TestGetPrecoRegional:
         cat = _minimal_catalogo()
         with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
             from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
+
             return CatalogExporterExcel(cat, jurisdicao_id=jurisdicao_id)
 
     def test_no_jurisdicao_returns_preco_unitario(self):
@@ -163,6 +165,7 @@ class TestCexBuildInsumosDfs:
         cat = _minimal_catalogo()
         with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
             from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
+
             return CatalogExporterExcel(cat)
 
     def test_returns_three_dataframes(self):
@@ -276,6 +279,7 @@ class TestCexBuildCpuRow:
         cat = catalogo or _minimal_catalogo()
         with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia") as MockSim:
             from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
+
             exp = CatalogExporterExcel(cat)
         mock_sim = exp.simulador
         return exp, mock_sim
@@ -413,6 +417,7 @@ class TestCexWriteSheets:
         cat = _minimal_catalogo()
         with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
             from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
+
             exp = CatalogExporterExcel(cat)
         return exp
 
@@ -491,6 +496,7 @@ class TestExport:
         cat = catalogo or _minimal_catalogo()
         with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
             from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
+
             exp = CatalogExporterExcel(cat)
         exp.simulador.simular_cpu.return_value = _make_sim_result()
         return exp
@@ -626,6 +632,7 @@ class TestAplicarEstilo:
         cat = catalogo or _minimal_catalogo()
         with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
             from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
+
             return CatalogExporterExcel(cat)
 
     def _make_mock_writer(self, sheet_names=("Sheet1",)):
@@ -737,9 +744,9 @@ class TestAplicarEstilo:
 
         # row_idx starts at 2; 3 rows → indices 2, 3, 4
         # idx=2 even → None; idx=3 odd → fill; idx=4 even → None
-        assert called_fills[0] is None   # row_idx=2, even
+        assert called_fills[0] is None  # row_idx=2, even
         assert called_fills[1] is not None  # row_idx=3, odd
-        assert called_fills[2] is None   # row_idx=4, even
+        assert called_fills[2] is None  # row_idx=4, even
 
     def test_aplicar_estilo_empty_sheets_dict(self):
         """No sheets → should not raise."""

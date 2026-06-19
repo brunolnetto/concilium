@@ -9,10 +9,9 @@ Strategy:
 
 from __future__ import annotations
 
-import threading
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -26,10 +25,10 @@ from concilium.application.jobs.service import (
 from concilium.application.jobs.state import PipelineJobStateMachine
 from concilium.infrastructure.settings import JobsSettings
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_config(
     *,
@@ -86,6 +85,7 @@ def _build_job_dict(
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _reset_singleton():
     """Ensure the global singleton is clean before and after each test."""
@@ -116,6 +116,7 @@ def svc(repo, cfg):
 # ---------------------------------------------------------------------------
 # disparar_pipeline
 # ---------------------------------------------------------------------------
+
 
 class TestDispararPipeline:
     """Verify disparar_pipeline saves the job and returns a correct JobDTO."""
@@ -176,9 +177,7 @@ class TestDispararPipeline:
         """Second job should show queue position."""
         # Manually seed a job with same-or-earlier timestamp
         earlier_job = _build_job_dict("job-first", "proj-q")
-        earlier_job["disparado_em"] = (
-            datetime.now(UTC) - timedelta(seconds=1)
-        ).isoformat()
+        earlier_job["disparado_em"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
         repo.save("job-first", earlier_job)
 
         with patch.object(svc, "_executar_pipeline_async"):
@@ -201,6 +200,7 @@ class TestDispararPipeline:
 # ---------------------------------------------------------------------------
 # consultar_job
 # ---------------------------------------------------------------------------
+
 
 class TestConsultarJob:
     """Verify consultar_job returns DTO reflecting the state machine status."""
@@ -251,6 +251,7 @@ class TestConsultarJob:
 # ---------------------------------------------------------------------------
 # listar_jobs
 # ---------------------------------------------------------------------------
+
 
 class TestListarJobs:
     """Verify listar_jobs counters and filters."""
@@ -367,6 +368,7 @@ class TestListarJobs:
 # cancelar_job
 # ---------------------------------------------------------------------------
 
+
 class TestCancelarJob:
     """Verify cancelar_job transitions and error cases."""
 
@@ -427,6 +429,7 @@ class TestCancelarJob:
 # obter_estatisticas
 # ---------------------------------------------------------------------------
 
+
 class TestObterEstatisticas:
     """Verify obter_estatisticas reflects repo state and config."""
 
@@ -477,6 +480,7 @@ class TestObterEstatisticas:
 # ---------------------------------------------------------------------------
 # _limpar_jobs_expirados
 # ---------------------------------------------------------------------------
+
 
 class TestLimparJobsExpirados:
     """Directly call _limpar_jobs_expirados and verify expired terminal jobs removed."""
@@ -571,6 +575,7 @@ class TestLimparJobsExpirados:
 # get_job_service / reset_job_service singleton
 # ---------------------------------------------------------------------------
 
+
 class TestSingletonFunctions:
     """Tests for module-level get_job_service and reset_job_service."""
 
@@ -597,6 +602,7 @@ class TestSingletonFunctions:
 # ---------------------------------------------------------------------------
 # _criar_progress_callback
 # ---------------------------------------------------------------------------
+
 
 class TestProgressCallback:
     """Verify _criar_progress_callback updates the repo correctly."""
@@ -650,6 +656,7 @@ class TestProgressCallback:
 # ---------------------------------------------------------------------------
 # JobService.__init__ dependency injection
 # ---------------------------------------------------------------------------
+
 
 class TestInitDependencyInjection:
     """Verify __init__ accepts injected repo and config."""

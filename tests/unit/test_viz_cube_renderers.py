@@ -2,23 +2,24 @@
 
 Covers all missing lines in _renderers.py using MagicMock for matplotlib.
 """
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock
 
 import pytest
 
 from concilium.application.runtime.deliverables.visualizations.cube._renderers import (
-    render_stacked_bar,
+    render_line_bar,
     render_stacked_area,
     render_stacked_area_100pct,
-    render_line_bar,
+    render_stacked_bar,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
+
 
 def _make_plt_mock(two_axes: bool = False):
     """Return a MagicMock that mimics plt.subplots correctly."""
@@ -42,6 +43,7 @@ def _col(role: str, col_id: str, label: str = "") -> dict:
 # ---------------------------------------------------------------------------
 # render_stacked_bar — early-exit paths
 # ---------------------------------------------------------------------------
+
 
 class TestRenderStackedBarEarlyExit:
     def test_returns_none_when_rows_empty(self):
@@ -70,6 +72,7 @@ class TestRenderStackedBarEarlyExit:
 # ---------------------------------------------------------------------------
 # render_stacked_bar — x_key_role branch (normal path)
 # ---------------------------------------------------------------------------
+
 
 class TestRenderStackedBarXKeyRole:
     def _make_rows(self):
@@ -134,6 +137,7 @@ class TestRenderStackedBarXKeyRole:
 # render_stacked_bar — y_key_role branch
 # ---------------------------------------------------------------------------
 
+
 class TestRenderStackedBarYKeyRole:
     def _make_rows(self):
         return [
@@ -161,6 +165,7 @@ class TestRenderStackedBarYKeyRole:
 # ---------------------------------------------------------------------------
 # render_stacked_bar — show_normalized=True
 # ---------------------------------------------------------------------------
+
 
 class TestRenderStackedBarNormalized:
     def _make_rows(self):
@@ -213,6 +218,7 @@ class TestRenderStackedBarNormalized:
 # render_stacked_bar — annotate_bdi=True
 # ---------------------------------------------------------------------------
 
+
 class TestRenderStackedBarAnnotateBdi:
     def _make_rows(self):
         return [
@@ -237,9 +243,7 @@ class TestRenderStackedBarAnnotateBdi:
         plt_mock, fig_mock, ax_mock, ax_norm_mock = _make_plt_mock(two_axes=True)
         rows = self._make_rows()
         columns = self._make_columns()
-        result = render_stacked_bar(
-            plt_mock, rows, columns, "BDI", show_normalized=True, annotate_bdi=True
-        )
+        result = render_stacked_bar(plt_mock, rows, columns, "BDI", show_normalized=True, annotate_bdi=True)
         assert result is fig_mock
         ax_norm_mock.annotate.assert_called_once()
 
@@ -247,6 +251,7 @@ class TestRenderStackedBarAnnotateBdi:
 # ---------------------------------------------------------------------------
 # render_stacked_area — early-exit paths
 # ---------------------------------------------------------------------------
+
 
 class TestRenderStackedAreaEarlyExit:
     def test_no_series_key_returns_none(self):
@@ -266,6 +271,7 @@ class TestRenderStackedAreaEarlyExit:
 # ---------------------------------------------------------------------------
 # render_stacked_area — normal path
 # ---------------------------------------------------------------------------
+
 
 class TestRenderStackedAreaNormal:
     def _make_rows(self):
@@ -301,9 +307,7 @@ class TestRenderStackedAreaNormal:
 
     def test_use_millions_ylabel(self):
         plt_mock, fig_mock, ax_mock, ax_norm_mock = _make_plt_mock(two_axes=True)
-        render_stacked_area(
-            plt_mock, self._make_rows(), self._make_columns(), "Area", use_millions=True
-        )
+        render_stacked_area(plt_mock, self._make_rows(), self._make_columns(), "Area", use_millions=True)
         calls = [str(c) for c in ax_mock.set_ylabel.call_args_list]
         assert any("Mi" in c for c in calls)
 
@@ -333,6 +337,7 @@ class TestRenderStackedAreaNormal:
 # render_stacked_area_100pct — early-exit paths
 # ---------------------------------------------------------------------------
 
+
 class TestRenderStackedArea100pctEarlyExit:
     def test_no_series_key_returns_none(self):
         plt_mock = MagicMock()
@@ -352,6 +357,7 @@ class TestRenderStackedArea100pctEarlyExit:
 # render_stacked_area_100pct — normal path
 # ---------------------------------------------------------------------------
 
+
 class TestRenderStackedArea100pctNormal:
     def _make_rows(self):
         return [
@@ -370,9 +376,7 @@ class TestRenderStackedArea100pctNormal:
 
     def test_normal_execution_returns_fig(self):
         plt_mock, fig_mock, ax_mock, _ = _make_plt_mock(two_axes=False)
-        result = render_stacked_area_100pct(
-            plt_mock, self._make_rows(), self._make_columns(), "100pct"
-        )
+        result = render_stacked_area_100pct(plt_mock, self._make_rows(), self._make_columns(), "100pct")
         assert result is fig_mock
 
     def test_fill_between_called(self):
@@ -412,6 +416,7 @@ class TestRenderStackedArea100pctNormal:
 # render_line_bar — early-exit paths
 # ---------------------------------------------------------------------------
 
+
 class TestRenderLineBarEarlyExit:
     def test_no_value_key_returns_none(self):
         plt_mock = MagicMock()
@@ -430,6 +435,7 @@ class TestRenderLineBarEarlyExit:
 # ---------------------------------------------------------------------------
 # render_line_bar — bar branch (no series_key)
 # ---------------------------------------------------------------------------
+
 
 class TestRenderLineBarBarBranch:
     def _make_rows(self):
@@ -476,6 +482,7 @@ class TestRenderLineBarBarBranch:
 # render_line_bar — line branch (series_key present)
 # ---------------------------------------------------------------------------
 
+
 class TestRenderLineBarLineBranch:
     def _make_rows(self):
         return [
@@ -519,6 +526,7 @@ class TestRenderLineBarLineBranch:
 # render_line_bar — is_liters=True path (diesel in value_key)
 # ---------------------------------------------------------------------------
 
+
 class TestRenderLineBarLitersBranch:
     def _make_rows_diesel(self):
         return [
@@ -531,16 +539,12 @@ class TestRenderLineBarLitersBranch:
 
     def test_diesel_keyword_activates_liters_path(self):
         plt_mock, fig_mock, ax_mock, _ = _make_plt_mock(two_axes=False)
-        result = render_line_bar(
-            plt_mock, self._make_rows_diesel(), self._make_columns_diesel(), "Diesel"
-        )
+        result = render_line_bar(plt_mock, self._make_rows_diesel(), self._make_columns_diesel(), "Diesel")
         assert result is fig_mock
 
     def test_ylabel_volume_kl_for_diesel(self):
         plt_mock, fig_mock, ax_mock, _ = _make_plt_mock(two_axes=False)
-        render_line_bar(
-            plt_mock, self._make_rows_diesel(), self._make_columns_diesel(), "Diesel"
-        )
+        render_line_bar(plt_mock, self._make_rows_diesel(), self._make_columns_diesel(), "Diesel")
         calls = [str(c) for c in ax_mock.set_ylabel.call_args_list]
         assert any("kL" in c for c in calls)
 
@@ -557,9 +561,7 @@ class TestRenderLineBarLitersBranch:
     def test_diesel_values_scaled_by_1000(self):
         """Values should be divided by 1000 in the bar call."""
         plt_mock, fig_mock, ax_mock, _ = _make_plt_mock(two_axes=False)
-        render_line_bar(
-            plt_mock, self._make_rows_diesel(), self._make_columns_diesel(), "Diesel"
-        )
+        render_line_bar(plt_mock, self._make_rows_diesel(), self._make_columns_diesel(), "Diesel")
         ax_mock.bar.assert_called_once()
         bar_call_args = ax_mock.bar.call_args
         values_passed = bar_call_args[0][1]  # second positional arg = values list
@@ -571,6 +573,7 @@ class TestRenderLineBarLitersBranch:
 # ---------------------------------------------------------------------------
 # render_line_bar — use_millions flag (ylabel only, no is_liters)
 # ---------------------------------------------------------------------------
+
 
 class TestRenderLineBarUseMilions:
     def test_use_millions_ylabel_not_liters(self):

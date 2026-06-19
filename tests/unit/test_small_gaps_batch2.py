@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ─── domain/models/financial/backtracking_pe.py ───────────────────────────────
+
 
 def _make_solucao(**kwargs):
     from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
+
     defaults = dict(
         parametro="L",
         valor_atual=0.15,
@@ -76,6 +76,7 @@ class TestSolucaoInversa:
 class TestBacktrackingPEItem:
     def _make_item(self, solucoes=()):
         from concilium.domain.models.financial.backtracking_pe import BacktrackingPEItem
+
         return BacktrackingPEItem(
             atividade_id="A1",
             descricao="Atividade 1",
@@ -100,6 +101,7 @@ class TestBacktrackingPEItem:
 class TestBacktrackingPERelatorio:
     def _make_relatorio(self, n_fails=0):
         from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio
+
         return BacktrackingPERelatorio(
             projeto_id="proj-1",
             gerado_em="2026-01-01",
@@ -126,9 +128,11 @@ class TestBacktrackingPERelatorio:
 
 # ─── infrastructure/auth/jwt_config.py ────────────────────────────────────────
 
+
 class TestReadPem:
     def test_read_pem_from_env_var(self, monkeypatch):
         from concilium.infrastructure.auth.jwt_config import _read_pem
+
         monkeypatch.setenv("CONCILIUM__JWT_PRIVATE_KEY_PEM", "-----BEGIN RSA PRIVATE KEY-----\ntest\n")
         auth_mock = MagicMock()
         auth_mock.jwt_private_key_pem = ""
@@ -143,6 +147,7 @@ class TestReadPem:
 
     def test_read_pem_from_path(self, tmp_path, monkeypatch):
         from concilium.infrastructure.auth.jwt_config import _read_pem
+
         pem_file = tmp_path / "key.pem"
         pem_file.write_bytes(b"-----BEGIN RSA PRIVATE KEY-----\nfakepem\n")
         monkeypatch.delenv("CONCILIUM__JWT_PRIVATE_KEY_PEM", raising=False)
@@ -156,6 +161,7 @@ class TestReadPem:
 
     def test_read_pem_key_vault_no_url_returns_none(self, monkeypatch):
         from concilium.infrastructure.auth.jwt_config import _read_pem
+
         monkeypatch.delenv("CONCILIUM__JWT_PRIVATE_KEY_PEM", raising=False)
         auth_mock = MagicMock()
         auth_mock.jwt_private_key_pem = ""
@@ -167,6 +173,7 @@ class TestReadPem:
 
     def test_read_from_key_vault_import_error(self, monkeypatch):
         from concilium.infrastructure.auth.jwt_config import _read_from_key_vault
+
         auth_mock = MagicMock()
         auth_mock.key_vault_url = "https://myvault.vault.azure.net"
         with (
@@ -174,12 +181,14 @@ class TestReadPem:
             patch.dict("sys.modules", {"azure.identity": None, "azure.keyvault.secrets": None}),
         ):
             import warnings
+
             with warnings.catch_warnings(record=True):
                 result = _read_from_key_vault("jwt-private-key")
         assert result is None
 
     def test_read_from_key_vault_exception_warns(self, monkeypatch):
         from concilium.infrastructure.auth.jwt_config import _read_from_key_vault
+
         auth_mock = MagicMock()
         auth_mock.key_vault_url = "https://myvault.vault.azure.net"
         azure_identity_mock = MagicMock()
@@ -189,12 +198,16 @@ class TestReadPem:
         azure_secrets_mock.SecretClient.return_value = secret_client_mock
         with (
             patch("concilium.infrastructure.auth.jwt_config.get_auth", return_value=auth_mock),
-            patch.dict("sys.modules", {
-                "azure.identity": azure_identity_mock,
-                "azure.keyvault.secrets": azure_secrets_mock,
-            }),
+            patch.dict(
+                "sys.modules",
+                {
+                    "azure.identity": azure_identity_mock,
+                    "azure.keyvault.secrets": azure_secrets_mock,
+                },
+            ),
         ):
             import warnings
+
             with warnings.catch_warnings(record=True):
                 result = _read_from_key_vault("jwt-private-key")
         assert result is None
@@ -202,9 +215,11 @@ class TestReadPem:
 
 # ─── application/benchmarks/validation/cpu_mapper.py ─────────────────────────
 
+
 class TestCpuMapper:
     def _make_mapper(self, catalogo=None):
         from concilium.application.benchmarks.validation.cpu_mapper import CpuMapper
+
         mapper = CpuMapper.__new__(CpuMapper)
         mapper.contexto_id = "test"
         mapper.runtime = MagicMock()
@@ -289,5 +304,6 @@ class TestCpuMapper:
 
     def test_load_catalog_raises_on_error(self, tmp_path):
         from concilium.application.benchmarks.validation.cpu_mapper import CpuMapper
+
         with pytest.raises(RuntimeError, match="Failed to load catalog"):
             CpuMapper(contexto_id="nonexistent", config_root=tmp_path)

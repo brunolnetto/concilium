@@ -1,9 +1,24 @@
 from __future__ import annotations
-from typing import Any
+
 from openpyxl import Workbook
+
 from concilium.domain.models.canonical import CanonicalModel
-from ..styles import _fill, _font, _border, _align, _money, _label, _header_row, _title_row, _section_row, _set_col_widths, _auto_fit_columns, _freeze, _C
-from ..helpers import _fmt_mes, _week_to_month
+
+from ..styles import (
+    _C,
+    _align,
+    _auto_fit_columns,
+    _border,
+    _fill,
+    _font,
+    _freeze,
+    _header_row,
+    _label,
+    _money,
+    _section_row,
+    _set_col_widths,
+    _title_row,
+)
 
 
 def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> None:
@@ -65,7 +80,8 @@ def render_calendario_operacional(wb: Workbook, canonical: CanonicalModel) -> No
         _label(ws, row, 1, semana, fill)
         _label(ws, row, 2, float(row_data.get("dias_uteis_base", 0.0) or 0.0), fill, align="right")
         _label(ws, row, 3, float(row_data.get("dias_uteis_efetivos", 0.0) or 0.0), fill, align="right")
-        _label(ws, row, 4, float(row_data.get("fator_calendario", 1.0) or 1.0), fill, align="right")
+        _fc_cal = row_data.get("fator_calendario")
+        _label(ws, row, 4, float(_fc_cal if _fc_cal is not None else 1.0), fill, align="right")
         _label(ws, row, 5, round(clima_por_semana.get(semana, 1.0), 4), fill, align="right")
         _label(
             ws, row, 6, round(total_por_semana.get(semana, clima_por_semana.get(semana, 1.0)), 4), fill, align="right"

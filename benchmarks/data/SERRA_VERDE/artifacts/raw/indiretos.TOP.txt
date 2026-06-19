@@ -1,0 +1,31 @@
+EQUIPE:			TOPOGRAFIA																	
+																				
+	CUSTO FIXO MENSAL					MÃO DE OBRA		R$ 39.781,27					PERMANÊNCIA - MÊS						CUSTO TOTAL	
+			R$ 63.781,27			EQUIPAMENTOS		R$ 0,00					24,00						 1.530.750,48 	
+						VERBAS		R$ 24.000,00												
+																				
+																				
+MÃO DE OBRA																				
+ITEM		FUNÇÃO			QT.	SALARIO BASE		HORAS EXTRAS				ALIMENTAÇÃO					ENCARGOS E PROVISÃO		CUSTO TOTAL	
+																				
+P0057	PJ		Topógrafo	P0057	1	 R$16.000,00 			 -   			j	 1.800,00 				 -   		 17.800,00 	
+P0010			Auxiliar de topografia	P0010	1	 R$2.805,60 		D	 701,40 			j	 2.535,00 				 2.139,27 		 8.181,27 	
+P0058	PJ		Sala técnica	P0058	1	 R$12.000,00 			 -   			j	 1.800,00 				 -   		 13.800,00 	
+P0001			Ajudante	P0001		 R$1.623,60 		D	 405,90 			J	 2.535,00 				 -   		 -   	
+									 -   				 -   				 -   		 -   	
+		TOTAL			3	 30.805,60 		 701,40 				 6.135,00 					 2.139,27 		 39.781,27 	
+																				
+EQUIPAMENTOS																				
+TIPO			EQUIPAMENTO		QT.	ALUGUEL MENSAL			"H OU KM
+MÊS"					CONSUMO				COMBUSTÍVEL	CUSTO UNITÁRIO	TOTAL GERAL
+														KM/L ou L/H						
+E0040			Veículo picape 4 x 4	E0040	1	 10.000,00 			km		 900,00 			S1	 9,00 			 700,00 	 10.700,00 	 -   
+																		  	 -   	
+			TOTAL		1	 10.000,00 												 700,00 		 -   
+																				
+VERBAS																				
+ITEM		DESCRIÇÃO			UNID.		QUANTIDADE			PREÇO UNITÁRIO					VALOR					
+1		ESTACAS			VB		 24,00 			 1.000,00 					 24.000,00 					
+																				
+															 -   					
+															 24.000,00 					

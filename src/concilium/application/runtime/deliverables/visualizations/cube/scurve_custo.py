@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, timedelta
 
-from ._common import init_mpl
+from ._common import build_payload, init_mpl
 
 _PALETTE = ["#1a3a5c", "#5adc8e", "#5aabdc", "#e8a030", "#c05c18"]
 _BDI_COMPS = ["Overhead BDI", "Lucro (L)", "Tributos"]
@@ -112,57 +112,70 @@ def _bdi_decomp(resultado) -> dict[str, float]:
     # Proporção padrão: overhead ~35%, lucro ~30%, tributos ~35%
     return {
         "Overhead BDI": bdi_abs * 0.35,
-        "Lucro (L)":    bdi_abs * 0.30,
-        "Tributos":     bdi_abs * 0.35,
+        "Lucro (L)": bdi_abs * 0.30,
+        "Tributos": bdi_abs * 0.35,
     }
 
 
 def build(canonical, cubo) -> bytes | None:  # noqa: ARG001
-    del cubo
     try:
         plt, fig_to_bytes = init_mpl()
     except ImportError:
         return None
 
+    cubo_analitico = getattr(canonical, "cubo_analitico", None)
     try:
-        projeto = getattr(canonical, "projeto", None)
-        data_inicio_str = getattr(projeto, "data_inicio", None) if projeto else None
-        try:
-            data_inicio = date.fromisoformat(str(data_inicio_str)) if data_inicio_str else date(2026, 1, 1)
-        except (ValueError, TypeError):
-            data_inicio = date(2026, 1, 1)
+        nat_payload = build_payload("tempo_natureza", "mes", 220, canonical, cubo_analitico)
+        rows_nat = nat_payload.get("rows") if nat_payload else None
+        if not rows_nat:
+            return None
 
-        # ── Séries mensais a partir das fontes canônicas ─────────────────────
-        direto_m   = _build_monthly_direto(canonical)
-        indireto_m = _build_monthly_indireto(canonical, data_inicio)
+        comp_payload = build_payload("tempo_componente", "mes", 220, canonical, cubo_analitico)
+        rows_comp = (comp_payload.get("rows") if comp_payload else None) or []
 
-        # Períodos: union de todos os meses com dado, ordenados
-        periodos = sorted(set(direto_m) | set(indireto_m))
+        # Build direto/indireto monthly series from nat rows
+        direto_m: dict[str, float] = {}
+        indireto_m: dict[str, float] = {}
+        for r in rows_nat:
+            p = str(r.get("periodo", ""))
+            v = float(r.get("valor_rs", 0.0))
+            nat = str(r.get("natureza", ""))
+            if nat == "direto":
+                direto_m[p] = direto_m.get(p, 0.0) + v
+            elif nat == "indireto":
+                indireto_m[p] = indireto_m.get(p, 0.0) + v
+
+        # BDI layers from comp rows (only _BDI_COMPS are used)
+        bdi_by_period: dict[str, dict[str, float]] = {}
+        for r in rows_comp:
+            comp = str(r.get("componente_bdi", ""))
+            if comp not in _BDI_COMPS:
+                continue
+            p = str(r.get("periodo", ""))
+            v = float(r.get("valor_rs", 0.0))
+            if p not in bdi_by_period:
+                bdi_by_period[p] = {c: 0.0 for c in _BDI_COMPS}
+            bdi_by_period[p][comp] = bdi_by_period[p].get(comp, 0.0) + v
+
+        periodos = sorted(set(direto_m) | set(indireto_m) | set(bdi_by_period))
         if not periodos:
             return None
 
         # Último mês com direto (marca fim da obra)
-        ultimo_direto_idx = max(
-            (i for i, p in enumerate(periodos) if direto_m.get(p, 0.0) > 0), default=None
-        )
+        ultimo_direto_idx = max((i for i, p in enumerate(periodos) if direto_m.get(p, 0.0) > 0), default=None)
 
         scale = 1e6
-        direto   = [direto_m.get(p, 0.0) / scale for p in periodos]
+        direto = [direto_m.get(p, 0.0) / scale for p in periodos]
         indireto = [indireto_m.get(p, 0.0) / scale for p in periodos]
+        bdi_layers: dict[str, list[float]] = {
+            comp: [bdi_by_period.get(p, {}).get(comp, 0.0) / scale for p in periodos] for comp in _BDI_COMPS
+        }
 
         resultado = getattr(canonical, "resultado", None)
         preco_venda = float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) / scale
-        custo_op    = float(getattr(getattr(resultado, "custo", None), "total", 0.0) or 0.0) / scale
-
-        # BDI: distribui o markup proporcionalmente ao custo mensal (todas as séries em Mi)
-        total_custo = sum(direto) + sum(indireto)  # em Mi
-        bdi_total   = max(0.0, preco_venda - total_custo)  # em Mi
-        bdi_frac    = bdi_total / max(total_custo, 1e-9)   # fração adimensional
-        bdi_layers: dict[str, list[float]] = {
-            "Overhead BDI": [(d + i) * bdi_frac * 0.35 for d, i in zip(direto, indireto)],
-            "Lucro (L)":    [(d + i) * bdi_frac * 0.30 for d, i in zip(direto, indireto)],
-            "Tributos":     [(d + i) * bdi_frac * 0.35 for d, i in zip(direto, indireto)],
-        }
+        # Custo operacional real = direto + indireto, derivado do cubo (não de custo.total
+        # que pode refletir custo de pool ≠ PU×Q quando n_frentes > 1).
+        custo_op = (sum(direto_m.values()) + sum(indireto_m.values())) / scale
 
         x = list(range(len(periodos)))
 
@@ -209,28 +222,44 @@ def build(canonical, cubo) -> bytes | None:  # noqa: ARG001
             prev_acc = nxt_acc
         ax_line.plot(x, acc_total_bdi, color="#333", linewidth=1.8, alpha=0.9, zorder=5)
 
-        # Linhas de referência — vêm do resultado financeiro real
-        if preco_venda > 0:
-            ax_line.axhline(preco_venda, color="#e74c3c", linewidth=1.8, linestyle="-",
-                            alpha=0.9, label=f"Preço de venda: {preco_venda:.1f} Mi")
+        # Linhas de referência
+        # preco_pool_bdi = topo das barras acumuladas (direto+indireto+BDI do gráfico)
+        preco_pool_bdi = acc_total_bdi[-1] if acc_total_bdi else 0.0
+        if preco_pool_bdi > 0:
+            ax_line.axhline(
+                preco_pool_bdi,
+                color="#e74c3c",
+                linewidth=1.8,
+                linestyle="-",
+                alpha=0.9,
+                label=f"Preço de venda: {preco_pool_bdi:.1f} Mi",
+            )
         if custo_op > 0:
-            ax_line.axhline(custo_op, color="#27ae60", linewidth=1.2, linestyle="--",
-                            alpha=0.6, label=f"Custo s/BDI: {custo_op:.1f} Mi")
+            ax_line.axhline(
+                custo_op,
+                color="#27ae60",
+                linewidth=1.2,
+                linestyle="--",
+                alpha=0.6,
+                label=f"Custo s/BDI: {custo_op:.1f} Mi",
+            )
 
         # Separador visual: fim das atividades diretas vs pós-obra
         if ultimo_direto_idx is not None and ultimo_direto_idx < len(periodos) - 1:
             for ax in (ax_bar, ax_line):
-                ax.axvline(x=ultimo_direto_idx + 0.5, color="#555", linewidth=1.2,
-                           linestyle=":", alpha=0.7)
-            ax_bar.text(ultimo_direto_idx + 0.6, ax_bar.get_ylim()[1] * 0.92,
-                        "← obra concluída\n   pós-obra →",
-                        fontsize=7, color="#555", va="top")
+                ax.axvline(x=ultimo_direto_idx + 0.5, color="#555", linewidth=1.2, linestyle=":", alpha=0.7)
+            ax_bar.text(
+                ultimo_direto_idx + 0.6,
+                ax_bar.get_ylim()[1] * 0.92,
+                "← obra concluída\n   pós-obra →",
+                fontsize=7,
+                color="#555",
+                va="top",
+            )
 
         ax_line.set_ylabel("R$ (Mi) Acumulado", fontsize=9)
         ax_line.set_xlabel("Mês", fontsize=9)
-        ax_line.set_title(
-            "Custo Acumulado (direto + indireto + BDI → preço de venda)", fontsize=11, fontweight="bold"
-        )
+        ax_line.set_title("Custo Acumulado (direto + indireto + BDI → preço de venda)", fontsize=11, fontweight="bold")
         ax_line.set_xticks(x)
         ax_line.set_xticklabels(periodos, rotation=45, ha="right", fontsize=8)
         ax_line.legend(fontsize=7.5, loc="upper left", ncol=2)

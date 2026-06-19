@@ -180,8 +180,8 @@ def explore_schedules(
                     quality_score=score,
                 )
             )
-        except Exception:
-            pass  # Infeasible or error for this heuristic — skip
+        except Exception as e:
+            _log.warning("Heurística %s falhou (infeasible ou erro): %s", heuristic, e, exc_info=True)
 
     results.sort(key=lambda r: (-r.quality_score, r.schedule.makespan))
     return results[:top_n]

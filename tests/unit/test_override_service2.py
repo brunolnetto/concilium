@@ -1,4 +1,5 @@
 """Tests for OverrideService to boost coverage."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -6,6 +7,7 @@ from unittest.mock import MagicMock
 
 def _make_svc():
     from concilium.application.services.project.override_service import OverrideService
+
     repo = MagicMock()
     audit = MagicMock()
     svc = OverrideService(repository=repo, audit_service=audit)
@@ -14,7 +16,9 @@ def _make_svc():
 
 def _make_project(data_map: dict | None = None):
     proj = MagicMock()
-    proj.read_json.side_effect = lambda path, default=None: (data_map or {}).get(path, default if default is not None else {})
+    proj.read_json.side_effect = lambda path, default=None: (data_map or {}).get(
+        path, default if default is not None else {}
+    )
     proj.write_json = MagicMock()
     return proj
 
@@ -41,6 +45,7 @@ class TestOverrides:
     def test_list_overrides_returns_data(self):
         svc, repo, _ = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         proj = _make_project({DEFAULT_PROJECT_FILES.overrides: {"skill-01": {"key": "val"}}})
         repo.get_project.return_value = proj
         result = svc.list_overrides("proj-1")
@@ -49,6 +54,7 @@ class TestOverrides:
     def test_upsert_override_merges_and_logs(self):
         svc, repo, audit = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         existing = {"skill-01": {"a": 1}}
         proj = _make_project({DEFAULT_PROJECT_FILES.overrides: existing})
         repo.get_project.return_value = proj
@@ -61,6 +67,7 @@ class TestOverrides:
     def test_upsert_override_creates_new_skill(self):
         svc, repo, audit = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         proj = _make_project({DEFAULT_PROJECT_FILES.overrides: {}})
         repo.get_project.return_value = proj
         result = svc.upsert_override("proj-1", "skill-02", {"x": 9})
@@ -69,6 +76,7 @@ class TestOverrides:
     def test_delete_override_removes_skill(self):
         svc, repo, audit = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         existing = {"skill-01": {"a": 1}, "skill-02": {"b": 2}}
         proj = _make_project({DEFAULT_PROJECT_FILES.overrides: existing})
         repo.get_project.return_value = proj
@@ -79,6 +87,7 @@ class TestOverrides:
     def test_delete_override_missing_skill_no_error(self):
         svc, repo, _ = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         proj = _make_project({DEFAULT_PROJECT_FILES.overrides: {}})
         repo.get_project.return_value = proj
         result = svc.delete_override("proj-1", "nonexistent")
@@ -89,6 +98,7 @@ class TestMobilizacaoPolicies:
     def test_get_policies_returns_stored(self):
         svc, repo, _ = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         data = {"item-1": {"n_inicial": 1}}
         proj = _make_project({DEFAULT_PROJECT_FILES.mobilizacao_policies: data})
         repo.get_project.return_value = proj
@@ -98,6 +108,7 @@ class TestMobilizacaoPolicies:
     def test_upsert_policy_writes_and_logs(self):
         svc, repo, audit = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         proj = _make_project({DEFAULT_PROJECT_FILES.mobilizacao_policies: {}})
         repo.get_project.return_value = proj
         svc.upsert_mobilizacao_policy("proj-1", "item-1", {"n_inicial": 2})
@@ -107,6 +118,7 @@ class TestMobilizacaoPolicies:
     def test_delete_policy_removes_item(self):
         svc, repo, audit = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         data = {"item-1": {"n_inicial": 1}, "item-2": {"n_inicial": 2}}
         proj = _make_project({DEFAULT_PROJECT_FILES.mobilizacao_policies: data})
         repo.get_project.return_value = proj
@@ -120,6 +132,7 @@ class TestMobilizacaoPolicies:
     def test_delete_policy_missing_no_error(self):
         svc, repo, _ = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         proj = _make_project({DEFAULT_PROJECT_FILES.mobilizacao_policies: {}})
         repo.get_project.return_value = proj
         svc.delete_mobilizacao_policy("proj-1", "nonexistent")  # no error
@@ -129,6 +142,7 @@ class TestDeliverablesConfig:
     def test_get_deliverables_config_returns_stored(self):
         svc, repo, _ = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
+
         stored = {"key1": True}
         proj = _make_project({DEFAULT_PROJECT_FILES.deliverables_config: stored})
         repo.get_project.return_value = proj
@@ -138,6 +152,7 @@ class TestDeliverablesConfig:
     def test_get_deliverables_config_returns_default_when_empty(self):
         svc, repo, _ = _make_svc()
         from concilium.application.services.project.project_files import DEFAULT_DELIVERABLES, DEFAULT_PROJECT_FILES
+
         proj = _make_project({DEFAULT_PROJECT_FILES.deliverables_config: {}})
         repo.get_project.return_value = proj
         result = svc.get_deliverables_config("proj-1")

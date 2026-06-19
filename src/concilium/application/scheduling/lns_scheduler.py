@@ -262,8 +262,7 @@ class LnsScheduler:
         t = earliest
         while t + a.duration_weeks <= deadline:
             if all(
-                resource_usage.get(t + offset, {}).get(res, 0)
-                + _lns_demand_at_offset(a, offset, res, qty)
+                resource_usage.get(t + offset, {}).get(res, 0) + _lns_demand_at_offset(a, offset, res, qty)
                 <= pool.resources.get(res, 0)
                 for res, qty in a.required_resources.items()
                 for offset in range(a.duration_weeks)

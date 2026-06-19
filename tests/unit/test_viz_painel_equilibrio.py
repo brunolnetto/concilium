@@ -14,12 +14,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_lever(
     id_: str = "lever_x",
@@ -80,6 +78,7 @@ _MOD = "concilium.application.runtime.deliverables.visualizations.charts.painel_
 
 def _import_fn():
     import importlib
+
     mod = importlib.import_module(_MOD)
     return mod.build_painel_equilibrio
 
@@ -87,6 +86,7 @@ def _import_fn():
 # ---------------------------------------------------------------------------
 # 1. Early-return paths
 # ---------------------------------------------------------------------------
+
 
 class TestEarlyReturns:
     def test_empty_levers_key_absent_returns_none(self):
@@ -118,6 +118,7 @@ class TestEarlyReturns:
 # 2. Minimal happy path — one lever
 # ---------------------------------------------------------------------------
 
+
 class TestMinimalOneLever:
     def test_returns_bytes_one_lever(self):
         """Single lever with defaults → bytes returned."""
@@ -133,10 +134,12 @@ class TestMinimalOneLever:
         build = _import_fn()
         mock_plt, _, _, _ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            result = build({
-                "levers": [_make_lever()],
-                "break_even_alcancavel": True,
-            })
+            result = build(
+                {
+                    "levers": [_make_lever()],
+                    "break_even_alcancavel": True,
+                }
+            )
         assert result == b"PNG"
 
 
@@ -144,16 +147,19 @@ class TestMinimalOneLever:
 # 3. delta_total / deficit_mi branches
 # ---------------------------------------------------------------------------
 
+
 class TestDeltaTotalBranches:
     def test_deficit_negative_draws_axvline(self):
         """delta_total < 0 → ax.axvline called with red color."""
         build = _import_fn()
         mock_plt, mock_fig, mock_ax, _ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            build({
-                "levers": [_make_lever()],
-                "delta_total": -2_000_000.0,
-            })
+            build(
+                {
+                    "levers": [_make_lever()],
+                    "delta_total": -2_000_000.0,
+                }
+            )
         # The red deficit line should have been drawn
         calls_axvline = mock_ax.axvline.call_args_list
         assert any(
@@ -166,10 +172,12 @@ class TestDeltaTotalBranches:
         build = _import_fn()
         mock_plt, mock_fig, mock_ax, _ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            build({
-                "levers": [_make_lever()],
-                "delta_total": 0.0,
-            })
+            build(
+                {
+                    "levers": [_make_lever()],
+                    "delta_total": 0.0,
+                }
+            )
         calls_axvline = mock_ax.axvline.call_args_list
         red_calls = [c for c in calls_axvline if c.kwargs.get("color") == "#e74c3c"]
         assert len(red_calls) == 0
@@ -179,10 +187,12 @@ class TestDeltaTotalBranches:
         build = _import_fn()
         mock_plt, mock_fig, mock_ax, _ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            build({
-                "levers": [_make_lever()],
-                "delta_total": 1_000_000.0,
-            })
+            build(
+                {
+                    "levers": [_make_lever()],
+                    "delta_total": 1_000_000.0,
+                }
+            )
         calls_axvline = mock_ax.axvline.call_args_list
         red_calls = [c for c in calls_axvline if c.kwargs.get("color") == "#e74c3c"]
         assert len(red_calls) == 0
@@ -192,15 +202,18 @@ class TestDeltaTotalBranches:
 # 4. combinacoes / solo_ids / combo_only_ids logic
 # ---------------------------------------------------------------------------
 
+
 class TestCombinacoesBranches:
     def _run(self, combinacoes, levers=None):
         build = _import_fn()
         mock_plt, *_ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            return build({
-                "levers": levers or [_make_lever("lv1")],
-                "combinacoes_break_even": combinacoes,
-            })
+            return build(
+                {
+                    "levers": levers or [_make_lever("lv1")],
+                    "combinacoes_break_even": combinacoes,
+                }
+            )
 
     def test_no_combinacoes(self):
         assert self._run([]) == b"PNG"
@@ -239,15 +252,18 @@ class TestCombinacoesBranches:
 # 5. Label-building (word-wrap, ★ prefix, ◎ prefix, plain)
 # ---------------------------------------------------------------------------
 
+
 class TestLabelBuilding:
     def _run_with_levers(self, levers, combinacoes=None):
         build = _import_fn()
         mock_plt, *_ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            return build({
-                "levers": levers,
-                "combinacoes_break_even": combinacoes or [],
-            })
+            return build(
+                {
+                    "levers": levers,
+                    "combinacoes_break_even": combinacoes or [],
+                }
+            )
 
     def test_label_uses_id_when_descricao_absent(self):
         """When descricao is absent, id with underscores replaced is used as label."""
@@ -292,6 +308,7 @@ class TestLabelBuilding:
 # 6. tipo coloring — custo vs. preco
 # ---------------------------------------------------------------------------
 
+
 class TestColorBranches:
     def test_tipo_custo_lever(self):
         """tipo='custo' → blue color applied."""
@@ -331,6 +348,7 @@ class TestColorBranches:
 # 7. acao_potencial aggregation
 # ---------------------------------------------------------------------------
 
+
 class TestAcaoPotencial:
     def _run_levers(self, levers):
         build = _import_fn()
@@ -365,11 +383,13 @@ class TestAcaoPotencial:
 
     def test_all_three_acao_buckets(self):
         """All three special levers fill acao_potencial."""
-        result = self._run_levers([
-            _make_lever("fechar_gap_praticabilidade", delta=1_000_000.0),
-            _make_lever("fechar_gap_escala", delta=1_000_000.0),
-            _make_lever("fechar_gap_pool", delta=1_000_000.0),
-        ])
+        result = self._run_levers(
+            [
+                _make_lever("fechar_gap_praticabilidade", delta=1_000_000.0),
+                _make_lever("fechar_gap_escala", delta=1_000_000.0),
+                _make_lever("fechar_gap_pool", delta=1_000_000.0),
+            ]
+        )
         assert result == b"PNG"
 
     def test_no_acao_levers_shows_sem_alavancas(self):
@@ -382,16 +402,19 @@ class TestAcaoPotencial:
 # 8. frentes_nec_media branch in title
 # ---------------------------------------------------------------------------
 
+
 class TestFrentesNecMedia:
     def test_frentes_nec_media_above_threshold(self):
         """frentes_nec_media > 1.01 → pu_line prefix added to title."""
         build = _import_fn()
         mock_plt, *_ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            result = build({
-                "levers": [_make_lever()],
-                "frentes_nec_media": 2.5,
-            })
+            result = build(
+                {
+                    "levers": [_make_lever()],
+                    "frentes_nec_media": 2.5,
+                }
+            )
         assert result == b"PNG"
 
     def test_frentes_nec_media_at_threshold(self):
@@ -399,16 +422,19 @@ class TestFrentesNecMedia:
         build = _import_fn()
         mock_plt, *_ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            result = build({
-                "levers": [_make_lever()],
-                "frentes_nec_media": 1.0,
-            })
+            result = build(
+                {
+                    "levers": [_make_lever()],
+                    "frentes_nec_media": 1.0,
+                }
+            )
         assert result == b"PNG"
 
 
 # ---------------------------------------------------------------------------
 # 9. Error path (rendering exception → returns None)
 # ---------------------------------------------------------------------------
+
 
 class TestErrorPath:
     def test_rendering_exception_returns_none(self):
@@ -422,6 +448,7 @@ class TestErrorPath:
 
     def test_savefig_exception_returns_none(self):
         """When fig_to_bytes raises, the except block catches it and returns None."""
+
         def _bad_fig_to_bytes(fig):
             raise OSError("disk full")
 
@@ -438,6 +465,7 @@ class TestErrorPath:
 # ---------------------------------------------------------------------------
 # 10. Multiple levers covering bar-annotation loop
 # ---------------------------------------------------------------------------
+
 
 class TestMultipleLevers:
     def test_multiple_levers_all_rendered(self):
@@ -485,16 +513,19 @@ class TestMultipleLevers:
 # 11. legend_elements deficit line (deficit_mi < 0)
 # ---------------------------------------------------------------------------
 
+
 class TestLegendDeficitLine:
     def test_deficit_legend_element_added(self):
         """When delta_total < 0, a Line2D element for the deficit is appended."""
         build = _import_fn()
         mock_plt, mock_fig, mock_ax, _ = _make_plt_mock()
         with _patched_init_mpl(mock_plt):
-            result = build({
-                "levers": [_make_lever()],
-                "delta_total": -3_000_000.0,
-            })
+            result = build(
+                {
+                    "levers": [_make_lever()],
+                    "delta_total": -3_000_000.0,
+                }
+            )
         assert result == b"PNG"
         # legend was called with handles
         mock_ax.legend.assert_called_once()

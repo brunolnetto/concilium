@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import json
-import sys
-from io import StringIO
-from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from concilium.application.runtime.exceptions import (
     RuntimeError as _RuntimeError,
+)
+from concilium.application.runtime.exceptions import (
     RuntimeTechnicalError,
 )
 from concilium.application.runtime.helpers.pipeline import (
@@ -26,7 +24,6 @@ from concilium.application.runtime.helpers.pipeline import (
     _print_skill_start,
     _resolve_state,
 )
-
 
 # ---------------------------------------------------------------------------
 # _parse_executed_skills
@@ -320,13 +317,16 @@ class TestResolveState:
 
         skill_inputs = {"99-nongate": {"decision_variables": {"x": 1}}}
         updated = MagicMock()
-        with patch(
-            "concilium.application.runtime.helpers.pipeline._GATE_SKILLS",
-            frozenset(),
-        ), patch(
-            "concilium.application.runtime.helpers.pipeline._apply_dv",
-            return_value=updated,
-        ) as mock_apply:
+        with (
+            patch(
+                "concilium.application.runtime.helpers.pipeline._GATE_SKILLS",
+                frozenset(),
+            ),
+            patch(
+                "concilium.application.runtime.helpers.pipeline._apply_dv",
+                return_value=updated,
+            ) as mock_apply,
+        ):
             new_state = _resolve_state("99-nongate", result, skill_inputs)
         mock_apply.assert_called_once_with(canonical, {"x": 1})
         assert new_state is updated
@@ -344,9 +344,7 @@ class TestResolveState:
         gate_skill = "01-escopo-e-eap" if "01-escopo-e-eap" in _GATE_SKILLS else next(iter(_GATE_SKILLS))
         result = self._make_result(has_errors=True, canonical=canonical)
 
-        with patch(
-            "concilium.application.runtime.helpers.pipeline._apply_dv"
-        ) as mock_apply:
+        with patch("concilium.application.runtime.helpers.pipeline._apply_dv") as mock_apply:
             _resolve_state(gate_skill, result, skill_inputs)
         mock_apply.assert_not_called()
 
@@ -605,8 +603,10 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch("concilium.application.runtime.helpers.pipeline._oas_save_state"), \
-             patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"):
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
+        ):
             _on_after_skill(runtime, store, "v1", {}, "04-cronograma", result, new_state, record)
 
         captured = capsys.readouterr()
@@ -621,8 +621,10 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch("concilium.application.runtime.helpers.pipeline._oas_save_state"), \
-             patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"):
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
+        ):
             _on_after_skill(runtime, store, "v1", {}, "04-cronograma", result, new_state, record)
 
         captured = capsys.readouterr()
@@ -636,8 +638,10 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch("concilium.application.runtime.helpers.pipeline._oas_save_state"), \
-             patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"):
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
+        ):
             _on_after_skill(runtime, store, "v1", {}, "04-cronograma", result, new_state, record)
 
         captured = capsys.readouterr()
@@ -652,8 +656,10 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch("concilium.application.runtime.helpers.pipeline._oas_save_state"), \
-             patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"):
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
+        ):
             _on_after_skill(runtime, store, "v1", {}, "99-nongate", result, new_state, record)
 
         captured = capsys.readouterr()
@@ -667,8 +673,10 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch("concilium.application.runtime.helpers.pipeline._oas_save_state"), \
-             patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"):
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
+        ):
             _on_after_skill(runtime, store, "v1", {}, "04-cronograma", result, new_state, record)
 
         runtime._process_side_effects.assert_called_once_with("04-cronograma", result, store, "v1")
@@ -680,8 +688,10 @@ class TestOnAfterSkill:
         record = self._make_record(status="OK")
         new_state = MagicMock()
 
-        with patch("concilium.application.runtime.helpers.pipeline._oas_save_state"), \
-             patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"):
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
+        ):
             _on_after_skill(runtime, store, "v1", {}, "04-cronograma", None, new_state, record)
 
         runtime._process_side_effects.assert_not_called()
@@ -694,10 +704,9 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch(
-            "concilium.application.runtime.helpers.pipeline._oas_save_state"
-        ) as mock_save, patch(
-            "concilium.application.runtime.helpers.pipeline._oas_log_invocation"
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state") as mock_save,
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
         ):
             _on_after_skill(runtime, store, "v1", {}, "04-cronograma", result, new_state, record)
         mock_save.assert_called_once_with(store, "v1", "04-cronograma", result, new_state, record)
@@ -710,15 +719,12 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch(
-            "concilium.application.runtime.helpers.pipeline._oas_save_state"
-        ), patch(
-            "concilium.application.runtime.helpers.pipeline._oas_log_invocation"
-        ) as mock_log:
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation") as mock_log,
+        ):
             _on_after_skill(runtime, store, "v1", {"ctx": "x"}, "04-cronograma", result, new_state, record)
-        mock_log.assert_called_once_with(
-            runtime, store, "v1", {"ctx": "x"}, "04-cronograma", result, record
-        )
+        mock_log.assert_called_once_with(runtime, store, "v1", {"ctx": "x"}, "04-cronograma", result, record)
 
     def test_multiple_errors_joined_by_semicolon(self, capsys):
         runtime = MagicMock()
@@ -728,8 +734,10 @@ class TestOnAfterSkill:
         result = MagicMock()
         new_state = MagicMock()
 
-        with patch("concilium.application.runtime.helpers.pipeline._oas_save_state"), \
-             patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"):
+        with (
+            patch("concilium.application.runtime.helpers.pipeline._oas_save_state"),
+            patch("concilium.application.runtime.helpers.pipeline._oas_log_invocation"),
+        ):
             _on_after_skill(runtime, store, "v1", {}, "04-cronograma", result, new_state, record)
 
         captured = capsys.readouterr()

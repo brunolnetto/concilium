@@ -7,13 +7,6 @@ from unittest.mock import patch
 
 import pytest
 
-from concilium.application.catalog.plausibility_checker import (
-    _check_equipamento,
-    _check_mao_obra,
-    _check_produtividades,
-    _count_severidades,
-    verificar_plausibilidade,
-)
 from concilium.application.catalog._plausibility_checks import (
     Anomalia,
     _pc_check_equipe_refs,
@@ -30,16 +23,19 @@ from concilium.application.catalog._plausibility_checks import (
     _pc_mo_zscore,
     _pc_prod_vhs,
 )
+from concilium.application.catalog.plausibility_checker import (
+    _check_equipamento,
+    _check_mao_obra,
+    _check_produtividades,
+    _count_severidades,
+    verificar_plausibilidade,
+)
 from concilium.domain.constants import (
-    ALPHA_MAX_ENCARGOS as ALPHA_MAX,
-    ALPHA_MIN_ENCARGOS as ALPHA_MIN,
     DIESEL_L_POR_CV_PONT,
-    DIESEL_TOLERANCIA,
     HORAS_MES_CLT,
     SMH,
     VALIDADE_PRECO_DIAS,
     VH_MAX,
-    ZSCORE_EXTREMO,
 )
 
 # ---------------------------------------------------------------------------
@@ -277,6 +273,7 @@ def test_pc_mo_semantica_unusual_unit(unidade):
 
 def test_pc_mo_staleness_stale(monkeypatch):
     from datetime import timedelta
+
     ref_date = date(2024, 1, 1)
     today_date = ref_date + timedelta(days=VALIDADE_PRECO_DIAS + 20)  # 200 days later
     monkeypatch.setattr("concilium.application.catalog._plausibility_checks._today", lambda: today_date)
@@ -291,6 +288,7 @@ def test_pc_mo_staleness_stale(monkeypatch):
 
 def test_pc_mo_staleness_fresh(monkeypatch):
     from datetime import timedelta
+
     ref_date = date(2024, 6, 1)
     today_date = ref_date + timedelta(days=49)  # 49 days later → well within VALIDADE_DIAS
     monkeypatch.setattr("concilium.application.catalog._plausibility_checks._today", lambda: today_date)
@@ -759,7 +757,8 @@ def test_verificar_plausibilidade_insumo_index_uses_codigo():
     result = verificar_plausibilidade([mo_ins], [prod])
     # MO-001 is in index, so no INCOMPLETO ERRO for funcao_id
     incompleto_erros = [
-        a for a in result["anomalias"]
+        a
+        for a in result["anomalias"]
         if a["tipo"] == "INCOMPLETO" and a["severidade"] == "ERRO" and "funcao_id" in a.get("detalhe", {})
     ]
     assert incompleto_erros == []

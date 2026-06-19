@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-
 from concilium.application.scheduling.pool_validator import (
     ResourcePoolValidator,
     _collect_schedule_weeks,
     _compute_week_demand,
 )
-from concilium.presentation.mcp.tools import prompts, schemas
+from concilium.presentation.mcp.tools import prompts
 from concilium.presentation.mcp.tools.schemas import (
     CatalogDraftSchema,
     ReplanSimResult,

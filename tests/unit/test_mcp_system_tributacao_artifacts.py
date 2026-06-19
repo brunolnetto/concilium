@@ -1,18 +1,19 @@
 """Tests for MCP tools: system.py, tributacao.py, artifacts.py."""
+
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from mcp.server.fastmcp import FastMCP
 
-
 # ─── helpers ──────────────────────────────────────────────────────────────────
+
 
 def _register_tools(module_path: str, monkeypatch, tmp_path: Path) -> dict:
     """Register tools from a module and return {name: callable}."""
     import importlib
+
     config_dir = tmp_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_dir))

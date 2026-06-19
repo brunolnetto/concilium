@@ -489,9 +489,7 @@ def _detectar_oportunidades_paralelo(
     cpm_es = _cpm_early_start(dag)
     cpm_lf = _cpm_late_finish(dag, sched.makespan)
 
-    precedencias: set[frozenset] = {
-        frozenset([pred, succ]) for pred, succ in dag.precedence
-    }
+    precedencias: set[frozenset] = {frozenset([pred, succ]) for pred, succ in dag.precedence}
 
     resultado: list[OportunidadeCompartilhamentoParalelo] = []
 
@@ -506,9 +504,7 @@ def _detectar_oportunidades_paralelo(
             continue
 
         usuarios: list[str] = [
-            sa.activity_id
-            for sa in sched.scheduled_activities
-            if sa.assigned_resources.get(tipo_id, 0) > 0
+            sa.activity_id for sa in sched.scheduled_activities if sa.assigned_resources.get(tipo_id, 0) > 0
         ]
         if len(usuarios) < 2:
             continue
@@ -561,11 +557,7 @@ def _detectar_oportunidades_paralelo(
                             act_succ = act_map.get(succ)
                             if act_succ is None:
                                 continue
-                            tf_succ = (
-                                cpm_lf[succ]
-                                - cpm_es.get(succ, 0)
-                                - act_succ.duration_weeks
-                            )
+                            tf_succ = cpm_lf[succ] - cpm_es.get(succ, 0) - act_succ.duration_weeks
                             if tf_succ < delay:
                                 rejeitado = True
                                 break

@@ -9,26 +9,27 @@ Covers:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import typer
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _patch_cce(monkeypatch, return_value):
     """Patch collect_catalog_critical_errors at its source module."""
     import concilium.application.orchestrators.catalog_governance as cg_mod
+
     monkeypatch.setattr(cg_mod, "collect_catalog_critical_errors", lambda c: return_value)
 
 
 def _patch_runtime(monkeypatch, runtime_instance=None, side_effect=None):
     import concilium.application.runtime as runtime_mod
+
     if side_effect is not None:
         monkeypatch.setattr(runtime_mod, "Runtime", MagicMock(side_effect=side_effect))
     else:
@@ -37,6 +38,7 @@ def _patch_runtime(monkeypatch, runtime_instance=None, side_effect=None):
 
 def _patch_skill_registry(monkeypatch, registry_instance=None, side_effect=None):
     import concilium.application.skills.registry as reg_mod
+
     if side_effect is not None:
         monkeypatch.setattr(reg_mod, "SkillRegistry", MagicMock(side_effect=side_effect))
     else:
@@ -45,6 +47,7 @@ def _patch_skill_registry(monkeypatch, registry_instance=None, side_effect=None)
 
 def _patch_get_storage(monkeypatch, drive_id=""):
     import concilium.infrastructure.settings as settings_mod
+
     storage_mock = MagicMock()
     storage_mock.sharepoint.drive_id = drive_id
     monkeypatch.setattr(settings_mod, "get_storage", lambda: storage_mock)
@@ -53,6 +56,7 @@ def _patch_get_storage(monkeypatch, drive_id=""):
 
 def _patch_shared(monkeypatch, config_dir: Path, proj_dir: Path):
     import concilium.presentation.cli.shared as shared_mod
+
     monkeypatch.setattr(shared_mod, "_config_root", lambda: config_dir)
     monkeypatch.setattr(shared_mod, "_projetos_root", lambda: proj_dir)
 
@@ -74,6 +78,7 @@ def _make_rt_mock(catalogo=None):
 class TestHcCheckCatalogoHealth:
     def _fn(self):
         from concilium.presentation.cli.commands_health import _hc_check_catalogo_health
+
         return _hc_check_catalogo_health
 
     def test_success_no_errors(self, monkeypatch):
@@ -141,6 +146,7 @@ class TestHcCheckCatalogoHealth:
 class TestHcCheckCatalogs:
     def _fn(self):
         from concilium.presentation.cli.commands_health import _hc_check_catalogs
+
         return _hc_check_catalogs
 
     def test_noop_empty_contexto_ids(self, tmp_path):
@@ -213,6 +219,7 @@ class TestHcCheckCatalogs:
 class TestHcCheckSharepoint:
     def _fn(self):
         from concilium.presentation.cli.commands_health import _hc_check_sharepoint
+
         return _hc_check_sharepoint
 
     def test_noop_when_no_drive_id(self, monkeypatch):
@@ -223,6 +230,7 @@ class TestHcCheckSharepoint:
 
     def test_noop_when_drive_id_none(self, monkeypatch):
         import concilium.infrastructure.settings as settings_mod
+
         storage_mock = MagicMock()
         storage_mock.sharepoint.drive_id = None
         monkeypatch.setattr(settings_mod, "get_storage", lambda: storage_mock)
@@ -237,9 +245,8 @@ class TestHcCheckSharepoint:
         sp_storage.health_check.return_value = {"status": "ok", "drive_name": "My Drive"}
 
         import concilium.infrastructure.adapters.blob_storage.sharepoint as sp_mod
-        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(
-            **{"from_env.return_value": sp_storage}
-        ))
+
+        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(**{"from_env.return_value": sp_storage}))
 
         rows = []
         self._fn()(rows)
@@ -257,9 +264,8 @@ class TestHcCheckSharepoint:
         sp_storage.health_check.return_value = {"status": "error", "message": "timeout"}
 
         import concilium.infrastructure.adapters.blob_storage.sharepoint as sp_mod
-        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(
-            **{"from_env.return_value": sp_storage}
-        ))
+
+        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(**{"from_env.return_value": sp_storage}))
 
         rows = []
         self._fn()(rows)
@@ -275,9 +281,8 @@ class TestHcCheckSharepoint:
         sp_storage.health_check.return_value = {"status": "ok", "drive_name": "", "message": ""}
 
         import concilium.infrastructure.adapters.blob_storage.sharepoint as sp_mod
-        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(
-            **{"from_env.return_value": sp_storage}
-        ))
+
+        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(**{"from_env.return_value": sp_storage}))
 
         rows = []
         self._fn()(rows)
@@ -291,11 +296,10 @@ class TestHcCheckSharepoint:
         _patch_get_storage(monkeypatch, drive_id="drv-123")
 
         import sys
+
         # Remove the module from sys.modules so the lazy import inside the function
         # will re-execute the import machinery, and we can inject a broken module.
-        original_mod = sys.modules.pop(
-            "concilium.infrastructure.adapters.blob_storage.sharepoint", None
-        )
+        original_mod = sys.modules.pop("concilium.infrastructure.adapters.blob_storage.sharepoint", None)
         # Insert a sentinel that raises ImportError when accessed
         monkeypatch.setitem(
             sys.modules,
@@ -309,13 +313,9 @@ class TestHcCheckSharepoint:
         finally:
             # Restore the original module
             if original_mod is not None:
-                sys.modules[
-                    "concilium.infrastructure.adapters.blob_storage.sharepoint"
-                ] = original_mod
+                sys.modules["concilium.infrastructure.adapters.blob_storage.sharepoint"] = original_mod
             else:
-                sys.modules.pop(
-                    "concilium.infrastructure.adapters.blob_storage.sharepoint", None
-                )
+                sys.modules.pop("concilium.infrastructure.adapters.blob_storage.sharepoint", None)
 
         assert len(rows) == 1
         name, ok, detail = rows[0]
@@ -329,9 +329,8 @@ class TestHcCheckSharepoint:
         sp_storage.health_check.side_effect = Exception("connection refused")
 
         import concilium.infrastructure.adapters.blob_storage.sharepoint as sp_mod
-        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(
-            **{"from_env.return_value": sp_storage}
-        ))
+
+        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(**{"from_env.return_value": sp_storage}))
 
         rows = []
         self._fn()(rows)
@@ -344,6 +343,7 @@ class TestHcCheckSharepoint:
         _patch_get_storage(monkeypatch, drive_id="drv-123")
 
         import concilium.infrastructure.adapters.blob_storage.sharepoint as sp_mod
+
         sp_cls_mock = MagicMock()
         sp_cls_mock.from_env.side_effect = ConnectionError("network error")
         monkeypatch.setattr(sp_mod, "SharePointBlobStorage", sp_cls_mock)
@@ -396,6 +396,7 @@ class TestHealthCommand:
         _patch_cce(monkeypatch, [])
 
         from concilium.presentation.cli.commands_health import health
+
         health()  # Must not raise
 
     def test_degraded_missing_config_dir(self, tmp_path, monkeypatch):
@@ -407,6 +408,7 @@ class TestHealthCommand:
         self._setup_common(monkeypatch, config_dir, proj_dir)
 
         from concilium.presentation.cli.commands_health import health
+
         with pytest.raises(typer.Exit) as exc_info:
             health()
         assert exc_info.value.exit_code == 1
@@ -425,6 +427,7 @@ class TestHealthCommand:
         _patch_cce(monkeypatch, [])
 
         from concilium.presentation.cli.commands_health import health
+
         with pytest.raises(typer.Exit) as exc_info:
             health()
         assert exc_info.value.exit_code == 1
@@ -439,6 +442,7 @@ class TestHealthCommand:
         self._setup_common(monkeypatch, config_dir, proj_dir)
 
         from concilium.presentation.cli.commands_health import health
+
         with pytest.raises(typer.Exit) as exc_info:
             health()
         assert exc_info.value.exit_code == 1
@@ -452,6 +456,7 @@ class TestHealthCommand:
         self._setup_common(monkeypatch, config_dir, proj_dir)
 
         from concilium.presentation.cli.commands_health import health
+
         with pytest.raises(typer.Exit) as exc_info:
             health()
         assert exc_info.value.exit_code == 1
@@ -466,6 +471,7 @@ class TestHealthCommand:
         self._setup_common(monkeypatch, config_dir, proj_dir)
 
         from concilium.presentation.cli.commands_health import health
+
         with pytest.raises(typer.Exit) as exc_info:
             health()
         assert exc_info.value.exit_code == 1
@@ -487,11 +493,11 @@ class TestHealthCommand:
         sp_storage.health_check.return_value = {"status": "ok", "drive_name": "SP Drive"}
 
         import concilium.infrastructure.adapters.blob_storage.sharepoint as sp_mod
-        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(
-            **{"from_env.return_value": sp_storage}
-        ))
+
+        monkeypatch.setattr(sp_mod, "SharePointBlobStorage", MagicMock(**{"from_env.return_value": sp_storage}))
 
         from concilium.presentation.cli.commands_health import health
+
         health()  # Must not raise
 
     def test_degraded_runtime_error_in_catalogs(self, tmp_path, monkeypatch):
@@ -506,6 +512,7 @@ class TestHealthCommand:
         _patch_cce(monkeypatch, [])
 
         from concilium.presentation.cli.commands_health import health
+
         with pytest.raises(typer.Exit) as exc_info:
             health()
         assert exc_info.value.exit_code == 1
@@ -525,6 +532,7 @@ class TestHealthCommand:
         _patch_cce(monkeypatch, [])
 
         from concilium.presentation.cli.commands_health import health
+
         health()  # Must not raise
 
     def test_degraded_catalog_with_errors(self, tmp_path, monkeypatch):
@@ -541,6 +549,7 @@ class TestHealthCommand:
         _patch_cce(monkeypatch, ["critical error 1"])  # catalog has errors
 
         from concilium.presentation.cli.commands_health import health
+
         with pytest.raises(typer.Exit) as exc_info:
             health()
         assert exc_info.value.exit_code == 1

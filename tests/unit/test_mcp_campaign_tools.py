@@ -1,18 +1,18 @@
 """Tests for MCP campaign tools coverage."""
+
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from mcp.server.fastmcp import FastMCP
-
 
 _CAMPAIGN_MOD = "concilium.presentation.mcp.tools.campaign"
 
 
 def _register_tools(monkeypatch, tmp_path: Path) -> dict:
     import importlib
+
     config_dir = tmp_path / "config"
     config_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_dir))
@@ -38,7 +38,7 @@ class TestExplorarConfiguracoesGo:
         storage_mock.config_root = tmp_path / "config"
 
         with (
-            patch(f"concilium.infrastructure.settings.get_storage", return_value=storage_mock),
+            patch("concilium.infrastructure.settings.get_storage", return_value=storage_mock),
             patch(
                 "concilium.presentation.cli.commands_campaign._load_project_base_spec",
                 return_value=None,
@@ -94,11 +94,22 @@ class TestExplorarConfiguracoesGo:
         with (
             patch("concilium.infrastructure.settings.get_storage", return_value=storage_mock),
             patch("concilium.presentation.cli.commands_campaign._load_project_base_spec", return_value=base_spec),
-            patch("concilium.application.services.campaign.campaign_service.executar_campanha", return_value=campaign_result),
+            patch(
+                "concilium.application.services.campaign.campaign_service.executar_campanha",
+                return_value=campaign_result,
+            ),
             patch("concilium.application.services.campaign.campaign_service.construir_cubo", return_value={}),
-            patch("concilium.application.services.campaign.campaign_report.serialize_campaign_report", return_value={"cubo": {}}),
-            patch("concilium.application.services.campaign.campaign_report.render_campaign_report_md", return_value="# report"),
-            patch("concilium.application.services.campaign.campaign_report.render_campaign_report_pdf", return_value=b""),
+            patch(
+                "concilium.application.services.campaign.campaign_report.serialize_campaign_report",
+                return_value={"cubo": {}},
+            ),
+            patch(
+                "concilium.application.services.campaign.campaign_report.render_campaign_report_md",
+                return_value="# report",
+            ),
+            patch(
+                "concilium.application.services.campaign.campaign_report.render_campaign_report_pdf", return_value=b""
+            ),
             patch("concilium.infrastructure.storage.campaign_store.CampaignRunStore", return_value=store_mock),
         ):
             result = tools["explorar_configuracoes_go"](

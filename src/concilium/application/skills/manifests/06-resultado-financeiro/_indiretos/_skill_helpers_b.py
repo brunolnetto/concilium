@@ -23,7 +23,6 @@ from typing import Any
 
 from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
 from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # ADR-056 §T3
-from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 from concilium.domain.models.canonical import (
     CanonicalModel,
     IndirectoCategoria,
@@ -34,6 +33,7 @@ from concilium.domain.models.canonical import (
     Mobilizacao,
     ValidacaoItem,
 )
+from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
 from concilium.domain.models.project.decision_variables import DecisionVariables
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 

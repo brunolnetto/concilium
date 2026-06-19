@@ -16,7 +16,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
 import typer
 from typer.testing import CliRunner
 
@@ -349,8 +348,9 @@ class TestAuditPrintConflitos:
 
 class TestPrintSkillsTable:
     def test_prints_skills_table(self):
-        from concilium.presentation.cli.commands_basic import _print_skills_table
         from rich.console import Console
+
+        from concilium.presentation.cli.commands_basic import _print_skills_table
 
         skill_meta = SimpleNamespace(description="Escopo e EAP")
         registry_mock = MagicMock()
@@ -379,10 +379,10 @@ class TestStatus:
         config_dir.mkdir()
 
         with patch(f"{MODULE}.config_root", return_value=config_dir):
-            from concilium.presentation.cli.commands_basic import status
-
             # Call directly; typer.Argument defaults to "" when called outside CLI
             import typer
+
+            from concilium.presentation.cli.commands_basic import status
 
             # We use typer testing via a mini app
             mini_app = typer.Typer()
@@ -398,7 +398,6 @@ class TestStatus:
         registry_mock = MagicMock()
         registry_mock.get_all_skills.return_value = {"sk-01": skill_meta}
 
-        import typer
 
         from concilium.presentation.cli.commands_basic import status
 
@@ -424,7 +423,6 @@ class TestStatus:
             version_path=version_dir,
         )
 
-        import typer
 
         from concilium.presentation.cli.commands_basic import status
 
@@ -454,7 +452,6 @@ class TestStatus:
             version_path=version_dir,
         )
 
-        import typer
 
         from concilium.presentation.cli.commands_basic import status
 
@@ -484,7 +481,6 @@ class TestStatus:
             version_path=version_dir,
         )
 
-        import typer
 
         from concilium.presentation.cli.commands_basic import status
 
@@ -508,7 +504,6 @@ class TestStatus:
             version_path=version_dir,
         )
 
-        import typer
 
         from concilium.presentation.cli.commands_basic import status
 
@@ -529,7 +524,6 @@ class TestStatus:
 
 def _build_audit_app():
     """Build a mini Typer app wrapping audit for testing."""
-    import typer
 
     from concilium.presentation.cli.commands_basic import audit
 

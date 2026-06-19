@@ -3,8 +3,8 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from .projection import BenchmarkProjection
 from ..spec.spec_loader import ProjectSpec
+from .projection import BenchmarkProjection
 
 
 def _load_inference_service() -> Any:
@@ -18,6 +18,9 @@ def _load_inference_service() -> Any:
 def _add_ferramenta_data(confronto: dict[str, Any], projection: BenchmarkProjection) -> None:
     if projection.ferramenta:
         confronto["ferramenta"] = projection.ferramenta
+    _pvf = getattr(projection, "preco_venda_fonte", None)
+    if _pvf:
+        confronto["preco_venda_fonte"] = _pvf
     if projection.ponto_equilibrio_ferramenta:
         confronto["ponto_equilibrio_ferramenta"] = projection.ponto_equilibrio_ferramenta
     if projection.ferramenta_breakdown_direto:
@@ -34,10 +37,15 @@ def _build_deltas_from_confronto(ref_vals: dict[str, Any], fer_vals: dict[str, A
         ref_v = ref_vals.get(key)
         tool_v = fer_vals.get(key)
         if ref_v is not None and tool_v is not None:
-            deltas[key] = {
+            entry: dict[str, Any] = {
                 "absoluto": round(tool_v - ref_v, 2),
                 "percentual": round((tool_v - ref_v) / ref_v * 100, 2) if ref_v != 0 else None,
             }
+            if key == "preco_venda":
+                fonte = fer_vals.get("preco_venda_fonte", "indisponivel")
+                entry["fonte"] = fonte
+                entry["homogeneo"] = fonte == "total_com_bdi"
+            deltas[key] = entry
     return deltas
 
 

@@ -135,8 +135,6 @@ def _bu_persist_bdi_diff(
     try:
         import json
 
-        from concilium.domain.models.financial.bdi import BdiPerfilDiff
-
         ant_dict2 = perfil_anterior.model_dump(mode="json")
         nov_dict2 = novo_perfil.model_dump(mode="json")
         campos2: list[str] = []

@@ -32,12 +32,12 @@ if TYPE_CHECKING:  # static analysis & IDEs only — never runs at startup
         ValidacaoItem,
     )
     from concilium.domain.models.catalog.catalogo import CPU, Insumo, TemplateObra, TipoInsumo
-    from concilium.domain.models.project.constraint_violation import ConstraintViolation
     from concilium.domain.models.catalog.contexto import ContextoObra
-    from concilium.domain.models.project.decision_variables import DecisionVariables
     from concilium.domain.models.catalog.jurisdicao import Jurisdicao
-    from concilium.domain.models.project.perfil import PerfilConstrutora
     from concilium.domain.models.catalog.referencia import TabelaReferencia
+    from concilium.domain.models.project.constraint_violation import ConstraintViolation
+    from concilium.domain.models.project.decision_variables import DecisionVariables
+    from concilium.domain.models.project.perfil import PerfilConstrutora
 
 # name -> (module_path, attribute)
 _LAZY_MAP: dict[str, tuple[str, str]] = {

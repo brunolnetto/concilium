@@ -1,0 +1,15 @@
+{
+  "codigo": "SV-P0045-D",
+  "tipo": "MAO_OBRA",
+  "descricao": "Operador de Pá Carregadeira (Diurno, 12×36)",
+  "unidade": "h",
+  "preco_unitario": 22.8396,
+  "fonte_preco": "PLANILHA_SERRA_VERDE_2026",
+  "data_referencia_preco": "2026-08-01",
+  "categoria": "MINERACAO",
+  "atributos_especificos": {
+    "nota": "inclui encargos — taxa horária all-in (custo_total_planilha/360h)",
+    "custo_total_mensal": 8222.27,
+    "turno": "D"
+  }
+}

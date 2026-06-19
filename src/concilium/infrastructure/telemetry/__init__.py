@@ -56,6 +56,40 @@ def setup_telemetry() -> None:
 
     _setup_tracing()
     _setup_metrics()
+    _setup_logging()
+
+
+def _setup_logging() -> None:
+    """Configura LoggerProvider OTel e ponte Python logging → OTel (ADR-111 F2)."""
+    import logging
+
+    from opentelemetry._logs import set_logger_provider
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+
+    telemetry = get_telemetry()
+    resource = Resource({SERVICE_NAME: telemetry.otel_service_name})
+    log_provider = LoggerProvider(resource=resource)
+
+    otlp_endpoint = telemetry.otlp_endpoint
+    if otlp_endpoint:
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+
+        log_provider.add_log_record_processor(
+            BatchLogRecordProcessor(OTLPLogExporter(endpoint=f"{otlp_endpoint}/v1/logs"))
+        )
+    elif _otel_console():
+        from opentelemetry.sdk._logs.export import ConsoleLogExporter
+
+        log_provider.add_log_record_processor(BatchLogRecordProcessor(ConsoleLogExporter()))
+
+    set_logger_provider(log_provider)
+
+    # Ponte: Python logging.Logger → OTel LogRecord (ADR-111 D2)
+    # Nível WARNING para não inundar o sink OTel com DEBUG/INFO
+    handler = LoggingHandler(level=logging.WARNING, logger_provider=log_provider)
+    logging.getLogger().addHandler(handler)
 
 
 def _setup_tracing() -> None:

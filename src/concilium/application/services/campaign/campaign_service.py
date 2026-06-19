@@ -1,4 +1,5 @@
 """ADR-070 — Campaign service: grid generation, evaluation, Pareto, shortlist curation."""
+
 from __future__ import annotations
 
 import concurrent.futures
@@ -7,9 +8,9 @@ import hashlib
 import itertools
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from concilium.domain.models.campaign.campaign import (
     CampaignBundleCube,
@@ -38,7 +39,7 @@ from concilium.domain.models.campaign.campaign import (
 
 
 _PER_ITEM_PREFIX = "_per_item_:"
-_CPU_ALT_PREFIX  = "_cpu_alt_:"
+_CPU_ALT_PREFIX = "_cpu_alt_:"
 
 
 def _expand_sweep_dims(bundle: GoResearchCampaignBundle) -> tuple[list[str], list[list]]:
@@ -134,12 +135,12 @@ def _apply_cpu_alt_override(spec: dict, key_path: str, value: str) -> None:
     onde campo pode ser "eap.cpu_id" ou qualquer variante com "cpu_id".
     """
     # Extrai item_id: é o sufixo após o último ":"
-    suffix = key_path[len(_CPU_ALT_PREFIX):]
+    suffix = key_path[len(_CPU_ALT_PREFIX) :]
     # suffix = "{campo}:{item_id}" — item_id não contém ":" por convenção
     last_colon = suffix.rfind(":")
     if last_colon < 0:
         return
-    item_id = suffix[last_colon + 1:]
+    item_id = suffix[last_colon + 1 :]
 
     # Navega até a lista eap no spec
     eap_list = None
@@ -169,6 +170,7 @@ def _apply_scalar(existing: Any, value: Any) -> Any:
     Qualquer outro dict faz merge; qualquer outro valor substitui.
     """
     import math as _math
+
     if isinstance(value, dict):
         if "__scale__" in value and existing is not None:
             try:
@@ -252,12 +254,12 @@ def _apply_per_item_post_load(spec_obj: object, key_path: str, value: Any) -> No
     Se o campo não contém "[*]", tenta localizar a activity pelo item_id na lista
     de atividades e aplicar o path relativo ao n_max (última parte do campo).
     """
-    suffix = key_path[len(_PER_ITEM_PREFIX):]
+    suffix = key_path[len(_PER_ITEM_PREFIX) :]
     last_colon = suffix.rfind(":")
     if last_colon < 0:
         return
     campo = suffix[:last_colon]
-    item_id = suffix[last_colon + 1:]
+    item_id = suffix[last_colon + 1 :]
 
     if not campo.startswith("inputs_"):
         return
@@ -370,9 +372,9 @@ def _cubo_analitico_agregado(canonical: dict) -> dict[str, Any]:
             continue
         v = float(c.get("valor_rs") or 0.0)
         total += v
-        cat  = (c.get("categoria_insumo") or "").lower()
+        cat = (c.get("categoria_insumo") or "").lower()
         prop = (c.get("propriedade") or "").lower()
-        aid  = c.get("atividade_id") or ""
+        aid = c.get("atividade_id") or ""
         if cat == "mao_obra":
             mo += v
         elif cat == "equipamento":
@@ -387,10 +389,10 @@ def _cubo_analitico_agregado(canonical: dict) -> dict[str, Any]:
 
     hhi = round(sum((v / total) ** 2 for v in por_atividade.values()), 4) if por_atividade else None
     return {
-        "share_mo":   round(mo   / total, 4),
-        "share_eq":   round(eq   / total, 4),
+        "share_mo": round(mo / total, 4),
+        "share_eq": round(eq / total, 4),
         "share_comb": round(comb / total, 4),
-        "hhi":        hhi,
+        "hhi": hhi,
     }
 
 
@@ -472,18 +474,12 @@ def extrair_vetor_EF(canonical: dict, report: dict) -> VetorEspacoEF:
 def classificar_O(v: VetorEspacoO, perfil: PerfilExpectativas) -> ClassificacaoO:
     scores = []
     if v.folga_semanas is not None:
-        scores.append(
-            "IDEAL" if v.folga_semanas >= 0 else ("ATENCAO" if v.folga_semanas >= -2 else "CRITICO")
-        )
+        scores.append("IDEAL" if v.folga_semanas >= 0 else ("ATENCAO" if v.folga_semanas >= -2 else "CRITICO"))
     if v.fe_nec_medio is not None:
-        scores.append(
-            "IDEAL" if v.fe_nec_medio <= 1.0 else ("ATENCAO" if v.fe_nec_medio <= 1.25 else "CRITICO")
-        )
+        scores.append("IDEAL" if v.fe_nec_medio <= 1.0 else ("ATENCAO" if v.fe_nec_medio <= 1.25 else "CRITICO"))
     if v.itens_criticos_pct is not None:
         scores.append(
-            "IDEAL"
-            if v.itens_criticos_pct == 0
-            else ("ATENCAO" if v.itens_criticos_pct <= 0.20 else "CRITICO")
+            "IDEAL" if v.itens_criticos_pct == 0 else ("ATENCAO" if v.itens_criticos_pct <= 0.20 else "CRITICO")
         )
     if not scores:
         return "ATENCAO"
@@ -552,9 +548,7 @@ def _domina_EF(a: CenarioAvaliado, b: CenarioAvaliado) -> bool:
     if va.custo_indireto is not None and vb.custo_indireto is not None:
         ind_ok = va.custo_indireto <= vb.custo_indireto
     strictly = va.margem_pct > vb.margem_pct or (
-        va.custo_indireto is not None
-        and vb.custo_indireto is not None
-        and va.custo_indireto < vb.custo_indireto
+        va.custo_indireto is not None and vb.custo_indireto is not None and va.custo_indireto < vb.custo_indireto
     )
     return margem_ok and ind_ok and strictly
 
@@ -647,11 +641,7 @@ def curar_shortlist(
     shortlist = []
     for i, c in enumerate(ranked[:top_k]):
         c.rank_final = i + 1
-        motivo = (
-            "pareto_intersecao"
-            if c.pareto_intersecao
-            else ("pareto_EF" if c.pareto_EF else "melhor_viavel")
-        )
+        motivo = "pareto_intersecao" if c.pareto_intersecao else ("pareto_EF" if c.pareto_EF else "melhor_viavel")
         shortlist.append(
             CenarioRankeado(
                 rank=i + 1,
@@ -691,16 +681,16 @@ class _CampaignTask:
     config_root: str
     projects_root: str
     prazo_contratual: int | None
-    perfil: "PerfilExpectativas"
+    perfil: PerfilExpectativas
     do_reset: bool
 
 
-def _run_campaign_task(task: "_CampaignTask") -> "CenarioAvaliado":
+def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
     """Avalia um cenário da campanha — module-level para ser picklável."""
-    from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
     from concilium.application.benchmarks.execution.runner import BenchmarkRunner
-    from concilium.application.benchmarks.spec.spec_loader import load_spec_from_dict
+    from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
     from concilium.application.benchmarks.report.report_printer import BenchmarkReportPrinter
+    from concilium.application.benchmarks.spec.spec_loader import load_spec_from_dict
 
     class _Silent(BenchmarkReportPrinter):
         def print(self, report: dict) -> None:  # noqa: A003
@@ -751,13 +741,13 @@ def _run_campaign_task(task: "_CampaignTask") -> "CenarioAvaliado":
             v_O = extrair_vetor_O(canonical, task.prazo_contratual)
             v_EF = extrair_vetor_EF(canonical, report)
             decision = (report.get("quality_gates") or {}).get("decision") or "BLOQUEADO"
-            via_map: dict[str, "ViabilidadeStatus"] = {
+            via_map: dict[str, ViabilidadeStatus] = {
                 "APROVADO": "APROVADO",
                 "APROVADO_COM_RESSALVAS": "APROVADO_COM_RESSALVAS",
                 "BLOQUEADO_COM_INVESTIGACAO": "BLOQUEADO_COM_INVESTIGACAO",
                 "BLOQUEADO": "BLOQUEADO",
             }
-            viabilidade: "ViabilidadeStatus" = via_map.get(decision, "ERRO")
+            viabilidade: ViabilidadeStatus = via_map.get(decision, "ERRO")
             result = CenarioAvaliado(
                 cenario_id=cid,
                 parametros_variados=task.variados,
@@ -811,6 +801,7 @@ def executar_campanha(
     O limiar é configurável via CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD (default: 10.000).
     """
     import warnings
+
     from concilium.infrastructure.settings import get_campaign as _get_campaign_settings
 
     cfg = _get_campaign_settings()
@@ -861,7 +852,7 @@ def executar_campanha(
     output = CampaignOutputBundle(
         campaign_id=bundle.campaign_id,
         campaign_version=bundle.campaign_version,
-        gerado_em=datetime.now(timezone.utc),
+        gerado_em=datetime.now(UTC),
         n_cenarios_avaliados=len(cenarios),
         n_cenarios_viaveis=len(viaveis),
         n_falhas=sum(1 for c in cenarios if c.erro),
@@ -876,10 +867,23 @@ def executar_campanha(
 # CampaignBundleCube — camada analítica multidimensional
 # ---------------------------------------------------------------------------
 
-_METRICAS_O  = ["prazo_semanas", "fe_nec_medio", "itens_criticos_pct",
-                "gap_pool_total", "utilizacao_recursos_pct", "paralelismo_medio"]
-_METRICAS_EF = ["margem_pct", "ratio_pool_vs_cat", "custo_indireto",
-                "share_mo_pct", "share_eq_pct", "share_comb_pct", "concentracao_atividade"]
+_METRICAS_O = [
+    "prazo_semanas",
+    "fe_nec_medio",
+    "itens_criticos_pct",
+    "gap_pool_total",
+    "utilizacao_recursos_pct",
+    "paralelismo_medio",
+]
+_METRICAS_EF = [
+    "margem_pct",
+    "ratio_pool_vs_cat",
+    "custo_indireto",
+    "share_mo_pct",
+    "share_eq_pct",
+    "share_comb_pct",
+    "concentracao_atividade",
+]
 
 
 def _get_metrica(c: CenarioAvaliado, metrica: str) -> float | None:
@@ -899,8 +903,9 @@ def _label_variados(variados: dict) -> str:
     return " | ".join(parts) if parts else str(variados)
 
 
-def _tendencia(valores_ord: list, medias: list[float | None]) -> "TendenciaMarginal":
+def _tendencia(valores_ord: list, medias: list[float | None]) -> TendenciaMarginal:
     from concilium.domain.models.campaign.campaign import TendenciaMarginal  # noqa: F401
+
     valid = [(v, m) for v, m in zip(valores_ord, medias) if m is not None]
     if len(valid) < 2:
         return "indeterminado"
@@ -940,18 +945,20 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
     for _sv, variados in grid_list:
         cid = cenario_id(variados)
         c = cenario_por_id.get(cid)
-        celulas.append(CelulaAnalitica(
-            dimensoes={d.nome: variados.get(d.campo) for d in dims},
-            cenario_id=cid if c else None,
-            vetor_O=c.vetor_O if c else None,
-            vetor_EF=c.vetor_EF if c else None,
-            classificacao_O=c.classificacao_O if c else None,
-            classificacao_EF=c.classificacao_EF if c else None,
-            viabilidade=c.viabilidade if c else None,
-            pareto_O=c.pareto_O if c else False,
-            pareto_EF=c.pareto_EF if c else False,
-            pareto_intersecao=c.pareto_intersecao if c else False,
-        ))
+        celulas.append(
+            CelulaAnalitica(
+                dimensoes={d.nome: variados.get(d.campo) for d in dims},
+                cenario_id=cid if c else None,
+                vetor_O=c.vetor_O if c else None,
+                vetor_EF=c.vetor_EF if c else None,
+                classificacao_O=c.classificacao_O if c else None,
+                classificacao_EF=c.classificacao_EF if c else None,
+                viabilidade=c.viabilidade if c else None,
+                pareto_O=c.pareto_O if c else False,
+                pareto_EF=c.pareto_EF if c else False,
+                pareto_intersecao=c.pareto_intersecao if c else False,
+            )
+        )
 
     n_total = len(celulas)
     n_aval = sum(1 for ce in celulas if ce.cenario_id)
@@ -962,17 +969,16 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
     faces: list[FaceAnalitica] = []
     if len(dims) >= 2:
         for i, dx in enumerate(dims):
-            for dy in dims[i + 1:]:
+            for dy in dims[i + 1 :]:
                 for metrica in _METRICAS_O + _METRICAS_EF:
                     grade: list[list[float | None]] = []
                     for vy in dy.valores:
                         row = []
                         for vx in dx.valores:
                             matching = [
-                                ce for ce in celulas
-                                if ce.dimensoes.get(dx.nome) == vx
-                                and ce.dimensoes.get(dy.nome) == vy
-                                and ce.cenario_id
+                                ce
+                                for ce in celulas
+                                if ce.dimensoes.get(dx.nome) == vx and ce.dimensoes.get(dy.nome) == vy and ce.cenario_id
                             ]
                             if matching:
                                 c_match = cenario_por_id.get(matching[0].cenario_id)
@@ -982,14 +988,16 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
                         grade.append(row)
                     # Only include face if at least some values are non-None
                     if any(v is not None for row in grade for v in row):
-                        faces.append(FaceAnalitica(
-                            dim_x=dx.nome,
-                            dim_y=dy.nome,
-                            metrica=metrica,
-                            valores_x=dx.valores,
-                            valores_y=dy.valores,
-                            grade=grade,
-                        ))
+                        faces.append(
+                            FaceAnalitica(
+                                dim_x=dx.nome,
+                                dim_y=dy.nome,
+                                metrica=metrica,
+                                valores_x=dx.valores,
+                                valores_y=dy.valores,
+                                grade=grade,
+                            )
+                        )
 
     # --- 4. Resumos marginais ---
     resumos: list[ResumoMarginal] = []
@@ -997,10 +1005,7 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
         for metrica in _METRICAS_O + _METRICAS_EF:
             medias: list[float | None] = []
             for val in d.valores:
-                celulas_val = [
-                    ce for ce in celulas
-                    if ce.dimensoes.get(d.nome) == val and ce.cenario_id
-                ]
+                celulas_val = [ce for ce in celulas if ce.dimensoes.get(d.nome) == val and ce.cenario_id]
                 vals_m = []
                 for ce in celulas_val:
                     c_m = cenario_por_id.get(ce.cenario_id)
@@ -1011,13 +1016,15 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
                 medias.append(round(sum(vals_m) / len(vals_m), 4) if vals_m else None)
 
             if any(m is not None for m in medias):
-                resumos.append(ResumoMarginal(
-                    dimensao=d.nome,
-                    metrica=metrica,
-                    valores=d.valores,
-                    medias=medias,
-                    tendencia=_tendencia(d.valores, medias),
-                ))
+                resumos.append(
+                    ResumoMarginal(
+                        dimensao=d.nome,
+                        metrica=metrica,
+                        valores=d.valores,
+                        medias=medias,
+                        tendencia=_tendencia(d.valores, medias),
+                    )
+                )
 
     return CampaignBundleCube(
         campaign_id=output.campaign_id,

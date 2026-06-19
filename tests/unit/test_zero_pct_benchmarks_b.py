@@ -11,9 +11,7 @@ Covers:
 
 from __future__ import annotations
 
-import io
 import json
-import sys
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -47,9 +45,11 @@ def _write_json(path: Path, data: Any) -> None:
 from concilium.application.benchmarks.comparison.catalog_confronto import (
     _acc_process_cpu_refs,
     _acc_process_equipes,
-    _load_json as cc_load_json,
     analyze_catalog_confronto,
     consolidate_all,
+)
+from concilium.application.benchmarks.comparison.catalog_confronto import (
+    _load_json as cc_load_json,
 )
 
 
@@ -358,7 +358,7 @@ class TestBuildEquipesDetail:
                     "equipe_id": "EQ-01",
                     "nome": "Equipe A",
                     "cpu_id": cpu_id,
-                    "funcoes": [],          # empty → discrepancy with catalog
+                    "funcoes": [],  # empty → discrepancy with catalog
                     "equipamentos": [],
                     "custo_total": 0,
                     "custo_mao_obra_mensal": 0,
@@ -561,7 +561,9 @@ class TestBuildGranularComparison:
         }
         extracao = {
             "etapas": {
-                "03_equipes_e_alocacao": {"equipes": [{"item_id": "1.1", "funcoes": [], "equipamentos": [], "custo_total": 0}]},
+                "03_equipes_e_alocacao": {
+                    "equipes": [{"item_id": "1.1", "funcoes": [], "equipamentos": [], "custo_total": 0}]
+                },
                 "04_planejamento_bdi": {"itens_com_qtd_e_custo_zero": []},
             },
             "disparidades": {"equipes_zeradas": []},
@@ -933,7 +935,12 @@ class TestCpuMapperSearchCpus:
         mapper = _make_mapper()
         mapper.catalogo = {
             "cpus": [
-                {"codigo": f"CPU-{i:03d}", "descricao": "Aterro Compactação genérico", "unidade": "m³", "categoria": "TERRA"}
+                {
+                    "codigo": f"CPU-{i:03d}",
+                    "descricao": "Aterro Compactação genérico",
+                    "unidade": "m³",
+                    "categoria": "TERRA",
+                }
                 for i in range(10)
             ]
         }
@@ -1178,7 +1185,7 @@ class TestCpuValidatorValidateEapItems:
     def test_mixes_valid_and_invalid(self):
         v = _make_validator()
         eap_items = [
-            {"item_id": "1.1", "cpu_id": "ATI-001"},   # valid
+            {"item_id": "1.1", "cpu_id": "ATI-001"},  # valid
             {"item_id": "1.2", "cpu_id": "NONEXISTENT"},  # invalid
         ]
         result = v.validate_eap_items(eap_items)

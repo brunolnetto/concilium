@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 import zipfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -22,11 +21,11 @@ from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp.tools.benchmark import register
 
-
 # ---------------------------------------------------------------------------
 # Helper: build a FastMCP server with benchmark tools registered and extract
 # the inner callables by name.
 # ---------------------------------------------------------------------------
+
 
 def _make_server_and_tools(monkeypatch, config_dir: Path) -> dict:
     """Register benchmark tools and return a dict of {name: callable}."""
@@ -226,9 +225,7 @@ def test_empacotar_benchmark_happy_path(monkeypatch, tmp_path):
 
         with patch("zipfile.ZipFile", side_effect=_open_real):
             tools = _make_server_and_tools(monkeypatch, config_dir)
-            result = tools["empacotar_benchmark"](
-                slug="AGIS", gerar_graficos=True, incluir_cenarios=False
-            )
+            result = tools["empacotar_benchmark"](slug="AGIS", gerar_graficos=True, incluir_cenarios=False)
 
     assert "zip_path" in result
     assert "tamanho_bytes" in result

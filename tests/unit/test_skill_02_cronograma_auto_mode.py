@@ -233,7 +233,6 @@ def test_02_auto_infeasivel_quando_tudo_falha():
     assert result.canonical.cronograma is None, "cronograma must not be set when infeasible"
 
 
-
 def test_02_auto_algorithm_override():
     """algorithm input is forwarded to strategy selection without error."""
     canonical = _make_canonical(num_activities=3, deadline_days=30)
