@@ -8,6 +8,7 @@ ADR-113: skills são classificadas em dois tiers de execução:
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
 
 from concilium.application.skills import MANIFEST_META
@@ -28,6 +29,25 @@ class PipelineMode(str, Enum):
     OLAP = "olap"  # completo: 01-11
 
 
+class ProcurementIntent(str, Enum):
+    """Intenção de procurement no fluxo RFX."""
+
+    RFI = "rfi"
+    RFP = "rfp"
+    RFQ = "rfq"
+
+
+@dataclass(frozen=True)
+class PipelineProfile:
+    """Perfil de execução orientado por linguagem de negócio (RFX)."""
+
+    intent: ProcurementIntent
+    mode: PipelineMode
+    path_name: str
+    skill_sequence: list[str]
+    deliverables: list[str]
+
+
 def get_skills_for_mode(mode: PipelineMode) -> list[str]:
     """Retorna lista de skill IDs para o modo especificado.
 
@@ -46,6 +66,74 @@ def get_skills_for_mode(mode: PipelineMode) -> list[str]:
         relatorio = [sid for sid in olap_ids if "relatorio" in sid]
         return oltp_ids + relatorio
     return oltp_ids + olap_ids  # fallback seguro
+
+
+def get_pipeline_profile_for_intent(intent: ProcurementIntent | str) -> PipelineProfile:
+    """Resolve perfil RFX em termos de nós/caminho/entregáveis da pipeline.
+
+    Esta função institucionaliza a linguagem ubiqua de procurement no core da
+    orquestração (e não nas tools):
+
+    - RFI: precificação de catálogo (PU x Q), sem trilha analítica pesada.
+    - RFP: comparação técnico-econômica completa com cronograma e análise.
+    - RFQ: fechamento de cotação com baseline fixada e pacote comercial.
+    """
+    if isinstance(intent, ProcurementIntent):
+        resolved = intent
+    else:
+        try:
+            resolved = ProcurementIntent(str(intent).strip().lower())
+        except Exception:
+            resolved = ProcurementIntent.RFI
+
+    if resolved == ProcurementIntent.RFP:
+        return PipelineProfile(
+            intent=resolved,
+            mode=PipelineMode.OLAP,
+            path_name="RFP_TECNICO_ECONOMICO",
+            skill_sequence=get_skills_for_mode(PipelineMode.OLAP),
+            deliverables=[
+                "benchmark_report.json",
+                "relatorio.pdf",
+                "resultado_planejamento.xlsx",
+            ],
+        )
+
+    if resolved == ProcurementIntent.RFQ:
+        return PipelineProfile(
+            intent=resolved,
+            mode=PipelineMode.LIGHT,
+            path_name="RFQ_COTACAO_FINAL",
+            skill_sequence=get_skills_for_mode(PipelineMode.LIGHT),
+            deliverables=[
+                "benchmark_report.json",
+                "resultado_planejamento.xlsx",
+            ],
+        )
+
+    return PipelineProfile(
+        intent=ProcurementIntent.RFI,
+        mode=PipelineMode.OLTP,
+        path_name="RFI_EXPLORACAO_CATALOGO",
+        skill_sequence=get_skills_for_mode(PipelineMode.OLTP),
+        deliverables=["benchmark_report.json"],
+    )
+
+
+def normalize_procurement_intent(intent: ProcurementIntent | str | None) -> ProcurementIntent:
+    """Normaliza intenção de procurement para enum tipado (fallback=RFI)."""
+    if isinstance(intent, ProcurementIntent):
+        return intent
+    try:
+        return ProcurementIntent(str(intent or "").strip().lower())
+    except Exception:
+        return ProcurementIntent.RFI
+
+
+def is_campaign_allowed_for_intent(intent: ProcurementIntent | str | None) -> bool:
+    """Campanha GO é permitida apenas para RFP/RFQ."""
+    normalized = normalize_procurement_intent(intent)
+    return normalized in {ProcurementIntent.RFP, ProcurementIntent.RFQ}
 
 
 # Preserve canonical display order

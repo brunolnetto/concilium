@@ -64,15 +64,25 @@ class BenchmarkRunner:
         reset: bool = False,
         skip_artifacts: bool = False,
         mode: PipelineMode | None = None,
+        procurement_intent: str | None = None,
     ) -> dict[str, Any]:
         """Executa o benchmark com o modo de pipeline especificado.
 
         Args:
             mode:           PipelineMode.OLTP (01-06), LIGHT (01-06+relatorio) ou
                             OLAP (01-11 completo, padrão). Tem precedência sobre skip_artifacts.
+            procurement_intent:
+                            Linguagem RFX (`rfi|rfp|rfq`) resolvida no core da
+                            pipeline para definir caminho e entregáveis.
+                            Quando informado, tem precedência sobre `mode` e
+                            `skip_artifacts`.
             skip_artifacts: Legado — equivale a mode=PipelineMode.OLTP quando True.
         """
-        from concilium.application.skills.phase_classifier import PipelineMode, get_skills_for_mode
+        from concilium.application.skills.phase_classifier import (
+            PipelineMode,
+            get_pipeline_profile_for_intent,
+            get_skills_for_mode,
+        )
 
         store = self._find_or_create(spec.nome, spec.slug, spec.contexto_id, reset)
 
@@ -93,10 +103,22 @@ class BenchmarkRunner:
         if store.current_version() is None:
             store.new_version()
 
-        # Resolve modo de execução: mode= tem precedência sobre skip_artifacts legado
-        if mode is None:
-            mode = PipelineMode.OLTP if skip_artifacts else PipelineMode.OLAP
-        _skill_seq = get_skills_for_mode(mode)
+        profile = None
+        if procurement_intent:
+            profile = get_pipeline_profile_for_intent(procurement_intent)
+            # ADR-115 D4/D6: RFQ exige baseline congelada (versão de referência existente).
+            from concilium.domain.models.procurement import validate_procurement_baseline
+
+            _baseline_ref = store.current_version() if not reset else None
+            validate_procurement_baseline(procurement_intent, _baseline_ref)
+            mode = profile.mode
+            _skill_seq = profile.skill_sequence
+        else:
+            # Resolve modo de execução: mode= tem precedência sobre skip_artifacts legado
+            if mode is None:
+                mode = PipelineMode.OLTP if skip_artifacts else PipelineMode.OLAP
+            _skill_seq = get_skills_for_mode(mode)
+
         results_log = runtime.run_pipeline(
             store,
             self._prepare_inputs(spec, ref_data, inference_pack),
@@ -110,19 +132,46 @@ class BenchmarkRunner:
             canonical=store.load_canonical(),
             inference_pack=inference_pack,
         )
+        if profile is not None:
+            report.setdefault("rfx", {})
+            report["rfx"].update(
+                {
+                    "intent": profile.intent.value,
+                    "path_name": profile.path_name,
+                    "pipeline_mode": profile.mode.value,
+                    "deliverables": profile.deliverables,
+                }
+            )
         self.report_printer.print(report)
 
         # Registrar execução no BenchmarkStore para auditabilidade (NEP-039).
         self._log_execution(spec, report, store_project=store)
 
         if mode != PipelineMode.OLAP:
-            # Modo OLTP/LIGHT (ex: campanha de exploração): apenas benchmark_report.json, sem imagens/PDFs.
+            # Modo OLTP/LIGHT: sempre salva benchmark_report; quando houver perfil RFX
+            # explícito, materializa também os entregáveis declarados no perfil.
             artifacts_dir = self._artifact_output_dir(spec)
             audit_dir = artifacts_dir.parent / "audit"
             audit_dir.mkdir(parents=True, exist_ok=True)
             (audit_dir / "benchmark_report.json").write_text(
                 json.dumps(report, indent=2, default=str, ensure_ascii=False), encoding="utf-8"
             )
+            if profile is not None:
+                v = store.current_version()
+                declared = set(profile.deliverables)
+                for fname in store.list_output_files(v):
+                    if fname not in declared:
+                        continue
+                    data = store.load_output_file(v, fname)
+                    if data is None:
+                        continue
+                    subdir = self._get_output_subdir(fname)
+                    subdir_path = artifacts_dir / subdir
+                    subdir_path.mkdir(parents=True, exist_ok=True)
+                    try:
+                        (subdir_path / fname).write_bytes(data)
+                    except PermissionError:
+                        print(f"  [WARN] {fname} em uso — artefato ignorado")
             return report
 
         # Caminho organizado por benchmark slug (unico destino de artefatos).
@@ -319,6 +368,9 @@ class BenchmarkRunner:
         # operacional de equipes (N4) — a comparação é catalog-vs-reference, não
         # deployment-vs-reference. Sem isso, skill-08 propaga VERMELHO → skill-15
         # falha com ERRO → status_final=INVIAVEL mesmo quando o plano é viável.
+        skill_inputs.setdefault("05-equipes-e-alocacao", {})["benchmark_mode"] = True
+        if isinstance(ref, dict) and isinstance(ref.get("planejamento"), list):
+            skill_inputs.setdefault("05-equipes-e-alocacao", {})["planejamento_ref"] = ref.get("planejamento")
         skill_inputs.setdefault("06-resultado-financeiro", {})["benchmark_mode"] = True
 
         svc_cls = _load_inference_service()

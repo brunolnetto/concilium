@@ -182,6 +182,10 @@ def run_benchmarks(
     reset: bool = typer.Option(False, "--reset", help="Força re-execução mesmo se já existir resultado."),
     pack: bool = typer.Option(False, "--pack", help="Empacota artefatos de saída em ZIP ao final."),
     charts: bool = typer.Option(False, "--charts", help="Gera gráficos PNG antes de empacotar (requer matplotlib)."),
+    intent: str = typer.Option(
+        "", "--intent",
+        help="Intenção RFX (ADR-115): rfi (OLTP, exploração), rfp (OLAP, técnico-econômico), rfq (LIGHT, cotação com baseline).",
+    ),
 ) -> None:
     """Executa um benchmark específico ou todos (use run-batch para modo batch)."""
 
@@ -230,9 +234,12 @@ def run_benchmarks(
         report_builder=BenchmarkReportBuilder(),
         report_printer=BenchmarkReportPrinter(),
     )
+    _intent = intent.strip().lower() or None
+    if _intent:
+        rprint(f"[dim](intent RFX: {_intent})[/dim]")
     rprint(f"[cyan]-> {target_slug}[/cyan]", end=" ")
     try:
-        runner.run(target_spec, reset=reset)
+        runner.run(target_spec, reset=reset, procurement_intent=_intent)
         rprint("[green]OK[/green]")
     except Exception as e:
         rprint(f"[red]ERRO: {e}[/red]")
