@@ -106,10 +106,16 @@ class BenchmarkRunner:
         profile = None
         if procurement_intent:
             profile = get_pipeline_profile_for_intent(procurement_intent)
-            # ADR-115 D4/D6: RFQ exige baseline congelada (versão de referência existente).
+            # ADR-115 D4/D6: RFQ exige baseline congelada (RFI/RFP previamente definidos).
+            # No benchmark, a baseline é a referência seed (read-only): existe
+            # independentemente de `reset`, que apenas recomputa os artefatos.
+            # Fallback: versão corrente do store (cenário sem referência seed).
             from concilium.domain.models.procurement import validate_procurement_baseline
 
-            _baseline_ref = store.current_version() if not reset else None
+            if spec.referencia_path and spec.referencia_path.exists():
+                _baseline_ref = str(spec.referencia_path)
+            else:
+                _baseline_ref = store.current_version()
             validate_procurement_baseline(procurement_intent, _baseline_ref)
             mode = profile.mode
             _skill_seq = profile.skill_sequence
