@@ -6,10 +6,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from concilium.domain.constants import ISS_PADRAO
-
 from mcp.server.fastmcp import FastMCP
 
+from concilium.domain.constants import ISS_PADRAO
 from concilium.infrastructure.storage.project import ProjectStore
 from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
@@ -57,10 +56,13 @@ def _resolve_tributario(meta: dict, rt: Any) -> dict:
     return tributario
 
 
+from concilium.infrastructure.auth.permission_guard import permission
+
 def register(server: FastMCP) -> None:
     """Registra criar_projeto_spec no servidor MCP."""
 
     @server.tool()
+    @permission("project:create")
     def criar_projeto_spec(spec: dict[str, Any]) -> dict[str, Any]:
         """Use quando o projeto está definido em um documento JSON completo (ProjetoSpec).
 

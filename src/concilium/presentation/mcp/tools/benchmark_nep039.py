@@ -23,10 +23,13 @@ from concilium.infrastructure.storage.benchmark_store import (
 )
 
 
+from concilium.infrastructure.auth.permission_guard import permission
+
 def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
     """Registra ferramentas de benchmark no servidor MCP."""
 
     @server.tool(description="Consulta metadados de um benchmark sem executar o pipeline.")
+    @permission("project:read")
     def consultar_benchmark(benchmark_id: str) -> dict[str, Any]:
         """Retorna metadados do benchmark.
 
@@ -68,6 +71,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
         }
 
     @server.tool(description="Lista benchmarks com metadados do catálogo NEP-039 (versão, imutabilidade, histórico).")
+    @permission("project:read")
     def listar_benchmarks_nep039() -> dict[str, Any]:
         """Retorna lista de benchmarks (versão atual de cada um).
 
@@ -96,6 +100,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
     @server.tool(
         description="Enfileira execução de benchmark NEP-039 (registra vínculo com projeto e retorna execution_id)."
     )
+    @permission("project:run")
     def executar_benchmark_nep039(
         benchmark_id: str,
         criar_novo_projeto: bool = True,
@@ -136,6 +141,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
         }
 
     @server.tool(description="Edita um benchmark com controle de imutabilidade. Imutável → gera v+1.")
+    @permission("project:run")
     def editar_benchmark(benchmark_id: str, patch: dict[str, Any]) -> dict[str, Any]:
         """Edita benchmark. Se imutável, gera nova versão.
 
@@ -176,6 +182,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
             }
 
     @server.tool(description="Marca um benchmark como imutável (após primeira execução).")
+    @permission("project:approve")
     def marcar_benchmark_imutavel(benchmark_id: str) -> dict[str, Any]:
         """Marca benchmark como imutável.
 
@@ -200,6 +207,7 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
         }
 
     @server.tool(description="Compara duas execuções de benchmark e retorna diff estruturado (Fase 4).")
+    @permission("project:read")
     def comparar_execucoes_benchmark(execution_1_id: str, execution_2_id: str) -> dict[str, Any]:
         """Compara duas execuções e retorna deltas estruturados.
 

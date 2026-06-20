@@ -14,10 +14,13 @@ from concilium.presentation.mcp._context import (
 )
 
 
+from concilium.infrastructure.auth.permission_guard import permission
+
 def register(server: FastMCP) -> None:
     """Registra ferramentas de sistema no servidor MCP."""
 
     @server.tool()
+    @permission("system:read")
     def ping() -> dict[str, Any]:
         """Verifica a saúde do servidor MCP sem criar nem alterar dados.
 

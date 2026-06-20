@@ -11,12 +11,14 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp._context import _wrap_response
+from concilium.infrastructure.auth.permission_guard import permission
 
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas de tributação social."""
 
     @server.tool()
+    @permission("catalog:read")
     def calcular_custo_empregador_clt(
         salario_base: float,
         categoria: str = "horista",
@@ -60,6 +62,7 @@ def register(server: FastMCP) -> None:
             return _wrap_response({"erro": str(exc)})
 
     @server.tool()
+    @permission("catalog:read")
     def calcular_inss_empregado(salario_bruto: float) -> dict[str, Any]:
         """Calcula o INSS descontado do empregado pela tabela progressiva 2026.
 
@@ -87,6 +90,7 @@ def register(server: FastMCP) -> None:
             return _wrap_response({"erro": str(exc)})
 
     @server.tool()
+    @permission("catalog:read")
     def calcular_irrf(base_calculo: float) -> dict[str, Any]:
         """Calcula o IRRF mensal com isenção efetiva Lei 15.270/2025.
 

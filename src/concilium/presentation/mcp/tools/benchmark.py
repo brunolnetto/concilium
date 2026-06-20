@@ -14,12 +14,14 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp._context import _config_root, _wrap_response
+from concilium.infrastructure.auth.permission_guard import permission
 
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas de empacotamento/download de benchmark no servidor MCP."""
 
     @server.tool()
+    @permission("project:run")
     def empacotar_benchmark(
         slug: str,
         gerar_graficos: bool = True,
@@ -70,6 +72,7 @@ def register(server: FastMCP) -> None:
         )
 
     @server.tool()
+    @permission("artifacts:download")
     def download_benchmark_zip(
         slug: str,
         zip_nome: str = "",

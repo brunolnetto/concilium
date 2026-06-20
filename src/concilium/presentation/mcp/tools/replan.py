@@ -7,6 +7,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.domain.constants import META_MARGEM_PADRAO
+from concilium.infrastructure.auth.permission_guard import permission
 
 
 def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
@@ -106,6 +107,7 @@ def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de replanejamento."""
 
     @server.tool()
+    @permission("project:run")
     def simular_cenario_replan(
         project_id: str,
         tipo: str,

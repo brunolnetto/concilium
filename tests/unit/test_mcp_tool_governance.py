@@ -21,28 +21,37 @@ MCP_TOOL_CEILING = 52
 _TOOLS_GLOB = "src/concilium/presentation/mcp/tools/*.py"
 
 
-def _discover_registered_tools() -> list[tuple[str, str]]:
-    """Descobre (módulo, nome) de toda função decorada com @server.tool()."""
+def _is_server_tool(dec) -> bool:
+    return (isinstance(dec, ast.Attribute) and dec.attr == "tool") or (
+        isinstance(dec, ast.Call) and isinstance(dec.func, ast.Attribute) and dec.func.attr == "tool"
+    )
+
+
+def _is_permission(dec) -> bool:
+    return isinstance(dec, ast.Call) and isinstance(dec.func, ast.Name) and dec.func.id == "permission"
+
+
+def _discover_registered_tools() -> list[tuple[str, str, bool]]:
+    """Descobre (módulo, nome, tem_permission) de toda função @server.tool().
+
+    tem_permission: se a função também tem o decorator @permission inline (ADR-117).
+    """
     root = os.path.join(os.path.dirname(__file__), "..", "..")
-    rows: list[tuple[str, str]] = []
+    rows: list[tuple[str, str, bool]] = []
     for f in sorted(glob.glob(os.path.join(root, _TOOLS_GLOB))):
         mod = os.path.basename(f).replace(".py", "")
         tree = ast.parse(open(f, encoding="utf-8").read())
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
-                for dec in node.decorator_list:
-                    is_tool = (isinstance(dec, ast.Attribute) and dec.attr == "tool") or (
-                        isinstance(dec, ast.Call)
-                        and isinstance(dec.func, ast.Attribute)
-                        and dec.func.attr == "tool"
-                    )
-                    if is_tool:
-                        rows.append((mod, node.name))
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                decs = node.decorator_list
+                if any(_is_server_tool(d) for d in decs):
+                    has_perm = any(_is_permission(d) for d in decs)
+                    rows.append((mod, node.name, has_perm))
     return rows
 
 
 @pytest.fixture(scope="module")
-def tools() -> list[tuple[str, str]]:
+def tools() -> list[tuple[str, str, bool]]:
     return _discover_registered_tools()
 
 
@@ -52,25 +61,21 @@ def test_tool_count_under_ceiling(tools):
     assert n <= MCP_TOOL_CEILING, (
         f"{n} tools registradas > teto {MCP_TOOL_CEILING}. Se o crescimento é "
         "intencional, suba MCP_TOOL_CEILING explicitamente e registre o motivo. "
-        f"Tools: {sorted(name for _, name in tools)}"
+        f"Tools: {sorted(name for _, name, _ in tools)}"
     )
 
 
 def test_removed_legacy_tools_absent(tools):
     """ADR-116: tools legadas removidas não devem reaparecer."""
-    names = {name for _, name in tools}
+    names = {name for _, name, _ in tools}
     removed = {"listar_benchmarks", "executar_benchmark", "avancar_pipeline"}
     reincidentes = removed & names
     assert not reincidentes, f"Tools legadas removidas pelo ADR-116 reapareceram: {reincidentes}"
 
 
 def test_no_duplicate_verb_intents(tools):
-    """Sem pares de tools com a mesma intenção (verbo+objeto), ex: X e X_nep039.
-
-    Detecta o padrão de duplicação P2 do ADR-116: uma tool e sua variante sufixada
-    que fazem a mesma coisa. Sufixos conhecidos toleráveis devem ser exceção explícita.
-    """
-    names = {name for _, name in tools}
+    """Sem pares de tools com a mesma intenção (verbo+objeto), ex: X e X_nep039."""
+    names = {name for _, name, _ in tools}
     suffixes = ("_nep039", "_v2", "_novo", "_legacy", "_old")
     duplicados = []
     for name in names:
@@ -85,30 +90,14 @@ def test_no_duplicate_verb_intents(tools):
     )
 
 
-def test_every_tool_has_rbac_coverage(tools):
-    """ADR-099/ADR-116 D4: toda tool registrada tem entrada em TOOL_PERMISSIONS."""
-    from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+def test_every_tool_has_permission_decorator(tools):
+    """ADR-117 D4 (fail-closed): toda @server.tool deve ter @permission inline.
 
-    names = {name for _, name in tools}
-    sem_rbac = sorted(names - set(TOOL_PERMISSIONS))
-    assert not sem_rbac, (
-        f"Tools sem cobertura RBAC (faltam em TOOL_PERMISSIONS): {sem_rbac}. "
-        "Toda tool precisa de uma permissão mapeada (ADR-099)."
-    )
-
-
-def test_tool_permissions_has_no_orphans(tools):
-    """TOOL_PERMISSIONS não deve ter entradas para tools inexistentes (limpeza)."""
-    from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
-
-    names = {name for _, name in tools}
-    # Aliases legados conhecidos que podem permanecer no mapa (compat de roles)
-    aliases_ok = {"ler_artefato", "listar_cpus", "buscar_cpu", "derivar_recursos_do_catalogo",
-                  "consultar_viabilidade_prazo", "identificar_gargalos_recurso",
-                  "simular_impacto_replan", "aplicar_sugestao_replan", "iniciar_orcamento",
-                  "auditar_plano"}
-    orfas = sorted(set(TOOL_PERMISSIONS) - names - aliases_ok)
-    assert not orfas, (
-        f"Entradas órfãs em TOOL_PERMISSIONS (tool não existe): {orfas}. "
-        "Remova ou registre como alias conhecido."
+    A permissão é a fonte única de RBAC (substitui o dict TOOL_PERMISSIONS).
+    Uma tool sem @permission é erro de governança — segurança não pode ser esquecida.
+    """
+    sem_perm = sorted(f"{mod}.{name}" for mod, name, has_perm in tools if not has_perm)
+    assert not sem_perm, (
+        f"{len(sem_perm)} tool(s) @server.tool SEM @permission inline: {sem_perm}. "
+        "Adicione @permission(\"<perm>\") logo abaixo de @server.tool() (ADR-117)."
     )

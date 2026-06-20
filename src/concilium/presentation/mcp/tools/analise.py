@@ -7,12 +7,14 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp._context import _project, _wrap_response
+from concilium.infrastructure.auth.permission_guard import permission
 
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de análise e auditoria."""
 
     @server.tool()
+    @permission("artifacts:read")
     def auditar_plano(project_id: str, escopo_id: str | None = None, plano_id: str | None = None) -> dict[str, Any]:
         """Realiza auditoria completa de um plano: viabilidade, gargalos e resumo financeiro.
 
@@ -58,6 +60,7 @@ def register(server: FastMCP) -> None:
         )
 
     @server.tool()
+    @permission("project:read")
     def comparar_planos(project_id: str, escopo_id: str, plano_a: str, plano_b: str) -> dict[str, Any]:
         """Compara dois planos do mesmo escopo para apoiar a tomada de decisão."""
         store = _project(project_id)
@@ -79,6 +82,7 @@ def register(server: FastMCP) -> None:
         return _wrap_response({"comparacao": results})
 
     @server.tool()
+    @permission("project:read")
     def explorar_pool_recursos(
         project_id: str,
         face: str = "instancia_ciclo_vida",

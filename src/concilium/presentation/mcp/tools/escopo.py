@@ -7,6 +7,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.presentation.mcp._context import _project, _wrap_response
+from concilium.infrastructure.auth.permission_guard import permission
 
 
 def _resolve_escopo_id(store: Any, escopo_id: str | None = None) -> str:
@@ -31,6 +32,7 @@ def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de estrutura de projeto."""
 
     @server.tool()
+    @permission("project:read")
     def consultar_estrutura_projeto(project_id: str) -> dict[str, Any]:
         """Retorna a árvore completa de Escopos e Planos do projeto (ADR-031)."""
         store = _project(project_id)
@@ -63,6 +65,7 @@ def register(server: FastMCP) -> None:
         return _wrap_response({"project_id": project_id, "escopos": out})
 
     @server.tool()
+    @permission("project:create")
     def configurar_escopo(
         project_id: str,
         escopo_id: str,
@@ -96,6 +99,7 @@ def register(server: FastMCP) -> None:
         return _wrap_response({"status": "OK", "escopo_id": es.escopo_id})
 
     @server.tool()
+    @permission("project:create")
     def gerenciar_plano(
         project_id: str,
         escopo_id: str,

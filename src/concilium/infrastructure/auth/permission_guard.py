@@ -138,80 +138,11 @@ def _auth_enabled() -> bool:
     return get_auth().enabled
 
 
-# ── Mapeamento MCP tool → permissão ──────────────────────────────────────────
-
-TOOL_PERMISSIONS: dict[str, str] = {
-    # ── Leitura (viewer) ──────────────────────────────────────────────────────
-    "listar_projetos": PROJECT_READ,
-    "consultar_status": PROJECT_READ,
-    "comparar_planos": PROJECT_READ,
-    "explorar_pool_recursos": PROJECT_READ,
-    "consultar_benchmark": PROJECT_READ,
-    "listar_benchmarks_nep039": PROJECT_READ,
-    "comparar_execucoes_benchmark": PROJECT_READ,
-    "listar_runs_campanha": PROJECT_READ,
-    "consultar_estrutura_projeto": PROJECT_READ,
-    "consultar_job_pipeline": PROJECT_READ,
-    "listar_jobs_pipeline": PROJECT_READ,
-    "obter_estatisticas_jobs": PROJECT_READ,
-    # ── Catálogo leitura (viewer) ─────────────────────────────────────────────
-    "listar_contextos": CATALOG_READ,
-    "pesquisar_catalogo": CATALOG_READ,
-    "listar_cpus": CATALOG_READ,
-    "buscar_cpu": CATALOG_READ,
-    "derivar_recursos_do_catalogo": CATALOG_READ,
-    "consultar_saude_catalogo": CATALOG_READ,
-    "avaliar_plausibilidade_catalogo": CATALOG_READ,
-    "verificar_integridade_catalogo": CATALOG_READ,
-    "consultar_preco_insumo_temporal": CATALOG_READ,
-    "tendencia_precos_catalogo": CATALOG_READ,
-    "calcular_pu_producao": CATALOG_READ,
-    "listar_versoes_catalogo": CATALOG_READ,
-    "comparar_versoes_catalogo": CATALOG_READ,
-    # ── Tributação (viewer — informacional) ───────────────────────────────────
-    "calcular_custo_empregador_clt": CATALOG_READ,
-    "calcular_inss_empregado": CATALOG_READ,
-    "calcular_irrf": CATALOG_READ,
-    # ── Sistema (admin) ───────────────────────────────────────────────────────
-    "ping": SYSTEM_READ,
-    # ── Artefatos leitura ─────────────────────────────────────────────────────
-    "listar_artefatos_projeto": ARTIFACTS_READ,
-    "auditar_plano": ARTIFACTS_READ,
-    # ── Financeiros (auditor/operator) ────────────────────────────────────────
-    "consultar_viabilidade_prazo": FINANCIALS_READ,
-    "identificar_gargalos_recurso": FINANCIALS_READ,
-    "obter_resultado_campanha": FINANCIALS_READ,
-    "comparar_rfi_catalogo": FINANCIALS_READ,
-    # ── Download (operator) ───────────────────────────────────────────────────
-    "ler_artefato": ARTIFACTS_DOWNLOAD,
-    "ler_artefato_texto": ARTIFACTS_DOWNLOAD,
-    "baixar_artefato_binario": ARTIFACTS_DOWNLOAD,
-    "baixar_bundle_zip": ARTIFACTS_DOWNLOAD,
-    "download_benchmark_zip": ARTIFACTS_DOWNLOAD,
-    # ── Criação (operator) ────────────────────────────────────────────────────
-    "criar_projeto_formulario": PROJECT_CREATE,
-    "criar_projeto_spec": PROJECT_CREATE,
-    "iniciar_orcamento": PROJECT_CREATE,
-    "nova_versao": PROJECT_CREATE,
-    "configurar_escopo": PROJECT_CREATE,
-    "gerenciar_plano": PROJECT_CREATE,
-    # ── Execução (operator) ───────────────────────────────────────────────────
-    "disparar_pipeline": PROJECT_RUN,
-    "cancelar_job_pipeline": PROJECT_RUN,
-    "executar_benchmark_nep039": PROJECT_RUN,
-    "empacotar_benchmark": PROJECT_RUN,
-    "explorar_configuracoes_go": PROJECT_RUN,
-    "simular_cenario_replan": PROJECT_RUN,
-    "salvar_perfil_bdi": PROJECT_RUN,
-    "editar_benchmark": PROJECT_RUN,
-    "simular_impacto_replan": PROJECT_RUN,
-    "aplicar_sugestao_replan": PROJECT_RUN,
-    # ── Aprovação / Escrita catálogo (engineer) ───────────────────────────────
-    "aprovar_versao": PROJECT_APPROVE,
-    "marcar_benchmark_imutavel": PROJECT_APPROVE,
-    "atualizar_preco_insumo": CATALOG_WRITE,
-    "adicionar_variante_producao": CATALOG_WRITE,
-}
+# ── Mapeamento MCP tool → permissão (ADR-117) ────────────────────────────────
+# Não é mais mantido à mão: a fonte de verdade são as tags @permission nas tools.
+# Este dict é um CACHE populado em runtime por build_tool_permission_map(server)
+# (chamado em patch_mcp_auth_permissions), para consumidores name-based.
+TOOL_PERMISSIONS: dict[str, str] = {}
 
 
 # ── Contextvar para MCP tools (sem request HTTP) ──────────────────────────────
@@ -274,6 +205,9 @@ def permission(perm: str):
                     )
             return fn(*args, **kwargs)
 
+        # ADR-117: tag introspectável — fonte única da permissão da tool,
+        # lida por patch_mcp_auth_permissions e pelo teste de governança.
+        wrapper._required_permission = perm  # type: ignore[attr-defined]
         return wrapper
 
     return decorator
@@ -312,38 +246,66 @@ import logging as _logging
 
 _guard_log = _logging.getLogger(__name__)
 
-# Permissão padrão para tools sem mapeamento explícito (mínimo: qualquer usuário autenticado)
-_DEFAULT_TOOL_PERMISSION = PROJECT_READ
+
+# ADR-117: fonte da permissão é a tag _required_permission posta por @permission.
+# Tool sem tag → fail-closed (exige AUTH_MANAGE, só admin) + warning. O teste de
+# governança (fail-closed estático) impede que isso aconteça em produção.
+_FAILCLOSED_TOOL_PERMISSION = AUTH_MANAGE
+
+
+def _tool_required_permission(tool: Any) -> str | None:
+    """Lê a permissão declarada via @permission (tag _required_permission)."""
+    fn = getattr(tool, "fn", None)
+    return getattr(fn, "_required_permission", None)
 
 
 def validate_tool_coverage(server: Any) -> list[str]:
-    """Verifica quais tools registradas no servidor não têm entrada em TOOL_PERMISSIONS.
+    """Retorna tools registradas SEM tag @permission (ADR-117 — fail-closed).
 
-    Retorna lista de nomes de tools sem mapeamento.
-    Chamado em build_server() para auditoria de cobertura.
+    Chamado em build_server() para auditoria. Tools sem tag são logadas como
+    erro de governança (deveriam ter @permission inline).
     """
     try:
         tools = server._tool_manager._tools
     except AttributeError:
         return []
-    missing = [name for name in tools if name not in TOOL_PERMISSIONS]
+    missing = [name for name, tool in tools.items() if _tool_required_permission(tool) is None]
     if missing:
-        _guard_log.warning(
-            "RBAC: %d tool(s) sem mapeamento em TOOL_PERMISSIONS: %s — será aplicada permissão padrão '%s'",
+        _guard_log.error(
+            "RBAC: %d tool(s) sem @permission inline: %s — fail-closed (exigirá %s).",
             len(missing),
             missing,
-            _DEFAULT_TOOL_PERMISSION,
+            _FAILCLOSED_TOOL_PERMISSION,
         )
     return missing
 
 
-def patch_mcp_auth_permissions(server: Any) -> None:
-    """Envolve todas as tools MCP com verificação de permissão via TOOL_PERMISSIONS.
+def build_tool_permission_map(server: Any) -> dict[str, str]:
+    """Deriva a tabela tool→permissão por introspecção (ADR-117 D5).
 
-    Para tools com @permission() decorator: a verificação dupla é harmless
-    (o decorator ainda executa depois do wrapper).
-    Para tools sem @permission(): o wrapper é a única linha de defesa.
-    Tools sem entrada em TOOL_PERMISSIONS recebem _DEFAULT_TOOL_PERMISSION.
+    Substitui o antigo dict TOOL_PERMISSIONS mantido à mão — agora a tabela é
+    reconstruída a partir das tags @permission. Use para auditoria/relatório.
+    """
+    try:
+        tools = server._tool_manager._tools
+    except AttributeError:
+        return {}
+    mapping = {
+        name: (_tool_required_permission(tool) or _FAILCLOSED_TOOL_PERMISSION)
+        for name, tool in tools.items()
+    }
+    # Atualiza o cache módulo-level para consumidores name-based (ex.: scope_guard).
+    TOOL_PERMISSIONS.clear()
+    TOOL_PERMISSIONS.update(mapping)
+    return mapping
+
+
+def patch_mcp_auth_permissions(server: Any) -> None:
+    """Defesa em profundidade: envolve cada tool com checagem pela tag _required_permission.
+
+    A fonte da permissão é a tag posta por @permission (ADR-117). Tools sem tag
+    recebem _FAILCLOSED_TOOL_PERMISSION (admin) — o teste de governança garante que
+    isso não ocorra. O decorator inline já checa; este wrapper cobre o transporte HTTP.
 
     Chamado em build_server() após registrar todas as tools.
     """
@@ -353,11 +315,14 @@ def patch_mcp_auth_permissions(server: Any) -> None:
         _guard_log.warning("patch_mcp_auth_permissions: servidor sem _tool_manager._tools — skipping")
         return
 
-    for tool_name, tool in tools.items():
+    # Popula o cache name-based (TOOL_PERMISSIONS) a partir das tags antes do re-wrap.
+    build_tool_permission_map(server)
+
+    for _tool_name, tool in tools.items():
         if not (hasattr(tool, "fn") and callable(tool.fn)):
             continue
-        required_perm = TOOL_PERMISSIONS.get(tool_name, _DEFAULT_TOOL_PERMISSION)
         original_fn = tool.fn
+        required_perm = getattr(original_fn, "_required_permission", None) or _FAILCLOSED_TOOL_PERMISSION
 
         def _make_wrapper(fn: Any, perm: str) -> Any:
             @wraps(fn)
@@ -372,6 +337,7 @@ def patch_mcp_auth_permissions(server: Any) -> None:
                         )
                 return fn(*args, **kwargs)
 
+            _auth_wrapper._required_permission = perm  # type: ignore[attr-defined]  # propaga a tag
             return _auth_wrapper
 
         tool.fn = _make_wrapper(original_fn, required_perm)

@@ -28,6 +28,8 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
 
 
+from concilium.infrastructure.auth.permission_guard import permission
+
 def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de catálogo."""
 
@@ -36,12 +38,14 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Lista os contextos de catálogo disponíveis (ex: mendeslobo, test). Ponto de entrada para descobrir contexto_id."
     )
+    @permission("catalog:read")
     def listar_contextos() -> dict[str, Any]:
         return _impl_listar_contextos()
 
     @server.tool(
         description="Busca CPUs por código ou descrição (ex: query='escavação 1ª cat'). Use para encontrar cpu_id antes de criar projeto."
     )
+    @permission("catalog:read")
     def pesquisar_catalogo(
         contexto_id: str,
         query: str | None = None,
@@ -58,12 +62,14 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Cobertura do catálogo: % de insumos com preço, % de CPUs calculáveis. Use para saber se o catálogo está pronto para orçamento."
     )
+    @permission("catalog:read")
     def consultar_saude_catalogo(contexto_id: str) -> dict[str, Any]:
         return _impl_consultar_saude_catalogo(contexto_id)
 
     @server.tool(
         description="Detecta valores fora de faixa no catálogo (outliers de preço, razões de produtividade anômalas). Use quando suspeitar de calibração errada."
     )
+    @permission("catalog:read")
     def avaliar_plausibilidade_catalogo(
         contexto_id: str,
     ) -> dict[str, Any]:
@@ -72,6 +78,7 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Verifica consistência referencial (insumos ausentes, ciclos de dependência) e recalcula PUs com encargos e diesel informados. Use para auditoria de integridade."
     )
+    @permission("catalog:read")
     def verificar_integridade_catalogo(
         contexto_id: str,
         alpha_clt: float = 1.777,
@@ -85,6 +92,7 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Atualiza o preço de um insumo (ex: novo preço de diesel após cotação). Use projeto_id para override de projeto em vez de alterar o master."
     )
+    @permission("catalog:write")
     def atualizar_preco_insumo(
         contexto_id: str,
         insumo_id: str,
@@ -98,6 +106,7 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Adiciona uma variante de produtividade a uma producao existente (ex: equipe alternativa com custo/hora diferente)."
     )
+    @permission("catalog:write")
     def adicionar_variante_producao(
         contexto_id: str,
         producao_id: str,
@@ -116,6 +125,7 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Retorna o preço de um insumo específico em uma data passada. Use para verificar o preço vigente na época do contrato (diferente de tendencia_precos_catalogo que mostra evolução agregada)."
     )
+    @permission("catalog:read")
     def consultar_preco_insumo_temporal(
         contexto_id: str,
         insumo_id: str,
@@ -128,6 +138,7 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Mostra evolução histórica dos preços de todos os insumos do catálogo. Use para detectar inflação ou deflação sistêmica (diferente de consultar_preco_insumo_temporal que retorna ponto único)."
     )
+    @permission("catalog:read")
     def tendencia_precos_catalogo(
         contexto_id: str,
         jurisdicao_id: str | None = None,
@@ -137,6 +148,7 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Compara dados de RFI (Request for Information) com o catálogo master e lista divergências. dry_run=True (padrão) apenas mostra — use dry_run=False para aplicar as diferenças."
     )
+    @permission("financials:read")
     def comparar_rfi_catalogo(
         contexto_id: str,
         dry_run: bool = True,
@@ -146,6 +158,7 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description="Recalcula o preço unitário de uma produção específica dado alpha_clt, alpha_pj e preço do diesel. Use para simular impacto de mudança de encargos ou combustível em uma CPU."
     )
+    @permission("catalog:read")
     def calcular_pu_producao(
         contexto_id: str,
         producao_id: str,
@@ -165,6 +178,7 @@ def register(server: FastMCP) -> None:
             "Use antes de comparar_versoes_catalogo para saber quais versões existem."
         )
     )
+    @permission("catalog:read")
     def listar_versoes_catalogo(contexto_id: str) -> dict[str, Any]:
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.settings import get_storage
@@ -191,6 +205,7 @@ def register(server: FastMCP) -> None:
             "antes de aprovar uma atualização de preços ou composições."
         )
     )
+    @permission("catalog:read")
     def comparar_versoes_catalogo(
         contexto_id: str,
         versao_a: str,

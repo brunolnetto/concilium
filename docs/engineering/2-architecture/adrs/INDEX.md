@@ -225,6 +225,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [114](adr-114-golden-example-avaliacao.md) | Golden Example de Avaliação — benchmark sintético GOLDEN calibrado; invariantes algébricos + regressão; clarificou margem=preço operacional (não catálogo) | ✅ Implementado 2026-06-19 _(F1-F4 · 17 testes)_ | ADR-043, ADR-085, ADR-044, ADR-090, ADR-060 |
 | [115](adr-115-rfx-semantica-procurement-no-concilium.md) | Semântica RFI/RFP/RFQ no Concilium — intent→PipelineMode (RFI→OLTP, RFP→OLAP, RFQ→LIGHT), validação de baseline RFQ, CLI --intent, bloco rfx no report | ✅ Implementado 2026-06-20 _(F1-F3,F5; F4 parcial · 18 testes)_ | ADR-043, ADR-050, ADR-102, ADR-113, ADR-114 |
 | [116](adr-116-mcp-tool-surface-cleanup.md) | Limpeza da Superfície de Tools MCP — remove duplicatas benchmark legado + avancar_pipeline deprecada (55→52); teste de governança (teto, sem-duplicatas, cobertura RBAC) | ✅ Implementado 2026-06-20 _(F1-F4; consolidação catalogo/tributacao deferida)_ | ADR-037, ADR-099, ADR-102, ADR-043 |
+| [117](adr-117-rbac-decorator-tagging.md) | RBAC por Decorator com Tag Introspectável — `@permission` etiqueta `_required_permission`; dict TOOL_PERMISSIONS hand-maintained eliminado (vira cache populado em runtime); fail-closed (tool sem tag → auth:manage); governança AST garante toda tool decorada | ✅ Implementado 2026-06-20 _(D1-D6 · 46 decorators inline · 136 testes)_ | ADR-099, ADR-116, ADR-037 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 

@@ -14,12 +14,14 @@ from mcp.server.fastmcp import FastMCP
 
 from concilium.application.services.artifact import artifact_bundle as ab
 from concilium.presentation.mcp._context import _project, _wrap_response
+from concilium.infrastructure.auth.permission_guard import permission
 
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas de artefatos no servidor MCP."""
 
     @server.tool()
+    @permission("artifacts:read")
     def listar_artefatos_projeto(project_id: str, versao: str | None = None) -> dict[str, Any]:
         """Lista os artefatos disponíveis de um projeto com nome, tipo, tamanho e audiência.
 
@@ -31,6 +33,7 @@ def register(server: FastMCP) -> None:
         return _wrap_response(ab.list_artifacts(store, versao))
 
     @server.tool()
+    @permission("artifacts:download")
     def ler_artefato_texto(project_id: str, nome_arquivo: str, versao: str | None = None) -> dict[str, Any]:
         """Retorna o conteúdo de um artefato textual (md, json, csv, txt) como string.
 
@@ -43,6 +46,7 @@ def register(server: FastMCP) -> None:
             return _wrap_response({"erro": str(e), "nome": nome_arquivo})
 
     @server.tool()
+    @permission("artifacts:download")
     def baixar_artefato_binario(project_id: str, nome_arquivo: str, versao: str | None = None) -> dict[str, Any]:
         """Retorna um artefato binário (PNG, XLSX, PDF) como base64.
 
@@ -56,6 +60,7 @@ def register(server: FastMCP) -> None:
             return _wrap_response({"erro": str(e), "nome": nome_arquivo})
 
     @server.tool()
+    @permission("artifacts:download")
     def baixar_bundle_zip(
         project_id: str, versao: str | None = None, filtro: list[str] | None = None
     ) -> dict[str, Any]:

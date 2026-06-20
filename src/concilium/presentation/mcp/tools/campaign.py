@@ -4,18 +4,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from concilium.domain.constants import META_MARGEM_PADRAO
-
 from mcp.server.fastmcp import FastMCP
+
+from concilium.domain.constants import META_MARGEM_PADRAO
+from concilium.infrastructure.auth.permission_guard import permission
 
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas de campanha no servidor MCP."""
 
     @server.tool()
+    @permission("project:run")
     def explorar_configuracoes_go(
         project_id: str,
         parametros_sweep: list[dict],
+        procurement_intent: str = "rfp",
         meta_margem_pct: float = META_MARGEM_PADRAO,
         prazo_contratual_semanas: int | None = None,
         top_k: int = 5,
@@ -51,6 +54,7 @@ def register(server: FastMCP) -> None:
             serialize_campaign_report,
         )
         from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
+        from concilium.application.skills.phase_classifier import is_campaign_allowed_for_intent, normalize_procurement_intent
         from concilium.domain.models.campaign.campaign import (
             GoResearchCampaignBundle,
             ParametroSweep,
@@ -70,6 +74,14 @@ def register(server: FastMCP) -> None:
             config_root = Path(storage.config_root)
 
             slug = project_id.upper()
+            intent = normalize_procurement_intent(procurement_intent)
+            if not is_campaign_allowed_for_intent(intent):
+                return {
+                    "erro": (
+                        "Campanha GO é permitida apenas para RFP/RFQ. "
+                        "RFI é fase exploratória de catálogo (PU x Q)."
+                    )
+                }
 
             base_spec = _load_project_base_spec(projects_root, slug)
             if base_spec is None:
@@ -104,6 +116,7 @@ def register(server: FastMCP) -> None:
                 bundle,
                 config_root=config_root,
                 projects_root=projects_root,
+                procurement_intent=intent.value,
                 num_workers=workers,
                 reset=reset,
             )
@@ -151,6 +164,7 @@ def register(server: FastMCP) -> None:
 
             return {
                 "run_id": run_id,
+                "procurement_intent": intent.value,
                 "status": result.status,
                 "n_avaliados": result.n_cenarios_avaliados,
                 "n_viaveis": result.n_cenarios_viaveis,
@@ -161,6 +175,7 @@ def register(server: FastMCP) -> None:
             return {"erro": f"Erro ao executar campanha: {exc}"}
 
     @server.tool()
+    @permission("project:read")
     def listar_runs_campanha(project_id: str) -> list[dict[str, Any]]:
         """Lista todos os runs de campanha para um projeto.
 
@@ -204,6 +219,7 @@ def register(server: FastMCP) -> None:
             return [{"erro": f"Erro ao listar runs: {exc}"}]
 
     @server.tool()
+    @permission("financials:read")
     def obter_resultado_campanha(
         project_id: str,
         run_id: str | None = None,

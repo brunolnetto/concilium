@@ -18,11 +18,14 @@ from concilium.presentation.mcp._context import (
 )
 
 
+from concilium.infrastructure.auth.permission_guard import permission
+
 def register(server: FastMCP) -> None:
     """Registra as ferramentas de projeto no servidor MCP."""
 
     # ── 2. Listar projetos existentes ─────────────────────────────────────
     @server.tool()
+    @permission("project:read")
     def listar_projetos() -> dict[str, Any]:
         """Lista os projetos existentes no sistema com versão atual e contexto."""
         proj_root = _projetos_root()
@@ -51,6 +54,7 @@ def register(server: FastMCP) -> None:
 
     # ── 3. Iniciar orçamento ─────────────────────────────────────────────
     @server.tool()
+    @permission("project:create")
     def iniciar_orcamento(
         nome: str,
         contexto_id: str,
@@ -156,6 +160,7 @@ def register(server: FastMCP) -> None:
 
     # ── 6. Status ────────────────────────────────────────────────────────
     @server.tool()
+    @permission("project:read")
     def consultar_status(project_id: str) -> dict[str, Any]:
         """Retorna estado atual do projeto: escopos/plano ativo, skills executadas, integridade do pipeline."""
         store = _project(project_id)
@@ -275,6 +280,7 @@ def register(server: FastMCP) -> None:
 
     # ── 7. Aprovar plano (ADR-031) ────────────────────────────────────────────
     @server.tool()
+    @permission("project:approve")
     def aprovar_versao(project_id: str, escopo_id: str | None = None, plano_id: str | None = None) -> dict[str, Any]:
         """Aprova o plano ativo do projeto (operação irreversível — confirmar com o usuário).
 
@@ -304,6 +310,7 @@ def register(server: FastMCP) -> None:
 
     # ── Nova iteração de planejamento (ADR-031) ───────────────────────────────
     @server.tool()
+    @permission("project:create")
     def nova_versao(project_id: str, escopo_id: str | None = None, nome: str | None = None) -> dict[str, Any]:
         """Cria novo plano para uma nova iteração de orçamento no mesmo escopo.
 
@@ -330,6 +337,7 @@ def register(server: FastMCP) -> None:
 
     # ── ADR-023 §D6: Salvar / atualizar perfil BDI do projeto (Phase 1C) ─────
     @server.tool()
+    @permission("project:run")
     def salvar_perfil_bdi(
         project_id: str,
         tributario: dict[str, Any],

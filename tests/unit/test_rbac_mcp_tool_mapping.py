@@ -93,18 +93,44 @@ ALL_TOOL_NAMES = [
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _ast_tool_permission_map() -> dict[str, str]:
+    """ADR-117: deriva nome→permissão das tags @permission no source das tools (sem servidor vivo)."""
+    import ast
+    import glob
+    import os
+
+    root = os.path.join(os.path.dirname(__file__), "..", "..")
+    mapping: dict[str, str] = {}
+    for f in sorted(glob.glob(os.path.join(root, "src/concilium/presentation/mcp/tools/*.py"))):
+        tree = ast.parse(open(f, encoding="utf-8").read())
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            is_tool = any(
+                (isinstance(d, ast.Attribute) and d.attr == "tool")
+                or (isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr == "tool")
+                for d in node.decorator_list
+            )
+            if not is_tool:
+                continue
+            for d in node.decorator_list:
+                if isinstance(d, ast.Call) and isinstance(d.func, ast.Name) and d.func.id == "permission":
+                    if d.args and isinstance(d.args[0], ast.Constant):
+                        mapping[node.name] = d.args[0].value
+    return mapping
+
+
 class TestToolPermissionsCoverage:
-    """TOOL_PERMISSIONS deve mapear todas as 55 tools MCP."""
+    """ADR-117: toda tool tem @permission inline (fonte única, derivada por introspecção)."""
 
-    def test_all_tools_have_entry_in_tool_permissions(self):
-        from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
-
-        missing = [t for t in ALL_TOOL_NAMES if t not in TOOL_PERMISSIONS]
-        assert not missing, f"{len(missing)} tools sem entrada em TOOL_PERMISSIONS:\n  " + "\n  ".join(sorted(missing))
+    def test_all_tools_have_permission_tag(self):
+        perm_map = _ast_tool_permission_map()
+        missing = [t for t in ALL_TOOL_NAMES if t not in perm_map]
+        assert not missing, f"{len(missing)} tools sem @permission inline:\n  " + "\n  ".join(sorted(missing))
 
     def test_tool_permissions_values_are_valid_permissions(self):
-        """Cada valor em TOOL_PERMISSIONS deve ser uma permission string conhecida."""
-        from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+        """Cada permissão declarada via @permission deve ser uma string conhecida."""
+        TOOL_PERMISSIONS = _ast_tool_permission_map()
 
         valid_perms = {
             "project:read",
@@ -124,7 +150,7 @@ class TestToolPermissionsCoverage:
 
     def test_write_tools_require_at_least_operator_permission(self):
         """Tools que modificam dados não devem exigir apenas catalog:read ou project:read."""
-        from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+        TOOL_PERMISSIONS = _ast_tool_permission_map()
 
         write_tools = {
             "iniciar_orcamento",
@@ -152,30 +178,36 @@ class TestToolPermissionsCoverage:
 
 
 class TestValidateToolCoverage:
-    """validate_tool_coverage(server) detecta tools registradas sem mapeamento."""
+    """validate_tool_coverage(server) detecta tools SEM tag @permission (ADR-117)."""
 
-    def _make_server(self, tool_names: list[str]):
-        """Cria servidor FastMCP simulado com tools pelo nome."""
+    def _make_server(self, tools_spec: dict[str, str | None]):
+        """Cria servidor simulado. tools_spec: {nome: perm|None}.
+
+        perm=None → fn sem _required_permission (deve ser detectada como não-coberta).
+        """
         server = MagicMock()
         tools = {}
-        for name in tool_names:
+        for name, perm in tools_spec.items():
             t = MagicMock()
-            t.fn.__name__ = name
+            fn = lambda: None
+            fn.__name__ = name
+            if perm is not None:
+                fn._required_permission = perm
+            t.fn = fn  # fn real (não MagicMock) — sem auto-criação de atributo
             tools[name] = t
         server._tool_manager._tools = tools
         return server
 
-    def test_returns_empty_when_all_tools_mapped(self):
-        from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS, validate_tool_coverage
-
-        server = self._make_server(list(TOOL_PERMISSIONS.keys())[:5])
-        missing = validate_tool_coverage(server)
-        assert missing == []
-
-    def test_returns_unmapped_tools(self):
+    def test_returns_empty_when_all_tools_tagged(self):
         from concilium.infrastructure.auth.permission_guard import validate_tool_coverage
 
-        server = self._make_server(["ferramenta_nova_sem_permissao"])
+        server = self._make_server({"a": "project:read", "b": "project:run"})
+        assert validate_tool_coverage(server) == []
+
+    def test_returns_untagged_tools(self):
+        from concilium.infrastructure.auth.permission_guard import validate_tool_coverage
+
+        server = self._make_server({"ferramenta_nova_sem_permissao": None})
         missing = validate_tool_coverage(server)
         assert "ferramenta_nova_sem_permissao" in missing
 
@@ -188,14 +220,15 @@ class TestValidateToolCoverage:
 class TestPatchMcpAuthPermissions:
     """patch_mcp_auth_permissions() envolve tools com verificação de permissão."""
 
-    def _make_server_with_tool(self, tool_name: str, tool_fn=None):
+    def _make_server_with_tool(self, tool_name: str, tool_fn=None, perm: str | None = None):
         server = MagicMock()
         if tool_fn is None:
             tool_fn = lambda: "ok"
             tool_fn.__name__ = tool_name
+        if perm is not None:
+            tool_fn._required_permission = perm  # ADR-117: tag posta por @permission
         tool = MagicMock()
         tool.fn = tool_fn
-        tool.fn.__name__ = tool_name
         server._tool_manager._tools = {tool_name: tool}
         return server
 
@@ -213,7 +246,7 @@ class TestPatchMcpAuthPermissions:
             result_holder.append("called")
 
         fn.__name__ = "disparar_pipeline"
-        server = self._make_server_with_tool("disparar_pipeline", fn)
+        server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
         patch_mcp_auth_permissions(server)
         # Simula roles de operator
         tok = set_roles(["operator"])
@@ -235,7 +268,7 @@ class TestPatchMcpAuthPermissions:
             pass
 
         fn.__name__ = "disparar_pipeline"
-        server = self._make_server_with_tool("disparar_pipeline", fn)
+        server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
         patch_mcp_auth_permissions(server)
         tok = set_roles(["viewer"])
         with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
@@ -259,7 +292,7 @@ class TestPatchMcpAuthPermissions:
             result_holder.append("read_ok")
 
         fn.__name__ = "listar_projetos"
-        server = self._make_server_with_tool("listar_projetos", fn)
+        server = self._make_server_with_tool("listar_projetos", fn, perm="project:read")
         patch_mcp_auth_permissions(server)
         tok = set_roles(["viewer"])
         try:
@@ -268,26 +301,28 @@ class TestPatchMcpAuthPermissions:
             _current_roles.reset(tok)
         assert "read_ok" in result_holder
 
-    def test_unmapped_tool_defaults_to_project_read(self):
-        """Tool sem mapeamento exige project:read como mínimo."""
+    def test_untagged_tool_is_fail_closed(self):
+        """ADR-117: tool sem tag @permission → fail-closed (exige auth:manage, só admin).
+
+        operator NÃO tem auth:manage → negado quando auth ativo. O default deixou de
+        ser project:read (permissivo) para auth:manage (restritivo) — segurança por omissão.
+        """
         from concilium.infrastructure.auth.permission_guard import (
             _current_roles,
             patch_mcp_auth_permissions,
             set_roles,
         )
 
-        result_holder = []
-
         def fn():
-            result_holder.append("default_perm")
+            return "executou"
 
         fn.__name__ = "tool_nova_sem_mapeamento"
-        server = self._make_server_with_tool("tool_nova_sem_mapeamento", fn)
+        server = self._make_server_with_tool("tool_nova_sem_mapeamento", fn)  # sem perm= → sem tag
         patch_mcp_auth_permissions(server)
-        # operator tem project:read, então deve passar
         tok = set_roles(["operator"])
-        try:
-            server._tool_manager._tools["tool_nova_sem_mapeamento"].fn()
-        finally:
-            _current_roles.reset(tok)
-        assert "default_perm" in result_holder
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+            try:
+                with pytest.raises(PermissionError):
+                    server._tool_manager._tools["tool_nova_sem_mapeamento"].fn()
+            finally:
+                _current_roles.reset(tok)

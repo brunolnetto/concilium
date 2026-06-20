@@ -342,19 +342,57 @@ class TestJWTMiddleware:
 
 
 class TestScopeGuard:
+    """check_scope lê o cache TOOL_PERMISSIONS (ADR-117: populado em runtime das tags @permission).
+
+    A fixture autouse simula a população que build_server faz, derivando do source.
+    avancar_pipeline foi removida (ADR-116) — usa disparar_pipeline (mesma perm project:run).
+    """
+
+    @pytest.fixture(autouse=True)
+    def _populate_cache(self):
+        import ast
+        import glob as _glob
+        import os as _os
+
+        from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+
+        root = _os.path.join(_os.path.dirname(__file__), "..", "..")
+        mapping: dict[str, str] = {}
+        for f in sorted(_glob.glob(_os.path.join(root, "src/concilium/presentation/mcp/tools/*.py"))):
+            tree = ast.parse(open(f, encoding="utf-8").read())
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                if not any(
+                    (isinstance(d, ast.Attribute) and d.attr == "tool")
+                    or (isinstance(d, ast.Call) and isinstance(d.func, ast.Attribute) and d.func.attr == "tool")
+                    for d in node.decorator_list
+                ):
+                    continue
+                for d in node.decorator_list:
+                    if isinstance(d, ast.Call) and isinstance(d.func, ast.Name) and d.func.id == "permission":
+                        if d.args and isinstance(d.args[0], ast.Constant):
+                            mapping[node.name] = d.args[0].value
+        saved = dict(TOOL_PERMISSIONS)
+        TOOL_PERMISSIONS.clear()
+        TOOL_PERMISSIONS.update(mapping)
+        yield
+        TOOL_PERMISSIONS.clear()
+        TOOL_PERMISSIONS.update(saved)
+
     def test_no_op_when_auth_disabled(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope
 
         clean = {k: v for k, v in os.environ.items() if k != "CONCILIUM__AUTH_ENABLED"}
         with patch.dict(os.environ, clean, clear=True):
-            check_scope("avancar_pipeline")  # deve passar sem erro
+            check_scope("disparar_pipeline")  # deve passar sem erro
 
     def test_passes_with_correct_scope(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
 
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles(["operator"])
-            check_scope("avancar_pipeline")  # operator tem project:run
+            check_scope("disparar_pipeline")  # operator tem project:run
 
     def test_raises_with_missing_scope(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
@@ -362,7 +400,7 @@ class TestScopeGuard:
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles(["viewer"])
             with pytest.raises(PermissionError, match="project:run"):
-                check_scope("avancar_pipeline")
+                check_scope("disparar_pipeline")
 
     def test_unmapped_tool_passes_regardless(self):
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
@@ -377,7 +415,7 @@ class TestScopeGuard:
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
             set_roles([])
             with pytest.raises(PermissionError) as exc_info:
-                check_scope("avancar_pipeline")
+                check_scope("disparar_pipeline")
             assert "project:run" in str(exc_info.value)
             assert "Permissão" in str(exc_info.value)
 
@@ -389,7 +427,7 @@ class TestScopeGuard:
             ("explorar_pool_recursos", "project:read"),
             ("baixar_bundle_zip", "artifacts:download"),
             ("criar_projeto_formulario", "project:create"),
-            ("avancar_pipeline", "project:run"),
+            ("disparar_pipeline", "project:run"),
         ],
     )
     def test_tool_permission_map_completeness(self, tool, required_permission):

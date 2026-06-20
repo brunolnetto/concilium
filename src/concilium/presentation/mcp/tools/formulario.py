@@ -137,6 +137,46 @@ def _build_eap_items(servicos: list[dict]) -> tuple[list[dict], list[dict]]:
     return eap_items, nao_mapeados
 
 
+def _normalize_procurement_intent(value: str | None) -> str:
+    """Normaliza intenção de procurement para {rfi, rfp, rfq}."""
+    normalized = (value or "rfi").strip().lower()
+    if normalized in {"rfi", "rfp", "rfq"}:
+        return normalized
+    return "rfi"
+
+
+def _procurement_context(intent: str) -> dict[str, str]:
+    """Retorna contexto semântico de procurement para a resposta MCP."""
+    if intent == "rfp":
+        return {
+            "intent": "rfp",
+            "fase": "comparacao_tecnico_economica",
+            "metodo_custo": "operacional_com_cronograma",
+            "resumo": (
+                "RFP considera cronograma, praticabilidade climatica e tempo nao-produtivo. "
+                "O custo total tende a ser maior que o catalogo puro."
+            ),
+        }
+    if intent == "rfq":
+        return {
+            "intent": "rfq",
+            "fase": "fechamento_comercial",
+            "metodo_custo": "escopo_fechado_para_cotacao",
+            "resumo": (
+                "RFQ exige baseline fechada para cotacao final com itens e quantitativos definidos."
+            ),
+        }
+    return {
+        "intent": "rfi",
+        "fase": "exploracao_inicial",
+        "metodo_custo": "catalogo_pu_x_quantitativo",
+        "resumo": (
+            "RFI usa precificacao de catalogo (PU x quantitativo), sem penalidades operacionais "
+            "de clima/ociosidade para comparacao inicial de mercado."
+        ),
+    }
+
+
 # ── Registro ──────────────────────────────────────────────────────────────────
 
 _UI_META = {
@@ -162,6 +202,7 @@ def register(server: FastMCP) -> None:
         data_inicio: str,
         servicos: list[dict],
         data_termino: str | None = None,
+        procurement_intent: str = "rfi",
         coordenadas_lat: float = 0.0,
         coordenadas_lng: float = 0.0,
         dias_semana: int = 6,
@@ -190,6 +231,7 @@ def register(server: FastMCP) -> None:
                                "predecessores": []          # opcional
                              }
             data_termino:    "YYYY-MM-DD" (opcional)
+            procurement_intent: "rfi" | "rfp" | "rfq" (default "rfi")
             coordenadas_lat/lng: para consulta climática (opcional, default 0)
             dias_semana:     regime de trabalho (default 6)
             horas_dia:       regime de trabalho (default 8)
@@ -201,6 +243,8 @@ def register(server: FastMCP) -> None:
             Se há não-mapeados:
               {status: "pendente", mapeados, nao_mapeados, instrucoes}
         """
+        intent = _normalize_procurement_intent(procurement_intent)
+        intent_ctx = _procurement_context(intent)
         eap_mapeados, nao_mapeados = _build_eap_items(servicos)
 
         # ── Preview de mapeamento ──────────────────────────────────────────────
@@ -239,6 +283,7 @@ def register(server: FastMCP) -> None:
                         "item não mapeado. Em seguida, chame criar_projeto_formulario "
                         "novamente incluindo 'cpu_id' em cada serviço não mapeado."
                     ),
+                    "procurement_context": intent_ctx,
                 }
             )
 
@@ -251,6 +296,7 @@ def register(server: FastMCP) -> None:
         from concilium.infrastructure.storage.project import ProjectStore
 
         store = ProjectStore.init(proj_root, nome, contexto_id=contexto_id)
+        store.update_meta(procurement_intent=intent)
 
         # ADR-031: cria estrutura de escopo+plano para compatibilidade com disparar_pipeline
         escopo_id = "esc-principal"
@@ -282,6 +328,7 @@ def register(server: FastMCP) -> None:
             "versao_referencia_id": rt.load_contexto(contexto_id).referencia_id,
             "eap": eap_clean,
             "objetivo_pool": objetivo_pool,
+            "procurement_intent": intent,
         }
 
         try:
@@ -323,6 +370,7 @@ def register(server: FastMCP) -> None:
                     "Projeto criado com escopo e plano (ADR-031). "
                     "Use disparar_pipeline para calcular praticabilidade climática e prosseguir."
                 ),
+                "procurement_context": intent_ctx,
             }
         )
 
