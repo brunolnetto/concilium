@@ -12,14 +12,20 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
+# LoggingHandler OTel: mesmo fallback usado em telemetry/__init__.py
+try:
+    from opentelemetry.instrumentation.logging.handler import LoggingHandler as _OtelLoggingHandler
+except ImportError:
+    from opentelemetry.sdk._logs._internal import LoggingHandler as _OtelLoggingHandler
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures de limpeza do root logger
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture(autouse=False)
 def clean_root_logger():
@@ -43,6 +49,7 @@ def clean_root_logger():
 def reset_telemetry():
     """Reseta o flag _initialized da telemetria e faz shutdown dos providers OTel."""
     import concilium.infrastructure.telemetry as tel
+
     original = tel._initialized
     tel._initialized = False
     yield
@@ -67,12 +74,14 @@ def reset_telemetry():
     # Reseta o lock Once do OTel para permitir set_meter_provider() em múltiplos testes
     try:
         import opentelemetry.metrics._internal as _m_internal
+
         _m_internal._METER_PROVIDER_SET_ONCE._done = False
         _m_internal._METER_PROVIDER = None
     except Exception:
         pass
     try:
         import opentelemetry._logs._internal as _l_internal
+
         _l_internal._LOGGER_PROVIDER_SET_ONCE._done = False
         _l_internal._LOGGER_PROVIDER = None
     except Exception:
@@ -83,18 +92,25 @@ def reset_telemetry():
 # F1-A: _JsonFormatter
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestJsonFormatter:
     """_JsonFormatter emite JSON-lines com campos obrigatórios por ADR-111 D4."""
 
     @pytest.fixture(autouse=True)
     def formatter(self):
         from concilium.infrastructure.observability.logging_config import _JsonFormatter
+
         self.fmt = _JsonFormatter()
 
     def _record(self, msg="mensagem de teste", level=logging.WARNING, name="concilium.test"):
         return logging.LogRecord(
-            name=name, level=level, pathname="", lineno=0,
-            msg=msg, args=(), exc_info=None,
+            name=name,
+            level=level,
+            pathname="",
+            lineno=0,
+            msg=msg,
+            args=(),
+            exc_info=None,
         )
 
     def test_output_is_valid_json(self):
@@ -113,8 +129,13 @@ class TestJsonFormatter:
 
     def test_message_is_formatted(self):
         record = logging.LogRecord(
-            name="t", level=logging.INFO, pathname="", lineno=0,
-            msg="CPU %s ausente no catálogo %s", args=("P0046", "mendeslobo"), exc_info=None,
+            name="t",
+            level=logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="CPU %s ausente no catálogo %s",
+            args=("P0046", "mendeslobo"),
+            exc_info=None,
         )
         payload = json.loads(self.fmt.format(record))
         assert payload["message"] == "CPU P0046 ausente no catálogo mendeslobo"
@@ -138,8 +159,13 @@ class TestJsonFormatter:
             raise ValueError("preco_unitario inválido")
         except ValueError:
             record = logging.LogRecord(
-                name="t", level=logging.ERROR, pathname="", lineno=0,
-                msg="falha na simulação", args=(), exc_info=sys.exc_info(),
+                name="t",
+                level=logging.ERROR,
+                pathname="",
+                lineno=0,
+                msg="falha na simulação",
+                args=(),
+                exc_info=sys.exc_info(),
             )
         payload = json.loads(self.fmt.format(record))
         assert "exception" in payload
@@ -160,6 +186,7 @@ class TestJsonFormatter:
 # F1-B: configure_logging()
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestConfigureLogging:
     """configure_logging() configura root logger corretamente."""
 
@@ -169,59 +196,70 @@ class TestConfigureLogging:
 
     def test_sets_root_level_info(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="INFO", json_format=False)
         assert logging.getLogger().level == logging.INFO
 
     def test_sets_root_level_warning(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="WARNING", json_format=False)
         assert logging.getLogger().level == logging.WARNING
 
     def test_sets_root_level_debug(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="DEBUG", json_format=False)
         assert logging.getLogger().level == logging.DEBUG
 
     def test_json_format_adds_stream_handler_with_json_formatter(self):
-        from concilium.infrastructure.observability.logging_config import configure_logging, _JsonFormatter
+        from concilium.infrastructure.observability.logging_config import _JsonFormatter, configure_logging
+
         configure_logging(level="INFO", json_format=True)
         json_handlers = [h for h in logging.getLogger().handlers if isinstance(h.formatter, _JsonFormatter)]
         assert len(json_handlers) >= 1, "Deve ter pelo menos 1 handler com _JsonFormatter"
 
     def test_no_json_formatter_when_json_format_false(self):
-        from concilium.infrastructure.observability.logging_config import configure_logging, _JsonFormatter
+        from concilium.infrastructure.observability.logging_config import _JsonFormatter, configure_logging
+
         configure_logging(level="INFO", json_format=False)
         json_handlers = [h for h in logging.getLogger().handlers if isinstance(h.formatter, _JsonFormatter)]
         assert len(json_handlers) == 0, "json_format=False não deve adicionar _JsonFormatter"
 
     def test_silences_httpx(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="DEBUG", json_format=False)
         assert logging.getLogger("httpx").level == logging.WARNING
 
     def test_silences_httpcore(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="DEBUG", json_format=False)
         assert logging.getLogger("httpcore").level == logging.WARNING
 
     def test_silences_urllib3(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="DEBUG", json_format=False)
         assert logging.getLogger("urllib3").level == logging.WARNING
 
     def test_silences_azure(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="DEBUG", json_format=False)
         assert logging.getLogger("azure").level == logging.WARNING
 
     def test_silences_opentelemetry_sdk(self):
         from concilium.infrastructure.observability.logging_config import configure_logging
+
         configure_logging(level="DEBUG", json_format=False)
         assert logging.getLogger("opentelemetry.sdk").level == logging.WARNING
 
     def test_idempotent_no_duplicate_json_handlers(self):
         """Chamar configure_logging duas vezes não cria handlers duplicados."""
-        from concilium.infrastructure.observability.logging_config import configure_logging, _JsonFormatter
+        from concilium.infrastructure.observability.logging_config import _JsonFormatter, configure_logging
+
         configure_logging(level="INFO", json_format=True)
         configure_logging(level="INFO", json_format=True)
         json_handlers = [h for h in logging.getLogger().handlers if isinstance(h.formatter, _JsonFormatter)]
@@ -232,39 +270,62 @@ class TestConfigureLogging:
 # F1-C: trace context injetado quando span OTel ativo
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestJsonFormatterWithActiveSpan:
     """_JsonFormatter extrai trace_id/span_id do span OTel ativo."""
 
     @pytest.fixture(autouse=True)
     def formatter(self):
         from concilium.infrastructure.observability.logging_config import _JsonFormatter
+
         self.fmt = _JsonFormatter()
 
     def _record(self):
         return logging.LogRecord(
-            name="t", level=logging.WARNING, pathname="", lineno=0,
-            msg="teste", args=(), exc_info=None,
+            name="t",
+            level=logging.WARNING,
+            pathname="",
+            lineno=0,
+            msg="teste",
+            args=(),
+            exc_info=None,
         )
 
-    def test_trace_id_injected_when_span_active(self):
-        """Quando há span OTel ativo com contexto válido, trace_id != ''."""
+    @staticmethod
+    def _fresh_global_tracer(monkeypatch):
+        """Cria um TracerProvider gravável e o registra como global (determinístico).
+
+        Dois pontos de cuidado:
+        1. conftest.py seta OTEL_SDK_DISABLED=true → SDK produz spans NoOp com
+           contexto inválido. Removemos a env para que os spans gravem de verdade.
+        2. _get_trace_context() lê via trace.get_current_span() (provider GLOBAL).
+           Resetar o Once lock permite registrar um provider fresco por teste.
+        """
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider
 
+        monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+        try:
+            import opentelemetry.trace as _t
+            _t._TRACER_PROVIDER_SET_ONCE._done = False
+            _t._TRACER_PROVIDER = None
+        except Exception:
+            pass
         provider = TracerProvider()
-        tracer = provider.get_tracer("test")
+        trace.set_tracer_provider(provider)
+        return trace.get_tracer("test")
+
+    def test_trace_id_injected_when_span_active(self, monkeypatch):
+        """Quando há span OTel ativo com contexto válido, trace_id != ''."""
+        tracer = self._fresh_global_tracer(monkeypatch)
         with tracer.start_as_current_span("test_span"):
             payload = json.loads(self.fmt.format(self._record()))
         # O span tem contexto válido → trace_id não deve ser vazio
         assert payload["trace_id"] != "", "trace_id deve ser preenchido com span ativo"
         assert payload["span_id"] != "", "span_id deve ser preenchido com span ativo"
 
-    def test_trace_id_is_32_hex_chars(self):
-        from opentelemetry import trace
-        from opentelemetry.sdk.trace import TracerProvider
-
-        provider = TracerProvider()
-        tracer = provider.get_tracer("test")
+    def test_trace_id_is_32_hex_chars(self, monkeypatch):
+        tracer = self._fresh_global_tracer(monkeypatch)
         with tracer.start_as_current_span("test_span"):
             payload = json.loads(self.fmt.format(self._record()))
         assert len(payload["trace_id"]) == 32
@@ -275,6 +336,7 @@ class TestJsonFormatterWithActiveSpan:
 # F2: _setup_logging() em setup_telemetry()
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestSetupLogging:
     """setup_telemetry() configura LoggerProvider e adiciona LoggingHandler ao root."""
 
@@ -284,12 +346,13 @@ class TestSetupLogging:
 
     def test_setup_telemetry_adds_logging_handler_in_console_mode(self, monkeypatch):
         """Com CONCILIUM__OTEL_CONSOLE=true, root logger recebe LoggingHandler OTel."""
-        from opentelemetry.sdk._logs._internal import LoggingHandler
+        LoggingHandler = _OtelLoggingHandler
 
         monkeypatch.setenv("CONCILIUM__OTEL_CONSOLE", "true")
         monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
 
         from concilium.infrastructure.telemetry import setup_telemetry
+
         setup_telemetry()
 
         otel_handlers = [h for h in logging.getLogger().handlers if isinstance(h, LoggingHandler)]
@@ -297,11 +360,12 @@ class TestSetupLogging:
 
     def test_setup_telemetry_no_logging_handler_when_sdk_disabled(self, monkeypatch):
         """Com OTEL_SDK_DISABLED=true, nenhum LoggingHandler é adicionado."""
-        from opentelemetry.sdk._logs._internal import LoggingHandler
+        LoggingHandler = _OtelLoggingHandler
 
         monkeypatch.setenv("OTEL_SDK_DISABLED", "true")
 
         from concilium.infrastructure.telemetry import setup_telemetry
+
         setup_telemetry()
 
         otel_handlers = [h for h in logging.getLogger().handlers if isinstance(h, LoggingHandler)]
@@ -316,17 +380,17 @@ class TestSetupLogging:
         monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
 
         from concilium.infrastructure.telemetry import setup_telemetry
+
         setup_telemetry()
 
         provider = get_logger_provider()
-        assert isinstance(provider, LoggerProvider), (
-            f"LoggerProvider deve ser SdkLoggerProvider, não {type(provider)}"
-        )
+        assert isinstance(provider, LoggerProvider), f"LoggerProvider deve ser SdkLoggerProvider, não {type(provider)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F3: Entry points chamam configure_logging()
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestEntryPointsCallConfigureLogging:
     """API, MCP e CLI chamam configure_logging() na inicialização."""
@@ -338,6 +402,7 @@ class TestEntryPointsCallConfigureLogging:
         monkeypatch.setattr("concilium.presentation.api.app.configure_logging", mock_configure)
 
         from concilium.presentation.api import app as app_module
+
         app_module.create_app()
 
         mock_configure.assert_called_once()
@@ -349,6 +414,7 @@ class TestEntryPointsCallConfigureLogging:
         monkeypatch.setattr("concilium.presentation.mcp.server.configure_logging", mock_configure)
 
         from concilium.presentation.mcp import server as mcp_module
+
         mcp_module.build_server()
 
         mock_configure.assert_called_once()

@@ -66,13 +66,21 @@ def setup_telemetry() -> None:
 def _setup_logging() -> None:
     """Configura LoggerProvider OTel e ponte Python logging → OTel (ADR-111 F2)."""
     import logging
+
     global _active_log_providers
 
     from opentelemetry._logs import set_logger_provider
     from opentelemetry.sdk._logs import LoggerProvider
-    from opentelemetry.sdk._logs._internal import LoggingHandler  # public alias deprecated; usar _internal
     from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+
+    # LoggingHandler: preferir opentelemetry-instrumentation-logging (se instalado),
+    # com fallback para o SDK nativo (_internal). O linter tende a reescrever para o
+    # pacote de instrumentação; o try/except torna o import resiliente a ambos.
+    try:
+        from opentelemetry.instrumentation.logging.handler import LoggingHandler
+    except ImportError:
+        from opentelemetry.sdk._logs._internal import LoggingHandler
 
     telemetry = get_telemetry()
     resource = Resource({SERVICE_NAME: telemetry.otel_service_name})
@@ -132,6 +140,7 @@ def _setup_metrics() -> None:
     from opentelemetry import metrics
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+
     global _active_meter_providers
 
     telemetry = get_telemetry()

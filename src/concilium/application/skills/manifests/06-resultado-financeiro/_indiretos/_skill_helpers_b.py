@@ -19,7 +19,10 @@ Inputs (no dict 'inputs'):
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
 from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # ADR-056 §T3
@@ -189,7 +192,7 @@ def _custo_mob_legado(dados_mob: dict, num_pessoas_direta: int, prazo_meses: int
         )
         mobilizacoes.append(mob)
         custo_total += mob.custo_total
-    custo_pessoa_mes = dados_mob.get("custo_pessoa_mes", 1850)
+    custo_pessoa_mes = dados_mob.get("custo_pessoa_mes", 1850)  # B3-known: R$1.850 legado; idealmente derivar do catálogo
     custo_total += num_pessoas_direta * custo_pessoa_mes * prazo_meses
     for b in dados_mob.get("baixadas", []):
         n_ocorrencias = len(b.get("meses_ocorrencia", []))
@@ -252,23 +255,34 @@ def _process_mob_categoria(
         custo = round(custo * policy_scale[dv4_policy], 2)
         cat_obj = cat_obj.model_copy(update={"custo_fixo_total": custo})
 
-    # ADR-105: Se mob_schedule disponível, usar novas janelas para distribuição
+    # ADR-105: Se mob_schedule disponível, calcular distribuição por fase MOB/OP/DEMOB.
+    # B1-fix (2026-06-19): resultado era descartado (try/pass dead code); agora loga
+    # a distribuição e atualiza custo quando mob_schedule fornece total mais preciso.
     if mob_schedule:
         try:
-            # Preparar indiretos para calcular_custo_indireto_mob
             indiretos_mob = [
                 {
                     "tipo": "MOB",
                     "categoria": "MOB",
                     "fase": "mobilizacao",
                     "driver": "projeto",
-                    "custo_fixo_total": custo * 0.15,  # default 15%
+                    "custo_fixo_total": custo,  # B2-fix: usar custo real, não 0.15×custo
                 }
             ]
-            mob_costs = calcular_custo_indireto_mob(indiretos_mob, mob_schedule)
-            # TODO: Melhorar distribuição com dados de spec.indiretos
-        except Exception:
-            pass  # Fallback para comportamento legado
+            mob_result = calcular_custo_indireto_mob(indiretos_mob, mob_schedule)
+            mob_total = mob_result.get("custo_mob_total", 0.0)
+            if mob_total > 0:
+                custo = round(mob_total, 2)
+                cat_obj = cat_obj.model_copy(update={"custo_fixo_total": custo})
+                logger.debug(
+                    "MOB custo atualizado via mob_schedule: R$%.2f (fases: %s)",
+                    custo, list(mob_result.get("mob", {}).keys()),
+                )
+        except Exception as e:
+            logger.warning(
+                "Falha ao calcular custo MOB com mob_schedule — usando custo legado R$%.2f: %s",
+                custo, e, exc_info=True,
+            )
 
     indir = Indireto(
         categoria="MOB",

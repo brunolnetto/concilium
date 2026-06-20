@@ -75,6 +75,7 @@
 | [045](nep-045-remocao-milp-scheduler-legado.md) | Remoção do MILPScheduler (código morto) | ✅ Implementado | 🟡 Baixo | milp.py removido; skill-04, skill-13, CLI e testes limpos (2026-06-12) |
 | [046](nep-046-lns-metricas-reais.md) | Métricas reais no LNS (remover _simple_metrics trivial) | ✅ Implementado | 🟠 Médio | leveling/idle/utilization reais via resource_usage de _ssgs() (2026-06-12) |
 | [047](nep-047-ramp-profiles-lns-completion.md) | Ramp profiles (ADR-074): completar suporte no LNS | ✅ Implementado | 🟠 Médio | _find_start e _book_resources usam _lns_demand_at_offset; CP-SAT conservador documentado (2026-06-12) |
+| [048](nep-048-review-composicao-times-indiretos.md) | Review composição times indiretos: MOB mob_schedule dead-code + custo×0.15 | ⚠️ Parcial | 🟠 Médio | B1/B2 corrigidos (mob_result conectado); B3/B4 documentados como limitações (2026-06-19) |
 
 ---
 

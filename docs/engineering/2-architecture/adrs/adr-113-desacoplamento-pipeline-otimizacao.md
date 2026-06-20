@@ -1,6 +1,6 @@
 # ADR-113 — Tiers de Execução de Skills: OLTP (Planejamento) e OLAP (Análise/Artefatos)
 
-**Status:** Proposta  
+**Status:** Implementado ✅ _(F1–F4 2026-06-19 · 14 testes · renumeração 09→10/10→07/11→08/12→09/13→11)_  
 **Data:** 2026-06-19  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-022 (Wave Execution & Gate Propagation), ADR-036 (CLI Reorganização), ADR-050 (CLI Unificada), ADR-102 (Pipeline Jobs)
