@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from concilium.domain.constants import META_MARGEM_PADRAO
-
 from mcp.server.fastmcp import FastMCP
+
+from concilium.domain.constants import META_MARGEM_PADRAO
 
 
 def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
@@ -97,7 +97,7 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
         "itens": itens_sim,
         "nota": (
             "Estimativa linear sem re-execução do pipeline. "
-            "Para resultado definitivo use avancar_pipeline após aplicar parâmetros."
+            "Para resultado definitivo use disparar_pipeline após aplicar parâmetros."
         ),
     }
 
@@ -117,7 +117,7 @@ def register(server: FastMCP) -> None:
         Tipos suportados:
           - ``lever_adjust``: ajuste de fator_equipes, horas_dia, dias_semana, meta_margem_pct
 
-        Para replanejamento definitivo, use ``avancar_pipeline`` após confirmar os parâmetros.
+        Para replanejamento definitivo, use ``disparar_pipeline`` após confirmar os parâmetros.
         """
         try:
             from concilium.application.services.project.project_service import ProjectService

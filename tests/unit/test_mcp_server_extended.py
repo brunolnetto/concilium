@@ -274,146 +274,12 @@ async def test_consultar_status_with_version_and_log(server, server_env):
 # ── tool: avancar_pipeline ────────────────────────────────────────────────────
 
 
-@pytest.mark.asyncio
-async def test_avancar_pipeline_skill_explicit(server, server_env):
-    """avancar_pipeline with skill_id=None picks first pending skill."""
-
-    projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "AvancProj", "test")
-    store.new_version()
-    es = store.create_escopo(
-        escopo_id="esc-1",
-        nome="Escopo Principal",
-        tipo_obra="terraplenagem",
-        localizacao="Aracoiaba, CE",
-        coordenadas_lat=-4.36,
-        coordenadas_lng=-38.74,
-        data_inicio="2026-06-01",
-        data_termino="2026-12-31",
-    )
-    es.create_plan("plano-principal")
-    proj_id = store.root.name
-
-    # With no skills run yet, next skill should be 00-escopo
-    # We provide inputs for 00-escopo
-    result = await server.call_tool(
-        "avancar_pipeline",
-        arguments={
-            "project_id": proj_id,
-            "skill_id": "01-escopo-e-eap",
-            "inputs": {
-                "nome": "AvancProj",
-                "tipo_obra": "terraplenagem",
-                "localizacao": "Aracoiaba, CE",
-                "coordenadas": {"lat": -4.36, "lng": -38.74},
-                "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
-                "data_inicio": "2026-06-01",
-                "data_termino": "2026-12-31",
-                "eap": [
-                    {
-                        "item_id": "eap-01",
-                        "ordem": 1,
-                        "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
-                        "descricao": "Escavação",
-                        "unidade": "m3",
-                        "quantitativo": 1000,
-                    }
-                ],
-            },
-        },
-    )
-    assert result is not None
 
 
-@pytest.mark.asyncio
-async def test_avancar_pipeline_auto_next(server, server_env):
-    """avancar_pipeline without skill_id auto-selects first pending."""
-    projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "AutoNextProj", "test")
-    store.new_version()
-    es = store.create_escopo(
-        escopo_id="esc-1",
-        nome="Escopo Principal",
-        tipo_obra="terraplenagem",
-        localizacao="Aracoiaba, CE",
-        coordenadas_lat=-4.36,
-        coordenadas_lng=-38.74,
-        data_inicio="2026-06-01",
-        data_termino="2026-12-31",
-    )
-    es.create_plan("plano-principal")
-    proj_id = store.root.name
-    result = await server.call_tool(
-        "avancar_pipeline",
-        arguments={"project_id": proj_id},
-    )
-    assert result is not None
 
 
-@pytest.mark.asyncio
-async def test_avancar_pipeline_runtime_error(server, server_env):
-    """avancar_pipeline when skill deps not met → returns ERRO_PRECONDICAO."""
-    projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "DepErrProj", "test")
-    store.new_version()
-    es = store.create_escopo(
-        escopo_id="esc-1",
-        nome="Escopo Principal",
-        tipo_obra="terraplenagem",
-        localizacao="Aracoiaba, CE",
-        coordenadas_lat=-4.36,
-        coordenadas_lng=-38.74,
-        data_inicio="2026-06-01",
-        data_termino="2026-12-31",
-    )
-    es.create_plan("plano-principal")
-    proj_id = store.root.name
-
-    # 04-cronograma requires 00 and 01 — should fail with ERRO_PRECONDICAO
-    result = await server.call_tool(
-        "avancar_pipeline",
-        arguments={"project_id": proj_id, "skill_id": "04-cronograma"},
-    )
-    assert result is not None
 
 
-@pytest.mark.asyncio
-async def test_avancar_pipeline_pipeline_complete(server, server_env):
-    """avancar_pipeline when all skills done → returns info message."""
-    projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "AllDoneProj", "test")
-    store.new_version()
-    es = store.create_escopo(
-        escopo_id="esc-1",
-        nome="Escopo Principal",
-        tipo_obra="terraplenagem",
-        localizacao="Aracoiaba, CE",
-        coordenadas_lat=-4.36,
-        coordenadas_lng=-38.74,
-        data_inicio="2026-06-01",
-        data_termino="2026-12-31",
-    )
-    ps = es.create_plan("plano-principal")
-
-    # Fake the invocations log as if all canonical skills ran OK
-    skills_in_order = [
-        "01-escopo-e-eap",
-        "02-produtividade-climatica",
-        "04-cronograma",
-        "05-equipes-e-alocacao",
-        "06-resultado-financeiro",  # NEP-041 F4
-        "10-relatorio-e-artefatos",
-    ]
-    from datetime import UTC, datetime
-
-    log_path = ps.root / "invocations.log"
-    with log_path.open("w", encoding="utf-8") as f:
-        for skill in skills_in_order:
-            f.write(json.dumps({"skill": skill, "status": "OK", "ts": datetime.now(UTC).isoformat()}) + "\n")
-
-    proj_id = store.root.name
-    result = await server.call_tool("avancar_pipeline", arguments={"project_id": proj_id})
-    assert result is not None
 
 
 # ── tool: aprovar_versao ──────────────────────────────────────────────────────
@@ -627,64 +493,8 @@ async def test_iniciar_orcamento_generic_exception(server, server_env):
     assert result is not None
 
 
-@pytest.mark.asyncio
-async def test_avancar_pipeline_malformed_log_line(server, server_env):
-    """avancar_pipeline handles malformed JSON in invocations log (lines 241-242)."""
-
-    projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "MalformedLog", "test")
-    store.new_version()
-    es = store.create_escopo(
-        escopo_id="esc-1",
-        nome="Escopo Principal",
-        tipo_obra="terraplenagem",
-        localizacao="Aracoiaba, CE",
-        coordenadas_lat=-4.36,
-        coordenadas_lng=-38.74,
-        data_inicio="2026-06-01",
-        data_termino="2026-12-31",
-    )
-    ps = es.create_plan("plano-principal")
-
-    # Write a malformed JSON line so the JSONDecodeError path is covered
-    log_path = ps.root / "invocations.log"
-    log_path.write_text("this is not valid json\n", encoding="utf-8")
-
-    proj_id = store.root.name
-    result = await server.call_tool("avancar_pipeline", arguments={"project_id": proj_id})
-    assert result is not None
 
 
-@pytest.mark.asyncio
-async def test_avancar_pipeline_generic_exception_from_skill(server, server_env):
-    """avancar_pipeline catches generic Exception from run_skill (lines 253-254)."""
-    from unittest.mock import MagicMock, patch
-
-    projects_path = server_env["projects_path"]
-    store = ProjectStore.init(projects_path, "GenExcPipe", "test")
-    store.new_version()
-    es = store.create_escopo(
-        escopo_id="esc-1",
-        nome="Escopo Principal",
-        tipo_obra="terraplenagem",
-        localizacao="Aracoiaba, CE",
-        coordenadas_lat=-4.36,
-        coordenadas_lng=-38.74,
-        data_inicio="2026-06-01",
-        data_termino="2026-12-31",
-    )
-    es.create_plan("plano-principal")
-    proj_id = store.root.name
-
-    with patch("concilium.presentation.mcp.tools.pipeline._lifecycle_coordinator") as mock_lc_fn:
-        mock_coord = MagicMock()
-        mock_lc_fn.return_value = mock_coord
-        mock_coord.avancar_plano.side_effect = ValueError("unexpected error")
-        result = await server.call_tool(
-            "avancar_pipeline",
-            arguments={"project_id": proj_id, "skill_id": "01-escopo-e-eap"},
-        )
-    assert result is not None
 
 
 @pytest.mark.asyncio

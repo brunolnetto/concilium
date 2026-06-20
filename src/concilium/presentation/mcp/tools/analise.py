@@ -32,7 +32,7 @@ def register(server: FastMCP) -> None:
             return {"erro": str(e)}
 
         if not canonical:
-            return {"erro": "Plano sem dados canônicos. Execute avancar_pipeline primeiro."}
+            return {"erro": "Plano sem dados canônicos. Execute disparar_pipeline primeiro."}
 
         res = canonical.resultado
         return _wrap_response(
@@ -113,7 +113,7 @@ def register(server: FastMCP) -> None:
             return {"erro": str(e)}
 
         if not canonical:
-            return {"erro": "Plano sem dados canônicos. Execute avancar_pipeline primeiro."}
+            return {"erro": "Plano sem dados canônicos. Execute disparar_pipeline primeiro."}
         if not (getattr(canonical, "contratos_recurso", None) or getattr(canonical, "instancias_recurso", None)):
             return {"erro": "Sem pool de recursos neste plano (rcpsp_spec ausente em skill-05)."}
 

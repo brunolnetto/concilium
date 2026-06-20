@@ -160,50 +160,10 @@ def register(server: FastMCP) -> None:
         except ValueError as exc:
             return _wrap_response({"erro": str(exc)})
 
-    # ── 4c. Avançar pipeline (síncrono — DEPRECATED) ─────────────────────────
-    @server.tool()
-    @permission("project:run")
-    @mcp_rate_limit()
-    def avancar_pipeline(
-        project_id: str,
-        skill_id: str | None = None,
-        inputs: dict[str, Any] | None = None,
-        escopo_id: str | None = None,
-        plano_id: str | None = None,
-    ) -> dict[str, Any]:
-        """[DEPRECATED] Executa a próxima skill pendente do pipeline (BLOQUEANTE).
-
-        ⚠️ ATENÇÃO: Esta tool é SÍNCRONA e pode bloquear o cliente MCP por 30-120s.
-        Use disparar_pipeline() + consultar_job_pipeline() para execução assíncrona.
-
-        Args:
-            project_id: ID do projeto (vindo de listar_projetos ou iniciar_orcamento)
-            skill_id: Opcional. ID da skill a executar. Se omitido, escolhe automaticamente
-                      a próxima na sequência canônica.
-            inputs: Inputs específicos da skill. Cronograma requer num_equipes_por_item.
-            escopo_id: ID do escopo (ADR-031). Auto-inferido se único.
-            plano_id: ID do plano (ADR-031). Auto-inferido se escopo tiver plano ativo único.
-
-        Returns:
-            skill_executada, status, validacoes, próxima_sugerida
-        """
-        rt = _runtime()
-        store = _project(project_id)
-
-        from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
-
-        eid = _resolve_escopo_id(store, escopo_id)
-        es = store.escopo(eid)
-        resolved_plano = plano_id
-        if resolved_plano is None:
-            active = es.active_plan()
-            if active is None:
-                return _wrap_response(
-                    {"error": (f"Nenhum plano ativo no escopo '{eid}'. Use criar_plano antes de avancar_pipeline.")}
-                )
-            resolved_plano = active.plano_id
-        ps = es.plan(resolved_plano)
-        return _run_pipeline_on_plano(rt, store, ps, skill_id, inputs or {})
+    # ── 4c. avancar_pipeline REMOVIDA (ADR-116) ──────────────────────────────
+    # Era síncrona/bloqueante e estava [DEPRECATED]. Substituída por
+    # disparar_pipeline() (async) + consultar_job_pipeline(). O helper
+    # _run_pipeline_on_plano permanece — usado pelo job worker async.
 
 
 # ── ADR-031: helper para executar pipeline em PlanoStore ──────────────────────

@@ -224,6 +224,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [113](adr-113-desacoplamento-pipeline-otimizacao.md) | Tiers OLTP/OLAP de Skills — Planejamento (01-06) separado de Análise/Artefatos (07-11); renumeração 09→10, 10→07, 11→08, 12→09, 13→11; PipelineMode enum | ✅ Implementado 2026-06-19 _(14 testes, 8505 passed)_ | ADR-022, ADR-036, ADR-050, ADR-070, ADR-102 |
 | [114](adr-114-golden-example-avaliacao.md) | Golden Example de Avaliação — benchmark sintético GOLDEN calibrado; invariantes algébricos + regressão; clarificou margem=preço operacional (não catálogo) | ✅ Implementado 2026-06-19 _(F1-F4 · 17 testes)_ | ADR-043, ADR-085, ADR-044, ADR-090, ADR-060 |
 | [115](adr-115-rfx-semantica-procurement-no-concilium.md) | Semântica RFI/RFP/RFQ no Concilium — intent→PipelineMode (RFI→OLTP, RFP→OLAP, RFQ→LIGHT), validação de baseline RFQ, CLI --intent, bloco rfx no report | ✅ Implementado 2026-06-20 _(F1-F3,F5; F4 parcial · 18 testes)_ | ADR-043, ADR-050, ADR-102, ADR-113, ADR-114 |
+| [116](adr-116-mcp-tool-surface-cleanup.md) | Limpeza da Superfície de Tools MCP — remove duplicatas benchmark legado + avancar_pipeline deprecada (55→52); teste de governança (teto, sem-duplicatas, cobertura RBAC) | ✅ Implementado 2026-06-20 _(F1-F4; consolidação catalogo/tributacao deferida)_ | ADR-037, ADR-099, ADR-102, ADR-043 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 

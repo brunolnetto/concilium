@@ -13,7 +13,7 @@ Uso nas tools MCP:
 
     @server.tool()
     @permission("project:run")
-    def avancar_pipeline(...):
+    def disparar_pipeline(...):
         ...  # lógica da ferramenta
 
 O decorator @permission lê _current_roles (setado por set_roles() no

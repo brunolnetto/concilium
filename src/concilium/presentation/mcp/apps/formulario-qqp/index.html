@@ -390,7 +390,7 @@ async function criarProjeto() {
           <div class="text-sm"><span class="font-mono bg-green-100 px-2 py-0.5 rounded">${result.project_id}</span>
           versão ${result.version || 'v1'}</div>
           ${result.nota ? `<div class="text-xs mt-2 opacity-75">${result.nota}</div>` : ''}
-          <div class="text-xs mt-2">Use <code>avancar_pipeline(project_id="${result.project_id}")</code> para executar as skills.</div>
+          <div class="text-xs mt-2">Use <code>disparar_pipeline(project_id="${result.project_id}")</code> para executar as skills.</div>
         </div>
       `, 'green');
     } else if (result?.status === 'pendente_mapeamento') {

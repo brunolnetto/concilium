@@ -215,7 +215,7 @@ def _derivar_inputs_01A(rt: Runtime, store: ProjectStore, version: str) -> dict[
         Equipamentos -> 'EQUIP-{equip_id}'  (ex: 'EQUIP-ESCAV-HID-38T')
         Funções/MO   -> 'FUNC-{funcao_id}'  (ex: 'FUNC-OPER-ESCAV-HID')
 
-    Usado por avancar_pipeline quando o agente não fornece inputs explícitos.
+    Usado pelo pipeline (disparar_pipeline) quando o agente não fornece inputs explícitos.
     """
     canonical = store.load_canonical(version)
     if canonical is None:

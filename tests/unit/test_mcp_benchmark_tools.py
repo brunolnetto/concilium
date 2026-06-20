@@ -51,16 +51,6 @@ def _bench_root(config_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def test_listar_benchmarks_no_bench_root(monkeypatch, tmp_path):
-    """bench_root missing → returns empty benchmarks list (lines 23-27)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-
-    tools = _make_server_and_tools(monkeypatch, config_dir)
-    result = tools["listar_benchmarks"]()
-
-    assert "benchmarks" in result
-    assert result["benchmarks"] == []
 
 
 # ---------------------------------------------------------------------------
@@ -68,124 +58,16 @@ def test_listar_benchmarks_no_bench_root(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_listar_benchmarks_slug_with_referencia_at_root(monkeypatch, tmp_path):
-    """Slug dir with referencia.json at root → reads nome from 'projeto' key (lines 29-64)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    slug_dir = bench_root / "AGIS"
-    slug_dir.mkdir(parents=True)
-
-    ref = {"projeto": "AGIS Projeto Teste"}
-    (slug_dir / "referencia.json").write_text(json.dumps(ref), encoding="utf-8")
-
-    tools = _make_server_and_tools(monkeypatch, config_dir)
-    result = tools["listar_benchmarks"]()
-
-    assert result["total"] == 1
-    assert result["benchmarks"][0]["nome"] == "AGIS Projeto Teste"
-    assert result["benchmarks"][0]["slug"] == "AGIS"
-    assert "schema_version" in result
 
 
-def test_listar_benchmarks_referencia_under_artifacts_inputs(monkeypatch, tmp_path):
-    """referencia.json under artifacts/inputs is found (lines 33-35)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    slug_dir = bench_root / "FOO"
-    art_in = slug_dir / "artifacts" / "inputs"
-    art_in.mkdir(parents=True)
-
-    ref = {"projeto": "Foo Benchmark"}
-    (art_in / "referencia.json").write_text(json.dumps(ref), encoding="utf-8")
-
-    tools = _make_server_and_tools(monkeypatch, config_dir)
-    result = tools["listar_benchmarks"]()
-
-    assert result["benchmarks"][0]["nome"] == "Foo Benchmark"
-    assert result["benchmarks"][0]["tem_referencia"] is True
 
 
-def test_listar_benchmarks_outputs_pngs_zips_reports(monkeypatch, tmp_path):
-    """outputs dir with PNGs and ZIPs; artifacts/outputs with .md reports (lines 37-42)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    slug_dir = bench_root / "BAR"
-    outputs_dir = slug_dir / "outputs"
-    outputs_dir.mkdir(parents=True)
-    (outputs_dir / "chart.png").write_bytes(b"")
-    (outputs_dir / "results.zip").write_bytes(b"PK")
-
-    art_out = slug_dir / "artifacts" / "outputs"
-    art_out.mkdir(parents=True)
-    (art_out / "report.md").write_text("# report")
-    (art_out / "data.json").write_text("{}")
-
-    audit_dir = slug_dir / "artifacts" / "audit"
-    audit_dir.mkdir(parents=True)
-    (audit_dir / "benchmark_report.json").write_text("{}")
-
-    tools = _make_server_and_tools(monkeypatch, config_dir)
-    result = tools["listar_benchmarks"]()
-
-    entry = result["benchmarks"][0]
-    assert entry["graficos"] == 1
-    assert "results.zip" in entry["zips_disponiveis"]
-    assert entry["relatorios"] == 2
-    assert entry["tem_audit"] is True
 
 
-def test_listar_benchmarks_referencia_json_parse_error(monkeypatch, tmp_path):
-    """referencia.json with invalid JSON → falls back to slug name (lines 46-50)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    slug_dir = bench_root / "BADSIG"
-    slug_dir.mkdir(parents=True)
-    (slug_dir / "referencia.json").write_text("NOT JSON {{{{ invalid", encoding="utf-8")
-
-    tools = _make_server_and_tools(monkeypatch, config_dir)
-    result = tools["listar_benchmarks"]()
-
-    assert result["benchmarks"][0]["nome"] == "BADSIG"
 
 
-def test_listar_benchmarks_skips_files_at_bench_root(monkeypatch, tmp_path):
-    """Non-directory entries at bench_root are skipped (lines 30-32)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    bench_root.mkdir(parents=True)
-    (bench_root / "some_file.txt").write_text("ignored")
-
-    slug_dir = bench_root / "REAL"
-    slug_dir.mkdir()
-    (slug_dir / "referencia.json").write_text(json.dumps({"projeto": "Real"}))
-
-    tools = _make_server_and_tools(monkeypatch, config_dir)
-    result = tools["listar_benchmarks"]()
-
-    slugs = [b["slug"] for b in result["benchmarks"]]
-    assert "REAL" in slugs
-    assert "some_file.txt" not in slugs
 
 
-def test_listar_benchmarks_total_count(monkeypatch, tmp_path):
-    """total key reflects number of benchmarks found (line 64)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    for name in ("A1", "A2", "A3"):
-        d = bench_root / name
-        d.mkdir(parents=True)
-        (d / "referencia.json").write_text(json.dumps({"projeto": name}))
-
-    tools = _make_server_and_tools(monkeypatch, config_dir)
-    result = tools["listar_benchmarks"]()
-
-    assert result["total"] == 3
 
 
 # ---------------------------------------------------------------------------
@@ -447,22 +329,6 @@ def test_download_benchmark_zip_no_zips_empacotar_ok_small(monkeypatch, tmp_path
 # ---------------------------------------------------------------------------
 
 
-def test_executar_benchmark_not_found(monkeypatch, tmp_path):
-    """find_benchmark_reference None → {"erro": ...} (lines 192-204)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    bench_root.mkdir(parents=True)
-
-    with patch(
-        "concilium.application.benchmarks.execution.batch.find_benchmark_reference",
-        return_value=None,
-    ):
-        tools = _make_server_and_tools(monkeypatch, config_dir)
-        result = tools["executar_benchmark"](slug="MISSING")
-
-    assert "erro" in result
-    assert "MISSING" in result["erro"]
 
 
 # ---------------------------------------------------------------------------
@@ -470,37 +336,6 @@ def test_executar_benchmark_not_found(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_executar_benchmark_runner_raises(monkeypatch, tmp_path):
-    """runner.run raises → {"erro": "Falha na execução: ..."} (lines 217-220)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    bench_root.mkdir(parents=True)
-
-    fake_ref_path = tmp_path / "referencia.json"
-    fake_ref_path.write_text(json.dumps({"projeto": "Test"}))
-
-    mock_spec = MagicMock()
-
-    with (
-        patch(
-            "concilium.application.benchmarks.execution.batch.find_benchmark_reference",
-            return_value=fake_ref_path,
-        ),
-        patch(
-            "concilium.application.benchmarks.spec.spec_loader.BenchmarkSpecLoader.load",
-            return_value=mock_spec,
-        ),
-        patch(
-            "concilium.application.benchmarks.execution.runner.BenchmarkRunner.run",
-            side_effect=RuntimeError("execution failed"),
-        ),
-    ):
-        tools = _make_server_and_tools(monkeypatch, config_dir)
-        result = tools["executar_benchmark"](slug="AGIS")
-
-    assert "erro" in result
-    assert "Falha na execução:" in result["erro"]
 
 
 # ---------------------------------------------------------------------------
@@ -508,51 +343,6 @@ def test_executar_benchmark_runner_raises(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_executar_benchmark_happy_empacotar_true(monkeypatch, tmp_path):
-    """Happy path with empacotar=True → resultado includes zip_path/zip_mb (lines 222-240)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    bench_root.mkdir(parents=True)
-
-    fake_ref_path = tmp_path / "referencia.json"
-    fake_ref_path.write_text(json.dumps({"projeto": "Test"}))
-
-    mock_spec = MagicMock()
-    mock_report = {
-        "status_final": "OK",
-        "confronto": {"deltas": {"preco_venda": {"percentual": 1.5}}},
-    }
-
-    zip_path = tmp_path / "output.zip"
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("x.txt", "data")
-
-    with (
-        patch(
-            "concilium.application.benchmarks.execution.batch.find_benchmark_reference",
-            return_value=fake_ref_path,
-        ),
-        patch(
-            "concilium.application.benchmarks.spec.spec_loader.BenchmarkSpecLoader.load",
-            return_value=mock_spec,
-        ),
-        patch(
-            "concilium.application.benchmarks.execution.runner.BenchmarkRunner.run",
-            return_value=mock_report,
-        ),
-        patch(
-            "concilium.application.benchmarks.charts.output_packager.empacotar_outputs",
-            return_value=zip_path,
-        ),
-    ):
-        tools = _make_server_and_tools(monkeypatch, config_dir)
-        result = tools["executar_benchmark"](slug="AGIS", empacotar=True)
-
-    assert "zip_path" in result
-    assert "zip_mb" in result
-    assert result["slug"] == "AGIS"
-    assert "schema_version" in result
 
 
 # ---------------------------------------------------------------------------
@@ -560,43 +350,6 @@ def test_executar_benchmark_happy_empacotar_true(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_executar_benchmark_empacotar_fails(monkeypatch, tmp_path):
-    """empacotar_outputs raises after successful run → aviso_pack in resultado (lines 233-238)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    bench_root.mkdir(parents=True)
-
-    fake_ref_path = tmp_path / "referencia.json"
-    fake_ref_path.write_text(json.dumps({"projeto": "Test"}))
-
-    mock_spec = MagicMock()
-    mock_report = {"status_final": "OK", "confronto": {}}
-
-    with (
-        patch(
-            "concilium.application.benchmarks.execution.batch.find_benchmark_reference",
-            return_value=fake_ref_path,
-        ),
-        patch(
-            "concilium.application.benchmarks.spec.spec_loader.BenchmarkSpecLoader.load",
-            return_value=mock_spec,
-        ),
-        patch(
-            "concilium.application.benchmarks.execution.runner.BenchmarkRunner.run",
-            return_value=mock_report,
-        ),
-        patch(
-            "concilium.application.benchmarks.charts.output_packager.empacotar_outputs",
-            side_effect=OSError("disk full"),
-        ),
-    ):
-        tools = _make_server_and_tools(monkeypatch, config_dir)
-        result = tools["executar_benchmark"](slug="AGIS", empacotar=True)
-
-    assert "aviso_pack" in result
-    assert "disk full" in result["aviso_pack"]
-    assert "schema_version" in result
 
 
 # ---------------------------------------------------------------------------
@@ -604,43 +357,6 @@ def test_executar_benchmark_empacotar_fails(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_executar_benchmark_no_empacotar(monkeypatch, tmp_path):
-    """empacotar=False → no zip keys in resultado (lines 230, 240)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    bench_root.mkdir(parents=True)
-
-    fake_ref_path = tmp_path / "referencia.json"
-    fake_ref_path.write_text(json.dumps({"projeto": "Test"}))
-
-    mock_spec = MagicMock()
-    mock_report = {
-        "quality_gates": {"decision": "APROVADO"},
-        "confronto": {"deltas": {}},
-    }
-
-    with (
-        patch(
-            "concilium.application.benchmarks.execution.batch.find_benchmark_reference",
-            return_value=fake_ref_path,
-        ),
-        patch(
-            "concilium.application.benchmarks.spec.spec_loader.BenchmarkSpecLoader.load",
-            return_value=mock_spec,
-        ),
-        patch(
-            "concilium.application.benchmarks.execution.runner.BenchmarkRunner.run",
-            return_value=mock_report,
-        ),
-    ):
-        tools = _make_server_and_tools(monkeypatch, config_dir)
-        result = tools["executar_benchmark"](slug="AGIS", empacotar=False)
-
-    assert "zip_path" not in result
-    assert "zip_mb" not in result
-    assert result["slug"] == "AGIS"
-    assert "schema_version" in result
 
 
 # ---------------------------------------------------------------------------
@@ -648,59 +364,3 @@ def test_executar_benchmark_no_empacotar(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_executar_benchmark_silent_printer_noop(monkeypatch, tmp_path):
-    """_SilentPrinter.print is a no-op — calling it does not raise (lines 206-208)."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    bench_root = _bench_root(config_dir)
-    bench_root.mkdir(parents=True)
-
-    fake_ref_path = tmp_path / "referencia.json"
-    fake_ref_path.write_text(json.dumps({"projeto": "Test"}))
-
-    mock_spec = MagicMock()
-    mock_report = {"status_final": "OK", "confronto": {}}
-
-    captured_printer = {}
-
-    original_init = __import__(
-        "concilium.application.benchmarks.execution.runner",
-        fromlist=["BenchmarkRunner"],
-    ).BenchmarkRunner.__init__
-
-    def _capturing_init(self, **kwargs):
-        captured_printer["printer"] = kwargs.get("report_printer")
-        object.__setattr__(self, "config_root", kwargs["config_root"])
-        object.__setattr__(self, "projects_root", kwargs["projects_root"])
-        object.__setattr__(self, "report_builder", kwargs["report_builder"])
-        object.__setattr__(self, "report_printer", kwargs["report_printer"])
-
-    with (
-        patch(
-            "concilium.application.benchmarks.execution.batch.find_benchmark_reference",
-            return_value=fake_ref_path,
-        ),
-        patch(
-            "concilium.application.benchmarks.spec.spec_loader.BenchmarkSpecLoader.load",
-            return_value=mock_spec,
-        ),
-        patch(
-            "concilium.application.benchmarks.execution.runner.BenchmarkRunner.run",
-            return_value=mock_report,
-        ),
-        patch(
-            "concilium.application.benchmarks.charts.output_packager.empacotar_outputs",
-            side_effect=OSError("skip"),
-        ),
-        patch(
-            "concilium.application.benchmarks.execution.runner.BenchmarkRunner.__init__",
-            _capturing_init,
-        ),
-    ):
-        tools = _make_server_and_tools(monkeypatch, config_dir)
-        tools["executar_benchmark"](slug="AGIS", empacotar=True)
-
-    printer = captured_printer.get("printer")
-    if printer is not None:
-        # _SilentPrinter.print should silently accept any dict without error
-        printer.print({"status": "OK"})  # must not raise

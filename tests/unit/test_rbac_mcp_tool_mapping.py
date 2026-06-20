@@ -13,40 +13,68 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────────────────────────────────────
 
 ALL_TOOL_NAMES = [
     # analise
-    "auditar_plano", "comparar_planos", "explorar_pool_recursos",
+    "auditar_plano",
+    "comparar_planos",
+    "explorar_pool_recursos",
     # artifacts
-    "listar_artefatos_projeto", "ler_artefato_texto", "baixar_artefato_binario", "baixar_bundle_zip",
-    # benchmark
-    "listar_benchmarks", "empacotar_benchmark", "download_benchmark_zip", "executar_benchmark",
+    "listar_artefatos_projeto",
+    "ler_artefato_texto",
+    "baixar_artefato_binario",
+    "baixar_bundle_zip",
+    # benchmark (ADR-116: listar_benchmarks/executar_benchmark removidas — dup de nep039)
+    "empacotar_benchmark",
+    "download_benchmark_zip",
     # benchmark_nep039
-    "consultar_benchmark", "listar_benchmarks_nep039", "executar_benchmark_nep039",
-    "editar_benchmark", "marcar_benchmark_imutavel", "comparar_execucoes_benchmark",
+    "consultar_benchmark",
+    "listar_benchmarks_nep039",
+    "executar_benchmark_nep039",
+    "editar_benchmark",
+    "marcar_benchmark_imutavel",
+    "comparar_execucoes_benchmark",
     # campaign
-    "explorar_configuracoes_go", "listar_runs_campanha", "obter_resultado_campanha",
+    "explorar_configuracoes_go",
+    "listar_runs_campanha",
+    "obter_resultado_campanha",
     # catalogo
-    "listar_contextos", "pesquisar_catalogo", "consultar_saude_catalogo",
-    "avaliar_plausibilidade_catalogo", "verificar_integridade_catalogo",
-    "atualizar_preco_insumo", "adicionar_variante_producao",
-    "consultar_preco_insumo_temporal", "tendencia_precos_catalogo",
-    "comparar_rfi_catalogo", "calcular_pu_producao",
-    "listar_versoes_catalogo", "comparar_versoes_catalogo",
+    "listar_contextos",
+    "pesquisar_catalogo",
+    "consultar_saude_catalogo",
+    "avaliar_plausibilidade_catalogo",
+    "verificar_integridade_catalogo",
+    "atualizar_preco_insumo",
+    "adicionar_variante_producao",
+    "consultar_preco_insumo_temporal",
+    "tendencia_precos_catalogo",
+    "comparar_rfi_catalogo",
+    "calcular_pu_producao",
+    "listar_versoes_catalogo",
+    "comparar_versoes_catalogo",
     # escopo
-    "consultar_estrutura_projeto", "configurar_escopo", "gerenciar_plano",
+    "consultar_estrutura_projeto",
+    "configurar_escopo",
+    "gerenciar_plano",
     # formulario
     "criar_projeto_formulario",
     # pipeline
-    "disparar_pipeline", "consultar_job_pipeline", "listar_jobs_pipeline",
-    "obter_estatisticas_jobs", "cancelar_job_pipeline", "avancar_pipeline",
+    "disparar_pipeline",
+    "consultar_job_pipeline",
+    "listar_jobs_pipeline",
+    "obter_estatisticas_jobs",
+    "cancelar_job_pipeline",
+    # (ADR-116: avancar_pipeline removida — deprecada, substituída por disparar_pipeline)
     # projeto
-    "listar_projetos", "iniciar_orcamento", "consultar_status",
-    "aprovar_versao", "nova_versao", "salvar_perfil_bdi",
+    "listar_projetos",
+    "iniciar_orcamento",
+    "consultar_status",
+    "aprovar_versao",
+    "nova_versao",
+    "salvar_perfil_bdi",
     # replan
     "simular_cenario_replan",
     # spec
@@ -54,7 +82,9 @@ ALL_TOOL_NAMES = [
     # system
     "ping",
     # tributacao
-    "calcular_custo_empregador_clt", "calcular_inss_empregado", "calcular_irrf",
+    "calcular_custo_empregador_clt",
+    "calcular_inss_empregado",
+    "calcular_irrf",
 ]
 
 
@@ -62,25 +92,32 @@ ALL_TOOL_NAMES = [
 # F1: TOOL_PERMISSIONS cobre todas as tools
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestToolPermissionsCoverage:
     """TOOL_PERMISSIONS deve mapear todas as 55 tools MCP."""
 
     def test_all_tools_have_entry_in_tool_permissions(self):
         from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+
         missing = [t for t in ALL_TOOL_NAMES if t not in TOOL_PERMISSIONS]
-        assert not missing, (
-            f"{len(missing)} tools sem entrada em TOOL_PERMISSIONS:\n  " +
-            "\n  ".join(sorted(missing))
-        )
+        assert not missing, f"{len(missing)} tools sem entrada em TOOL_PERMISSIONS:\n  " + "\n  ".join(sorted(missing))
 
     def test_tool_permissions_values_are_valid_permissions(self):
         """Cada valor em TOOL_PERMISSIONS deve ser uma permission string conhecida."""
         from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+
         valid_perms = {
-            "project:read", "project:create", "project:run", "project:approve",
-            "catalog:read", "catalog:write",
-            "artifacts:read", "artifacts:download",
-            "financials:read", "auth:manage", "system:read",
+            "project:read",
+            "project:create",
+            "project:run",
+            "project:approve",
+            "catalog:read",
+            "catalog:write",
+            "artifacts:read",
+            "artifacts:download",
+            "financials:read",
+            "auth:manage",
+            "system:read",
         }
         invalid = {k: v for k, v in TOOL_PERMISSIONS.items() if v not in valid_perms}
         assert not invalid, f"Permissões inválidas: {invalid}"
@@ -88,11 +125,17 @@ class TestToolPermissionsCoverage:
     def test_write_tools_require_at_least_operator_permission(self):
         """Tools que modificam dados não devem exigir apenas catalog:read ou project:read."""
         from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS
+
         write_tools = {
-            "iniciar_orcamento", "criar_projeto_formulario", "criar_projeto_spec",
-            "disparar_pipeline", "avancar_pipeline", "executar_benchmark",
-            "atualizar_preco_insumo", "adicionar_variante_producao",
-            "aprovar_versao", "marcar_benchmark_imutavel",
+            "iniciar_orcamento",
+            "criar_projeto_formulario",
+            "criar_projeto_spec",
+            "disparar_pipeline",
+            "executar_benchmark_nep039",
+            "atualizar_preco_insumo",
+            "adicionar_variante_producao",
+            "aprovar_versao",
+            "marcar_benchmark_imutavel",
         }
         read_only = {"project:read", "catalog:read", "artifacts:read", "system:read"}
         for tool in write_tools:
@@ -106,6 +149,7 @@ class TestToolPermissionsCoverage:
 # ─────────────────────────────────────────────────────────────────────────────
 # F2: validate_tool_coverage() detecta gaps
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestValidateToolCoverage:
     """validate_tool_coverage(server) detecta tools registradas sem mapeamento."""
@@ -122,13 +166,15 @@ class TestValidateToolCoverage:
         return server
 
     def test_returns_empty_when_all_tools_mapped(self):
-        from concilium.infrastructure.auth.permission_guard import validate_tool_coverage, TOOL_PERMISSIONS
+        from concilium.infrastructure.auth.permission_guard import TOOL_PERMISSIONS, validate_tool_coverage
+
         server = self._make_server(list(TOOL_PERMISSIONS.keys())[:5])
         missing = validate_tool_coverage(server)
         assert missing == []
 
     def test_returns_unmapped_tools(self):
         from concilium.infrastructure.auth.permission_guard import validate_tool_coverage
+
         server = self._make_server(["ferramenta_nova_sem_permissao"])
         missing = validate_tool_coverage(server)
         assert "ferramenta_nova_sem_permissao" in missing
@@ -137,6 +183,7 @@ class TestValidateToolCoverage:
 # ─────────────────────────────────────────────────────────────────────────────
 # F3: patch_mcp_auth_permissions() enforcement
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestPatchMcpAuthPermissions:
     """patch_mcp_auth_permissions() envolve tools com verificação de permissão."""
@@ -155,10 +202,16 @@ class TestPatchMcpAuthPermissions:
     def test_authorized_call_passes_through(self):
         """operator pode chamar disparar_pipeline (project:run)."""
         from concilium.infrastructure.auth.permission_guard import (
-            patch_mcp_auth_permissions, set_roles, _current_roles,
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
         )
+
         result_holder = []
-        def fn(): result_holder.append("called")
+
+        def fn():
+            result_holder.append("called")
+
         fn.__name__ = "disparar_pipeline"
         server = self._make_server_with_tool("disparar_pipeline", fn)
         patch_mcp_auth_permissions(server)
@@ -173,9 +226,14 @@ class TestPatchMcpAuthPermissions:
     def test_unauthorized_call_raises_permission_error(self):
         """viewer não pode chamar disparar_pipeline (project:run) quando auth ativo."""
         from concilium.infrastructure.auth.permission_guard import (
-            patch_mcp_auth_permissions, set_roles, _current_roles,
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
         )
-        def fn(): pass
+
+        def fn():
+            pass
+
         fn.__name__ = "disparar_pipeline"
         server = self._make_server_with_tool("disparar_pipeline", fn)
         patch_mcp_auth_permissions(server)
@@ -190,10 +248,16 @@ class TestPatchMcpAuthPermissions:
     def test_viewer_can_call_read_tool(self):
         """viewer pode chamar listar_projetos (project:read)."""
         from concilium.infrastructure.auth.permission_guard import (
-            patch_mcp_auth_permissions, set_roles, _current_roles,
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
         )
+
         result_holder = []
-        def fn(): result_holder.append("read_ok")
+
+        def fn():
+            result_holder.append("read_ok")
+
         fn.__name__ = "listar_projetos"
         server = self._make_server_with_tool("listar_projetos", fn)
         patch_mcp_auth_permissions(server)
@@ -207,10 +271,16 @@ class TestPatchMcpAuthPermissions:
     def test_unmapped_tool_defaults_to_project_read(self):
         """Tool sem mapeamento exige project:read como mínimo."""
         from concilium.infrastructure.auth.permission_guard import (
-            patch_mcp_auth_permissions, set_roles, _current_roles,
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
         )
+
         result_holder = []
-        def fn(): result_holder.append("default_perm")
+
+        def fn():
+            result_holder.append("default_perm")
+
         fn.__name__ = "tool_nova_sem_mapeamento"
         server = self._make_server_with_tool("tool_nova_sem_mapeamento", fn)
         patch_mcp_auth_permissions(server)

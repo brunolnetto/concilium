@@ -17,11 +17,27 @@ NOTAS_VIABILIDADE = {
 
 # Replanejamento
 PROXIMOS_PASSOS_REPLAN = [
-    "avancar_pipeline('{project_id}', '06-resultado-financeiro') para recomputar precificação+indiretos+consolidação",
-    "avancar_pipeline('{project_id}', '11-replanejamento-e-cenarios') para reanalisar sugestões e cenários",
-    "avancar_pipeline('{project_id}', '10-relatorio-e-artefatos') para gerar relatório final",
+    "disparar_pipeline('{project_id}', skill_id='06-resultado-financeiro') para recomputar precificação+indiretos+consolidação",
+    "disparar_pipeline('{project_id}', skill_id='11-replanejamento-e-cenarios') para reanalisar sugestões e cenários",
+    "disparar_pipeline('{project_id}', skill_id='10-relatorio-e-artefatos') para gerar relatório final",
 ]
 
 # Mensagens de Erro Comuns
 ERR_NO_ACTIVE_VERSION = "Nenhuma versão ativa encontrada para o projeto."
 ERR_CANONICAL_NOT_FOUND = "Modelo canônico não encontrado para a versão solicitada."
+
+# Procurement Intent (ADR-115)
+NOTAS_RFX = {
+    "rfi": (
+        "RFI: fase exploratória. Priorize custo de catálogo (PU x quantitativo) "
+        "para comparação inicial, sem concluir compra."
+    ),
+    "rfp": (
+        "RFP: fase comparativa técnico-econômica. Considere cronograma, clima e "
+        "tempo não-produtivo (custo operacional tende a ser maior que catálogo puro)."
+    ),
+    "rfq": (
+        "RFQ: fase de fechamento comercial. Exija baseline congelada e detalhamento "
+        "de itens/quantidades para cotação final."
+    ),
+}

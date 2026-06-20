@@ -142,78 +142,75 @@ def _auth_enabled() -> bool:
 
 TOOL_PERMISSIONS: dict[str, str] = {
     # ── Leitura (viewer) ──────────────────────────────────────────────────────
-    "listar_projetos":                  PROJECT_READ,
-    "consultar_status":                 PROJECT_READ,
-    "comparar_planos":                  PROJECT_READ,
-    "explorar_pool_recursos":           PROJECT_READ,
-    "listar_benchmarks":                PROJECT_READ,
-    "consultar_benchmark":              PROJECT_READ,
-    "listar_benchmarks_nep039":         PROJECT_READ,
-    "comparar_execucoes_benchmark":     PROJECT_READ,
-    "listar_runs_campanha":             PROJECT_READ,
-    "consultar_estrutura_projeto":      PROJECT_READ,
-    "consultar_job_pipeline":           PROJECT_READ,
-    "listar_jobs_pipeline":             PROJECT_READ,
-    "obter_estatisticas_jobs":          PROJECT_READ,
+    "listar_projetos": PROJECT_READ,
+    "consultar_status": PROJECT_READ,
+    "comparar_planos": PROJECT_READ,
+    "explorar_pool_recursos": PROJECT_READ,
+    "consultar_benchmark": PROJECT_READ,
+    "listar_benchmarks_nep039": PROJECT_READ,
+    "comparar_execucoes_benchmark": PROJECT_READ,
+    "listar_runs_campanha": PROJECT_READ,
+    "consultar_estrutura_projeto": PROJECT_READ,
+    "consultar_job_pipeline": PROJECT_READ,
+    "listar_jobs_pipeline": PROJECT_READ,
+    "obter_estatisticas_jobs": PROJECT_READ,
     # ── Catálogo leitura (viewer) ─────────────────────────────────────────────
-    "listar_contextos":                 CATALOG_READ,
-    "pesquisar_catalogo":               CATALOG_READ,
-    "listar_cpus":                      CATALOG_READ,
-    "buscar_cpu":                       CATALOG_READ,
-    "derivar_recursos_do_catalogo":     CATALOG_READ,
-    "consultar_saude_catalogo":         CATALOG_READ,
-    "avaliar_plausibilidade_catalogo":  CATALOG_READ,
-    "verificar_integridade_catalogo":   CATALOG_READ,
-    "consultar_preco_insumo_temporal":  CATALOG_READ,
-    "tendencia_precos_catalogo":        CATALOG_READ,
-    "calcular_pu_producao":             CATALOG_READ,
-    "listar_versoes_catalogo":          CATALOG_READ,
-    "comparar_versoes_catalogo":        CATALOG_READ,
+    "listar_contextos": CATALOG_READ,
+    "pesquisar_catalogo": CATALOG_READ,
+    "listar_cpus": CATALOG_READ,
+    "buscar_cpu": CATALOG_READ,
+    "derivar_recursos_do_catalogo": CATALOG_READ,
+    "consultar_saude_catalogo": CATALOG_READ,
+    "avaliar_plausibilidade_catalogo": CATALOG_READ,
+    "verificar_integridade_catalogo": CATALOG_READ,
+    "consultar_preco_insumo_temporal": CATALOG_READ,
+    "tendencia_precos_catalogo": CATALOG_READ,
+    "calcular_pu_producao": CATALOG_READ,
+    "listar_versoes_catalogo": CATALOG_READ,
+    "comparar_versoes_catalogo": CATALOG_READ,
     # ── Tributação (viewer — informacional) ───────────────────────────────────
-    "calcular_custo_empregador_clt":    CATALOG_READ,
-    "calcular_inss_empregado":          CATALOG_READ,
-    "calcular_irrf":                    CATALOG_READ,
+    "calcular_custo_empregador_clt": CATALOG_READ,
+    "calcular_inss_empregado": CATALOG_READ,
+    "calcular_irrf": CATALOG_READ,
     # ── Sistema (admin) ───────────────────────────────────────────────────────
-    "ping":                             SYSTEM_READ,
+    "ping": SYSTEM_READ,
     # ── Artefatos leitura ─────────────────────────────────────────────────────
-    "listar_artefatos_projeto":         ARTIFACTS_READ,
-    "auditar_plano":                    ARTIFACTS_READ,
+    "listar_artefatos_projeto": ARTIFACTS_READ,
+    "auditar_plano": ARTIFACTS_READ,
     # ── Financeiros (auditor/operator) ────────────────────────────────────────
-    "consultar_viabilidade_prazo":      FINANCIALS_READ,
-    "identificar_gargalos_recurso":     FINANCIALS_READ,
-    "obter_resultado_campanha":         FINANCIALS_READ,
-    "comparar_rfi_catalogo":            FINANCIALS_READ,
+    "consultar_viabilidade_prazo": FINANCIALS_READ,
+    "identificar_gargalos_recurso": FINANCIALS_READ,
+    "obter_resultado_campanha": FINANCIALS_READ,
+    "comparar_rfi_catalogo": FINANCIALS_READ,
     # ── Download (operator) ───────────────────────────────────────────────────
-    "ler_artefato":                     ARTIFACTS_DOWNLOAD,
-    "ler_artefato_texto":               ARTIFACTS_DOWNLOAD,
-    "baixar_artefato_binario":          ARTIFACTS_DOWNLOAD,
-    "baixar_bundle_zip":                ARTIFACTS_DOWNLOAD,
-    "download_benchmark_zip":           ARTIFACTS_DOWNLOAD,
+    "ler_artefato": ARTIFACTS_DOWNLOAD,
+    "ler_artefato_texto": ARTIFACTS_DOWNLOAD,
+    "baixar_artefato_binario": ARTIFACTS_DOWNLOAD,
+    "baixar_bundle_zip": ARTIFACTS_DOWNLOAD,
+    "download_benchmark_zip": ARTIFACTS_DOWNLOAD,
     # ── Criação (operator) ────────────────────────────────────────────────────
-    "criar_projeto_formulario":         PROJECT_CREATE,
-    "criar_projeto_spec":               PROJECT_CREATE,
-    "iniciar_orcamento":                PROJECT_CREATE,
-    "nova_versao":                      PROJECT_CREATE,
-    "configurar_escopo":                PROJECT_CREATE,
-    "gerenciar_plano":                  PROJECT_CREATE,
+    "criar_projeto_formulario": PROJECT_CREATE,
+    "criar_projeto_spec": PROJECT_CREATE,
+    "iniciar_orcamento": PROJECT_CREATE,
+    "nova_versao": PROJECT_CREATE,
+    "configurar_escopo": PROJECT_CREATE,
+    "gerenciar_plano": PROJECT_CREATE,
     # ── Execução (operator) ───────────────────────────────────────────────────
-    "disparar_pipeline":                PROJECT_RUN,
-    "avancar_pipeline":                 PROJECT_RUN,
-    "cancelar_job_pipeline":            PROJECT_RUN,
-    "executar_benchmark":               PROJECT_RUN,
-    "executar_benchmark_nep039":        PROJECT_RUN,
-    "empacotar_benchmark":              PROJECT_RUN,
-    "explorar_configuracoes_go":        PROJECT_RUN,
-    "simular_cenario_replan":           PROJECT_RUN,
-    "salvar_perfil_bdi":                PROJECT_RUN,
-    "editar_benchmark":                 PROJECT_RUN,
-    "simular_impacto_replan":           PROJECT_RUN,
-    "aplicar_sugestao_replan":          PROJECT_RUN,
+    "disparar_pipeline": PROJECT_RUN,
+    "cancelar_job_pipeline": PROJECT_RUN,
+    "executar_benchmark_nep039": PROJECT_RUN,
+    "empacotar_benchmark": PROJECT_RUN,
+    "explorar_configuracoes_go": PROJECT_RUN,
+    "simular_cenario_replan": PROJECT_RUN,
+    "salvar_perfil_bdi": PROJECT_RUN,
+    "editar_benchmark": PROJECT_RUN,
+    "simular_impacto_replan": PROJECT_RUN,
+    "aplicar_sugestao_replan": PROJECT_RUN,
     # ── Aprovação / Escrita catálogo (engineer) ───────────────────────────────
-    "aprovar_versao":                   PROJECT_APPROVE,
-    "marcar_benchmark_imutavel":        PROJECT_APPROVE,
-    "atualizar_preco_insumo":           CATALOG_WRITE,
-    "adicionar_variante_producao":      CATALOG_WRITE,
+    "aprovar_versao": PROJECT_APPROVE,
+    "marcar_benchmark_imutavel": PROJECT_APPROVE,
+    "atualizar_preco_insumo": CATALOG_WRITE,
+    "adicionar_variante_producao": CATALOG_WRITE,
 }
 
 
@@ -332,9 +329,10 @@ def validate_tool_coverage(server: Any) -> list[str]:
     missing = [name for name in tools if name not in TOOL_PERMISSIONS]
     if missing:
         _guard_log.warning(
-            "RBAC: %d tool(s) sem mapeamento em TOOL_PERMISSIONS: %s — "
-            "será aplicada permissão padrão '%s'",
-            len(missing), missing, _DEFAULT_TOOL_PERMISSION,
+            "RBAC: %d tool(s) sem mapeamento em TOOL_PERMISSIONS: %s — será aplicada permissão padrão '%s'",
+            len(missing),
+            missing,
+            _DEFAULT_TOOL_PERMISSION,
         )
     return missing
 
@@ -373,6 +371,7 @@ def patch_mcp_auth_permissions(server: Any) -> None:
                             "Solicite ao admin o role adequado."
                         )
                 return fn(*args, **kwargs)
+
             return _auth_wrapper
 
         tool.fn = _make_wrapper(original_fn, required_perm)
