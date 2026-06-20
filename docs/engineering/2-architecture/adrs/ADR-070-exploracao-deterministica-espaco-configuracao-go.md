@@ -1,9 +1,27 @@
 # ADR-070: Exploração Determinística do Espaço de Configuração Operacional para Viabilidade de GO
 
-**Status:** ⚠️ Parcialmente Implementado — reavaliado 2026-06-11  
+**Status:** ⚠️ Parcialmente Implementado — núcleo entregue via ADR-108/109 _(reclassificado 2026-06-19)_  
 **Data original:** 2026-05-23  
 **Reavaliação:** 2026-06-11 — correção de status + mapeamento ao estado atual + path revisado  
-**Relacionado:** ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061, NEP-042, NEP-043
+**Relacionado:** ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061, ADR-108, ADR-109, ADR-113, NEP-042, NEP-043
+
+---
+
+## Reclassificação 2026-06-19 (backlog cleanup)
+
+Não é "bug abandonado" — é feature cujo **núcleo foi entregue depois** por outros ADRs:
+
+| Componente ADR-070 | Entregue por | Estado |
+|---|---|---|
+| `GoResearchCampaignBundle` (contrato tipado) | ADR-108/109 | ✅ `domain/models/campaign/campaign.py` |
+| Sweep paramétrico (produto cartesiano) | ADR-109 | ✅ cardinalidade + discretizações |
+| Modo de execução leve para exploração | ADR-113 | ✅ `PipelineMode.OLTP` (campanha não gera artefatos) |
+| Curadoria Pareto formal (F3) | — | 🔴 deferido — ranking heurístico atual é suficiente para uso real |
+| Separação formal espaços O × EF/F (D8) | — | 🔴 deferido |
+
+**Decisão:** O valor central do ADR-070 (exploração paramétrica de campanha) está
+operacional. As partes não entregues (Pareto bi-espaço) são refinamento sem demanda
+concreta. Mantido como ⚠️ Parcial; **sem trabalho ativo planejado** até surgir caso de uso.
 
 ---
 

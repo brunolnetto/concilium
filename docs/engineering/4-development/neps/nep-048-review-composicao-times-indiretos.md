@@ -1,9 +1,23 @@
 # NEP-048 — Review: Composição de Times Indiretos
 
 **Data:** 2026-06-19  
-**Status:** Parcialmente corrigido  
+**Status:** ✅ Fechado — B1/B2 curados; B3/B4 deprecados como limitações aceitas _(2026-06-19)_  
 **Contexto:** Revisão da lógica de times indiretos (skill-06/_skill_helpers_b.py)  
 **Relacionado:** ADR-009 (Indirect Costs as First-Class), ADR-090 (BDI Sistemático), ADR-105 (Mob/Demob)
+
+---
+
+## Decisão de fechamento (2026-06-19)
+
+- **B1, B2:** ✅ **Curados** — `mob_result` conectado; `custo*0.15` → `custo` real.
+- **B3** (`custo_pessoa_mes=1850` legado): ⬜ **Deprecado como limitação aceita.** Só
+  dispara no path legado sem `IndirectoCategoria`. Projetos atuais usam o path novo.
+  Não há demanda para derivar do catálogo enquanto o legado não for reativado.
+- **B4** (`_comp_custo` mistura `custo_total`/`custo_fixo_mensal`): ⬜ **Deprecado como
+  limitação estrutural conhecida.** Mitigado pela correção de 2026-06-11 (resíduo→verba).
+  Cura completa exige refatorar `IndirectoCategoria` para carregar duração nos componentes
+  — escopo de ADR próprio, sem demanda concreta. Documentado para não recorrer ao
+  diagnóstico do zero.
 
 ---
 

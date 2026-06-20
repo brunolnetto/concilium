@@ -1,8 +1,45 @@
 # NEP-043 — Reconciliação C_r: Custo Operacional de Equipe deve ser idêntico ao PU de Catálogo
 
-**Status:** ABERTO  
-**Prioridade:** ALTA — causa divergência de 3.4× entre `custo_execucao_pool` e `PU×Q` no benchmark  
-**Relacionado:** NEP-029 (calibração operacional↔catálogo), ADR-106 (LifecycleEngine)
+**Status:** ✅ Resolvido — com revisão de premissa _(2026-06-19)_  
+**Prioridade:** ~~ALTA~~ — divergência metodológica curada; resíduo é eficiência de pool legítima (ADR-085)  
+**Relacionado:** NEP-029 (calibração operacional↔catálogo), ADR-106 (LifecycleEngine), ADR-085 (Custo Instancial), ADR-114 (Golden invariante)
+
+---
+
+## Resolução (2026-06-19)
+
+Os três bugs documentados foram **curados** em trabalho subsequente:
+
+| Bug | Fix aplicado | Onde |
+|---|---|---|
+| 1 — ADR-091 divide sem compensar | `custo_total × num_equipes_base` na consolidação | `_consolidacao/_skill_helpers_a.py:95` (comentário NEP-043) |
+| 2 — encargos ausentes em skill-06 | skill-06 usa `encargo_resolver.resolver_encargo()` | `_indiretos/_skill_helpers_a.py:208` |
+| 3 — `custo_hora_total_referencia` ambíguo | `custo_inst_*` separa custo por frente; `num_equipes_base` aplicado | `_consolidacao/_skill_helpers_a.py:486` |
+
+**Evidência:** `test_cost_decomposition_adr104::test_agis_custo_direto_matches_reference`
+passa com `custo_direto = 16.5M` (antes 22M divergente).
+
+### Revisão de premissa (importante)
+
+O título original exige **igualdade** (`custo_operacional = PU×Q`). Após o **ADR-085**
+(Custo Instancial Composicional-Temporal), a relação correta é **desigualdade**:
+
+```
+custo_instancial ≤ custo_catálogo (Σ PU×Q)
+```
+
+O gap residual NÃO é bug — é a **eficiência de pool** (compartilhamento de recursos entre
+atividades reduz o custo real abaixo da soma dos PU standalone). Esse invariante está
+codificado como teste vivo no **ADR-114 Golden Example** (invariante 6:
+`custo.direto_equipes ≤ Σ subtotal_sem_bdi`).
+
+A divergência de 3.4× original era bug (n_frentes + encargos); o gap legítimo pós-fix é
+muito menor e representa economia real de pool. **Esta NEP está fechada**; a vigilância
+contínua é feita pelo golden invariante, não por uma meta de igualdade exata.
+
+---
+
+## Histórico original (pré-resolução)
 
 ---
 

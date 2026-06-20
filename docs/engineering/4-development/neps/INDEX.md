@@ -70,12 +70,12 @@
 | [040](nep-040-implementacao-decomposicao-instancial-custos.md) | Implementação da Decomposição Instancial (`custo_inst_*`) | ✅ Implementado | 🔴 Crítico | Auditado 2026-06-08 |
 | [041](nep-041-consolidacao-skills-analise-saida.md) | Consolidação de Skills de Análise, Saída e Financeiro (09+15, 13+14, 06+07+08, freeze 11+12) | ✅ Implementado | 🟠 Alto | Fases 1-4 ✅ (2026-06-11): pipeline 15→11 skills; gate AGIS paridade exata; Fase 5 (re-enumeração cosmética) deferida |
 | [042](nep-042-modelo-tres-camadas-precificacao.md) | Modelo de Três Camadas de Precificação — PU_cat, PU_op_autonomo, burden_pool | ✅ Implementado | 🟠 Alto | D1-D3 campos no PontoEquilibrio; D4 view PRECO_UNITARIO_TRES_CAMADAS no relatório (2026-06-10) |
-| [043](nep-043-reconciliacao-cr-custo-operacional-pu-catalogo.md) | Reconciliação C_r: custo operacional de equipe deve ser idêntico ao PU de catálogo | 💡 Proposta | 🔴 Crítico | 3 bugs: ADR-091 n_frentes sem compensar, encargos ausentes em skill-06, custo_hora_total_referencia ambíguo. Usar encargo_resolver.py como fonte única. |
+| [043](nep-043-reconciliacao-cr-custo-operacional-pu-catalogo.md) | Reconciliação C_r: custo operacional de equipe vs PU de catálogo | ✅ Resolvido | 🔴 Crítico | 3 bugs curados (n_frentes, encargos skill-06, custo_hora_total_referencia); premissa de igualdade revisada → `instancial ≤ catálogo` (ADR-085); vigiado por golden ADR-114 (2026-06-19) |
 | [044](nep-044-cpsat-requisito-sem-fallback-silencioso.md) | CP-SAT como requisito: falha explícita em vez de fallback silencioso | ✅ Implementado | 🟠 Alto | `explore_schedules()` agora lança `ScheduleError` em vez de cair no MINSLK silenciosamente (2026-06-12) |
 | [045](nep-045-remocao-milp-scheduler-legado.md) | Remoção do MILPScheduler (código morto) | ✅ Implementado | 🟡 Baixo | milp.py removido; skill-04, skill-13, CLI e testes limpos (2026-06-12) |
 | [046](nep-046-lns-metricas-reais.md) | Métricas reais no LNS (remover _simple_metrics trivial) | ✅ Implementado | 🟠 Médio | leveling/idle/utilization reais via resource_usage de _ssgs() (2026-06-12) |
 | [047](nep-047-ramp-profiles-lns-completion.md) | Ramp profiles (ADR-074): completar suporte no LNS | ✅ Implementado | 🟠 Médio | _find_start e _book_resources usam _lns_demand_at_offset; CP-SAT conservador documentado (2026-06-12) |
-| [048](nep-048-review-composicao-times-indiretos.md) | Review composição times indiretos: MOB mob_schedule dead-code + custo×0.15 | ⚠️ Parcial | 🟠 Médio | B1/B2 corrigidos (mob_result conectado); B3/B4 documentados como limitações (2026-06-19) |
+| [048](nep-048-review-composicao-times-indiretos.md) | Review composição times indiretos: MOB mob_schedule dead-code + custo×0.15 | ✅ Fechado | 🟠 Médio | B1/B2 curados; B3/B4 deprecados como limitações aceitas (2026-06-19) |
 
 ---
 
