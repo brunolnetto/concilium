@@ -7,13 +7,15 @@ import pytest
 
 from concilium.presentation.mcp.server import build_server
 
+pytestmark = pytest.mark.slow  # build_server() leva ~1.5–2.5s por instância
+
 # ── Conjunto canônico de tools (atualizar aqui quando adicionar novas) ─────────
 # sistema (1): ping
 # catalogo (5): listar_contextos, pesquisar_catalogo, consultar_saude_catalogo,
 #               atualizar_preco_insumo, adicionar_variante_producao
 # projeto (6): listar_projetos, iniciar_orcamento, consultar_status,
 #              aprovar_versao, nova_versao, salvar_perfil_bdi
-# pipeline (1): avancar_pipeline
+# pipeline (1): disparar_pipeline  [avancar_pipeline removida — ADR-116]
 # analise (2): auditar_plano, comparar_planos
 # replan (1): simular_cenario_replan  [aplicar_sugestao_replan removido — era stub]
 # escopo (3): consultar_estrutura_projeto, configurar_escopo, gerenciar_plano
@@ -33,8 +35,8 @@ TOOLS_ESPERADAS = {
     "aprovar_versao",
     "nova_versao",
     "salvar_perfil_bdi",
-    # pipeline
-    "avancar_pipeline",
+    # pipeline (ADR-116: avancar_pipeline removida, substituída por disparar_pipeline)
+    "disparar_pipeline",
     # analise
     "auditar_plano",
     "comparar_planos",
@@ -148,7 +150,7 @@ class TestMCPSmoke:
             ToolError = Exception
         try:
             result = await server_with_config.call_tool(
-                "avancar_pipeline",
+                "disparar_pipeline",
                 arguments={"project_id": "smoke-inexistente"},
             )
             assert result is not None  # não levantou exceção

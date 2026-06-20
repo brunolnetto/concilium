@@ -196,6 +196,7 @@ class TestCommandsRunHelpers:
 # ─── presentation/mcp/server.py ───────────────────────────────────────────────
 
 
+@pytest.mark.slow
 class TestMcpServer:
     def test_build_server_returns_server(self):
         from concilium.presentation.mcp.server import build_server

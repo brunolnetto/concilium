@@ -6,6 +6,8 @@ from typing import Any
 
 import pytest
 
+pytestmark = pytest.mark.slow  # fixtures session-scoped rodam pipeline completo
+
 # ── Fixtures: Usamos diretamente as session-scoped do conftest.py ──────
 # Sem fixtures intermediárias para evitar recriação desnecessária
 

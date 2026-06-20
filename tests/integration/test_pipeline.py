@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
+pytestmark = pytest.mark.slow  # runs full pipeline / copytree fixtures
+
 from concilium.application.runtime import Runtime
 from concilium.infrastructure.storage.project import ProjectStore
 
@@ -328,7 +330,7 @@ class TestPipelineAnalitico:
     """Testa dispatch via Runtime para skills 07-12, persistência de artefatos e log."""
 
     def test_08_criticality_popula_canonical(self, runtime, projeto_analitico):
-        r = runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
+        r = runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
         assert not r.has_errors
 
         can = projeto_analitico.load_canonical()
@@ -336,8 +338,8 @@ class TestPipelineAnalitico:
         assert "critical_path" in can.criticality_report
 
     def test_09_cost_criticality_popula_canonical(self, runtime, projeto_analitico):
-        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
-        r = runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
+        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
+        r = runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
         assert not r.has_errors
 
         can = projeto_analitico.load_canonical()
@@ -345,8 +347,8 @@ class TestPipelineAnalitico:
         assert len(can.cost_criticality_report.atividades) > 0
 
     def test_10_intervention_roi_popula_canonical(self, runtime, projeto_analitico):
-        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
-        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
+        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
+        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
         intervencoes = [
             {
                 "intervencao_id": "iv-01",
@@ -358,7 +360,7 @@ class TestPipelineAnalitico:
             }
         ]
         r = runtime.run_skill(
-            "11-avaliacao-intervencoes",
+            "08-avaliacao-intervencoes",
             projeto_analitico,
             inputs={"intervencoes_propostas": intervencoes},
         )
@@ -369,8 +371,8 @@ class TestPipelineAnalitico:
         assert len(can.intervention_assessments) == 1
 
     def test_11_decision_log_persiste_json(self, runtime, projeto_analitico):
-        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
-        runtime.run_skill("10-diagnostico-criticidade", projeto_analitico, inputs={})
+        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
+        runtime.run_skill("07-diagnostico-criticidade", projeto_analitico, inputs={})
         decision_inputs = {
             "objective": "Aumentar margem para faixa verde (≥10%)",
             "considered_interventions": [
@@ -385,7 +387,7 @@ class TestPipelineAnalitico:
             "decided_by": {"type": "ENGENHEIRO", "id": "eng-bruno"},
             "expected_outcome": {"margem": 0.10, "prazo_dias": 214},
         }
-        r = runtime.run_skill("12-registro-decisoes", projeto_analitico, inputs=decision_inputs)
+        r = runtime.run_skill("09-registro-decisoes", projeto_analitico, inputs=decision_inputs)
         assert not r.has_errors
 
         v = projeto_analitico.current_version()
@@ -407,8 +409,8 @@ class TestPipelineAnalitico:
         shutil.copytree(sk09_proj.root, dest)
         proj = ProjectStore(dest)
 
-        runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
-        runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
+        runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
+        runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
 
         intervencoes = [
             {
@@ -421,7 +423,7 @@ class TestPipelineAnalitico:
             }
         ]
         runtime.run_skill(
-            "11-avaliacao-intervencoes",
+            "08-avaliacao-intervencoes",
             proj,
             inputs={"intervencoes_propostas": intervencoes},
         )
@@ -435,7 +437,7 @@ class TestPipelineAnalitico:
             "justification": {"rationale": "Custo adicional de subcontratação não se paga na margem atual"},
             "decided_by": {"type": "GESTOR", "id": "gest-01"},
         }
-        runtime.run_skill("12-registro-decisoes", proj, inputs=decision_inputs)
+        runtime.run_skill("09-registro-decisoes", proj, inputs=decision_inputs)
 
         log_text = (proj.root / "v1" / "invocations.log").read_text()
         n_inv = len([line for line in log_text.strip().splitlines() if line])

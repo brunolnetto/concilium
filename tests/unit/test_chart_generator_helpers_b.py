@@ -518,6 +518,7 @@ class TestChartGanttMocked:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow
 class TestChartGanttRealMatplotlib:
     """Integration tests using the real matplotlib Agg backend."""
 
