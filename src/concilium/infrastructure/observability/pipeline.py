@@ -15,7 +15,7 @@ from typing import Any
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
 from .checkpoint_store import Checkpoint, CheckpointStore
-from .silver_normalizer import normalize_log_record, normalize_span_record, normalize_metric_record
+from .silver_normalizer import normalize_log_record, normalize_metric_record, normalize_span_record
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,8 @@ _BRONZE_PREFIX = "observability/bronze"
 _SILVER_PREFIX = "observability/silver"
 
 _NORMALIZERS = {
-    "logs":    normalize_log_record,
-    "traces":  normalize_span_record,
+    "logs": normalize_log_record,
+    "traces": normalize_span_record,
     "metrics": normalize_metric_record,
 }
 
@@ -158,15 +158,113 @@ class ObservabilityWorker:
             self._upsert_silver(signal_type, normalized)
             records_processed += len(raw_records)
             current_total += len(raw_records)
-            self._checkpoints.save(Checkpoint(
-                signal_type=signal_type,
-                last_processed_path=blob_path,
-                last_processed_ts=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                records_processed=current_total,
-            ))
+            self._checkpoints.save(
+                Checkpoint(
+                    signal_type=signal_type,
+                    last_processed_path=blob_path,
+                    last_processed_ts=datetime.datetime.now(datetime.UTC).isoformat(),
+                    records_processed=current_total,
+                )
+            )
 
         logger.info(
             "Observability pipeline: %d blobs, %d records (%s)",
-            len(new_blobs), records_processed, signal_type,
+            len(new_blobs),
+            records_processed,
+            signal_type,
         )
         return {"blobs_processed": len(new_blobs), "records_processed": records_processed}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ObservabilityScheduler — ADR-112 F7
+# Ciclo time-gated: Bronze→Silver a cada 15min, Silver→Gold a cada 1h.
+# Idempotente; a cadência real (cron ACI) é configuração de deploy — esta classe
+# decide o que rodar com base nos timestamps do último ciclo (via CheckpointStore).
+# ─────────────────────────────────────────────────────────────────────────────
+
+_SCHED_SILVER = "_scheduler_silver"
+_SCHED_GOLD = "_scheduler_gold"
+_SIGNAL_TYPES = ("logs", "traces", "metrics")
+
+
+class ObservabilityScheduler:
+    """Orquestra os estágios da pipeline conforme cadência (F7).
+
+    Args:
+        silver_interval_min: intervalo mínimo entre execuções Bronze→Silver (default 15).
+        gold_interval_min:   intervalo mínimo entre execuções Silver→Gold (default 60).
+    """
+
+    def __init__(
+        self,
+        storage: BlobStoragePort,
+        silver_interval_min: int = 15,
+        gold_interval_min: int = 60,
+    ):
+        self._storage = storage
+        self._checkpoints = CheckpointStore(storage)
+        self.silver_interval_min = silver_interval_min
+        self.gold_interval_min = gold_interval_min
+
+    def _last_run(self, marker: str) -> datetime.datetime | None:
+        cp = self._checkpoints.load(marker)
+        if cp and cp.last_processed_ts:
+            try:
+                return datetime.datetime.fromisoformat(cp.last_processed_ts)
+            except ValueError:
+                return None
+        return None
+
+    def _mark_run(self, marker: str, now: datetime.datetime, records: int = 0) -> None:
+        self._checkpoints.save(
+            Checkpoint(
+                signal_type=marker,
+                last_processed_path="",
+                last_processed_ts=now.isoformat(),
+                records_processed=records,
+            )
+        )
+
+    @staticmethod
+    def _elapsed_min(last: datetime.datetime | None, now: datetime.datetime) -> float:
+        if last is None:
+            return float("inf")
+        return (now - last).total_seconds() / 60.0
+
+    def run_cycle(self, now: datetime.datetime | None = None) -> dict[str, Any]:
+        """Executa um ciclo. Roda Silver e/ou Gold conforme intervalos decorridos.
+
+        Returns:
+            {"silver_ran": bool, "gold_ran": bool, "silver_records": int}
+        """
+        if now is None:
+            now = datetime.datetime.now(datetime.UTC)
+
+        result: dict[str, Any] = {"silver_ran": False, "gold_ran": False, "silver_records": 0}
+
+        # Bronze → Silver (cadência rápida)
+        if self._elapsed_min(self._last_run(_SCHED_SILVER), now) >= self.silver_interval_min:
+            worker = ObservabilityWorker(self._storage)
+            total = 0
+            for sig in _SIGNAL_TYPES:
+                try:
+                    total += worker.run(signal_type=sig).get("records_processed", 0)
+                except Exception as e:
+                    logger.warning("Scheduler: falha em Silver(%s): %s", sig, e, exc_info=True)
+            self._mark_run(_SCHED_SILVER, now, total)
+            result["silver_ran"] = True
+            result["silver_records"] = total
+
+        # Silver → Gold (cadência lenta)
+        if self._elapsed_min(self._last_run(_SCHED_GOLD), now) >= self.gold_interval_min:
+            try:
+                from .gold_aggregator import GoldAggregator
+
+                GoldAggregator(self._storage).write_gold()
+                self._mark_run(_SCHED_GOLD, now)
+                result["gold_ran"] = True
+            except Exception as e:
+                logger.warning("Scheduler: falha em Gold: %s", e, exc_info=True)
+
+        return result

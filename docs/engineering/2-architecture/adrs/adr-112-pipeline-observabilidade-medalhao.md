@@ -1,6 +1,6 @@
 # ADR-112 — Pipeline Assíncrona de Observabilidade: Arquitetura Medalhão com Backfill-Incremental
 
-**Status:** Parcialmente Implementado _(F1–F6 ✅ 2026-06-19 · TDD · 40 testes · F7-F8 pendentes)_  
+**Status:** Implementado ✅ _(F1–F8 2026-06-19 · TDD · 51 testes)_  
 **Data:** 2026-06-18  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-095 (OTel), ADR-111 (Logging Bridge), ADR-047 (Blob Storage), ADR-096 (Deploy Azure)
@@ -258,10 +258,19 @@ Isso mantém o servidor da API sem overhead de processamento de observabilidade 
 | F4 | `ObservabilityWorker`: fast-forward, upsert por event_id, full-reload | ✅ 2026-06-19 |
 | F5 | `gold_aggregator.py`: DuckDB → `sli_diario`, `fallback_rate_por_skill`, `alertas_ativos` | ✅ 2026-06-19 |
 | F6 | CLI command `concilium observability run/status/report` | ✅ 2026-06-19 |
-| F7 | Job ACI periódico: 15min Bronze→Silver, 1h Silver→Gold | ⬜ Pendente |
-| F8 | Cross-domain Gold: JOIN observabilidade × canonical por `project_id + run_date` | ⬜ Pendente |
+| F7 | `ObservabilityScheduler.run_cycle()` time-gated (15min Silver, 1h Gold) + CLI `observability cycle` | ✅ 2026-06-19 |
+| F8 | `CrossDomainBuilder`: fallback_rate por projeto ⋈ canonical (custo_direto, margem) + CLI `cross-domain` | ✅ 2026-06-19 |
 
 **Invariante:** cada fase tem teste de integração local (sem Azure) usando mock BlobStorage.
+
+### Nota de implementação F7 (cadência vs. infra)
+
+`ObservabilityScheduler.run_cycle(now)` é **time-gated e idempotente**: decide o que rodar com
+base nos timestamps do último ciclo (persistidos via `CheckpointStore` em markers
+`_scheduler_silver`/`_scheduler_gold`). A **cadência real** (cron job no ACI) é configuração de
+deploy — o ACI invoca `concilium ops observability cycle` a cada poucos minutos e o scheduler
+decide internamente se executa Silver (≥15min) e/ou Gold (≥1h). Isso evita um daemon Python
+de longa duração e mantém o ciclo testável com `now` injetável.
 
 ---
 

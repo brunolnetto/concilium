@@ -27,6 +27,7 @@ _SIGNAL_TYPES = ["logs", "traces", "metrics"]
 
 def _get_storage():
     from concilium.infrastructure.observability.pipeline import _make_storage
+
     return _make_storage()
 
 
@@ -128,3 +129,53 @@ def show_report() -> None:
             rprint(f"  [red]• {a['tipo']}[/red] skill={a.get('skill_id')} date={a.get('date')}")
     else:
         rprint("\n[green]✓ Nenhum alerta ativo[/green]")
+
+
+@observability_app.command("cycle")
+def run_cycle() -> None:
+    """Executa um ciclo do scheduler (ADR-112 F7): Bronze→Silver (15min) + Silver→Gold (1h).
+
+    Idempotente e time-gated — seguro chamar via cron/ACI a cada poucos minutos.
+    A cadência real é configurada no scheduler de deploy (ACI cron job).
+    """
+    from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+    storage = _get_storage()
+    result = ObservabilityScheduler(storage).run_cycle()
+    silver = "✓" if result["silver_ran"] else "—"
+    gold = "✓" if result["gold_ran"] else "—"
+    rprint(f"[cyan]Ciclo de observabilidade:[/cyan]")
+    rprint(f"  Silver (Bronze→Silver): [{'green' if result['silver_ran'] else 'dim'}]{silver}[/] "
+           f"({result['silver_records']} records)")
+    rprint(f"  Gold (Silver→Gold):     [{'green' if result['gold_ran'] else 'dim'}]{gold}[/]")
+
+
+@observability_app.command("cross-domain")
+def show_cross_domain() -> None:
+    """Cruza fallback_rate por projeto com custo/margem do canonical (ADR-112 F8)."""
+    from concilium.infrastructure.observability.cross_domain import (
+        CrossDomainBuilder,
+        default_canonical_provider,
+    )
+    from concilium.infrastructure.settings import get_storage as _get_settings_storage
+
+    storage = _get_storage()
+    cfg = _get_settings_storage()
+    bench_root = getattr(cfg, "benchmark_projects_root", None) or (
+        (getattr(cfg, "root", None) or ".") and __import__("pathlib").Path(
+            getattr(cfg, "root", ".")
+        ) / "benchmarks" / "projetos"
+    )
+    builder = CrossDomainBuilder(storage, canonical_provider=default_canonical_provider(bench_root))
+    rows = builder.build()
+    if not rows:
+        rprint("[dim]Cross-domain: sem logs Silver com project_id.[/dim]")
+        return
+    t = Table(title="Cross-Domain: Fallback × Resultado Financeiro", show_header=True)
+    for col in ("project_id", "n_fallbacks", "n_total", "fallback_rate", "custo_direto", "margem_pct"):
+        t.add_column(col)
+    for r in rows:
+        t.add_row(*[str(r.get(c, "")) for c in ("project_id", "n_fallbacks", "n_total", "fallback_rate", "custo_direto", "margem_pct")])
+    rprint(t)
+    builder.write()
+    rprint("[dim]Gravado em observability/gold/cross_domain.json[/dim]")
