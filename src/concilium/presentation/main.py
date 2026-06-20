@@ -60,6 +60,11 @@ auth_app = typer.Typer(
     help="Gestão de usuários, dispositivos e tokens JWT.",
     no_args_is_help=True,
 )
+ops_app = typer.Typer(
+    name="ops",
+    help="Operações de infra: auth, observabilidade e migração de storage.",
+    no_args_is_help=True,
+)
 skills_app = typer.Typer(
     name="skills",
     help="Gerenciamento e exportação dos manifests de skills.",
@@ -79,13 +84,15 @@ configuration_app.add_typer(app_jurisdicao)
 from concilium.presentation.cli.commands_blob import blob_app  # noqa: E402
 from concilium.presentation.cli.commands_observability import observability_app  # noqa: E402
 
+ops_app.add_typer(auth_app)
+ops_app.add_typer(observability_app)
+ops_app.add_typer(blob_app)
+
 app.add_typer(catalog_app)
 app.add_typer(project_app)
 app.add_typer(configuration_app)
 app.add_typer(benchmark_app)
-app.add_typer(auth_app)
-app.add_typer(observability_app)
-app.add_typer(blob_app)
+app.add_typer(ops_app)
 
 
 # ── Loaders por grupo ────────────────────────────────────────────────────────
@@ -219,6 +226,10 @@ def _load_auth() -> None:
     auth_app.command("revoke-device")(revoke_device)
 
 
+def _load_devops() -> None:
+    _load_auth()
+
+
 def _load_health() -> None:
     from concilium.presentation.cli import commands_health
 
@@ -244,7 +255,7 @@ def _load_all() -> None:
     _load_project()
     _load_benchmark()
     _load_configuration()
-    _load_auth()
+    _load_devops()
 
     validate_app = typer.Typer(
         name="validate",
@@ -287,7 +298,7 @@ _GROUP_LOADERS = {
     "schedule": _load_schedule,
     "health": _load_health,
     "configuration": _load_configuration,
-    "auth": _load_auth,
+    "devops": _load_devops,
 }
 
 
@@ -334,6 +345,8 @@ def _dispatch() -> None:
     group = non_flags[0] if non_flags else None
 
     loader = _GROUP_LOADERS.get(group)  # type: ignore[arg-type]
+    if loader is None and group in {"auth", "observability", "blob"}:
+        loader = _load_devops
     if loader is not None:
         loader()
     elif group is not None:
