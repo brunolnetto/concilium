@@ -1,19 +1,25 @@
 # ADR-106: EquipeCustoEngine — Lifecycle Unificado para Equipes Diretas e Indiretas
 
-**Status:** Parcialmente Implementado ⚠️ _(F1-F4, F7 ✅ 2026-06-10; F5-F6 deferred; F8 pendente)_  
+**Status:** Implementado ✅ _(F1-F4, F6, F7 entregues; F5 bloqueado por dado de catálogo; F8 → ADR-086. Reconciliado 2026-06-20)_  
 **Data:** 2026-06-08  
 **Autores:** Engenharia de Plataforma  
 
-> **Nota de implementação (2026-06-09):**
-> - ✅ `gap_pool_overhead` refeito para usar idle real das instâncias (não diferença custo),
->   alinhando com a semântica correta: overhead = standby real, não custo de frentes.
-> - ✅ S1 (NEP-029): `_calibrar_custos_por_cref` implementado em skill-05 —
->   base autoritativa para equipes diretas, eliminando divergência autônomo vs pool.
-> - ⚠️ `equipe_custo_engine.py` (F1-F3): NÃO implementado — engine unificado
->   aguarda S2/S3 (NEP-031, NEP-037, ADR-105 completos).
-> - ⚠️ `IndirectTeamCostStrategy` (F4): NÃO implementado.
-> - ⚠️ Mob windows / early dismissal EQ (F5-F6): NÃO implementados.
+> **Reconciliação de status (2026-06-20):** a nota de 2026-06-09 ficou defasada. Estado real verificado no código:
+> - ✅ `equipe_custo_engine.py` (F1): `LifecycleEngine` + `CustoEquipeDecomposicao` implementados e testados (`test_adr106_f1_lifecycle_engine.py`).
+> - ✅ `DirectTeamCostStrategy` (F2) e `IndirectTeamCostStrategy` (F4): implementados e testados.
+> - ✅ `_fill_custo_inst_sem_pool` (F3): integrado em skill-05 (skill.py:322); invariante IC-3 (Σ custo_inst_* ≈ custo_total) garantido por rescaling.
+> - ✅ **F6 (early dismissal EQ)**: funcional no pipeline — `economia_desmobilizacao_antecipada` computado em `_skill_helpers_a.py:2539`; 21 testes passando (`test_adr106_f6_early_dismissal.py`). **Antes marcado deferred; rótulo corrigido.**
+> - ✅ F7: skill-08 usa `custo_inst_*` diretamente.
+> - ⏳ **F5 (mob window)**: engine PRONTO (`leadtime_mob_semanas`/`lag_demob_semanas` em `LifecycleEngine.calcular`) e constantes PRONTAS (`DEFAULT_LEADTIME_MOB_SEMANAS=2`, `DEFAULT_LAG_DEMOB_SEMANAS=1`). Bloqueio é **ausência de dado**: 0 CPUs do catálogo têm `mob_policy.leadtime_mob_semanas`. Ver nota de não-implementação abaixo.
+> - 💡 F8 (face de ocupação no cubo): aguarda extensão do ADR-086.
 **Relacionados:** ADR-079, ADR-080, ADR-085, ADR-104, ADR-105, NEP-040, NEP-031
+
+> **Por que F5 NÃO foi implementado agora (decisão consciente):** conectar o read-path com fallback 0
+> seria código inerte (nenhum benchmark mudaria, pois nenhuma CPU tem `mob_policy`); aplicar os
+> DEFAULT constants automaticamente a todas as equipes (a) quebraria o baseline calibrado do AGIS
+> (16,5M) e (b) **duplicaria o custo MOB**, que já é contabilizado nos indiretos (categoria MOB,
+> ADR-105). F5 deve ser ativado quando o catálogo for populado com `mob_policy` por CPU, junto de
+> uma análise de não-dupla-contagem MOB-direto × MOB-indireto. Engine e constantes ficam prontos.
 
 ---
 
@@ -255,8 +261,8 @@ Rejeitado porque: indiretos são configurados por categoria de projeto, não por
 | **F2** | `DirectTeamCostStrategy`: converte campos mensais de EquipeDireta para taxa semanal e delega para engine | ✅ 2026-06-10 |
 | **F3** | `_fill_custo_inst_sem_pool`: preenche `custo_inst_*` para equipes sem pool; integrado em skill-05 | ✅ 2026-06-10 |
 | **F4** | `IndirectTeamCostStrategy`: parameteriza indiretos para engine (custo_mobilizacao como mob/demob) | ✅ 2026-06-10 |
-| **F5** | Mob window: adicionar `leadtime_mob_semanas` e `lag_demob_semanas` no catálogo e CPU | ⏳ Deferred — aguarda dados de catálogo |
-| **F6** | Early dismissal para EQ de equipes diretas | ⏳ Deferred — aguarda F5 |
+| **F5** | Mob window: `leadtime_mob_semanas`/`lag_demob_semanas` no catálogo e CPU | ⏳ Bloqueado por dado — engine+constantes prontos; 0 CPUs com `mob_policy`. Não ativar sem análise de dupla-contagem MOB direto×indireto |
+| **F6** | Early dismissal para EQ de equipes diretas | ✅ 2026-06-20 — `economia_desmobilizacao_antecipada` no pipeline (skill-05); 21 testes |
 | **F7** | Skill-08 usa `custo_inst_*` diretamente (elimina fallback proporcional) | ✅ 2026-06-10 |
 | **F8** | Cubo do pool: face de ocupação de recursos (timeline mob/demob/utilização) | 💡 Pendente — aguarda ADR-086 extensão |
 
