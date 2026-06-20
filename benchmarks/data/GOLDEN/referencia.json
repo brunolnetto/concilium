@@ -1,9 +1,10 @@
 {
   "$comment": "ADR-114: Golden Example de Avaliação — projeto sintético mínimo com invariantes verificáveis.",
   "$golden_audit": {
-    "versao": "1.1.0",
-    "data_calibracao": "2026-06-19",
+    "versao": "1.2.0",
+    "data_calibracao": "2026-06-20",
     "proposito": "Referência matemática do sistema. Use para onboarding e validação de invariantes.",
+    "$changelog": "1.2.0 (golden update): PU do eap-03 alinhado ao CPU de catálogo REGULARIZACAO-SUBLEITO (4,60→1,3684). O PU hand-set anterior inventava componentes material/mão_obra inexistentes no CPU (composição só equipamento+diesel), divergindo 3,36× do catálogo e disparando VAL-FRENTES-NECESSARIAS-ALTA (ERRO/S0) na skill 06 — o que tornava o GOLDEN INVIAVEL no caminho OLAP e impedia a geração de relatórios. Agora o OLAP completa (APROVADO) e o GOLDEN serve de referência de testes RFX.",
     "invariantes": {
       "1_PU_check": "subtotal_sem_bdi[i] = round(quantitativo[i] * preco_unitario[i].total, 2)",
       "2_PU_componentes": "PU.material + PU.diesel + PU.mao_obra + PU.equipamentos = PU.total",
@@ -21,10 +22,10 @@
     "derivacao_numerica": {
       "item_eap_01": "Q=40000 m³ × PU=6.15 R$/m³ = R$246.000,00",
       "item_eap_02": "Q=30000 m³ × PU=6.00 R$/m³ = R$180.000,00",
-      "item_eap_03": "Q=10000 m² × PU=4.60 R$/m² = R$ 46.000,00",
-      "soma_catalog": "Σ subtotal_sem_bdi = R$472.000,00",
-      "custo_instancial": "custo.direto_equipes = R$472.000,00 (= catálogo; GOLDEN não tem compartilhamento de pool)",
-      "margem_calibrada": "(757.100,90 − 651.075,74) / 757.100,90 = 0,1400 (14,0%) → status AMARELO"
+      "item_eap_03": "Q=10000 m² × PU=1.3684 R$/m² = R$ 13.683,75 (alinhado ao CPU REGULARIZACAO-SUBLEITO)",
+      "soma_catalog": "Σ subtotal_sem_bdi = R$439.683,75",
+      "custo_instancial": "custo.direto_equipes = R$439.683,75 (= catálogo; GOLDEN não tem compartilhamento de pool)",
+      "margem_calibrada": "(721.677,80 − 618.759,49) / 721.677,80 = 0,1426 (14,26%) → status AMARELO"
     }
   },
   "meta": {
@@ -39,7 +40,10 @@
     "tipo_projeto": "hot_project",
     "data_inicio": "2026-07-07",
     "data_termino": "2026-08-30",
-    "regime_trabalho": {"horas_dia": 8, "dias_semana": 6},
+    "regime_trabalho": {
+      "horas_dia": 8,
+      "dias_semana": 6
+    },
     "localizacao": "Brasil"
   },
   "eap": [
@@ -110,50 +114,86 @@
       "item_id": "eap-01",
       "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
       "quantitativo": 40000,
-      "preco_unitario": {"material": 0.0, "diesel": 1.25, "mao_obra": 0.40, "equipamentos": 4.50, "total": 6.15},
+      "preco_unitario": {
+        "material": 0.0,
+        "diesel": 1.25,
+        "mao_obra": 0.4,
+        "equipamentos": 4.5,
+        "total": 6.15
+      },
       "subtotal": {
-        "sem_bdi": {"total": 246000.0},
-        "com_bdi": {"total": 246000.0}
+        "sem_bdi": {
+          "total": 246000.0
+        },
+        "com_bdi": {
+          "total": 246000.0
+        }
       }
     },
     {
       "item_id": "eap-02",
       "cpu_id": "COMPACT-ATERRO-100PN",
       "quantitativo": 30000,
-      "preco_unitario": {"material": 0.0, "diesel": 1.00, "mao_obra": 0.50, "equipamentos": 4.50, "total": 6.00},
+      "preco_unitario": {
+        "material": 0.0,
+        "diesel": 1.0,
+        "mao_obra": 0.5,
+        "equipamentos": 4.5,
+        "total": 6.0
+      },
       "subtotal": {
-        "sem_bdi": {"total": 180000.0},
-        "com_bdi": {"total": 180000.0}
+        "sem_bdi": {
+          "total": 180000.0
+        },
+        "com_bdi": {
+          "total": 180000.0
+        }
       }
     },
     {
       "item_id": "eap-03",
       "cpu_id": "REGULARIZACAO-SUBLEITO",
       "quantitativo": 10000,
-      "preco_unitario": {"material": 0.50, "diesel": 0.80, "mao_obra": 0.30, "equipamentos": 3.00, "total": 4.60},
+      "preco_unitario": {
+        "material": 0.0,
+        "diesel": 0.5068,
+        "mao_obra": 0.0,
+        "equipamentos": 0.8616,
+        "total": 1.3684
+      },
       "subtotal": {
-        "sem_bdi": {"total": 46000.0},
-        "com_bdi": {"total": 46000.0}
+        "sem_bdi": {
+          "total": 13683.75
+        },
+        "com_bdi": {
+          "total": 13683.75
+        }
       }
     }
   ],
   "indiretos": [
-    {"categoria": "ADM", "custo_total": 60000.0},
-    {"categoria": "TOP", "custo_total": 40000.0}
+    {
+      "categoria": "ADM",
+      "custo_total": 60000.0
+    },
+    {
+      "categoria": "TOP",
+      "custo_total": 40000.0
+    }
   ],
   "resultado": {
-    "$nota": "Valores calibrados via pipeline OLAP em 2026-06-19. Atualizar com commit 'golden(update): razão' quando uma mudança arquitetural alterar os números.",
+    "$nota": "Valores calibrados via pipeline OLAP em 2026-06-20 (golden update: eap-03 alinhado ao CPU de catálogo). Atualizar com commit 'golden(update): razão' quando uma mudança arquitetural alterar os números.",
     "venda": {
       "total_sem_bdi": 456781.08,
       "total_com_bdi": 703311.52,
-      "total_custo_plus": 757100.90
+      "total_custo_plus": 721677.8
     },
     "custo": {
-      "direto_equipes": 472000.0,
-      "total": 651075.74
+      "direto_equipes": 439683.75,
+      "total": 618759.49
     },
-    "resultado_financeiro": 106025.16,
-    "margem_pct": 0.1400,
+    "resultado_financeiro": 102918.31,
+    "margem_pct": 0.1426,
     "status_margem": "AMARELO",
     "makespan_weeks": 8,
     "$calibrado": true

@@ -18,18 +18,20 @@ def _artifact_files(artifacts_root: Path) -> set[str]:
 def test_intent_artifacts_match_profile_deliverables(config_root):
     """Cada intent RFX deve materializar ao menos os entregáveis previstos no perfil.
 
-    Pesado: roda o pipeline completo do AGIS 3× (rfi/rfp/rfq) com reset.
+    Usa o GOLDEN (ADR-114) como referência de testes — projeto sintético mínimo
+    e calibrado (3 itens de EAP) cujo propósito é justamente validar invariantes
+    do sistema. Rodar os 3 intents nele leva ~10s (vs ~9min no AGIS real),
+    desacoplando este teste estrutural de dados de cliente.
     """
     root = config_root.parent
     facade = BenchmarkFacade.from_root(root)
 
-    # AGIS é benchmark estável no repositório e já usado em outros testes de integração.
     for intent in ("rfi", "rfp", "rfq"):
-        report = facade.run_single("AGIS", reset=True, procurement_intent=intent)
+        report = facade.run_single("GOLDEN", reset=True, procurement_intent=intent)
         assert report is not None
 
         profile = get_pipeline_profile_for_intent(intent)
-        artifacts_root = root / "benchmarks" / "projetos" / "AGIS" / "artifacts"
+        artifacts_root = root / "benchmarks" / "projetos" / "GOLDEN" / "artifacts"
         files = _artifact_files(artifacts_root)
 
         # Alguns entregáveis podem ser opcionais em dados sintéticos/seed;
