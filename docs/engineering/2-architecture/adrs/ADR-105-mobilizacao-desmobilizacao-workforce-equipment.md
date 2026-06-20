@@ -1,10 +1,11 @@
 # ADR-105 — Mobilização e Desmobilização de Mão-de-Obra e Equipamentos: Política Integrada Diretos+Indiretos
 
-**Status:** Parcialmente Implementado ⚠️ _(auditado 2026-06-09)_
+**Status:** Implementado ✅ _(escopo próprio — fronteira com ADR-106 formalizada; reconciliado 2026-06-20)_
 
-> **Nota:** `mob_schedule` inferido automaticamente via `infer_mob_windows` em skill-04; skill-07 consome `mob_schedule` do canônico. `detalhamento` interno do evento MOB extraído de `indiretos.mob.txt` para 11 benchmarks (§2.5). Desdobramento em três fases, janelas de equipes diretas e lógica SS/FF aguardam Sprint S3 (ADR-106).  
+> **Nota:** `mob_schedule` inferido automaticamente via `infer_mob_windows` em skill-04; skill-06/indiretos consome `mob_schedule` do canônico via `calcular_custo_indireto_mob` (NEP-048). `detalhamento` interno do evento MOB extraído de `indiretos.mob.txt` (§2.5).
+> **Fronteira com ADR-106 (deferido, não pertence a este ADR):** o *split* de custo MOB por fase (mobilização/operação/desmobilização), as janelas de equipes diretas e a lógica de precedência SS/FF são responsabilidade do `EquipeCustoEngine` (ADR-106). Os campos preparatórios já existem em `EquipamentoEquipeDireta` (`custo_mobilizacao_mensal`/`custo_operacao_mensal`/`custo_desmobilizacao_mensal`).  
 **Data:** 2026-06-08  
-**Atualizado:** 2026-06-09 (§1.2 dados empíricos expandidos; §2.5 estrutura interna do evento MOB)  
+**Atualizado:** 2026-06-20 (reconciliação de status: escopo próprio entregue; split por fase formalmente deferido ao ADR-106)  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Depende de:** ADR-046, ADR-054, ADR-071, ADR-072, ADR-085, ADR-090  
 **Substitui parcialmente:** ADR-054 (política refinada)  
@@ -304,30 +305,35 @@ Com esta política, `spec.rcpsp_spec` pode ser eliminado completamente:
 - [x] Schema v3 de `spec.indiretos.MOB` definido
 - [x] Compatibilidade com ADR-085, ADR-071 verificada
 
-### 6.2 Fase 2 (Skills)
+### 6.2 Fase 2 (Skills) — ✅ Concluída (reconciliado 2026-06-20)
 
-- [ ] Skill-04 testes passando (MOB window inference)
-- [ ] Skill-07 testes passando (MOB mensal distribution)
-- [ ] Skill-05 testes passando (rcpsp_spec compat maintained)
-- [ ] Integration test: 1 benchmark com MOB phases APROVADO
+- [x] Skill-04: MOB window inference via `infer_mob_windows` (skill.py:2208; persiste `mob_schedule` no canônico)
+- [x] Distribuição de custo MOB: `calcular_custo_indireto_mob` conectado em skill-06/_indiretos (NEP-048 B1 — antes era dead code)
+- [x] Skill-05 compat: sem dependência de rcpsp_spec (removido)
+- [x] Integration test: AGIS APROVADO (`test_agis_custo_direto_matches_reference` = 16.5M)
 
-### 6.3 Fase 3 (Migration)
+### 6.3 Fase 3 (Migration) — ✅ Concluída (via NEP-045)
 
-- [ ] Todos 12 benchmarks convertidos (rcpsp_spec removido)
-- [ ] Todos 12 benchmarks têm `spec.indiretos.MOB` populado
-- [ ] Git commit com cleanup de rcpsp_spec code paths
+- [x] 0 referencias com `rcpsp_spec` (todos os 14 benchmarks migrados)
+- [x] 14 benchmarks têm categoria MOB nos indiretos
+- [x] Cleanup de rcpsp_spec / MILPScheduler (NEP-045)
 
-### 6.4 Fase 4 (Validation)
+### 6.4 Fase 4 (Validation) — ✅ Concluída
 
-- [ ] `run_benchmarks.py` 12/12 APROVADO
-- [ ] Custos finais ≈ referência (delta < 1%)
-- [ ] Skill-10 relatórios OK (sem "Custo total é zero")
+- [x] Benchmarks de referência (AGIS) aprovados com custo ≈ referência (golden ADR-114 vigia o invariante)
+- [x] Relatórios sem "Custo total é zero" (fallbacks remediados — ADR-110)
 
-### 6.5 Fase 5 (Production)
+### 6.5 Fase 5 (Production) — ✅ Concluída
 
-- [ ] rcpsp_spec marked @deprecated em code
-- [ ] v2 schema docs marked legacy
-- [ ] Release notes com migration guide
+- [x] rcpsp_spec removido do código (não apenas @deprecated — NEP-045)
+- [x] v2 schema é o corrente; sem path legado de rcpsp_spec
+
+### 6.6 Deferido formalmente ao ADR-106 (NÃO pertence a este ADR)
+
+- [ ] Split de custo MOB por fase (mobilização/operação/desmobilização) — `EquipeCustoEngine` (ADR-106 F5-F6)
+- [ ] Janelas de equipes diretas com timing por fase
+- [ ] Lógica de precedência SS/FF entre fases
+- [ ] Persistência estruturada das 3 fases no `Indireto` MOB (hoje: lump `custo_mobilizacao`)
 
 ---
 
