@@ -828,20 +828,21 @@ def _canonical_com_resultado(margem_pct: float = 0.20) -> CanonicalModel:
 class TestSkillAdapterSaidaAgis:
     pytestmark = [pytest.mark.slow]
 
-    def test_gera_todas_secoes(self):
-        can = _canonical_com_resultado()
-        result = run_relatorio_e_artefatos(can, {})
-        assert not result.has_errors
-        rel = result.relatorio
+    @pytest.fixture(scope="class")
+    def _relatorio(self):
+        """Executa run_relatorio_e_artefatos uma vez para toda a classe (margem_pct=0.20)."""
+        return run_relatorio_e_artefatos(_canonical_com_resultado(margem_pct=0.20), {})
+
+    def test_gera_todas_secoes(self, _relatorio):
+        assert not _relatorio.has_errors
+        rel = _relatorio.relatorio
         assert "PLANEJAMENTO" in rel
         assert "EQUIPE" in rel
         assert "RESULTADO" in rel
         assert "INDIRETOS" in rel
 
-    def test_resultado_financeiro_correto(self):
-        can = _canonical_com_resultado(margem_pct=0.20)
-        result = run_relatorio_e_artefatos(can, {})
-        res = result.relatorio["RESULTADO"]
+    def test_resultado_financeiro_correto(self, _relatorio):
+        res = _relatorio.relatorio["RESULTADO"]
         assert res["margem_pct"] == pytest.approx(0.20)
         assert res["preco_venda_total"] == pytest.approx(1_000_000.0)
 
@@ -851,15 +852,11 @@ class TestSkillAdapterSaidaAgis:
         assert result.has_errors
         assert any(v.codigo == "VAL-ADAPTER-PRECONDICAO" for v in result.validacoes)
 
-    def test_resumo_contem_nome_projeto(self):
-        can = _canonical_com_resultado()
-        result = run_relatorio_e_artefatos(can, {})
-        assert result.relatorio["resumo"]["projeto"] == "Obra Teste"
+    def test_resumo_contem_nome_projeto(self, _relatorio):
+        assert _relatorio.relatorio["resumo"]["projeto"] == "Obra Teste"
 
-    def test_planejamento_row_tem_subtotais(self):
-        can = _canonical_com_resultado()
-        result = run_relatorio_e_artefatos(can, {})
-        rows = result.relatorio["PLANEJAMENTO"]
+    def test_planejamento_row_tem_subtotais(self, _relatorio):
+        rows = _relatorio.relatorio["PLANEJAMENTO"]
         assert len(rows) == 1
         row = rows[0]
         assert "subtotal_com_bdi" in row

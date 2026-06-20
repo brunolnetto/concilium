@@ -34,7 +34,7 @@ def _load_cenarios(inter_dir: Path) -> list[dict]:
     return [_build_cenario_record(s, _CENARIO_POOL_DEF.get(s, {}), inter_dir) for s in _CENARIO_SLUGS]
 
 
-def _chart_gantt(plt, out_dir: Path, slug: str, np) -> Path:
+def _chart_gantt(plt, out_dir: Path, slug: str, np, *, dpi: int = 180) -> Path:
     import matplotlib.patches as mpatches
     from matplotlib.patches import FancyBboxPatch
 
@@ -93,6 +93,6 @@ def _chart_gantt(plt, out_dir: Path, slug: str, np) -> Path:
     ax_r.set_title("Utilização de Recursos/Semana", fontsize=9)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     p = out_dir / "01_gantt_cronograma.png"
-    fig.savefig(p, dpi=180, bbox_inches="tight", facecolor=BG)
+    fig.savefig(p, dpi=dpi, bbox_inches="tight", facecolor=BG)
     plt.close(fig)
     return p

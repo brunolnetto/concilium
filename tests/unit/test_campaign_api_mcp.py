@@ -59,14 +59,24 @@ def campaign_store(project_dir: Path):
     return CampaignRunStore(project_dir)
 
 
+@pytest.fixture(scope="module")
+def _shared_app():
+    """App FastAPI criado uma vez por módulo — ~1.5s poupado por teste."""
+    from unittest.mock import patch as _patch
+
+    with _patch("concilium.presentation.api.app.setup_telemetry"), \
+         _patch("concilium.presentation.api.app.configure_logging"):
+        app = create_app()
+    return app
+
+
 @pytest.fixture()
-def client_factory(tmp_projects_root: Path, monkeypatch):
-    """Factory that creates a TestClient with an injected fake service and tmp projects root."""
+def client_factory(tmp_projects_root: Path, monkeypatch, _shared_app):
+    """Factory que reutiliza a app module-scoped, trocando apenas service e storage por teste."""
 
     def _make(project_id: str = "PROJ-TEST") -> TestClient:
         from concilium.infrastructure import settings as _settings
 
-        # Patch get_storage() to point to our tmp dir
         class _FakeStorage:
             root = tmp_projects_root.parent
             config_root = tmp_projects_root.parent
@@ -75,9 +85,8 @@ def client_factory(tmp_projects_root: Path, monkeypatch):
 
         monkeypatch.setattr(_settings, "get_storage", lambda: _FakeStorage())
 
-        app = create_app()
-        app.dependency_overrides[get_concilium_service] = lambda: _FakeService(project_id)
-        return TestClient(app)
+        _shared_app.dependency_overrides[get_concilium_service] = lambda: _FakeService(project_id)
+        return TestClient(_shared_app)
 
     return _make
 
@@ -238,35 +247,41 @@ class TestGetCampaignRunReport:
 
 
 class TestMcpCampaignTools:
-    def _build_server(self):
-        """Build a minimal FastMCP server with campaign tools registered."""
+    @pytest.fixture(scope="class")
+    def _server(self):
+        """FastMCP com campaign tools — criado uma vez por classe (~2s)."""
         from mcp.server.fastmcp import FastMCP
-
         from concilium.presentation.mcp.tools import campaign
 
         server = FastMCP("test-concilium")
         campaign.register(server)
         return server
 
-    def test_explorar_configuracoes_go_registered(self):
+    def _build_server(self):
+        from mcp.server.fastmcp import FastMCP
+        from concilium.presentation.mcp.tools import campaign
+
+        server = FastMCP("test-concilium")
+        campaign.register(server)
+        return server
+
+    def test_explorar_configuracoes_go_registered(self, _server):
         """explorar_configuracoes_go is registered in the server."""
-        server = self._build_server()
-        tools = server._tool_manager._tools
+        tools = _server._tool_manager._tools
         assert "explorar_configuracoes_go" in tools
 
-    def test_listar_runs_campanha_registered(self):
+    def test_listar_runs_campanha_registered(self, _server):
         """listar_runs_campanha is registered in the server."""
-        server = self._build_server()
+        server = _server
         tools = server._tool_manager._tools
         assert "listar_runs_campanha" in tools
 
-    def test_obter_resultado_campanha_registered(self):
+    def test_obter_resultado_campanha_registered(self, _server):
         """obter_resultado_campanha is registered in the server."""
-        server = self._build_server()
-        tools = server._tool_manager._tools
+        tools = _server._tool_manager._tools
         assert "obter_resultado_campanha" in tools
 
-    def test_listar_runs_campanha_empty(self, tmp_path: Path, monkeypatch):
+    def test_listar_runs_campanha_empty(self, _server, tmp_path: Path, monkeypatch):
         """listar_runs_campanha returns [] for a project with no runs."""
         _projects_root = tmp_path / "projetos"
         (_projects_root / "PROJ-EMPTY").mkdir(parents=True)
@@ -284,12 +299,11 @@ class TestMcpCampaignTools:
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)
 
-        server = self._build_server()
-        fn = server._tool_manager._tools["listar_runs_campanha"].fn
+        fn = _server._tool_manager._tools["listar_runs_campanha"].fn
         result = fn(project_id="PROJ-EMPTY")
         assert result == []
 
-    def test_obter_resultado_campanha_no_runs(self, tmp_path: Path, monkeypatch):
+    def test_obter_resultado_campanha_no_runs(self, _server, tmp_path: Path, monkeypatch):
         """obter_resultado_campanha returns an error dict when no runs exist."""
         _projects_root = tmp_path / "projetos"
         (_projects_root / "PROJ-EMPTY").mkdir(parents=True)
@@ -307,13 +321,12 @@ class TestMcpCampaignTools:
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)
 
-        server = self._build_server()
-        fn = server._tool_manager._tools["obter_resultado_campanha"].fn
+        fn = _server._tool_manager._tools["obter_resultado_campanha"].fn
         result = fn(project_id="PROJ-EMPTY")
         assert "erro" in result
         assert "PROJ-EMPTY" in result["erro"] or "dica" in result
 
-    def test_listar_runs_campanha_with_data(self, tmp_path: Path, monkeypatch):
+    def test_listar_runs_campanha_with_data(self, _server, tmp_path: Path, monkeypatch):
         """listar_runs_campanha returns the stored run metadata."""
         from concilium.infrastructure.storage.campaign_store import CampaignRunStore
 
@@ -346,15 +359,14 @@ class TestMcpCampaignTools:
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)
 
-        server = self._build_server()
-        fn = server._tool_manager._tools["listar_runs_campanha"].fn
+        fn = _server._tool_manager._tools["listar_runs_campanha"].fn
         result = fn(project_id="PROJ-DATA")
         assert len(result) == 1
         assert result[0]["run_id"] == run_id
         assert result[0]["status"] == "SUCESSO"
         assert result[0]["n_avaliados"] == 6
 
-    def test_obter_resultado_campanha_with_bundle(self, tmp_path: Path, monkeypatch):
+    def test_obter_resultado_campanha_with_bundle(self, _server, tmp_path: Path, monkeypatch):
         """obter_resultado_campanha returns shortlist summary when bundle exists."""
         from concilium.infrastructure.storage.campaign_store import CampaignRunStore
 
@@ -399,10 +411,43 @@ class TestMcpCampaignTools:
 
         monkeypatch.setattr(_settings, "get_storage", _fake_storage)
 
-        server = self._build_server()
-        fn = server._tool_manager._tools["obter_resultado_campanha"].fn
+        fn = _server._tool_manager._tools["obter_resultado_campanha"].fn
         result = fn(project_id="PROJ-BUNDLE")
         assert result["run_id"] == run_id
         assert len(result["shortlist"]) == 1
         assert result["shortlist"][0]["rank"] == 1
         assert result["shortlist"][0]["viabilidade"] == "APROVADO"
+
+
+class TestCampaignIntentEligibility:
+    def test_api_run_campaign_rejects_rfi(self, client_factory):
+        client = client_factory()
+        resp = client.post(
+            "/api/projects/PROJ-TEST/campaign/run",
+            json={"procurement_intent": "rfi"},
+        )
+        assert resp.status_code == 422
+        assert "RFP/RFQ" in resp.json()["detail"]
+
+    def test_mcp_explorar_rejects_rfi(self, tmp_path: Path, monkeypatch):
+        _projects_root = tmp_path / "projetos"
+        (_projects_root / "PROJ-EMPTY").mkdir(parents=True)
+
+        import concilium.infrastructure.settings as _settings
+
+        def _fake_storage():
+            class _S:
+                root = tmp_path
+                config_root = tmp_path
+                projects_root = _projects_root
+                benchmark_projects_root = None
+
+            return _S()
+
+        monkeypatch.setattr(_settings, "get_storage", _fake_storage)
+
+        server = TestMcpCampaignTools()._build_server()
+        fn = server._tool_manager._tools["explorar_configuracoes_go"].fn
+        result = fn(project_id="PROJ-EMPTY", parametros_sweep=[], procurement_intent="rfi")
+        assert "erro" in result
+        assert "RFP/RFQ" in result["erro"]

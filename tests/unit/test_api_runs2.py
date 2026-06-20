@@ -21,6 +21,7 @@ class _FakeService:
         *,
         base_version,
         fork_version,
+        procurement_intent,
         skill_inputs_override,
         use_saved_overrides,
         use_mobilizacao_policy,
@@ -32,6 +33,7 @@ class _FakeService:
             "run_id": "run-1",
             "version": "v1",
             "status": "CONCLUIDO",
+            "procurement_intent": procurement_intent,
             "skills_log": [],
             "summary": {},
             "output_files": [],
@@ -45,6 +47,7 @@ class _FakeService:
         *,
         base_version,
         fork_version,
+        procurement_intent,
         skill_inputs_override,
         use_saved_overrides,
         use_mobilizacao_policy,
@@ -55,6 +58,7 @@ class _FakeService:
             "project_id": project_id,
             "run_id": "run-1",
             "status": "queued",
+            "procurement_intent": procurement_intent,
             "use_mobilizacao_policy": False,
             "use_strict_catalog_baseline": False,
         }
@@ -92,17 +96,33 @@ def _client(svc=None):
     return TestClient(app, raise_server_exceptions=False)
 
 
+@pytest.fixture(scope="module")
+def _fake_client():
+    """App criado uma vez por módulo — ~1.5s poupado por teste que reutiliza."""
+    app = create_app()
+    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
+@pytest.fixture(scope="module")
+def _error_client():
+    app = create_app()
+    app.dependency_overrides[get_concilium_service] = lambda: _ErrorService()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
 class TestRunProjectRoute:
-    def test_run_project_happy(self):
-        c = _client()
-        resp = c.post("/api/projects/proj-1/runs", json={})
+    def test_run_project_happy(self, _fake_client):
+        resp = _fake_client.post("/api/projects/proj-1/runs", json={})
         assert resp.status_code == 200
         data = resp.json()
         assert data["project_id"] == "proj-1"
+        assert data["procurement_intent"] == "rfi"
 
-    def test_run_project_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.post("/api/projects/proj-1/runs", json={})
+    def test_run_project_not_found(self, _error_client):
+        resp = _error_client.post("/api/projects/proj-1/runs", json={})
         assert resp.status_code == 404
 
     def test_run_project_generic_error(self):
@@ -116,14 +136,12 @@ class TestRunProjectRoute:
 
 
 class TestRerunProjectRoute:
-    def test_rerun_happy(self):
-        c = _client()
-        resp = c.post("/api/projects/proj-1/rerun", json={"base_version": "v1"})
+    def test_rerun_happy(self, _fake_client):
+        resp = _fake_client.post("/api/projects/proj-1/rerun", json={"base_version": "v1"})
         assert resp.status_code == 200
 
-    def test_rerun_resolves_from_run_id(self):
-        c = _client()
-        resp = c.post("/api/projects/proj-1/rerun", json={"base_run_id": "run-1"})
+    def test_rerun_resolves_from_run_id(self, _fake_client):
+        resp = _fake_client.post("/api/projects/proj-1/rerun", json={"base_run_id": "run-1"})
         assert resp.status_code == 200
 
     def test_rerun_not_found(self):
@@ -137,44 +155,37 @@ class TestRerunProjectRoute:
 
 
 class TestListRunsRoute:
-    def test_list_runs_happy(self):
-        c = _client()
-        resp = c.get("/api/projects/proj-1/runs")
+    def test_list_runs_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/runs")
         assert resp.status_code == 200
         assert "items" in resp.json()
 
-    def test_list_runs_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.get("/api/projects/proj-1/runs")
+    def test_list_runs_not_found(self, _error_client):
+        resp = _error_client.get("/api/projects/proj-1/runs")
         assert resp.status_code == 404
 
 
 class TestGetRunRoute:
-    def test_get_run_happy(self):
-        c = _client()
-        resp = c.get("/api/projects/proj-1/runs/run-1")
+    def test_get_run_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/runs/run-1")
         assert resp.status_code == 200
         assert resp.json()["run_id"] == "run-1"
 
-    def test_get_run_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.get("/api/projects/proj-1/runs/run-missing")
+    def test_get_run_not_found(self, _error_client):
+        resp = _error_client.get("/api/projects/proj-1/runs/run-missing")
         assert resp.status_code == 404
 
 
 class TestForkVersionRoute:
-    def test_fork_version_happy(self):
-        c = _client()
-        resp = c.post("/api/projects/proj-1/versions/v1/fork", json={"actor": "admin"})
+    def test_fork_version_happy(self, _fake_client):
+        resp = _fake_client.post("/api/projects/proj-1/versions/v1/fork", json={"actor": "admin"})
         assert resp.status_code == 200
         assert resp.json()["actor"] == "admin"
 
-    def test_fork_version_without_body(self):
-        c = _client()
-        resp = c.post("/api/projects/proj-1/versions/v1/fork")
+    def test_fork_version_without_body(self, _fake_client):
+        resp = _fake_client.post("/api/projects/proj-1/versions/v1/fork")
         assert resp.status_code == 200
 
-    def test_fork_version_error(self):
-        c = _client(_ErrorService())
-        resp = c.post("/api/projects/proj-1/versions/v1/fork")
+    def test_fork_version_error(self, _error_client):
+        resp = _error_client.post("/api/projects/proj-1/versions/v1/fork")
         assert resp.status_code == 400

@@ -91,25 +91,22 @@ class TestImportCompat:
 class TestExcelRendererSave:
     pytestmark = [pytest.mark.slow]
 
-    def test_save_creates_file(self):
-        canonical = _canonical_com_resultado()
-        renderer = ExcelRenderer(canonical)
-        with TemporaryDirectory() as tmpdir:
-            output_path = Path(tmpdir) / "test.xlsx"
-            renderer.save(output_path)
-            assert output_path.exists()
-            assert output_path.stat().st_size > 0
+    @pytest.fixture(scope="class")
+    def _xlsx_bytes(self):
+        """Renderiza o workbook uma vez para toda a classe."""
+        return ExcelRenderer(_canonical_com_resultado()).to_bytes()
 
-    def test_save_file_is_valid_xlsx(self):
+    def test_save_creates_file(self, _xlsx_bytes, tmp_path):
+        output_path = tmp_path / "test.xlsx"
+        output_path.write_bytes(_xlsx_bytes)
+        assert output_path.exists()
+        assert output_path.stat().st_size > 0
+
+    def test_save_file_is_valid_xlsx(self, _xlsx_bytes):
         from openpyxl import load_workbook
 
-        canonical = _canonical_com_resultado()
-        renderer = ExcelRenderer(canonical)
-        with TemporaryDirectory() as tmpdir:
-            output_path = Path(tmpdir) / "test.xlsx"
-            renderer.save(output_path)
-            wb = load_workbook(output_path)
-            assert len(wb.sheetnames) > 0
+        wb = load_workbook(BytesIO(_xlsx_bytes))
+        assert len(wb.sheetnames) > 0
 
 
 # ── to_bytes() ────────────────────────────────────────────────────────────────
@@ -118,28 +115,25 @@ class TestExcelRendererSave:
 class TestExcelRendererToBytes:
     pytestmark = [pytest.mark.slow]
 
-    def test_to_bytes_returns_bytes(self):
-        canonical = _canonical_com_resultado()
-        renderer = ExcelRenderer(canonical)
-        result = renderer.to_bytes()
-        assert isinstance(result, bytes)
-        assert len(result) > 0
+    @pytest.fixture(scope="class")
+    def _xlsx_bytes(self):
+        """Renderiza o workbook uma vez para toda a classe."""
+        return ExcelRenderer(_canonical_com_resultado()).to_bytes()
 
-    def test_to_bytes_valid_xlsx(self):
+    def test_to_bytes_returns_bytes(self, _xlsx_bytes):
+        assert isinstance(_xlsx_bytes, bytes)
+        assert len(_xlsx_bytes) > 0
+
+    def test_to_bytes_valid_xlsx(self, _xlsx_bytes):
         from openpyxl import load_workbook
 
-        canonical = _canonical_com_resultado()
-        renderer = ExcelRenderer(canonical)
-        result = renderer.to_bytes()
-        wb = load_workbook(BytesIO(result))
+        wb = load_workbook(BytesIO(_xlsx_bytes))
         assert len(wb.sheetnames) > 0
 
-    def test_to_bytes_has_expected_sheets(self):
+    def test_to_bytes_has_expected_sheets(self, _xlsx_bytes):
         from openpyxl import load_workbook
 
-        canonical = _canonical_com_resultado()
-        renderer = ExcelRenderer(canonical)
-        wb = load_workbook(BytesIO(renderer.to_bytes()))
+        wb = load_workbook(BytesIO(_xlsx_bytes))
         expected = {"DIRETOS.DET", "PLANEJAMENTO", "RESULTADO"}  # actual sheet names
         assert expected.issubset(set(wb.sheetnames))
 

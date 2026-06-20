@@ -520,9 +520,16 @@ class TestChartGanttMocked:
 
 @pytest.mark.slow
 class TestChartGanttRealMatplotlib:
-    """Integration tests using the real matplotlib Agg backend."""
+    """Integration tests using the real matplotlib Agg backend.
 
-    def _setup_real_plt(self):
+    A fixture de classe inicializa matplotlib uma vez e gera os 4 PNGs necessários
+    (AGIS padrão, short, long) num único diretório compartilhado. Testes apenas
+    inspecionam os resultados — sem rerenderizar.
+    """
+
+    @pytest.fixture(scope="class")
+    def _rendered(self, tmp_path_factory):
+        """Gera todos os PNGs necessários uma única vez por classe."""
         import os
 
         os.environ["MPLBACKEND"] = "Agg"
@@ -531,47 +538,38 @@ class TestChartGanttRealMatplotlib:
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
-        return plt
-
-    def test_gantt_creates_file_on_disk(self, tmp_path):
         m = _import_module()
+        out = tmp_path_factory.mktemp("gantt")
+
         _inject_gantt_globals(m)
-        plt = self._setup_real_plt()
-        result = m._chart_gantt(plt, tmp_path, "AGIS", np)
-        assert result.exists()
-        assert result.name == "01_gantt_cronograma.png"
+        std_dir = out / "std"; std_dir.mkdir()
+        standard = m._chart_gantt(plt, std_dir, "AGIS", np, dpi=30)
 
-    def test_gantt_file_is_non_empty(self, tmp_path):
-        m = _import_module()
-        _inject_gantt_globals(m)
-        plt = self._setup_real_plt()
-        result = m._chart_gantt(plt, tmp_path, "AGIS", np)
-        assert result.stat().st_size > 0
-
-    def test_gantt_with_short_activity_only(self, tmp_path):
-        """Single short activity (dur<=4) should not raise."""
-        m = _import_module()
         _inject_gantt_globals(m, SHORT_ATIVIDADES, {"DESMAT": "#8B5CF6"})
-        plt = self._setup_real_plt()
-        result = m._chart_gantt(plt, tmp_path, "X", np)
-        assert result.exists()
+        short_dir = out / "short"; short_dir.mkdir()
+        short = m._chart_gantt(plt, short_dir, "X", np, dpi=30)
 
-    def test_gantt_with_activity_beyond_52_weeks(self, tmp_path):
-        """Activity extending beyond week 52 should not raise IndexError."""
-        m = _import_module()
         _inject_gantt_globals(m, LONG_ATIVIDADES, {"DESMAT": "#8B5CF6"})
-        plt = self._setup_real_plt()
-        result = m._chart_gantt(plt, tmp_path, "LONG", np)
-        assert result.exists()
+        long_dir = out / "long"; long_dir.mkdir()
+        long_ = m._chart_gantt(plt, long_dir, "LONG", np, dpi=30)
 
-    def test_gantt_dpi_passed_to_savefig(self, tmp_path):
-        """Verify savefig is called with dpi=180."""
-        m = _import_module()
-        _inject_gantt_globals(m)
-        plt = self._setup_real_plt()
-        import unittest.mock as mock
+        return {"standard": standard, "short": short, "long": long_}
 
-        with mock.patch.object(plt, "close", wraps=plt.close):
-            result = m._chart_gantt(plt, tmp_path, "AGIS", np)
-        # Just confirm file created — dpi testing done via mock suite
-        assert result.exists()
+    def test_gantt_creates_file_on_disk(self, _rendered):
+        assert _rendered["standard"].exists()
+        assert _rendered["standard"].name == "01_gantt_cronograma.png"
+
+    def test_gantt_file_is_non_empty(self, _rendered):
+        assert _rendered["standard"].stat().st_size > 0
+
+    def test_gantt_with_short_activity_only(self, _rendered):
+        """Single short activity (dur<=4) should not raise."""
+        assert _rendered["short"].exists()
+
+    def test_gantt_with_activity_beyond_52_weeks(self, _rendered):
+        """Activity extending beyond week 52 should not raise IndexError."""
+        assert _rendered["long"].exists()
+
+    def test_gantt_dpi_passed_to_savefig(self, _rendered):
+        """Verify dpi parameter produces a valid file."""
+        assert _rendered["standard"].exists()
