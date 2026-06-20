@@ -1,11 +1,41 @@
 # ADR-114 — Golden Example de Avaliação: Projeto de Referência para Invariantes do Sistema
 
-**Status:** Proposta  
+**Status:** Implementado ✅ _(F1–F4 2026-06-19 · GOLDEN calibrado · 7 invariantes algébricos + 9 de regressão)_  
 **Data:** 2026-06-19  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-043 (Benchmark Application Layer), ADR-085 (Custo Instancial), ADR-044 (Planilha-First PU), ADR-090 (BDI Sistemático)
 
 ---
+
+## Achado de calibração (F3 — 2026-06-19): margem usa preço operacional
+
+A calibração revelou uma clarificação importante que o golden agora documenta e testa:
+
+**`margem_pct` NÃO usa `total_com_bdi` (catálogo).** A fórmula real é:
+
+```
+margem_pct = (venda.total_custo_plus − custo.total) / venda.total_custo_plus
+```
+
+onde:
+- `total_custo_plus` = preço **operacional** (custo instancial × BDI + indiretos) — base da margem
+- `total_com_bdi` = preço de **catálogo** (PU×Q×BDI + indiretos) — benchmark de mercado
+- `custo.total` = custo operacional real (direto instancial + indireto)
+
+Valores calibrados do GOLDEN (3 itens, sem pool sharing):
+
+| Campo | Valor |
+|---|---|
+| Σ subtotal_sem_bdi (catálogo) | R$ 472.000,00 |
+| custo.direto_equipes (instancial) | R$ 472.000,00 _(= catálogo; sem pool sharing)_ |
+| venda.total_sem_bdi | R$ 456.781,08 |
+| venda.total_com_bdi (catálogo) | R$ 703.311,52 |
+| venda.total_custo_plus (operacional) | R$ 757.100,90 |
+| custo.total (operacional real) | R$ 651.075,74 |
+| margem_pct | 14,0% → AMARELO |
+
+A invariante #5 original do plano (`(total_com_bdi − custo)/total_com_bdi`) estava **errada**;
+foi corrigida para a fórmula operacional no `$golden_audit` e no teste de regressão.
 
 ## Contexto
 

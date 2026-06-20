@@ -1,31 +1,35 @@
 {
   "$comment": "ADR-114: Golden Example de Avaliação — projeto sintético mínimo com invariantes verificáveis.",
   "$golden_audit": {
-    "versao": "1.0.0",
+    "versao": "1.1.0",
     "data_calibracao": "2026-06-19",
     "proposito": "Referência matemática do sistema. Use para onboarding e validação de invariantes.",
     "invariantes": {
       "1_PU_check": "subtotal_sem_bdi[i] = round(quantitativo[i] * preco_unitario[i].total, 2)",
-      "2_BDI_check": "subtotal_com_bdi[i] = round(subtotal_sem_bdi[i] * (1 + bdi_pct), 2) onde bdi_pct vem do perfil",
-      "3_venda_check": "venda.total_com_bdi ≈ Σ(subtotal_com_bdi) + indireto_com_bdi",
-      "4_custo_formula": "custo_total = custo.direto_equipes + custo_indireto_total",
-      "5_margem_formula": "margem_pct = (venda.total_com_bdi - custo_total) / venda.total_com_bdi",
-      "6_instancial_invariant": "custo.direto_equipes ≤ Σ(subtotal_sem_bdi) [ADR-085]",
-      "7_margem_minima": "margem_pct ≥ 0.05 [ADR-060 MARGEM_MINIMA]"
+      "2_PU_componentes": "PU.material + PU.diesel + PU.mao_obra + PU.equipamentos = PU.total",
+      "3_custo_operacional": "custo.total (operacional real) = custo.direto_equipes + Σ custo_indireto",
+      "4_margem_formula": "margem_pct = (venda.total_custo_plus - custo.total) / venda.total_custo_plus — usa o PREÇO OPERACIONAL (instancial×BDI), NÃO total_com_bdi (catálogo)",
+      "5_instancial_invariant": "custo.direto_equipes ≤ Σ(subtotal_sem_bdi) [ADR-085] — igual no GOLDEN (sem pool sharing)",
+      "6_margem_minima": "margem_pct ≥ 0.05 [ADR-060 MARGEM_MINIMA]"
+    },
+    "clarificacao_precos": {
+      "total_sem_bdi": "Σ subtotal_sem_bdi = PU×Q sem BDI (catálogo bruto)",
+      "total_com_bdi": "venda_catalogo_plus = PU×Q×BDI + indiretos — preço de CATÁLOGO (benchmark de mercado)",
+      "total_custo_plus": "venda_plus = custo_instancial×BDI + indiretos — preço OPERACIONAL (base da margem)",
+      "margem_usa": "total_custo_plus (operacional), não total_com_bdi (catálogo) — distinção ADR-085"
     },
     "derivacao_numerica": {
       "item_eap_01": "Q=40000 m³ × PU=6.15 R$/m³ = R$246.000,00",
       "item_eap_02": "Q=30000 m³ × PU=6.00 R$/m³ = R$180.000,00",
       "item_eap_03": "Q=10000 m² × PU=4.60 R$/m² = R$ 46.000,00",
-      "soma_catalog":  "Σ subtotal_sem_bdi = R$472.000,00",
-      "venda_semBDI_esperada": "≈ R$472.000 (BDI 0% neste perfil de referência) + indiretos = ~R$540.000",
-      "custo_instancial_nota": "custo.direto_equipes < Σ subtotal_sem_bdi (eficiência de pool, ADR-085)",
-      "margem_nota": "margem_pct esperada ≥ 9% com base no custo instancial histórico"
+      "soma_catalog": "Σ subtotal_sem_bdi = R$472.000,00",
+      "custo_instancial": "custo.direto_equipes = R$472.000,00 (= catálogo; GOLDEN não tem compartilhamento de pool)",
+      "margem_calibrada": "(757.100,90 − 651.075,74) / 757.100,90 = 0,1400 (14,0%) → status AMARELO"
     }
   },
   "meta": {
     "gerado_em": "2026-06-19",
-    "contexto_id": "mendeslobo",
+    "contexto_id": "samples",
     "modo": "golden_reference"
   },
   "projeto": {
@@ -138,17 +142,20 @@
     {"categoria": "TOP", "custo_total": 40000.0}
   ],
   "resultado": {
-    "$nota": "Valores capturados na calibração 2026-06-19. Atualizar com commit 'golden(update): razão'.",
+    "$nota": "Valores calibrados via pipeline OLAP em 2026-06-19. Atualizar com commit 'golden(update): razão' quando uma mudança arquitetural alterar os números.",
     "venda": {
-      "total_sem_bdi": null,
-      "total_com_bdi": null
+      "total_sem_bdi": 456781.08,
+      "total_com_bdi": 703311.52,
+      "total_custo_plus": 757100.90
     },
     "custo": {
-      "direto_equipes": null,
-      "total": null
+      "direto_equipes": 472000.0,
+      "total": 651075.74
     },
-    "margem_pct": null,
-    "status_margem": null,
-    "$calibrado": false
+    "resultado_financeiro": 106025.16,
+    "margem_pct": 0.1400,
+    "status_margem": "AMARELO",
+    "makespan_weeks": 8,
+    "$calibrado": true
   }
 }

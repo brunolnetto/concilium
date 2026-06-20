@@ -222,7 +222,8 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [111](adr-111-logging-centralizado-otel-bridge.md) | Logging Centralizado e Ponte Python → OTel — `_setup_logging()`, `LoggingHandler`, `_JsonFormatter`, `configure_logging()` nos 3 entry points | ✅ Implementado 2026-06-18 _(TDD · 28 testes)_ | ADR-095, ADR-110, ADR-096, ADR-112 |
 | [112](adr-112-pipeline-observabilidade-medalhao.md) | Pipeline Assíncrona de Observabilidade Medalhão — Bronze/Silver/Gold, backfill-incremental (fast-forward), checkpoints, DuckDB, SLIs, alertas, cross-domain | ⚠️ Parcial _(F1–F6 ✅ 2026-06-19 · TDD · 40 testes; F7-F8 pendentes)_ | ADR-095, ADR-111, ADR-047, ADR-102, ADR-103 |
 | [113](adr-113-desacoplamento-pipeline-otimizacao.md) | Tiers OLTP/OLAP de Skills — Planejamento (01-06) separado de Análise/Artefatos (07-11); renumeração 09→10, 10→07, 11→08, 12→09, 13→11; PipelineMode enum | ✅ Implementado 2026-06-19 _(14 testes, 8505 passed)_ | ADR-022, ADR-036, ADR-050, ADR-070, ADR-102 |
-| [114](adr-114-golden-example-avaliacao.md) | Golden Example de Avaliação — benchmark sintético GOLDEN com invariantes algébricos (Q×PU, BDI, margem, custo_instancial≤catálogo) e testes de regressão | ⚠️ Parcial _(F1-F2 ✅ 2026-06-19; F3-F4 pendentes calibração)_ | ADR-043, ADR-085, ADR-044, ADR-090, ADR-060 |
+| [114](adr-114-golden-example-avaliacao.md) | Golden Example de Avaliação — benchmark sintético GOLDEN calibrado; invariantes algébricos + regressão; clarificou margem=preço operacional (não catálogo) | ✅ Implementado 2026-06-19 _(F1-F4 · 17 testes)_ | ADR-043, ADR-085, ADR-044, ADR-090, ADR-060 |
+| [115](adr-115-rfx-semantica-procurement-no-concilium.md) | Semântica RFI/RFP/RFQ no Concilium — mapeamento de intenção de procurement para estágios, PipelineMode (OLTP/OLAP/LIGHT) e pacotes auditáveis por etapa | 💡 Proposta | ADR-043, ADR-050, ADR-102, ADR-113, ADR-114 |
 
 **Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 

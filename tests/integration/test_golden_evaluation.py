@@ -175,6 +175,52 @@ class TestGoldenRegression:
             "Verifique as produtividades dos CPUs."
         )
 
+    @pytest.mark.slow
+    def test_margem_formula_uses_operational_price(self, golden_benchmark):
+        """ADR-114 D2 / ADR-085: margem = (total_custo_plus - custo.total) / total_custo_plus.
+
+        Usa o PREÇO OPERACIONAL (total_custo_plus), NÃO total_com_bdi (catálogo).
+        """
+        r = getattr(golden_benchmark, "resultado", None)
+        if r is None:
+            pytest.skip("Canonical sem resultado — pipeline OLAP necessário")
+        venda_plus = getattr(r.venda, "total_custo_plus", None)
+        custo_total = r.custo.total
+        if not venda_plus:
+            pytest.skip("total_custo_plus ausente")
+        margem_calc = (venda_plus - custo_total) / venda_plus
+        assert abs(margem_calc - r.margem_pct) <= _ABS_TOL, (
+            f"Fórmula de margem divergente: (venda_plus={venda_plus:,.2f} - custo={custo_total:,.2f})"
+            f"/venda_plus = {margem_calc:.4f} ≠ margem_pct={r.margem_pct:.4f}"
+        )
+
+    @pytest.mark.slow
+    def test_regression_against_calibrated_values(self, golden_benchmark):
+        """Regressão: valores do pipeline batem com resultado calibrado no referencia.json (tol 0.5%)."""
+        ref = json.loads(_GOLDEN_REF.read_text(encoding="utf-8"))
+        expected = ref.get("resultado", {})
+        if not expected.get("$calibrado"):
+            pytest.skip("GOLDEN ainda não calibrado")
+        r = getattr(golden_benchmark, "resultado", None)
+        if r is None:
+            pytest.skip("Canonical sem resultado — pipeline OLAP necessário")
+
+        checks = [
+            ("custo.direto_equipes", r.custo.direto_equipes, expected["custo"]["direto_equipes"]),
+            ("custo.total", r.custo.total, expected["custo"]["total"]),
+            ("venda.total_com_bdi", r.venda.total_com_bdi, expected["venda"]["total_com_bdi"]),
+            ("margem_pct", r.margem_pct, expected["margem_pct"]),
+        ]
+        for nome, atual, esperado in checks:
+            if esperado in (None, 0):
+                continue
+            desvio = abs(atual - esperado) / abs(esperado)
+            assert desvio <= _REG_TOL, (
+                f"Regressão em {nome}: atual={atual:,.4f} vs calibrado={esperado:,.4f} "
+                f"(desvio={desvio:.2%} > {_REG_TOL:.1%}). Se intencional, recalibrar com "
+                f"commit 'golden(update): <razão>'."
+            )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tipo 3: Invariantes matemáticos da saída (pós-pipeline)
