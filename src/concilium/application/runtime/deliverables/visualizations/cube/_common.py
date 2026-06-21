@@ -84,16 +84,33 @@ def apply_monthly_ticks(ax, labels: list[str], weekly_to_monthly_fn) -> None:
     ax.set_xticklabels(tick_labels, rotation=45, ha="right", fontsize=8)
 
 
+# Cache do módulo — evita reimportar matplotlib e reconfigurar o backend por chart.
+_mpl_plt = None
+
+
 def init_mpl():
-    """Bootstrap matplotlib Agg backend. Returns (plt, fig_to_bytes). Raises ImportError."""
-    import matplotlib
+    """Bootstrap matplotlib Agg backend. Returns (plt, fig_to_bytes). Raises ImportError.
 
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    Cacheado no módulo para evitar reimport por chart (~500ms de overhead por chamada
+    sem cache). O backend Agg e as rcParams são configurados na primeira chamada.
+    """
+    global _mpl_plt
+    if _mpl_plt is None:
+        import matplotlib
 
-    def fig_to_bytes(fig) -> bytes:
+        matplotlib.use("Agg")
+        # bbox_inches="tight" dispara get_tightbbox() que mede texto de cada tick label
+        # (~0.5s/figura × 17 figuras = ~8.5s). Substituído por pad_inches com margem fixa.
+        matplotlib.rcParams.update({"savefig.bbox": None, "savefig.pad_inches": 0.1})
+        import matplotlib.pyplot as plt
+
+        _mpl_plt = plt
+
+    plt = _mpl_plt
+
+    def fig_to_bytes(fig, dpi: int = 150) -> bytes:
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+        fig.savefig(buf, format="png", dpi=dpi)
         plt.close(fig)
         buf.seek(0)
         return buf.read()
