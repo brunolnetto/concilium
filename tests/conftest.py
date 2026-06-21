@@ -27,9 +27,18 @@ PRÓXIMAS OTIMIZAÇÕES (se necessário):
 """
 
 # Ensure the package source dir is on sys.path so tests can import `concilium`
+import os
 import sys
 import time
 from pathlib import Path
+
+# Desabilita todos os plugins do pydantic ANTES de qualquer import de pydantic.
+# logfire instala um entry-point 'pydantic:logfire-plugin' que carrega ~8-15s de
+# imports pesados (requests, OTel exporters, protobuf) em cada processo pytest.
+# PYDANTIC_DISABLE_PLUGINS=__all__ suprime todos os plugins (pydantic._loader).
+os.environ.setdefault("PYDANTIC_DISABLE_PLUGINS", "__all__")
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
+os.environ.setdefault("LOGFIRE_TOKEN", "")
 
 # Garante asyncio_mode=auto mesmo em versões antigas do pytest-asyncio
 import pytest
@@ -73,15 +82,12 @@ src_path = project_root / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-import os
 import shutil
-from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 os.environ.setdefault("CONCILIUM__PDF_RENDERER", "fpdf2")
+os.environ.setdefault("CONCILIUM__OTEL_CONSOLE", "false")
 
 from concilium.infrastructure.observability.logging_config import configure_logging
 
@@ -308,10 +314,10 @@ def _session_pipeline_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
     print(f"[PERF] sk09/06-resultado-financeiro: {time.time() - _t:.2f}s")
     _t = time.time()
-    runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
+    runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
     print(f"[PERF] sk09/10-diagnostico: {time.time() - _t:.2f}s")
     _t = time.time()
-    r = runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
+    r = runtime.run_skill("10-relatorio-e-artefatos", proj, inputs={})
     print(f"[PERF] sk09/09-relatorio: {time.time() - _t:.2f}s")
     print(f"[PERF] Pipeline sk09 completo: {time.time() - _start:.2f}s")
     return proj, r
@@ -337,8 +343,8 @@ def _session_edge_case_sk09(tmp_path_factory, runtime, _session_pipeline_sk03):
     runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
     runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
     runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
-    runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
-    runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
+    runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
+    runtime.run_skill("10-relatorio-e-artefatos", proj, inputs={})
     print(f"\n[PERF] Pipeline edge case sk09: {time.time() - _start:.2f}s")
     return proj
 
@@ -402,8 +408,8 @@ def _session_pipeline_mendeslobo_sk09(tmp_path_factory, runtime, inputs_escopo_t
     runtime.run_skill("04-cronograma", proj, inputs=cron_inputs)
     runtime.run_skill("05-equipes-e-alocacao", proj, inputs={})
     runtime.run_skill("06-resultado-financeiro", proj, inputs={})  # NEP-041 F4: unifica 06+07+08
-    runtime.run_skill("10-diagnostico-criticidade", proj, inputs={})
-    runtime.run_skill("09-relatorio-e-artefatos", proj, inputs={})
+    runtime.run_skill("07-diagnostico-criticidade", proj, inputs={})
+    runtime.run_skill("10-relatorio-e-artefatos", proj, inputs={})
     print(f"[PERF] Pipeline mendeslobo completo: {time.time() - _start:.2f}s")
     return proj
 

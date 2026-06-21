@@ -123,14 +123,18 @@ class TestEnrichCpusCorrectness:
 class TestEnrichCpusComplexity:
     @pytest.mark.flaky
     def test_linear_time_10k_cpus(self):
-        """O(P + C): 10_000 CPUs + 10_000 productions must enrich in < 200 ms."""
+        """O(P + C): 10_000 CPUs + 10_000 productions must enrich in < 500 ms.
+
+        Threshold generoso para ambientes com CPU sob carga (CI, dev com outros processos).
+        O invariante real é a linearidade testada em test_linear_time_1k_cpus_vs_10k_cpus.
+        """
         cat = _make_cat(10_000, 10_000)
         t0 = time.perf_counter()
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
         elapsed_ms = (time.perf_counter() - t0) * 1_000
         assert len(enriched) == 10_000
         assert all(c.get("producao_horaria") is not None for c in enriched)
-        assert elapsed_ms < 200, f"Enrichment took {elapsed_ms:.1f} ms — expected < 200 ms"
+        assert elapsed_ms < 500, f"Enrichment took {elapsed_ms:.1f} ms — expected < 500 ms"
 
     @pytest.mark.slow
     def test_linear_time_1k_cpus_vs_10k_cpus(self):
@@ -156,7 +160,10 @@ class TestEnrichCpusComplexity:
 
     @pytest.mark.flaky
     def test_no_quadratic_behavior_worst_case(self):
-        """Worst case: all CPUs share one production — still O(C)."""
+        """Worst case: all CPUs share one production — still O(C).
+
+        Threshold generoso (300 ms) para ambientes com CPU sob carga.
+        """
         cat = {
             "cpus": [{"codigo": f"CPU-{i}", "producao_id_ref": "PROD-0"} for i in range(5_000)],
             "producoes": [{"id": "PROD-0", "valor_horario": 1.0}],
@@ -166,7 +173,7 @@ class TestEnrichCpusComplexity:
         enriched = ConciliumService._enrich_cpus_with_producao(cat)
         elapsed_ms = (time.perf_counter() - t0) * 1_000
         assert len(enriched) == 5_000
-        assert elapsed_ms < 100, f"Worst-case took {elapsed_ms:.1f} ms — expected < 100 ms"
+        assert elapsed_ms < 300, f"Worst-case took {elapsed_ms:.1f} ms — expected < 300 ms"
 
 
 # ─── Cache ────────────────────────────────────────────────────────────────────

@@ -15,6 +15,10 @@ TEST_REPORT  := $(COV_DIR)/test-report.json
 # Exclude skill manifests (dirs with dashes are not valid Python package names)
 MYPY_EXCLUDE := --exclude 'src/concilium/application/skills/manifests'
 SKIP_MARKERS := -m "not slow and not flaky"
+# Desabilita logfire pydantic plugin antes do primeiro import de pydantic.
+# logfire 4.x instala entry-point 'pydantic:logfire-plugin' que acrescenta ~10-15s
+# de imports pesados (requests, OTel exporters, protobuf) se instalado no env.
+TEST_ENV     := PYDANTIC_DISABLE_PLUGINS=__all__ OTEL_SDK_DISABLED=true
 
 .PHONY: help test test-slow test-flaky lint lint-report type-check fmt \
         coverage codebase-stats file-sizes size clean
@@ -42,7 +46,13 @@ help:
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test:
-	$(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(SKIP_MARKERS)
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(SKIP_MARKERS)
+
+test-slow:
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short -m slow
+
+test-flaky:
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short -m flaky
 
 # ── Lint ──────────────────────────────────────────────────────────────────────
 lint:
@@ -80,7 +90,7 @@ fmt:
 # ── Coverage ──────────────────────────────────────────────────────────────────
 coverage:
 	@mkdir -p $(COV_DIR)
-	$(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(SKIP_MARKERS) \
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short \
 		--cov=$(SRC) \
 		--cov-branch \
 		--cov-report=json:$(COV_DIR)/coverage.json \
