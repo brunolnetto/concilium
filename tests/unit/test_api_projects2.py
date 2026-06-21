@@ -76,73 +76,75 @@ def _client(svc=None):
     return TestClient(app, raise_server_exceptions=False)
 
 
+@pytest.fixture(scope="module")
+def _fake_client():
+    app = create_app()
+    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
+@pytest.fixture(scope="module")
+def _error_client():
+    app = create_app()
+    app.dependency_overrides[get_concilium_service] = lambda: _ErrorService()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
 class TestProjectsRoutes:
-    def test_list_projects(self):
-        c = _client()
-        resp = c.get("/api/projects/")
+    def test_list_projects(self, _fake_client):
+        resp = _fake_client.get("/api/projects/")
         assert resp.status_code == 200
 
-    def test_create_project(self):
-        c = _client()
-        resp = c.post("/api/projects/", json={"nome": "New Project", "contexto_id": "ctx"})
+    def test_create_project(self, _fake_client):
+        resp = _fake_client.post("/api/projects/", json={"nome": "New Project", "contexto_id": "ctx"})
         assert resp.status_code == 200
 
-    def test_get_project_happy(self):
-        c = _client()
-        resp = c.get("/api/projects/proj-1")
+    def test_get_project_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1")
         assert resp.status_code == 200
 
-    def test_get_project_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.get("/api/projects/proj-missing")
+    def test_get_project_not_found(self, _error_client):
+        resp = _error_client.get("/api/projects/proj-missing")
         assert resp.status_code == 404
 
-    def test_delete_project_happy(self):
-        c = _client()
-        resp = c.delete("/api/projects/proj-1")
+    def test_delete_project_happy(self, _fake_client):
+        resp = _fake_client.delete("/api/projects/proj-1")
         assert resp.status_code == 200
 
-    def test_delete_project_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.delete("/api/projects/proj-missing")
+    def test_delete_project_not_found(self, _error_client):
+        resp = _error_client.delete("/api/projects/proj-missing")
         assert resp.status_code == 404
 
-    def test_list_versions_happy(self):
-        c = _client()
-        resp = c.get("/api/projects/proj-1/versions")
+    def test_list_versions_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/versions")
         assert resp.status_code == 200
 
-    def test_list_versions_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.get("/api/projects/proj-missing/versions")
+    def test_list_versions_not_found(self, _error_client):
+        resp = _error_client.get("/api/projects/proj-missing/versions")
         assert resp.status_code == 404
 
-    def test_delete_version_happy(self):
-        c = _client()
-        resp = c.delete("/api/projects/proj-1/versions/v1")
+    def test_delete_version_happy(self, _fake_client):
+        resp = _fake_client.delete("/api/projects/proj-1/versions/v1")
         assert resp.status_code == 200
 
-    def test_delete_version_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.delete("/api/projects/proj-1/versions/v99")
+    def test_delete_version_not_found(self, _error_client):
+        resp = _error_client.delete("/api/projects/proj-1/versions/v99")
         assert resp.status_code == 404
 
-    def test_get_eap_happy(self):
-        c = _client()
-        resp = c.get("/api/projects/proj-1/eap")
+    def test_get_eap_happy(self, _fake_client):
+        resp = _fake_client.get("/api/projects/proj-1/eap")
         assert resp.status_code == 200
 
-    def test_get_eap_not_found(self):
-        c = _client(_ErrorService())
-        resp = c.get("/api/projects/proj-1/eap")
+    def test_get_eap_not_found(self, _error_client):
+        resp = _error_client.get("/api/projects/proj-1/eap")
         assert resp.status_code == 404
 
-    def test_upsert_eap_error(self):
-        c = _client(_ErrorService())
-        resp = c.put("/api/projects/proj-1/eap", json={"items": []})
+    def test_upsert_eap_error(self, _error_client):
+        resp = _error_client.put("/api/projects/proj-1/eap", json={"items": []})
         assert resp.status_code in (400, 422)
 
-    def test_patch_project_config(self):
-        c = _client()
-        resp = c.patch("/api/projects/proj-1/config", json={"nome": "Updated"})
+    def test_patch_project_config(self, _fake_client):
+        resp = _fake_client.patch("/api/projects/proj-1/config", json={"nome": "Updated"})
         assert resp.status_code == 200

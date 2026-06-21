@@ -179,6 +179,65 @@ class TestSkill15RelatorioCriticidade:
 class TestSkill07CriticidadeEnrichment:
     pytestmark = [pytest.mark.slow]
 
+    @pytest.fixture(scope="class")
+    def _result_crit(self):
+        """Roda skill 10 com criticidade uma vez para toda a classe."""
+        can = TestSkill07CriticidadeEnrichment._make_canonical(with_criticidade=True)
+        mod = _load_skill("10-relatorio-e-artefatos")
+        return mod.run_relatorio_e_artefatos(canonical_in=can, inputs={}, perfil={})
+
+    @pytest.fixture(scope="class")
+    def _result_no_crit(self):
+        """Roda skill 10 sem criticidade uma vez para toda a classe."""
+        can = TestSkill07CriticidadeEnrichment._make_canonical(with_criticidade=False)
+        mod = _load_skill("10-relatorio-e-artefatos")
+        return mod.run_relatorio_e_artefatos(canonical_in=can, inputs={}, perfil={})
+
+    @staticmethod
+    def _make_canonical(with_criticidade: bool = False) -> CanonicalModel:
+        """Helper estático para fixtures de classe — sem acesso a self."""
+        from concilium.domain.models.canonical import (
+            BdiCategorias,
+            EapItem,
+            Planejamento,
+            PrecoUnitarioCategoria,
+            SubtotalCategorias,
+            SubtotalSemBdiComBdi,
+        )
+
+        eap = [
+            EapItem(
+                item_id="item-01", ordem=1, cpu_id="CPU-001", descricao="Serviço A", unidade="m³", quantitativo=100.0
+            )
+        ]
+        bdi = BdiCategorias(material=0.05, diesel=0.26, mao_obra=0.35, equipamentos=0.30)
+        preco_unit = PrecoUnitarioCategoria(material=10.0, diesel=5.0, mao_obra=20.0, equipamentos=15.0, total=50.0)
+        preco_com = PrecoUnitarioCategoria(material=10.5, diesel=6.3, mao_obra=27.0, equipamentos=19.5, total=63.3)
+        sub_sem = SubtotalCategorias(material=1000.0, diesel=500.0, mao_obra=2000.0, equipamentos=1500.0, total=5000.0)
+        sub_com = SubtotalCategorias(material=1050.0, diesel=630.0, mao_obra=2700.0, equipamentos=1950.0, total=6330.0)
+        planejamento = [
+            Planejamento(
+                item_id="item-01",
+                cpu_id="CPU-001",
+                quantitativo=100.0,
+                preco_unitario=preco_unit,
+                bdi=bdi,
+                preco_unitario_com_bdi=preco_com,
+                subtotal=SubtotalSemBdiComBdi(sem_bdi=sub_sem, com_bdi=sub_com),
+            )
+        ]
+        crit_report = _make_criticidade_result(1) if with_criticidade else None
+        if crit_report:
+            crit_report.atividades[0] = crit_report.atividades[0].model_copy(update={"atividade_id": "item-01"})
+        return CanonicalModel(
+            meta=_make_meta(),
+            projeto=_make_projeto(),
+            eap=eap,
+            planejamento=planejamento,
+            resultado=_make_resultado(),
+            cost_criticality_report=crit_report,
+        )
+
     def _run(self, canonical_in: CanonicalModel) -> SkillResult:
         mod = _load_skill("10-relatorio-e-artefatos")
         return mod.run_relatorio_e_artefatos(
@@ -231,44 +290,33 @@ class TestSkill07CriticidadeEnrichment:
             cost_criticality_report=crit_report,
         )
 
-    def test_val_adapter_criticidade_ok_when_enriched(self):
+    def test_val_adapter_criticidade_ok_when_enriched(self, _result_crit):
         """VAL-ADAPTER-CRITICIDADE is OK when cost_criticality_report present."""
-        result = self._run(self._canonical_with_resultado(with_criticidade=True))
-        val = next((v for v in result.validacoes if v.codigo == "VAL-ADAPTER-CRITICIDADE"), None)
+        val = next((v for v in _result_crit.validacoes if v.codigo == "VAL-ADAPTER-CRITICIDADE"), None)
         assert val is not None, "VAL-ADAPTER-CRITICIDADE not found in validacoes"
         assert val.status == "OK"
 
-    def test_val_adapter_criticidade_aviso_when_absent(self):
+    def test_val_adapter_criticidade_aviso_when_absent(self, _result_no_crit):
         """VAL-ADAPTER-CRITICIDADE is AVISO when cost_criticality_report is None."""
-        result = self._run(self._canonical_with_resultado(with_criticidade=False))
-        val = next((v for v in result.validacoes if v.codigo == "VAL-ADAPTER-CRITICIDADE"), None)
+        val = next((v for v in _result_no_crit.validacoes if v.codigo == "VAL-ADAPTER-CRITICIDADE"), None)
         assert val is not None
         assert val.status == "AVISO"
 
-    def test_planejamento_rows_include_criticidade_key(self):
+    def test_planejamento_rows_include_criticidade_key(self, _result_crit):
         """When enriched, planejamento rows include 'criticidade' field."""
-        mod = _load_skill("10-relatorio-e-artefatos")
-        canonical_in = self._canonical_with_resultado(with_criticidade=True)
-
-        # We need to inspect the JSON relatorio for criticidade field
-        result = mod.run_relatorio_e_artefatos(canonical_in=canonical_in, inputs={}, perfil={})
-        relatorio = getattr(result, "relatorio", None)
+        relatorio = getattr(_result_crit, "relatorio", None)
         if relatorio is None:
-            relatorio = getattr(result.canonical, "_relatorio_saida", None)
-
+            relatorio = getattr(_result_crit.canonical, "_relatorio_saida", None)
         if relatorio and "PLANEJAMENTO" in relatorio:
             rows = relatorio["PLANEJAMENTO"]
             if rows:
                 assert "criticidade" in rows[0], "planejamento row missing 'criticidade' key when enriched"
 
-    def test_planejamento_rows_no_criticidade_when_absent(self):
+    def test_planejamento_rows_no_criticidade_when_absent(self, _result_no_crit):
         """When not enriched, planejamento rows do not include 'criticidade' field."""
-        mod = _load_skill("10-relatorio-e-artefatos")
-        canonical_in = self._canonical_with_resultado(with_criticidade=False)
-        result = mod.run_relatorio_e_artefatos(canonical_in=canonical_in, inputs={}, perfil={})
-        relatorio = getattr(result, "relatorio", None)
+        relatorio = getattr(_result_no_crit, "relatorio", None)
         if relatorio is None:
-            relatorio = getattr(result.canonical, "_relatorio_saida", None)
+            relatorio = getattr(_result_no_crit.canonical, "_relatorio_saida", None)
         if relatorio and "PLANEJAMENTO" in relatorio:
             rows = relatorio["PLANEJAMENTO"]
             if rows:

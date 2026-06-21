@@ -112,110 +112,106 @@ def _client(svc=None):
     return TestClient(app, raise_server_exceptions=False)
 
 
+@pytest.fixture(scope="module")
+def _fake_client():
+    app = create_app()
+    app.dependency_overrides[get_concilium_service] = lambda: _FakeSvc()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
+@pytest.fixture(scope="module")
+def _error_client():
+    app = create_app()
+    app.dependency_overrides[get_concilium_service] = lambda: _ErrorSvc()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
 class TestPerfilRoutes:
-    def test_list_perfis(self):
-        c = _client()
-        resp = c.get("/api/perfis")
+    def test_list_perfis(self, _fake_client):
+        resp = _fake_client.get("/api/perfis")
         assert resp.status_code == 200
         assert "items" in resp.json()
 
-    def test_list_perfil_versions(self):
-        c = _client()
-        resp = c.get("/api/perfis/p1/versions")
+    def test_list_perfil_versions(self, _fake_client):
+        resp = _fake_client.get("/api/perfis/p1/versions")
         assert resp.status_code == 200
 
-    def test_create_perfil_version(self):
-        c = _client()
-        resp = c.post("/api/perfis/p1/versions", json={"motivo": "update"})
+    def test_create_perfil_version(self, _fake_client):
+        resp = _fake_client.post("/api/perfis/p1/versions", json={"motivo": "update"})
         assert resp.status_code == 200
 
-    def test_create_perfil_version_error(self):
-        c = _client(_ErrorSvc())
-        resp = c.post("/api/perfis/p1/versions", json={"motivo": "bad"})
+    def test_create_perfil_version_error(self, _error_client):
+        resp = _error_client.post("/api/perfis/p1/versions", json={"motivo": "bad"})
         assert resp.status_code == 400
 
-    def test_compare_perfil_versions(self):
-        c = _client()
-        resp = c.get("/api/perfis/compare?id=p1&vA=v1&vB=v2")
+    def test_compare_perfil_versions(self, _fake_client):
+        resp = _fake_client.get("/api/perfis/compare?id=p1&vA=v1&vB=v2")
         assert resp.status_code == 200
 
 
 class TestContextoRoutes:
-    def test_list_contextos(self):
-        c = _client()
-        resp = c.get("/api/contextos")
+    def test_list_contextos(self, _fake_client):
+        resp = _fake_client.get("/api/contextos")
         assert resp.status_code == 200
 
-    def test_list_contexto_versions(self):
-        c = _client()
-        resp = c.get("/api/contextos/ctx1/versions")
+    def test_list_contexto_versions(self, _fake_client):
+        resp = _fake_client.get("/api/contextos/ctx1/versions")
         assert resp.status_code == 200
 
-    def test_create_contexto_version(self):
-        c = _client()
-        resp = c.post("/api/contextos/ctx1/versions", json={"motivo": "update"})
+    def test_create_contexto_version(self, _fake_client):
+        resp = _fake_client.post("/api/contextos/ctx1/versions", json={"motivo": "update"})
         assert resp.status_code == 200
 
-    def test_create_contexto_version_error(self):
-        c = _client(_ErrorSvc())
-        resp = c.post("/api/contextos/ctx1/versions", json={"motivo": "bad"})
+    def test_create_contexto_version_error(self, _error_client):
+        resp = _error_client.post("/api/contextos/ctx1/versions", json={"motivo": "bad"})
         assert resp.status_code == 400
 
-    def test_compare_contexto_versions(self):
-        c = _client()
-        resp = c.get("/api/contextos/compare?id=ctx1&vA=v1&vB=v2")
+    def test_compare_contexto_versions(self, _fake_client):
+        resp = _fake_client.get("/api/contextos/compare?id=ctx1&vA=v1&vB=v2")
         assert resp.status_code == 200
 
 
 class TestTemaRoutes:
-    def test_list_temas(self):
-        c = _client()
-        resp = c.get("/api/temas")
+    def test_list_temas(self, _fake_client):
+        resp = _fake_client.get("/api/temas")
         assert resp.status_code == 200
 
-    def test_list_tema_versions(self):
-        c = _client()
-        resp = c.get("/api/temas/t1/versions")
+    def test_list_tema_versions(self, _fake_client):
+        resp = _fake_client.get("/api/temas/t1/versions")
         assert resp.status_code == 200
 
-    def test_create_tema_version(self):
-        c = _client()
-        resp = c.post("/api/temas/t1/versions", json={"motivo": "update"})
+    def test_create_tema_version(self, _fake_client):
+        resp = _fake_client.post("/api/temas/t1/versions", json={"motivo": "update"})
         assert resp.status_code == 200
 
-    def test_create_tema_version_error(self):
-        c = _client(_ErrorSvc())
-        resp = c.post("/api/temas/t1/versions", json={"motivo": "bad"})
+    def test_create_tema_version_error(self, _error_client):
+        resp = _error_client.post("/api/temas/t1/versions", json={"motivo": "bad"})
         assert resp.status_code == 400
 
-    def test_compare_tema_versions(self):
-        c = _client()
-        resp = c.get("/api/temas/compare?id=t1&vA=v1&vB=v2")
+    def test_compare_tema_versions(self, _fake_client):
+        resp = _fake_client.get("/api/temas/compare?id=t1&vA=v1&vB=v2")
         assert resp.status_code == 200
 
 
 class TestJurisdictionRoutes:
-    def test_list_jurisdicoes(self):
-        c = _client()
-        resp = c.get("/api/jurisdicoes")
+    def test_list_jurisdicoes(self, _fake_client):
+        resp = _fake_client.get("/api/jurisdicoes")
         assert resp.status_code == 200
 
-    def test_list_jurisdicao_versions(self):
-        c = _client()
-        resp = c.get("/api/jurisdicoes/j1/versions")
+    def test_list_jurisdicao_versions(self, _fake_client):
+        resp = _fake_client.get("/api/jurisdicoes/j1/versions")
         assert resp.status_code == 200
 
-    def test_create_jurisdicao_version(self):
-        c = _client()
-        resp = c.post("/api/jurisdicoes/j1/versions", json={"motivo": "update"})
+    def test_create_jurisdicao_version(self, _fake_client):
+        resp = _fake_client.post("/api/jurisdicoes/j1/versions", json={"motivo": "update"})
         assert resp.status_code == 200
 
-    def test_create_jurisdicao_version_error(self):
-        c = _client(_ErrorSvc())
-        resp = c.post("/api/jurisdicoes/j1/versions", json={"motivo": "bad"})
+    def test_create_jurisdicao_version_error(self, _error_client):
+        resp = _error_client.post("/api/jurisdicoes/j1/versions", json={"motivo": "bad"})
         assert resp.status_code == 400
 
-    def test_compare_jurisdicao_versions(self):
-        c = _client()
-        resp = c.get("/api/jurisdicoes/compare?id=j1&vA=v1&vB=v2")
+    def test_compare_jurisdicao_versions(self, _fake_client):
+        resp = _fake_client.get("/api/jurisdicoes/compare?id=j1&vA=v1&vB=v2")
         assert resp.status_code == 200

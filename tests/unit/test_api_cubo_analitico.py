@@ -14,6 +14,15 @@ except TypeError as exc:  # FastAPI/Starlette version mismatch in local env
 pytestmark = [pytest.mark.slow]
 
 
+@pytest.fixture(scope="module")
+def _cubo_client():
+    """App + _FakeService criados uma vez por módulo."""
+    app = create_app()
+    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
+    with TestClient(app) as c:
+        yield c
+
+
 class _FakeService:
     def get_cubo_analitico(self, project_id: str, version: str | None = None):
         assert project_id == "proj-123"
@@ -104,10 +113,8 @@ class _FakeService:
         }
 
 
-def test_get_cubo_analitico_route_returns_payload():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_route_returns_payload(_cubo_client):
+    client = _cubo_client
 
     response = client.get("/api/projects/proj-123/cubo-analitico")
 
@@ -119,10 +126,8 @@ def test_get_cubo_analitico_route_returns_payload():
     assert "mes" in body["cubo_analitico"]["resumo_por_natureza_temporal"]
 
 
-def test_get_cubo_analitico_projection_contract_default_payload():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_contract_default_payload(_cubo_client):
+    client = _cubo_client
 
     response = client.get("/api/projects/proj-123/cubo-analitico/projecao")
 
@@ -143,10 +148,8 @@ def test_get_cubo_analitico_projection_contract_default_payload():
 
 @pytest.mark.parametrize("face", ["tempo_natureza", "tempo_componente", "categoria_componente", "abc_curva"])
 @pytest.mark.parametrize("granularidade", ["semana", "mes", "trimestre"])
-def test_get_cubo_analitico_projection_accepts_valid_face_and_granularity(face: str, granularidade: str):
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_accepts_valid_face_and_granularity(_cubo_client, face: str, granularidade: str):
+    client = _cubo_client
 
     response = client.get(
         "/api/projects/proj-123/cubo-analitico/projecao",
@@ -159,10 +162,8 @@ def test_get_cubo_analitico_projection_accepts_valid_face_and_granularity(face: 
     assert body["granularidade"] == granularidade
 
 
-def test_get_cubo_analitico_projection_accepts_measure_profile_and_aggregation_mode():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_accepts_measure_profile_and_aggregation_mode(_cubo_client):
+    client = _cubo_client
 
     response = client.get(
         "/api/projects/proj-123/cubo-analitico/projecao",
@@ -181,10 +182,8 @@ def test_get_cubo_analitico_projection_accepts_measure_profile_and_aggregation_m
     assert body["aggregation_mode"] == "pareto"
 
 
-def test_get_cubo_analitico_projection_accepts_version_query_param():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_accepts_version_query_param(_cubo_client):
+    client = _cubo_client
 
     response = client.get(
         "/api/projects/proj-123/cubo-analitico/projecao",
@@ -195,10 +194,8 @@ def test_get_cubo_analitico_projection_accepts_version_query_param():
     assert response.json()["version"] == "v2"
 
 
-def test_get_cubo_analitico_projection_rejects_invalid_face():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_rejects_invalid_face(_cubo_client):
+    client = _cubo_client
 
     response = client.get(
         "/api/projects/proj-123/cubo-analitico/projecao",
@@ -208,10 +205,8 @@ def test_get_cubo_analitico_projection_rejects_invalid_face():
     assert response.status_code == 422
 
 
-def test_get_cubo_analitico_projection_rejects_invalid_granularity():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_rejects_invalid_granularity(_cubo_client):
+    client = _cubo_client
 
     response = client.get(
         "/api/projects/proj-123/cubo-analitico/projecao",
@@ -221,10 +216,8 @@ def test_get_cubo_analitico_projection_rejects_invalid_granularity():
     assert response.status_code == 422
 
 
-def test_get_cubo_analitico_projection_rejects_invalid_filters():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_rejects_invalid_filters(_cubo_client):
+    client = _cubo_client
 
     response = client.get(
         "/api/projects/proj-123/cubo-analitico/projecao",
@@ -234,10 +227,8 @@ def test_get_cubo_analitico_projection_rejects_invalid_filters():
     assert response.status_code == 422
 
 
-def test_get_cubo_analitico_projection_rejects_invalid_measure_profile():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_rejects_invalid_measure_profile(_cubo_client):
+    client = _cubo_client
 
     response = client.get(
         "/api/projects/proj-123/cubo-analitico/projecao",
@@ -247,10 +238,8 @@ def test_get_cubo_analitico_projection_rejects_invalid_measure_profile():
     assert response.status_code == 422
 
 
-def test_get_cubo_analitico_projection_contract_matrix_endpoint():
-    app = create_app()
-    app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
-    client = TestClient(app)
+def test_get_cubo_analitico_projection_contract_matrix_endpoint(_cubo_client):
+    client = _cubo_client
 
     response = client.get("/api/projects/proj-123/cubo-analitico/projecao/contrato")
 
