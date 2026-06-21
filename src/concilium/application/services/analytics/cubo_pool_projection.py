@@ -336,7 +336,9 @@ def _face_custo_estado_componente(cubo, contratos, cadeias, **_):
     comb_total = cec.get(("prod", "comb"), 0.0) + cec.get(("idle", "comb"), 0.0)
     mat_total = cec.get(("prod", "mat"), 0.0) + cec.get(("idle", "mat"), 0.0)
     if comb_total <= 0.0:
-        narrativa.append("Combustível aparece zerado nesta execução (sem custo de diesel consolidado no pool instancial).")
+        narrativa.append(
+            "Combustível aparece zerado nesta execução (sem custo de diesel consolidado no pool instancial)."
+        )
     if mat_total <= 0.0:
         narrativa.append("Material aparece zerado nesta execução do pool instancial.")
     return columns, rows, narrativa, {}
@@ -464,7 +466,9 @@ def _face_causa_custo(cubo, contratos, cadeias, *, top_n=300, **_):
     return columns, rows, narrativa, {}
 
 
-def _face_economia_pool(cubo, contratos, cadeias, *, top_n=300, baseline_por_item=None, baseline_source_by_item=None, **_):
+def _face_economia_pool(
+    cubo, contratos, cadeias, *, top_n=300, baseline_por_item=None, baseline_source_by_item=None, **_
+):
     baseline_por_item = baseline_por_item or {}
     baseline_source_by_item = baseline_source_by_item or {}
     rows = []

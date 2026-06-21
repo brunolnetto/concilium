@@ -35,9 +35,11 @@ class TestBuildDiretoTemporalCategoria:
         mock_plt = MagicMock()
         mock_fig = MagicMock()
 
-        with patch(self._PAYLOAD, return_value=payload), patch(
-            self._INIT_MPL, return_value=(mock_plt, lambda fig: b"PNG_BYTES")
-        ), patch(self._RENDER, return_value=mock_fig):
+        with (
+            patch(self._PAYLOAD, return_value=payload),
+            patch(self._INIT_MPL, return_value=(mock_plt, lambda fig: b"PNG_BYTES")),
+            patch(self._RENDER, return_value=mock_fig),
+        ):
             assert build(MagicMock(), MagicMock()) == b"PNG_BYTES"
 
 
@@ -71,7 +73,9 @@ class TestBuildIndiretoTemporalCategoria:
         mock_plt = MagicMock()
         mock_fig = MagicMock()
 
-        with patch(self._PAYLOAD, return_value=payload), patch(
-            self._INIT_MPL, return_value=(mock_plt, lambda fig: b"PNG_BYTES")
-        ), patch(self._RENDER, return_value=mock_fig):
+        with (
+            patch(self._PAYLOAD, return_value=payload),
+            patch(self._INIT_MPL, return_value=(mock_plt, lambda fig: b"PNG_BYTES")),
+            patch(self._RENDER, return_value=mock_fig),
+        ):
             assert build(MagicMock(), MagicMock()) == b"PNG_BYTES"

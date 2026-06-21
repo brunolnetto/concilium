@@ -22,6 +22,7 @@ blob_app = typer.Typer(
 def _make_source_storage():
     """Instancia storage de origem (lê env vars de source)."""
     from concilium.infrastructure.storage.store_factory import build_blob_storage
+
     return build_blob_storage()
 
 
@@ -34,6 +35,7 @@ def _make_target_storage():
         CONCILIUM__AZURE_CONTAINER=...
     """
     from concilium.infrastructure.storage.store_factory import build_blob_storage
+
     return build_blob_storage()
 
 
@@ -82,14 +84,14 @@ def migrate(
     )
 
     color = "green" if result.success else "red"
-    rprint(
-        f"\n[bold {color}]{'DRY-RUN ' if dry_run else ''}Migração concluída[/bold {color}]"
-    )
+    rprint(f"\n[bold {color}]{'DRY-RUN ' if dry_run else ''}Migração concluída[/bold {color}]")
     rprint(f"  Total blobs:  {result.total_blobs}")
     if not dry_run:
         rprint(f"  Copiados:     [green]{result.copied}[/green]")
         rprint(f"  Pulados:      [yellow]{result.skipped}[/yellow]")
-        rprint(f"  Falhas:       [{'red' if result.failed else 'dim'}]{result.failed}[/{'red' if result.failed else 'dim'}]")
+        rprint(
+            f"  Falhas:       [{'red' if result.failed else 'dim'}]{result.failed}[/{'red' if result.failed else 'dim'}]"
+        )
 
     if result.failed > 0:
         raise typer.Exit(1)

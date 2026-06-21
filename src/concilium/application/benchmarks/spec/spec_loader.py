@@ -300,11 +300,19 @@ class BenchmarkSpecLoader:
         path = Path(path).resolve()
         ref = self._normalize_reference_schema(ref)
 
-        contexto_id = ref.get("contexto_id") or "mendeslobo"
+        projeto_block = ref.get("projeto") if isinstance(ref.get("projeto"), dict) else {}
+        projeto_nome = ref.get("projeto") if isinstance(ref.get("projeto"), str) else None
+        if not projeto_nome and projeto_block:
+            projeto_nome = projeto_block.get("nome") or projeto_block.get("projeto")
+        if not isinstance(projeto_nome, str) or not projeto_nome.strip():
+            projeto_nome = self._infer_slug_from_path(path)
+
+        meta_block = ref.get("meta") if isinstance(ref.get("meta"), dict) else {}
+        contexto_id = ref.get("contexto_id") or (meta_block.get("contexto_id") if meta_block else None) or "mendeslobo"
         _ctx_version, _perfil_id, _perfil_version = self._lfd_resolve_context(ref, contexto_id)
 
-        data_ini = ref.get("data_inicio", "2025-01-01")
-        data_fim = ref.get("data_termino", "2025-06-30")
+        data_ini = ref.get("data_inicio") or (projeto_block.get("data_inicio") if projeto_block else None) or "2025-01-01"
+        data_fim = ref.get("data_termino") or (projeto_block.get("data_termino") if projeto_block else None) or "2025-06-30"
         weeks = iso_weeks(data_ini, data_fim)
         eap = self._extract_eap(ref)
         eap = self._enrich_eap_with_cpu_ids(eap, contexto_id)
@@ -375,8 +383,18 @@ class BenchmarkSpecLoader:
         if ref.get("rcpsp_spec"):
             extra_inputs["05-equipes-e-alocacao"] = {"rcpsp_spec": ref["rcpsp_spec"]}
 
+        localizacao = ref.get("localizacao")
+        if localizacao is None and projeto_block:
+            localizacao = projeto_block.get("localizacao")
+
+        regime_trabalho = ref.get("regime_trabalho")
+        if not isinstance(regime_trabalho, dict) and projeto_block:
+            regime_trabalho = projeto_block.get("regime_trabalho")
+        if not isinstance(regime_trabalho, dict):
+            regime_trabalho = {"horas_dia": 8, "dias_semana": 6}
+
         return ProjectSpec(
-            nome=ref.get("projeto", slug),
+            nome=projeto_nome,
             slug=slug,
             contexto_id=contexto_id,
             contexto_version=_ctx_version,
@@ -384,17 +402,17 @@ class BenchmarkSpecLoader:
             perfil_version=_perfil_version,
             referencia_path=path,
             inputs_escopo={
-                "nome": ref.get("projeto", slug),
+                "nome": projeto_nome,
                 "tipo_obra": "terraplenagem",
                 # localizacao: string legada OU {lat, lng} normalizado. coordenadas é
                 # alias retrocompat — se localizacao já é {lat,lng}, reusa o mesmo dict.
-                "localizacao": ref.get("localizacao", "Brasil"),
+                "localizacao": localizacao or "Brasil",
                 "coordenadas": (
-                    ref.get("localizacao")
-                    if isinstance(ref.get("localizacao"), dict)
+                    localizacao
+                    if isinstance(localizacao, dict)
                     else ref.get("coordenadas", {"lat": 0.0, "lng": 0.0})
                 ),
-                "regime_trabalho": ref.get("regime_trabalho", {"horas_dia": 8, "dias_semana": 6}),
+                "regime_trabalho": regime_trabalho,
                 "data_inicio": data_ini,
                 "data_termino": data_fim,
                 "eap": [item for item in eap if item.get("cpu_id")],

@@ -44,6 +44,7 @@ class CreateProjectResponse(BaseModel):
 class RunProjectRequest(BaseModel):
     base_version: str | None = None
     fork_version: bool = False
+    procurement_intent: str = "rfi"
     skill_inputs_override: dict[str, dict[str, Any]] = Field(default_factory=dict)
     use_saved_overrides: bool = True
     # ADR-054 §9.1: independent toggle for WMP policy injection.
@@ -58,6 +59,7 @@ class RerunProjectRequest(BaseModel):
     base_run_id: str | None = None
     base_version: str | None = None
     fork_version: bool = True
+    procurement_intent: str = "rfi"
     skill_inputs_override: dict[str, dict[str, Any]] = Field(default_factory=dict)
     use_saved_overrides: bool = True
     use_mobilizacao_policy: bool = True
@@ -83,6 +85,7 @@ class RunProjectResponse(BaseModel):
     run_id: str
     version: str
     status: str
+    procurement_intent: str = "rfi"
     requested_at: str | None = None
     started_at: str | None = None
     finished_at: str | None = None
@@ -103,6 +106,7 @@ class RunStartResponse(BaseModel):
     project_id: str
     run_id: str
     status: str
+    procurement_intent: str = "rfi"
     use_mobilizacao_policy: bool = True
     use_strict_catalog_baseline: bool = False
 
@@ -139,12 +143,16 @@ class SimulateRequest(BaseModel):
     quantitativo: float = Field(gt=0)
     producao_horaria: float = Field(ge=0)
     dias_semana: int = Field(
-        default=6, ge=1, le=7,
-        description="Dias úteis por semana (default 6 = regime 6×1 MendesLobo). Use 5 para regime 5×2, 7 para contínuo."
+        default=6,
+        ge=1,
+        le=7,
+        description="Dias úteis por semana (default 6 = regime 6×1 MendesLobo). Use 5 para regime 5×2, 7 para contínuo.",
     )
     horas_dia: int = Field(
-        default=8, ge=1, le=24,
-        description="Horas de trabalho por dia (default 8h). Outros regimes: 9h (5×9), 12h (12×36)."
+        default=8,
+        ge=1,
+        le=24,
+        description="Horas de trabalho por dia (default 8h). Outros regimes: 9h (5×9), 12h (12×36).",
     )
     semana_inicio: str | None = Field(
         default=None,

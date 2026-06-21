@@ -25,13 +25,16 @@ _SIGNAL_TYPES = {"logs", "traces", "metrics"}
 
 # ── Dependency: storage ───────────────────────────────────────────────────────
 
+
 def _get_storage():
     """Retorna o BlobStorage configurado para observabilidade."""
     from concilium.infrastructure.observability.pipeline import _make_storage
+
     return _make_storage()
 
 
 # ── Helpers de paginação ─────────────────────────────────────────────────────
+
 
 def _paginate(items: list[Any], page: int, page_size: int) -> dict[str, Any]:
     total = len(items)
@@ -48,6 +51,7 @@ def _paginate(items: list[Any], page: int, page_size: int) -> dict[str, Any]:
 
 def _read_silver_records(storage, signal_type: str) -> list[dict[str, Any]]:
     import json
+
     blobs = sorted(storage.listar_blobs(f"observability/silver/{signal_type}/"))
     records: list[dict[str, Any]] = []
     for path in blobs:
@@ -63,6 +67,7 @@ def _read_silver_records(storage, signal_type: str) -> list[dict[str, Any]]:
 
 def _read_bronze_records(storage, signal_type: str, date: str | None) -> list[dict[str, Any]]:
     import json
+
     prefix = f"observability/bronze/{signal_type}/"
     if date:
         prefix += f"{date}/"
@@ -81,6 +86,7 @@ def _read_bronze_records(storage, signal_type: str, date: str | None) -> list[di
 
 # ── Gold endpoints ────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/gold/sli",
     summary="SLI diário — p50/p95/p99 de duration_ms por skill",
@@ -94,6 +100,7 @@ def get_sli_diario(
     storage=Depends(_get_storage),
 ) -> dict[str, Any]:
     from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+
     agg = GoldAggregator(storage)
     rows = agg.build_sli_diario()
     if skill_id:
@@ -117,6 +124,7 @@ def get_fallback_rate(
     storage=Depends(_get_storage),
 ) -> dict[str, Any]:
     from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+
     agg = GoldAggregator(storage)
     rows = agg.build_fallback_rate_por_skill()
     if skill_id:
@@ -138,6 +146,7 @@ def get_alertas_ativos(
     storage=Depends(_get_storage),
 ) -> dict[str, Any]:
     from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+
     agg = GoldAggregator(storage)
     alertas = agg.build_alertas_ativos()
     if tipo:
@@ -146,6 +155,7 @@ def get_alertas_ativos(
 
 
 # ── Silver endpoints ──────────────────────────────────────────────────────────
+
 
 @router.get(
     "/silver/{signal_type}",
@@ -175,6 +185,7 @@ def get_silver(
 
 # ── Bronze endpoints ──────────────────────────────────────────────────────────
 
+
 @router.get(
     "/bronze/{signal_type}",
     summary="Records Bronze raw — dados brutos antes da normalização",
@@ -195,14 +206,16 @@ def get_bronze(
 
 # ── Status endpoint ───────────────────────────────────────────────────────────
 
+
 @router.get(
     "/status",
     summary="Checkpoints do pipeline — último blob processado por sinal",
     response_model=None,
 )
 def get_status(storage=Depends(_get_storage)) -> dict[str, Any]:
-    from concilium.infrastructure.observability.checkpoint_store import CheckpointStore
     import dataclasses
+
+    from concilium.infrastructure.observability.checkpoint_store import CheckpointStore
 
     store = CheckpointStore(storage)
     checkpoints = {}

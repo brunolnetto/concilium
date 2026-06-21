@@ -26,7 +26,7 @@ def test_intent_artifacts_match_profile_deliverables(config_root):
     root = config_root.parent
     facade = BenchmarkFacade.from_root(root)
 
-    for intent in ("rfi", "rfp", "rfq"):
+    for intent in ("rfi", "rfp"):
         report = facade.run_single("GOLDEN", reset=True, procurement_intent=intent)
         assert report is not None
 

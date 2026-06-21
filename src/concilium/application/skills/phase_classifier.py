@@ -34,7 +34,6 @@ class ProcurementIntent(str, Enum):
 
     RFI = "rfi"
     RFP = "rfp"
-    RFQ = "rfq"
 
 
 @dataclass(frozen=True)
@@ -76,7 +75,7 @@ def get_pipeline_profile_for_intent(intent: ProcurementIntent | str) -> Pipeline
 
     - RFI: precificação de catálogo (PU x Q), sem trilha analítica pesada.
     - RFP: comparação técnico-econômica completa com cronograma e análise.
-    - RFQ: fechamento de cotação com baseline fixada e pacote comercial.
+      O RFP aprovado segue diretamente para aprovação do cliente.
     """
     if isinstance(intent, ProcurementIntent):
         resolved = intent
@@ -95,18 +94,6 @@ def get_pipeline_profile_for_intent(intent: ProcurementIntent | str) -> Pipeline
             deliverables=[
                 "benchmark_report.json",
                 "relatorio.pdf",
-                "resultado_planejamento.xlsx",
-            ],
-        )
-
-    if resolved == ProcurementIntent.RFQ:
-        return PipelineProfile(
-            intent=resolved,
-            mode=PipelineMode.LIGHT,
-            path_name="RFQ_COTACAO_FINAL",
-            skill_sequence=get_skills_for_mode(PipelineMode.LIGHT),
-            deliverables=[
-                "benchmark_report.json",
                 "resultado_planejamento.xlsx",
             ],
         )
@@ -131,9 +118,9 @@ def normalize_procurement_intent(intent: ProcurementIntent | str | None) -> Proc
 
 
 def is_campaign_allowed_for_intent(intent: ProcurementIntent | str | None) -> bool:
-    """Campanha GO é permitida apenas para RFP/RFQ."""
+    """Campanha GO é permitida apenas para RFP."""
     normalized = normalize_procurement_intent(intent)
-    return normalized in {ProcurementIntent.RFP, ProcurementIntent.RFQ}
+    return normalized == ProcurementIntent.RFP
 
 
 # Preserve canonical display order

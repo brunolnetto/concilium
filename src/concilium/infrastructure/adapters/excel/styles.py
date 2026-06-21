@@ -150,12 +150,22 @@ def _set_col_widths(ws: Any, widths: list[int | float]) -> None:
         ws.column_dimensions[get_column_letter(i)].width = w
 
 
-def _auto_fit_columns(ws: Any, min_width: float = 8.0, max_width: float = 42.0, padding: float = 2.0) -> None:
-    """Ajusta largura das colunas com base no maior valor textual visível."""
+def _auto_fit_columns(
+    ws: Any,
+    min_width: float = 8.0,
+    max_width: float = 42.0,
+    padding: float = 2.0,
+    sample_rows: int = 200,
+) -> None:
+    """Ajusta largura das colunas com base no maior valor textual visível.
+
+    sample_rows limita a iteração às primeiras N linhas — suficiente para
+    calibrar largura sem percorrer sheets com centenas de linhas de dados.
+    """
     for column_cells in ws.columns:
         max_len = 0
         column_letter = get_column_letter(column_cells[0].column)
-        for cell in column_cells:
+        for cell in column_cells[:sample_rows]:
             if cell.value is None:
                 continue
             value = cell.value

@@ -398,7 +398,6 @@ class TestStatus:
         registry_mock = MagicMock()
         registry_mock.get_all_skills.return_value = {"sk-01": skill_meta}
 
-
         from concilium.presentation.cli.commands_basic import status
 
         mini_app = typer.Typer()
@@ -422,7 +421,6 @@ class TestStatus:
             versions=["v1"],
             version_path=version_dir,
         )
-
 
         from concilium.presentation.cli.commands_basic import status
 
@@ -452,7 +450,6 @@ class TestStatus:
             version_path=version_dir,
         )
 
-
         from concilium.presentation.cli.commands_basic import status
 
         mini_app = typer.Typer()
@@ -481,7 +478,6 @@ class TestStatus:
             version_path=version_dir,
         )
 
-
         from concilium.presentation.cli.commands_basic import status
 
         mini_app = typer.Typer()
@@ -503,7 +499,6 @@ class TestStatus:
             versions=[],
             version_path=version_dir,
         )
-
 
         from concilium.presentation.cli.commands_basic import status
 

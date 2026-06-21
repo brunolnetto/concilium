@@ -11,6 +11,8 @@ from concilium.application.services.project.project_service import ProjectServic
 from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
 from concilium.presentation.api.app import create_app
 
+from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent
+
 pytestmark = [pytest.mark.slow]
 
 
@@ -99,6 +101,7 @@ def test_run_project_merges_inputs_and_records_progress(repository, audit_servic
         project.meta["id"],
         base_version=None,
         fork_version=False,
+        procurement_intent="rfp",
         skill_inputs_override={"01-escopo-e-eap": {"nested": {"request": 30}}},
         use_saved_overrides=True,
         use_mobilizacao_policy=True,
@@ -110,11 +113,12 @@ def test_run_project_merges_inputs_and_records_progress(repository, audit_servic
     assert payload["version"] == "v1"
     assert observed["skill_inputs"]["01-escopo-e-eap"]["base"] == 1
     assert observed["skill_inputs"]["01-escopo-e-eap"]["nested"] == {"left": 10, "saved": 20, "request": 30}
-    assert observed["skill_sequence"]
+    assert observed["skill_sequence"] == get_pipeline_profile_for_intent("rfp").skill_sequence
     assert payload["skills_progress"][0]["skill"] == "skill-a"
     assert payload["skills_progress"][0]["status"] == "OK"
     assert observed["invocation_context"]["run_id"] == payload["run_id"]
     assert pipeline_service.list_runs(project.meta["id"])[0]["run_id"] == payload["run_id"]
+    assert payload["procurement_intent"] == "rfp"
 
 
 def test_run_project_can_disable_mobilizacao_policy_injection(repository, audit_service):
@@ -134,6 +138,7 @@ def test_run_project_can_disable_mobilizacao_policy_injection(repository, audit_
         project.meta["id"],
         base_version=None,
         fork_version=False,
+        procurement_intent="rfp",
         skill_inputs_override={},
         use_saved_overrides=True,
         use_mobilizacao_policy=False,
@@ -145,7 +150,7 @@ def test_run_project_can_disable_mobilizacao_policy_injection(repository, audit_
     assert payload["use_mobilizacao_policy"] is False
     assert observed["skill_inputs"]["04-cronograma"] == {"base": True}
     assert "mobilizacao_policies" not in observed["skill_inputs"]["04-cronograma"]
-    assert observed["skill_sequence"]
+    assert observed["skill_sequence"] == get_pipeline_profile_for_intent("rfp").skill_sequence
 
 
 def test_resolved_catalog_baseline_prefers_project_reference(repository, audit_service):
@@ -171,6 +176,7 @@ def test_resolved_catalog_baseline_prefers_project_reference(repository, audit_s
         project.meta["id"],
         base_version=None,
         fork_version=False,
+        procurement_intent="rfi",
         skill_inputs_override={},
         use_saved_overrides=True,
         use_mobilizacao_policy=False,
@@ -182,7 +188,7 @@ def test_resolved_catalog_baseline_prefers_project_reference(repository, audit_s
     assert payload["catalogo_base_origem"] == "project_reference"
     assert resolved["catalogo_base_origem"] == "project_reference"
     assert resolved["items"]["cpus"][0]["codigo"] == "cpu-projeto"
-    assert observed["skill_sequence"]
+    assert observed["skill_sequence"] == get_pipeline_profile_for_intent("rfi").skill_sequence
 
 
 def test_strict_catalog_baseline_fails_without_project_reference(repository, audit_service):
@@ -198,6 +204,7 @@ def test_strict_catalog_baseline_fails_without_project_reference(repository, aud
         project.meta["id"],
         base_version=None,
         fork_version=False,
+        procurement_intent="rfp",
         skill_inputs_override={},
         use_saved_overrides=True,
         use_mobilizacao_policy=False,

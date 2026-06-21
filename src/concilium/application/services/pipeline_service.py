@@ -7,6 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from concilium.application.pipeline_strategy import get_pipeline_strategy
+from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent, normalize_procurement_intent
 
 from .project.audit_service import AuditService
 from .project.project_files import DEFAULT_PROJECT_FILES, ProjectFiles
@@ -36,6 +37,7 @@ class PipelineService:
         *,
         base_version: str | None,
         fork_version: bool,
+        procurement_intent: str | None = None,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
         use_mobilizacao_policy: bool,
@@ -47,6 +49,7 @@ class PipelineService:
             project,
             base_version=base_version,
             fork_version=fork_version,
+            procurement_intent=procurement_intent,
             skill_inputs_override=skill_inputs_override,
             use_saved_overrides=use_saved_overrides,
             use_mobilizacao_policy=use_mobilizacao_policy,
@@ -64,6 +67,7 @@ class PipelineService:
                 "run_id": run_id,
                 "base_version": base_version,
                 "fork_version": fork_version,
+                "procurement_intent": normalize_procurement_intent(procurement_intent).value,
                 "use_saved_overrides": use_saved_overrides,
                 "use_mobilizacao_policy": use_mobilizacao_policy,
                 "use_strict_catalog_baseline": use_strict_catalog_baseline,
@@ -78,6 +82,7 @@ class PipelineService:
         *,
         base_version: str | None,
         fork_version: bool,
+        procurement_intent: str | None = None,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
         use_mobilizacao_policy: bool,
@@ -89,6 +94,7 @@ class PipelineService:
             project,
             base_version=base_version,
             fork_version=fork_version,
+            procurement_intent=procurement_intent,
             skill_inputs_override=skill_inputs_override,
             use_saved_overrides=use_saved_overrides,
             use_mobilizacao_policy=use_mobilizacao_policy,
@@ -113,6 +119,7 @@ class PipelineService:
                 "run_id": run_id,
                 "base_version": base_version,
                 "fork_version": fork_version,
+                "procurement_intent": normalize_procurement_intent(procurement_intent).value,
                 "use_saved_overrides": use_saved_overrides,
                 "use_mobilizacao_policy": use_mobilizacao_policy,
                 "use_strict_catalog_baseline": use_strict_catalog_baseline,
@@ -143,6 +150,7 @@ class PipelineService:
             "project_id": project_id,
             "run_id": run_id,
             "status": run.get("status"),
+            "procurement_intent": run.get("procurement_intent", "rfi"),
             "requested_at": run.get("requested_at"),
             "started_at": run.get("started_at"),
             "finished_at": run.get("finished_at"),
@@ -166,6 +174,7 @@ class PipelineService:
         *,
         base_version: str | None,
         fork_version: bool,
+        procurement_intent: str | None = None,
         skill_inputs_override: dict[str, dict[str, Any]],
         use_saved_overrides: bool,
         use_mobilizacao_policy: bool,
@@ -174,6 +183,7 @@ class PipelineService:
         mode: str,
     ) -> str:
         run_id = f"run_{uuid4().hex[:12]}"
+        intent = normalize_procurement_intent(procurement_intent)
         run = {  # type: ignore[var-annotated]
             "run_id": run_id,
             "project_id": project.meta.get("id"),
@@ -186,6 +196,7 @@ class PipelineService:
             "base_version": base_version,
             "version": None,
             "fork_version": fork_version,
+            "procurement_intent": intent.value,
             "use_saved_overrides": use_saved_overrides,
             "use_mobilizacao_policy": use_mobilizacao_policy,
             "use_strict_catalog_baseline": use_strict_catalog_baseline,
@@ -267,12 +278,15 @@ class PipelineService:
             strategy = get_pipeline_strategy(project)
             strategy.validate_preconditions(project)
 
+            # Linguagem RFX nativa no core: caminho (skills) definido por intent.
+            profile = get_pipeline_profile_for_intent(run.get("procurement_intent", "rfi"))
+
             runtime = self._runtime_factory()
             skills_log = runtime.run_pipeline(
                 project,
                 skill_inputs,
                 invocation_context={"run_id": run_id},
-                skill_sequence=strategy.skill_sequence(),
+                skill_sequence=profile.skill_sequence or strategy.skill_sequence(),
             )
             canonical = project.load_canonical(version)
             has_errors = any(item.get("status") in ("ERRO", "EXCEPTION") for item in skills_log)
@@ -287,6 +301,7 @@ class PipelineService:
                     "status": "ERRO" if has_errors else "OK",
                     "finished_at": self._now_iso(),
                     "skills_log": skills_log,
+                    "path_name": profile.path_name,
                     "summary": build_summary(canonical),
                     "output_files": project.list_output_files(version),
                     "error": None,

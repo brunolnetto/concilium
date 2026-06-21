@@ -34,9 +34,7 @@ def _bfc_custo_direto_total(
     return custo_direto, getattr(custo, "total", None), instancial
 
 
-def _bfc_preco_venda(
-    venda: object, custo_total: float | None
-) -> tuple[float | None, float | None, str]:
+def _bfc_preco_venda(venda: object, custo_total: float | None) -> tuple[float | None, float | None, str]:
     """Retorna (raw_bdi_lucro, preco_venda, fonte).
 
     fonte indica qual campo originou o preco_venda, permitindo que comparações downstream
@@ -243,7 +241,9 @@ class BenchmarkProjection:
     ferramenta_breakdown_direto: dict[str, Any] | None = None
     ferramenta_breakdown_indireto: dict[str, Any] | None = None
     actionable_insights: dict[str, Any] | None = None
-    preco_venda_fonte: str | None = None  # ADR-110 F7: "total_com_bdi" | "total_custo_plus_catalogo" | "derivado" | "indisponivel"
+    preco_venda_fonte: str | None = (
+        None  # ADR-110 F7: "total_com_bdi" | "total_custo_plus_catalogo" | "derivado" | "indisponivel"
+    )
 
     def _populate_resultado(self, resultado: Any) -> tuple[Any, Any]:
         """Popula ferramenta, breakdown_indireto e PE. Retorna (custo_direto, custo_indireto)."""

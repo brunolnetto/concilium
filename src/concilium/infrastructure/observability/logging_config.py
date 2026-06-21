@@ -18,6 +18,7 @@ from typing import Any
 # _JsonFormatter: JSON-lines com campos OTel obrigatórios (ADR-111 D4)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _get_trace_context() -> tuple[str, str]:
     """Retorna (trace_id, span_id) do span OTel ativo, ou ('', '') se ausente."""
     try:
@@ -39,6 +40,7 @@ def _get_auth_context() -> tuple[str, str]:
             current_request_id,
             current_user_id,
         )
+
         return current_user_id.get(), current_request_id.get()
     except Exception:
         return "", ""

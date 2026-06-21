@@ -138,9 +138,9 @@ def _build_eap_items(servicos: list[dict]) -> tuple[list[dict], list[dict]]:
 
 
 def _normalize_procurement_intent(value: str | None) -> str:
-    """Normaliza intenção de procurement para {rfi, rfp, rfq}."""
+    """Normaliza intenção de procurement para {rfi, rfp}."""
     normalized = (value or "rfi").strip().lower()
-    if normalized in {"rfi", "rfp", "rfq"}:
+    if normalized in {"rfi", "rfp"}:
         return normalized
     return "rfi"
 
@@ -155,15 +155,6 @@ def _procurement_context(intent: str) -> dict[str, str]:
             "resumo": (
                 "RFP considera cronograma, praticabilidade climatica e tempo nao-produtivo. "
                 "O custo total tende a ser maior que o catalogo puro."
-            ),
-        }
-    if intent == "rfq":
-        return {
-            "intent": "rfq",
-            "fase": "fechamento_comercial",
-            "metodo_custo": "escopo_fechado_para_cotacao",
-            "resumo": (
-                "RFQ exige baseline fechada para cotacao final com itens e quantitativos definidos."
             ),
         }
     return {
@@ -231,7 +222,7 @@ def register(server: FastMCP) -> None:
                                "predecessores": []          # opcional
                              }
             data_termino:    "YYYY-MM-DD" (opcional)
-            procurement_intent: "rfi" | "rfp" | "rfq" (default "rfi")
+            procurement_intent: "rfi" | "rfp" (default "rfi")
             coordenadas_lat/lng: para consulta climática (opcional, default 0)
             dias_semana:     regime de trabalho (default 6)
             horas_dia:       regime de trabalho (default 8)

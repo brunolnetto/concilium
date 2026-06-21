@@ -232,9 +232,7 @@ def _resolve_producao_horaria(eap_item: dict, cpu_lookup: dict, producao_lookup:
     if valor is not None:
         return float(valor)
     # Nível 3: ausente — 0 é fallback explícito (não valor calculado)
-    logger.debug(
-        "Produção horária não encontrada para cpu_id=%s prod_id=%s — retornando 0.0", cpu_id, prod_id
-    )
+    logger.debug("Produção horária não encontrada para cpu_id=%s prod_id=%s — retornando 0.0", cpu_id, prod_id)
     return 0.0
 
 

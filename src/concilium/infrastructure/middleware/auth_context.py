@@ -34,10 +34,12 @@ current_source_ip: ContextVar[str] = ContextVar("current_source_ip", default="")
 # Helper: decodifica token JWT sem lançar exceção
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _try_decode_token(token: str) -> dict | None:
     """Decodifica JWT silenciosamente. Retorna claims ou None se inválido."""
     try:
         from concilium.infrastructure.auth.token_service import decode_token
+
         return decode_token(token)
     except Exception:
         return None
@@ -46,6 +48,7 @@ def _try_decode_token(token: str) -> dict | None:
 # ─────────────────────────────────────────────────────────────────────────────
 # AuthContextMiddleware
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class AuthContextMiddleware(BaseHTTPMiddleware):
     """Middleware ASGI que popula contextvars de rastreabilidade para cada request.
@@ -66,7 +69,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
 
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            token = auth_header[len("Bearer "):].strip()
+            token = auth_header[len("Bearer ") :].strip()
             claims = _try_decode_token(token)
             if claims:
                 user_id = str(claims.get("sub") or "")
@@ -92,6 +95,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _extract_client_ip(request: Request) -> str:
     """Extrai IP real do cliente respeitando X-Forwarded-For (proxy/gateway)."""
     forwarded = request.headers.get("X-Forwarded-For", "")
@@ -105,6 +109,7 @@ def _set_otel_span_attributes(user_id: str, request_id: str) -> None:
     """Adiciona user.id e request.id ao span OTel ativo (best-effort)."""
     try:
         from opentelemetry import trace
+
         span = trace.get_current_span()
         if span and span.is_recording():
             if user_id:

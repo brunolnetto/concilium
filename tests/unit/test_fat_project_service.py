@@ -522,7 +522,6 @@ class TestCompareVersions:
         right_can = MagicMock()
         p.load_canonical.side_effect = [left_can, right_can]
 
-
         with (
             patch(
                 "concilium.application.services.project.project_service.resolve_compare_version",

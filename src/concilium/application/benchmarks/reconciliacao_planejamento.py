@@ -187,7 +187,9 @@ class ReconciliadorPlanejamento:
         for eq in self.canonical.equipes_diretas:
             _neb = getattr(eq, "num_equipes_base", None)
             n_base = max(1, _neb if _neb is not None else 1)
-            analise.canonical_direto[eq.item_id] = analise.canonical_direto.get(eq.item_id, 0.0) + eq.custo_total * n_base
+            analise.canonical_direto[eq.item_id] = (
+                analise.canonical_direto.get(eq.item_id, 0.0) + eq.custo_total * n_base
+            )
             analise.total_canonical_direto += eq.custo_total * n_base
 
         # Indiretos (do resultado)

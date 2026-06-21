@@ -1,11 +1,13 @@
-"""TDD ADR-115 — Semântica RFX (RFI/RFP/RFQ) de procurement.
+"""TDD ADR-115 — Semântica RFX (RFI/RFP) de procurement.
 
 Cobre:
   D1/D2 — ProcurementIntent enum + mapeamento intent → PipelineMode
   D3    — deliverables por intent
   D5    — resolve_procurement_context: caminho, modo, método de custo
-  D5/D6 — RFQ exige baseline (requires_baseline)
   F2    — BenchmarkRunner.run aceita procurement_intent
+
+Nota: RFQ foi removido do domínio — o RFP aprovado vai diretamente para
+aprovação do cliente (sem etapa intermediária de cotação).
 """
 
 from __future__ import annotations
@@ -18,11 +20,14 @@ import pytest
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestProcurementIntentEnum:
-    def test_three_intents_exist(self):
+    def test_two_intents_exist(self):
         from concilium.domain.models.procurement import ProcurementIntent
         assert ProcurementIntent.RFI == "rfi"
         assert ProcurementIntent.RFP == "rfp"
-        assert ProcurementIntent.RFQ == "rfq"
+
+    def test_rfq_no_longer_exists(self):
+        from concilium.domain.models.procurement import ProcurementIntent
+        assert not hasattr(ProcurementIntent, "RFQ")
 
     def test_from_string_case_insensitive(self):
         from concilium.domain.models.procurement import ProcurementIntent
@@ -31,7 +36,7 @@ class TestProcurementIntentEnum:
 
 
 class TestIntentToPipelineMode:
-    """D2: RFI→OLTP, RFP→OLAP, RFQ→LIGHT."""
+    """D2: RFI→OLTP, RFP→OLAP."""
 
     def test_rfi_maps_to_oltp(self):
         from concilium.domain.models.procurement import resolve_procurement_context, ProcurementIntent
@@ -44,12 +49,6 @@ class TestIntentToPipelineMode:
         from concilium.application.skills.phase_classifier import PipelineMode
         ctx = resolve_procurement_context(ProcurementIntent.RFP)
         assert ctx.pipeline_mode == PipelineMode.OLAP
-
-    def test_rfq_maps_to_light(self):
-        from concilium.domain.models.procurement import resolve_procurement_context, ProcurementIntent
-        from concilium.application.skills.phase_classifier import PipelineMode
-        ctx = resolve_procurement_context(ProcurementIntent.RFQ)
-        assert ctx.pipeline_mode == PipelineMode.LIGHT
 
     def test_accepts_string_intent(self):
         from concilium.domain.models.procurement import resolve_procurement_context
@@ -78,12 +77,6 @@ class TestProcurementContext:
         assert "operacional" in ctx.metodo_custo.lower()
         assert ctx.requires_baseline is False
 
-    def test_rfq_requires_baseline(self):
-        from concilium.domain.models.procurement import resolve_procurement_context, ProcurementIntent
-        ctx = resolve_procurement_context(ProcurementIntent.RFQ)
-        assert ctx.caminho == "RFQ_COTACAO_FINAL"
-        assert ctx.requires_baseline is True
-
     def test_context_has_deliverables(self):
         """D3: cada intent tem lista de entregáveis."""
         from concilium.domain.models.procurement import resolve_procurement_context, ProcurementIntent
@@ -111,22 +104,13 @@ class TestProcurementContext:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# D5/D6 — baseline validation para RFQ
+# D5/D6 — baseline validation (RFI/RFP — nenhuma exige baseline prévia)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestBaselineValidation:
-    def test_rfq_without_baseline_raises(self):
-        from concilium.domain.models.procurement import validate_procurement_baseline, ProcurementIntent
-        with pytest.raises(ValueError, match="baseline"):
-            validate_procurement_baseline(ProcurementIntent.RFQ, baseline_ref=None)
-
-    def test_rfq_with_baseline_ok(self):
-        from concilium.domain.models.procurement import validate_procurement_baseline, ProcurementIntent
-        # não levanta
-        validate_procurement_baseline(ProcurementIntent.RFQ, baseline_ref="v3")
-
     def test_rfi_without_baseline_ok(self):
         from concilium.domain.models.procurement import validate_procurement_baseline, ProcurementIntent
+        # nenhuma intenção exige baseline — chamada é no-op
         validate_procurement_baseline(ProcurementIntent.RFI, baseline_ref=None)
 
     def test_rfp_without_baseline_ok(self):
@@ -146,7 +130,7 @@ class TestBenchmarkRunnerIntent:
         assert "procurement_intent" in sig.parameters
 
     def test_intent_resolves_to_correct_mode(self):
-        """Intent rfi/rfp/rfq devem mapear aos modos OLTP/OLAP/LIGHT."""
+        """Intent rfi/rfp devem mapear aos modos OLTP/OLAP."""
         from concilium.domain.models.procurement import resolve_procurement_context
         from concilium.application.skills.phase_classifier import PipelineMode, get_skills_for_mode
         # RFI = OLTP = 6 skills

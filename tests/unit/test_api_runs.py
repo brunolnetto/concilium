@@ -19,6 +19,7 @@ class _FakeService:
         *,
         base_version: str | None,
         fork_version: bool,
+        procurement_intent: str,
         skill_inputs_override: dict,
         use_saved_overrides: bool,
         use_mobilizacao_policy: bool,
@@ -33,6 +34,7 @@ class _FakeService:
             "project_id": project_id,
             "run_id": "run-abc",
             "status": "queued",
+            "procurement_intent": procurement_intent,
             "use_mobilizacao_policy": use_mobilizacao_policy,
             "use_strict_catalog_baseline": use_strict_catalog_baseline,
         }

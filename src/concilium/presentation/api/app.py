@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from concilium.infrastructure.settings import get_telemetry
 from concilium.infrastructure.middleware.auth_context import AuthContextMiddleware
 from concilium.infrastructure.observability.logging_config import configure_logging
 from concilium.infrastructure.telemetry import setup_telemetry
@@ -30,7 +31,10 @@ _TAGS_METADATA = [
     # ── Auth ───────────────────────────────────────────────────────────────────
     {"name": "auth", "description": "Autenticação JWT RS256 — emissão de tokens (ADR-094)."},
     # ── Observability ──────────────────────────────────────────────────────────
-    {"name": "observability", "description": "Pipeline de observabilidade (ADR-112): Bronze/Silver/Gold paginados — SLIs, fallback rates, alertas, records raw."},
+    {
+        "name": "observability",
+        "description": "Pipeline de observabilidade (ADR-112): Bronze/Silver/Gold paginados — SLIs, fallback rates, alertas, records raw.",
+    },
     # ── System ─────────────────────────────────────────────────────────────────
     {"name": "system", "description": "Health check and API entry point."},
     # ── Configuration ──────────────────────────────────────────────────────────
@@ -69,12 +73,14 @@ def create_app() -> FastAPI:
         swagger_ui_parameters={"displayRequestDuration": True, "docExpansion": "list"},
     )
 
-    try:
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    # Evita custo de instrumentação quando SDK está desativado (comum em testes/CI).
+    if not get_telemetry().otel_sdk_disabled:
+        try:
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-        FastAPIInstrumentor.instrument_app(app)
-    except ImportError:
-        pass
+            FastAPIInstrumentor.instrument_app(app)
+        except ImportError:
+            pass
 
     # ADR-099: PermissionError → 403 Forbidden
     from fastapi import Request as _Request

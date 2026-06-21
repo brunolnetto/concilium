@@ -122,3 +122,33 @@ class TestBenchmarkRunnerMode:
         oltp_skills = get_skills_for_mode(PipelineMode.OLTP)
         assert len(oltp_skills) == 6, "OLTP deve ter exatamente 6 skills"
         assert all(s.startswith(("01", "02", "03", "04", "05", "06")) for s in oltp_skills)
+
+
+class TestRfxPipelineProfiles:
+    """ADR-115 — linguagem RFX resolvida no core da pipeline."""
+
+    def test_rfi_profile_maps_to_oltp_and_catalog_path(self):
+        from concilium.application.skills.phase_classifier import (
+            PipelineMode,
+            ProcurementIntent,
+            get_pipeline_profile_for_intent,
+        )
+
+        profile = get_pipeline_profile_for_intent(ProcurementIntent.RFI)
+        assert profile.mode == PipelineMode.OLTP
+        assert profile.path_name == "RFI_EXPLORACAO_CATALOGO"
+        assert profile.skill_sequence and all(s.startswith(("01", "02", "03", "04", "05", "06")) for s in profile.skill_sequence)
+
+    def test_rfp_profile_maps_to_olap_and_full_analysis_path(self):
+        from concilium.application.skills.phase_classifier import PipelineMode, get_pipeline_profile_for_intent
+
+        profile = get_pipeline_profile_for_intent("rfp")
+        assert profile.mode == PipelineMode.OLAP
+        assert profile.path_name == "RFP_TECNICO_ECONOMICO"
+        assert any("10-relatorio" in s for s in profile.skill_sequence)
+
+    def test_unknown_intent_falls_back_to_rfi(self):
+        from concilium.application.skills.phase_classifier import ProcurementIntent, get_pipeline_profile_for_intent
+
+        profile = get_pipeline_profile_for_intent("desconhecido")
+        assert profile.intent == ProcurementIntent.RFI

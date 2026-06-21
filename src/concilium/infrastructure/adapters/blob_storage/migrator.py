@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
@@ -75,7 +75,10 @@ class BlobMigrator:
 
         logger.info(
             "Migração iniciada: %d blobs (prefix='%s', dry_run=%s, overwrite=%s)",
-            total, prefix or "*", dry_run, overwrite,
+            total,
+            prefix or "*",
+            dry_run,
+            overwrite,
         )
 
         for n, blob_path in enumerate(blobs, start=1):
@@ -101,6 +104,9 @@ class BlobMigrator:
 
         logger.info(
             "Migração concluída: copiados=%d, pulados=%d, falhas=%d (dry_run=%s)",
-            result.copied, result.skipped, result.failed, dry_run,
+            result.copied,
+            result.skipped,
+            result.failed,
+            dry_run,
         )
         return result

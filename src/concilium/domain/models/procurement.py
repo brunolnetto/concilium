@@ -6,8 +6,11 @@ conectados ao core da pipeline). Este módulo NÃO redefine o enum — reusa-o e
 adiciona a camada voltada a MCP/CLI (D6):
 
 - `ProcurementContext`: bloco serializável (`to_dict`) com método de custo,
-  estágio, pergunta central, requisito de baseline e entregáveis (D3).
-- `validate_procurement_baseline`: pré-condição de baseline para RFQ (D4/D6).
+  estágio, pergunta central e entregáveis (D3).
+- `validate_procurement_baseline`: stub de validação de pré-condições por intent.
+
+Fluxo canônico: RFI (exploração) → RFP (técnico-econômico) → aprovação do cliente.
+O RFP aprovado segue diretamente para o cliente — não existe etapa intermediária RFQ.
 
 Princípio (D6): o CORE resolve caminho/modo; CLI/API/MCP passam o intent e
 recebem o contexto. A seleção de nós não fica acoplada às tools.
@@ -30,6 +33,7 @@ __all__ = [
     "validate_procurement_baseline",
 ]
 
+
 # ── Entregáveis lógicos por intenção (D3 — contrato, não nomes de arquivo) ────
 
 _RFI_DELIVERABLES = [
@@ -50,13 +54,6 @@ _RFP_DELIVERABLES = _RFI_DELIVERABLES + [
     "bundle_relatorios",
 ]
 
-_RFQ_DELIVERABLES = [
-    "escopo_congelado_itens_quantidades",
-    "precos_unitarios_subtotal_por_item",
-    "memoria_premissas_bdi_indiretos",
-    "versao_hash_referencia_auditoria",
-]
-
 # Metadados de negócio por intenção (D2)
 _INTENT_META: dict[ProcurementIntent, dict] = {
     ProcurementIntent.RFI: {
@@ -72,13 +69,6 @@ _INTENT_META: dict[ProcurementIntent, dict] = {
         "metodo_custo": "Custo operacional (cronograma, clima, não-produtivo) — auditável",
         "requires_baseline": False,
         "deliverables": _RFP_DELIVERABLES,
-    },
-    ProcurementIntent.RFQ: {
-        "estagio": "Negociação final",
-        "pergunta_central": "Qual o melhor preço para escopo fixo?",
-        "metodo_custo": "Cotação sobre baseline congelada (PU + totais)",
-        "requires_baseline": True,
-        "deliverables": _RFQ_DELIVERABLES,
     },
 }
 
@@ -115,7 +105,7 @@ def resolve_procurement_context(intent: ProcurementIntent | str) -> ProcurementC
 
     Delega caminho/modo ao perfil do core (`get_pipeline_profile_for_intent`)
     e enriquece com método de custo, estágio e contrato de entregáveis (D3).
-    Aceita o enum ou a string ('rfi'|'rfp'|'rfq', case-insensitive).
+    Aceita o enum ou a string ('rfi'|'rfp', case-insensitive).
     """
     profile = get_pipeline_profile_for_intent(intent)
     meta = _INTENT_META[profile.intent]
@@ -132,18 +122,10 @@ def resolve_procurement_context(intent: ProcurementIntent | str) -> ProcurementC
 
 
 def validate_procurement_baseline(intent: ProcurementIntent | str, baseline_ref: str | None) -> None:
-    """Valida a pré-condição de baseline por intenção (ADR-115 D4/D6).
+    """Valida pré-condições de baseline por intenção (ADR-115 D4/D6).
 
-    RFQ exige baseline (versão/hash de referência) previamente definida.
-    RFI/RFP não exigem.
-
-    Raises:
-        ValueError: se intent == RFQ e baseline_ref ausente/vazio.
+    RFI e RFP não exigem baseline prévia.
+    Função mantida para compatibilidade de assinatura com callers existentes.
     """
-    ctx = resolve_procurement_context(intent)
-    if ctx.requires_baseline and not (baseline_ref and str(baseline_ref).strip()):
-        raise ValueError(
-            f"Intenção '{ctx.intent.value}' (RFQ) exige baseline congelada — "
-            "forneça versão/hash de referência (RFI/RFP previamente definidos). "
-            "RFQ sucede RFP no fluxo canônico (ADR-115 D4)."
-        )
+    # Nenhuma intenção ativa exige baseline — chamada é no-op para RFI/RFP.
+    _ = resolve_procurement_context(intent)  # valida que o intent é reconhecido

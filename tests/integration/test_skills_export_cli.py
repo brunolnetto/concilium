@@ -58,7 +58,7 @@ class TestSkillsExportCLI:
             "04-cronograma",
             "05-equipes-e-alocacao",
             "06-resultado-financeiro",  # NEP-041 F4
-            "09-relatorio-e-artefatos",
+            "10-relatorio-e-artefatos",
         ]
 
         for skill in expected_skills:

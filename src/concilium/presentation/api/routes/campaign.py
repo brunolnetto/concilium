@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/projects", tags=["projects - campaign"])
 
 class CampaignRunRequest(BaseModel):
     campaign_file: str | None = None  # absolute path; None = project default
+    procurement_intent: str = "rfp"
     workers: int = 4
     reset: bool = True
 
@@ -109,6 +110,7 @@ def run_campaign(
         serialize_campaign_report,
     )
     from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
+    from concilium.application.skills.phase_classifier import is_campaign_allowed_for_intent, normalize_procurement_intent
     from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
     from concilium.infrastructure.settings import get_storage
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
@@ -131,6 +133,15 @@ def run_campaign(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     slug = project_id.upper()
+    intent = normalize_procurement_intent(req.procurement_intent)
+    if not is_campaign_allowed_for_intent(intent):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Campanha GO é permitida apenas para RFP. "
+                "RFI é fase exploratória de catálogo (PU x Q)."
+            ),
+        )
 
     # Resolve campaign file
     if req.campaign_file:
@@ -197,6 +208,7 @@ def run_campaign(
                 bundle,
                 config_root=config_root,
                 projects_root=projects_root,
+                procurement_intent=intent.value,
                 num_workers=workers,
                 reset=reset,
             )

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import zipfile
+from builtins import __import__ as _builtin_import
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -888,15 +889,14 @@ class TestTentarGerarGraficos:
         # Should not raise — just return early
         _tentar_gerar_graficos(tmp_path, "SLUG")
 
-    def test_import_error_silent_pass(self, tmp_path):
-        # No outputs dir → tries to import chart_generator which may not exist
-        with patch(
-            "concilium.application.benchmarks.charts.output_packager._tentar_gerar_graficos",
-            side_effect=None,
-        ):
-            # Real call without the chart_generator module should be silent
-            pass
-        # Call directly — ImportError should be swallowed
+    def test_import_error_silent_pass(self, tmp_path, monkeypatch):
+        # Simula ImportError só para o módulo de chart_generator.
+        def _import_with_forced_error(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "concilium.application.benchmarks.charts.chart_generator":
+                raise ImportError("simulated missing matplotlib stack")
+            return _builtin_import(name, globals, locals, fromlist, level)
+
+        monkeypatch.setattr("builtins.__import__", _import_with_forced_error)
         _tentar_gerar_graficos(tmp_path, "SLUG")
 
 

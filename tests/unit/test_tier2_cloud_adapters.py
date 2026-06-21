@@ -341,7 +341,6 @@ class TestGoogleDriveBlobStorage:
         downloader_mock = MagicMock()
         downloader_mock.next_chunk.return_value = (None, True)
 
-
         def fake_download_ctor(buf, request):
             buf.write(b"file-content")
             buf.seek(0)

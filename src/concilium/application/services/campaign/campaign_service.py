@@ -682,6 +682,7 @@ class _CampaignTask:
     projects_root: str
     prazo_contratual: int | None
     perfil: PerfilExpectativas
+    procurement_intent: str
     do_reset: bool
 
 
@@ -730,7 +731,12 @@ def _run_campaign_task(task: _CampaignTask) -> CenarioAvaliado:
                 report_builder=BenchmarkReportBuilder(),
                 report_printer=_Silent(),
             )
-            report = runner.run(spec_obj, reset=task.do_reset, skip_artifacts=True)
+            report = runner.run(
+                spec_obj,
+                reset=task.do_reset,
+                skip_artifacts=True,
+                procurement_intent=task.procurement_intent,
+            )
             canonical: dict = {}
             for _try in (actual_project_slug, actual_project_slug.upper(), actual_project_slug.lower()):
                 _can = scenario_projects_root / _try / "v1" / "canonical.json"
@@ -792,6 +798,7 @@ def executar_campanha(
     bundle: GoResearchCampaignBundle,
     config_root: str | Path,
     projects_root: str | Path,
+    procurement_intent: str = "rfp",
     num_workers: int = 3,
     reset: bool = True,
 ) -> CampaignOutputBundle:
@@ -831,6 +838,7 @@ def executar_campanha(
             projects_root=str(projects_root),
             prazo_contratual=prazo_cont,
             perfil=bundle.perfil_expectativas,
+            procurement_intent=procurement_intent,
             do_reset=reset,
         )
         for sv, var in grid

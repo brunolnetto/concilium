@@ -30,9 +30,10 @@ class BronzeWriter:
         necessária para o fast-forward incremental.
         """
         import uuid
+
         if date is None:
             date = datetime.date.today().isoformat()
-        ts = datetime.datetime.now(datetime.timezone.utc).strftime("%H%M%S%f")
+        ts = datetime.datetime.now(datetime.UTC).strftime("%H%M%S%f")
         batch_id = f"{ts}-{uuid.uuid4().hex[:8]}"
         path = f"{self._PREFIX}/{self._signal_type}/{date}/{batch_id}.ndjson"
         lines = [json.dumps(r, ensure_ascii=False) for r in records]

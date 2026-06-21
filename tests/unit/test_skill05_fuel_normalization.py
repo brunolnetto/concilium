@@ -19,7 +19,9 @@ def test_resolve_consumo_sem_override_faz_fallback_insumo():
     mod = _load_skill05_helpers_a()
     atrib = {"consumo_litros_hora": 12.0}
 
-    consumo, code = mod._resolve_consumo_equip(atrib, consumo_override_proj=None, consumo_override_cpu=None, preco_diesel=7.0)
+    consumo, code = mod._resolve_consumo_equip(
+        atrib, consumo_override_proj=None, consumo_override_cpu=None, preco_diesel=7.0
+    )
 
     assert consumo == 12.0
     assert code == "VAL-EQUIP-COMB-02"
@@ -33,7 +35,9 @@ def test_resolve_consumo_override_zero_forca_sem_combustivel():
     mod = _load_skill05_helpers_a()
     atrib = {"consumo_litros_hora": 12.0}
 
-    consumo, code = mod._resolve_consumo_equip(atrib, consumo_override_proj=0.0, consumo_override_cpu=None, preco_diesel=7.0)
+    consumo, code = mod._resolve_consumo_equip(
+        atrib, consumo_override_proj=0.0, consumo_override_cpu=None, preco_diesel=7.0
+    )
 
     assert consumo == 0.0
     assert code == "VAL-EQUIP-COMB-01"

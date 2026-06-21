@@ -427,7 +427,7 @@ class TestCampaignIntentEligibility:
             json={"procurement_intent": "rfi"},
         )
         assert resp.status_code == 422
-        assert "RFP/RFQ" in resp.json()["detail"]
+        assert "RFP" in resp.json()["detail"]
 
     def test_mcp_explorar_rejects_rfi(self, tmp_path: Path, monkeypatch):
         _projects_root = tmp_path / "projetos"
@@ -450,4 +450,4 @@ class TestCampaignIntentEligibility:
         fn = server._tool_manager._tools["explorar_configuracoes_go"].fn
         result = fn(project_id="PROJ-EMPTY", parametros_sweep=[], procurement_intent="rfi")
         assert "erro" in result
-        assert "RFP/RFQ" in result["erro"]
+        assert "RFP" in result["erro"]

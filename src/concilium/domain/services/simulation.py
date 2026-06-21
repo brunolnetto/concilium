@@ -75,7 +75,9 @@ def _sim_calc_materiais(cpu: dict, insumos: dict, producao_total: float) -> floa
         insumo = insumos.get(item["insumo_id"], {})
         preco = insumo.get("preco_unitario")
         if preco is None:
-            logger.warning("Material %s sem preco_unitario no catálogo — custo material zerado", item.get("insumo_id", "?"))
+            logger.warning(
+                "Material %s sem preco_unitario no catálogo — custo material zerado", item.get("insumo_id", "?")
+            )
             preco = 0
         custo_mat += item["coeficiente"] * producao_total * preco
     return custo_mat

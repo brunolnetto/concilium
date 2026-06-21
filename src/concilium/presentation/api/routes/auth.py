@@ -159,7 +159,9 @@ class IssueTokenRequest(BaseModel):
     client_id: str = Field(description="ID do usuário (definido em CONCILIUM__AUTH_CLIENTS).")
     client_secret: str = Field(description="Senha do usuário.")
     ttl_days: int = Field(default=30, ge=1, le=90, description="Validade em dias. Padrão: 30 dias.")
-    label: str = Field(default="", description="Rótulo opcional para identificar o uso do token (ex: 'claude-desktop-bruno').")
+    label: str = Field(
+        default="", description="Rótulo opcional para identificar o uso do token (ex: 'claude-desktop-bruno')."
+    )
 
 
 @router.post(
@@ -201,7 +203,10 @@ def issue_user_token(request: Request, response: Response, body: IssueTokenReque
 
     logger.info(
         "Token emitido para usuário '%s' (label='%s', ttl=%dd, roles=%s)",
-        body.client_id, body.label or "—", body.ttl_days, client_roles,
+        body.client_id,
+        body.label or "—",
+        body.ttl_days,
+        client_roles,
     )
 
     return TokenResponse(

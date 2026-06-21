@@ -36,8 +36,4 @@ NOTAS_RFX = {
         "RFP: fase comparativa técnico-econômica. Considere cronograma, clima e "
         "tempo não-produtivo (custo operacional tende a ser maior que catálogo puro)."
     ),
-    "rfq": (
-        "RFQ: fase de fechamento comercial. Exija baseline congelada e detalhamento "
-        "de itens/quantidades para cotação final."
-    ),
 }

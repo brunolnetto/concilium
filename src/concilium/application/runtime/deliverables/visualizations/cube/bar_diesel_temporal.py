@@ -98,7 +98,7 @@ def build(canonical, cubo) -> bytes | None:
             if liters <= 0:
                 continue
             for (bucket, wom), portion in _week_months_contribution(semana_iso, liters).items():
-                    monthly_wom[bucket][wom] += portion
+                monthly_wom[bucket][wom] += portion
 
         if not monthly_wom:
             return None

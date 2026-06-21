@@ -14,18 +14,18 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 
 import pytest
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fixture: LocalBlobStorage isolada por teste
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def storage(tmp_path):
     from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
     return LocalBlobStorage(tmp_path)
 
 
@@ -33,11 +33,13 @@ def storage(tmp_path):
 # F1-A: BronzeWriter
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestBronzeWriter:
     """Escrita append-only de batches NDJSON no Bronze."""
 
     def test_write_batch_creates_ndjson_blob(self, storage):
         from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
         writer = BronzeWriter(storage, signal_type="logs")
         records = [{"severity": "WARNING", "message": "teste"}]
         path = writer.write_batch(records, date="2026-06-18")
@@ -46,6 +48,7 @@ class TestBronzeWriter:
 
     def test_write_batch_path_partitioned_by_date(self, storage):
         from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
         writer = BronzeWriter(storage, signal_type="traces")
         path = writer.write_batch([{"span_id": "abc"}], date="2026-06-18")
         assert path.startswith("observability/bronze/traces/2026-06-18/")
@@ -53,6 +56,7 @@ class TestBronzeWriter:
 
     def test_write_batch_append_only_each_call_creates_new_file(self, storage):
         from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
         writer = BronzeWriter(storage, signal_type="logs")
         path1 = writer.write_batch([{"msg": "a"}], date="2026-06-18")
         path2 = writer.write_batch([{"msg": "b"}], date="2026-06-18")
@@ -60,6 +64,7 @@ class TestBronzeWriter:
 
     def test_write_batch_multiple_records_as_ndjson(self, storage):
         from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
         writer = BronzeWriter(storage, signal_type="logs")
         records = [{"id": 1}, {"id": 2}, {"id": 3}]
         path = writer.write_batch(records, date="2026-06-18")
@@ -68,8 +73,10 @@ class TestBronzeWriter:
         assert json.loads(lines[2])["id"] == 3
 
     def test_write_batch_uses_today_when_date_omitted(self, storage):
-        from concilium.infrastructure.observability.bronze_writer import BronzeWriter
         import datetime
+
+        from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
         writer = BronzeWriter(storage, signal_type="logs")
         path = writer.write_batch([{"x": 1}])
         today = datetime.date.today().isoformat()
@@ -79,6 +86,7 @@ class TestBronzeWriter:
 # ─────────────────────────────────────────────────────────────────────────────
 # F1-B: BronzeLogHandler
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestBronzeLogHandler:
     """Handler Python logging → Bronze."""
@@ -94,7 +102,8 @@ class TestBronzeLogHandler:
             root.addHandler(h)
 
     def test_handler_writes_log_record_to_bronze(self, storage, tmp_path):
-        from concilium.infrastructure.observability.bronze_writer import BronzeWriter, BronzeLogHandler
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+
         writer = BronzeWriter(storage, signal_type="logs")
         handler = BronzeLogHandler(writer)
         logger = logging.getLogger("test.bronze")
@@ -106,7 +115,8 @@ class TestBronzeLogHandler:
         assert len(blobs) >= 1
 
     def test_handler_includes_message_in_record(self, storage):
-        from concilium.infrastructure.observability.bronze_writer import BronzeWriter, BronzeLogHandler
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+
         writer = BronzeWriter(storage, signal_type="logs")
         handler = BronzeLogHandler(writer)
         logger = logging.getLogger("test.bronze.msg")
@@ -124,16 +134,19 @@ class TestBronzeLogHandler:
 # F2: CheckpointStore
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestCheckpointStore:
     """Leitura/escrita/deleção de checkpoints JSON."""
 
     def test_load_returns_none_when_checkpoint_not_exists(self, storage):
         from concilium.infrastructure.observability.checkpoint_store import CheckpointStore
+
         store = CheckpointStore(storage)
         assert store.load("logs") is None
 
     def test_save_and_load_roundtrip(self, storage):
-        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore, Checkpoint
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
         store = CheckpointStore(storage)
         cp = Checkpoint(
             signal_type="logs",
@@ -148,7 +161,8 @@ class TestCheckpointStore:
         assert loaded.records_processed == 42
 
     def test_checkpoint_fields_required(self, storage):
-        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore, Checkpoint
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
         store = CheckpointStore(storage)
         cp = Checkpoint(signal_type="traces", last_processed_path="p", last_processed_ts="t", records_processed=0)
         store.save(cp)
@@ -159,14 +173,16 @@ class TestCheckpointStore:
         assert hasattr(loaded, "records_processed")
 
     def test_delete_makes_load_return_none(self, storage):
-        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore, Checkpoint
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
         store = CheckpointStore(storage)
         store.save(Checkpoint("logs", "p", "t", 10))
         store.delete("logs")
         assert store.load("logs") is None
 
     def test_save_overwrites_existing_checkpoint(self, storage):
-        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore, Checkpoint
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
         store = CheckpointStore(storage)
         store.save(Checkpoint("logs", "path-A", "ts-A", 100))
         store.save(Checkpoint("logs", "path-B", "ts-B", 200))
@@ -175,7 +191,8 @@ class TestCheckpointStore:
         assert loaded.records_processed == 200
 
     def test_independent_checkpoints_per_signal_type(self, storage):
-        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore, Checkpoint
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
         store = CheckpointStore(storage)
         store.save(Checkpoint("logs", "logs-path", "ts", 10))
         store.save(Checkpoint("traces", "traces-path", "ts", 20))
@@ -187,11 +204,13 @@ class TestCheckpointStore:
 # F3: SilverNormalizer
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestSilverNormalizer:
     """Normalização Bronze → Silver e classificação de fallback_type."""
 
     def test_normalize_log_record_mandatory_fields(self):
         from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
+
         raw = {
             "ts": "2026-06-18T10:00:00Z",
             "severity": "WARNING",
@@ -207,13 +226,31 @@ class TestSilverNormalizer:
 
     def test_normalize_log_record_extracts_skill_id_from_logger(self):
         from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
-        raw = {"logger": "concilium.skills.manifests.05-equipes-e-alocacao.skill", "message": "x", "ts": "", "severity": "", "trace_id": "", "span_id": "", "service": ""}
+
+        raw = {
+            "logger": "concilium.skills.manifests.05-equipes-e-alocacao.skill",
+            "message": "x",
+            "ts": "",
+            "severity": "",
+            "trace_id": "",
+            "span_id": "",
+            "service": "",
+        }
         norm = normalize_log_record(raw)
         assert norm["skill_id"] == "05"
 
     def test_normalize_log_record_skill_id_none_for_non_skill_logger(self):
         from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
-        raw = {"logger": "concilium.domain.services.simulation", "message": "x", "ts": "", "severity": "", "trace_id": "", "span_id": "", "service": ""}
+
+        raw = {
+            "logger": "concilium.domain.services.simulation",
+            "message": "x",
+            "ts": "",
+            "severity": "",
+            "trace_id": "",
+            "span_id": "",
+            "service": "",
+        }
         norm = normalize_log_record(raw)
         assert norm["skill_id"] is None
 
@@ -221,44 +258,77 @@ class TestSilverNormalizer:
 
     def test_classify_preco_unitario_fallback(self):
         from concilium.infrastructure.observability.silver_normalizer import classify_fallback_type
+
         assert classify_fallback_type("Função SV-P0046-D sem preco_unitario no catálogo") == "preco_unitario"
 
     def test_classify_bdi_ausente_fallback(self):
         from concilium.infrastructure.observability.silver_normalizer import classify_fallback_type
+
         assert classify_fallback_type("BDI sem taxa para 'mao_obra' — markup zero") == "bdi_ausente"
 
     def test_classify_cpu_fallback(self):
         from concilium.infrastructure.observability.silver_normalizer import classify_fallback_type
+
         assert classify_fallback_type("Falha ao resolver CPU P0046 no catálogo mendeslobo") == "cpu_fallback"
 
     def test_classify_producao_horaria_fallback(self):
         from concilium.infrastructure.observability.silver_normalizer import classify_fallback_type
+
         assert classify_fallback_type("Produção horária não encontrada para cpu_id=X") == "producao_horaria"
 
     def test_classify_contexto_fallback(self):
         from concilium.infrastructure.observability.silver_normalizer import classify_fallback_type
+
         assert classify_fallback_type("Falha ao resolver contexto mendeslobo") == "contexto_fallback"
 
     def test_classify_none_for_unrecognized_message(self):
         from concilium.infrastructure.observability.silver_normalizer import classify_fallback_type
+
         assert classify_fallback_type("Pipeline executado com sucesso") is None
 
     def test_normalize_assigns_fallback_type_to_log(self):
         from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
-        raw = {"message": "BDI sem taxa para 'equipamentos'", "logger": "concilium.skills.06", "ts": "", "severity": "WARNING", "trace_id": "", "span_id": "", "service": ""}
+
+        raw = {
+            "message": "BDI sem taxa para 'equipamentos'",
+            "logger": "concilium.skills.06",
+            "ts": "",
+            "severity": "WARNING",
+            "trace_id": "",
+            "span_id": "",
+            "service": "",
+        }
         norm = normalize_log_record(raw)
         assert norm["fallback_type"] == "bdi_ausente"
 
     def test_normalize_fallback_type_none_for_clean_log(self):
         from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
-        raw = {"message": "Benchmark concluído com sucesso", "logger": "concilium.runner", "ts": "", "severity": "INFO", "trace_id": "", "span_id": "", "service": ""}
+
+        raw = {
+            "message": "Benchmark concluído com sucesso",
+            "logger": "concilium.runner",
+            "ts": "",
+            "severity": "INFO",
+            "trace_id": "",
+            "span_id": "",
+            "service": "",
+        }
         norm = normalize_log_record(raw)
         assert norm["fallback_type"] is None
 
     def test_event_id_stable_for_same_record(self):
         """event_id deve ser determinístico para o mesmo record (dedup por re-processamento)."""
         from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
-        raw = {"trace_id": "abc", "span_id": "def", "ts": "2026-06-18T10:00:00Z", "severity": "WARNING", "logger": "x", "message": "y", "service": "concilium"}
+
+        raw = {
+            "trace_id": "abc",
+            "span_id": "def",
+            "ts": "2026-06-18T10:00:00Z",
+            "severity": "WARNING",
+            "logger": "x",
+            "message": "y",
+            "service": "concilium",
+        }
         n1 = normalize_log_record(raw)
         n2 = normalize_log_record(raw)
         assert n1["event_id"] == n2["event_id"]
@@ -268,9 +338,11 @@ class TestSilverNormalizer:
 # F4: ObservabilityWorker
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _seed_bronze(storage, signal_type: str, date: str, records: list[dict]) -> str:
     """Helper: grava um batch Bronze na storage."""
     from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
     writer = BronzeWriter(storage, signal_type=signal_type)
     return writer.write_batch(records, date=date)
 
@@ -280,18 +352,48 @@ class TestObservabilityWorker:
 
     def test_run_processes_bronze_blobs(self, storage):
         from concilium.infrastructure.observability.pipeline import ObservabilityWorker
-        _seed_bronze(storage, "logs", "2026-06-18", [
-            {"ts": "2026-06-18T10:00:00Z", "severity": "WARNING", "logger": "concilium.test", "message": "BDI sem taxa", "trace_id": "", "span_id": "s1", "service": "concilium"},
-        ])
+
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-06-18",
+            [
+                {
+                    "ts": "2026-06-18T10:00:00Z",
+                    "severity": "WARNING",
+                    "logger": "concilium.test",
+                    "message": "BDI sem taxa",
+                    "trace_id": "",
+                    "span_id": "s1",
+                    "service": "concilium",
+                },
+            ],
+        )
         worker = ObservabilityWorker(storage)
         result = worker.run(signal_type="logs")
         assert result["blobs_processed"] == 1
         assert result["records_processed"] == 1
 
     def test_run_creates_checkpoint_after_processing(self, storage):
-        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
         from concilium.infrastructure.observability.checkpoint_store import CheckpointStore
-        _seed_bronze(storage, "logs", "2026-06-18", [{"ts": "t", "severity": "W", "logger": "l", "message": "m", "trace_id": "", "span_id": "s2", "service": "c"}])
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-06-18",
+            [
+                {
+                    "ts": "t",
+                    "severity": "W",
+                    "logger": "l",
+                    "message": "m",
+                    "trace_id": "",
+                    "span_id": "s2",
+                    "service": "c",
+                }
+            ],
+        )
         worker = ObservabilityWorker(storage)
         worker.run(signal_type="logs")
         checkpoint = CheckpointStore(storage).load("logs")
@@ -300,7 +402,23 @@ class TestObservabilityWorker:
 
     def test_fast_forward_second_run_processes_zero_blobs(self, storage):
         from concilium.infrastructure.observability.pipeline import ObservabilityWorker
-        _seed_bronze(storage, "logs", "2026-06-18", [{"ts": "t", "severity": "W", "logger": "l", "message": "m", "trace_id": "", "span_id": "s3", "service": "c"}])
+
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-06-18",
+            [
+                {
+                    "ts": "t",
+                    "severity": "W",
+                    "logger": "l",
+                    "message": "m",
+                    "trace_id": "",
+                    "span_id": "s3",
+                    "service": "c",
+                }
+            ],
+        )
         worker = ObservabilityWorker(storage)
         worker.run(signal_type="logs")
         result2 = worker.run(signal_type="logs")
@@ -308,18 +426,65 @@ class TestObservabilityWorker:
 
     def test_fast_forward_processes_only_new_blobs(self, storage):
         from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
         worker = ObservabilityWorker(storage)
-        _seed_bronze(storage, "logs", "2026-06-18", [{"ts": "t", "severity": "W", "logger": "l", "message": "m", "trace_id": "", "span_id": "s4", "service": "c"}])
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-06-18",
+            [
+                {
+                    "ts": "t",
+                    "severity": "W",
+                    "logger": "l",
+                    "message": "m",
+                    "trace_id": "",
+                    "span_id": "s4",
+                    "service": "c",
+                }
+            ],
+        )
         worker.run(signal_type="logs")
         # Adiciona novo blob
-        _seed_bronze(storage, "logs", "2026-06-18", [{"ts": "t", "severity": "W", "logger": "l", "message": "m2", "trace_id": "", "span_id": "s5", "service": "c"}])
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-06-18",
+            [
+                {
+                    "ts": "t",
+                    "severity": "W",
+                    "logger": "l",
+                    "message": "m2",
+                    "trace_id": "",
+                    "span_id": "s5",
+                    "service": "c",
+                }
+            ],
+        )
         result = worker.run(signal_type="logs")
         assert result["blobs_processed"] == 1
         assert result["records_processed"] == 1
 
     def test_full_reload_resets_checkpoint_and_reprocesses(self, storage):
         from concilium.infrastructure.observability.pipeline import ObservabilityWorker
-        _seed_bronze(storage, "logs", "2026-06-18", [{"ts": "t", "severity": "W", "logger": "l", "message": "m", "trace_id": "", "span_id": "s6", "service": "c"}])
+
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-06-18",
+            [
+                {
+                    "ts": "t",
+                    "severity": "W",
+                    "logger": "l",
+                    "message": "m",
+                    "trace_id": "",
+                    "span_id": "s6",
+                    "service": "c",
+                }
+            ],
+        )
         worker = ObservabilityWorker(storage)
         worker.run(signal_type="logs")
         result = worker.run(signal_type="logs", full_reload=True)
@@ -328,7 +493,23 @@ class TestObservabilityWorker:
     def test_idempotent_upsert_no_duplicate_silver_records(self, storage):
         """Processar o mesmo blob duas vezes (full_reload) não duplica Silver."""
         from concilium.infrastructure.observability.pipeline import ObservabilityWorker
-        _seed_bronze(storage, "logs", "2026-06-18", [{"ts": "t", "severity": "W", "logger": "l", "message": "m", "trace_id": "", "span_id": "same-id", "service": "c"}])
+
+        _seed_bronze(
+            storage,
+            "logs",
+            "2026-06-18",
+            [
+                {
+                    "ts": "t",
+                    "severity": "W",
+                    "logger": "l",
+                    "message": "m",
+                    "trace_id": "",
+                    "span_id": "same-id",
+                    "service": "c",
+                }
+            ],
+        )
         worker = ObservabilityWorker(storage)
         worker.run(signal_type="logs")
         worker.run(signal_type="logs", full_reload=True)
@@ -339,6 +520,7 @@ class TestObservabilityWorker:
 
     def test_run_returns_zero_when_no_bronze_data(self, storage):
         from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
         worker = ObservabilityWorker(storage)
         result = worker.run(signal_type="logs")
         assert result["blobs_processed"] == 0
@@ -349,9 +531,11 @@ class TestObservabilityWorker:
 # F5: GoldAggregator
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _seed_silver_traces(worker, records: list[dict]) -> None:
     """Helper: injeta records diretamente no Silver de traces."""
     from concilium.infrastructure.observability.silver_normalizer import normalize_span_record
+
     normalized = [normalize_span_record(r) for r in records]
     worker._upsert_silver("traces", normalized)
 
@@ -359,6 +543,7 @@ def _seed_silver_traces(worker, records: list[dict]) -> None:
 def _seed_silver_logs(worker, records: list[dict]) -> None:
     """Helper: injeta records normalizados diretamente no Silver de logs."""
     from concilium.infrastructure.observability.silver_normalizer import normalize_log_record
+
     normalized = [normalize_log_record(r) for r in records]
     worker._upsert_silver("logs", normalized)
 
@@ -367,13 +552,41 @@ class TestGoldAggregator:
     """Agregações Silver → Gold via DuckDB."""
 
     def test_sli_diario_computed_from_traces(self, storage):
-        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
         from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
         worker = ObservabilityWorker(storage)
-        _seed_silver_traces(worker, [
-            {"span_id": "a", "trace_id": "t1", "parent_span_id": None, "service": "concilium", "operation": "concilium.skill.05", "start_ts": "2026-06-18T10:00:00Z", "end_ts": "2026-06-18T10:00:02Z", "duration_ms": 2000, "status": "OK", "project_id": "AGIS", "skill_id": "05"},
-            {"span_id": "b", "trace_id": "t2", "parent_span_id": None, "service": "concilium", "operation": "concilium.skill.05", "start_ts": "2026-06-18T10:01:00Z", "end_ts": "2026-06-18T10:01:05Z", "duration_ms": 5000, "status": "OK", "project_id": "AGIS", "skill_id": "05"},
-        ])
+        _seed_silver_traces(
+            worker,
+            [
+                {
+                    "span_id": "a",
+                    "trace_id": "t1",
+                    "parent_span_id": None,
+                    "service": "concilium",
+                    "operation": "concilium.skill.05",
+                    "start_ts": "2026-06-18T10:00:00Z",
+                    "end_ts": "2026-06-18T10:00:02Z",
+                    "duration_ms": 2000,
+                    "status": "OK",
+                    "project_id": "AGIS",
+                    "skill_id": "05",
+                },
+                {
+                    "span_id": "b",
+                    "trace_id": "t2",
+                    "parent_span_id": None,
+                    "service": "concilium",
+                    "operation": "concilium.skill.05",
+                    "start_ts": "2026-06-18T10:01:00Z",
+                    "end_ts": "2026-06-18T10:01:05Z",
+                    "duration_ms": 5000,
+                    "status": "OK",
+                    "project_id": "AGIS",
+                    "skill_id": "05",
+                },
+            ],
+        )
         agg = GoldAggregator(storage)
         sli = agg.build_sli_diario()
         assert len(sli) >= 1
@@ -383,14 +596,42 @@ class TestGoldAggregator:
         assert "p99_ms" in row
 
     def test_fallback_rate_computed_from_logs(self, storage):
-        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
         from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
         worker = ObservabilityWorker(storage)
-        _seed_silver_logs(worker, [
-            {"ts": "2026-06-18T10:00:00Z", "severity": "WARNING", "logger": "concilium.skills.06", "message": "BDI sem taxa para 'mao_obra'", "trace_id": "", "span_id": "x1", "service": "c"},
-            {"ts": "2026-06-18T10:00:01Z", "severity": "INFO", "logger": "concilium.skills.06", "message": "skill concluída", "trace_id": "", "span_id": "x2", "service": "c"},
-            {"ts": "2026-06-18T10:00:02Z", "severity": "INFO", "logger": "concilium.skills.06", "message": "skill concluída", "trace_id": "", "span_id": "x3", "service": "c"},
-        ])
+        _seed_silver_logs(
+            worker,
+            [
+                {
+                    "ts": "2026-06-18T10:00:00Z",
+                    "severity": "WARNING",
+                    "logger": "concilium.skills.06",
+                    "message": "BDI sem taxa para 'mao_obra'",
+                    "trace_id": "",
+                    "span_id": "x1",
+                    "service": "c",
+                },
+                {
+                    "ts": "2026-06-18T10:00:01Z",
+                    "severity": "INFO",
+                    "logger": "concilium.skills.06",
+                    "message": "skill concluída",
+                    "trace_id": "",
+                    "span_id": "x2",
+                    "service": "c",
+                },
+                {
+                    "ts": "2026-06-18T10:00:02Z",
+                    "severity": "INFO",
+                    "logger": "concilium.skills.06",
+                    "message": "skill concluída",
+                    "trace_id": "",
+                    "span_id": "x3",
+                    "service": "c",
+                },
+            ],
+        )
         agg = GoldAggregator(storage)
         rates = agg.build_fallback_rate_por_skill()
         assert len(rates) >= 1
@@ -399,51 +640,94 @@ class TestGoldAggregator:
         assert 0.0 <= row["fallback_rate"] <= 1.0
 
     def test_alertas_ativos_triggered_when_p99_over_threshold(self, storage):
-        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
         from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
         worker = ObservabilityWorker(storage)
         # skill com p99 > 30s
-        _seed_silver_traces(worker, [
-            {"span_id": f"s{i}", "trace_id": f"t{i}", "parent_span_id": None, "service": "c",
-             "operation": "concilium.skill.04", "start_ts": "2026-06-18T10:00:00Z",
-             "end_ts": "2026-06-18T10:01:00Z", "duration_ms": 40000 + i,
-             "status": "OK", "project_id": "AGIS", "skill_id": "04"}
-            for i in range(5)
-        ])
+        _seed_silver_traces(
+            worker,
+            [
+                {
+                    "span_id": f"s{i}",
+                    "trace_id": f"t{i}",
+                    "parent_span_id": None,
+                    "service": "c",
+                    "operation": "concilium.skill.04",
+                    "start_ts": "2026-06-18T10:00:00Z",
+                    "end_ts": "2026-06-18T10:01:00Z",
+                    "duration_ms": 40000 + i,
+                    "status": "OK",
+                    "project_id": "AGIS",
+                    "skill_id": "04",
+                }
+                for i in range(5)
+            ],
+        )
         agg = GoldAggregator(storage)
         alertas = agg.build_alertas_ativos()
         tipos = {a["tipo"] for a in alertas}
         assert "p99_alto" in tipos
 
     def test_no_alertas_when_nominal(self, storage):
-        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
         from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
         worker = ObservabilityWorker(storage)
-        _seed_silver_traces(worker, [
-            {"span_id": "ok1", "trace_id": "t1", "parent_span_id": None, "service": "c",
-             "operation": "concilium.skill.03", "start_ts": "2026-06-18T10:00:00Z",
-             "end_ts": "2026-06-18T10:00:01Z", "duration_ms": 800,
-             "status": "OK", "project_id": "AGIS", "skill_id": "03"}
-        ])
+        _seed_silver_traces(
+            worker,
+            [
+                {
+                    "span_id": "ok1",
+                    "trace_id": "t1",
+                    "parent_span_id": None,
+                    "service": "c",
+                    "operation": "concilium.skill.03",
+                    "start_ts": "2026-06-18T10:00:00Z",
+                    "end_ts": "2026-06-18T10:00:01Z",
+                    "duration_ms": 800,
+                    "status": "OK",
+                    "project_id": "AGIS",
+                    "skill_id": "03",
+                }
+            ],
+        )
         agg = GoldAggregator(storage)
         alertas = agg.build_alertas_ativos()
         p99_alertas = [a for a in alertas if a["tipo"] == "p99_alto"]
         assert len(p99_alertas) == 0
 
     def test_alertas_triggered_by_high_fallback_rate(self, storage):
-        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
         from concilium.infrastructure.observability.gold_aggregator import GoldAggregator
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
         worker = ObservabilityWorker(storage)
         # 6 fallbacks em 10 logs → 60% > 5%
         logs = []
         for i in range(6):
-            logs.append({"ts": f"2026-06-18T10:00:0{i}Z", "severity": "WARNING",
-                         "logger": "concilium.skills.manifests.06-resultado-financeiro.skill",
-                         "message": "BDI sem taxa", "trace_id": "", "span_id": f"f{i}", "service": "c"})
+            logs.append(
+                {
+                    "ts": f"2026-06-18T10:00:0{i}Z",
+                    "severity": "WARNING",
+                    "logger": "concilium.skills.manifests.06-resultado-financeiro.skill",
+                    "message": "BDI sem taxa",
+                    "trace_id": "",
+                    "span_id": f"f{i}",
+                    "service": "c",
+                }
+            )
         for i in range(4):
-            logs.append({"ts": f"2026-06-18T10:01:0{i}Z", "severity": "INFO",
-                         "logger": "concilium.skills.manifests.06-resultado-financeiro.skill",
-                         "message": "concluído", "trace_id": "", "span_id": f"ok{i}", "service": "c"})
+            logs.append(
+                {
+                    "ts": f"2026-06-18T10:01:0{i}Z",
+                    "severity": "INFO",
+                    "logger": "concilium.skills.manifests.06-resultado-financeiro.skill",
+                    "message": "concluído",
+                    "trace_id": "",
+                    "span_id": f"ok{i}",
+                    "service": "c",
+                }
+            )
         _seed_silver_logs(worker, logs)
         agg = GoldAggregator(storage)
         alertas = agg.build_alertas_ativos()
@@ -455,18 +739,24 @@ class TestGoldAggregator:
 # F6: CLI commands
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestObservabilityCLI:
     """CLI commands: run, status, report."""
 
     def test_cli_run_calls_worker_run(self, monkeypatch, tmp_path):
         from typer.testing import CliRunner
+
         from concilium.presentation.cli.commands_observability import observability_app
+
         called = {}
+
         def fake_run(self, signal_type="logs", full_reload=False, since=None):
             called["signal_type"] = signal_type
             called["full_reload"] = full_reload
             return {"blobs_processed": 2, "records_processed": 10}
+
         from concilium.infrastructure.observability import pipeline as pipeline_mod
+
         monkeypatch.setattr(pipeline_mod.ObservabilityWorker, "run", fake_run)
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path))
         runner = CliRunner()
@@ -475,12 +765,17 @@ class TestObservabilityCLI:
 
     def test_cli_run_full_reload_flag(self, monkeypatch, tmp_path):
         from typer.testing import CliRunner
+
         from concilium.presentation.cli.commands_observability import observability_app
+
         called = {}
+
         def fake_run(self, signal_type="logs", full_reload=False, since=None):
             called["full_reload"] = full_reload
             return {"blobs_processed": 0, "records_processed": 0}
+
         from concilium.infrastructure.observability import pipeline as pipeline_mod
+
         monkeypatch.setattr(pipeline_mod.ObservabilityWorker, "run", fake_run)
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path))
         runner = CliRunner()
@@ -489,11 +784,14 @@ class TestObservabilityCLI:
 
     def test_cli_status_shows_checkpoints(self, monkeypatch, tmp_path, storage):
         from typer.testing import CliRunner
+
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
         from concilium.presentation.cli.commands_observability import observability_app
-        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore, Checkpoint
+
         CheckpointStore(storage).save(Checkpoint("logs", "path/abc.ndjson", "2026-06-18T10:00:00Z", 42))
         # Patch storage creation to return our fixture storage
         from concilium.infrastructure.observability import pipeline as pipeline_mod
+
         monkeypatch.setattr(pipeline_mod, "_make_storage", lambda: storage)
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path))
         runner = CliRunner()

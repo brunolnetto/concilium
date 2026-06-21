@@ -116,7 +116,6 @@ class TestToday:
             "concilium.application.catalog._plausibility_checks._today",
             return_value=fixed_date,
         ):
-
             # The patch replaces the function itself in module scope
             assert fixed_date == date(2025, 1, 15)
 

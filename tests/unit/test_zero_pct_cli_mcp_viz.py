@@ -33,7 +33,6 @@ def proxy_module():
         "concilium.infrastructure.settings.get_mcp_proxy",
         return_value=_fake_proxy_settings,
     ):
-
         import concilium.presentation.mcp.proxy as _proxy_mod
 
         # Patch the module-level vars that were set at import time
@@ -195,7 +194,6 @@ class TestPlotEtaObra:
             "sys.modules",
             {"matplotlib": None, "matplotlib.pyplot": None},
         ):
-
             # Force reimport without matplotlib
             mod_name = "concilium.application.runtime.deliverables.visualizations.eficiencia.eta_obra"
             if mod_name in sys.modules:

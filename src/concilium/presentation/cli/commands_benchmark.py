@@ -184,7 +184,7 @@ def run_benchmarks(
     charts: bool = typer.Option(False, "--charts", help="Gera gráficos PNG antes de empacotar (requer matplotlib)."),
     intent: str = typer.Option(
         "", "--intent",
-        help="Intenção RFX (ADR-115): rfi (OLTP, exploração), rfp (OLAP, técnico-econômico), rfq (LIGHT, cotação com baseline).",
+        help="Intenção RFX (ADR-115): rfi (OLTP, exploração), rfp (OLAP, técnico-econômico).",
     ),
 ) -> None:
     """Executa um benchmark específico ou todos (use run-batch para modo batch)."""

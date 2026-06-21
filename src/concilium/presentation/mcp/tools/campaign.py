@@ -78,7 +78,7 @@ def register(server: FastMCP) -> None:
             if not is_campaign_allowed_for_intent(intent):
                 return {
                     "erro": (
-                        "Campanha GO é permitida apenas para RFP/RFQ. "
+                        "Campanha GO é permitida apenas para RFP. "
                         "RFI é fase exploratória de catálogo (PU x Q)."
                     )
                 }

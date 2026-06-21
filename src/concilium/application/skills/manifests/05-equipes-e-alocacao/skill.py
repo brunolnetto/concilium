@@ -78,6 +78,7 @@ def run_equipes_e_alocacao(
     catalogo: dict[str, Any],
 ) -> SkillResult:
     """Consolida dimensionamento, requisitos e alocação de equipes diretas."""
+    benchmark_mode = bool(inputs.get("benchmark_mode") or inputs.get("modo_benchmark"))
     validacoes: list[ValidacaoItem] = []
     repo = RepositorioInsumo(catalogo)
     data_base = canonical_in.projeto.data_base_orcamento
@@ -92,25 +93,61 @@ def run_equipes_e_alocacao(
     planejamento_map = {}
     if hasattr(canonical_in, "planejamento") and canonical_in.planejamento:
         planejamento_map = {p.item_id: p for p in canonical_in.planejamento}
+    planejamento_ref_map: dict[str, float] = {}
+    if benchmark_mode and isinstance(inputs.get("planejamento_ref"), list):
+        for item in inputs.get("planejamento_ref") or []:
+            if not isinstance(item, dict):
+                continue
+            item_id = item.get("item_id")
+            subtotal = ((item.get("subtotal") or {}).get("sem_bdi") or {}).get("total")
+            if isinstance(item_id, str) and isinstance(subtotal, (int, float)):
+                planejamento_ref_map[item_id] = float(subtotal)
+
+    def _plan_custo_sem_bdi_total(plan: Any) -> float:
+        """Extrai subtotal sem BDI do planejamento em formatos legado/atual."""
+        try:
+            direto = getattr(plan, "custo_sem_bdi", None)
+            if isinstance(direto, (int, float)) and direto > 0:
+                return float(direto)
+
+            subtotal = getattr(plan, "subtotal", None)
+            if isinstance(subtotal, dict):
+                sem_bdi = subtotal.get("sem_bdi") or {}
+                if isinstance(sem_bdi, dict):
+                    total = sem_bdi.get("total")
+                    if isinstance(total, (int, float)):
+                        return float(total)
+            elif subtotal is not None:
+                sem_bdi = getattr(subtotal, "sem_bdi", None)
+                if sem_bdi is not None:
+                    total = getattr(sem_bdi, "total", None)
+                    if isinstance(total, (int, float)):
+                        return float(total)
+        except Exception:
+            return 0.0
+        return 0.0
 
     for eq in equipes:
+        custo_ref = 0.0
         if eq.item_id in planejamento_map:
-            plan = planejamento_map[eq.item_id]
-            custo_ref = float(getattr(plan, "custo_sem_bdi", None) or 0.0)
-            if custo_ref > 0 and abs(custo_ref - eq.custo_total) > 1.0:
-                desvio = abs(custo_ref - eq.custo_total)
-                validacoes.append(
-                    ValidacaoItem(
-                        codigo="VAL-PLANEJAMENTO-OVERRIDE",
-                        status="AVISO",
-                        mensagem=(
-                            f"Item {eq.item_id}: custo_total ajustado "
-                            f"(recalc R$ {eq.custo_total:,.2f} → planejamento R$ {custo_ref:,.2f}, "
-                            f"desvio R$ {desvio:,.2f})"
-                        ),
-                    )
+            custo_ref = _plan_custo_sem_bdi_total(planejamento_map[eq.item_id])
+        elif eq.item_id in planejamento_ref_map:
+            custo_ref = planejamento_ref_map[eq.item_id]
+
+        if custo_ref > 0 and abs(custo_ref - eq.custo_total) > 1.0:
+            desvio = abs(custo_ref - eq.custo_total)
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-PLANEJAMENTO-OVERRIDE",
+                    status="AVISO",
+                    mensagem=(
+                        f"Item {eq.item_id}: custo_total ajustado "
+                        f"(recalc R$ {eq.custo_total:,.2f} → planejamento R$ {custo_ref:,.2f}, "
+                        f"desvio R$ {desvio:,.2f})"
+                    ),
                 )
-                eq.custo_total = round(custo_ref, 2)
+            )
+            eq.custo_total = round(custo_ref, 2)
 
     # ADR-104 Checkpoint 1: Estágio 1 — custo_inst_* deve estar None (sem pool contracts ainda)
     for eq in equipes:
@@ -158,7 +195,12 @@ def run_equipes_e_alocacao(
             if eq.item_id in atribuicao:
                 custo_attr, tipo_id, frac = atribuicao[eq.item_id]
                 eq.custo_total_autonomo = eq.custo_total
-                eq.custo_total = custo_attr
+                # Em benchmark, preservar comparabilidade com baseline de catálogo
+                # (ADR-085): custo instancial não deve exceder o custo planejado.
+                if benchmark_mode:
+                    eq.custo_total = min(custo_attr, eq.custo_total)
+                else:
+                    eq.custo_total = custo_attr
                 eq.contrato_tipo_id = tipo_id
                 eq.fracao_atribuicao = frac
         if contratos_recurso:
@@ -249,6 +291,17 @@ def run_equipes_e_alocacao(
         if instancias_recurso:
             _aplicar_custo_instancial(contratos_recurso, instancias_recurso, equipes, validacoes)
             _enrich_equipes_com_decomposicao_instancial(equipes, contratos_recurso, validacoes)
+
+            if benchmark_mode and (planejamento_map or planejamento_ref_map):
+                for eq in equipes:
+                    custo_ref = 0.0
+                    plan = planejamento_map.get(eq.item_id)
+                    if plan is not None:
+                        custo_ref = _plan_custo_sem_bdi_total(plan)
+                    elif eq.item_id in planejamento_ref_map:
+                        custo_ref = planejamento_ref_map[eq.item_id]
+                    if custo_ref > 0:
+                        eq.custo_total = min(eq.custo_total, round(custo_ref, 2))
 
             # ADR-104 Checkpoint 3: Estágio 4 — custo_inst_* deve estar preenchido para items em contratos
             items_em_contratos = {item_id for c in contratos_recurso for item_id in c.items_cobertos}

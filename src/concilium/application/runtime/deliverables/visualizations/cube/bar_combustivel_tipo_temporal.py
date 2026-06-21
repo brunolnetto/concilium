@@ -76,7 +76,9 @@ def build(canonical, cubo=None) -> bytes | None:
                     if consumo_lh <= 0:
                         continue
                     fuel = _normalize_fuel_label(getattr(equip, "tipo_combustivel", None))
-                    litros = consumo_lh * float(getattr(equip, "num_unidades", 0) or 0) * horas_semana * n_eq * eficiencia
+                    litros = (
+                        consumo_lh * float(getattr(equip, "num_unidades", 0) or 0) * horas_semana * n_eq * eficiencia
+                    )
                     liters_by_week_and_fuel[str(semana_iso)][fuel] += litros
 
         if not liters_by_week_and_fuel:
@@ -86,7 +88,9 @@ def build(canonical, cubo=None) -> bytes | None:
         if not fuels:
             return None
 
-        by_fuel_monthly_wom: dict[str, dict[str, dict[int, float]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+        by_fuel_monthly_wom: dict[str, dict[str, dict[int, float]]] = defaultdict(
+            lambda: defaultdict(lambda: defaultdict(float))
+        )
         for semana_iso, fuel_map in liters_by_week_and_fuel.items():
             for fuel, liters in fuel_map.items():
                 if liters <= 0:
@@ -97,7 +101,9 @@ def build(canonical, cubo=None) -> bytes | None:
         periodos = sorted({bucket for fuels_map in by_fuel_monthly_wom.values() for bucket in fuels_map.keys()})
         if not periodos:
             return None
-        all_woms = sorted({w for fuels_map in by_fuel_monthly_wom.values() for wom_map in fuels_map.values() for w in wom_map})
+        all_woms = sorted(
+            {w for fuels_map in by_fuel_monthly_wom.values() for wom_map in fuels_map.values() for w in wom_map}
+        )
         if not all_woms:
             return None
 
@@ -137,8 +143,7 @@ def build(canonical, cubo=None) -> bytes | None:
 
         total_kL = sum(sum(m.values()) for m in liters_by_week_and_fuel.values()) / 1000.0
         unknown_liters = sum(
-            sum(wom_map.values())
-            for wom_map in by_fuel_monthly_wom.get("combustivel_nao_informado", {}).values()
+            sum(wom_map.values()) for wom_map in by_fuel_monthly_wom.get("combustivel_nao_informado", {}).values()
         )
         fig.suptitle("Consumo de Combustível no Tempo por Tipo (subplots)", fontsize=12, fontweight="bold", y=0.995)
         fig.text(0.01, 0.01, f"Total no horizonte: {total_kL:.1f} kL", fontsize=8, color="#555", ha="left")
@@ -146,7 +151,7 @@ def build(canonical, cubo=None) -> bytes | None:
             fig.text(
                 0.99,
                 0.01,
-                f"Auditoria pendente: combustivel_nao_informado = {unknown_liters/1000.0:.1f} kL",
+                f"Auditoria pendente: combustivel_nao_informado = {unknown_liters / 1000.0:.1f} kL",
                 fontsize=8,
                 color="#a94442",
                 ha="right",

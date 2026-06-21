@@ -1305,7 +1305,6 @@ class TestBdiUpdate:
         bdi_file = self._make_bdi_file(tmp_path)
         mock_proj = self._make_project(tmp_path)
 
-
         with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
             result = runner.invoke(
                 bdi_app,

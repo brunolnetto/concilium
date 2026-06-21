@@ -72,7 +72,7 @@ class BenchmarkRunner:
             mode:           PipelineMode.OLTP (01-06), LIGHT (01-06+relatorio) ou
                             OLAP (01-11 completo, padrão). Tem precedência sobre skip_artifacts.
             procurement_intent:
-                            Linguagem RFX (`rfi|rfp|rfq`) resolvida no core da
+                            Linguagem RFX (`rfi|rfp`) resolvida no core da
                             pipeline para definir caminho e entregáveis.
                             Quando informado, tem precedência sobre `mode` e
                             `skip_artifacts`.
@@ -106,7 +106,7 @@ class BenchmarkRunner:
         profile = None
         if procurement_intent:
             profile = get_pipeline_profile_for_intent(procurement_intent)
-            # ADR-115 D4/D6: RFQ exige baseline congelada (RFI/RFP previamente definidos).
+            # ADR-115 D4/D6: valida pré-condições do intent (RFI/RFP).
             # No benchmark, a baseline é a referência seed (read-only): existe
             # independentemente de `reset`, que apenas recomputa os artefatos.
             # Fallback: versão corrente do store (cenário sem referência seed).

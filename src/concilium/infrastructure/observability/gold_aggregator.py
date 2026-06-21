@@ -15,7 +15,7 @@ from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 logger = logging.getLogger(__name__)
 
 _SILVER_PREFIX = "observability/silver"
-_P99_THRESHOLD_MS = 30_000    # 30 s
+_P99_THRESHOLD_MS = 30_000  # 30 s
 _FALLBACK_RATE_THRESHOLD = 0.05  # 5 %
 
 
@@ -60,7 +60,8 @@ class GoldAggregator:
             "INSERT INTO traces VALUES (?, ?, ?, ?)",
             [
                 (t.get("span_id", ""), t.get("skill_id"), int(t.get("duration_ms", 0)), t.get("start_ts", ""))
-                for t in traces if t.get("skill_id")
+                for t in traces
+                if t.get("skill_id")
             ],
         )
         rows = con.execute("""
@@ -97,8 +98,7 @@ class GoldAggregator:
         """)
         con.executemany(
             "INSERT INTO logs VALUES (?, ?, ?, ?)",
-            [(l.get("event_id", ""), l.get("skill_id"), l.get("fallback_type"), l.get("ts", ""))
-             for l in logs],
+            [(l.get("event_id", ""), l.get("skill_id"), l.get("fallback_type"), l.get("ts", "")) for l in logs],
         )
         rows = con.execute("""
             SELECT
@@ -117,8 +117,10 @@ class GoldAggregator:
         """).fetchall()
         return [
             {
-                "date": r[0], "skill_id": r[1],
-                "n_fallbacks": r[2], "n_total": r[3],
+                "date": r[0],
+                "skill_id": r[1],
+                "n_fallbacks": r[2],
+                "n_total": r[3],
                 "fallback_rate": float(r[4] or 0.0),
             }
             for r in rows
@@ -130,23 +132,27 @@ class GoldAggregator:
 
         for row in self.build_sli_diario():
             if (row.get("p99_ms") or 0) > _P99_THRESHOLD_MS:
-                alertas.append({
-                    "tipo": "p99_alto",
-                    "skill_id": row["skill_id"],
-                    "date": row["date"],
-                    "p99_ms": row["p99_ms"],
-                    "threshold_ms": _P99_THRESHOLD_MS,
-                })
+                alertas.append(
+                    {
+                        "tipo": "p99_alto",
+                        "skill_id": row["skill_id"],
+                        "date": row["date"],
+                        "p99_ms": row["p99_ms"],
+                        "threshold_ms": _P99_THRESHOLD_MS,
+                    }
+                )
 
         for row in self.build_fallback_rate_por_skill():
             if (row.get("fallback_rate") or 0.0) > _FALLBACK_RATE_THRESHOLD:
-                alertas.append({
-                    "tipo": "fallback_alto",
-                    "skill_id": row["skill_id"],
-                    "date": row["date"],
-                    "fallback_rate": row["fallback_rate"],
-                    "threshold": _FALLBACK_RATE_THRESHOLD,
-                })
+                alertas.append(
+                    {
+                        "tipo": "fallback_alto",
+                        "skill_id": row["skill_id"],
+                        "date": row["date"],
+                        "fallback_rate": row["fallback_rate"],
+                        "threshold": _FALLBACK_RATE_THRESHOLD,
+                    }
+                )
 
         return alertas
 
@@ -154,9 +160,9 @@ class GoldAggregator:
         """Persiste tabelas Gold no BlobStorage como JSON. Retorna paths gravados."""
         paths: dict[str, str] = {}
         for name, data in [
-            ("sli_diario",              self.build_sli_diario()),
+            ("sli_diario", self.build_sli_diario()),
             ("fallback_rate_por_skill", self.build_fallback_rate_por_skill()),
-            ("alertas_ativos",          self.build_alertas_ativos()),
+            ("alertas_ativos", self.build_alertas_ativos()),
         ]:
             path = f"observability/gold/{name}.json"
             self._storage.gravar_blob(path, json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
