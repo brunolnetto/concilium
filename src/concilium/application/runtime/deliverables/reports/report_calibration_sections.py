@@ -51,7 +51,7 @@ def render_equilibrium_section(
         return []
 
     lines = [
-        "## Ponto de Equilibrio",
+        "## Análise de Viabilidade (Ponto de Equilíbrio)",
         "",
         "> **Como interpretar ERRO por item sem distorcer o saldo global do projeto?**",
         ">",
@@ -95,7 +95,7 @@ def render_equilibrium_section(
 
     lines += [
         "",
-        "### Reconciliacao Itens -> Resultado Global",
+        "### Reconciliação Itens da EAP × Resultado Global",
         "",
         "| Indicador | Soma Itens (R$) | Global (R$) | Delta (R$) |",
         "|-----------|----------------:|------------:|-----------:|",
@@ -113,7 +113,7 @@ def render_equilibrium_section(
 def render_insights_section(insights: Any) -> list[str]:
     if not insights:
         return []
-    lines = ["## Insights Acionaveis", ""]
+    lines = ["## Recomendações Técnicas", ""]
     if isinstance(insights, dict):
         lines.extend(_render_dict_insights(insights))
     elif isinstance(insights, list):

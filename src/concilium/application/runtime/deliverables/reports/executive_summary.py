@@ -79,11 +79,11 @@ def render_resumo_executivo(relatorio: dict[str, Any], canonical: Any | None = N
     semaforo = {"VERDE": "🟢", "AMARELO": "🟡", "VERMELHO": "🔴"}.get(status_margem, "⚪")
 
     lines: list[str] = [
-        f"# Resumo Executivo — {nome}",
+        f"# Sumário Executivo — {nome}",
         "",
         f"**Status do plano:** {status}" + (f" · **Período:** {periodo}" if periodo else ""),
         "",
-        "## Resultado Financeiro (operacional)",
+        "## Dimensionamento Financeiro",
         "",
         "| Indicador | Valor |",
         "|-----------|------:|",
@@ -96,7 +96,7 @@ def render_resumo_executivo(relatorio: dict[str, Any], canonical: Any | None = N
 
     criticas = _top_criticas(canonical, 3)
     if criticas:
-        lines += ["## Atividades Mais Críticas", ""]
+        lines += ["## Atividades Críticas do Cronograma", ""]
         for c in criticas:
             interp = c["interpretacao"][:90]
             lines.append(f"- **{c['atividade_id']}** (classe {c['classe']}) — {interp}")
@@ -105,7 +105,7 @@ def render_resumo_executivo(relatorio: dict[str, Any], canonical: Any | None = N
     levers = _top_levers(canonical, 3)
     if levers:
         lines += [
-            "## Alavancas Prioritárias (Ponto de Equilíbrio)",
+            "## Alavancas de Viabilidade (Ponto de Equilíbrio)",
             "",
             "| Item | Alavanca | Ganho potencial de margem |",
             "|------|----------|--------------------------:|",

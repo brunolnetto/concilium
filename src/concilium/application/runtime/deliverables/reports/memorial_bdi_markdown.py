@@ -19,7 +19,7 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
     meta = memorial.get("meta") or {}
     gerado_em = str(meta.get("gerado_em", ""))[:19].replace("T", " ")
     lines += [
-        "# Memorial de Calculo BDI",
+        "# Memorial de Cálculo — BDI e Encargos Sociais",
         "",
         f"**Projeto:** {meta.get('projeto_id', '')}",
         f"**Versao:** {meta.get('version', '?')}",
@@ -36,7 +36,7 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
     enc_h = memorial.get("encargos_horista") or {}
     enc_m = memorial.get("encargos_mensalista") or {}
     lines += [
-        "## Encargos Sociais",
+        "## Encargos Sociais (CLT)",
         "",
         "| Grupo | Horista CLT | Mensalista CLT |",
         "|-------|------------:|---------------:|",
@@ -56,7 +56,7 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
     # ---- BDI por Categoria -----------------------------------------------
     bdi_cat = memorial.get("bdi_por_categoria") or {}
     lines += [
-        "## BDI por Categoria",
+        "## BDI por Categoria de Custo",
         "",
         "| Categoria | AC | DF | R | Lucro | Overhead | Tributos | BDI Total |",
         "|-----------|---:|---:|---:|------:|---------:|---------:|----------:|",
@@ -81,7 +81,7 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
     decomp = memorial.get("decomposicao_por_categoria") or {}
     if decomp:
         lines += [
-            "## Decomposicao Percentual do Preco de Venda",
+            "## Decomposição do Preço de Venda",
             "",
             "| Categoria | Custo Direto | AC | DF | R | Lucro | ISS | CSSL | IR |",
             "|-----------|-------------:|---:|---:|---:|------:|----:|-----:|---:|",
@@ -100,7 +100,7 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
     aplicacao = memorial.get("aplicacao_por_item") or []
     if aplicacao:
         lines += [
-            "## Aplicacao por Item",
+            "## Aplicação por Item da EAP",
             "",
             "| Item | Descricao | Qtd | Un | PU s/BDI | BDI | PU c/BDI | Subtotal c/BDI |",
             "|------|-----------|----:|----|----------:|----:|----------:|---------------:|",
@@ -118,7 +118,7 @@ def render_memorial_bdi_markdown(memorial: dict) -> str:
 
     # ---- Resumo Financeiro ----------------------------------------------
     lines += [
-        "## Resumo Financeiro",
+        "## Síntese do Orçamento",
         "",
         "| Componente | Valor |",
         "|------------|------:|",

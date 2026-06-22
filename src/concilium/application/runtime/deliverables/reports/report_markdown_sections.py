@@ -44,7 +44,7 @@ def render_executive_summary(resumo: dict[str, Any], resultado: dict[str, Any]) 
     razao_ind = float(resultado.get("razao_indireto_direto") or 0)
 
     # Compose contextual paragraphs
-    lines: list[str] = ["## Sumario Executivo", ""]
+    lines: list[str] = ["## Sumário Executivo", ""]
 
     # Project identity paragraph
     tipo_label = {
@@ -52,7 +52,7 @@ def render_executive_summary(resumo: dict[str, Any], resultado: dict[str, Any]) 
         "pavimentacao": "obra de pavimentacao",
         "saneamento": "obra de saneamento",
     }.get(tipo_obra, tipo_obra)
-    parag1_parts = [f"O orçamento contempla {tipo_label} denominada **{nome}**"]
+    parag1_parts = [f"O orçamento operacional contempla {tipo_label} denominada **{nome}**"]
     if localizacao:
         parag1_parts.append(f"localizada em {localizacao}")
     if periodo:
@@ -107,7 +107,7 @@ def render_header(meta: dict[str, Any], resumo: dict[str, Any]) -> list[str]:
     nome = resumo.get("projeto") or meta.get("framework", "Projeto")
     gerado = str(meta.get("gerado_em", ""))[:19].replace("T", " ")
     return [
-        f"# Relatorio Analitico -- {nome}",
+        f"# Relatório Técnico-Financeiro -- {nome}",
         "",
         f"**Gerado em:** {gerado}  ",
         f"**Framework:** {meta.get('framework', '')}  ",
@@ -121,7 +121,7 @@ def render_resultado(resultado: dict[str, Any]) -> list[str]:
     if not isinstance(resultado, dict) or not resultado:
         return []
     lines = [
-        "## Resultado Financeiro",
+        "## Dimensionamento Financeiro",
         "",
         "| Indicador | Valor |",
         "|-----------|-------|",
@@ -141,7 +141,7 @@ def render_planejamento_table(plan: list[dict[str, Any]]) -> list[str]:
     if not isinstance(plan, list) or not plan:
         return []
     lines = [
-        "## Planejamento por EAP",
+        "## Quantitativos e Composição de Custos",
         "",
         "| Item | Descricao | c/BDI (R$) |",
         "|------|-----------|-----------:|",
@@ -176,7 +176,7 @@ def render_compressao_cronograma(compressao: dict | None) -> list[str]:
     c_semana = float(compressao.get("custo_semana") or 0)
 
     lines: list[str] = [
-        "## Oportunidades de Compressao de Cronograma",
+        "## Oportunidades de Aceleração do Cronograma (k-scaling)",
         "",
         "> NEP-038 — k-scaling de equipes: dobrar os recursos de uma atividade reduz"
         " sua duracao produtiva pela metade sem alterar o custo direto (invariante"
@@ -243,7 +243,7 @@ def render_compressao_cronograma(compressao: dict | None) -> list[str]:
     # Detalhe das atividades viáveis
     viáveis = [i for i in itens if i.get("k_otimo") and i.get("roi") and float(i.get("roi") or 0) > 1]
     if viáveis:
-        lines += ["### Detalhamento das Atividades Candidatas", ""]
+        lines += ["### Detalhamento das Atividades Candidatas à Compressão", ""]
         for item in viáveis:
             aid = item.get("activity_id", "")
             tipo = item.get("tipo_recurso", "")
@@ -293,7 +293,7 @@ def render_oportunidades(relatorio: object | None) -> list[str]:
     gap_max_dict = _opp_get(relatorio, "gap_max_por_tipo", {}) or {}
 
     lines: list[str] = [
-        "## Grafo de Oportunidades de Compartilhamento",
+        "## Oportunidades de Compartilhamento de Recursos",
         "",
         "> ADR-078 — Pré-processamento estrutural: pares de atividades com potencial de"
         " economia via perpetuação de recursos. `η` = eficiência (desconta custo idle);"
@@ -315,7 +315,7 @@ def render_oportunidades(relatorio: object | None) -> list[str]:
         lines += [""]
 
     lines += [
-        "### Oportunidades por Par de Atividades",
+        "### Oportunidades de Compartilhamento por Par de Atividades",
         "",
         f"Total: **{total}** oportunidades avaliadas · "
         f"**{total - podadas}** viáveis · **{podadas}** podadas · "
@@ -389,7 +389,7 @@ def render_pool_economia_origem(canonical: object | None) -> list[str]:
     tot_eco = float(meta.get("economia_total", 0.0) or 0.0)
 
     lines: list[str] = [
-        "## Origem da Economia por Atividade",
+        "## Economia por Compartilhamento de Frente",
         "",
         f"Baseline homogênea (planejamento sem BDI): **{_brl(tot_aut)}** | Instancial (pool): **{_brl(tot_inst)}** | "
         f"Economia líquida: **{_brl(tot_eco)}**.",
@@ -398,7 +398,7 @@ def render_pool_economia_origem(canonical: object | None) -> list[str]:
 
     if top_pos:
         lines += [
-            "### Principais economias",
+            "### Principais Economias de Pool",
             "",
             "| Atividade | Economia (R$) | Economia (%) | Leitura causal |",
             "|-----------|--------------:|-------------:|----------------|",
@@ -417,7 +417,7 @@ def render_pool_economia_origem(canonical: object | None) -> list[str]:
 
     if top_neg:
         lines += [
-            "### Atividades com sobrecusto do pool",
+            "### Atividades com Sobrecusto de Pool (Ociosidade)",
             "",
             "| Atividade | Economia (R$) | Motivo dominante |",
             "|-----------|--------------:|------------------|",
