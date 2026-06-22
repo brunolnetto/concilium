@@ -243,6 +243,9 @@ def render_financial_report_pdf(
                 "pool_economia.png",
                 "painel_equilibrio.png",
             ]
+            # Altura máxima por imagem: ½ da página útil para evitar LayoutError
+            # "Flowable too large on page N" quando a imagem excede o frame restante.
+            max_img_h = (page_h - 32 * mm) * 0.5
             images_added = 0
             for name in preferred:
                 if images_added >= 4:
@@ -252,6 +255,10 @@ def render_financial_report_pdf(
                     continue
                 try:
                     img = Image(BytesIO(content), width=usable_w * 0.95)
+                    # Limita altura mantendo aspect ratio
+                    if img.imageHeight > max_img_h:
+                        ratio = max_img_h / img.imageHeight
+                        img = Image(BytesIO(content), width=usable_w * 0.95 * ratio, height=max_img_h)
                     img.hAlign = "CENTER"
                     story.append(Spacer(1, 2 * mm))
                     story.append(Paragraph(_safe_text(name.replace(".png", "")), st_h2))
