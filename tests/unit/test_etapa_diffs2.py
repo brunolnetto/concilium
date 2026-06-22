@@ -228,3 +228,310 @@ class TestNormalizeResultadoPairs:
         result = _normalize_resultado_pairs(can, ref)
         # ref_venda should be 1000
         assert any(t[0] == "venda" and t[2] == 1000.0 for t in result)
+
+    def test_benchmark_confronto_referencia(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_resultado_pairs
+
+        can = {}
+        ref = {"benchmark_confronto_referencia": {"preco_venda": 2000, "custo_total": 1500}}
+        result = _normalize_resultado_pairs(can, ref)
+        # ref_venda should be 2000
+        assert any(t[0] == "venda" and t[2] == 2000.0 for t in result)
+
+    def test_confronto_referencia_zero_venda_gives_zero_margem(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_resultado_pairs
+
+        ref = {"benchmark_confronto_referencia": {"preco_venda": 0.0, "custo_total": 100.0}}
+        result = _normalize_resultado_pairs({}, ref)
+        margem_row = next(t for t in result if t[0] == "margem")
+        assert margem_row[2] == 0.0
+
+    def test_confronto_ferramenta_positive_venda_gives_nonzero_margem(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_resultado_pairs
+
+        ref = {"benchmark_confronto_ferramenta": {"preco_venda": 1000, "custo_indireto": 100, "custo_direto": 700}}
+        result = _normalize_resultado_pairs({}, ref)
+        margem_row = next(t for t in result if t[0] == "margem")
+        # (1000 - 800) / 1000 = 0.2
+        assert abs(margem_row[2] - 0.2) < 1e-6
+
+    def test_none_inputs_treated_as_empty_dicts(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_resultado_pairs
+
+        result = _normalize_resultado_pairs(None, None)
+        assert len(result) == 3
+
+
+class TestNormalizeRefPlanejamento:
+    def test_list_passthrough(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_planejamento
+
+        data = [{"item_id": "A1"}]
+        assert _normalize_ref_planejamento(data) == data
+
+    def test_non_dict_non_list_returns_empty(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_planejamento
+
+        assert _normalize_ref_planejamento("invalid") == []
+        assert _normalize_ref_planejamento(42) == []
+
+    def test_dict_with_itens_com_precos(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_planejamento
+
+        data = {"itens_com_precos": [{"item_id": "A1", "subtotal_com_bdi": {"total": 100}}]}
+        result = _normalize_ref_planejamento(data)
+        assert result == [{"item_id": "A1", "subtotal_com_bdi": {"total": 100}}]
+
+    def test_dict_with_itens_key_normalizes(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_planejamento
+
+        data = {"itens": [{"item_id": "A1", "subtotal": {"sem_bdi": {"total": 500.0}}}]}
+        result = _normalize_ref_planejamento(data)
+        assert len(result) == 1
+        assert result[0]["subtotal_com_bdi"]["total"] == 500.0
+
+    def test_dict_without_itens_returns_empty(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_planejamento
+
+        result = _normalize_ref_planejamento({"other_key": []})
+        assert result == []
+
+
+class TestNormalizeRefIndiretos:
+    def test_non_dict_returns_empty(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_indiretos
+
+        assert _normalize_ref_indiretos([]) == {}
+        assert _normalize_ref_indiretos("x") == {}
+
+    def test_direct_cat_keys_passthrough(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_indiretos
+
+        data = {cat: {"custo_com_bdi": float(i * 100)} for i, cat in enumerate(("ADM", "TOP", "LAB", "QSMS", "MOB"))}
+        result = _normalize_ref_indiretos(data)
+        assert result == data
+
+    def test_raw_indiretos_list(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_indiretos
+
+        data = {"raw_indiretos": [{"categoria": "ADM", "custo_total": 500.0}, {"categoria": "TOP", "custo_total": 200.0}]}
+        result = _normalize_ref_indiretos(data)
+        assert result["ADM"]["custo_com_bdi"] == 500.0
+        assert result["TOP"]["custo_com_bdi"] == 200.0
+
+    def test_raw_indiretos_com_bdi_list(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_indiretos
+
+        data = {"raw_indiretos_com_bdi": [{"categoria": "LAB", "custo_com_bdi": 300.0}]}
+        result = _normalize_ref_indiretos(data)
+        assert result["LAB"]["custo_com_bdi"] == 300.0
+
+    def test_empty_dict_returns_zero_categories(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_indiretos
+
+        result = _normalize_ref_indiretos({})
+        for cat in ("ADM", "TOP", "LAB", "QSMS", "MOB"):
+            assert result[cat]["custo_com_bdi"] == 0.0
+
+
+class TestCompareIndiretos:
+    def test_no_discrepancy_when_equal(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import compare_indiretos_skill05
+
+        canonical = [{"categoria": "ADM", "custo_total": 1000.0}]
+        ref = {"ADM": {"custo_com_bdi": 1000.0}, "TOP": {"custo_com_bdi": 0.0}, "LAB": {"custo_com_bdi": 0.0}, "QSMS": {"custo_com_bdi": 0.0}, "MOB": {"custo_com_bdi": 0.0}}
+        result = compare_indiretos_skill05(canonical, ref)
+        assert result == []
+
+    def test_critica_when_can_zero_ref_positive(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import compare_indiretos_skill05
+
+        canonical = []
+        ref = {"ADM": {"custo_com_bdi": 5000.0}, "TOP": {"custo_com_bdi": 0.0}, "LAB": {"custo_com_bdi": 0.0}, "QSMS": {"custo_com_bdi": 0.0}, "MOB": {"custo_com_bdi": 0.0}}
+        result = compare_indiretos_skill05(canonical, ref)
+        adm = next(d for d in result if d["categoria"] == "ADM")
+        assert "CRÍT" in adm["severidade"] or adm["severidade"].startswith("CR")
+
+    def test_ref_val_zero_gives_zero_pct(self):
+        """When ref_val=0 and can_val≠0, pct_diff=0 (no division by zero)."""
+        from concilium.application.benchmarks.analysis.etapa_diffs import compare_indiretos_skill05
+
+        canonical = [{"categoria": "ADM", "custo_total": 1000.0}]
+        ref = {"ADM": {"custo_com_bdi": 0.0}, "TOP": {"custo_com_bdi": 0.0}, "LAB": {"custo_com_bdi": 0.0}, "QSMS": {"custo_com_bdi": 0.0}, "MOB": {"custo_com_bdi": 0.0}}
+        result = compare_indiretos_skill05(canonical, ref)
+        assert any(d["categoria"] == "ADM" for d in result)
+        adm = next(d for d in result if d["categoria"] == "ADM")
+        assert adm["pct_diff"] == 0.0
+
+
+class TestNormalizeReferencePayload:
+    def test_non_dict_returns_empty(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_reference_payload
+
+        assert _normalize_reference_payload(None) == {}
+        assert _normalize_reference_payload([]) == {}
+
+    def test_already_normalized_passthrough(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_reference_payload
+
+        data = {"equipes": [], "planejamento": [], "indiretos": {}, "resultado": {}}
+        result = _normalize_reference_payload(data)
+        assert result == data
+
+    def test_agis_format_with_cat_keys(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_reference_payload
+
+        data = {
+            "equipes_detalhadas": [],
+            "planejamento_detalhado": [],
+            "resultado": {},
+            "rcpsp_spec": {"deadline_weeks": 52},
+            "ADM": {"custo_fixo_mensal_total": 100.0, "custo_fixo_total": 0.0},
+            "TOP": {"custo_fixo_mensal_total": 50.0, "custo_fixo_total": 0.0},
+            "LAB": {"custo_fixo_mensal_total": 0.0, "custo_fixo_total": 0.0},
+            "QSMS": {"custo_fixo_mensal_total": 0.0, "custo_fixo_total": 0.0},
+            "MOB": {"custo_fixo_mensal_total": 0.0, "custo_fixo_total": 0.0},
+        }
+        result = _normalize_reference_payload(data)
+        assert "equipes" in result
+        assert "indiretos" in result
+        assert "ADM" in result["indiretos"]
+        assert result["indiretos"]["ADM"]["custo_com_bdi"] > 0
+
+    def test_agis_zero_deadline_weeks(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_reference_payload
+
+        data = {
+            "equipes_detalhadas": [],
+            "planejamento_detalhado": [],
+            "resultado": {},
+            "rcpsp_spec": {"deadline_weeks": 0},
+            "ADM": {"custo_fixo_mensal_total": 100.0, "custo_fixo_total": 0.0},
+            "TOP": {"custo_fixo_mensal_total": 0.0, "custo_fixo_total": 0.0},
+            "LAB": {"custo_fixo_mensal_total": 0.0, "custo_fixo_total": 0.0},
+            "QSMS": {"custo_fixo_mensal_total": 0.0, "custo_fixo_total": 0.0},
+            "MOB": {"custo_fixo_mensal_total": 0.0, "custo_fixo_total": 0.0},
+        }
+        result = _normalize_reference_payload(data)
+        # With 0 deadline_weeks, meses_estimados=0, monthly cost contributes nothing
+        assert result["indiretos"]["ADM"]["custo_com_bdi"] == 0.0
+
+
+class TestPlanejamentoSeveridade:
+    def test_alta_when_pct_over_20(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import compare_planejamento_skill04
+
+        can = [{"item_id": "A1", "subtotal": {"sem_bdi": {"total": 1500}}}]
+        ref = [{"item_id": "A1", "subtotal_com_bdi": {"total": 1000}}]
+        result = compare_planejamento_skill04(can, ref)
+        assert len(result) > 0
+        # pct_diff = |500 / (1000 + 0.01)| × 100 ≈ 50% → ALTA
+        assert result[0]["severidade"] == "ALTA"
+
+    def test_media_when_pct_5_to_20(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import compare_planejamento_skill04
+
+        can = [{"item_id": "A1", "subtotal": {"sem_bdi": {"total": 1100}}}]
+        ref = [{"item_id": "A1", "subtotal_com_bdi": {"total": 1000}}]
+        result = compare_planejamento_skill04(can, ref)
+        assert len(result) > 0
+        # pct_diff ≈ 10% → MÉDIA
+        assert "ÉDIA" in result[0]["severidade"] or result[0]["severidade"] == "MÉ" or "M" in result[0]["severidade"]
+
+    def test_baixa_when_pct_under_5(self):
+        from concilium.application.benchmarks.analysis.etapa_diffs import compare_planejamento_skill04
+
+        can = [{"item_id": "A1", "subtotal": {"sem_bdi": {"total": 1020}}}]
+        ref = [{"item_id": "A1", "subtotal_com_bdi": {"total": 1000}}]
+        result = compare_planejamento_skill04(can, ref)
+        assert len(result) > 0
+        assert result[0]["severidade"] == "BAIXA"
+
+
+class TestFindBenchmarkReportFallback:
+    def test_fallback_benchmark_json_at_root(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _find_benchmark_report
+
+        p = tmp_path / "benchmark_agis.json"
+        p.write_text('{"slug": "AGIS"}')
+        result = _find_benchmark_report("AGIS", tmp_path)
+        assert result == p
+
+    def test_organized_path_preferred_over_fallback(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _find_benchmark_report
+
+        fallback = tmp_path / "benchmark_agis.json"
+        fallback.write_text('{"fallback": true}')
+        organized = tmp_path / "benchmarks" / "data" / "AGIS" / "artifacts" / "outputs" / "benchmark_report.json"
+        organized.parent.mkdir(parents=True)
+        organized.write_text('{"organized": true}')
+        result = _find_benchmark_report("AGIS", tmp_path)
+        assert result == organized
+
+
+class TestFindReferencePayload:
+    def test_finds_iteracao_referencias_at_root_bench(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _find_reference_payload
+
+        path = tmp_path / "benchmarks" / "data" / "AGIS" / "iteracao_referencias_agis.json"
+        path.parent.mkdir(parents=True)
+        path.write_text("{}")
+        result = _find_reference_payload("AGIS", tmp_path)
+        assert result == path
+
+    def test_finds_referencia_json_at_data_slug(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _find_reference_payload
+
+        path = tmp_path / "benchmarks" / "data" / "AGIS" / "referencia.json"
+        path.parent.mkdir(parents=True)
+        path.write_text("{}")
+        result = _find_reference_payload("AGIS", tmp_path)
+        assert result == path
+
+
+class TestGdfbLoadCanonical:
+    def test_returns_empty_when_no_projetos_dir(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+
+        bench = {"projeto": "MyProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result == {}
+
+    def test_returns_canonical_when_found(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+        import json
+
+        projeto_dir = tmp_path / "projetos" / "proj1"
+        v1_dir = projeto_dir / "v1"
+        v1_dir.mkdir(parents=True)
+        (projeto_dir / "meta.json").write_text(json.dumps({"nome": "MyProject", "current_version": "v1"}))
+        (v1_dir / "canonical.json").write_text(json.dumps({"projeto_id": "p1"}))
+
+        bench = {"projeto": "MyProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result.get("projeto_id") == "p1"
+
+    def test_skips_bad_meta_json(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+
+        projeto_dir = tmp_path / "projetos" / "proj_bad"
+        projeto_dir.mkdir(parents=True)
+        (projeto_dir / "meta.json").write_text("not_valid_json{{{")
+
+        bench = {"projeto": "SomeProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result == {}
+
+    def test_returns_empty_when_projeto_nome_mismatch(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+        import json
+
+        projeto_dir = tmp_path / "projetos" / "proj1"
+        v1_dir = projeto_dir / "v1"
+        v1_dir.mkdir(parents=True)
+        (projeto_dir / "meta.json").write_text(json.dumps({"nome": "OtherProject"}))
+        (v1_dir / "canonical.json").write_text(json.dumps({"projeto_id": "p1"}))
+
+        bench = {"projeto": "MyProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result == {}

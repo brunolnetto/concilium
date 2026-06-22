@@ -346,3 +346,345 @@ class TestListVersions:
         store = _init_store(tmp_path)
         store.update_meta(custom_field="hello")
         assert store.meta["custom_field"] == "hello"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore.read_json / write_json
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestReadWriteJson:
+    def test_write_then_read_json(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.write_json("custom/data.json", {"x": 1})
+        result = store.read_json("custom/data.json", {})
+        assert result == {"x": 1}
+
+    def test_read_json_missing_returns_default(self, tmp_path):
+        store = _init_store(tmp_path)
+        result = store.read_json("nonexistent.json", {"default": True})
+        assert result == {"default": True}
+
+    def test_read_json_invalid_returns_default(self, tmp_path):
+        store = _init_store(tmp_path)
+        bad = store.root / "bad.json"
+        bad.write_text("not json", encoding="utf-8")
+        result = store.read_json("bad.json", "fallback")
+        assert result == "fallback"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore.extend_cpu / set_compensacao_ineficiencias
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestExtendCpuAndCompensacao:
+    def test_extend_cpu_writes_override_and_audit(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.extend_cpu("CPU-X", {"descricao": "cpu x"}, actor="user", motivo="test")
+        override = store.read_json("overrides/cpus_override.json", {})
+        assert "CPU-X" in override
+        audit = (store.root / "audit_log.jsonl").read_text(encoding="utf-8")
+        assert "extend_cpu" in audit
+        assert "CPU-X" in audit
+
+    def test_extend_cpu_multiple_entries(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.extend_cpu("CPU-A", {"desc": "a"})
+        store.extend_cpu("CPU-B", {"desc": "b"})
+        override = store.read_json("overrides/cpus_override.json", {})
+        assert "CPU-A" in override and "CPU-B" in override
+
+    def test_set_compensacao_ineficiencias(self, tmp_path):
+        store = _init_store(tmp_path)
+        comp = {"fator": 1.05, "justificativa": "terreno irregular"}
+        store.set_compensacao_ineficiencias(comp, actor="eng", motivo="ajuste")
+        data = store.read_json("compensacao_ineficiencias.json", {})
+        assert data["compensacao"] == comp
+        assert data["actor"] == "eng"
+        audit = (store.root / "audit_log.jsonl").read_text(encoding="utf-8")
+        assert "set_compensacao_ineficiencias" in audit
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore.save_intermediate_file / load_intermediate_file
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestIntermediateFiles:
+    def test_save_and_load_intermediate_bytes(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.new_version()
+        store.save_intermediate_file("data.bin", b"\x00\x01\x02", "v1")
+        result = store.load_intermediate_file("data.bin", "v1")
+        assert result == b"\x00\x01\x02"
+
+    def test_save_intermediate_str(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.new_version()
+        store.save_intermediate_file("report.txt", "hello world", "v1")
+        result = store.load_intermediate_file("report.txt", "v1")
+        assert result == b"hello world"
+
+    def test_load_intermediate_file_missing_returns_none(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.new_version()
+        result = store.load_intermediate_file("nonexistent.bin", "v1")
+        assert result is None
+
+    def test_load_intermediate_file_no_version_returns_none(self, tmp_path):
+        store = _init_store(tmp_path)
+        result = store.load_intermediate_file("data.bin")
+        assert result is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore._get_output_subdir / save_output_file / load_output_file
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestOutputSubdirAndFallback:
+    def test_get_output_subdir_image(self, tmp_path):
+        assert ProjectStore._get_output_subdir("chart.png") == "visualizations"
+        assert ProjectStore._get_output_subdir("image.jpg") == "visualizations"
+        assert ProjectStore._get_output_subdir("fig.svg") == "visualizations"
+        assert ProjectStore._get_output_subdir("img.gif") == "visualizations"
+        assert ProjectStore._get_output_subdir("img.webp") == "visualizations"
+        assert ProjectStore._get_output_subdir("img.jpeg") == "visualizations"
+
+    def test_get_output_subdir_reports(self, tmp_path):
+        assert ProjectStore._get_output_subdir("result.xlsx") == "reports"
+        assert ProjectStore._get_output_subdir("report.pdf") == "reports"
+        assert ProjectStore._get_output_subdir("data.csv") == "reports"
+        assert ProjectStore._get_output_subdir("data.xls") == "reports"
+
+    def test_get_output_subdir_fallback(self, tmp_path):
+        assert ProjectStore._get_output_subdir("something.txt") == "reports"
+
+    def test_save_image_goes_to_visualizations(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.new_version()
+        store.save_output_file(b"png data", filename="chart.png")
+        vis_path = store.root / "v1" / "outputs" / "visualizations" / "chart.png"
+        assert vis_path.exists()
+
+    def test_load_output_file_fallback_subdir(self, tmp_path):
+        """load_output_file falls back to the other subdir when not in primary."""
+        store = _init_store(tmp_path)
+        store.new_version()
+        # Place a PDF in visualizations (wrong subdir) — should still be found via fallback
+        wrong_dir = store.root / "v1" / "outputs" / "visualizations"
+        wrong_dir.mkdir(parents=True, exist_ok=True)
+        (wrong_dir / "report.pdf").write_bytes(b"pdf content")
+        result = store.load_output_file(filename="report.pdf")
+        assert result == b"pdf content"
+
+    def test_list_output_files_no_version_returns_empty(self, tmp_path):
+        store = _init_store(tmp_path)
+        assert store.list_output_files() == []
+
+    def test_list_output_files_outputs_dir_missing(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.new_version()
+        # v1 exists but no outputs/ subdir is created after the fact
+        import shutil
+        shutil.rmtree(store.root / "v1" / "outputs")
+        assert store.list_output_files() == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore.new_version with explicit base
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestNewVersionWithBase:
+    def test_new_version_copies_from_explicit_base(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.new_version()  # v1
+        (store.root / "v1" / "canonical.json").write_text(
+            json.dumps(_make_minimal_canonical()), encoding="utf-8"
+        )
+        store.new_version()  # v2 (no explicit base, copies v1)
+        # Create v3 explicitly from v1
+        store.new_version(base="v1")
+        assert (store.root / "v3" / "canonical.json").exists()
+
+    def test_new_version_no_canonical_to_copy(self, tmp_path):
+        """new_version() when source has no canonical.json doesn't fail."""
+        store = _init_store(tmp_path)
+        store.new_version()  # v1, no canonical
+        store.new_version()  # v2 — copies from v1 which has no canonical
+        assert not (store.root / "v2" / "canonical.json").exists()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore.resolve_cpu
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestResolveCpu:
+    def test_resolve_cpu_from_override(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.extend_cpu("CPU-OVR", {"codigo": "CPU-OVR", "descricao": "override"})
+        result = store.resolve_cpu("CPU-OVR")
+        assert result is not None
+        assert result["codigo"] == "CPU-OVR"
+
+    def test_resolve_cpu_from_snapshot(self, tmp_path):
+        store = _init_store(tmp_path)
+        snaps_dir = store.root / "snapshots"
+        snaps_dir.mkdir(exist_ok=True)
+        snap_data = {"cpus": [{"codigo": "CPU-SNAP", "descricao": "snapshot cpu"}]}
+        (snaps_dir / "catalogo-v1.json").write_text(
+            json.dumps(snap_data), encoding="utf-8"
+        )
+        result = store.resolve_cpu("CPU-SNAP")
+        assert result is not None
+        assert result["codigo"] == "CPU-SNAP"
+
+    def test_resolve_cpu_snapshot_malformed_skipped(self, tmp_path):
+        store = _init_store(tmp_path)
+        snaps_dir = store.root / "snapshots"
+        snaps_dir.mkdir(exist_ok=True)
+        (snaps_dir / "catalogo-v1.json").write_text("not json", encoding="utf-8")
+        result = store.resolve_cpu("CPU-ANY")
+        assert result is None
+
+    def test_resolve_cpu_not_found(self, tmp_path):
+        store = _init_store(tmp_path)
+        result = store.resolve_cpu("CPU-MISSING")
+        assert result is None
+
+    def test_resolve_cpu_snapshot_newest_first(self, tmp_path):
+        """Snapshots are checked in reverse order (newest first)."""
+        store = _init_store(tmp_path)
+        snaps_dir = store.root / "snapshots"
+        snaps_dir.mkdir(exist_ok=True)
+        (snaps_dir / "catalogo-v1.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-A", "version": "old"}]}), encoding="utf-8"
+        )
+        (snaps_dir / "catalogo-v2.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-A", "version": "new"}]}), encoding="utf-8"
+        )
+        result = store.resolve_cpu("CPU-A")
+        assert result["version"] == "new"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore.list_escopos / escopo / create_escopo
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestEscopos:
+    def test_list_escopos_empty(self, tmp_path):
+        store = _init_store(tmp_path)
+        assert store.list_escopos() == []
+
+    def test_escopo_returns_escopo_store(self, tmp_path):
+        from concilium.infrastructure.storage.escopo_store import EscopoStore
+
+        store = _init_store(tmp_path)
+        es = store.escopo("default")
+        assert isinstance(es, EscopoStore)
+
+    def test_create_escopo_and_list(self, tmp_path):
+        from concilium.infrastructure.storage.escopo_store import EscopoStore
+
+        store = _init_store(tmp_path)
+        es = store.create_escopo(
+            escopo_id="esc-001",
+            nome="Trecho Norte",
+            tipo_obra="terraplenagem",
+            localizacao="CE",
+            coordenadas_lat=-3.7,
+            coordenadas_lng=-38.5,
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
+        )
+        assert isinstance(es, EscopoStore)
+        escopos = store.list_escopos()
+        assert "esc-001" in escopos
+
+    def test_create_escopo_duplicate_raises(self, tmp_path):
+        store = _init_store(tmp_path)
+        store.create_escopo(
+            escopo_id="esc-dup",
+            nome="Esc",
+            tipo_obra="terraplenagem",
+            localizacao="BA",
+            coordenadas_lat=0.0,
+            coordenadas_lng=0.0,
+            data_inicio="2026-01-01",
+            data_termino="2026-06-30",
+        )
+        with pytest.raises(FileExistsError):
+            store.create_escopo(
+                escopo_id="esc-dup",
+                nome="Esc",
+                tipo_obra="terraplenagem",
+                localizacao="BA",
+                coordenadas_lat=0.0,
+                coordenadas_lng=0.0,
+                data_inicio="2026-01-01",
+                data_termino="2026-06-30",
+            )
+
+    def test_create_escopo_with_optional_fields(self, tmp_path):
+        store = _init_store(tmp_path)
+        es = store.create_escopo(
+            escopo_id="esc-opt",
+            nome="Full",
+            tipo_obra="pavimentacao",
+            localizacao="SP",
+            coordenadas_lat=-23.5,
+            coordenadas_lng=-46.6,
+            data_inicio="2026-03-01",
+            data_termino="2026-09-30",
+            dias_semana=5,
+            horas_dia=9,
+            snapshot_catalogo_id="cat-001",
+            snapshot_perfil_id="perf-001",
+            bdi_perfil_id="bdi-001",
+        )
+        import json as _json
+        from concilium.infrastructure.storage.escopo_store import EscopoStore
+        meta = _json.loads((es.root / EscopoStore.ESCOPO_FILE).read_text(encoding="utf-8"))
+        assert meta["dias_semana"] == 5
+        assert meta["bdi_perfil_id"] == "bdi-001"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ProjectStore.init with benchmark slug
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestInitWithBenchmarkSlug:
+    def test_init_with_benchmark_slug_uses_slug_as_id(self, tmp_path):
+        store = ProjectStore.init(
+            tmp_path,
+            nome="Benchmark Proj",
+            contexto_id="ctx-bm",
+            derivado_de_benchmark="AGIS-2026",
+            benchmark_versao=3,
+            benchmark_execution_id="exec-abc",
+        )
+        # Directory name should be the slug
+        assert store.root.name == "AGIS-2026"
+        meta = store.meta
+        assert meta["derivado_de_benchmark"] == "AGIS-2026"
+        assert meta["benchmark_versao"] == 3
+        assert meta["benchmark_execution_id"] == "exec-abc"
+
+    def test_init_existing_dir_ok(self, tmp_path):
+        """init() with exist_ok=True on existing dir doesn't fail."""
+        # First init
+        store1 = ProjectStore.init(tmp_path, "P1", "ctx")
+        project_id = store1.root.name
+        # Re-init same slug should not fail (exist_ok)
+        store2 = ProjectStore.init(
+            tmp_path,
+            nome="P2",
+            contexto_id="ctx",
+            derivado_de_benchmark=project_id,
+        )
+        assert store2.root.exists()

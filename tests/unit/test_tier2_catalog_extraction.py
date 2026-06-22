@@ -237,6 +237,58 @@ class TestConsolidateReference:
         assert result["equipes_detalhadas"] == []
         assert result["planejamento_detalhado"] == []
 
+    def test_ref_has_no_projeto_key_returns_raw_ref(self, tmp_path):
+        """Line 29: referencia.json exists but has no 'projeto' key → _find_project_dir returns None."""
+        bench_data = tmp_path / "benchmarks" / "data" / "PROJ3"
+        bench_data.mkdir(parents=True)
+        ref = {"slug": "PROJ3", "eap": []}  # no 'projeto' key
+        (bench_data / "referencia.json").write_text(json.dumps(ref), encoding="utf-8")
+        (tmp_path / "projetos").mkdir(parents=True)
+
+        result = consolidate_reference("PROJ3", root=tmp_path)
+        assert result == ref  # raw ref returned, no enrichment
+
+    def test_project_dir_contains_non_dir_entry(self, tmp_path):
+        """Line 33: projetos/ contains a plain file — _find_project_dir skips it."""
+        bench_data = tmp_path / "benchmarks" / "data" / "PROJ4"
+        bench_data.mkdir(parents=True)
+        ref = {"slug": "PROJ4", "projeto": "Obra Nao Existe"}
+        (bench_data / "referencia.json").write_text(json.dumps(ref), encoding="utf-8")
+        projetos = tmp_path / "projetos"
+        projetos.mkdir(parents=True)
+        # Place a plain file (not a directory) inside projetos/
+        (projetos / "stray_file.txt").write_text("not a project dir")
+
+        result = consolidate_reference("PROJ4", root=tmp_path)
+        assert result == ref  # no project matched → raw ref
+
+    def test_project_dir_missing_meta_json_is_skipped(self, tmp_path):
+        """Line 36: project dir exists but has no meta.json → skipped."""
+        bench_data = tmp_path / "benchmarks" / "data" / "PROJ5"
+        bench_data.mkdir(parents=True)
+        ref = {"slug": "PROJ5", "projeto": "Obra Sem Meta"}
+        (bench_data / "referencia.json").write_text(json.dumps(ref), encoding="utf-8")
+        projetos = tmp_path / "projetos"
+        # A project dir without meta.json
+        (projetos / "some-uuid").mkdir(parents=True)
+
+        result = consolidate_reference("PROJ5", root=tmp_path)
+        assert result == ref
+
+    def test_project_dir_corrupt_meta_json_is_skipped(self, tmp_path):
+        """Lines 39-40: meta.json exists but is corrupted → exception caught, dir skipped."""
+        bench_data = tmp_path / "benchmarks" / "data" / "PROJ6"
+        bench_data.mkdir(parents=True)
+        ref = {"slug": "PROJ6", "projeto": "Obra Corrompida"}
+        (bench_data / "referencia.json").write_text(json.dumps(ref), encoding="utf-8")
+        proj_dir = tmp_path / "projetos" / "bad-uuid"
+        proj_dir.mkdir(parents=True)
+        # Write invalid JSON to meta.json
+        (proj_dir / "meta.json").write_text("{{not valid json", encoding="utf-8")
+
+        result = consolidate_reference("PROJ6", root=tmp_path)
+        assert result == ref
+
 
 # ---------------------------------------------------------------------------
 # engine_refs

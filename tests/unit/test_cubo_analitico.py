@@ -668,7 +668,7 @@ class TestDieselConsumption:
             assert vol >= 0
 
     def test_diesel_consumo_only_on_custo_direto_cell(self):
-        """Only the custo_direto cell carries the physical quantity.
+        """Only the custo_direto cell carries the physical quantity — ADR-090.
         All other BDI components (overhead, margem, tributos) have consumo_L=0."""
         from concilium.application.skills import run_escopo_e_eap
         from concilium.domain.models.canonical import (
@@ -747,3 +747,157 @@ class TestDieselConsumption:
         outros = [c for c in diesel_cells if c.componente_bdi != "custo_direto"]
         assert all(c.consumo_diesel_L > 0 for c in custo_direto)
         assert all(c.consumo_diesel_L == 0.0 for c in outros)
+
+
+# ---------------------------------------------------------------------------
+# CelulaAnalitica — uncovered branches
+# ---------------------------------------------------------------------------
+
+
+class TestCelulaAnaliticaExtraBranches:
+    def _make_cell(self, cat_insumo, prop, comp="custo_direto", natureza="direto", valor_rs=100.0, valor_fisico=0.0, unidade=""):
+        return CelulaAnalitica(
+            natureza=natureza,
+            atividade_id="eap-01",
+            categoria_insumo=cat_insumo,
+            propriedade=prop,
+            semana_iso="2026-W23",
+            componente_bdi=comp,
+            valor_rs=valor_rs,
+            valor_fisico=valor_fisico,
+            unidade_fisica=unidade,
+        )
+
+    def test_verba_categoria_maps_to_material(self):
+        """verba category maps backward to 'material'."""
+        c = self._make_cell("verba", "fixo")
+        assert c.categoria == "material"
+        assert not c.is_diesel()
+        assert not c.is_equipamento()
+        assert not c.is_mao_obra()
+
+    def test_equipamento_is_equipamento(self):
+        c = self._make_cell("equipamento", "aluguel")
+        assert c.is_equipamento()
+        assert not c.is_diesel()
+        assert not c.is_mao_obra()
+
+    def test_mao_obra_is_mao_obra(self):
+        c = self._make_cell("mao_obra", "salario_encargos")
+        assert c.is_mao_obra()
+        assert not c.is_equipamento()
+        assert not c.is_diesel()
+
+    def test_consumo_diesel_L_wrong_unit_returns_zero(self):
+        """material.combustivel without unidade_fisica='L' returns 0."""
+        c = self._make_cell("material", "combustivel", valor_fisico=50.0, unidade="m3")
+        assert c.consumo_diesel_L == 0.0
+
+    def test_consumo_diesel_L_mao_obra_returns_zero(self):
+        """mao_obra cell always returns 0 for consumo_diesel_L."""
+        c = self._make_cell("mao_obra", "salario_encargos", valor_fisico=100.0, unidade="L")
+        assert c.consumo_diesel_L == 0.0
+
+    def test_equipamento_combustivel_is_not_diesel_adr090(self):
+        """ADR-090: equipamento.combustivel is NOT diesel (only material.combustivel is)."""
+        c = self._make_cell("equipamento", "combustivel")
+        assert not c.is_diesel()
+        assert c.is_equipamento()
+        assert c.categoria == "equipamento"
+
+    def test_indireto_natureza(self):
+        c = self._make_cell("mao_obra", "salario_encargos", natureza="indireto")
+        assert c.natureza == "indireto"
+
+
+# ---------------------------------------------------------------------------
+# CuboAnalitico — uncovered projection methods
+# ---------------------------------------------------------------------------
+
+
+class TestCuboAnaliticoUncoveredProjections:
+    def test_composicao_por_hierarquia_structure(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        hier = cubo.composicao_por_hierarquia()
+        # Keys should be (categoria_insumo, propriedade) tuples
+        for key in hier.keys():
+            assert isinstance(key, tuple)
+            assert len(key) == 2
+        # All values should be dicts of componente_bdi → float
+        for key, val in hier.items():
+            assert isinstance(val, dict)
+
+    def test_custo_direto_por_atividade_semana_structure(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        cd = cubo.custo_direto_por_atividade_semana()
+        for key, val in cd.items():
+            assert isinstance(key, tuple)
+            assert len(key) == 2
+            assert isinstance(val, float)
+            assert val > 0
+
+    def test_custo_direto_por_atividade_semana_total_matches(self):
+        import math
+
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        cd = cubo.custo_direto_por_atividade_semana()
+        total_cd = sum(cd.values())
+        assert math.isclose(total_cd, cubo.total_custo_direto, rel_tol=0.001)
+
+    def test_pct_tributos_zero_when_empty(self):
+        cubo = CuboAnalitico(
+            projeto_id="empty",
+            gerado_em="2026",
+            regime_bdi="pre_reforma",
+            total_preco_venda=0.0,
+            celulas=(),
+        )
+        assert cubo.pct_tributos == 0.0
+        assert cubo.pct_margem == 0.0
+
+    def test_slice_by_natureza(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        sliced = cubo.slice(natureza="direto")
+        assert all(c.natureza == "direto" for c in sliced.celulas)
+
+    def test_slice_by_categoria_insumo(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        sliced = cubo.slice(categoria_insumo="mao_obra")
+        assert all(c.categoria_insumo == "mao_obra" for c in sliced.celulas)
+
+    def test_slice_by_propriedade(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        sliced = cubo.slice(propriedade="salario_encargos")
+        assert all(c.propriedade == "salario_encargos" for c in sliced.celulas)
+
+    def test_group_by_natureza_categoria(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        gb = cubo.group_by("natureza", "categoria_insumo")
+        assert all(isinstance(k, tuple) and len(k) == 2 for k in gb.keys())
+
+    def test_composicao_por_categoria_backward_compat(self):
+        canonical = _make_canonical()
+        cubo = CuboAnaliticoBuilder().build(canonical)
+        comp = cubo.composicao_por_categoria()
+        # Should contain 'mao_obra', 'equipamento', 'diesel' (backward compat keys)
+        assert "mao_obra" in comp
+
+
+# ---------------------------------------------------------------------------
+# _temporal_bucket_from_week_iso — invalid granularidade raises ValueError
+# ---------------------------------------------------------------------------
+
+
+class TestTemporalBucketInvalidGranularidade:
+    def test_invalid_granularidade_raises(self):
+        from concilium.domain.models.analytics.cubo_analitico import _temporal_bucket_from_week_iso
+
+        with pytest.raises(ValueError, match="Granularidade temporal invalida"):
+            _temporal_bucket_from_week_iso("2026-W23", "quinzena")  # type: ignore

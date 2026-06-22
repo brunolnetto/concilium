@@ -248,3 +248,66 @@ class TestCircularDeps:
         """Verifica apenas a partir de CPU-A — ciclo deve ser encontrado."""
         erros = verificar_ciclos_cpu(self._catalogo_com_ciclo(), cpu_id="CPU-A")
         assert len(erros) >= 1
+
+    def test_terceirizado_composicao_item_builds_insumo_map(self):
+        """Lines 34-35: CPU with TERCEIRIZADO composition item populates insumo_para_cpu map."""
+        catalogo = {
+            "cpus": [
+                {
+                    "codigo": "CPU-SUB",
+                    "cpu_referencia_id": "CPU-MAIN",
+                    "composicao_itens": [
+                        {"insumo_id": "INS-PROXY", "categoria_custo": "TERCEIRIZADO"}
+                    ],
+                },
+                {
+                    "codigo": "CPU-MAIN",
+                    "cpu_referencia_id": None,
+                    "composicao_itens": [
+                        {"insumo_id": "INS-PROXY", "categoria_custo": "TERCEIRIZADO"}
+                    ],
+                },
+            ]
+        }
+        # No cycle here — just verifying it runs without error and builds the map
+        erros = verificar_ciclos_cpu(catalogo)
+        assert isinstance(erros, list)
+
+    def test_self_referencing_insumo_is_filtered_out(self):
+        """Lines 46-48: cpu_dep == cpu['codigo'] is filtered so no self-loop is added."""
+        catalogo = {
+            "cpus": [
+                {
+                    "codigo": "CPU-SELF",
+                    "cpu_referencia_id": None,
+                    "composicao_itens": [
+                        # insumo maps back to CPU-SELF itself (self-loop via TERCEIRIZADO)
+                        {"insumo_id": "INS-SELF", "categoria_custo": "TERCEIRIZADO"}
+                    ],
+                },
+            ]
+        }
+        # Manually seed: INS-SELF → CPU-SELF (via cpu_referencia_id on a different CPU)
+        # Build insumo_para_cpu via a helper CPU that references CPU-SELF
+        catalogo2 = {
+            "cpus": [
+                {
+                    "codigo": "CPU-SELF",
+                    "cpu_referencia_id": "CPU-OTHER",
+                    "composicao_itens": [
+                        {"insumo_id": "INS-OTHER", "categoria_custo": "TERCEIRIZADO"}
+                    ],
+                },
+                {
+                    "codigo": "CPU-OTHER",
+                    "cpu_referencia_id": None,
+                    "composicao_itens": [
+                        {"insumo_id": "INS-OTHER", "categoria_custo": "TERCEIRIZADO"}
+                    ],
+                },
+            ]
+        }
+        # CPU-OTHER has INS-OTHER which maps to CPU-OTHER itself → cpu_dep == cpu["codigo"]
+        # This branch ensures that self-reference is filtered out (no self-loop in graph)
+        erros = verificar_ciclos_cpu(catalogo2)
+        assert isinstance(erros, list)

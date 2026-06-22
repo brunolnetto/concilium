@@ -12,6 +12,7 @@ from src.concilium.domain.benchmark.models import (
 from src.concilium.infrastructure.storage.benchmark_store import (
     FileSystemBenchmarkStore,
 )
+from src.concilium.domain.benchmark.repository import BenchmarkRepositoryPort
 
 
 @pytest.fixture
@@ -129,3 +130,90 @@ def test_benchmark_store_gera_nova_versao_apos_edicao(benchmark_store):
     assert v1_loaded.versao == 1
     assert v2_loaded.versao == 2
     assert v2_loaded.nome == "AGIS v2"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BenchmarkRepositoryPort: abstract method bodies reachable via super()
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class _ConcreteRepo(BenchmarkRepositoryPort):
+    """Concrete subclass that calls super() to exercise all abstract pass bodies."""
+
+    def save_metadata(self, metadata):
+        return super().save_metadata(metadata)
+
+    def get_metadata(self, benchmark_id):
+        return super().get_metadata(benchmark_id)
+
+    def get_metadata_by_version(self, benchmark_id, version):
+        return super().get_metadata_by_version(benchmark_id, version)
+
+    def list_all(self):
+        return super().list_all()
+
+    def log_execution(self, execution):
+        return super().log_execution(execution)
+
+    def get_execution_history(self, benchmark_id, limit=50):
+        return super().get_execution_history(benchmark_id, limit)
+
+    def create_new_version(self, benchmark_id, patch):
+        return super().create_new_version(benchmark_id, patch)
+
+    def update_metadata(self, benchmark_id, patch):
+        return super().update_metadata(benchmark_id, patch)
+
+
+@pytest.fixture
+def concrete_repo() -> _ConcreteRepo:
+    return _ConcreteRepo()
+
+
+def test_port_save_metadata_returns_none(concrete_repo):
+    meta = BenchmarkMetadata(
+        benchmark_id="X",
+        nome="X",
+        origem="Test",
+        tags=[],
+        criado_em=datetime.now(),
+        versao=1,
+        imutavel=False,
+    )
+    assert concrete_repo.save_metadata(meta) is None
+
+
+def test_port_get_metadata_returns_none(concrete_repo):
+    assert concrete_repo.get_metadata("missing") is None
+
+
+def test_port_get_metadata_by_version_returns_none(concrete_repo):
+    assert concrete_repo.get_metadata_by_version("missing", 1) is None
+
+
+def test_port_list_all_returns_none(concrete_repo):
+    assert concrete_repo.list_all() is None
+
+
+def test_port_log_execution_returns_none(concrete_repo):
+    exec_ = BenchmarkExecution(
+        execution_id="e1",
+        benchmark_id="X",
+        versao=1,
+        projeto_id="p1",
+        status="SUCESSO",
+        executado_em=datetime.now(),
+    )
+    assert concrete_repo.log_execution(exec_) is None
+
+
+def test_port_get_execution_history_returns_none(concrete_repo):
+    assert concrete_repo.get_execution_history("missing") is None
+
+
+def test_port_create_new_version_returns_none(concrete_repo):
+    assert concrete_repo.create_new_version("missing", {}) is None
+
+
+def test_port_update_metadata_returns_none(concrete_repo):
+    assert concrete_repo.update_metadata("missing", {}) is None

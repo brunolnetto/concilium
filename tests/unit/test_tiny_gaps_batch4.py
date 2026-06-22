@@ -96,6 +96,21 @@ class TestDomainModelsInit:
 
         assert CanonicalModel is not None
 
+    def test_unknown_attribute_raises_attribute_error(self):
+        """Line 95: __getattr__ raises AttributeError for unknown names."""
+        import concilium.domain.models
+
+        with pytest.raises(AttributeError, match="has no attribute"):
+            _ = concilium.domain.models.NonExistentModel  # type: ignore[attr-defined]
+
+    def test_lazy_load_known_model(self):
+        """__getattr__ successfully resolves and caches a lazy-loaded model."""
+        import concilium.domain.models
+
+        # Access via __getattr__ — should return the real class
+        cls = getattr(concilium.domain.models, "Projeto")
+        assert cls is not None
+
 
 # ─── application/runtime/mixins/inputs.py (5 missing: 30, 38, 54, 71-72) ─────
 

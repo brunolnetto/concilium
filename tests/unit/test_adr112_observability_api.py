@@ -314,3 +314,78 @@ class TestBronzeEndpoint:
         data_other = client.get("/observability/bronze/logs?date=2020-01-01").json()
         assert data_today["total"] >= 1
         assert data_other["total"] == 0
+
+
+# ── BronzeWriter / BronzeLogHandler unit tests ───────────────────────────────
+# These tests are NOT slow (no create_app) — they directly exercise the writer.
+
+
+class TestBronzeLogHandlerBuffering:
+    """Cover missing lines in bronze_writer.py: emit auto-flush and flush paths."""
+
+    def _make_writer_and_storage(self, tmp_path):
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+        from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+
+        storage = LocalBlobStorage(tmp_path)
+        writer = BronzeWriter(storage, "logs")
+        return writer, storage
+
+    def test_flush_on_buffer_size_reached(self, tmp_path):
+        """emit() calls flush() automatically when buffer hits buffer_size (line 70)."""
+        import logging
+
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler
+
+        writer, storage = self._make_writer_and_storage(tmp_path)
+        handler = BronzeLogHandler(writer, buffer_size=2)
+
+        record1 = logging.LogRecord("t", logging.INFO, "", 0, "msg1", (), None)
+        record2 = logging.LogRecord("t", logging.INFO, "", 0, "msg2", (), None)
+
+        handler.emit(record1)
+        assert len(handler._buffer) == 1  # not yet flushed
+        handler.emit(record2)
+        # After second emit, buffer_size=2 reached → flush called → buffer cleared
+        assert len(handler._buffer) == 0
+
+    def test_flush_writes_batch_to_storage(self, tmp_path):
+        """flush() on non-empty buffer writes to storage (lines 74-78)."""
+        import logging
+
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler
+
+        writer, storage = self._make_writer_and_storage(tmp_path)
+        handler = BronzeLogHandler(writer, buffer_size=100)
+
+        record = logging.LogRecord("t", logging.WARNING, "", 0, "hello", (), None)
+        handler.emit(record)
+        assert len(handler._buffer) == 1
+
+        handler.flush()
+        assert len(handler._buffer) == 0
+
+    def test_flush_empty_buffer_is_noop(self, tmp_path):
+        """flush() on empty buffer returns without writing (line 73 branch)."""
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler
+
+        writer, _storage = self._make_writer_and_storage(tmp_path)
+        handler = BronzeLogHandler(writer, buffer_size=10)
+        # No records emitted — flush should be a no-op
+        handler.flush()  # Must not raise
+
+    def test_flush_swallows_write_exception(self, tmp_path):
+        """flush() catches exceptions from write_batch without re-raising (lines 79-80)."""
+        import logging
+        from unittest.mock import MagicMock
+
+        from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+
+        storage = MagicMock()
+        storage.gravar_blob.side_effect = OSError("disk full")
+        writer = BronzeWriter(storage, "logs")
+        handler = BronzeLogHandler(writer, buffer_size=100)
+
+        record = logging.LogRecord("t", logging.ERROR, "", 0, "oops", (), None)
+        handler.emit(record)
+        handler.flush()  # Should NOT raise even though storage fails

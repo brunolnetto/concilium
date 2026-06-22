@@ -199,6 +199,62 @@ class TestCheckpointStore:
         assert store.load("logs").last_processed_path == "logs-path"
         assert store.load("traces").last_processed_path == "traces-path"
 
+    def test_delete_swallows_storage_error(self):
+        """delete() silently ignores exceptions from gravar_blob."""
+        from unittest.mock import MagicMock
+
+        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore
+
+        failing_storage = MagicMock()
+        failing_storage.gravar_blob.side_effect = RuntimeError("storage unavailable")
+        store = CheckpointStore(failing_storage)
+        # Must not raise
+        store.delete("logs")
+
+    def test_load_all_returns_all_saved_checkpoints(self, storage):
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
+        store = CheckpointStore(storage)
+        store.save(Checkpoint("logs", "logs-path", "ts1", 10))
+        store.save(Checkpoint("traces", "traces-path", "ts2", 20))
+        checkpoints = store.load_all()
+        signal_types = {cp.signal_type for cp in checkpoints}
+        assert "logs" in signal_types
+        assert "traces" in signal_types
+        assert len(checkpoints) == 2
+
+    def test_load_all_returns_empty_when_no_checkpoints(self, storage):
+        from concilium.infrastructure.observability.checkpoint_store import CheckpointStore
+
+        store = CheckpointStore(storage)
+        assert store.load_all() == []
+
+    def test_load_all_skips_deleted_checkpoints(self, storage):
+        """load_all() ignores empty blobs (deleted checkpoints)."""
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
+        store = CheckpointStore(storage)
+        store.save(Checkpoint("logs", "path", "ts", 5))
+        store.save(Checkpoint("traces", "path2", "ts2", 7))
+        store.delete("logs")  # overwrites with empty bytes
+        result = store.load_all()
+        signal_types = {cp.signal_type for cp in result}
+        assert "logs" not in signal_types
+        assert "traces" in signal_types
+
+    def test_load_all_skips_malformed_blobs(self, storage):
+        """load_all() silently skips blobs with invalid JSON."""
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+
+        store = CheckpointStore(storage)
+        store.save(Checkpoint("logs", "path", "ts", 3))
+        # Write a corrupt blob at the same prefix location
+        storage.gravar_blob("observability/checkpoints/corrupt.json", b"not-valid-json{{{")
+        result = store.load_all()
+        signal_types = {cp.signal_type for cp in result}
+        assert "logs" in signal_types
+        # corrupt blob is silently skipped — no crash
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F3: SilverNormalizer

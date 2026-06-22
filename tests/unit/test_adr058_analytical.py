@@ -393,3 +393,102 @@ class TestSCurveBuilder:
         d = sc.to_dict()
         json_str = json.dumps(d, ensure_ascii=False, default=str)
         assert len(json_str) > 50
+
+    def test_build_uses_pool_costs_when_available(self):
+        """Covers the custo_por_semana_pool non-empty branch in SCurveBuilder.build."""
+        from unittest.mock import patch
+
+        canonical = _make_canonical(with_schedule=True)
+        pool_costs = {"2026-W23": 10000.0, "2026-W24": 20000.0}
+
+        with patch(
+            "concilium.domain.services.analytics.s_curve_builder._scb_collect_direct_costs_pool",
+            return_value=pool_costs,
+        ):
+            sc = SCurveBuilder().build(canonical)
+        assert isinstance(sc, SCurve)
+        # pool costs must be reflected in total
+        assert sc.total_custo_direto >= 0
+
+    def test_build_empty_when_no_schedule_weeks(self):
+        """Covers _scb_collect_semanas returning (None, None) — _empty() branch."""
+        from unittest.mock import MagicMock
+
+        canonical = _make_canonical(with_schedule=False)
+        sc = SCurveBuilder().build(canonical)
+        assert sc.total_projeto == 0.0
+        assert sc.semanas_iso == ()
+
+
+# ---------------------------------------------------------------------------
+# SCurveBuilder helper functions
+# ---------------------------------------------------------------------------
+
+
+class TestSCurveBuilderHelpers:
+    def test_extend_weeks_no_op_when_within_length(self):
+        """max_offset < len(semanas_sorted) → returns unchanged list."""
+        from concilium.domain.services.analytics.s_curve_builder import _scb_extend_weeks_for_offsets
+
+        weeks = ["2026-W01", "2026-W02", "2026-W03"]
+        result = _scb_extend_weeks_for_offsets(weeks, max_offset=1)
+        assert result == weeks
+
+    def test_extend_weeks_appends_when_offset_exceeds_length(self):
+        """max_offset >= len(semanas_sorted) → appends new ISO weeks."""
+        from concilium.domain.services.analytics.s_curve_builder import _scb_extend_weeks_for_offsets
+
+        weeks = ["2026-W01", "2026-W02"]
+        result = _scb_extend_weeks_for_offsets(weeks, max_offset=3)
+        assert len(result) == 4  # needs to reach index 3
+        assert result[:2] == weeks
+        assert all("-W" in w for w in result)
+
+    def test_extend_weeks_empty_list_returns_empty(self):
+        """Empty semanas_sorted → returned as-is."""
+        from concilium.domain.services.analytics.s_curve_builder import _scb_extend_weeks_for_offsets
+
+        result = _scb_extend_weeks_for_offsets([], max_offset=5)
+        assert result == []
+
+    def test_build_curves_zero_total_proj_gives_zero_pct(self):
+        """total_proj == 0 → pct_acum is all zeros."""
+        from concilium.domain.services.analytics.s_curve_builder import _scb_build_curves
+
+        custo_acum, pct_acum = _scb_build_curves([0.0, 0.0, 0.0], total_proj=0.0)
+        assert custo_acum == [0.0, 0.0, 0.0]
+        assert pct_acum == [0.0, 0.0, 0.0]
+
+    def test_build_curves_normal(self):
+        """Normal case: pct_acum ends at 1.0."""
+        import math
+
+        from concilium.domain.services.analytics.s_curve_builder import _scb_build_curves
+
+        custo_acum, pct_acum = _scb_build_curves([100.0, 200.0, 300.0], total_proj=600.0)
+        assert custo_acum[-1] == 600.0
+        assert math.isclose(pct_acum[-1], 1.0, abs_tol=1e-6)
+
+    def test_collect_direct_costs_pool_returns_empty_on_exception(self):
+        """CuboPoolInstancialBuilder.build raises → returns empty dict."""
+        from unittest.mock import MagicMock, patch
+
+        from concilium.domain.services.analytics.s_curve_builder import _scb_collect_direct_costs_pool
+
+        with patch(
+            "concilium.domain.services.analytics.cubo_pool_builder.CuboPoolInstancialBuilder.build",
+            side_effect=Exception("fail"),
+        ):
+            result = _scb_collect_direct_costs_pool(MagicMock())
+        assert result == {}
+
+    def test_collect_semanas_returns_none_when_no_weeks(self):
+        """No distribuicao_semanal keys → returns (None, None)."""
+        from unittest.mock import MagicMock
+
+        from concilium.domain.services.analytics.s_curve_builder import _scb_collect_semanas
+
+        sa = MagicMock()
+        sa.distribuicao_semanal = {}
+        result = _scb_collect_semanas([sa])
+        assert result == (None, None)

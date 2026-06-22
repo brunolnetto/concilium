@@ -246,3 +246,214 @@ class TestFileProjectRepository:
         repo = FileProjectRepository(tmp_path)
         with pytest.raises(FileNotFoundError):
             repo.get_project("nonexistent-id")
+
+    def test_create_project_with_catalogo_base(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+
+        projects_root = tmp_path / "projects"
+        projects_root.mkdir()
+        repo = FileProjectRepository(projects_root)
+        handle = repo.create_project("Proj Cat", "ctx", catalogo_base="cat-001")
+        assert handle.meta.get("catalogo_base") == "cat-001"
+
+    def test_list_projects_skips_non_dir(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+        from concilium.infrastructure.storage.project import ProjectStore
+
+        projects_root = tmp_path / "projects"
+        projects_root.mkdir()
+        # Create a real project
+        ProjectStore.init(projects_root, "Real", "ctx")
+        # Add a file (not a dir) — should be skipped
+        (projects_root / "not_a_dir.txt").write_text("noise")
+        repo = FileProjectRepository(projects_root)
+        projects = repo.list_projects()
+        assert len(projects) == 1
+
+
+class TestFileProjectHandleExtended:
+    """Cover remaining delegating methods on FileProjectHandle."""
+
+    def _make_handle(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+        store = _make_store(tmp_path)
+        return FileProjectHandle(store)
+
+    def test_snapshots_property(self, tmp_path):
+        from concilium.infrastructure.storage.snapshot import SnapshotStore
+        handle = self._make_handle(tmp_path)
+        assert isinstance(handle.snapshots, SnapshotStore)
+
+    def test_update_meta(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.update_meta(extra="value")
+        assert handle.meta["extra"] == "value"
+
+    def test_list_versions_empty(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        assert handle.list_versions() == []
+
+    def test_current_version_none(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        assert handle.current_version() is None
+
+    def test_new_version_and_version_path(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        v = handle.new_version()
+        assert v == "v1"
+        assert handle.version_path("v1") == handle.root / "v1"
+
+    def test_load_canonical_none(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.new_version()
+        assert handle.load_canonical() is None
+
+    def test_write_canonical_raw_and_list_output_files(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.new_version()
+        handle.write_canonical_raw({"obra": {"nome": "T", "escopo": "r", "localizacao": "X", "extensao_km": 1.0, "atividades": []}})
+        assert handle.list_output_files() == []
+
+    def test_save_and_load_output_file(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.new_version()
+        handle.save_output_file(b"data", filename="out.xlsx")
+        result = handle.load_output_file(filename="out.xlsx")
+        assert result == b"data"
+
+    def test_set_overlay_non_dict_overlay_overwritten(self, tmp_path):
+        """set_overlay: if overlay on disk is not a dict, it's replaced."""
+        handle = self._make_handle(tmp_path)
+        # Write corrupt non-dict overlay
+        handle._store.write_json("overrides/cpus_overlay.json", ["not", "a", "dict"])
+        handle.set_overlay("cpu", "CPU-1", {"codigo": "CPU-1"})
+        overlay = handle.read_json("overrides/cpus_overlay.json", {})
+        assert "CPU-1" in overlay
+
+    def test_load_resolved_catalog_present(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle._store.new_version()
+        catalog_path = handle._store.root / "v1" / "resolved_catalog.json"
+        catalog_path.write_text('{"cpus": []}', encoding="utf-8")
+        result = handle.load_resolved_catalog()
+        assert result == {"cpus": []}
+
+    def test_load_resolved_catalog_bad_json(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle._store.new_version()
+        catalog_path = handle._store.root / "v1" / "resolved_catalog.json"
+        catalog_path.write_text("not json", encoding="utf-8")
+        result = handle.load_resolved_catalog()
+        assert result is None
+
+    def test_set_compensacao_ineficiencias(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.set_compensacao_ineficiencias({"fator": 1.1}, motivo="test")
+        data = handle.read_json("compensacao_ineficiencias.json", {})
+        assert data["compensacao"]["fator"] == 1.1
+
+    def test_resolve_cpu_with_catalogo_base_and_snapshot(self, tmp_path):
+        """resolve_cpu: walks override→individual→aggregate→snapshot when catalogo_base set."""
+        handle = self._make_handle(tmp_path)
+        # Set catalogo_base in meta (individual/aggregate files won't exist in tmp_path)
+        handle.update_meta(catalogo_base="nonexistent-catalog")
+        # Should fall through to snapshots
+        snaps_dir = handle.root / "snapshots"
+        snaps_dir.mkdir(exist_ok=True)
+        (snaps_dir / "catalogo-v1.json").write_text(
+            '{"cpus": [{"codigo": "CPU-S"}]}', encoding="utf-8"
+        )
+        result = handle.resolve_cpu("CPU-S")
+        assert result == {"codigo": "CPU-S"}
+
+    def test_append_jsonl_and_read_lines(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        log_path = handle.root / "events.jsonl"
+        log_path.touch()
+        handle.append_jsonl("events.jsonl", {"event": "first"})
+        handle.append_jsonl("events.jsonl", {"event": "second"})
+        lines = handle.read_lines("events.jsonl")
+        assert len(lines) == 2
+        assert "first" in lines[0]
+
+    def test_save_and_load_intermediate_via_handle(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.new_version()
+        handle.save_intermediate_file("interim.bin", b"\xff\xfe", "v1")
+        result = handle.load_intermediate_file("interim.bin", "v1")
+        assert result == b"\xff\xfe"
+
+    def test_log_invocation_and_approve(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.new_version()
+        handle.log_invocation("v1", {"skill": "01"})
+        log = (handle.root / "v1" / "invocations.log").read_text(encoding="utf-8")
+        assert "01" in log
+        # approve — need canonical first
+        handle.write_canonical_raw({"obra": {"nome": "T", "escopo": "r", "localizacao": "X", "extensao_km": 1.0, "atividades": []}})
+        handle.approve("v1")
+        assert "v1" in handle.meta.get("approved_versions", [])
+
+    def test_list_escopos_and_escopo(self, tmp_path):
+        from concilium.infrastructure.storage.escopo_store import EscopoStore
+        handle = self._make_handle(tmp_path)
+        assert handle.list_escopos() == []
+        es = handle.escopo("default")
+        assert isinstance(es, EscopoStore)
+
+    def test_create_escopo_via_handle(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        es = handle.create_escopo(
+            escopo_id="e01",
+            nome="Trecho A",
+            tipo_obra="terraplenagem",
+            localizacao="MG",
+            coordenadas_lat=-19.0,
+            coordenadas_lng=-43.0,
+            data_inicio="2026-01-01",
+            data_termino="2026-06-30",
+        )
+        from concilium.infrastructure.storage.escopo_store import EscopoStore
+        assert isinstance(es, EscopoStore)
+        assert "e01" in handle.list_escopos()
+
+    def test_write_json_creates_parent_dirs(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        # write_json in file_project_repository does NOT mkdir — test existing behavior
+        # The path must be reachable: root exists, so writing to root directly works
+        handle.write_json("direct.json", {"ok": True})
+        assert (handle.root / "direct.json").exists()
+
+
+class TestRcHelpersEdgeCases:
+    """Cover error branches in the _rc_try_* helper functions."""
+
+    def test_rc_try_override_bad_json(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+        f = tmp_path / "bad.json"
+        f.write_text("not json")
+        result = _rc_try_override(f, "CPU-1", json)
+        assert result is None
+
+    def test_rc_try_file_bad_json(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+        f = tmp_path / "bad.json"
+        f.write_text("not json")
+        result = _rc_try_file(f)
+        assert result is None
+
+    def test_rc_try_aggregate_bad_json(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+        f = tmp_path / "bad.json"
+        f.write_text("not json")
+        result = _rc_try_aggregate(f, "CPU-1", json)
+        assert result is None
+
+    def test_rc_try_snapshots_bad_json_skipped(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        (snaps_dir / "catalogo-v1.json").write_text("not json")
+        (snaps_dir / "catalogo-v2.json").write_text('{"cpus": [{"codigo": "CPU-G"}]}')
+        result = _rc_try_snapshots(snaps_dir, "CPU-G", json)
+        assert result == {"codigo": "CPU-G"}

@@ -182,3 +182,185 @@ class TestProjectsPrefix:
         with patch("concilium.infrastructure.storage.store_factory.get_storage", return_value=storage_mock):
             result = _projects_prefix()
         assert result == "my-prefix"
+
+
+class TestBuildAzureRepository:
+    def test_wires_azure_storage_and_prefix(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        calls: dict = {}
+
+        class DummyAzureBlobStorage:
+            @classmethod
+            def from_env(cls):
+                calls["from_env"] = True
+                return "azure-storage"
+
+        class DummyStorageProjectRepository:
+            def __init__(self, storage, projects_prefix):
+                calls["storage"] = storage
+                calls["projects_prefix"] = projects_prefix
+
+        monkeypatch.setenv("CONCILIUM__STORE_PROJECTS_PREFIX", "azure-projects")
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.azure",
+            types.SimpleNamespace(AzureBlobStorage=DummyAzureBlobStorage),
+        )
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.storage.storage_project_repository",
+            types.SimpleNamespace(StorageProjectRepository=DummyStorageProjectRepository),
+        )
+
+        repo = store_factory._build_azure_repository()
+        assert isinstance(repo, DummyStorageProjectRepository)
+        assert calls["from_env"] is True
+        assert calls["storage"] == "azure-storage"
+        assert calls["projects_prefix"] == "azure-projects"
+
+
+class TestBuildGdriveRepository:
+    def test_wires_gdrive_storage_and_prefix(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        calls: dict = {}
+
+        class DummyGoogleDriveBlobStorage:
+            @classmethod
+            def from_env(cls):
+                calls["from_env"] = True
+                return "gdrive-storage"
+
+        class DummyStorageProjectRepository:
+            def __init__(self, storage, projects_prefix):
+                calls["storage"] = storage
+                calls["projects_prefix"] = projects_prefix
+
+        monkeypatch.setenv("CONCILIUM__STORE_PROJECTS_PREFIX", "gdrive-projects")
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.gdrive",
+            types.SimpleNamespace(GoogleDriveBlobStorage=DummyGoogleDriveBlobStorage),
+        )
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.storage.storage_project_repository",
+            types.SimpleNamespace(StorageProjectRepository=DummyStorageProjectRepository),
+        )
+
+        repo = store_factory._build_gdrive_repository()
+        assert isinstance(repo, DummyStorageProjectRepository)
+        assert calls["from_env"] is True
+        assert calls["storage"] == "gdrive-storage"
+        assert calls["projects_prefix"] == "gdrive-projects"
+
+
+class TestBuildBlobStorageCloudBackends:
+    """Covers build_blob_storage() branches for sharepoint, s3, azure, gdrive."""
+
+    def test_sharepoint_backend_calls_from_env(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+
+        class DummySP:
+            @classmethod
+            def from_env(cls):
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.sharepoint",
+            types.SimpleNamespace(SharePointBlobStorage=DummySP),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="sharepoint",
+        ):
+            result = store_factory.build_blob_storage()
+        assert result is sentinel
+
+    def test_s3_backend_calls_from_env(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+
+        class DummyS3:
+            @classmethod
+            def from_env(cls):
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.s3",
+            types.SimpleNamespace(S3BlobStorage=DummyS3),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="s3",
+        ):
+            result = store_factory.build_blob_storage()
+        assert result is sentinel
+
+    def test_azure_backend_calls_from_env(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+
+        class DummyAzure:
+            @classmethod
+            def from_env(cls):
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.azure",
+            types.SimpleNamespace(AzureBlobStorage=DummyAzure),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="azure",
+        ):
+            result = store_factory.build_blob_storage()
+        assert result is sentinel
+
+    def test_gdrive_backend_calls_from_env(self, monkeypatch):
+        import sys
+        import types
+
+        from concilium.infrastructure.storage import store_factory
+
+        sentinel = object()
+
+        class DummyGDrive:
+            @classmethod
+            def from_env(cls):
+                return sentinel
+
+        monkeypatch.setitem(
+            sys.modules,
+            "concilium.infrastructure.adapters.blob_storage.gdrive",
+            types.SimpleNamespace(GoogleDriveBlobStorage=DummyGDrive),
+        )
+        with patch(
+            "concilium.infrastructure.storage.store_factory.resolve_store_backend",
+            return_value="gdrive",
+        ):
+            result = store_factory.build_blob_storage()
+        assert result is sentinel

@@ -98,6 +98,385 @@ class TestPuCalculator:
         result = _converter_rental_unit(10.0, "hora_produtiva", producao_horaria=1.0)
         assert isinstance(result, float)
 
+    def test_converter_rental_unit_none_passthrough(self):
+        from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
+        # None rental_unit → return preco_original unchanged
+        result = _converter_rental_unit(25.0, None)
+        assert result == 25.0
+
+    def test_converter_rental_unit_dia_zero_producao(self):
+        from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
+        # producao_horaria=0 → no division by zero, uses custo_hora_calendario
+        result = _converter_rental_unit(800.0, "dia_calendario", producao_horaria=0.0)
+        assert result == 800.0 / 8.0
+
+    def test_converter_rental_unit_mes_zero_producao(self):
+        from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
+        result = _converter_rental_unit(15500.0, "mes", producao_horaria=0.0, horas_mes=193.6)
+        assert abs(result - 15500.0 / 193.6) < 0.01
+
+    def test_converter_rental_unit_unknown_passthrough(self):
+        from concilium.application.catalog.pu_calculator import _converter_rental_unit
+
+        result = _converter_rental_unit(50.0, "quinzena")
+        assert result == 50.0
+
+    def test_alpha_with_percentual_encargos_local(self):
+        from concilium.application.catalog.pu_calculator import _alpha, ParametrosCalculo
+
+        params = ParametrosCalculo()
+        insumo = {"atributos_especificos": {"percentual_encargos_local": 0.8}}
+        result = _alpha(insumo, params)
+        assert abs(result - 1.8) < 0.001
+
+    def test_alpha_with_invalid_percentual_falls_back_to_tipo(self):
+        from concilium.application.catalog.pu_calculator import _alpha, ParametrosCalculo
+
+        params = ParametrosCalculo()
+        insumo = {"atributos_especificos": {"percentual_encargos_local": "bad", "tipo_contrato": "PJ"}}
+        result = _alpha(insumo, params)
+        assert result == params.alpha_pj
+
+    def test_horas_mes_from_insumo_attrs(self):
+        from concilium.application.catalog.pu_calculator import _horas_mes, ParametrosCalculo
+
+        params = ParametrosCalculo()
+        insumo = {"atributos_especificos": {"horas_mes": 176.0}}
+        result = _horas_mes(insumo, params)
+        assert result == 176.0
+
+    def test_horas_mes_invalid_falls_back(self):
+        from concilium.application.catalog.pu_calculator import _horas_mes, ParametrosCalculo
+
+        params = ParametrosCalculo()
+        insumo = {"atributos_especificos": {"horas_mes": "bad"}}
+        result = _horas_mes(insumo, params)
+        assert result == params.horas_mes
+
+    def test_breakdown_pu_ok_false_when_refs_faltantes(self):
+        from concilium.application.catalog.pu_calculator import BreakdownPU
+
+        bd = BreakdownPU(producao_id="P1", valor_horario=100.0, referencias_faltantes=["INS-X"])
+        assert bd.ok is False
+
+    def test_breakdown_pu_ok_true_when_no_missing_refs(self):
+        from concilium.application.catalog.pu_calculator import BreakdownPU
+
+        bd = BreakdownPU(producao_id="P1", valor_horario=100.0)
+        assert bd.ok is True
+
+    def test_breakdown_pu_calculated_none_when_zero_vh(self):
+        from concilium.application.catalog.pu_calculator import BreakdownPU
+
+        bd = BreakdownPU(producao_id="P1", valor_horario=0.0, custo_mo_h=100.0)
+        assert bd.pu_calculado is None
+
+    def test_breakdown_pu_to_dict(self):
+        from concilium.application.catalog.pu_calculator import BreakdownPU
+
+        bd = BreakdownPU(producao_id="P1", valor_horario=10.0, custo_mo_h=20.0)
+        d = bd.to_dict()
+        assert d["producao_id"] == "P1"
+        assert "breakdown" in d
+        assert d["breakdown"]["mo"] == 20.0
+
+    def test_calcular_pu_with_funcao_mensal(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu, ParametrosCalculo
+
+        producao = {
+            "id": "CPU-1",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "funcoes": [{"funcao_id": "FN-1", "num_pessoas": 2}]
+            },
+        }
+        insumo_index = {
+            "FN-1": {"codigo": "FN-1", "preco_unitario": 4000.0, "unidade": "mes"}
+        }
+        params = ParametrosCalculo(alpha_clt=1.8, horas_mes=200.0)
+        bd = calcular_pu(producao, insumo_index, params)
+        # custo_mo_h = (4000/200) * 1.8 * 2 = 72
+        assert bd.custo_mo_h > 0
+
+    def test_calcular_pu_with_funcao_horista(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu, ParametrosCalculo
+
+        producao = {
+            "id": "CPU-2",
+            "valor_horario": 5.0,
+            "composicao_padrao_equipe": {
+                "funcoes": [{"funcao_id": "OP-1", "num_pessoas": 1}]
+            },
+        }
+        insumo_index = {
+            "OP-1": {"codigo": "OP-1", "preco_unitario": 30.0, "unidade": "h"}
+        }
+        bd = calcular_pu(producao, insumo_index)
+        # unidade=h → direct rate, no alpha
+        assert bd.custo_mo_h == 30.0
+
+    def test_calcular_pu_funcao_missing_ref(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "CPU-3",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "funcoes": [{"funcao_id": "MISSING-FN", "num_pessoas": 1}]
+            },
+        }
+        bd = calcular_pu(producao, {})
+        assert "MISSING-FN" in bd.referencias_faltantes
+
+    def test_calcular_pu_equipamento_with_preco_h_override(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "CPU-4",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "equipamentos": [
+                    {"equip_id": "EQ-1", "num_unidades": 2, "preco_h_unitario": 50.0}
+                ]
+            },
+        }
+        insumo_index = {"EQ-1": {"codigo": "EQ-1", "preco_unitario": 999.0}}
+        bd = calcular_pu(producao, insumo_index)
+        # override = 50 * 2 = 100
+        assert bd.custo_equip_h == 100.0
+
+    def test_calcular_pu_equipamento_with_consumo_diesel_from_attrs(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu, ParametrosCalculo
+
+        producao = {
+            "id": "CPU-5",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "equipamentos": [
+                    {
+                        "equip_id": "EQ-D",
+                        "num_unidades": 1,
+                        # no consumo_litros_hora at entry level
+                    }
+                ]
+            },
+        }
+        insumo_index = {
+            "EQ-D": {
+                "codigo": "EQ-D",
+                "preco_unitario": 40.0,
+                "atributos_especificos": {"consumo_litros_hora": 5.0},
+            }
+        }
+        params = ParametrosCalculo(preco_diesel=7.0)
+        bd = calcular_pu(producao, insumo_index, params)
+        # diesel from attrs: 5.0 * 7.0 * 1 = 35
+        assert abs(bd.custo_diesel_h - 35.0) < 0.01
+        assert any("consumo_litros_hora" in a for a in bd.alertas)
+
+    def test_calcular_pu_equipamento_missing_ref(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "CPU-6",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "equipamentos": [{"equip_id": "MISSING-EQ", "num_unidades": 1}]
+            },
+        }
+        bd = calcular_pu(producao, {})
+        assert "MISSING-EQ" in bd.referencias_faltantes
+
+    def test_calcular_pu_material(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "CPU-7",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "materiais": [
+                    {"insumo_id": "MAT-1", "consumo_por_hora": 2.0}
+                ]
+            },
+        }
+        insumo_index = {"MAT-1": {"codigo": "MAT-1", "preco_unitario": 15.0}}
+        bd = calcular_pu(producao, insumo_index)
+        assert bd.custo_material_h == 30.0
+
+    def test_calcular_pu_material_missing_ref(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "CPU-8",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "materiais": [{"insumo_id": "MAT-MISS", "consumo_por_hora": 1.0}]
+            },
+        }
+        bd = calcular_pu(producao, {})
+        assert "MAT-MISS" in bd.referencias_faltantes
+
+    def test_calcular_pu_material_empty_id_skipped(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "CPU-9",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "materiais": [{"consumo_por_hora": 1.0}]  # no id keys
+            },
+        }
+        bd = calcular_pu(producao, {})
+        # Empty mid → not appended to refs_faltantes
+        assert bd.referencias_faltantes == []
+
+    def test_calcular_pu_composicao_itens_basic(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu_composicao_itens
+
+        cpu = {
+            "codigo": "CPU-C1",
+            "composicao_itens": [
+                {"insumo_id": "INS-A", "coeficiente": 3.0, "categoria_custo": "MO"}
+            ],
+        }
+        insumo_index = {"INS-A": {"codigo": "INS-A", "preco_unitario": 10.0}}
+        result = calcular_pu_composicao_itens(cpu, insumo_index)
+        assert result["pu_fixo"] == 30.0
+        assert len(result["breakdown"]) == 1
+
+    def test_calcular_pu_composicao_itens_missing_insumo(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu_composicao_itens
+
+        cpu = {
+            "codigo": "CPU-C2",
+            "composicao_itens": [{"insumo_id": "MISSING", "coeficiente": 1.0}],
+        }
+        result = calcular_pu_composicao_itens(cpu, {})
+        assert len(result["refs_faltantes"]) == 1
+        assert result["pu_fixo"] == 0.0
+
+    def test_calcular_pu_composicao_itens_empty(self):
+        from concilium.application.catalog.pu_calculator import calcular_pu_composicao_itens
+
+        result = calcular_pu_composicao_itens({"codigo": "C"}, {})
+        assert result["pu_fixo"] == 0.0
+        assert result["breakdown"] == []
+
+    def test_calcular_catalogo_empty(self):
+        from concilium.application.catalog.pu_calculator import calcular_catalogo
+
+        result = calcular_catalogo([], [])
+        assert result["ok"] is True
+        assert result["total_producoes"] == 0
+
+    def test_calcular_catalogo_sem_composicao_skipped(self):
+        from concilium.application.catalog.pu_calculator import calcular_catalogo
+
+        producoes = [{"id": "P1", "valor_horario": 10.0}]  # no equipe
+        result = calcular_catalogo(producoes, [])
+        assert result["com_composicao"] == 0
+
+    def test_calcular_catalogo_sem_valor_horario(self):
+        from concilium.application.catalog.pu_calculator import calcular_catalogo
+
+        producoes = [
+            {
+                "id": "P1",
+                "valor_horario": 0.0,
+                "composicao_padrao_equipe": {
+                    "funcoes": [{"funcao_id": "FN-1", "num_pessoas": 1}]
+                },
+            }
+        ]
+        insumos = [{"codigo": "FN-1", "preco_unitario": 100.0, "tipo": "MO"}]
+        result = calcular_catalogo(producoes, insumos)
+        assert "P1" in result["sem_valor_horario"]
+
+    def test_calcular_catalogo_pu_divergente(self):
+        from concilium.application.catalog.pu_calculator import calcular_catalogo
+
+        producoes = [
+            {
+                "id": "P-DIV",
+                "valor_horario": 10.0,
+                "_cu_planilha_referencia": 999.0,  # huge divergence
+                "composicao_padrao_equipe": {
+                    "funcoes": [{"funcao_id": "FN-X", "num_pessoas": 1}]
+                },
+            }
+        ]
+        insumos = [{"codigo": "FN-X", "preco_unitario": 100.0, "unidade": "h"}]
+        result = calcular_catalogo(producoes, insumos, tolerancia_pct=5.0)
+        assert len(result["pu_divergentes"]) == 1
+
+    def test_check_pu_divergencia_no_hint(self):
+        from concilium.application.catalog.pu_calculator import _check_pu_divergencia, BreakdownPU
+
+        bd = BreakdownPU(producao_id="P", valor_horario=10.0, custo_mo_h=50.0)
+        divergentes: list = []
+        _check_pu_divergencia(bd, {"id": "P"}, 20.0, divergentes)
+        assert divergentes == []
+
+    def test_check_pu_divergencia_below_tolerance(self):
+        from concilium.application.catalog.pu_calculator import _check_pu_divergencia, BreakdownPU
+
+        bd = BreakdownPU(producao_id="P", valor_horario=100.0, custo_mo_h=1001.0)
+        divergentes: list = []
+        # pu_calculado ≈ 10.01, ref=10.0, delta < 20%
+        _check_pu_divergencia(bd, {"_cu_planilha_referencia": 10.0}, 20.0, divergentes)
+        assert divergentes == []
+
+    def test_derivar_precos_unitarios_sbdi_basic(self):
+        from concilium.application.catalog.pu_calculator import derivar_precos_unitarios_sbdi
+
+        producao = {
+            "id": "P1",
+            "valor_horario": 10.0,
+            "composicao_padrao_equipe": {
+                "funcoes": [{"funcao_id": "FN-1", "num_pessoas": 1}]
+            },
+        }
+        insumo_index = {
+            "FN-1": {"codigo": "FN-1", "preco_unitario": 100.0, "unidade": "h"}
+        }
+        result = derivar_precos_unitarios_sbdi(producao, insumo_index)
+        assert "mo" in result
+        assert result["_meta"]["producao_id"] == "P1"
+
+    def test_derivar_precos_unitarios_sbdi_zero_vh_returns_empty(self):
+        from concilium.application.catalog.pu_calculator import derivar_precos_unitarios_sbdi
+
+        producao = {"id": "P2", "valor_horario": 0.0}
+        result = derivar_precos_unitarios_sbdi(producao, {})
+        assert result == {}
+
+    def test_build_insumo_index_skips_missing_codigo(self):
+        from concilium.application.catalog.pu_calculator import _build_insumo_index
+
+        insumos = [
+            {"codigo": "A", "preco_unitario": 1.0},
+            {"preco_unitario": 2.0},  # no codigo key
+        ]
+        idx = _build_insumo_index(insumos)
+        assert "A" in idx
+        assert len(idx) == 1
+
+    def test_cpu_get_equipe_from_equipe_key(self):
+        from concilium.application.catalog.pu_calculator import _cpu_get_equipe
+
+        producao = {
+            "equipe": {
+                "funcoes": [{"funcao_id": "F1"}],
+                "equipamentos": [],
+                "materiais": [],
+            }
+        }
+        equipe, funcoes, equipamentos, materiais = _cpu_get_equipe(producao)
+        assert len(funcoes) == 1
+
 
 # ─── pdf_renderer ────────────────────────────────────────────────────────────
 

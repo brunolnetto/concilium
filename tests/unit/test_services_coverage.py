@@ -247,3 +247,97 @@ class TestProjectInputBuilder:
             result = builder.prepare(req)
         assert result.benchmark_slug == "TEST"
         assert result.contexto_version == "v1"
+
+    def test_build_skill_inputs_from_spec_with_inputs_cronograma(self, tmp_path):
+        """Line 82: spec.inputs_cronograma populated → adds '04-cronograma' key."""
+        import json
+
+        from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+
+        ref_data = {"slug": "TEST4", "contexto_id": "mendeslobo"}
+        ref_path = tmp_path / "referencia.json"
+        ref_path.write_text(json.dumps(ref_data), encoding="utf-8")
+        builder = ProjectInputBuilder(config_root=tmp_path / "config", benchmarks_root=tmp_path / "benchmarks")
+        req = MagicMock()
+        req.benchmark_slug = None
+        req.referencia_path = str(ref_path)
+        mock_spec = MagicMock()
+        mock_spec.slug = "TEST4"
+        mock_spec.contexto_id = "mendeslobo"
+        mock_spec.contexto_version = "v1"
+        mock_spec.perfil_id = None
+        mock_spec.perfil_version = None
+        mock_spec.inputs_escopo = {"tipo_obra": "terraplenagem"}
+        mock_spec.inputs_01A = None
+        mock_spec.inputs_cronograma = {"precedence": []}  # non-empty → line 82
+        mock_spec.inputs_indiretos = None
+        mock_spec.extra_inputs = {}
+        with patch("concilium.application.services.project.project_input_builder.BenchmarkSpecLoader") as mock_cls:
+            mock_loader = MagicMock()
+            mock_loader.load.return_value = mock_spec
+            mock_cls.return_value = mock_loader
+            result = builder.prepare(req)
+        assert "04-cronograma" in result.skill_inputs
+
+    def test_build_skill_inputs_from_spec_with_inputs_01A(self, tmp_path):
+        """Line 80: spec.inputs_01A populated → adds '03-catalogo-de-recursos' key."""
+        import json
+
+        from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+
+        ref_data = {"slug": "TEST2", "contexto_id": "mendeslobo"}
+        ref_path = tmp_path / "referencia.json"
+        ref_path.write_text(json.dumps(ref_data), encoding="utf-8")
+        builder = ProjectInputBuilder(config_root=tmp_path / "config", benchmarks_root=tmp_path / "benchmarks")
+        req = MagicMock()
+        req.benchmark_slug = None
+        req.referencia_path = str(ref_path)
+        mock_spec = MagicMock()
+        mock_spec.slug = "TEST2"
+        mock_spec.contexto_id = "mendeslobo"
+        mock_spec.contexto_version = "v1"
+        mock_spec.perfil_id = None
+        mock_spec.perfil_version = None
+        mock_spec.inputs_escopo = {"tipo_obra": "terraplenagem"}
+        mock_spec.inputs_01A = {"cpu_ids": ["CPU-001"]}  # non-empty → line 82
+        mock_spec.inputs_cronograma = None
+        mock_spec.inputs_indiretos = None
+        mock_spec.extra_inputs = {}
+        with patch("concilium.application.services.project.project_input_builder.BenchmarkSpecLoader") as mock_cls:
+            mock_loader = MagicMock()
+            mock_loader.load.return_value = mock_spec
+            mock_cls.return_value = mock_loader
+            result = builder.prepare(req)
+        assert "03-catalogo-de-recursos" in result.skill_inputs
+
+    def test_build_skill_inputs_from_spec_with_inputs_indiretos(self, tmp_path):
+        """Line 86: spec.inputs_indiretos populated → merges into '06-resultado-financeiro'."""
+        import json
+
+        from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+
+        ref_data = {"slug": "TEST3", "contexto_id": "mendeslobo"}
+        ref_path = tmp_path / "referencia.json"
+        ref_path.write_text(json.dumps(ref_data), encoding="utf-8")
+        builder = ProjectInputBuilder(config_root=tmp_path / "config", benchmarks_root=tmp_path / "benchmarks")
+        req = MagicMock()
+        req.benchmark_slug = None
+        req.referencia_path = str(ref_path)
+        mock_spec = MagicMock()
+        mock_spec.slug = "TEST3"
+        mock_spec.contexto_id = "mendeslobo"
+        mock_spec.contexto_version = "v1"
+        mock_spec.perfil_id = None
+        mock_spec.perfil_version = None
+        mock_spec.inputs_escopo = {"tipo_obra": "terraplenagem"}
+        mock_spec.inputs_01A = None
+        mock_spec.inputs_cronograma = None
+        mock_spec.inputs_indiretos = {"bdi_pct": 25.0}  # non-empty → line 86
+        mock_spec.extra_inputs = {}
+        with patch("concilium.application.services.project.project_input_builder.BenchmarkSpecLoader") as mock_cls:
+            mock_loader = MagicMock()
+            mock_loader.load.return_value = mock_spec
+            mock_cls.return_value = mock_loader
+            result = builder.prepare(req)
+        assert "06-resultado-financeiro" in result.skill_inputs
+        assert result.skill_inputs["06-resultado-financeiro"]["bdi_pct"] == 25.0

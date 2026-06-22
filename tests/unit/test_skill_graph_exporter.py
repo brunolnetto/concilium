@@ -132,3 +132,137 @@ class TestSkillGraphExporter:
         registry.skills = {"01-escopo-e-eap": MagicMock()}
         result = _group_skills_by_phase(registry)
         assert isinstance(result, dict)
+
+    def test_group_skills_by_phase_unknown_phase(self):
+        """Line 25: skill with phase not in PHASE_MAP gets its own key."""
+        from concilium.application.skills.graph_exporter import _group_skills_by_phase
+
+        registry = MagicMock()
+        # "99-unknown" will not match any known phase prefix → classify_phase returns
+        # something not in PHASE_MAP, triggering the `if phase not in phases_dict` branch.
+        registry.skills = {"99-unknown-xyz": MagicMock()}
+        result = _group_skills_by_phase(registry)
+        assert isinstance(result, dict)
+        # All known phases present
+        from concilium.application.skills.phase_classifier import PHASE_MAP
+        for p in PHASE_MAP:
+            assert p in result
+
+
+class TestGetSkillNoneBranches:
+    """Cover the `if not skill: continue` guards (lines 35, 74, 86, 92, 112, 130, 166, 174)."""
+
+    def _registry_with_none_skill(self):
+        """Registry where get_skill always returns None."""
+        registry = MagicMock()
+        registry.skills = {"01-skill-a": MagicMock()}
+        registry.get_skill.return_value = None  # every call returns None
+        return registry
+
+    def test_to_mermaid_skips_none_skill(self):
+        """Line 74: `if not skill: continue` in to_mermaid flat loop."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+
+        exporter = SkillGraphExporter(registry=self._registry_with_none_skill())
+        result = exporter.to_mermaid()
+        # No node definitions rendered but no crash
+        assert result.startswith("graph TD")
+
+    def test_to_mermaid_phases_skips_none_skill_in_phase(self):
+        """Line 92: `if not skill: continue` inside phase subgraph loop."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+        from concilium.application.skills.phase_classifier import classify_phase, PHASE_MAP
+
+        registry = MagicMock()
+        # Use a skill that maps to a known phase so the phase loop runs
+        from concilium.application.skills.phase_classifier import PHASE_MAP
+        real_skill_id = "01-escopo-e-eap"
+        registry.skills = {real_skill_id: MagicMock()}
+        registry.get_skill.return_value = None  # returns None → triggers continue on line 92
+        exporter = SkillGraphExporter(registry=registry)
+        result = exporter.to_mermaid(group_by_phase=True)
+        assert "graph TD" in result
+
+    def test_append_dep_edges_get_skill_none(self):
+        """Line 35: `if not skill: continue` in _append_dep_edges."""
+        from concilium.application.skills.graph_exporter import _append_dep_edges
+
+        registry = MagicMock()
+        registry.skills = {"01-a": MagicMock()}
+        registry.get_skill.return_value = None
+        lines: list = []
+        _append_dep_edges(lines, registry, lambda x: x)
+        assert lines == []  # no edges added, no crash
+
+    def test_to_json_skips_none_skill_in_nodes_loop(self):
+        """Line 112: `if not skill: continue` in to_json nodes loop."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+
+        exporter = SkillGraphExporter(registry=self._registry_with_none_skill())
+        result = exporter.to_json()
+        assert result["total_skills"] == 0
+        assert result["nodes"] == []
+
+    def test_to_json_skips_none_skill_in_edges_loop(self):
+        """Line 130: `if not skill: continue` in to_json edges loop.
+
+        First call (nodes loop) also returns None but we need the edges loop to fire.
+        Use side_effect so the first call returns a valid skill (node recorded),
+        the second call (edges loop) returns None.
+        """
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+
+        real_skill = MagicMock()
+        real_skill.version = "1.0"
+        real_skill.descricao = "Test"
+        real_skill.produces_section = "sec"
+        real_skill.validations = []
+        real_skill.depends_on_skills = []
+
+        registry = MagicMock()
+        registry.skills = {"01-skill-a": real_skill}
+        # First call (sorted loop for nodes) → real; second call (edges loop) → None
+        registry.get_skill.side_effect = [real_skill, None]
+        exporter = SkillGraphExporter(registry=registry)
+        result = exporter.to_json()
+        assert result["total_skills"] == 1
+        assert result["total_dependencies"] == 0
+
+    def test_to_dot_skips_none_skill_in_nodes(self):
+        """Line 166: `if not skill: continue` in to_dot nodes loop."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+
+        exporter = SkillGraphExporter(registry=self._registry_with_none_skill())
+        result = exporter.to_dot()
+        assert result.startswith("digraph SkillPipeline {")
+        # No node lines added (other than header), no crash
+
+    def test_to_dot_skips_none_skill_in_edges(self):
+        """Line 174: `if not skill: continue` in to_dot edges loop."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+
+        real_skill = MagicMock()
+        real_skill.depends_on_skills = []
+
+        registry = MagicMock()
+        registry.skills = {"01-skill-a": real_skill}
+        # First call (nodes loop) → real skill; second call (edges loop) → None
+        registry.get_skill.side_effect = [real_skill, None]
+        exporter = SkillGraphExporter(registry=registry)
+        result = exporter.to_dot()
+        assert "digraph SkillPipeline {" in result
+
+    def test_to_mermaid_with_phases_skips_empty_phase(self):
+        """Line 86: `if not phases_dict.get(phase): continue` skips empty phase."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+        from concilium.application.skills.phase_classifier import PHASE_MAP
+
+        # Registry with no skills → all phases are empty → every phase is skipped
+        registry = MagicMock()
+        registry.skills = {}
+        registry.get_skill.return_value = None
+        exporter = SkillGraphExporter(registry=registry)
+        result = exporter.to_mermaid(group_by_phase=True)
+        # No subgraphs in output since all phases empty
+        assert "subgraph" not in result
+        assert result.startswith("graph TD")

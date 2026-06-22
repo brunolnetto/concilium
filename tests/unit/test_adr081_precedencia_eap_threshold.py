@@ -495,3 +495,105 @@ class TestAGISGanttThresholds:
         expected = max(from_e19, from_e56)
         assert earliest["eap-1_10"] >= 40  # tarde o suficiente para evitar ATERRO-04 idle
         assert earliest["eap-1_10"] == expected
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# H. NEP-031 L4: SS/FF precedence types and short precedence entry guard
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestSSFFPrecedenceTypes:
+    """Cover lines 53-57 (SS/FF tipo path) and line 62 (len(p) < 2 guard)."""
+
+    def _make_eap_items_ss_ff(self):
+        """EAP items with SS and FF typed predecessors."""
+        from concilium.domain.models.canonical import EapItem, PrecedenciaItem
+
+        return [
+            EapItem(
+                item_id="ACT-A", ordem=1, cpu_id="CPU-1", descricao="A", unidade="m3", quantitativo=100
+            ),
+            EapItem(
+                item_id="ACT-B",
+                ordem=2,
+                cpu_id="CPU-2",
+                descricao="B",
+                unidade="m3",
+                quantitativo=50,
+                predecessores=[PrecedenciaItem(item_id="ACT-A", tipo="SS", lag=2, completion_threshold_pct=1.0)],
+            ),
+            EapItem(
+                item_id="ACT-C",
+                ordem=3,
+                cpu_id="CPU-3",
+                descricao="C",
+                unidade="m3",
+                quantitativo=80,
+                predecessores=[PrecedenciaItem(item_id="ACT-A", tipo="FF", lag=0, completion_threshold_pct=1.0)],
+            ),
+        ]
+
+    def test_ss_type_goes_into_extended_precedences(self):
+        """Lines 53-57: SS tipo creates entry in extended_precedences."""
+        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+
+        acts = [
+            Activity(activity_id="ACT-A", description="A", duration_weeks=10),
+            Activity(activity_id="ACT-B", description="B", duration_weeks=5),
+            Activity(activity_id="ACT-C", description="C", duration_weeks=8),
+        ]
+        spec = {"precedence": []}
+        eap_items = self._make_eap_items_ss_ff()
+        dag = extract_dag_from_spec_or_eap(spec, acts, eap_items)
+
+        # SS/FF still create sentinel entries in precedence (for topological ordering)
+        assert ("ACT-A", "ACT-B") in dag.precedence
+        assert ("ACT-A", "ACT-C") in dag.precedence
+        # And extended_precedences holds the SS/FF specifics
+        assert len(dag.extended_precedences) == 2
+        tipos = {ep.tipo for ep in dag.extended_precedences}
+        assert "SS" in tipos
+        assert "FF" in tipos
+
+    def test_ff_type_lag_preserved(self):
+        """FF typed predecessor with lag=0 ends up in extended_precedences with lag=0."""
+        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+
+        from concilium.domain.models.canonical import EapItem, PrecedenciaItem
+
+        eap_items = [
+            EapItem(item_id="P", ordem=1, cpu_id="C1", descricao="P", unidade="m", quantitativo=1),
+            EapItem(
+                item_id="S",
+                ordem=2,
+                cpu_id="C2",
+                descricao="S",
+                unidade="m",
+                quantitativo=1,
+                predecessores=[PrecedenciaItem(item_id="P", tipo="FF", lag=3, completion_threshold_pct=1.0)],
+            ),
+        ]
+        acts = [
+            Activity(activity_id="P", description="P", duration_weeks=10),
+            Activity(activity_id="S", description="S", duration_weeks=5),
+        ]
+        dag = extract_dag_from_spec_or_eap({"precedence": []}, acts, eap_items)
+        ff_entries = [ep for ep in dag.extended_precedences if ep.tipo == "FF"]
+        assert len(ff_entries) == 1
+        assert ff_entries[0].lag == 3
+
+    def test_short_precedence_entry_is_skipped(self):
+        """Line 62: precedence entries with len < 2 are ignored without error."""
+        from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
+
+        acts = [
+            Activity(activity_id="X", description="X", duration_weeks=5),
+            Activity(activity_id="Y", description="Y", duration_weeks=3),
+        ]
+        # Include an entry with only 1 element (should be skipped by the guard)
+        spec = {"precedence": [["X"], ["X", "Y"]]}
+        dag = extract_dag_from_spec_or_eap(spec, acts, eap_items=None)
+        # Only the valid 2-element entry should create an edge
+        assert ("X", "Y") in dag.precedence
+        # The single-element entry should be silently ignored (no crash)
+        assert len(dag.precedence) == 1

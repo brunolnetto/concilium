@@ -229,3 +229,114 @@ class TestDirectTokenIssuance:
         resp = client.post("/auth/token/issue", json={})
         assert resp.status_code != 404, "Endpoint /auth/token/issue deve existir"
         assert resp.status_code != 405, "Endpoint /auth/token/issue deve aceitar POST"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# F3: _try_decode_token, _extract_client_ip without client, _set_otel_span_attributes
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestAuthContextHelpers:
+    """Direct unit tests for the helper functions in auth_context.py."""
+
+    def test_try_decode_token_returns_claims_on_success(self):
+        """Lines 40-45: _try_decode_token calls decode_token and returns claims."""
+        from concilium.infrastructure.middleware.auth_context import _try_decode_token
+
+        claims = {"sub": "user@example.com", "roles": ["operator"]}
+        with patch("concilium.infrastructure.auth.token_service.decode_token", return_value=claims):
+            result = _try_decode_token("any-token")
+        assert result == claims
+
+    def test_try_decode_token_returns_none_on_exception(self):
+        """_try_decode_token returns None when decode_token raises."""
+        from concilium.infrastructure.middleware.auth_context import _try_decode_token
+
+        with patch(
+            "concilium.infrastructure.auth.token_service.decode_token",
+            side_effect=ValueError("invalid token"),
+        ):
+            result = _try_decode_token("bad-token")
+        assert result is None
+
+    def test_extract_client_ip_no_client_returns_empty(self):
+        """Line 103: request.client is None → returns empty string."""
+        from unittest.mock import MagicMock
+
+        from concilium.infrastructure.middleware.auth_context import _extract_client_ip
+
+        request = MagicMock()
+        request.headers.get.return_value = ""  # no X-Forwarded-For
+        request.client = None
+        result = _extract_client_ip(request)
+        assert result == ""
+
+    def test_extract_client_ip_uses_x_forwarded_for(self):
+        """_extract_client_ip returns first IP from X-Forwarded-For when present."""
+        from unittest.mock import MagicMock
+
+        from concilium.infrastructure.middleware.auth_context import _extract_client_ip
+
+        request = MagicMock()
+        request.headers.get.return_value = "10.0.0.1, 192.168.1.1"
+        result = _extract_client_ip(request)
+        assert result == "10.0.0.1"
+
+    def test_set_otel_span_attributes_with_user_id(self):
+        """Lines 115-116: when user_id is non-empty, span.set_attribute is called with 'user.id'.
+        We monkey-patch the opentelemetry.trace module that was already imported."""
+        from unittest.mock import MagicMock
+
+        import opentelemetry.trace as otel_trace
+        from concilium.infrastructure.middleware.auth_context import _set_otel_span_attributes
+
+        mock_span = MagicMock()
+        mock_span.is_recording.return_value = True
+        original_get = otel_trace.get_current_span
+        otel_trace.get_current_span = lambda: mock_span
+        try:
+            _set_otel_span_attributes("alice@example.com", "req-123")
+        finally:
+            otel_trace.get_current_span = original_get
+
+        calls = {call[0][0] for call in mock_span.set_attribute.call_args_list}
+        assert "user.id" in calls
+        assert "request.id" in calls
+
+    def test_set_otel_span_attributes_no_user_id_skips_user_attr(self):
+        """Lines 115-119: when user_id is empty, 'user.id' attribute is NOT set."""
+        from unittest.mock import MagicMock
+
+        import opentelemetry.trace as otel_trace
+        from concilium.infrastructure.middleware.auth_context import _set_otel_span_attributes
+
+        mock_span = MagicMock()
+        mock_span.is_recording.return_value = True
+        original_get = otel_trace.get_current_span
+        otel_trace.get_current_span = lambda: mock_span
+        try:
+            _set_otel_span_attributes("", "req-456")
+        finally:
+            otel_trace.get_current_span = original_get
+
+        calls = {call[0][0] for call in mock_span.set_attribute.call_args_list}
+        assert "user.id" not in calls
+        assert "request.id" in calls
+
+    def test_set_otel_span_attributes_swallows_exception(self):
+        """_set_otel_span_attributes never raises even if span.set_attribute throws."""
+        from unittest.mock import MagicMock
+
+        import opentelemetry.trace as otel_trace
+        from concilium.infrastructure.middleware.auth_context import _set_otel_span_attributes
+
+        mock_span = MagicMock()
+        mock_span.is_recording.return_value = True
+        mock_span.set_attribute.side_effect = RuntimeError("otel failure")
+        original_get = otel_trace.get_current_span
+        otel_trace.get_current_span = lambda: mock_span
+        try:
+            # Should not raise — exception is caught by the try/except
+            _set_otel_span_attributes("user", "req")
+        finally:
+            otel_trace.get_current_span = original_get
