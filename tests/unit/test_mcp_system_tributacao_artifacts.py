@@ -112,61 +112,68 @@ _TRIB_MOD = "concilium.presentation.mcp.tools.tributacao"
 
 
 class TestTributacaoTools:
-    def test_calcular_custo_empregador_horista(self, monkeypatch, tmp_path):
+    """ADR-116 F5: calcular_tributos(tipo=) unifica 3 tools anteriores."""
+
+    def test_clt_empregador_horista(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
-        result = tools["calcular_custo_empregador_clt"](salario_base=3000.0, categoria="horista")
+        result = tools["calcular_tributos"](tipo="clt_empregador", valor=3000.0, categoria="horista")
         assert "custo_total" in result
         assert result["custo_total"] > 3000.0
         assert "breakdown" in result
 
-    def test_calcular_custo_empregador_mensalista(self, monkeypatch, tmp_path):
+    def test_clt_empregador_mensalista(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
-        result = tools["calcular_custo_empregador_clt"](salario_base=5000.0, categoria="mensalista")
+        result = tools["calcular_tributos"](tipo="clt_empregador", valor=5000.0, categoria="mensalista")
         assert "multiplicador_efetivo" in result
 
-    def test_calcular_custo_empregador_invalid_returns_erro(self, monkeypatch, tmp_path):
+    def test_clt_empregador_exception(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
         with patch(
             "concilium.domain.services.financial.tributacao.calculate_employer_clt",
             side_effect=ValueError("invalid"),
         ):
-            result = tools["calcular_custo_empregador_clt"](salario_base=-1.0)
+            result = tools["calcular_tributos"](tipo="clt_empregador", valor=-1.0)
         assert "erro" in result
 
-    def test_calcular_inss_empregado(self, monkeypatch, tmp_path):
+    def test_inss_empregado(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
-        result = tools["calcular_inss_empregado"](salario_bruto=4000.0)
+        result = tools["calcular_tributos"](tipo="inss_empregado", valor=4000.0)
         assert "inss_empregado" in result
         assert result["inss_empregado"] > 0
 
-    def test_calcular_inss_empregado_exception(self, monkeypatch, tmp_path):
+    def test_inss_empregado_exception(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
         with patch(
             "concilium.domain.services.financial.tributacao.calculate_inss_employee",
             side_effect=ValueError("bad"),
         ):
-            result = tools["calcular_inss_empregado"](salario_bruto=0.0)
+            result = tools["calcular_tributos"](tipo="inss_empregado", valor=0.0)
         assert "erro" in result
 
-    def test_calcular_irrf_isento(self, monkeypatch, tmp_path):
+    def test_irrf_isento(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
-        result = tools["calcular_irrf"](base_calculo=3000.0)
+        result = tools["calcular_tributos"](tipo="irrf", valor=3000.0)
         assert result.get("isento") is True
         assert result.get("irrf_mensal") == 0.0
 
-    def test_calcular_irrf_tributavel(self, monkeypatch, tmp_path):
+    def test_irrf_tributavel(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
-        result = tools["calcular_irrf"](base_calculo=10000.0)
+        result = tools["calcular_tributos"](tipo="irrf", valor=10000.0)
         assert "irrf_mensal" in result
         assert result["irrf_mensal"] > 0
 
-    def test_calcular_irrf_exception(self, monkeypatch, tmp_path):
+    def test_irrf_exception(self, monkeypatch, tmp_path):
         tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
         with patch(
             "concilium.domain.services.financial.tributacao.calculate_irrf",
             side_effect=ValueError("bad"),
         ):
-            result = tools["calcular_irrf"](base_calculo=0.0)
+            result = tools["calcular_tributos"](tipo="irrf", valor=0.0)
+        assert "erro" in result
+
+    def test_tipo_invalido_retorna_erro(self, monkeypatch, tmp_path):
+        tools = _register_tools(_TRIB_MOD, monkeypatch, tmp_path)
+        result = tools["calcular_tributos"](tipo="invalido", valor=1000.0)
         assert "erro" in result
 
 

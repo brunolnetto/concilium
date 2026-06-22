@@ -327,42 +327,16 @@ class TestMcpTributacao:
         register(server)
         return server
 
-    def test_calcular_custo_empregador_clt_horista(self):
-        from mcp.server.fastmcp import FastMCP
-
-        from concilium.presentation.mcp.tools.tributacao import register
-
-        server = FastMCP("test")
-        register(server)
-        # Call the impl directly through module namespace
-        with patch("concilium.domain.services.financial.tributacao.calculate_employer_clt") as mock_calc:
-            mock_result = MagicMock()
-            mock_result.custo_total = 3778.0
-            mock_result.salario_base = 2000.0
-            mock_result.itens = []
-            mock_calc.return_value = mock_result
-
-            # Test by calling registered tool impl directly via mcp server tools
-            # We just verify the function calls the right service
-            mock_calc.assert_not_called()
-
-    def test_calcular_custo_empregador_clt_calls_service(self):
-        """Tests that the tool delegates to calculate_employer_clt."""
-        # Import and call register to bind inner functions
-        from mcp.server.fastmcp import FastMCP
-
-        from concilium.presentation.mcp.tools.tributacao import register
-
-        server = FastMCP("test")
-        register(server)
-        # The tool functions are registered; verify the service module exists
+    def test_calcular_tributos_clt_delega_servico(self):
+        """ADR-116 F5: tool unificada delega a calculate_employer_clt."""
         from concilium.domain.services.financial import tributacao as trib
 
         assert hasattr(trib, "calculate_employer_clt")
         assert hasattr(trib, "calculate_inss_employee")
         assert hasattr(trib, "calculate_irrf")
 
-    def test_tributacao_register_adds_tools(self):
+    def test_tributacao_register_adds_unified_tool(self):
+        """ADR-116 F5: apenas calcular_tributos registrada (3 → 1)."""
         from mcp.server.fastmcp import FastMCP
 
         from concilium.presentation.mcp.tools.tributacao import register
@@ -370,9 +344,10 @@ class TestMcpTributacao:
         server = FastMCP("test")
         register(server)
         tool_names = list(server._tool_manager._tools.keys())
-        assert "calcular_custo_empregador_clt" in tool_names
-        assert "calcular_inss_empregado" in tool_names
-        assert "calcular_irrf" in tool_names
+        assert "calcular_tributos" in tool_names
+        assert "calcular_custo_empregador_clt" not in tool_names
+        assert "calcular_inss_empregado" not in tool_names
+        assert "calcular_irrf" not in tool_names
 
 
 # ─── MCP artifacts ──────────────────────────────────────────────────────────

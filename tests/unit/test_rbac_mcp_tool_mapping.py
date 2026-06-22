@@ -81,10 +81,8 @@ ALL_TOOL_NAMES = [
     "criar_projeto_spec",
     # system
     "ping",
-    # tributacao
-    "calcular_custo_empregador_clt",
-    "calcular_inss_empregado",
-    "calcular_irrf",
+    # tributacao (ADR-116 F5: 3 → 1 tool unificada)
+    "calcular_tributos",
 ]
 
 
