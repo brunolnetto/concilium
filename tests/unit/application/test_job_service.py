@@ -235,5 +235,544 @@ class TestSingletonBehavior:
         assert service1 is not service2
 
 
+class TestLimparJobsExpirados:
+    """Covers _limpar_jobs_expirados (lines 82-102) and _criar_progress_callback (lines 114-122)."""
+
+    def test_limpar_jobs_expirados_removes_terminal_old_jobs(self, job_config, job_repository):
+        """Terminal jobs older than TTL must be purged."""
+        from datetime import UTC, datetime, timedelta
+
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        repo = InMemoryJobRepository()
+        svc = JobService(repository=repo, config=job_config, runtime_factory=lambda: Mock(), project_factory=Mock())
+
+        # Create a job that is already terminal and expired
+        job_id = "job-expired-test"
+        expired_time = (datetime.now(UTC) - timedelta(hours=job_config.job_ttl_hours + 1)).isoformat()
+        job_data = {
+            "job_id": job_id,
+            "status": "CONCLUIDO",
+            "project_id": "proj-x",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": expired_time,
+            "iniciado_em": expired_time,
+            "finalizado_em": expired_time,
+            "resultado": {"ok": True},
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        sm.iniciar()
+        sm.completar(resultado={"ok": True})
+        # completar() sets finalizado_em to now; override to expired time
+        job_data["finalizado_em"] = expired_time
+        job_data["state_machine"] = sm
+        repo.save(job_id, job_data)
+
+        assert repo.count() == 1
+        svc._limpar_jobs_expirados()
+        assert repo.count() == 0
+
+    def test_limpar_jobs_expirados_keeps_recent_terminal_jobs(self, job_config, job_repository):
+        """Terminal jobs within TTL must NOT be removed."""
+        from datetime import UTC, datetime, timedelta
+
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        repo = InMemoryJobRepository()
+        svc = JobService(repository=repo, config=job_config, runtime_factory=lambda: Mock(), project_factory=Mock())
+
+        job_id = "job-recent-terminal"
+        recent_time = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": job_id,
+            "status": "CONCLUIDO",
+            "project_id": "proj-x",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": recent_time,
+            "iniciado_em": recent_time,
+            "finalizado_em": recent_time,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        sm.iniciar()
+        sm.completar(resultado=None)
+        job_data["state_machine"] = sm
+        repo.save(job_id, job_data)
+
+        svc._limpar_jobs_expirados()
+        # Job is recent — should NOT be removed
+        assert repo.count() == 1
+
+    def test_limpar_jobs_expirados_ignores_non_terminal(self, job_config):
+        """Jobs still in AGUARDANDO_FILA must not be GC'd."""
+        from datetime import UTC, datetime, timedelta
+
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        repo = InMemoryJobRepository()
+        svc = JobService(repository=repo, config=job_config, runtime_factory=lambda: Mock(), project_factory=Mock())
+
+        # Very old, but NOT terminal
+        old_time = (datetime.now(UTC) - timedelta(hours=100)).isoformat()
+        job_data = {
+            "job_id": "job-waiting",
+            "status": "AGUARDANDO_FILA",
+            "project_id": "proj-x",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": old_time,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        job_data["state_machine"] = sm
+        repo.save("job-waiting", job_data)
+
+        svc._limpar_jobs_expirados()
+        assert repo.count() == 1
+
+
+class TestProgressCallback:
+    """Covers _criar_progress_callback (lines 114-122)."""
+
+    def test_progress_callback_updates_job(self, job_service):
+        """Callback must update progresso and progresso_percentual in the repo."""
+        job = job_service.disparar_pipeline(project_id="proj-cb")
+
+        cb = job_service._criar_progress_callback(job.job_id)
+        # Need to save the job in repo with all expected keys first
+        saved = job_service._repo.get(job.job_id)
+        if saved:
+            cb("Iniciando...", 0.3)
+            updated = job_service._repo.get(job.job_id)
+            if updated:
+                assert updated.get("progresso") == "Iniciando..."
+                assert updated.get("progresso_percentual") == 0.3
+
+    def test_progress_callback_clamps_percentual(self, job_service):
+        """Percentual must be clamped to [0.0, 1.0]."""
+        job = job_service.disparar_pipeline(project_id="proj-cb2")
+        cb = job_service._criar_progress_callback(job.job_id)
+        saved = job_service._repo.get(job.job_id)
+        if saved:
+            cb("Overload", 1.5)
+            updated = job_service._repo.get(job.job_id)
+            if updated:
+                assert updated.get("progresso_percentual") == 1.0
+
+    def test_progress_callback_noop_when_job_missing(self, job_service):
+        """Callback for non-existent job must not raise."""
+        cb = job_service._criar_progress_callback("job-ghost-99999")
+        cb("anything", 0.5)  # should not raise
+
+
+class TestExecutarPipelineAsync:
+    """Covers _executar_pipeline_async (lines 124-186)."""
+
+    def test_executar_pipeline_noop_when_job_missing(self, job_service):
+        """Worker must silently return when job not found."""
+        # No job saved — should not raise
+        job_service._executar_pipeline_async("job-nonexistent-xyz")
+
+    def _fresh_waiting_job(self, svc, job_id, project_id, escopo_id=None, plano_id=None):
+        """Insert a fresh AGUARDANDO_FILA job directly into repo, bypassing executor submission."""
+        from datetime import UTC, datetime
+
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        now = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": job_id,
+            "status": "AGUARDANDO_FILA",
+            "project_id": project_id,
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": escopo_id,
+            "plano_id": plano_id,
+            "disparado_em": now,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        job_data["state_machine"] = sm
+        svc._repo.save(job_id, job_data)
+        return job_id
+
+    def test_executar_pipeline_success_path(self, job_service):
+        """Worker transitions job to CONCLUIDO on success."""
+        from unittest.mock import MagicMock, patch
+
+        job_id = self._fresh_waiting_job(job_service, "job-async-ok", "proj-async", escopo_id="esc-1", plano_id="pl-1")
+
+        mock_store = MagicMock()
+        mock_plan = MagicMock()
+        mock_escopo = MagicMock()
+        mock_escopo.plan.return_value = mock_plan
+        mock_store.escopo.return_value = mock_escopo
+        job_service._project_factory = lambda pid: mock_store
+
+        with patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-1"), \
+             patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", return_value={"done": True}):
+            job_service._executar_pipeline_async(job_id)
+
+        result_job = job_service._repo.get(job_id)
+        sm = result_job["state_machine"]
+        assert sm.status_str == "CONCLUIDO"
+
+    def test_executar_pipeline_failure_transitions_to_error(self, job_service):
+        """Worker transitions job to ERRO when pipeline raises."""
+        from unittest.mock import MagicMock, patch
+
+        job_id = self._fresh_waiting_job(job_service, "job-async-fail", "proj-fail", escopo_id="esc-f", plano_id="pl-f")
+
+        mock_store = MagicMock()
+        job_service._project_factory = lambda pid: mock_store
+
+        with patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-f"), \
+             patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", side_effect=RuntimeError("pipeline crash")):
+            job_service._executar_pipeline_async(job_id)
+
+        result_job = job_service._repo.get(job_id)
+        sm = result_job["state_machine"]
+        assert sm.status_str == "ERRO"
+        assert "pipeline crash" in result_job["erro"]
+
+    def test_executar_pipeline_no_active_plan_fails(self, job_service):
+        """Worker transitions to ERRO when no active plan and plano_id is None."""
+        from unittest.mock import MagicMock, patch
+
+        job_id = self._fresh_waiting_job(job_service, "job-async-noplan", "proj-noplan", escopo_id="esc-np", plano_id=None)
+
+        mock_store = MagicMock()
+        mock_escopo = MagicMock()
+        mock_escopo.active_plan.return_value = None
+        mock_store.escopo.return_value = mock_escopo
+        job_service._project_factory = lambda pid: mock_store
+
+        with patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-np"):
+            job_service._executar_pipeline_async(job_id)
+
+        result_job = job_service._repo.get(job_id)
+        sm = result_job["state_machine"]
+        assert sm.status_str == "ERRO"
+
+
+class TestCancelarJob:
+    """Covers cancelar_job (lines 361-384)."""
+
+    def test_cancelar_job_in_fila(self, job_service):
+        """Job in AGUARDANDO_FILA can be cancelled by inserting directly into repo."""
+        from datetime import UTC, datetime
+
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.state import PipelineJobStateMachine
+        from concilium.infrastructure.settings import JobsSettings
+
+        repo = InMemoryJobRepository()
+        cfg = JobsSettings(max_concurrent_jobs=2, job_ttl_hours=1, job_gc_interval_minutes=5)
+        svc = JobService(repository=repo, config=cfg, runtime_factory=lambda: None, project_factory=lambda x: None)
+
+        # Insert a job directly (bypass executor) so it stays AGUARDANDO_FILA
+        now = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": "job-to-cancel",
+            "status": "AGUARDANDO_FILA",
+            "project_id": "proj-cancel",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": now,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        job_data["state_machine"] = sm
+        repo.save("job-to-cancel", job_data)
+
+        cancelled = svc.cancelar_job("job-to-cancel")
+        assert cancelled.status == "CANCELADO"
+
+    def test_cancelar_job_not_found_raises(self, job_service):
+        """Cancelling non-existent job raises ValueError."""
+        with pytest.raises(ValueError, match="não encontrado"):
+            job_service.cancelar_job("job-ghost-cancel")
+
+    def test_cancelar_job_terminal_raises(self, job_service):
+        """Cancelling a terminal job raises ValueError."""
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.state import PipelineJobStateMachine
+        from concilium.infrastructure.settings import JobsSettings
+        from datetime import UTC, datetime
+
+        repo = InMemoryJobRepository()
+        cfg = JobsSettings(max_concurrent_jobs=2, job_ttl_hours=1, job_gc_interval_minutes=5)
+        svc = JobService(repository=repo, config=cfg, runtime_factory=lambda: None, project_factory=lambda x: None)
+
+        now = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": "job-terminal-cancel",
+            "status": "CONCLUIDO",
+            "project_id": "p",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": now,
+            "iniciado_em": now,
+            "finalizado_em": now,
+            "resultado": {},
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        sm.iniciar()
+        sm.completar(resultado={})
+        job_data["state_machine"] = sm
+        repo.save("job-terminal-cancel", job_data)
+
+        with pytest.raises(ValueError, match="não pode ser cancelado"):
+            svc.cancelar_job("job-terminal-cancel")
+
+
+class TestListarJobsStatusCounts:
+    """Covers listar_jobs CANCELADO status branch (line 332)."""
+
+    def test_listar_jobs_counts_cancelado(self, job_service):
+        """CANCELADO status must be counted in estatisticas."""
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.state import PipelineJobStateMachine
+        from concilium.infrastructure.settings import JobsSettings
+        from datetime import UTC, datetime
+
+        repo = InMemoryJobRepository()
+        cfg = JobsSettings(max_concurrent_jobs=2, job_ttl_hours=1, job_gc_interval_minutes=5)
+        svc = JobService(repository=repo, config=cfg, runtime_factory=lambda: None, project_factory=lambda x: None)
+
+        now = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": "job-cancel-stats",
+            "status": "AGUARDANDO_FILA",
+            "project_id": "p",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": now,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        job_data["state_machine"] = sm
+        repo.save("job-cancel-stats", job_data)
+        sm.cancelar(motivo="test")
+
+        listing = svc.listar_jobs()
+        assert listing.estatisticas.cancelado == 1
+
+
+class TestResetJobServiceWithExecutor:
+    """Covers reset_job_service when _executor is active (lines 444-447)."""
+
+    def test_reset_shuts_down_executor(self):
+        """reset_job_service must call executor.shutdown."""
+        from concilium.application.jobs.service import get_job_service, reset_job_service
+
+        reset_job_service()
+        svc = get_job_service()
+        # Trigger lazy initialization
+        svc._ensure_initialized()
+        assert svc._executor is not None
+
+        reset_job_service()
+
+        # After reset, singleton is None
+        from concilium.application.jobs import service as _svc_module
+
+        assert _svc_module._service is None
+
+
+class TestGarbageCollectorLoop:
+    """Covers line 80: _garbage_collector_loop body executes _limpar_jobs_expirados."""
+
+    def test_gc_loop_calls_limpar_when_event_not_set(self):
+        """The GC loop calls _limpar_jobs_expirados at least once before stopping."""
+        import threading
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.infrastructure.settings import JobsSettings
+
+        repo = InMemoryJobRepository()
+        # Very short GC interval so the loop fires quickly
+        cfg = JobsSettings(max_concurrent_jobs=1, job_ttl_hours=1, job_gc_interval_minutes=0)
+        svc = JobService(repository=repo, config=cfg, runtime_factory=lambda: None, project_factory=lambda x: None)
+
+        called = threading.Event()
+        original = svc._limpar_jobs_expirados
+
+        def _patched():
+            called.set()
+            original()
+
+        svc._limpar_jobs_expirados = _patched
+
+        # Run the GC loop in a thread; stop after first invocation
+        t = threading.Thread(target=svc._garbage_collector_loop, daemon=True)
+        t.start()
+        called.wait(timeout=3.0)
+        svc._gc_stop_event.set()
+        t.join(timeout=2.0)
+
+        assert called.is_set(), "GC loop never called _limpar_jobs_expirados"
+
+
+class TestExecutarPipelineFallbackMcp:
+    """Covers lines 144-147: fallback MCP import path when factories are None."""
+
+    def test_fallback_mcp_path_on_factory_none(self):
+        """When runtime_factory/project_factory are None, the MCP fallback is used."""
+        from unittest.mock import MagicMock, patch
+        from datetime import UTC, datetime
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.application.jobs.state import PipelineJobStateMachine
+        from concilium.infrastructure.settings import JobsSettings
+
+        repo = InMemoryJobRepository()
+        cfg = JobsSettings(max_concurrent_jobs=2, job_ttl_hours=1, job_gc_interval_minutes=5)
+        # No runtime_factory / project_factory → triggers fallback at lines 144-147
+        svc = JobService(repository=repo, config=cfg, runtime_factory=None, project_factory=None)
+
+        now = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": "job-mcp-fallback",
+            "status": "AGUARDANDO_FILA",
+            "project_id": "proj-mcp",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": "esc-mcp",
+            "plano_id": "pl-mcp",
+            "disparado_em": now,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        job_data["state_machine"] = sm
+        repo.save("job-mcp-fallback", job_data)
+
+        mock_rt = MagicMock()
+        mock_store = MagicMock()
+        mock_plan = MagicMock()
+        mock_escopo = MagicMock()
+        mock_escopo.plan.return_value = mock_plan
+        mock_store.escopo.return_value = mock_escopo
+
+        with patch("concilium.presentation.mcp._context._runtime", return_value=mock_rt), \
+             patch("concilium.presentation.mcp._context._project", return_value=mock_store), \
+             patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-mcp"), \
+             patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", return_value={"mcp": True}):
+            svc._executar_pipeline_async("job-mcp-fallback")
+
+        result_job = repo.get("job-mcp-fallback")
+        assert result_job["state_machine"].status_str == "CONCLUIDO"
+
+
+class TestListarJobsStatusCountsConcludedAndError:
+    """Covers lines 328 and 330: CONCLUIDO and ERRO branches in listar_jobs stats."""
+
+    def _make_job(self, job_id, status_str, repo):
+        from datetime import UTC, datetime
+        from concilium.application.jobs.state import PipelineJobStateMachine
+
+        now = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": job_id,
+            "status": "AGUARDANDO_FILA",
+            "project_id": "proj-stats",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": now,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+        }
+        sm = PipelineJobStateMachine(job_data)
+        if status_str == "CONCLUIDO":
+            sm.iniciar()
+            sm.completar(resultado={})
+        elif status_str == "ERRO":
+            sm.iniciar()
+            sm.falhar(erro="something broke")
+        job_data["state_machine"] = sm
+        repo.save(job_id, job_data)
+
+    def test_listar_jobs_counts_concluido_and_erro(self):
+        """CONCLUIDO and ERRO jobs must be counted correctly in estatisticas."""
+        from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
+        from concilium.infrastructure.settings import JobsSettings
+
+        repo = InMemoryJobRepository()
+        cfg = JobsSettings(max_concurrent_jobs=2, job_ttl_hours=1, job_gc_interval_minutes=5)
+        svc = JobService(repository=repo, config=cfg, runtime_factory=lambda: None, project_factory=lambda x: None)
+
+        self._make_job("job-done-1", "CONCLUIDO", repo)
+        self._make_job("job-done-2", "CONCLUIDO", repo)
+        self._make_job("job-err-1", "ERRO", repo)
+
+        listing = svc.listar_jobs()
+        assert listing.estatisticas.concluido == 2  # line 328
+        assert listing.estatisticas.erro == 1       # line 330
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

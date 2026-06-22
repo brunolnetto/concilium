@@ -343,3 +343,197 @@ class TestWmpHelpers:
         # Should not raise — falls back to empty reference
         result = _cs_validate_mobilizacao_policies(svc, "proj-1")
         assert isinstance(result, list)
+
+
+class TestUpsertCatalogCpuCornerCases:
+    """Covers line 104-105: corrupt existing CPU file silenced."""
+
+    def test_corrupt_previous_cpu_file_silenced(self, tmp_path):
+        from concilium.application.services._concilium_service_helpers import _cs_upsert_catalog_cpu
+
+        cats_dir = tmp_path / "catalogos" / "cat-x"
+        cats_dir.mkdir(parents=True)
+        cpus_dir = cats_dir / "cpus"
+        cpus_dir.mkdir()
+        # Write corrupt JSON to trigger except branch
+        (cpus_dir / "CPU-1.json").write_text("not-valid-json{{{", encoding="utf-8")
+
+        svc = MagicMock()
+        svc.config_root = tmp_path
+        cpu_data = {"codigo": "CPU-1", "descricao": "desc", "unidade": "un"}
+        # Should not raise despite corrupt previous file
+        result = _cs_upsert_catalog_cpu(svc, "cat-x", "CPU-1", cpu_data, motivo="fix")
+        assert result["cpu_id"] == "CPU-1"
+
+
+class TestGetEnrichedCpus:
+    """Covers _cs_get_enriched_cpus (lines 148-171): cache miss, hit, bundle mtime."""
+
+    def _make_svc_with_catalog(self, tmp_path, cat_id="cat-enrich"):
+        from concilium.application.runtime import Runtime
+
+        cats_dir = tmp_path / "catalogos" / cat_id
+        cats_dir.mkdir(parents=True)
+        import json
+
+        # Write a minimal catalog.json
+        (cats_dir / "catalog.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-1", "descricao": "d", "unidade": "m"}]}), encoding="utf-8"
+        )
+
+        svc = MagicMock()
+        svc.config_root = tmp_path
+        svc._enriched_cache = {}
+        return svc, cat_id
+
+    def test_cache_miss_calls_runtime_and_stores(self, tmp_path):
+        from unittest.mock import patch
+        from concilium.application.services._concilium_service_helpers import _cs_get_enriched_cpus
+
+        svc, cat_id = self._make_svc_with_catalog(tmp_path, "cat-e1")
+
+        mock_rt = MagicMock()
+        mock_rt.load_catalogo.return_value = {
+            "cpus": [{"codigo": "CPU-1"}],
+            "produtividades": [],
+        }
+        with patch("concilium.application.runtime.Runtime", return_value=mock_rt):
+            result = _cs_get_enriched_cpus(svc, cat_id)
+
+        assert isinstance(result, list)
+        assert cat_id in svc._enriched_cache
+
+    def test_cache_hit_returns_cached(self, tmp_path):
+        from concilium.application.services._concilium_service_helpers import _cs_get_enriched_cpus
+
+        svc, cat_id = self._make_svc_with_catalog(tmp_path, "cat-e2")
+        # Pre-populate cache with mtime=0 — bundle doesn't exist so mtime is 0 again
+        cached_cpus = [{"codigo": "CPU-CACHED"}]
+        svc._enriched_cache = {cat_id: (0, cached_cpus)}
+        # No bundle file exists → mtime stays 0 → cache hit
+        result = _cs_get_enriched_cpus(svc, cat_id)
+        assert result is cached_cpus
+
+
+class TestSimulateMobilizacaoPolicy:
+    """Covers _cs_simulate_mobilizacao_policy (lines 174-208)."""
+
+    def _make_req(self, with_semana_inicio=False):
+        from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
+
+        policy = MobilizacaoPolicy(
+            n_inicial=1, n_maximo=2, taxa_mobilizacao=1.0, taxa_desmobilizacao=0.0, semanas_plateau=None
+        )
+        req: dict = {
+            "policy": policy.model_dump(),
+            "item_id": "eap-1",
+            "quantitativo": 100.0,
+            "producao_horaria": 2.0,
+            "dias_semana": 6,
+            "horas_dia": 8,
+        }
+        if with_semana_inicio:
+            req["semana_inicio"] = "2026-W01"
+            req["prat_semanal"] = {"2026-W01": 1.0}
+        return req
+
+    def test_simulate_without_semana_inicio(self):
+        from concilium.application.services._concilium_service_helpers import _cs_simulate_mobilizacao_policy
+
+        result = _cs_simulate_mobilizacao_policy("proj-1", self._make_req(with_semana_inicio=False))
+        assert isinstance(result, dict)
+
+    def test_simulate_with_semana_inicio_and_prat_semanal(self):
+        from concilium.application.services._concilium_service_helpers import _cs_simulate_mobilizacao_policy
+
+        result = _cs_simulate_mobilizacao_policy("proj-1", self._make_req(with_semana_inicio=True))
+        assert isinstance(result, dict)
+
+
+class TestGetEnrichedCpusOsError:
+    """Covers lines 153-154 and 167-168: OSError on bundle.stat() in _cs_get_enriched_cpus."""
+
+    def _make_svc_minimal(self, tmp_path, cat_id="cat-oserr"):
+        cats_dir = tmp_path / "catalogos" / cat_id
+        cats_dir.mkdir(parents=True)
+        import json
+        (cats_dir / "catalog.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-OE", "descricao": "d", "unidade": "m"}]})
+        )
+        svc = MagicMock()
+        svc.config_root = tmp_path
+        svc._enriched_cache = {}
+        return svc, cat_id
+
+    def test_oserror_on_initial_bundle_stat_falls_back_to_zero(self, tmp_path):
+        """Lines 153-154: OSError on first bundle.stat() → mtime=0, cache miss, calls Runtime."""
+        from unittest.mock import patch
+        from pathlib import Path
+        from concilium.application.services._concilium_service_helpers import _cs_get_enriched_cpus
+
+        svc, cat_id = self._make_svc_minimal(tmp_path)
+        bundle_path = tmp_path / "catalogos" / cat_id / ".catalog_bundle.json"
+        bundle_path.write_text("{}")  # exists → stat() will be called
+
+        mock_rt = MagicMock()
+        mock_rt.load_catalogo.return_value = {"cpus": [{"codigo": "CPU-1"}], "produtividades": []}
+
+        # Track stat calls per path; raise OSError only for the bundle on the first stat call
+        original_stat = Path.stat
+        stat_call_count: dict[str, int] = {}
+
+        def patched_stat(self_path, *args, **kwargs):
+            key = str(self_path)
+            stat_call_count[key] = stat_call_count.get(key, 0) + 1
+            if key == str(bundle_path) and stat_call_count[key] == 1:
+                raise OSError("stat failed on first call")
+            return original_stat(self_path, *args, **kwargs)
+
+        with patch("concilium.application.runtime.Runtime", return_value=mock_rt), \
+             patch.object(Path, "stat", patched_stat):
+            result = _cs_get_enriched_cpus(svc, cat_id)
+
+        assert isinstance(result, list)
+        assert cat_id in svc._enriched_cache
+
+    def test_oserror_on_post_load_bundle_stat_falls_back_to_zero(self, tmp_path):
+        """Lines 167-168: OSError on second bundle.stat() (post-load) → mtime=0, stored in cache."""
+        from unittest.mock import patch
+        from pathlib import Path
+        from concilium.application.services._concilium_service_helpers import _cs_get_enriched_cpus
+
+        svc, cat_id = self._make_svc_minimal(tmp_path)
+        bundle_path = tmp_path / "catalogos" / cat_id / ".catalog_bundle.json"
+        # No bundle before load → first exists() → False → mtime=0 (no stat, no OSError)
+        # After load_catalogo, create the bundle and make stat raise on second call
+
+        mock_rt = MagicMock()
+        mock_rt.load_catalogo.return_value = {"cpus": [{"codigo": "CPU-2"}], "produtividades": []}
+
+        original_stat = Path.stat
+        stat_call_count: dict[str, int] = {}
+
+        def patched_stat(self_path, *args, **kwargs):
+            key = str(self_path)
+            stat_call_count[key] = stat_call_count.get(key, 0) + 1
+            if key == str(bundle_path):
+                raise OSError("stat failed post-load")
+            return original_stat(self_path, *args, **kwargs)
+
+        original_exists = Path.exists
+
+        def patched_exists(self_path):
+            if str(self_path) == str(bundle_path):
+                # Before load: doesn't exist; after load (second call): exists
+                count = stat_call_count.get("exists_" + str(self_path), 0)
+                stat_call_count["exists_" + str(self_path)] = count + 1
+                return count >= 1  # True on second check
+            return original_exists(self_path)
+
+        with patch("concilium.application.runtime.Runtime", return_value=mock_rt), \
+             patch.object(Path, "stat", patched_stat), \
+             patch.object(Path, "exists", patched_exists):
+            result = _cs_get_enriched_cpus(svc, cat_id)
+
+        assert isinstance(result, list)
+        assert cat_id in svc._enriched_cache

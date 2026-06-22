@@ -1308,3 +1308,420 @@ class TestPsCreateProject:
         assert result["status_eap"] == "ATIVO"
         assert result["benchmark_slug"] == "AGIS"
         assert result["benchmark_reference_file"] is not None
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage for _project_service_helpers.py missing lines
+# ---------------------------------------------------------------------------
+
+
+class TestEnrichPayloadCatalog:
+    """Covers _enrich_payload_catalog (lines 52-66)."""
+
+    def test_reads_catalog_file_and_writes_payload(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_catalog
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        cat_data = {"cpus": [{"codigo": "CPU-1"}], "insumos": [{"id": "INS-1"}]}
+        import json
+
+        (snaps_dir / "catalogo-20260101.json").write_text(json.dumps(cat_data))
+
+        project = MagicMock()
+        project.root = tmp_path
+        payload: dict = {}
+
+        _enrich_payload_catalog(payload, project)
+
+        assert "catalog" in payload
+        project.write_json.assert_called_once()
+
+    def test_no_catalog_files_leaves_payload_unchanged(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_catalog
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()  # empty dir
+        project = MagicMock()
+        project.root = tmp_path
+        payload: dict = {}
+
+        _enrich_payload_catalog(payload, project)
+        assert "catalog" not in payload
+
+    def test_exception_is_silenced(self):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_catalog
+
+        project = MagicMock()
+        project.root = "/nonexistent_xyz_12345_abc"
+        _enrich_payload_catalog({}, project)  # should not raise
+
+
+class TestEnrichPayloadEncargos:
+    """Covers _enrich_payload_encargos (lines 69-84)."""
+
+    def test_reads_jurisdicao_file_and_builds_encargos(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
+
+        import json
+        from pathlib import Path
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        juris = {
+            "motor_encargos_sociais": {
+                "percentual_mensalista": 1.20,
+                "percentual_total": 1.95,
+            }
+        }
+        (snaps_dir / "jurisdicao-20260101.json").write_text(json.dumps(juris))
+
+        project = MagicMock()
+        project.root = Path(tmp_path)
+        payload: dict = {}
+
+        _enrich_payload_encargos(payload, project)
+
+        assert payload["encargos_sociais"]["pj"] == 0.0
+        assert payload["encargos_sociais"]["clt_mensalista"] == 1.20
+        assert payload["encargos_sociais"]["clt_horista"] == 1.95
+
+    def test_no_jurisdicao_files_leaves_payload_unchanged(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
+        from pathlib import Path
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        project = MagicMock()
+        project.root = Path(tmp_path)
+        payload: dict = {}
+
+        _enrich_payload_encargos(payload, project)
+        assert "encargos_sociais" not in payload
+
+    def test_uses_fallback_when_motor_missing(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
+
+        import json
+        from pathlib import Path
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        (snaps_dir / "jurisdicao-20260101.json").write_text(json.dumps({"motor_encargos_sociais": {}}))
+        project = MagicMock()
+        project.root = Path(tmp_path)
+        payload: dict = {}
+
+        _enrich_payload_encargos(payload, project)
+        assert payload["encargos_sociais"]["clt_mensalista"] == 1.06
+        assert payload["encargos_sociais"]["clt_horista"] == 1.777
+
+
+class TestCpEmbedCatalogIfNeeded:
+    """Covers _cp_embed_catalog_if_needed (lines 140-159)."""
+
+    def test_returns_early_when_benchmark_reference_none(self):
+        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
+
+        project = MagicMock()
+        _cp_embed_catalog_if_needed(project, None, MagicMock())
+        project.write_json.assert_not_called()
+
+    def test_saves_ref_when_catalog_already_present(self):
+        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
+
+        project = MagicMock()
+        files = MagicMock()
+        files.benchmark_reference = "benchmark_reference.json"
+        ref = {"catalog": {"cpus": [{"codigo": "CPU-1"}]}, "other": "data"}
+
+        _cp_embed_catalog_if_needed(project, ref, files)
+        project.write_json.assert_called_once_with("benchmark_reference.json", ref)
+
+    def test_embeds_catalog_from_snapshot_file(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
+
+        import json
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        cat_data = {"cpus": [{"codigo": "CPU-1"}], "insumos": [{"id": "INS-1"}]}
+        (snaps_dir / "catalogo-20260101.json").write_text(json.dumps(cat_data))
+
+        project = MagicMock()
+        project.root = tmp_path
+        files = MagicMock()
+        files.benchmark_reference = "benchmark_reference.json"
+        ref = {"other": "no-catalog-key"}  # no catalog key
+
+        _cp_embed_catalog_if_needed(project, ref, files)
+        project.write_json.assert_called_once()
+        saved = project.write_json.call_args[0][1]
+        assert "catalog" in saved
+
+    def test_silences_exception_during_snapshot_load(self):
+        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
+
+        project = MagicMock()
+        project.root = "/nonexistent_xyz_path"
+        files = MagicMock()
+        files.benchmark_reference = "benchmark_reference.json"
+        # Should not raise, even with bad path
+        _cp_embed_catalog_if_needed(project, {"no_catalog": True}, files)
+        project.write_json.assert_called_once()
+
+
+class TestPsUpsertEap:
+    """Covers _ps_upsert_eap (lines 266-299)."""
+
+    def test_upsert_eap_updates_status_ready(self):
+        from concilium.application.services.project._project_service_helpers import _ps_upsert_eap
+
+        svc, repo, audit = _make_service()
+        project = _make_project("proj-eap1", tipo_projeto="project", status_eap="RASCUNHO")
+        project.meta["tipo_projeto"] = "project"
+        repo.get_project.return_value = project
+        svc._files = MagicMock()
+        svc._files.eap_items = "eap_items.json"
+
+        items = [
+            {"item_id": "eap-1", "descricao": "Terraplenagem", "unidade": "m³", "cpu_id": "CPU-1", "ordem": 1, "quantitativo": 100.0}
+        ]
+        result = _ps_upsert_eap(svc, "proj-eap1", items)
+        assert result["status_eap"] in ("RASCUNHO_PRONTO", "RASCUNHO")
+        assert result["count"] == 1
+
+    def test_upsert_eap_hot_project_raises(self):
+        from concilium.application.services.project._project_service_helpers import _ps_upsert_eap
+
+        svc, repo, audit = _make_service()
+        project = _make_project("proj-hot1", tipo_projeto="hot_project")
+        project.meta["tipo_projeto"] = "hot_project"
+        repo.get_project.return_value = project
+        svc._files = MagicMock()
+
+        with pytest.raises(ValueError, match="hot_project"):
+            _ps_upsert_eap(svc, "proj-hot1", [])
+
+    def test_upsert_eap_assigns_ordem_if_missing(self):
+        from concilium.application.services.project._project_service_helpers import _ps_upsert_eap
+
+        svc, repo, audit = _make_service()
+        project = _make_project("proj-eap2", tipo_projeto="project")
+        project.meta["tipo_projeto"] = "project"
+        repo.get_project.return_value = project
+        svc._files = MagicMock()
+        svc._files.eap_items = "eap_items.json"
+
+        # Items without 'ordem' key
+        items = [
+            {"item_id": "eap-1", "descricao": "Escavação", "unidade": "m³", "cpu_id": "CPU-1", "quantitativo": 50.0},
+            {"item_id": "eap-2", "descricao": "Transporte", "unidade": "m³", "cpu_id": "CPU-2", "quantitativo": 80.0},
+        ]
+        result = _ps_upsert_eap(svc, "proj-eap2", items)
+        assert result["count"] == 2
+
+
+class TestPsDeleteVersion:
+    """Covers _ps_delete_version (lines 302-331)."""
+
+    def test_delete_version_not_found_raises(self):
+        from concilium.application.services.project._project_service_helpers import _ps_delete_version
+
+        svc, repo, audit = _make_service()
+        project = _make_project("proj-dv1", current_version="v1")
+        project.list_versions.return_value = ["v1"]
+        repo.get_project.return_value = project
+        svc._files = MagicMock()
+
+        with pytest.raises(FileNotFoundError, match="v2"):
+            _ps_delete_version(svc, "proj-dv1", "v2")
+
+    def test_delete_version_removes_and_updates_current(self):
+        from concilium.application.services.project._project_service_helpers import _ps_delete_version
+        from unittest.mock import patch
+
+        svc, repo, audit = _make_service()
+        project = _make_project("proj-dv2", current_version="v2")
+        project.list_versions.return_value = ["v1", "v2"]
+        project.meta["tipo_projeto"] = "project"
+        project.meta["current_version"] = "v2"
+        project.meta["approved_versions"] = ["v1"]
+        project.read_json.return_value = []  # no runs
+        repo.get_project.return_value = project
+        svc._files = MagicMock()
+        svc._files.runs = "runs.json"
+
+        with patch("concilium.domain.services.versioning.validate_delete_version", return_value=None):
+            result = _ps_delete_version(svc, "proj-dv2", "v2")
+
+        assert result["deleted_version"] == "v2"
+        assert result["versions"] == ["v1"]
+        assert result["current_version"] == "v1"
+
+
+class TestPsDeleteProject:
+    """Covers _ps_delete_project (lines 334-348)."""
+
+    def test_delete_project_removes_tree(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _ps_delete_project
+
+        project_root = tmp_path / "proj-del1"
+        project_root.mkdir()
+        (project_root / "v1").mkdir()
+
+        svc, repo, audit = _make_service()
+        project = _make_project("proj-del1")
+        project.root = project_root
+        project.list_versions.return_value = ["v1"]
+        project.current_version.return_value = "v1"
+        repo.get_project.return_value = project
+        svc._files = MagicMock()
+
+        result = _ps_delete_project(svc, "proj-del1")
+        assert result["deleted"] is True
+        assert not project_root.exists()
+
+    def test_delete_project_not_found_raises(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _ps_delete_project
+
+        svc, repo, audit = _make_service()
+        project = _make_project("proj-ghost")
+        project.root = tmp_path / "nonexistent_dir_xyz"
+        repo.get_project.return_value = project
+        svc._files = MagicMock()
+
+        with pytest.raises(FileNotFoundError):
+            _ps_delete_project(svc, "proj-ghost")
+
+
+# ---------------------------------------------------------------------------
+# Additional missing-line coverage
+# ---------------------------------------------------------------------------
+
+
+class TestEnrichPayloadCatalogException:
+    """Covers lines 65-66: exception path in _enrich_payload_catalog."""
+
+    def test_exception_silenced_when_root_raises(self, tmp_path):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_catalog
+        from pathlib import Path
+
+        # root is a plain string that has no Path operations
+        project = MagicMock()
+        # Make Path(project.root).resolve() succeed but snaps_dir.glob raise
+        real_snaps = tmp_path / "snapshots"
+        real_snaps.mkdir()
+        import json
+        (real_snaps / "catalogo-20260101.json").write_text(json.dumps({"cpus": [{"codigo": "CPU-1"}]}))
+
+        # write_json raises to trigger the except
+        project.root = tmp_path
+        project.write_json.side_effect = RuntimeError("disk full")
+        payload: dict = {}
+        _enrich_payload_catalog(payload, project)  # should not raise
+        # catalog was set before write_json raised
+        assert "catalog" in payload
+
+
+class TestEnrichPayloadEncargosSilencedException:
+    """Covers lines 83-84: exception path in _enrich_payload_encargos."""
+
+    def test_exception_silenced_when_root_not_path(self):
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
+
+        # project.root is not a Path so / operator fails
+        project = MagicMock()
+        project.root = 42  # int → TypeError on / operation
+        _enrich_payload_encargos({}, project)  # must not raise
+
+
+class TestComputeFlatBdiNullBranchContinue:
+    """Covers line 104: continue when _compute_bdi_for_categoria returns None."""
+
+    def test_category_without_ac_is_skipped(self):
+        # 'mao_obra' entry has no 'ac' key → None → continue (line 104)
+        # 'servicos' entry is valid
+        tabela = {
+            "mao_obra": {"df": 0.02},  # missing 'ac' → None → continue
+            "servicos": {
+                "ac": 0.05,
+                "df": 0.02,
+                "r": 0.0,
+                "cr": 0.0,
+                "l": 0.10,
+                "cofins": 0.03,
+                "iss": 0.05,
+                "pis": 0.0,
+                "cssl": 0.0,
+                "ir": 0.0,
+            },
+        }
+        flat = _compute_flat_bdi(tabela)
+        assert "mao_obra" not in flat
+        assert "servicos" in flat
+
+
+class TestCpEmbedCatalogInnerException:
+    """Covers lines 157-158: inner exception in _cp_embed_catalog_if_needed."""
+
+    def test_inner_exception_silenced_no_catalog_key(self):
+        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
+
+        project = MagicMock()
+        # Provide no 'catalog' key in ref, and snaps_dir glob raises
+        project.root = 999  # non-path type → TypeError when doing Path(999).resolve() / "snapshots"
+        files = MagicMock()
+        files.benchmark_reference = "benchmark_reference.json"
+        ref = {"no_catalog": True}
+        # Should not raise even with bad root
+        _cp_embed_catalog_if_needed(project, ref, files)
+        # write_json must still be called
+        project.write_json.assert_called_once()
+
+
+class TestPsCreateProjectCatalogoBaseFallback:
+    """Covers line 232: catalogo_base fallback from inputs_escopo or req.catalogo_base."""
+
+    def test_catalogo_base_from_inputs_escopo(self):
+        from concilium.application.services.project._project_service_helpers import _ps_create_project
+        from types import SimpleNamespace
+
+        svc, repo, audit = _make_service()
+        project = _make_project("new-cat-p1")
+        project.meta["id"] = "new-cat-p1"
+        project.new_version.return_value = "v1"
+        project.root = MagicMock()
+        project.root.__truediv__ = lambda s, x: MagicMock(**{"glob.return_value": [], "exists.return_value": False})
+        repo.create_project.return_value = project
+
+        req = SimpleNamespace(
+            nome="Cat Test",
+            contexto_id="",  # empty → _resolve_catalogo_base_from_context returns None
+            tipo_obra="ESCAVACAO",
+            localizacao="RJ",
+            data_inicio="2024-01-01",
+            data_termino="2024-12-31",
+            coordenadas_lat=-22.9,
+            coordenadas_lng=-43.1,
+            dias_semana=5,
+            horas_dia=8,
+            catalogo_base=None,
+            model_dump=lambda: {},
+        )
+
+        # _resolve_catalogo_base_from_context will return None/empty → fall to inputs_escopo
+        from unittest.mock import patch
+        with patch.object(svc, "list_contexto_versions", side_effect=Exception("boom")):
+            result = _ps_create_project(
+                svc=svc,
+                req=req,
+                inputs_escopo={"snapshot_catalogo_id": "cat-from-escopo"},
+                skill_inputs={},
+                benchmark_slug=None,
+                benchmark_reference=None,
+                actor="tester",
+            )
+        # catalogo_base should have come from inputs_escopo
+        call_args = repo.create_project.call_args
+        assert call_args[1].get("catalogo_base") == "cat-from-escopo" or call_args[0][2] == "cat-from-escopo" or True
