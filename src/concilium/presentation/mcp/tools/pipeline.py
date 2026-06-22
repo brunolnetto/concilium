@@ -32,6 +32,7 @@ def register(server: FastMCP) -> None:
         inputs: dict[str, Any] | None = None,
         escopo_id: str | None = None,
         plano_id: str | None = None,
+        procurement_intent: str | None = None,
     ) -> dict[str, Any]:
         """Dispara execução de pipeline em background (não-bloqueante).
 
@@ -59,8 +60,19 @@ def register(server: FastMCP) -> None:
         """
         from concilium.application.jobs import get_job_service
 
+        # ADR-119 D1: valida se o intent é permitido para o role do token
+        if procurement_intent:
+            from concilium.infrastructure.auth.permission_guard import (
+                _current_roles,
+                check_intent_allowed,
+            )
+            check_intent_allowed(procurement_intent, list(_current_roles.get()))
+
         service = get_job_service()
-        job_dto = service.disparar_pipeline(project_id, skill_id, inputs, escopo_id, plano_id)
+        job_dto = service.disparar_pipeline(
+            project_id, skill_id, inputs, escopo_id, plano_id,
+            procurement_intent=procurement_intent,
+        )
         return _wrap_response(job_dto.model_dump())
 
     # ── 4b. Consultar job de pipeline ────────────────────────────────────

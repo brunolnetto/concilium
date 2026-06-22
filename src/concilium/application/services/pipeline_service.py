@@ -246,12 +246,32 @@ class PipelineService:
             },
         )
         try:
+            # ADR-119 D3: captura identidade do ator via contextvars (ADR-118)
+            from concilium.infrastructure.auth.permission_guard import (
+                _current_roles,
+                get_current_user_id,
+            )
+            _actor_user_id = get_current_user_id() or run.get("actor") or "system"
+            _actor_roles = list(_current_roles.get())
+            _actor_role = _actor_roles[0] if _actor_roles else None
+            _intent = run.get("procurement_intent")
+
             if project.current_version() is None:
-                project.new_version()
+                project.new_version(
+                    criado_por=_actor_user_id,
+                    role_criador=_actor_role,
+                    procurement_intent=_intent,
+                )
 
             base_version = run.get("base_version")
             if run.get("fork_version"):
-                project.new_version(base=base_version or project.current_version())
+                project.new_version(
+                    base=base_version or project.current_version(),
+                    criado_por=_actor_user_id,
+                    role_criador=_actor_role,
+                    procurement_intent=_intent,
+                    forked_from=base_version or project.current_version(),
+                )
 
             version = project.current_version()
             if version is None:

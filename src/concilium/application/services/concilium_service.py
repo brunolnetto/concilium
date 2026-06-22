@@ -476,6 +476,10 @@ class ConciliumService:
     def list_versions(self, project_id: str) -> list[str]:
         return self._dependencies.project_service.list_versions(project_id)
 
+    def get_version_history(self, project_id: str) -> dict:
+        """ADR-119 D3: metadados de autoria de todas as versões."""
+        return self._dependencies.project_service.get_version_history(project_id)
+
     def delete_version(self, project_id: str, version: str, actor: str = "system") -> dict[str, Any]:
         return self._dependencies.project_service.delete_version(project_id, version, actor=actor)
 

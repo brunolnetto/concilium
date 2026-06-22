@@ -81,10 +81,41 @@ def patch_project_config(
 @router.get("/{project_id}/versions", summary="List all versions")
 def list_versions(
     project_id: str,
+    tree: bool = False,
     service: ConciliumService = Depends(get_concilium_service),
 ) -> dict[str, Any]:
+    """Lista versões do projeto.
+
+    ADR-119 D3: `?tree=true` retorna árvore hierárquica com metadados de autoria por versão.
+    """
     try:
-        return {"items": service.list_versions(project_id)}
+        versions = service.list_versions(project_id)
+        if not tree:
+            return {"items": versions}
+        # Build tree with authorship metadata
+        version_history = service.get_version_history(project_id)
+        items = []
+        for v in versions:
+            meta = version_history.get(v) or {}
+            items.append({
+                "version": v,
+                "criado_em": meta.get("criado_em"),
+                "criado_por": meta.get("criado_por"),
+                "role_criador": meta.get("role_criador"),
+                "procurement_intent": meta.get("procurement_intent"),
+                "forked_from": meta.get("forked_from"),
+                "motivo": meta.get("motivo"),
+            })
+        # Build parent→children adjacency for tree structure
+        children: dict[str, list[str]] = {}
+        roots: list[str] = []
+        for item in items:
+            parent = item.get("forked_from")
+            if parent and parent in [i["version"] for i in items]:
+                children.setdefault(parent, []).append(item["version"])
+            else:
+                roots.append(item["version"])
+        return {"items": items, "roots": roots, "children": children}
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

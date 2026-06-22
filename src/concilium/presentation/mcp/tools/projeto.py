@@ -300,13 +300,33 @@ def register(server: FastMCP) -> None:
         except Exception as e:
             return {"erro": str(e)}
 
-        return {
+        result = {
             "project_id": project_id,
             "escopo_id": eid,
             "plano_aprovado": pid,
             "planos_arquivados": arquivados,
             "status": "APROVADO",
         }
+        # ADR-119 D5: VersionAction no audit trail
+        try:
+            from concilium.infrastructure.auth.permission_guard import (
+                _current_roles,
+                get_current_user_id,
+            )
+            from concilium.application.services.project.audit_service import AuditService, VersionAction
+            user_id = get_current_user_id() or "system"
+            roles = list(_current_roles.get())
+            va = VersionAction(
+                action="approve",
+                version_afetada=pid,
+                actor_id=user_id,
+                actor_role=roles[0] if roles else None,
+                detalhes={"escopo_id": eid, "planos_arquivados": arquivados},
+            )
+            AuditService().log_version_action(store, va)
+        except Exception:
+            pass  # auditoria é best-effort
+        return result
 
     # ── Nova iteração de planejamento (ADR-031) ───────────────────────────────
     @server.tool()

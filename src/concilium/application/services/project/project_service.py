@@ -285,6 +285,11 @@ class ProjectService:
     def list_versions(self, project_id: str) -> list[str]:
         return self._repository.get_project(project_id).list_versions()
 
+    def get_version_history(self, project_id: str) -> dict:
+        """ADR-119 D3: retorna metadados de autoria de todas as versões do projeto."""
+        project = self._repository.get_project(project_id)
+        return project.meta.get("version_history") or {}
+
     def delete_version(self, project_id: str, version: str, actor: str = "system") -> dict[str, Any]:
         return _ps_delete_version(self, project_id, version, actor)
 
@@ -297,16 +302,48 @@ class ProjectService:
         if base_version not in versions:
             raise FileNotFoundError(f"Versao '{base_version}' nao encontrada.")
 
-        new_version = project.new_version(base=base_version)
+        # ADR-119 D3: captura identidade do ator via contextvars (ADR-118)
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            get_current_user_id,
+        )
+        user_id = get_current_user_id() or actor
+        roles = list(_current_roles.get())
+        role_criador = roles[0] if roles else None
+        # herda intent da versão de origem
+        base_meta = project.get_version_meta(base_version)
+        inherited_intent = base_meta.get("procurement_intent")
+
+        new_version = project.new_version(
+            base=base_version,
+            criado_por=user_id,
+            role_criador=role_criador,
+            procurement_intent=inherited_intent,
+            forked_from=base_version,
+        )
         payload = {
             "project_id": project_id,
             "base_version": base_version,
             "forked_version": new_version,
             "current_version": project.current_version(),
             "versions": project.list_versions(),
+            "criado_por": user_id,
+            "role_criador": role_criador,
         }
+        # ADR-119 D5: VersionAction no audit trail
+        from .audit_service import VersionAction
+        va = VersionAction(
+            action="fork",
+            version_afetada=new_version,
+            actor_id=user_id,
+            actor_role=role_criador,
+            intent=inherited_intent,
+            detalhes={"forked_from": base_version},
+        )
         self._audit_service.log(
-            project, action="fork_version", actor=actor, payload={"base_version": base_version}, result=payload
+            project, action="fork_version", actor=actor,
+            payload={"base_version": base_version}, result=payload,
+            version_action=va,
         )
         return payload
 
@@ -323,11 +360,28 @@ class ProjectService:
         right_summary = build_summary(right)
         deltas = calculate_deltas(left_summary, right_summary)
 
+        # ADR-119 D4: enriquecer com metadados de autoria das versões comparadas
+        version_history = project.meta.get("version_history") or {}
+        left_meta = version_history.get(resolved_left) or {}
+        right_meta = version_history.get(resolved_right) or {}
+
         return {
             "left_version": left_version,
             "right_version": right_version,
             "resolved_left_version": resolved_left,
             "resolved_right_version": resolved_right,
+            "left_autoria": {
+                "criado_por": left_meta.get("criado_por"),
+                "role_criador": left_meta.get("role_criador"),
+                "procurement_intent": left_meta.get("procurement_intent"),
+                "criado_em": left_meta.get("criado_em"),
+            },
+            "right_autoria": {
+                "criado_por": right_meta.get("criado_por"),
+                "role_criador": right_meta.get("role_criador"),
+                "procurement_intent": right_meta.get("procurement_intent"),
+                "criado_em": right_meta.get("criado_em"),
+            },
             "left": left_summary,
             "right": right_summary,
             "deltas": deltas,

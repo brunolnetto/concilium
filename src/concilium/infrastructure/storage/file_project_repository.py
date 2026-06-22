@@ -114,8 +114,11 @@ class FileProjectHandle(ProjectHandle):
     def current_version(self) -> str | None:
         return self._store.current_version()
 
-    def new_version(self, base: str | None = None) -> str:
-        return self._store.new_version(base=base)
+    def new_version(self, base: str | None = None, **kwargs: Any) -> str:  # ADR-119 D2
+        return self._store.new_version(base=base, **kwargs)
+
+    def get_version_meta(self, version: str) -> dict:  # ADR-119 D2
+        return self._store.get_version_meta(version)
 
     def version_path(self, version: str) -> Path:
         return self._store.version_path(version)

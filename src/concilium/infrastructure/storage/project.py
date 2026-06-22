@@ -151,8 +151,20 @@ class ProjectStore:
             return False
         return not bool(cf.stat().st_mode & stat.S_IWUSR)
 
-    def new_version(self, base: str | None = None) -> str:
-        """Cria nova versão (copy-on-write). Retorna o nome (v3, v4...) — v1 se não há versões."""
+    def new_version(
+        self,
+        base: str | None = None,
+        *,
+        criado_por: str | None = None,
+        role_criador: str | None = None,
+        procurement_intent: str | None = None,
+        forked_from: str | None = None,
+        motivo: str | None = None,
+    ) -> str:
+        """Cria nova versão (copy-on-write). Retorna o nome (v3, v4...) — v1 se não há versões.
+
+        ADR-119 D2: armazena metadados de autoria na version_history do meta.json.
+        """
         existing = self.list_versions()
         next_num = (max((int(v[1:]) for v in existing), default=0)) + 1
         new_name = f"v{next_num}"
@@ -168,8 +180,25 @@ class ProjectStore:
                 new_path / self.CANONICAL_FILE,
             )
 
-        self.update_meta(current_version=new_name)
+        # ADR-119 D2: grava metadados de autoria por versão
+        m = self.meta
+        version_history: dict = m.get("version_history") or {}
+        version_history[new_name] = {
+            "criado_em": datetime.now(UTC).isoformat(),
+            "criado_por": criado_por,
+            "role_criador": role_criador,
+            "procurement_intent": procurement_intent,
+            "forked_from": forked_from or source,
+            "motivo": motivo,
+        }
+        m["version_history"] = version_history
+        m["current_version"] = new_name
+        (self.root / self.META_FILE).write_text(json.dumps(m, indent=2, default=str), encoding="utf-8")
         return new_name
+
+    def get_version_meta(self, version: str) -> dict:
+        """ADR-119 D2: retorna metadados de autoria de uma versão específica."""
+        return (self.meta.get("version_history") or {}).get(version) or {}
 
     def load_canonical(self, version: str | None = None) -> CanonicalModel | None:
         """Carrega canônico da versão especificada (ou current)."""

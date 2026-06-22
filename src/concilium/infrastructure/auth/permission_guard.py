@@ -81,6 +81,40 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
 
 VALID_ROLES: frozenset[str] = frozenset(ROLE_PERMISSIONS.keys())
 
+# ── ADR-119 D1: Superfície de manipulação por role — Pipeline Intent Binding ──
+# Cada role tem um conjunto permitido de ProcurementIntent para acionar pipeline.
+# operator → só RFI (exploração rápida, OLTP); engineer/admin → RFI + RFP (análise completa).
+ROLE_ALLOWED_INTENTS: dict[str, frozenset[str]] = {
+    "viewer":     frozenset(),
+    "operator":   frozenset({"rfi"}),
+    "engineer":   frozenset({"rfi", "rfp"}),
+    "admin":      frozenset({"rfi", "rfp"}),
+    "service-ci": frozenset({"rfi"}),
+    "auditor":    frozenset(),
+}
+
+
+def check_intent_allowed(intent: str | None, roles: list[str]) -> None:
+    """Verifica se o procurement_intent é permitido para os roles do token.
+
+    Raise:
+        PermissionError: se o intent não é permitido para nenhum dos roles.
+    """
+    if not _auth_enabled() or intent is None:
+        return
+    normalized = str(intent).lower().strip()
+    allowed = set()
+    for role in roles:
+        allowed |= ROLE_ALLOWED_INTENTS.get(role, frozenset())
+    if normalized not in allowed:
+        roles_str = roles or ["(nenhum)"]
+        raise PermissionError(
+            f"Intent '{normalized}' não permitido para roles {roles_str!r}. "
+            f"Intents permitidos: {sorted(allowed) or '(nenhum)'}. "
+            "operator pode usar 'rfi'; engineer/admin podem usar 'rfi' ou 'rfp'."
+        )
+
+
 # ── Mapeamento legado: scopes ADR-094 → roles ADR-099 ─────────────────────────
 
 LEGACY_SCOPE_TO_ROLE: dict[str, str] = {
@@ -145,16 +179,50 @@ def _auth_enabled() -> bool:
 TOOL_PERMISSIONS: dict[str, str] = {}
 
 
-# ── Contextvar para MCP tools (sem request HTTP) ──────────────────────────────
+# ── Contextvars para MCP tools (sem request HTTP) ────────────────────────────
 
 _current_roles: contextvars.ContextVar[frozenset[str]] = contextvars.ContextVar(
     "_rbac_current_roles", default=frozenset()
+)
+
+_current_user_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_auth_current_user_id", default=None
+)
+
+_current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_auth_current_tenant_id", default=None
 )
 
 
 def set_roles(token_roles: list[str]) -> contextvars.Token:
     """Define os roles do request MCP atual. Chamar antes de invocar a tool."""
     return _current_roles.set(frozenset(token_roles))
+
+
+def set_auth_context(
+    user_id: str | None, tenant_id: str | None
+) -> tuple[contextvars.Token, contextvars.Token]:
+    """Define user_id e tenant_id extraídos do JWT no contexto de execução atual.
+
+    Retorna tokens para reset no finally do middleware (ADR-118).
+    """
+    return (_current_user_id.set(user_id), _current_tenant_id.set(tenant_id))
+
+
+def reset_auth_context(tokens: tuple[contextvars.Token, contextvars.Token]) -> None:
+    """Restaura contextvars de identidade ao estado anterior."""
+    _current_user_id.reset(tokens[0])
+    _current_tenant_id.reset(tokens[1])
+
+
+def get_current_user_id() -> str | None:
+    """Retorna user_id do contexto MCP atual (JWT sub). None fora de request."""
+    return _current_user_id.get()
+
+
+def get_current_tenant_id() -> str | None:
+    """Retorna tenant_id do contexto MCP atual (JWT tid). None fora de request."""
+    return _current_tenant_id.get()
 
 
 def _get_roles_from_context(kwargs: dict[str, Any]) -> list[str]:

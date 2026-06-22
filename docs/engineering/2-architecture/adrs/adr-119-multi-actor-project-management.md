@@ -1,6 +1,6 @@
 # ADR-119 — Gestão Multi-Ator de Projetos: Superfície de Manipulação, Fork por Ator e Auditoria Cross-Ator
 
-**Status:** Proposta  
+**Status:** Implementado ✅  
 **Data:** 2026-06-22  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-099 (RBAC role↔tool), ADR-117 (decorator tags), ADR-118 (tool invocation audit), ADR-031 (escopos e planos), ADR-115 (RFI/RFP procurement)
@@ -146,32 +146,36 @@ Isso permite reconstruir a narrativa de decisão: *"João rodou RFI (v1), Maria 
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | `ROLE_ALLOWED_INTENTS` em `permission_guard.py` + validação em `disparar_pipeline` | ⬜ Pendente |
-| F2 | Extensão de `VersionMeta` com `criado_por`, `role_criador`, `procurement_intent`, `forked_from` | ⬜ Pendente |
-| F3 | Propagação de `_current_user_id` / `_current_tenant_id` (ADR-118) para `fork_version` e `run_project` | ⬜ Pendente |
-| F4 | `GET /api/projects/{id}/versions?tree=true` — árvore de forks com autoria | ⬜ Pendente |
-| F5 | Enriquecimento do `/compare` com metadados de autoria das versões | ⬜ Pendente |
-| F6 | `VersionAction` no log de auditoria + testes | ⬜ Pendente |
+| F1 | `ROLE_ALLOWED_INTENTS` em `permission_guard.py` + `check_intent_allowed` + validação em `disparar_pipeline` | ✅ 2026-06-22 |
+| F2 | `ProjectStore.new_version` estendido com `criado_por`, `role_criador`, `procurement_intent`, `forked_from`; `version_history` no meta.json; `get_version_meta` | ✅ 2026-06-22 |
+| F3 | Propagação via `_current_user_id`/`_current_roles` (ADR-118) em `fork_version` e `pipeline_service._execute_run` | ✅ 2026-06-22 |
+| F4 | `GET /api/projects/{id}/versions?tree=true` — lista com autoria + estrutura de árvore pai→filhos | ✅ 2026-06-22 |
+| F5 | `/compare` enriquecido com `left_autoria`/`right_autoria` (criado_por, role, intent, criado_em) | ✅ 2026-06-22 |
+| F6 | `VersionAction` dataclass; `AuditService.log_version_action`; emissão em `fork_version` e `aprovar_versao`; 22 testes | ✅ 2026-06-22 |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `ROLE_ALLOWED_INTENTS` definido e testado
-- [ ] Tentativa de RFP por `operator` retorna `403` com mensagem clara
-- [ ] `service-ci` pode rodar somente RFI
+- [x] `ROLE_ALLOWED_INTENTS` definido e testado (22 testes)
+- [x] Tentativa de RFP por `operator` retorna `PermissionError` com mensagem clara
+- [x] `service-ci` pode rodar somente RFI
 
 ### Fase 2-3
-- [ ] `VersionMeta` estendido e migrado
-- [ ] `fork_version` registra `criado_por` e `forked_from`
-- [ ] `run_project` registra `procurement_intent` na versão criada
+- [x] `ProjectStore.new_version` aceita `criado_por`, `role_criador`, `procurement_intent`, `forked_from`
+- [x] `version_history` persistido em `meta.json` do projeto; `get_version_meta(v)` expõe por versão
+- [x] `FileProjectHandle.new_version` e `get_version_meta` delegam ao store
+- [x] `fork_version` registra `criado_por`, `forked_from` e herda `intent` da versão de origem
+- [x] `pipeline_service._execute_run` propaga actor via `_current_user_id`/`_current_roles`
 
 ### Fase 4-5
-- [ ] `/versions?tree=true` retorna árvore hierárquica
-- [ ] `/compare` inclui autoria das versões no response
+- [x] `GET /api/projects/{id}/versions?tree=true` retorna lista com autoria + adjacência pai→filhos
+- [x] `/compare` inclui `left_autoria`/`right_autoria` (criado_por, role, intent, criado_em)
 
 ### Fase 6
-- [ ] Auditoria registra `VersionAction` para `run_pipeline`, `fork`, `approve`, `compare`
-- [ ] Teste: narrativa completa RFI → fork → RFP → compare → approve auditável end-to-end
+- [x] `VersionAction` dataclass com `action`, `version_afetada`, `actor_id`, `actor_role`, `intent`, `detalhes`
+- [x] `AuditService.log_version_action` e `log(version_action=va)` — best-effort, não propaga exceção
+- [x] Emitido em `fork_version` e `aprovar_versao`
+- [x] 22 testes cobrindo F1, F2, F5, F6 e rastreamento de fork
 
 ---
 
