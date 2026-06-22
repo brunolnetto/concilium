@@ -7,8 +7,81 @@ com wrapping de texto. Implementado conforme NEP-034 e ADR-084.
 from __future__ import annotations
 
 import html
+import re
 from collections.abc import Callable
 from io import BytesIO
+
+# Mapa de slug de arquivo → título legível para humanos
+_CHART_LABELS: dict[str, str] = {
+    "scurve_custo": "Curva S de Custo Acumulado",
+    "bar_direto_atividade_temporal": "Custo Direto por Atividade (Evolução Temporal)",
+    "pool_utilizacao_temporal": "Utilização do Pool de Equipamentos",
+    "pool_custo_estado": "Custo por Estado do Pool de Recursos",
+    "pool_economia": "Economia de Pool vs. Execução Autônoma",
+    "painel_equilibrio": "Painel de Ponto de Equilíbrio",
+    "gantt_cronograma": "Cronograma de Execução (Gantt RCPSP)",
+    "fluxo_financeiro": "Fluxo de Caixa do Projeto",
+    "area_tempo_componente": "Evolução de Custos por Componente",
+    "bar_atividade_componente": "Composição de Custos por Atividade",
+    "bar_categoria_componente": "Composição de Custos por Categoria de Insumo",
+    "bar_combustivel_tipo_temporal": "Consumo de Combustível por Tipo (Temporal)",
+    "bar_diesel_temporal": "Consumo de Diesel ao Longo do Projeto",
+    "bar_tempo_direto_categoria": "Custo Direto por Categoria (Evolução Temporal)",
+    "bar_tempo_indireto_categoria": "Custos Indiretos por Categoria (Evolução Temporal)",
+    "bar_tempo_natureza": "Distribuição de Custos por Natureza (Temporal)",
+    "dependencia_eap": "Rede de Dependências da EAP",
+    "hist_equipamentos": "Histograma de Utilização de Equipamentos",
+    "hist_mao_obra": "Histograma de Utilização de Mão de Obra",
+    "linha_recursos_tempo": "Utilização de Recursos ao Longo do Tempo",
+}
+
+
+def _chart_label(filename: str) -> str:
+    """Converte nome de arquivo PNG em título legível."""
+    slug = filename.replace(".png", "")
+    if slug in _CHART_LABELS:
+        return _CHART_LABELS[slug]
+    # Fallback: capitalize e substitui underscores por espaços
+    return slug.replace("_", " ").title()
+
+
+def _fmt_localizacao(loc: str | None) -> str:
+    """Converte 'lat=X, lng=Y' em formato legível; retorna original caso não seja coordenada."""
+    if not loc:
+        return "-"
+    m = re.match(r"lat\s*=\s*([-\d.]+),?\s*lng\s*=\s*([-\d.]+)", str(loc))
+    if not m:
+        return loc
+    lat, lng = float(m.group(1)), float(m.group(2))
+    # Mapeamento simplificado de faixas de coordenadas para estados brasileiros
+    # (cobre os principais biomas e faixas relevantes para obras de infraestrutura)
+    estado = _br_estado_approx(lat, lng)
+    lat_fmt = f"{abs(lat):.2f}°{'S' if lat < 0 else 'N'}"
+    lng_fmt = f"{abs(lng):.2f}°{'O' if lng < 0 else 'L'}"
+    if estado:
+        return f"{estado}, Brasil ({lat_fmt}, {lng_fmt})"
+    return f"Brasil ({lat_fmt}, {lng_fmt})"
+
+
+def _br_estado_approx(lat: float, lng: float) -> str | None:
+    """Aproximação grosseira de estado brasileiro por bounding box."""
+    # Tabela compacta: (lat_min, lat_max, lng_min, lng_max, sigla, nome)
+    _BOXES = [
+        (-5.3, 2.8, -52.6, -44.0, "PA", "Pará"),
+        (-18.4, -7.4, -48.0, -39.6, "TO/BA", "Tocantins / Bahia"),
+        (-4.5, 0.0, -48.0, -43.0, "MA", "Maranhão"),
+        (-7.5, -2.4, -41.5, -34.8, "CE", "Ceará"),
+        (-9.0, -6.0, -38.0, -34.8, "BA/PE", "Bahia / Pernambuco"),
+        (-10.0, -6.5, -41.5, -37.0, "BA", "Bahia"),
+        (-23.0, -19.0, -53.0, -44.0, "SP/PR", "São Paulo / Paraná"),
+        (-23.8, -19.8, -44.0, -40.3, "MG", "Minas Gerais"),
+        (-33.8, -27.0, -57.0, -48.0, "RS", "Rio Grande do Sul"),
+        (-15.0, -7.0, -61.0, -48.0, "MT/GO", "Mato Grosso / Goiás"),
+    ]
+    for lat_min, lat_max, lng_min, lng_max, _sigla, nome in _BOXES:
+        if lat_min <= lat <= lat_max and lng_min <= lng <= lng_max:
+            return nome
+    return None
 
 
 def _brl(v: float) -> str:
@@ -116,14 +189,23 @@ def render_financial_report_pdf(
         story.append(Spacer(1, 2 * mm))
         story.append(Paragraph("Resumo Executivo", st_h2))
 
-        tipo = _safe_text(resumo.get("tipo_obra", "-") or "-")
-        local = _safe_text(resumo.get("localizacao", "-") or "-")
-        story.append(
-            Paragraph(
-                f"<b>Projeto:</b> {proj_nome}<br/><b>Tipo de Obra:</b> {tipo}<br/><b>Localização:</b> {local}",
-                st_body,
-            )
-        )
+        tipo_obra_map = {
+            "terraplenagem": "Terraplenagem",
+            "pavimentacao": "Pavimentação Asfáltica",
+            "pavimentação": "Pavimentação Asfáltica",
+            "saneamento": "Saneamento Básico",
+            "edificacao": "Edificação",
+            "edificação": "Edificação",
+            "infraestrutura": "Infraestrutura",
+        }
+        tipo_raw = resumo.get("tipo_obra", "") or ""
+        tipo = _safe_text(tipo_obra_map.get(tipo_raw.lower(), tipo_raw or "-"))
+        local = _safe_text(_fmt_localizacao(resumo.get("localizacao")))
+        descricao = resumo.get("descricao") or resumo.get("objetivo") or ""
+        info_lines = f"<b>Projeto:</b> {proj_nome}<br/><b>Tipo de Obra:</b> {tipo}<br/><b>Localização:</b> {local}"
+        if descricao:
+            info_lines += f"<br/><b>Descrição:</b> {_safe_text(str(descricao))}"
+        story.append(Paragraph(info_lines, st_body))
 
         story.append(Spacer(1, 1 * mm))
         story.append(Paragraph("Resultado Financeiro", st_h2))
@@ -203,7 +285,9 @@ def render_financial_report_pdf(
             ]
             for item in planejamento[:20]:
                 item_id = _safe_text(item.get("item_id", "-"))
-                desc = _safe_text(str(item.get("descricao", ""))[:80])
+                # item.get("descricao") pode retornar None explícito (JSON null)
+                desc_raw = item.get("descricao") or item.get("cpu_id") or ""
+                desc = _safe_text(str(desc_raw)[:80])
                 valor = _brl(float(item.get("subtotal_com_bdi", 0.0) or 0.0))
                 plan_data.append(
                     [
@@ -243,9 +327,9 @@ def render_financial_report_pdf(
                 "pool_economia.png",
                 "painel_equilibrio.png",
             ]
-            # Altura máxima por imagem: ½ da página útil para evitar LayoutError
-            # "Flowable too large on page N" quando a imagem excede o frame restante.
-            max_img_h = (page_h - 32 * mm) * 0.5
+            # Limites de dimensão por imagem para evitar LayoutError e distorção.
+            max_img_w = usable_w * 0.95
+            max_img_h = (page_h - 32 * mm) * 0.5  # ½ página útil
             images_added = 0
             for name in preferred:
                 if images_added >= 4:
@@ -254,14 +338,17 @@ def render_financial_report_pdf(
                 if not content:
                     continue
                 try:
-                    img = Image(BytesIO(content), width=usable_w * 0.95)
-                    # Limita altura mantendo aspect ratio
-                    if img.imageHeight > max_img_h:
-                        ratio = max_img_h / img.imageHeight
-                        img = Image(BytesIO(content), width=usable_w * 0.95 * ratio, height=max_img_h)
+                    probe = Image(BytesIO(content))
+                    nat_w, nat_h = probe.imageWidth, probe.imageHeight
+                    if nat_w <= 0 or nat_h <= 0:
+                        continue
+                    # Escala proporcional: cabe dentro de max_img_w × max_img_h sem distorcer
+                    scale = min(max_img_w / nat_w, max_img_h / nat_h, 1.0)
+                    disp_w, disp_h = nat_w * scale, nat_h * scale
+                    img = Image(BytesIO(content), width=disp_w, height=disp_h)
                     img.hAlign = "CENTER"
                     story.append(Spacer(1, 2 * mm))
-                    story.append(Paragraph(_safe_text(name.replace(".png", "")), st_h2))
+                    story.append(Paragraph(_safe_text(_chart_label(name)), st_h2))
                     story.append(img)
                     images_added += 1
                 except Exception:
