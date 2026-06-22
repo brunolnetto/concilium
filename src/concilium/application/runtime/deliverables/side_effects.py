@@ -129,7 +129,12 @@ def _save_relatorio_files(
             except Exception:
                 pass
         if gerar_pdf:
-            proj_nome = (rel_dict.get("meta") or {}).get("projeto", "Relatório")
+            # Prioridade: meta.projeto → resumo.projeto → fallback genérico
+            proj_nome = (
+                (rel_dict.get("meta") or {}).get("projeto")
+                or (rel_dict.get("resumo") or {}).get("projeto")
+                or "Relatório Financeiro"
+            )
             provider = lambda file_name: _load_output_image_bytes(project, v, file_name)
             pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
             if pdf_bytes:

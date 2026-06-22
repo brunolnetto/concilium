@@ -728,7 +728,15 @@ def _rra_build_resultado_section(
         + float(res.custo.indireto_qsms or 0.0)
         + float(res.custo.indireto_mob or 0.0)
     )
-    preco_venda_total = float(res.venda.total_com_bdi or 0.0)
+    # ADR-085/ADR-114: preço de venda é o OPERACIONAL (total_custo_plus = custo_instancial×BDI + indiretos),
+    # NÃO o de catálogo (total_com_bdi = PU_catalogo×Q×BDI). A margem é calculada sobre o preço que
+    # a empresa cobra pelo que realmente executa — o catálogo serve como referência de mercado, não
+    # como base de precificação operacional.
+    preco_venda_total = float(
+        getattr(res.venda, "total_custo_plus", None)
+        or getattr(res.venda, "total_com_bdi", None)
+        or 0.0
+    )
     # Usar custo.total do modelo como fonte autoritativa (inclui todos os componentes
     # calculados por skill-08). Fallback para recálculo local apenas quando ausente.
     custo_total_canonical = float(res.custo.total or 0.0) if res.custo.total else None
