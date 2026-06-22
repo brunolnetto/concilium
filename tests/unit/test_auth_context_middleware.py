@@ -194,24 +194,28 @@ class TestJsonFormatterWithAuthContext:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+@pytest.fixture(scope="module")
+def _auth_app():
+    """App criado uma vez por módulo para TestDirectTokenIssuance."""
+    from unittest.mock import patch
+    from fastapi.testclient import TestClient
+    from concilium.presentation.api.app import create_app
+
+    with (
+        patch("concilium.presentation.api.app.setup_telemetry"),
+        patch("concilium.presentation.api.app.configure_logging"),
+    ):
+        app = create_app()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
+
+
 class TestDirectTokenIssuance:
     """/auth/token/issue emite token para usuário existente sem device code."""
 
     @pytest.fixture
-    def client(self):
-        from unittest.mock import patch
-
-        from fastapi.testclient import TestClient
-
-        from concilium.presentation.api.app import create_app
-
-        with (
-            patch("concilium.presentation.api.app.setup_telemetry"),
-            patch("concilium.presentation.api.app.configure_logging"),
-        ):
-            app = create_app()
-        with TestClient(app, raise_server_exceptions=False) as c:
-            yield c
+    def client(self, _auth_app):
+        return _auth_app
 
     def test_issue_token_requires_valid_client_credentials(self, client):
         """POST /auth/token/issue com client_id/secret inválidos retorna 401."""

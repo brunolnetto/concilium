@@ -1545,19 +1545,14 @@ class TestAdapterSaidaAgisBranches:
 
     pytestmark = [pytest.mark.slow]
 
-    def test_adapter_sem_ponto_equilibrio(self):
-        """Cobre path quando pe (PontoEquilibrio) não existe para equipe."""
-        can = _canonical_com_resultado()
-        # ponto_equilibrio está vazio no canonical por padrão → pe = None
-        assert can.ponto_equilibrio == []
-        result = run_relatorio_e_artefatos(can, {})
-        assert not result.has_errors
-        # linha EQUIPE deve ter custo_venda_cpu=None
-        equipe_rows = result.relatorio["EQUIPE"]
-        assert equipe_rows[0]["custo_venda_cpu"] is None
+    @pytest.fixture(scope="class")
+    def _result_sem_pe(self):
+        """run_relatorio_e_artefatos sem ponto_equilibrio — uma vez por classe."""
+        return run_relatorio_e_artefatos(_canonical_com_resultado(), {})
 
-    def test_adapter_com_ponto_equilibrio(self):
-        """Cobre path quando pe existe (custo_venda_cpu preenchido)."""
+    @pytest.fixture(scope="class")
+    def _result_com_pe(self):
+        """run_relatorio_e_artefatos com ponto_equilibrio — uma vez por classe."""
         from concilium.domain.models.canonical import PontoEquilibrio as PE
 
         can = _canonical_com_resultado()
@@ -1569,10 +1564,18 @@ class TestAdapterSaidaAgisBranches:
             delta_pct=0.05,
             status_validacao="OK",
         )
-        can = can.model_copy(update={"ponto_equilibrio": [pe]})
-        result = run_relatorio_e_artefatos(can, {})
-        assert not result.has_errors
-        equipe_rows = result.relatorio["EQUIPE"]
+        return run_relatorio_e_artefatos(can.model_copy(update={"ponto_equilibrio": [pe]}), {})
+
+    def test_adapter_sem_ponto_equilibrio(self, _result_sem_pe):
+        """Cobre path quando pe (PontoEquilibrio) não existe para equipe."""
+        assert not _result_sem_pe.has_errors
+        equipe_rows = _result_sem_pe.relatorio["EQUIPE"]
+        assert equipe_rows[0]["custo_venda_cpu"] is None
+
+    def test_adapter_com_ponto_equilibrio(self, _result_com_pe):
+        """Cobre path quando pe existe (custo_venda_cpu preenchido)."""
+        assert not _result_com_pe.has_errors
+        equipe_rows = _result_com_pe.relatorio["EQUIPE"]
         assert equipe_rows[0]["custo_venda_cpu"] == 640_000
 
 

@@ -135,6 +135,21 @@ class TestBenchmarkRoutes:
 # ─── presentation/api/routes/projects.py (10 missing — patch_project_config error) ──
 
 
+@pytest.fixture(scope="module")
+def _projects_app():
+    """App FastAPI criado uma vez por módulo para TestProjectsRouteErrors."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    try:
+        from concilium.presentation.api.app import create_app
+    except TypeError:
+        pytest.skip("FastAPI incompatível")
+    app = create_app()
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield app  # yield the app, not the client — svc varies per test
+
+
 class TestProjectsRouteErrors:
     def _client(self, svc=None):
         pytest.importorskip("fastapi")
@@ -150,17 +165,23 @@ class TestProjectsRouteErrors:
             app.dependency_overrides[get_concilium_service] = lambda: svc
         return TestClient(app, raise_server_exceptions=False)
 
-    def test_patch_project_config_not_found(self):
+    def _client_with_svc(self, app, svc):
+        from fastapi.testclient import TestClient
+        from concilium.presentation.api.container import get_concilium_service
+        app.dependency_overrides[get_concilium_service] = lambda: svc
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_patch_project_config_not_found(self, _projects_app):
         svc = MagicMock()
         svc.patch_project_config.side_effect = FileNotFoundError("not found")
-        c = self._client(svc)
+        c = self._client_with_svc(_projects_app, svc)
         resp = c.patch("/api/projects/proj-1/config", json={"nome": "X"})
         assert resp.status_code == 404
 
-    def test_upsert_eap_happy(self):
+    def test_upsert_eap_happy(self, _projects_app):
         svc = MagicMock()
         svc.upsert_eap.return_value = {"eap": [{"item_id": "1.1"}]}
-        c = self._client(svc)
+        c = self._client_with_svc(_projects_app, svc)
         resp = c.put("/api/projects/proj-1/eap", json={"items": [{"item_id": "1.1", "cpu_id": "CPU-1"}]})
         assert resp.status_code in (200, 422)
 
