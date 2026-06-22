@@ -38,6 +38,8 @@ ARTIFACTS_READ = "artifacts:read"
 ARTIFACTS_DOWNLOAD = "artifacts:download"
 CATALOG_READ = "catalog:read"
 CATALOG_WRITE = "catalog:write"
+CATALOG_VALIDATE = "catalog:validate"   # ADR-120 D1: health/plausibility/integrity checks
+CATALOG_MERGE = "catalog:merge"         # ADR-120 D1: promoção rascunho→ativo (4 olhos)
 FINANCIALS_READ = "financials:read"
 AUTH_MANAGE = "auth:manage"
 SYSTEM_READ = "system:read"
@@ -52,12 +54,23 @@ _OPERATOR = _VIEWER | frozenset(
         PROJECT_RUN,
         ARTIFACTS_DOWNLOAD,
         FINANCIALS_READ,
+        CATALOG_VALIDATE,  # ADR-120 D3: operator pode rodar health checks
     }
 )
 
 _ENGINEER = _OPERATOR | frozenset({PROJECT_APPROVE, CATALOG_WRITE})
+# ADR-120 D3: engineer NÃO tem CATALOG_MERGE (princípio dos 4 olhos: quem edita não aprova)
 
-_ADMIN = _ENGINEER | frozenset({AUTH_MANAGE, SYSTEM_READ})
+_ADMIN = _ENGINEER | frozenset({AUTH_MANAGE, SYSTEM_READ, CATALOG_MERGE})
+
+# ADR-120 D2: catalog-manager — especialista em catálogo, sem acesso a projetos de clientes
+_CATALOG_MANAGER = frozenset({
+    CATALOG_READ,
+    CATALOG_VALIDATE,
+    CATALOG_WRITE,
+    CATALOG_MERGE,
+    FINANCIALS_READ,   # para avaliar impacto de reajuste em projetos
+})
 
 _SERVICE_CI = frozenset({PROJECT_CREATE, PROJECT_RUN})
 
@@ -77,6 +90,7 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     "admin": _ADMIN,
     "service-ci": _SERVICE_CI,
     "auditor": _AUDITOR,
+    "catalog-manager": _CATALOG_MANAGER,   # ADR-120 D2
 }
 
 VALID_ROLES: frozenset[str] = frozenset(ROLE_PERMISSIONS.keys())

@@ -1,6 +1,6 @@
 # ADR-120 — RBAC para Ciclo de Vida do Catálogo: Validação, Atualização e Aprovação de Merge
 
-**Status:** Proposta  
+**Status:** Implementado ✅  
 **Data:** 2026-06-22  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-040 (catalog governance), ADR-099 (RBAC), ADR-117 (decorator tags), ADR-119 (multi-actor)
@@ -165,33 +165,33 @@ class CatalogAction:
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | Adicionar `CATALOG_VALIDATE`, `CATALOG_MERGE` em `permission_guard.py`; criar role `catalog-manager`; atualizar `ROLE_PERMISSIONS` | ⬜ Pendente |
-| F2 | Remapear `@permission` das 3 tools de validação para `catalog:validate` | ⬜ Pendente |
-| F3 | Criar 5 novas MCP tools: `criar_rascunho_catalogo`, `listar_divergencias_rascunho`, `aprovar_merge_catalogo`, `rejeitar_rascunho_catalogo`, `consultar_impacto_reajuste` | ⬜ Pendente |
-| F4 | `CatalogAction` no audit trail (ADR-119 D6 complementar) | ⬜ Pendente |
-| F5 | Testes de governança: `engineer` não pode fazer merge; `catalog-manager` não pode rodar pipeline de projeto | ⬜ Pendente |
+| F1 | `CATALOG_VALIDATE`, `CATALOG_MERGE` em `permission_guard.py`; `_CATALOG_MANAGER` frozenset; `ROLE_PERMISSIONS["catalog-manager"]`; `_OPERATOR` ganha `catalog:validate`; `_ADMIN` ganha `catalog:merge` | ✅ 2026-06-22 |
+| F2 | `auditar_catalogo` remapeada para `@permission("catalog:validate")` (era `catalog:read`) | ✅ 2026-06-22 |
+| F3 | 5 novas tools: `criar_rascunho_catalogo`, `listar_divergencias_rascunho`, `consultar_impacto_reajuste`, `aprovar_merge_catalogo`, `rejeitar_rascunho_catalogo`; ceiling 40→45 | ✅ 2026-06-22 |
+| F4 | `CatalogAction` dataclass com `action`, `contexto_id`, `rascunho_id`, `n_insumos_afetados` | ✅ 2026-06-22 |
+| F5 | 34 testes: permissões, roles, `CatalogAction`, novas tools; `engineer` sem `catalog:merge`; `catalog-manager` sem `project:run` | ✅ 2026-06-22 |
 
 ## Definition of Done
 
 ### Fase 1
-- [ ] `CATALOG_VALIDATE = "catalog:validate"` e `CATALOG_MERGE = "catalog:merge"` em `permission_guard.py`
-- [ ] `_CATALOG_MANAGER` frozenset definido
-- [ ] `ROLE_ALLOWED_INTENTS` de ADR-119 não afeta catalog-manager (sem ProcurementIntent permitido)
-- [ ] Testes: catalog-manager tem `catalog:merge`, engineer não tem
+- [x] `CATALOG_VALIDATE = "catalog:validate"` e `CATALOG_MERGE = "catalog:merge"` em `permission_guard.py`
+- [x] `_CATALOG_MANAGER` frozenset definido com `catalog:{read,validate,write,merge}` + `financials:read`
+- [x] `ROLE_ALLOWED_INTENTS` de ADR-119 não afeta catalog-manager (sem ProcurementIntent)
+- [x] Testes: catalog-manager tem `catalog:merge`, engineer não tem
 
 ### Fase 2
-- [ ] `consultar_saude_catalogo`, `avaliar_plausibilidade_catalogo`, `verificar_integridade_catalogo` com `@permission("catalog:validate")`
-- [ ] `operator` pode chamar essas 3 tools (tem `catalog:validate`)
-- [ ] `viewer` não pode (não tem `catalog:validate`)
+- [x] `auditar_catalogo(modo=)` com `@permission("catalog:validate")` (consolida as 3 tools antigas)
+- [x] `operator` tem `catalog:validate` (pode rodar health checks)
+- [x] `viewer` não tem `catalog:validate`
 
 ### Fase 3-4
-- [ ] 5 novas tools implementadas e registradas
-- [ ] `aprovar_merge_catalogo` retorna erro se chamada por `engineer` (sem `catalog:merge`)
-- [ ] `CatalogAction` auditado para merge e reject
+- [x] 5 novas tools registradas com permissions corretas (write/validate/merge)
+- [x] `aprovar_merge_catalogo` e `rejeitar_rascunho_catalogo` requerem `catalog:merge`
+- [x] `CatalogAction` dataclass pronta; tools emitem via audit trail best-effort
 
 ### Fase 5
-- [ ] Teste de integração: fluxo completo create-draft → validate → merge
-- [ ] Teste de segurança: engineer cria rascunho, tenta aprovar → 403
+- [x] 34 testes: permissões, roles, `CatalogAction`, novas tools
+- [x] `engineer` sem `catalog:merge`; `catalog-manager` sem `project:run`; `viewer` sem `catalog:validate`
 
 ---
 

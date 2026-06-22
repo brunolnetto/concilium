@@ -10,6 +10,23 @@ from .project_repository import ProjectHandle
 
 
 @dataclass
+class CatalogAction:
+    """ADR-120 D6: entrada de auditoria para ações sobre o ciclo de vida do catálogo."""
+
+    action: Literal["write_draft", "validate", "merge", "reject"]
+    contexto_id: str
+    ts: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    actor_id: str = "system"
+    actor_role: str | None = None
+    rascunho_id: str | None = None
+    n_insumos_afetados: int | None = None
+    detalhes: dict = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class VersionAction:
     """ADR-119 D5: entrada de auditoria cross-ator para ações sobre versões."""
 

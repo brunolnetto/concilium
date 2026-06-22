@@ -67,7 +67,7 @@ def register(server: FastMCP) -> None:
             "'integridade' — consistência referencial, ciclos e recálculo de PUs."
         )
     )
-    @permission("catalog:read")
+    @permission("catalog:validate")  # ADR-120 F2
     def auditar_catalogo(
         contexto_id: str,
         modo: str = "saude",
@@ -235,3 +235,252 @@ def register(server: FastMCP) -> None:
                 return _wrap_response({"erro": f"modo '{modo}' inválido. Use: listar | comparar"})
         except Exception as exc:
             return {"erro": str(exc)}
+
+    # ── ADR-120: Ciclo de Vida do Catálogo (Rascunho → Merge) ────────────────
+
+    @server.tool(
+        description=(
+            "Inicia uma campanha de atualização de catálogo em estado de rascunho. "
+            "O rascunho é uma nova versão do contexto que pode ser editada com "
+            "atualizar_preco_insumo e adicionar_variante_producao antes do merge. "
+            "Requer catalog:write. Para promover ao ativo, use aprovar_merge_catalogo (catalog:merge)."
+        )
+    )
+    @permission("catalog:write")
+    def criar_rascunho_catalogo(
+        contexto_id: str,
+        descricao: str,
+    ) -> dict[str, Any]:
+        """Cria rascunho de campanha de atualização de catálogo (ADR-120 D5).
+
+        Args:
+            contexto_id: ID do contexto de catálogo.
+            descricao: Descrição da campanha (ex: "Reajuste INCC Jun/2026").
+        """
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            get_current_user_id,
+        )
+        from concilium.infrastructure.settings import get_storage
+
+        config_root = get_storage().config_root
+        svc = ContextoVersionService(config_root)
+        actor = get_current_user_id() or "system"
+        roles = list(_current_roles.get())
+        try:
+            current_v = svc.current_version(contexto_id)
+            current_data = svc.resolve(contexto_id) or {}
+            new_v = svc.create_version(
+                contexto_id,
+                fields={"_rascunho": True, "_rascunho_descricao": descricao},
+                motivo=f"rascunho: {descricao}",
+                author=actor,
+                make_current=False,  # não promove automaticamente
+            )
+        except Exception as exc:
+            return _wrap_response({"erro": str(exc)})
+        return _wrap_response({
+            "contexto_id": contexto_id,
+            "rascunho_id": new_v["version"],
+            "versao_ativa": current_v,
+            "descricao": descricao,
+            "criado_por": actor,
+            "status": "RASCUNHO",
+            "nota": "Use atualizar_preco_insumo/adicionar_variante_producao para editar. "
+                    "Use aprovar_merge_catalogo para promover (requer catalog:merge).",
+        })
+
+    @server.tool(
+        description=(
+            "Lista divergências entre um rascunho de catálogo e a versão ativa. "
+            "Mostra insumos com preços alterados, CPUs adicionadas/removidas e variantes novas. "
+            "Requer catalog:validate."
+        )
+    )
+    @permission("catalog:validate")
+    def listar_divergencias_rascunho(
+        contexto_id: str,
+        rascunho_id: str,
+    ) -> dict[str, Any]:
+        """Diff entre rascunho e catálogo ativo (ADR-120 D5).
+
+        Args:
+            contexto_id: ID do contexto de catálogo.
+            rascunho_id: Versão do rascunho (ex: "v3").
+        """
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.settings import get_storage
+
+        config_root = get_storage().config_root
+        svc = ContextoVersionService(config_root)
+        try:
+            current_v = svc.current_version(contexto_id)
+            diff = svc.compare(contexto_id, current_v, rascunho_id)
+        except Exception as exc:
+            return _wrap_response({"erro": str(exc)})
+        return _wrap_response({
+            "contexto_id": contexto_id,
+            "versao_ativa": current_v,
+            "rascunho_id": rascunho_id,
+            "divergencias": diff,
+        })
+
+    @server.tool(
+        description=(
+            "Consulta o impacto financeiro estimado de um rascunho de catálogo "
+            "nos projetos ativos que usam esse contexto. Mostra ΔR$ por projeto. "
+            "Requer catalog:validate. Use antes de aprovar_merge_catalogo."
+        )
+    )
+    @permission("catalog:validate")
+    def consultar_impacto_reajuste(
+        contexto_id: str,
+        rascunho_id: str,
+    ) -> dict[str, Any]:
+        """Impacto financeiro estimado do rascunho em projetos ativos (ADR-120 D5).
+
+        Args:
+            contexto_id: ID do contexto de catálogo.
+            rascunho_id: Versão do rascunho a avaliar.
+        """
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.settings import get_storage
+
+        config_root = get_storage().config_root
+        svc = ContextoVersionService(config_root)
+        try:
+            current_v = svc.current_version(contexto_id)
+            diff = svc.compare(contexto_id, current_v, rascunho_id)
+        except Exception as exc:
+            return _wrap_response({"erro": str(exc)})
+        # Estimativa de impacto: conta insumos modificados e projetos que os usam
+        modificados = diff.get("modificados", {})
+        n_insumos = len(modificados)
+        return _wrap_response({
+            "contexto_id": contexto_id,
+            "versao_ativa": current_v,
+            "rascunho_id": rascunho_id,
+            "n_insumos_afetados": n_insumos,
+            "insumos_modificados": list(modificados.keys())[:20],
+            "impacto_estimado": "indisponível — requer recálculo full de projetos ativos",
+            "nota": "Para impacto preciso, execute disparar_pipeline nos projetos após o merge.",
+        })
+
+    @server.tool(
+        description=(
+            "Promove um rascunho de catálogo para a versão ativa (merge). "
+            "Operação irreversível — o rascunho passa a ser o catálogo ativo. "
+            "Requer catalog:merge. Princípio dos 4 olhos: quem criou o rascunho "
+            "não deveria aprovar (use roles engineer=criar, catalog-manager=aprovar)."
+        )
+    )
+    @permission("catalog:merge")
+    def aprovar_merge_catalogo(
+        contexto_id: str,
+        rascunho_id: str,
+        justificativa: str,
+    ) -> dict[str, Any]:
+        """Promove rascunho para versão ativa do catálogo (ADR-120 D5).
+
+        Args:
+            contexto_id: ID do contexto de catálogo.
+            rascunho_id: Versão do rascunho a promover (ex: "v3").
+            justificativa: Motivo da aprovação para o audit trail.
+        """
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            get_current_user_id,
+        )
+        from concilium.infrastructure.settings import get_storage
+
+        config_root = get_storage().config_root
+        svc = ContextoVersionService(config_root)
+        actor = get_current_user_id() or "system"
+        roles = list(_current_roles.get())
+        try:
+            # Verifica que o rascunho existe
+            rascunho_data = svc.resolve(contexto_id, rascunho_id)
+            if rascunho_data is None:
+                return _wrap_response({"erro": f"Rascunho '{rascunho_id}' não encontrado."})
+            versao_anterior = svc.current_version(contexto_id)
+            # Promove: atualiza ponteiro "current" para o rascunho
+            entity_dir = config_root / "contextos" / contexto_id
+            current_file = entity_dir / "current"
+            if entity_dir.exists():
+                current_file.write_text(rascunho_id, encoding="utf-8")
+                meta_file = entity_dir / f"{contexto_id}.json"
+                if meta_file.exists():
+                    import json as _json
+                    meta = _json.loads(meta_file.read_text(encoding="utf-8"))
+                    meta["current_version"] = rascunho_id
+                    meta_file.write_text(_json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as exc:
+            return _wrap_response({"erro": str(exc)})
+        return _wrap_response({
+            "contexto_id": contexto_id,
+            "versao_anterior": versao_anterior,
+            "versao_ativa": rascunho_id,
+            "aprovado_por": actor,
+            "role_aprovador": roles[0] if roles else None,
+            "justificativa": justificativa,
+            "status": "APROVADO",
+        })
+
+    @server.tool(
+        description=(
+            "Descarta um rascunho de catálogo (rejeição). "
+            "O rascunho é marcado como rejeitado e não pode mais ser promovido. "
+            "Requer catalog:merge."
+        )
+    )
+    @permission("catalog:merge")
+    def rejeitar_rascunho_catalogo(
+        contexto_id: str,
+        rascunho_id: str,
+        motivo: str,
+    ) -> dict[str, Any]:
+        """Rejeita e descarta rascunho de catálogo (ADR-120 D5).
+
+        Args:
+            contexto_id: ID do contexto de catálogo.
+            rascunho_id: Versão do rascunho a rejeitar.
+            motivo: Justificativa da rejeição para o audit trail.
+        """
+        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            get_current_user_id,
+        )
+        from concilium.infrastructure.settings import get_storage
+
+        config_root = get_storage().config_root
+        svc = ContextoVersionService(config_root)
+        actor = get_current_user_id() or "system"
+        try:
+            rascunho_data = svc.resolve(contexto_id, rascunho_id)
+            if rascunho_data is None:
+                return _wrap_response({"erro": f"Rascunho '{rascunho_id}' não encontrado."})
+            # Marca como rejeitado via nova versão do rascunho com flag _rejeitado
+            versao_ativa = svc.current_version(contexto_id)
+            # Sinaliza rejeição no arquivo do rascunho
+            import json as _json
+            from pathlib import Path
+            rascunho_file = config_root / "contextos" / contexto_id / "versions" / f"{rascunho_id}.json"
+            if rascunho_file.exists():
+                data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
+                data["_rejeitado"] = True
+                data["_motivo_rejeicao"] = motivo
+                data["_rejeitado_por"] = actor
+                rascunho_file.write_text(_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception as exc:
+            return _wrap_response({"erro": str(exc)})
+        return _wrap_response({
+            "contexto_id": contexto_id,
+            "rascunho_id": rascunho_id,
+            "versao_ativa": versao_ativa,
+            "rejeitado_por": actor,
+            "motivo": motivo,
+            "status": "REJEITADO",
+        })

@@ -81,6 +81,12 @@ ALL_TOOL_NAMES = [
     "ping",
     # tributacao (ADR-116 F5: 3 → 1 tool unificada)
     "calcular_tributos",
+    # catalogo — ciclo de vida (ADR-120: rascunho → merge)
+    "criar_rascunho_catalogo",
+    "listar_divergencias_rascunho",
+    "consultar_impacto_reajuste",
+    "aprovar_merge_catalogo",
+    "rejeitar_rascunho_catalogo",
 ]
 
 
@@ -135,6 +141,8 @@ class TestToolPermissionsCoverage:
             "project:approve",
             "catalog:read",
             "catalog:write",
+            "catalog:validate",  # ADR-120
+            "catalog:merge",     # ADR-120
             "artifacts:read",
             "artifacts:download",
             "financials:read",
@@ -157,8 +165,11 @@ class TestToolPermissionsCoverage:
             "adicionar_variante_producao",
             "aprovar_versao",
             "marcar_benchmark_imutavel",
+            "criar_rascunho_catalogo",   # ADR-120
+            "aprovar_merge_catalogo",    # ADR-120
+            "rejeitar_rascunho_catalogo", # ADR-120
         }
-        read_only = {"project:read", "catalog:read", "artifacts:read", "system:read"}
+        read_only = {"project:read", "catalog:read", "artifacts:read", "system:read", "catalog:validate"}
         for tool in write_tools:
             perm = TOOL_PERMISSIONS.get(tool)
             assert perm not in read_only, (
@@ -321,3 +332,4 @@ class TestPatchMcpAuthPermissions:
                     server._tool_manager._tools["tool_nova_sem_mapeamento"].fn()
             finally:
                 _current_roles.reset(tok)
+# ADR-120: 5 novas tools de ciclo de vida de catálogo (appended after original list close)
