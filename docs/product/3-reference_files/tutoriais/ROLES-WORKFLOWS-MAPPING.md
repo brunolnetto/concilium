@@ -100,10 +100,12 @@ graph TD
 
 ## 3. Permissões → Tools MCP
 
-### 🔓 Sem autenticação requerida
+### 🔐 `system:read` requerido
 | Tool | Permissão | Descrição |
 |---|---|---|
-| `ping()` | — | Health check do sistema |
+| `ping()` | `system:read` | Health check — detalhes técnicos (versão, uptime, memória). Requer admin ou catalog-manager |
+
+> **Nota:** `ping()` exige `system:read`. Não é público — apenas admin (e futuramente catalog-manager, ADR-120).
 
 ### 📖 `project:read` — Leitura de projetos
 | Tool | Descrição |
@@ -113,32 +115,31 @@ graph TD
 | `consultar_status(project_id)` | Estado do pipeline e resultado (sem valores financeiros se não tiver `financials:read`) |
 | `consultar_estrutura_projeto(project_id)` | Árvore de Escopos e Planos |
 | `consultar_job_pipeline(job_id)` | Status de job assíncrono |
-| `listar_jobs_pipeline(project_id)` | Lista jobs de pipeline |
-| `obter_estatisticas_jobs()` | Estatísticas do worker pool |
+| `listar_jobs_pipeline(project_id, incluir_estatisticas=False)` | Lista jobs de pipeline; com `incluir_estatisticas=True` inclui métricas do worker pool (requer `system:read`) |
 | `comparar_planos(...)` | Compara dois planos do mesmo escopo |
 
 ### ✏️ `project:create` — Criação de projetos
 | Tool | Descrição |
 |---|---|
-| `criar_projeto_formulario(...)` | Cria projeto a partir de QQP |
+| `criar_projeto(nome, spec=None, ...)` | Cria projeto a partir de formulário QQP ou spec estruturado (unifica `criar_projeto_formulario` + `criar_projeto_spec`) |
 | `iniciar_orcamento(...)` | Cria projeto com EAP estruturada |
-| `configurar_escopo(...)` | Cria/atualiza escopo de obra |
-| `gerenciar_plano(acao="criar", ...)` | Cria novo plano dentro de escopo |
+| `gerir_escopo(entidade="escopo", acao, ...)` | Cria/atualiza escopo de obra |
+| `gerir_escopo(entidade="plano", acao="criar", ...)` | Cria novo plano dentro de escopo |
 | `nova_versao(...)` | Cria nova versão de planejamento |
 
 ### ▶️ `project:run` — Execução de pipeline
 | Tool | Descrição |
 |---|---|
 | `disparar_pipeline(...)` | Dispara skill em background (worker pool) |
-| `avancar_pipeline(...)` | **[DEPRECATED]** Execução síncrona |
 | `simular_cenario_replan(...)` | Simula impacto de alteração no plano |
-| `aplicar_sugestao_replan(...)` | Aplica sugestão criando nova versão |
+
+> **Nota:** `avancar_pipeline` foi removido (execução síncrona descontinuada). `aplicar_sugestao_replan` não existe na versão atual.
 
 ### ✅ `project:approve` — Aprovação (irreversível)
 | Tool | Descrição |
 |---|---|
 | `aprovar_versao(project_id)` | **Congela versão — IRREVERSÍVEL** |
-| `gerenciar_plano(acao="aprovar", ...)` | Aprova plano dentro de escopo |
+| `gerir_escopo(entidade="plano", acao="aprovar", ...)` | Aprova plano dentro de escopo |
 
 ### 📦 `artifacts:read` — Listagem de artefatos
 | Tool | Descrição |
@@ -148,27 +149,31 @@ graph TD
 ### 📥 `artifacts:download` — Download de artefatos
 | Tool | Descrição |
 |---|---|
-| `ler_artefato_texto(...)` | Lê artefato textual (.md, .json, .csv) |
-| `baixar_artefato_binario(...)` | Download binário em base64 (.png, .xlsx, .pdf) |
-| `baixar_bundle_zip(project_id)` | ZIP com todos os artefatos |
+| `obter_artefato(formato="texto", ...)` | Lê artefato textual (.md, .json, .csv) |
+| `obter_artefato(formato="binario", ...)` | Download binário em base64 (.png, .xlsx, .pdf) |
+| `obter_artefato(formato="bundle", project_id)` | ZIP com todos os artefatos |
 
 ### 📚 `catalog:read` — Leitura de catálogo
 | Tool | Descrição |
 |---|---|
 | `pesquisar_catalogo(contexto_id, query)` | Busca CPUs/recursos por descrição |
-| `verificar_integridade_catalogo(...)` | Integridade estrutural do catálogo |
-| `consultar_saude_catalogo(...)` | Indicadores de saúde e cobertura |
-| `avaliar_plausibilidade_catalogo(...)` | Detecta produtividades implausíveis |
+| `auditar_catalogo(modo="integridade", ...)` | Integridade estrutural do catálogo |
+| `auditar_catalogo(modo="saude", ...)` | Indicadores de saúde e cobertura |
+| `auditar_catalogo(modo="plausibilidade", ...)` | Detecta produtividades implausíveis |
 | `comparar_rfi_catalogo(...)` | Divergências entre RFI e catálogo |
-| `tendencia_precos_catalogo(...)` | Tendência histórica de preços |
-| `consultar_preco_insumo_temporal(...)` | Preço de insumo em data específica |
+| `historico_preco_insumo(modo="tendencia", ...)` | Tendência histórica de preços |
+| `historico_preco_insumo(modo="pontual", ...)` | Preço de insumo em data específica |
+| `versoes_catalogo(modo="listar", ...)` | Lista versões do catálogo disponíveis |
+| `versoes_catalogo(modo="comparar", ...)` | Compara duas versões do catálogo |
+| `calcular_tributos(tipo="clt_empregador", ...)` | Calcula custo total empregador CLT |
+| `calcular_tributos(tipo="inss_empregado", ...)` | Calcula INSS descontado do empregado |
+| `calcular_tributos(tipo="irrf", ...)` | Calcula IRRF sobre salário |
 
 ### ✏️ `catalog:write` — Escrita em catálogo
 | Tool | Descrição |
 |---|---|
 | `atualizar_preco_insumo(...)` | Atualiza preço de insumo |
 | `adicionar_variante_producao(...)` | Adiciona variante com equipe |
-| `calcular_pu_producao(...)` | Calcula PU de produção |
 | `salvar_perfil_bdi(...)` | Salva perfil BDI no contexto |
 
 ### 💰 `financials:read` — Leitura de dados financeiros
@@ -183,7 +188,7 @@ graph TD
 ### 🧪 Benchmarks (permissões mistas)
 | Tool | Permissão | Descrição |
 |---|---|---|
-| `listar_benchmarks()` | `project:read` | Lista benchmarks disponíveis |
+| `consultar_benchmark(benchmark_id=None)` | `project:read` | Lista todos os benchmarks quando chamado sem argumento; detalha um benchmark específico com `benchmark_id` |
 | `executar_benchmark(...)` | `project:run` | Executa benchmark completo |
 | `empacotar_benchmark(slug)` | `project:read` | Empacota resultados existentes |
 | `download_benchmark_zip(slug)` | `artifacts:download` | Download do ZIP |
@@ -198,8 +203,11 @@ graph TD
 ### 🔧 `system:read` — Diagnóstico (admin)
 | Tool | Efeito |
 |---|---|
-| `ping()` | **Desbloqueia** detalhes técnicos (versão, uptime, memória) |
-| `obter_estatisticas_jobs()` | **Desbloqueia** métricas internas do worker pool |
+| `ping()` | Health check com detalhes técnicos (versão, uptime, memória) |
+| `listar_jobs_pipeline(..., incluir_estatisticas=True)` | **Desbloqueia** métricas internas do worker pool |
+
+### 🔮 `catalog:validate` — Validação de catálogo (futuro — ADR-120, não implementado)
+> **Nota:** Role `catalog-manager` proposto em ADR-120. Permissão `catalog:validate` ainda não implementada. Prevista para separar responsabilidades de auditoria do catálogo de `catalog:write`.
 
 ---
 
@@ -229,12 +237,9 @@ graph LR
         WA[Aprovar versão]
     end
     
-    V --> W0
     O --> W0
     E --> W0
     A --> W0
-    SC --> W0
-    AU --> W0
     
     O --> W1
     E --> W1
@@ -277,6 +282,7 @@ graph LR
 ```
 
 **Observações:**
+- `ping()` requer `system:read` — apenas admin (e futuramente catalog-manager) têm acesso ao health check com detalhes técnicos
 - service-ci **não** pode: diagnóstico (sem `financials:read`), baixar artefatos, consultar catálogo
 - auditor **não** pode: criar projetos, executar pipeline, aprovar versão
 - viewer **não** pode: criar, executar, baixar artefatos
@@ -284,12 +290,14 @@ graph LR
 ---
 
 ### Fluxo 0 — Verificar saúde do sistema
-**Permissões:** Nenhuma (público)
+**Permissões:** `system:read`
 
 **Tools:**
-- `ping()`
+- `ping()` ← requer `system:read`
 
-**Quem pode executar:** Todos (viewer, operator, engineer, admin, service-ci, auditor)
+**Quem pode executar:** admin (e futuramente catalog-manager, ADR-120)
+
+**Bloqueado para:** viewer, operator, engineer, service-ci, auditor
 
 ---
 
@@ -298,9 +306,11 @@ graph LR
 
 **Tools:**
 - `listar_contextos()`
-- `criar_projeto_formulario(...)` ← requer `project:create`
+- `criar_projeto(nome, spec=None, ...)` ← requer `project:create`
 - `iniciar_orcamento(...)` ← requer `project:create`
 - `pesquisar_catalogo(...)` ← requer `catalog:read`
+- `gerir_escopo(entidade="escopo", acao, ...)` ← requer `project:create`
+- `gerir_escopo(entidade="plano", acao="criar", ...)` ← requer `project:create`
 
 **Quem pode executar:** operator, engineer, admin, service-ci
 
@@ -314,8 +324,7 @@ graph LR
 **Tools:**
 - `disparar_pipeline(...)` ← requer `project:run`
 - `consultar_job_pipeline(job_id)` ← requer `project:read`
-- `listar_jobs_pipeline(...)` ← requer `project:read`
-- `obter_estatisticas_jobs()` ← requer `project:read`
+- `listar_jobs_pipeline(project_id, incluir_estatisticas=False)` ← requer `project:read`; `incluir_estatisticas=True` requer adicionalmente `system:read`
 - `consultar_status(project_id)` ← requer `project:read`
 
 **Quem pode executar:** operator, engineer, admin, service-ci
@@ -333,7 +342,6 @@ graph LR
 - `auditar_plano(project_id)` ← requer `project:read` + `financials:read`
 - `explorar_pool_recursos(...)` ← requer `project:read`
 - `simular_cenario_replan(...)` ← requer `project:run`
-- `aplicar_sugestao_replan(...)` ← requer `project:run`
 - `comparar_planos(...)` ← requer `project:read`
 
 **Quem pode executar:** operator, engineer, admin
@@ -347,9 +355,9 @@ graph LR
 
 **Tools:**
 - `listar_artefatos_projeto(...)` ← requer `artifacts:read`
-- `ler_artefato_texto(...)` ← requer `artifacts:download`
-- `baixar_artefato_binario(...)` ← requer `artifacts:download`
-- `baixar_bundle_zip(...)` ← requer `artifacts:download`
+- `obter_artefato(formato="texto", ...)` ← requer `artifacts:download`
+- `obter_artefato(formato="binario", ...)` ← requer `artifacts:download`
+- `obter_artefato(formato="bundle", ...)` ← requer `artifacts:download`
 
 **Quem pode executar:** 
 - Listar: viewer, operator, engineer, admin, auditor
@@ -365,7 +373,7 @@ graph LR
 **Permissões:** `project:run` + `artifacts:download`
 
 **Tools:**
-- `listar_benchmarks()` ← requer `project:read`
+- `consultar_benchmark(benchmark_id=None)` ← requer `project:read`; sem argumento lista todos
 - `executar_benchmark(...)` ← requer `project:run`
 - `empacotar_benchmark(slug)` ← requer `project:read`
 - `download_benchmark_zip(slug)` ← requer `artifacts:download`
@@ -385,7 +393,7 @@ graph LR
 **Permissões:** `catalog:read` + `catalog:write` (escrita)
 
 **Tools:**
-- Leitura: `pesquisar_catalogo`, `consultar_saude_catalogo`, `verificar_integridade_catalogo`, etc.
+- Leitura: `pesquisar_catalogo`, `auditar_catalogo(modo=)`, `historico_preco_insumo(modo=)`, `versoes_catalogo(modo=)`, `calcular_tributos(tipo=)`, etc.
 - Escrita: `atualizar_preco_insumo`, `adicionar_variante_producao`, `salvar_perfil_bdi`
 
 **Quem pode executar:**
@@ -402,7 +410,7 @@ graph LR
 
 | Workflow | viewer | operator | engineer | admin | service-ci | auditor |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| 0. Verificar saúde | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 0. Verificar saúde (`ping`) | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
 | 1. Criação de projeto | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | 2. Execução de pipeline | ❌ | ✅ | ✅ | ✅ | ✅⚠️ | ❌ |
 | 3. Diagnóstico e replanejamento | ❌ | ✅ | ✅ | ✅ | ❌⚠️ | ⚠️ |
@@ -431,13 +439,14 @@ graph LR
 - Ver lista de projetos e status
 - Listar artefatos disponíveis
 - Consultar catálogo de CPUs
-- Ver health do sistema
+- Ver benchmark results (listar/empacotar)
 
 **Não pode fazer:**
 - Criar projetos
 - Executar pipeline
 - Baixar artefatos (confidencialidade)
 - Ver dados financeiros
+- Acessar health check com detalhes técnicos
 
 **Exemplo:** Cliente externo acompanhando o projeto sem acesso a custos
 
@@ -447,10 +456,10 @@ graph LR
 **Objetivo:** Criar e executar projetos, ver resultados completos
 
 **Pode fazer:**
-- Criar projetos (formulário ou EAP)
+- Criar projetos (`criar_projeto`, `gerir_escopo`)
 - Executar pipeline (disparar skills)
 - Ver resultados financeiros (custos, preços, margem)
-- Baixar artefatos e bundles
+- Baixar artefatos e bundles (`obter_artefato`)
 - Simular cenários de replanejamento
 - Executar benchmarks
 
@@ -458,6 +467,7 @@ graph LR
 - Aprovar versões (não pode congelar)
 - Escrever no catálogo mestre
 - Gerenciar usuários
+- Acessar health check técnico (`ping`)
 
 **Exemplo:** Engenheiro orçamentista criando propostas
 
@@ -475,6 +485,7 @@ graph LR
 
 **Não pode fazer:**
 - Gerenciar usuários (auth:manage)
+- Acessar health check técnico (`ping`)
 
 **Exemplo:** Engenheiro responsável por aprovar propostas finais
 
@@ -487,7 +498,8 @@ graph LR
 - Tudo do Engineer
 - Criar e revogar usuários
 - Emitir device codes
-- Ver métricas internas do sistema
+- Ver health check com detalhes técnicos (`ping`)
+- Ver métricas internas do worker pool (`listar_jobs_pipeline(incluir_estatisticas=True)`)
 
 **Exemplo:** DevOps/SysAdmin gerenciando infraestrutura
 
@@ -506,6 +518,7 @@ graph LR
 - Baixar artefatos
 - Aprovar versões
 - Consultar catálogo
+- Acessar health check (`ping`)
 
 **Blast radius reduzido:** Token comprometido não expõe custos de propostas
 
@@ -519,7 +532,7 @@ graph LR
 **Pode fazer:**
 - Ver projetos e status
 - Ver dados financeiros (custos, preços, margem)
-- Baixar artefatos e relatórios
+- Baixar artefatos e relatórios (`obter_artefato`)
 - Auditar planos (viabilidade, gargalos)
 
 **Não pode fazer:**
@@ -527,6 +540,7 @@ graph LR
 - Executar pipeline
 - Modificar catálogo
 - Aprovar versões
+- Acessar health check (`ping`)
 
 **Exemplo:** Controller financeiro auditando margens de propostas
 
@@ -568,14 +582,14 @@ Exemplo:
   "permission": "project:run",
   "tool": "disparar_pipeline",
   "project_id": "rodovia-ce040",
-  "timestamp": "2026-06-03T14:32:01Z",
+  "timestamp": "2026-06-22T14:32:01Z",
   "result": "success"
 }
 ```
 
 Alertas críticos:
 - `service-ci` tentando `aprovar_versao` → **bloqueado**
-- `viewer` tentando `baixar_artefato` → **bloqueado**
+- `viewer` tentando `obter_artefato` → **bloqueado**
 - Múltiplas tentativas de acesso negado → **possível comprometimento**
 
 ---
@@ -592,6 +606,32 @@ Tokens com `scopes` antigos (ADR-094) são mapeados automaticamente:
 | `scopes: ["mcp:read", "pipeline:run"]` | `roles: ["operator"]` |
 | `scopes: ["admin"]` | `roles: ["admin"]` |
 
+### Migração de Tools Renomeadas (ADR-116 F5)
+
+| Tool antiga | Tool nova |
+|---|---|
+| `criar_projeto_formulario(...)` | `criar_projeto(nome, spec=None, ...)` |
+| `criar_projeto_spec(...)` | `criar_projeto(nome, spec=..., ...)` |
+| `configurar_escopo(...)` | `gerir_escopo(entidade="escopo", ...)` |
+| `gerenciar_plano(acao="criar", ...)` | `gerir_escopo(entidade="plano", acao="criar", ...)` |
+| `gerenciar_plano(acao="aprovar", ...)` | `gerir_escopo(entidade="plano", acao="aprovar", ...)` |
+| `ler_artefato_texto(...)` | `obter_artefato(formato="texto", ...)` |
+| `baixar_artefato_binario(...)` | `obter_artefato(formato="binario", ...)` |
+| `baixar_bundle_zip(project_id)` | `obter_artefato(formato="bundle", project_id)` |
+| `consultar_saude_catalogo(...)` | `auditar_catalogo(modo="saude", ...)` |
+| `verificar_integridade_catalogo(...)` | `auditar_catalogo(modo="integridade", ...)` |
+| `avaliar_plausibilidade_catalogo(...)` | `auditar_catalogo(modo="plausibilidade", ...)` |
+| `consultar_preco_insumo_temporal(...)` | `historico_preco_insumo(modo="pontual", ...)` |
+| `tendencia_precos_catalogo(...)` | `historico_preco_insumo(modo="tendencia", ...)` |
+| `listar_versoes_catalogo(...)` | `versoes_catalogo(modo="listar", ...)` |
+| `comparar_versoes_catalogo(...)` | `versoes_catalogo(modo="comparar", ...)` |
+| `calcular_custo_empregador_clt(...)` | `calcular_tributos(tipo="clt_empregador", ...)` |
+| `calcular_inss_empregado(...)` | `calcular_tributos(tipo="inss_empregado", ...)` |
+| `calcular_irrf(...)` | `calcular_tributos(tipo="irrf", ...)` |
+| `obter_estatisticas_jobs()` | `listar_jobs_pipeline(..., incluir_estatisticas=True)` |
+| `listar_benchmarks()` | `consultar_benchmark()` (sem argumento lista todos) |
+| `avancar_pipeline(...)` | **REMOVIDO** — use `disparar_pipeline` (assíncrono) |
+
 ### Migração Recomendada
 
 1. **Identificar tokens CI/CD:** Devem ser migrados para `service-ci` (não `operator`)
@@ -605,10 +645,12 @@ Tokens com `scopes` antigos (ADR-094) são mapeados automaticamente:
 
 - [ADR-099: RBAC — Roles e Permissões](../../engineering/0-architecture/adrs/ADR-099-rbac-roles-permissoes.md)
 - [ADR-094: JWT Auth Layer](../../engineering/0-architecture/adrs/ADR-094-jwt-auth-layer.md)
+- [ADR-116: Tool Consolidation F5](../../engineering/0-architecture/adrs/ADR-116-tool-consolidation-f5.md)
+- [ADR-120: Catalog Manager Role](../../engineering/0-architecture/adrs/ADR-120-catalog-manager-role.md) *(proposto, não implementado)*
 - [AGENT_SKILL_TUTORIAL.md](./AGENT_SKILL_TUTORIAL.md)
 - [Principle of Least Privilege — OWASP](https://owasp.org/www-community/Access_Control)
 
 ---
 
-**Última atualização:** 2026-06-03  
-**Autor:** Sistema — baseado em ADR-099 e fluxos do tutorial
+**Última atualização:** 2026-06-22  
+**Autor:** Sistema — baseado em ADR-099, ADR-116 F5 e fluxos do tutorial

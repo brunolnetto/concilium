@@ -144,6 +144,9 @@ Arquivo: `%APPDATA%\Claude\claude_desktop_config.json`
 **Sempre faça isso primeiro.** Retorna contextos disponíveis, contagem de projetos e
 saúde de cada catálogo em uma única chamada.
 
+> **Permissão:** `ping()` requer role `admin` (escopo `system:read`). Em ambientes com
+> autenticação habilitada, apenas contas admin podem chamar esta ferramenta.
+
 ```python
 ping()
 # → {status: "SAUDAVEL", contextos: ["mendeslobo-ce"], projetos: 3,
@@ -189,10 +192,10 @@ Conduzir conversa em 7 blocos, pulando os que têm defaults aceitáveis:
 
 **Bloco 3 — Serviços** (sempre)
 ```python
-# Coletar lista em linguagem natural → criar_projeto_formulario resolve CPUs
+# Coletar lista em linguagem natural → criar_projeto resolve CPUs
 listar_contextos()  # → confirmar contexto_id disponível
 
-criar_projeto_formulario(
+criar_projeto(
     nome="Rodovia CE-040 — Lote 09/10",
     contexto_id="mendeslobo",
     tipo_obra="terraplenagem",
@@ -231,7 +234,7 @@ pesquisar_catalogo(contexto_id="mendeslobo", query="carga transporte terraplenag
 #   Qual se encaixa melhor?"
 ```
 
-Repetir `criar_projeto_formulario` com `cpu_id` preenchido.
+Repetir `criar_projeto` com `cpu_id` preenchido.
 
 **Bloco 4 — Custos de canteiro** (perguntar; aceita "não sei")
 
@@ -314,10 +317,10 @@ iniciar_orcamento(
 
 ### Passo 3 — Avançar skill a skill
 
-**⚠️ IMPORTANTE:** Use `disparar_pipeline()` em vez de `avancar_pipeline()` para evitar timeouts.
-Skills podem demorar 30-120s (especialmente cronograma com RCPSP), e chamadas síncronas bloqueiam o cliente.
+**⚠️ IMPORTANTE:** Use sempre `disparar_pipeline()` para evitar timeouts. Skills podem demorar
+30-120s (especialmente cronograma com RCPSP), e chamadas síncronas bloqueiam o cliente.
 
-#### Modo recomendado (assíncrono com worker pool):
+#### Modo assíncrono com worker pool:
 
 ```python
 # Dispara a próxima skill pendente em background
@@ -346,16 +349,15 @@ job = disparar_pipeline(
 )
 # Aguardar e consultar novamente...
 
-# Listar todos os jobs do projeto (com estatísticas)
+# Listar todos os jobs do projeto
 listar_jobs_pipeline(project_id="rodovia-ce040-lote09")
-# → {jobs: [{job_id: "job-abc123", status: "CONCLUIDO", progresso_percentual: 1.0, ...}],
-#    estatisticas: {aguardando_fila: 0, em_execucao: 1, concluido: 2, erro: 0},
-#    max_concurrent_jobs: 3}
+# → {jobs: [{job_id: "job-abc123", status: "CONCLUIDO", progresso_percentual: 1.0, ...}]}
 
-# Estatísticas do sistema (diagnóstico)
-obter_estatisticas_jobs()
-# → {configuracao: {max_concurrent_jobs: 3, job_ttl_hours: 24, gc_interval_minutes: 60},
-#    contadores: {total_jobs_ativos: 5, jobs_por_status: {...}},
+# Listar com estatísticas do sistema (workers, TTL, GC, health)
+listar_jobs_pipeline(project_id="rodovia-ce040-lote09", incluir_estatisticas=True)
+# → {jobs: [...],
+#    estatisticas: {aguardando_fila: 0, em_execucao: 1, concluido: 2, erro: 0},
+#    configuracao: {max_concurrent_jobs: 3, job_ttl_hours: 24, gc_interval_minutes: 60},
 #    sistema: {worker_pool_ativo: true, gc_ativo: true}}
 ```
 
@@ -369,15 +371,6 @@ export CONCILIUM__JOB_TTL_HOURS=48
 
 # Intervalo de garbage collection (default: 60min)
 export CONCILIUM__JOB_GC_INTERVAL_MINUTES=30
-```
-
-#### Modo legado (síncrono — não recomendado):
-
-```python
-# ⚠️ BLOQUEANTE — cliente MCP pode dar timeout em skills lentas (cronograma, otimização)
-avancar_pipeline(project_id="rodovia-ce040-lote09")
-# → {skill_executada: "02-produtividade-climatica", status: "OK",
-#    proxima_sugerida: "03-catalogo-de-recursos", validacoes: [...]}
 ```
 
 ### Passo 4 — Verificar status
@@ -442,16 +435,6 @@ simular_cenario_replan(
 )
 ```
 
-### Aplicar sugestão (cria nova versão)
-
-```python
-aplicar_sugestao_replan(
-    project_id="rodovia-ce040-lote09",
-    sugestao_id="sug-001",
-    justificativa="Paralelismo eap-1_6: +2 frentes para atingir margem alvo"
-)
-```
-
 ### Comparar dois planos
 
 ```python
@@ -475,23 +458,22 @@ listar_artefatos_projeto(project_id="rodovia-ce040-lote09")
 #    {kind: "planilha_excel", filename: "resultado_planejamento.xlsx", audiencia: "humano"},
 #    ...]
 
-# Artefatos textuais (md, json, csv) — use ler_artefato_TEXTO, não ler_artefato
-ler_artefato_texto(project_id="rodovia-ce040-lote09", nome_arquivo="resumo_executivo.md")
+# Artefatos textuais (md, json, csv)
+obter_artefato(project_id="rodovia-ce040-lote09", nome_arquivo="resumo_executivo.md", formato="texto")
 # → {conteudo: "# Resumo Executivo...", tamanho_bytes: 1204}
 
-# Binários (PNG, XLSX, PDF) — use baixar_artefato_binario
-baixar_artefato_binario(project_id="rodovia-ce040-lote09", nome_arquivo="relatorio.pdf")
+# Binários (PNG, XLSX, PDF)
+obter_artefato(project_id="rodovia-ce040-lote09", nome_arquivo="relatorio.pdf", formato="binario")
 # → {base64: "...", mime_type: "application/pdf"}
 ```
 
-> ⚠️ **`ler_artefato()` não existe.** O nome correto é `ler_artefato_texto()` para
-> arquivos de texto e `baixar_artefato_binario()` para binários. Confundir os dois
-> resulta em erro de chamada.
+> ⚠️ **`ler_artefato_texto()`, `baixar_artefato_binario()` e `baixar_bundle_zip()` não existem mais.**
+> Use `obter_artefato(formato="texto"|"binario"|"bundle")` para todos os casos.
 
 ### Bundle completo
 
 ```python
-baixar_bundle_zip(project_id="rodovia-ce040-lote09")
+obter_artefato(project_id="rodovia-ce040-lote09", formato="bundle")
 # → {base64: "...", filename: "rodovia-ce040-lote09-bundle.zip"}
 ```
 
@@ -499,7 +481,7 @@ baixar_bundle_zip(project_id="rodovia-ce040-lote09")
 
 ## Fluxo 5 — Benchmarks
 
-> ⚠️ **`executar_benchmark` é uma operação longa (2–7 min).** Chamá-la via MCP stdio
+> ⚠️ **`executar_benchmark_nep039` é uma operação longa (2–7 min).** Chamá-la via MCP stdio
 > bloqueia o host Claude Code enquanto aguarda a resposta — a UI aparece travada.
 > **Use sempre o CLI para executar benchmarks:**
 >
@@ -507,12 +489,16 @@ baixar_bundle_zip(project_id="rodovia-ce040-lote09")
 > concilium benchmark run --slug AGIS --reset
 > ```
 >
-> Após a execução, use `listar_benchmarks` e `download_benchmark_zip` normalmente via MCP.
+> Após a execução, use `consultar_benchmark` e `download_benchmark_zip` normalmente via MCP.
 
 ```python
-# Ver status de todos os benchmarks
-listar_benchmarks()
+# Ver status de todos os benchmarks (sem argumento = listar todos)
+consultar_benchmark()
 # → [{slug: "AGIS", tem_referencia: true, relatorios: 3, zips_disponiveis: []}, ...]
+
+# Ver detalhe de um benchmark específico
+consultar_benchmark(benchmark_id="AGIS")
+# → {slug: "AGIS", tem_referencia: true, relatorios: [...], quality_gates: {...}}
 
 # Empacotar resultados já existentes (rápido — não re-executa)
 empacotar_benchmark(slug="AGIS")
@@ -524,7 +510,7 @@ download_benchmark_zip(slug="AGIS")
 ### Interpretar resultados de benchmark
 
 Os artefatos ficam em `benchmarks/data/<SLUG>/artifacts/`. Para ler via MCP não existe
-tool direta — use `ler_artefato_texto` do projeto ou leia pelo filesystem. Os artefatos
+tool direta — use `obter_artefato(formato="texto")` do projeto ou leia pelo filesystem. Os artefatos
 chave são:
 
 | Arquivo | Conteúdo | Audiência |
@@ -556,29 +542,31 @@ de drenagem de baixo volume.
 
 ```python
 # Saúde geral do catálogo
-consultar_saude_catalogo(contexto_id="mendeslobo-ce")
+auditar_catalogo(contexto_id="mendeslobo-ce", modo="saude")
 
 # Integridade estrutural (detecta CPUs sem equipe, produtividades zeradas, etc.)
-verificar_integridade_catalogo(
+auditar_catalogo(
     contexto_id="mendeslobo-ce",
+    modo="integridade",
     alpha_clt=1.777,    # encargo CLT
     alpha_pj=1.06,      # encargo PJ
     preco_diesel=6.5    # R$/litro
 )
 
 # Plausibilidade dos dados (detecta ratios P_can/P_orig fora de [0.5, 2.0])
-avaliar_plausibilidade_catalogo(contexto_id="mendeslobo-ce")
+auditar_catalogo(contexto_id="mendeslobo-ce", modo="plausibilidade")
 
 # Comparar RFI com catálogo (dry_run=True não salva alterações)
 comparar_rfi_catalogo(contexto_id="mendeslobo-ce", dry_run=True)
 
 # Tendência histórica de preços
-tendencia_precos_catalogo(contexto_id="mendeslobo-ce")
+historico_preco_insumo(contexto_id="mendeslobo-ce", modo="tendencia")
 
 # Preço de insumo em data específica
-consultar_preco_insumo_temporal(
+historico_preco_insumo(
     contexto_id="mendeslobo-ce",
     insumo_id="diesel",
+    modo="pontual",
     data_referencia="2026-06-01"
 )
 
@@ -600,7 +588,7 @@ v1 (RASCUNHO) → aprovar_versao → v1 (APROVADO)
                                       ↓
                                nova_versao() → v2 (RASCUNHO)
                                       ↓
-                               avancar_pipeline...
+                               disparar_pipeline...
 ```
 
 ```python
@@ -623,7 +611,7 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 
 | Tool | Descrição |
 |---|---|
-| `ping()` | Saúde do servidor, contextos, projetos e catálogos em uma chamada |
+| `ping()` | Saúde do servidor, contextos, projetos e catálogos em uma chamada — requer `system:read` (admin) |
 | `listar_contextos()` | Lista contextos de catálogo disponíveis |
 | `listar_projetos()` | Lista todos os projetos existentes |
 
@@ -631,10 +619,9 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 
 | Tool | Descrição |
 |---|---|
-| `criar_projeto_formulario(...)` | Cria projeto a partir de QQP (linguagem natural → EAP) |
+| `criar_projeto(nome, spec=None, ...)` | Cria projeto via QQP (linguagem natural → EAP) quando `spec=None`, ou via EAP estruturada com `cpu_id` quando `spec` fornecido; substitui `criar_projeto_formulario` e `criar_projeto_spec` |
 | `iniciar_orcamento(...)` | Cria projeto com EAP estruturada e `cpu_id` já conhecidos |
-| `configurar_escopo(...)` | Cria ou atualiza um escopo de obra no projeto |
-| `gerenciar_plano(acao, ...)` | Gerencia planos dentro de um escopo (`criar`/`aprovar`/`arquivar`) |
+| `gerir_escopo(entidade, acao, ...)` | `entidade="escopo"` cria/atualiza escopo; `entidade="plano"` gerencia planos (`criar`/`aprovar`/`arquivar`) — substitui `configurar_escopo` e `gerenciar_plano` |
 | `nova_versao(...)` | Cria nova versão de planejamento a partir de versão aprovada |
 | `consultar_status(project_id)` | Estado do pipeline e resultado financeiro atual |
 | `consultar_estrutura_projeto(project_id)` | Árvore completa de Escopos e Planos (ADR-031) |
@@ -646,25 +633,22 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 |---|---|
 | `disparar_pipeline(project_id, ...)` | **[RECOMENDADO]** Dispara skill em background via worker pool, retorna job_id |
 | `consultar_job_pipeline(job_id)` | Consulta status, progresso e resultado de job assíncrono |
-| `listar_jobs_pipeline(project_id)` | Lista todos os jobs de pipeline do projeto com estatísticas |
-| `obter_estatisticas_jobs()` | Estatísticas do sistema (workers, TTL, GC, health check) |
-| `avancar_pipeline(project_id, ...)` | **[DEPRECATED]** Executa skill de forma síncrona (bloqueante — evite usar) |
+| `listar_jobs_pipeline(project_id, incluir_estatisticas=False)` | Lista jobs do projeto; `incluir_estatisticas=True` inclui contadores do sistema (workers, TTL, GC) |
 
 ### Catálogo
 
 | Tool | Descrição |
 |---|---|
 | `pesquisar_catalogo(contexto_id, query)` | Busca CPUs/recursos por descrição ou tipo de obra |
-| `verificar_integridade_catalogo(contexto_id)` | Integridade estrutural (CPUs sem equipe, PUs zerados) |
-| `consultar_saude_catalogo(contexto_id)` | Indicadores de saúde e cobertura |
-| `avaliar_plausibilidade_catalogo(contexto_id)` | Detecta ratios P_can/P_orig fora do intervalo aceitável |
+| `auditar_catalogo(contexto_id, modo=)` | `modo="saude"` indicadores gerais; `modo="integridade"` CPUs sem equipe/PUs zerados; `modo="plausibilidade"` ratios P_can/P_orig fora do intervalo — substitui `consultar_saude_catalogo`, `verificar_integridade_catalogo`, `avaliar_plausibilidade_catalogo` |
 | `comparar_rfi_catalogo(contexto_id, dry_run)` | Divergências entre RFI e catálogo |
-| `tendencia_precos_catalogo(contexto_id)` | Tendência histórica de preços por insumo |
-| `consultar_preco_insumo_temporal(...)` | Preço de insumo em data específica |
+| `historico_preco_insumo(contexto_id, insumo_id, modo=)` | `modo="pontual"` retorna preço em `data_referencia`; `modo="tendencia"` série histórica completa — substitui `consultar_preco_insumo_temporal` e `tendencia_precos_catalogo` |
+| `versoes_catalogo(contexto_id, modo=)` | `modo="listar"` lista versões disponíveis; `modo="comparar"` compara duas versões — substitui `listar_versoes_catalogo` e `comparar_versoes_catalogo` |
 | `atualizar_preco_insumo(...)` | Atualiza preço de insumo no contexto |
 | `adicionar_variante_producao(...)` | Adiciona variante com equipe e valor horário |
 | `calcular_pu_producao(...)` | Calcula PU de produção para uma composição |
 | `salvar_perfil_bdi(...)` | Salva perfil BDI no contexto |
+| `calcular_tributos(tipo=)` | `tipo="custo_empregador_clt"`, `"inss_empregado"` ou `"irrf"` — substitui `calcular_custo_empregador_clt`, `calcular_inss_empregado`, `calcular_irrf` |
 
 ### Análise e diagnóstico
 
@@ -674,23 +658,20 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 | `explorar_pool_recursos(project_id, face)` | Decomposição composicional-temporal do pool (7 faces) |
 | `comparar_planos(project_id, plano_a, plano_b)` | Compara dois planos do mesmo escopo |
 | `simular_cenario_replan(project_id, tipo, params)` | Simula impacto de alteração no plano |
-| `aplicar_sugestao_replan(project_id, sugestao_id)` | Aplica sugestão criando nova versão |
 
 ### Artefatos
 
 | Tool | Descrição |
 |---|---|
 | `listar_artefatos_projeto(project_id)` | Lista artefatos com nome, tipo, tamanho e audiência |
-| `ler_artefato_texto(project_id, nome_arquivo)` | Lê artefato textual: `.md`, `.json`, `.csv`, `.txt` |
-| `baixar_artefato_binario(project_id, nome_arquivo)` | Retorna binário em base64: `.png`, `.xlsx`, `.pdf` |
-| `baixar_bundle_zip(project_id)` | ZIP com todos os artefatos do projeto |
+| `obter_artefato(project_id, nome_arquivo, formato=)` | `formato="texto"` para `.md`/`.json`/`.csv`; `formato="binario"` para `.png`/`.xlsx`/`.pdf` (base64); `formato="bundle"` para ZIP completo do projeto — substitui `ler_artefato_texto`, `baixar_artefato_binario`, `baixar_bundle_zip` |
 
 ### Benchmarks
 
 | Tool | Descrição |
 |---|---|
-| `listar_benchmarks()` | Lista benchmarks disponíveis com status e artefatos |
-| `executar_benchmark(slug, reset)` | ⚠️ **LENTO (2–7 min) — prefira o CLI** |
+| `consultar_benchmark(benchmark_id=None)` | Sem argumento: lista todos os benchmarks com status e artefatos; com `benchmark_id`: detalha um benchmark específico — substitui `listar_benchmarks` |
+| `executar_benchmark_nep039(slug, reset)` | ⚠️ **LENTO (2–7 min) — prefira o CLI** |
 | `empacotar_benchmark(slug)` | Empacota resultados existentes em ZIP |
 | `download_benchmark_zip(slug)` | Retorna ZIP do benchmark em base64 |
 
@@ -700,17 +681,26 @@ consultar_estrutura_projeto(project_id="rodovia-ce040-lote09")
 
 | Código / Mensagem | Causa | Solução |
 |---|---|---|
-| `Tool not found: ler_artefato` | Nome errado | Use `ler_artefato_texto` (texto) ou `baixar_artefato_binario` (binário) |
+| `Tool not found: ler_artefato_texto` | Nome antigo removido | Use `obter_artefato(formato="texto")` |
+| `Tool not found: baixar_artefato_binario` | Nome antigo removido | Use `obter_artefato(formato="binario")` |
+| `Tool not found: baixar_bundle_zip` | Nome antigo removido | Use `obter_artefato(formato="bundle")` |
 | `Tool not found: buscar_cpu` | Nome errado | Use `pesquisar_catalogo(contexto_id, query)` |
+| `Tool not found: criar_projeto_formulario` | Nome antigo removido | Use `criar_projeto(nome=..., ...)` |
+| `Tool not found: configurar_escopo` | Nome antigo removido | Use `gerir_escopo(entidade="escopo", ...)` |
+| `Tool not found: gerenciar_plano` | Nome antigo removido | Use `gerir_escopo(entidade="plano", ...)` |
+| `Tool not found: listar_benchmarks` | Nome antigo removido | Use `consultar_benchmark()` (sem args = lista todos) |
+| `Tool not found: executar_benchmark` | Nome antigo removido | Use `executar_benchmark_nep039(slug, reset)` via CLI |
+| `Tool not found: avancar_pipeline` | Ferramenta removida | Use `disparar_pipeline()` + `consultar_job_pipeline()` |
+| `Tool not found: obter_estatisticas_jobs` | Ferramenta removida | Use `listar_jobs_pipeline(incluir_estatisticas=True)` |
+| `403 Forbidden` em `ping()` | `ping()` requer role `admin` (`system:read`) | Usar conta com permissão admin |
 | `pipeline_integridade: CORROMPIDO` | Skill GATE falhou | Ver `validacoes` em `consultar_status`, corrigir inputs e re-executar |
 | `status: pendente_mapeamento` | Serviço sem CPU | Usar `pesquisar_catalogo()` e repassar com `cpu_id` |
 | `margem VERMELHO` | BDI ou pool de equipes fora do alvo | Revisar BDI via `salvar_perfil_bdi` e simular cenários com `simular_cenario_replan` |
 | `401 Unauthorized` | Token ausente, expirado ou inválido (prod) | Renovar token JWT |
 | `403 Forbidden` | Token válido mas escopo insuficiente | Usar client_id com escopo adequado |
 | `429 Too Many Requests` | Rate limit atingido | Aguardar `Retry-After` segundos |
-| Timeout ao chamar `avancar_pipeline` | Skill demorada bloqueou cliente | Use `disparar_pipeline()` + `consultar_job_pipeline()` para execução assíncrona |
-| `status: AGUARDANDO_FILA` por muito tempo | Worker pool cheio (3 jobs rodando) | Aguardar ou verificar estatísticas com `obter_estatisticas_jobs()` |
+| `status: AGUARDANDO_FILA` por muito tempo | Worker pool cheio (3 jobs rodando) | Aguardar ou verificar estatísticas com `listar_jobs_pipeline(incluir_estatisticas=True)` |
 | `Job 'job-xyz' não encontrado` | Job expirado após TTL (24h) ou servidor reiniciado | Jobs em memória não persistem — re-disparar pipeline se necessário |
 | `progresso_percentual` não avança | Skill não reporta progresso ainda | Framework implementado mas skills precisam integração — ver ADR-102 |
-| UI travada ao chamar benchmark | `executar_benchmark` bloqueia stdio | Usar `concilium benchmark run --slug X` pelo terminal |
+| UI travada ao chamar benchmark | `executar_benchmark_nep039` bloqueia stdio | Usar `concilium benchmark run --slug X` pelo terminal |
 | `ratio P_can/P_orig` nos avisos | Produtividade implícita diverge | Calibrar `precos_unitarios_sbdi` no catálogo para os CPUs afetados |
