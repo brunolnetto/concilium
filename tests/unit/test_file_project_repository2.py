@@ -457,3 +457,124 @@ class TestRcHelpersEdgeCases:
         (snaps_dir / "catalogo-v2.json").write_text('{"cpus": [{"codigo": "CPU-G"}]}')
         result = _rc_try_snapshots(snaps_dir, "CPU-G", json)
         assert result == {"codigo": "CPU-G"}
+
+    def test_rc_try_aggregate_data_is_list_not_dict(self, tmp_path):
+        """When cpus.json contains a list instead of dict (no 'cpus' key), handled gracefully."""
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+        agg = tmp_path / "cpus.json"
+        # data is a plain list → data.get("cpus", data) would fail if data were not dict
+        # The code does: cpus = data.get("cpus", data) if isinstance(data, dict) else data
+        agg.write_text('[{"codigo": "CPU-L", "descricao": "List CPU"}]')
+        result = _rc_try_aggregate(agg, "CPU-L", json)
+        assert result == {"codigo": "CPU-L", "descricao": "List CPU"}
+
+    def test_rc_try_aggregate_dict_without_cpus_key(self, tmp_path):
+        """When top-level dict has no 'cpus' key, falls back to the dict itself — not a list."""
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+        agg = tmp_path / "cpus.json"
+        # dict without 'cpus' key → data.get("cpus", data) returns data (the dict)
+        # But then it checks isinstance(cpus, list) which is False → returns None
+        agg.write_text('{"meta": "some-meta"}')
+        result = _rc_try_aggregate(agg, "CPU-ANYTHING", json)
+        assert result is None
+
+    def test_rc_try_snapshots_cpu_not_found_in_any(self, tmp_path):
+        """CPU not found in any snapshot → returns None."""
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        (snaps_dir / "catalogo-v1.json").write_text('{"cpus": [{"codigo": "CPU-A"}]}')
+        result = _rc_try_snapshots(snaps_dir, "CPU-NOT-EXIST", json)
+        assert result is None
+
+
+class TestFileProjectHandleLoadResolvedCatalog:
+    """Extra branches for load_resolved_catalog on FileProjectHandle."""
+
+    def _make_handle(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+        from concilium.infrastructure.storage.project import ProjectStore
+        store = ProjectStore.init(tmp_path, "P", "ctx")
+        return FileProjectHandle(store)
+
+    def test_no_current_version_returns_none(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        # No version created — current_version() is None
+        result = handle.load_resolved_catalog()
+        assert result is None
+
+    def test_file_missing_returns_none(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle._store.new_version()
+        result = handle.load_resolved_catalog()
+        assert result is None
+
+    def test_explicit_version_returns_none_when_missing(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle._store.new_version()
+        result = handle.load_resolved_catalog(version="v1")
+        assert result is None
+
+
+class TestFileProjectHandleAppendJsonl:
+    """append_jsonl creates file when it doesn't exist."""
+
+    def _make_handle(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+        from concilium.infrastructure.storage.project import ProjectStore
+        store = ProjectStore.init(tmp_path, "P", "ctx")
+        return FileProjectHandle(store)
+
+    def test_append_jsonl_creates_file(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.append_jsonl("events.jsonl", {"event": "test"})
+        lines = handle.read_lines("events.jsonl")
+        assert len(lines) == 1
+        import json as _json
+        assert _json.loads(lines[0])["event"] == "test"
+
+    def test_append_jsonl_multiple_entries(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        handle.append_jsonl("log.jsonl", {"n": 1})
+        handle.append_jsonl("log.jsonl", {"n": 2})
+        lines = handle.read_lines("log.jsonl")
+        assert len(lines) == 2
+
+
+class TestFileProjectHandleReadJsonBadJson:
+    """read_json on FileProjectHandle with corrupt JSON → returns default."""
+
+    def _make_handle(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+        from concilium.infrastructure.storage.project import ProjectStore
+        store = ProjectStore.init(tmp_path, "P", "ctx")
+        return FileProjectHandle(store)
+
+    def test_read_json_bad_json_returns_default(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        (handle.root / "bad.json").write_text("NOT JSON")
+        result = handle.read_json("bad.json", {"default": True})
+        assert result == {"default": True}
+
+    def test_read_json_missing_file_returns_default(self, tmp_path):
+        handle = self._make_handle(tmp_path)
+        result = handle.read_json("nonexistent.json", 99)
+        assert result == 99
+
+
+class TestFileProjectHandleSaveCanonical:
+    """save_canonical delegation path on FileProjectHandle."""
+
+    def _make_handle(self, tmp_path):
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+        from concilium.infrastructure.storage.project import ProjectStore
+        store = ProjectStore.init(tmp_path, "P", "ctx")
+        return FileProjectHandle(store)
+
+    def test_save_canonical_raises_without_version(self, tmp_path):
+        from unittest.mock import MagicMock
+        handle = self._make_handle(tmp_path)
+        mock_model = MagicMock()
+        mock_model.model_dump_json.return_value = '{"meta": {}}'
+        with pytest.raises(ValueError, match="Nenhuma versão ativa"):
+            handle.save_canonical(mock_model)

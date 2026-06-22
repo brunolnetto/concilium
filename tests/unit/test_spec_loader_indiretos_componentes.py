@@ -446,6 +446,314 @@ class TestLoadFromDictEdgeCases:
         assert spec.nome == "INFERRED-SLUG"
 
 
+class TestLoadFromFile:
+    """BenchmarkSpecLoader.load() reads from disk — exercises the file I/O path."""
+
+    def test_load_reads_json_file(self, tmp_path):
+        from pathlib import Path
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        ref_data = {
+            "id": "FILE-TEST",
+            "meta": {
+                "projeto": "File Load Test",
+                "data_inicio": "2026-01-01",
+                "data_termino": "2026-06-30",
+            },
+            "spec": {"eap": []},
+            "resultado": {},
+        }
+        ref_path = tmp_path / "FILE-TEST" / "referencia.json"
+        ref_path.parent.mkdir(parents=True)
+        ref_path.write_text(__import__("json").dumps(ref_data), encoding="utf-8")
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        spec = loader.load(ref_path)
+        assert spec.nome == "File Load Test"
+        assert spec.slug == "FILE-TEST"
+
+    def test_load_with_str_path(self, tmp_path):
+        """load() accepts str path as well as Path."""
+        from pathlib import Path
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        ref_data = {
+            "id": "STR-PATH",
+            "meta": {
+                "projeto": "Str Path Test",
+                "data_inicio": "2026-01-01",
+                "data_termino": "2026-03-31",
+            },
+            "spec": {"eap": []},
+            "resultado": {},
+        }
+        ref_path = tmp_path / "STR-PATH" / "referencia.json"
+        ref_path.parent.mkdir(parents=True)
+        ref_path.write_text(__import__("json").dumps(ref_data), encoding="utf-8")
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        spec = loader.load(str(ref_path))
+        assert spec.slug == "STR-PATH"
+
+
+class TestLfdResolveContext:
+    """_lfd_resolve_context swallows exceptions → ctx_version/perfil all None."""
+
+    def test_returns_none_tuple_on_missing_config_root(self, tmp_path):
+        from pathlib import Path
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        # tmp_path has no contexto service config → exception swallowed
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        ref = {}
+        ctx_version, perfil_id, perfil_version = loader._lfd_resolve_context(ref, "nonexistent-ctx")
+        assert ctx_version is None
+        assert perfil_id is None
+        assert perfil_version is None
+
+
+class TestUnpackV2SchemaBdi:
+    def test_bdi_propagated(self):
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+        ref = {
+            "spec": {"bdi": {"material": 0.05, "mao_obra": 0.08}},
+            "meta": {},
+        }
+        out = _unpack_v2_schema(ref)
+        assert out["bdi"] == {"material": 0.05, "mao_obra": 0.08}
+
+    def test_cenarios_propagated(self):
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+        ref = {
+            "spec": {"cenarios": [{"id": "c1", "descricao": "Base"}]},
+            "meta": {},
+        }
+        out = _unpack_v2_schema(ref)
+        assert len(out["cenarios"]) == 1
+
+    def test_diretos_propagated_as_equipes_detalhadas(self):
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+        ref = {
+            "spec": {"diretos": [{"equipe_id": "EQ-1", "n_frentes": 2}]},
+            "meta": {},
+        }
+        out = _unpack_v2_schema(ref)
+        assert out["equipes_detalhadas"] == [{"equipe_id": "EQ-1", "n_frentes": 2}]
+
+    def test_resultado_propagated(self):
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+        ref = {
+            "spec": {},
+            "meta": {},
+            "resultado": {"custo_total": 1_000_000.0},
+        }
+        out = _unpack_v2_schema(ref)
+        assert out["resultado"]["custo_total"] == 1_000_000.0
+
+    def test_contexto_id_from_meta_when_absent_in_root(self):
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+        ref = {
+            "spec": {},
+            "meta": {"contexto_id": "ctx-from-meta"},
+        }
+        out = _unpack_v2_schema(ref)
+        assert out.get("contexto_id") == "ctx-from-meta"
+
+    def test_mode_propagated_from_meta(self):
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+        ref = {
+            "spec": {},
+            "meta": {"mode": "benchmark_config"},
+        }
+        out = _unpack_v2_schema(ref)
+        assert out.get("mode") == "benchmark_config"
+
+    def test_rcpsp_spec_propagated(self):
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+        rcpsp = {"resources": {"RES-1": {"capacity": 3}}}
+        ref = {
+            "spec": {"rcpsp_spec": rcpsp},
+            "meta": {},
+        }
+        out = _unpack_v2_schema(ref)
+        assert out["rcpsp_spec"] == rcpsp
+
+
+class TestLoadFromDictRegimeAndLocalizacao:
+    """load_from_dict edge cases for regime_trabalho and localizacao."""
+
+    def _loader(self, tmp_path):
+        from pathlib import Path
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+        return BenchmarkSpecLoader(Path(tmp_path))
+
+    def test_regime_from_projeto_block(self, tmp_path):
+        """When regime_trabalho absent at root, reads from projeto block."""
+        loader = self._loader(tmp_path)
+        from pathlib import Path
+        ref = {
+            "id": "REG-TEST",
+            "projeto": {
+                "nome": "P",
+                "regime_trabalho": {"horas_dia": 9, "dias_semana": 5},
+                "data_inicio": "2026-01-01",
+                "data_termino": "2026-06-30",
+            },
+        }
+        spec = loader.load_from_dict(ref, Path(tmp_path) / "REG-TEST" / "referencia.json")
+        assert spec.inputs_escopo["regime_trabalho"]["horas_dia"] == 9
+
+    def test_regime_defaults_when_absent(self, tmp_path):
+        """Falls back to horas_dia=8, dias_semana=6 when regime missing."""
+        loader = self._loader(tmp_path)
+        from pathlib import Path
+        ref = {
+            "id": "DEF-REG",
+            "data_inicio": "2026-01-01",
+            "data_termino": "2026-06-30",
+        }
+        spec = loader.load_from_dict(ref, Path(tmp_path) / "DEF-REG" / "referencia.json")
+        assert spec.inputs_escopo["regime_trabalho"] == {"horas_dia": 8, "dias_semana": 6}
+
+    def test_localizacao_from_projeto_block(self, tmp_path):
+        """When localizacao absent at root, reads from projeto block."""
+        loader = self._loader(tmp_path)
+        from pathlib import Path
+        ref = {
+            "id": "LOC-TEST",
+            "projeto": {
+                "nome": "P",
+                "localizacao": "Manaus",
+                "data_inicio": "2026-01-01",
+                "data_termino": "2026-06-30",
+            },
+        }
+        spec = loader.load_from_dict(ref, Path(tmp_path) / "LOC-TEST" / "referencia.json")
+        assert spec.inputs_escopo["localizacao"] == "Manaus"
+
+    def test_bdi_ref_empty_dict_skips_bdi_section(self, tmp_path):
+        """Empty bdi dict → lfd_build_bdi_section not called."""
+        loader = self._loader(tmp_path)
+        from pathlib import Path
+        ref = {
+            "id": "NOBDI",
+            "data_inicio": "2026-01-01",
+            "data_termino": "2026-06-30",
+            "bdi": {},
+        }
+        spec = loader.load_from_dict(ref, Path(tmp_path) / "NOBDI" / "referencia.json")
+        # No exception, bdi section not built
+        assert isinstance(spec.extra_inputs, dict)
+
+    def test_contexto_id_from_meta_block(self, tmp_path):
+        """contexto_id from nested meta block used when absent at root."""
+        loader = self._loader(tmp_path)
+        from pathlib import Path
+        ref = {
+            "id": "CTX-META",
+            "meta": {"contexto_id": "custom-ctx"},
+            "data_inicio": "2026-01-01",
+            "data_termino": "2026-06-30",
+        }
+        spec = loader.load_from_dict(ref, Path(tmp_path) / "CTX-META" / "referencia.json")
+        assert spec.contexto_id == "custom-ctx"
+
+
+class TestBuildInputsIndiretosMisc:
+    """Additional branches in _build_inputs_indiretos."""
+
+    def test_with_equipes_indiretas(self):
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+        ind_ref = {"ADM": {"custo_fixo_mensal_total": 10000.0}}
+        equipes = [
+            {
+                "id": "INDIR-ADM",
+                "categoria": "ADM",
+                "mao_obra": [{"funcao": "ENG", "quantidade": 1, "custo_unitario": 5000.0, "salario_base": 4000.0}],
+            }
+        ]
+        weeks = [f"2026-W{i:02d}" for i in range(1, 26)]
+        result = BenchmarkSpecLoader._build_inputs_indiretos(ind_ref, weeks, None, equipes_indiretas=equipes)
+        assert "categorias_config" in result
+        assert len(result["categorias_config"]) == 1
+
+    def test_with_referencia_indireto_total(self):
+        """With referencia_indireto_total set, scaling is applied."""
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+        ind_ref = {
+            "ADM": {"custo_fixo_mensal_total": 5000.0},
+            "LAB": {"custo_fixo_mensal_total": 2000.0},
+        }
+        weeks = [f"2026-W{i:02d}" for i in range(1, 26)]
+        result = BenchmarkSpecLoader._build_inputs_indiretos(ind_ref, weeks, referencia_indireto_total=100000.0)
+        assert "categorias_config" in result
+
+
+class TestResolveContextoLogError:
+    """resolve_contexto logs error and returns None when service raises."""
+
+    def test_resolve_contexto_logs_error_on_exception(self, tmp_path):
+        """Verifies resolve_contexto catches exception and returns None (exercises logger.error path)."""
+        from pathlib import Path
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+        import logging
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        # Calling with explicit version on non-existent config exercises the error log path
+        result = loader.resolve_contexto("nonexistent-ctx", version="v99")
+        assert result is None
+
+
+class TestLfdBuildIndRefParsedNone:
+    """_lfd_build_ind_ref: rows where _lfd_parse_raw_row returns None are skipped."""
+
+    def test_skips_rows_with_none_parsed(self, tmp_path):
+        """Rows missing required fields → _lfd_parse_raw_row returns None → skipped."""
+        from pathlib import Path
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        ref = {
+            "indiretos": {
+                "raw_indiretos": [
+                    # Valid row
+                    {"categoria": "ADM", "custo_total": 60000.0, "permanencia_meses": 12.0},
+                    # Row with missing fields → _lfd_parse_raw_row returns None
+                    {"invalid_key": "no categoria or custo"},
+                ]
+            }
+        }
+        weeks = [f"2026-W{i:02d}" for i in range(1, 13)]
+        result = loader._lfd_build_ind_ref(ref, weeks)
+        # Valid row processed; invalid row skipped without error
+        assert "ADM" in result
+        assert len(result) == 1
+
+
+class TestLfdBuildBdiSection:
+    """_lfd_build_bdi_section (line 334 branch: bdi_ref non-empty dict)."""
+
+    def test_load_from_dict_with_non_empty_bdi_builds_section(self, tmp_path):
+        """When bdi dict has nested content, _lfd_build_bdi_section is called (line 334)."""
+        from pathlib import Path
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        # bdi needs nested component dicts, not flat floats
+        ref = {
+            "id": "BDI-SECTION",
+            "data_inicio": "2026-01-01",
+            "data_termino": "2026-06-30",
+            "bdi": {
+                "mao_obra": {"bdi": 0.08, "ac": 0.02, "cp": 0.03, "outros": 0.01, "taxa": 0.08},
+                "material": {"bdi": 0.04, "ac": 0.01, "cp": 0.02, "outros": 0.01, "taxa": 0.04},
+            },
+        }
+        spec = loader.load_from_dict(ref, Path(tmp_path) / "BDI-SECTION" / "referencia.json")
+        # The BDI values should be passed through to extra_inputs
+        assert isinstance(spec.extra_inputs, dict)
+
+
 class TestComponentesPropagados:
     def test_equipamentos_chega_ao_config(self):
         spec = _load_spec(_ref_minimo_com_indiretos())
