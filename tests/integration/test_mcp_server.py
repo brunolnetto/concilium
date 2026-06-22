@@ -11,7 +11,7 @@ pytestmark = pytest.mark.slow  # build_server() leva ~1.5–2.5s por instância
 
 # ── Conjunto canônico de tools (atualizar aqui quando adicionar novas) ─────────
 # sistema (1): ping
-# catalogo (5): listar_contextos, pesquisar_catalogo, consultar_saude_catalogo,
+# catalogo (4): listar_contextos, pesquisar_catalogo, auditar_catalogo,
 #               atualizar_preco_insumo, adicionar_variante_producao
 # projeto (6): listar_projetos, iniciar_orcamento, consultar_status,
 #              aprovar_versao, nova_versao, salvar_perfil_bdi
@@ -25,7 +25,7 @@ TOOLS_ESPERADAS = {
     # catalogo
     "listar_contextos",
     "pesquisar_catalogo",
-    "consultar_saude_catalogo",
+    "auditar_catalogo",  # ADR-116 F5: consolida saude/plausibilidade/integridade
     "atualizar_preco_insumo",
     "adicionar_variante_producao",
     # projeto

@@ -60,32 +60,40 @@ class TestCatalogoWrappers:
             result = tools["pesquisar_catalogo"](contexto_id="ctx", query="escavação")
         assert "cpus" in result
 
-    def test_consultar_saude_catalogo(self, monkeypatch, tmp_path):
+    def test_auditar_catalogo_saude(self, monkeypatch, tmp_path):
+        """ADR-116 F5: modo='saude' substitui consultar_saude_catalogo."""
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_consultar_saude_catalogo",
             return_value={"cobertura_pct": 80},
         ):
-            result = tools["consultar_saude_catalogo"](contexto_id="ctx")
+            result = tools["auditar_catalogo"](contexto_id="ctx", modo="saude")
         assert "cobertura_pct" in result
 
-    def test_avaliar_plausibilidade_catalogo(self, monkeypatch, tmp_path):
+    def test_auditar_catalogo_plausibilidade(self, monkeypatch, tmp_path):
+        """ADR-116 F5: modo='plausibilidade' substitui avaliar_plausibilidade_catalogo."""
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_avaliar_plausibilidade_catalogo",
             return_value={"alertas": []},
         ):
-            result = tools["avaliar_plausibilidade_catalogo"](contexto_id="ctx")
+            result = tools["auditar_catalogo"](contexto_id="ctx", modo="plausibilidade")
         assert "alertas" in result
 
-    def test_verificar_integridade_catalogo(self, monkeypatch, tmp_path):
+    def test_auditar_catalogo_integridade(self, monkeypatch, tmp_path):
+        """ADR-116 F5: modo='integridade' substitui verificar_integridade_catalogo."""
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_verificar_integridade_catalogo",
             return_value={"erros": []},
         ):
-            result = tools["verificar_integridade_catalogo"](contexto_id="ctx")
+            result = tools["auditar_catalogo"](contexto_id="ctx", modo="integridade")
         assert "erros" in result
+
+    def test_auditar_catalogo_modo_invalido(self, monkeypatch, tmp_path):
+        tools = _register_tools(monkeypatch, tmp_path)
+        result = tools["auditar_catalogo"](contexto_id="ctx", modo="invalido")
+        assert "erro" in result
 
     def test_atualizar_preco_insumo(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)

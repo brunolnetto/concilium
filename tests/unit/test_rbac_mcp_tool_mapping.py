@@ -44,9 +44,7 @@ ALL_TOOL_NAMES = [
     # catalogo
     "listar_contextos",
     "pesquisar_catalogo",
-    "consultar_saude_catalogo",
-    "avaliar_plausibilidade_catalogo",
-    "verificar_integridade_catalogo",
+    "auditar_catalogo",  # ADR-116 F5: consultar_saude + avaliar_plausibilidade + verificar_integridade
     "atualizar_preco_insumo",
     "adicionar_variante_producao",
     "consultar_preco_insumo_temporal",

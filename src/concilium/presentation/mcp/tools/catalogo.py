@@ -60,32 +60,44 @@ def register(server: FastMCP) -> None:
     # verificar_integridade_catalogo  → consistência referencial (insumos pendentes, ciclos, PUs)
 
     @server.tool(
-        description="Cobertura do catálogo: % de insumos com preço, % de CPUs calculáveis. Use para saber se o catálogo está pronto para orçamento."
+        description=(
+            "Auditoria do catálogo em três modos: "
+            "'saude' — cobertura (% insumos com preço, % CPUs calculáveis); "
+            "'plausibilidade' — outliers de preço e razões de produtividade anômalas; "
+            "'integridade' — consistência referencial, ciclos e recálculo de PUs."
+        )
     )
     @permission("catalog:read")
-    def consultar_saude_catalogo(contexto_id: str) -> dict[str, Any]:
-        return _impl_consultar_saude_catalogo(contexto_id)
-
-    @server.tool(
-        description="Detecta valores fora de faixa no catálogo (outliers de preço, razões de produtividade anômalas). Use quando suspeitar de calibração errada."
-    )
-    @permission("catalog:read")
-    def avaliar_plausibilidade_catalogo(
+    def auditar_catalogo(
         contexto_id: str,
-    ) -> dict[str, Any]:
-        return _impl_avaliar_plausibilidade_catalogo(contexto_id)
-
-    @server.tool(
-        description="Verifica consistência referencial (insumos ausentes, ciclos de dependência) e recalcula PUs com encargos e diesel informados. Use para auditoria de integridade."
-    )
-    @permission("catalog:read")
-    def verificar_integridade_catalogo(
-        contexto_id: str,
+        modo: str = "saude",
         alpha_clt: float = 1.777,
         alpha_pj: float = 1.06,
         preco_diesel: float = 6.50,
     ) -> dict[str, Any]:
-        return _impl_verificar_integridade_catalogo(contexto_id, alpha_clt, alpha_pj, preco_diesel)
+        """Audita o catálogo de referência.
+
+        modos disponíveis:
+        - saude: cobertura — % insumos com preço, % CPUs calculáveis. Use antes de orçar.
+        - plausibilidade: detecta outliers e razões de produtividade anômalas.
+        - integridade: verifica insumos ausentes, ciclos e recalcula PUs com encargos/diesel.
+
+        Args:
+            contexto_id: ID do contexto do catálogo a auditar.
+            modo: "saude" | "plausibilidade" | "integridade" (padrão: "saude").
+            alpha_clt: Multiplicador CLT — só usado no modo "integridade".
+            alpha_pj: Multiplicador PJ — só usado no modo "integridade".
+            preco_diesel: Preço do diesel (R$/L) — só usado no modo "integridade".
+        """
+        if modo == "saude":
+            return _impl_consultar_saude_catalogo(contexto_id)
+        elif modo == "plausibilidade":
+            return _impl_avaliar_plausibilidade_catalogo(contexto_id)
+        elif modo == "integridade":
+            return _impl_verificar_integridade_catalogo(contexto_id, alpha_clt, alpha_pj, preco_diesel)
+        else:
+            from concilium.presentation.mcp._context import _wrap_response
+            return _wrap_response({"erro": f"modo '{modo}' inválido. Use: saude | plausibilidade | integridade"})
 
     # ── Mutação / atualização ────────────────────────────────────────────────
 
