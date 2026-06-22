@@ -120,24 +120,26 @@ class TestCatalogoWrappers:
             )
         assert result["variante_id"] == "VAR-1"
 
-    def test_consultar_preco_insumo_temporal(self, monkeypatch, tmp_path):
+    def test_historico_preco_insumo_pontual(self, monkeypatch, tmp_path):
+        """ADR-116 F5: modo='pontual' substitui consultar_preco_insumo_temporal."""
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_consultar_preco_insumo_temporal",
             return_value={"preco": 5.5},
         ):
-            result = tools["consultar_preco_insumo_temporal"](
-                contexto_id="ctx", insumo_id="INS-1", data_referencia="2026-01-01"
+            result = tools["historico_preco_insumo"](
+                contexto_id="ctx", modo="pontual", insumo_id="INS-1", data_referencia="2026-01-01"
             )
         assert result["preco"] == 5.5
 
-    def test_tendencia_precos_catalogo(self, monkeypatch, tmp_path):
+    def test_historico_preco_insumo_tendencia(self, monkeypatch, tmp_path):
+        """ADR-116 F5: modo='tendencia' substitui tendencia_precos_catalogo."""
         tools = _register_tools(monkeypatch, tmp_path)
         with patch(
             f"{_CATALOGO_MOD}._impl_tendencia_precos_catalogo",
             return_value={"tendencias": []},
         ):
-            result = tools["tendencia_precos_catalogo"](contexto_id="ctx")
+            result = tools["historico_preco_insumo"](contexto_id="ctx", modo="tendencia")
         assert "tendencias" in result
 
     def test_comparar_rfi_catalogo(self, monkeypatch, tmp_path):
@@ -160,78 +162,62 @@ class TestCatalogoWrappers:
 
 
 class TestVersionTools:
-    def test_listar_versoes_catalogo_happy(self, monkeypatch, tmp_path):
+    def test_versoes_catalogo_listar(self, monkeypatch, tmp_path):
+        """ADR-116 F5: modo='listar' substitui listar_versoes_catalogo."""
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
         version_svc.list_versions.return_value = [{"versao": "v1"}, {"versao": "v2"}]
         version_svc.current_version.return_value = "v2"
-
         with (
-            patch(
-                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                return_value=version_svc,
-            ),
-            patch(
-                "concilium.infrastructure.settings.get_storage",
-                return_value=MagicMock(config_root=tmp_path / "config"),
-            ),
+            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                  return_value=version_svc),
+            patch("concilium.infrastructure.settings.get_storage",
+                  return_value=MagicMock(config_root=tmp_path / "config")),
         ):
-            result = tools["listar_versoes_catalogo"](contexto_id="ctx-1")
+            result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="listar")
         assert result["contexto_id"] == "ctx-1"
         assert result["versao_atual"] == "v2"
         assert result["total_versoes"] == 2
 
-    def test_listar_versoes_catalogo_exception(self, monkeypatch, tmp_path):
+    def test_versoes_catalogo_listar_exception(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
         version_svc.list_versions.side_effect = FileNotFoundError("not found")
-
         with (
-            patch(
-                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                return_value=version_svc,
-            ),
-            patch(
-                "concilium.infrastructure.settings.get_storage",
-                return_value=MagicMock(config_root=tmp_path / "config"),
-            ),
+            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                  return_value=version_svc),
+            patch("concilium.infrastructure.settings.get_storage",
+                  return_value=MagicMock(config_root=tmp_path / "config")),
         ):
-            result = tools["listar_versoes_catalogo"](contexto_id="ctx-missing")
+            result = tools["versoes_catalogo"](contexto_id="ctx-missing", modo="listar")
         assert "erro" in result
 
-    def test_comparar_versoes_catalogo_happy(self, monkeypatch, tmp_path):
+    def test_versoes_catalogo_comparar(self, monkeypatch, tmp_path):
+        """ADR-116 F5: modo='comparar' substitui comparar_versoes_catalogo."""
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
         version_svc.compare.return_value = {"adicionados": [], "removidos": [], "modificados": []}
-
         with (
-            patch(
-                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                return_value=version_svc,
-            ),
-            patch(
-                "concilium.infrastructure.settings.get_storage",
-                return_value=MagicMock(config_root=tmp_path / "config"),
-            ),
+            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                  return_value=version_svc),
+            patch("concilium.infrastructure.settings.get_storage",
+                  return_value=MagicMock(config_root=tmp_path / "config")),
         ):
-            result = tools["comparar_versoes_catalogo"](contexto_id="ctx-1", versao_a="v1", versao_b="v2")
+            result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="comparar",
+                                               versao_a="v1", versao_b="v2")
         assert result["contexto_id"] == "ctx-1"
         assert "diff" in result
 
-    def test_comparar_versoes_catalogo_exception(self, monkeypatch, tmp_path):
+    def test_versoes_catalogo_comparar_exception(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         version_svc = MagicMock()
         version_svc.compare.side_effect = ValueError("versão inválida")
-
         with (
-            patch(
-                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                return_value=version_svc,
-            ),
-            patch(
-                "concilium.infrastructure.settings.get_storage",
-                return_value=MagicMock(config_root=tmp_path / "config"),
-            ),
+            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                  return_value=version_svc),
+            patch("concilium.infrastructure.settings.get_storage",
+                  return_value=MagicMock(config_root=tmp_path / "config")),
         ):
-            result = tools["comparar_versoes_catalogo"](contexto_id="ctx-1", versao_a="v1", versao_b="bad")
+            result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="comparar",
+                                               versao_a="v1", versao_b="bad")
         assert "erro" in result

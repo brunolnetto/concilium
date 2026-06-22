@@ -44,8 +44,8 @@ TOOLS_ESPERADAS = {
     "simular_cenario_replan",
     # escopo
     "consultar_estrutura_projeto",
-    "configurar_escopo",
-    "gerenciar_plano",
+    "gerir_escopo",  # ADR-116 F5
+    
 }
 
 

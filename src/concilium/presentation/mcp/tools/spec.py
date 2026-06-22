@@ -61,9 +61,10 @@ from concilium.infrastructure.auth.permission_guard import permission
 def register(server: FastMCP) -> None:
     """Registra criar_projeto_spec no servidor MCP."""
 
-    @server.tool()
+    # ADR-116 F5: criar_projeto_spec absorvido em criar_projeto(spec=...) de formulario.py
+    # Tool não mais registrada aqui; _resolve_tributario/_validate_spec importados diretamente.
     @permission("project:create")
-    def criar_projeto_spec(spec: dict[str, Any]) -> dict[str, Any]:
+    def _criar_projeto_spec_impl(spec: dict[str, Any]) -> dict[str, Any]:
         """Use quando o projeto está definido em um documento JSON completo (ProjetoSpec).
 
         Preferir esta tool quando o cronograma (n_equipes, producao_diaria por item) e o

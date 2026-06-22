@@ -91,42 +91,27 @@ def register(server: FastMCP) -> None:
         except ValueError as e:
             return _wrap_response({"error": str(e)})
 
-    # ── 4c. Listar jobs de pipeline ──────────────────────────────────────
+    # ── 4c+4d. Listar jobs e estatísticas (unificados ADR-116 F5) ───────────
     @server.tool()
     @permission("project:read")
     @mcp_rate_limit()
-    def listar_jobs_pipeline(project_id: str | None = None) -> dict[str, Any]:
-        """Lista todos os jobs de pipeline (opcionalmente filtrados por projeto).
+    def listar_jobs_pipeline(
+        project_id: str | None = None,
+        incluir_estatisticas: bool = False,
+    ) -> dict[str, Any]:
+        """Lista jobs de pipeline e, opcionalmente, estatísticas do sistema.
 
         Args:
-            project_id: Opcional. Se fornecido, retorna apenas jobs deste projeto.
-
-        Returns:
-            Lista de jobs com status e timestamps, estatísticas do sistema
+            project_id: Filtra por projeto (omita para todos os jobs).
+            incluir_estatisticas: True retorna também métricas de capacidade e health.
         """
         from concilium.application.jobs import get_job_service
 
         service = get_job_service()
-        job_list_dto = service.listar_jobs(project_id)
-        return _wrap_response(job_list_dto.model_dump())
-
-    # ── 4d. Estatísticas do sistema de jobs ──────────────────────────────
-    @server.tool()
-    @permission("project:read")
-    @mcp_rate_limit()
-    def obter_estatisticas_jobs() -> dict[str, Any]:
-        """Retorna estatísticas do sistema de jobs de pipeline.
-
-        Útil para diagnóstico de capacidade e health check do worker pool.
-
-        Returns:
-            Configuração (max_concurrent_jobs, TTL), contadores, health status
-        """
-        from concilium.application.jobs import get_job_service
-
-        service = get_job_service()
-        stats_dto = service.obter_estatisticas()
-        return _wrap_response(stats_dto.model_dump())
+        result = service.listar_jobs(project_id).model_dump()
+        if incluir_estatisticas:
+            result["estatisticas"] = service.obter_estatisticas().model_dump()
+        return _wrap_response(result)
 
     # ── 4b. Cancelar job de pipeline ─────────────────────────────────────────
     @server.tool(

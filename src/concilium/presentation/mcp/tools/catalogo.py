@@ -135,27 +135,37 @@ def register(server: FastMCP) -> None:
     # ── Análise temporal / RFI ───────────────────────────────────────────────
 
     @server.tool(
-        description="Retorna o preço de um insumo específico em uma data passada. Use para verificar o preço vigente na época do contrato (diferente de tendencia_precos_catalogo que mostra evolução agregada)."
+        description=(
+            "Consulta histórico de preços do catálogo em dois modos: "
+            "'pontual' — preço de um insumo específico em uma data (para verificar preço vigente na época do contrato); "
+            "'tendencia' — evolução histórica de todos os insumos (para detectar inflação/deflação sistêmica)."
+        )
     )
     @permission("catalog:read")
-    def consultar_preco_insumo_temporal(
+    def historico_preco_insumo(
         contexto_id: str,
-        insumo_id: str,
-        data_referencia: str,
+        modo: str = "tendencia",
+        insumo_id: str | None = None,
+        data_referencia: str | None = None,
         projeto_id: str | None = None,
         jurisdicao_id: str | None = None,
     ) -> dict[str, Any]:
-        return _impl_consultar_preco_insumo_temporal(contexto_id, insumo_id, data_referencia, projeto_id, jurisdicao_id)
+        """Histórico temporal de preços do catálogo.
 
-    @server.tool(
-        description="Mostra evolução histórica dos preços de todos os insumos do catálogo. Use para detectar inflação ou deflação sistêmica (diferente de consultar_preco_insumo_temporal que retorna ponto único)."
-    )
-    @permission("catalog:read")
-    def tendencia_precos_catalogo(
-        contexto_id: str,
-        jurisdicao_id: str | None = None,
-    ) -> dict[str, Any]:
-        return _impl_tendencia_precos_catalogo(contexto_id, jurisdicao_id)
+        modos disponíveis:
+        - pontual: preço de um insumo em data específica. Requer insumo_id e data_referencia.
+        - tendencia: evolução de todos os insumos. Parâmetros insumo_id e data_referencia ignorados.
+        """
+        if modo == "pontual":
+            if not insumo_id or not data_referencia:
+                from concilium.presentation.mcp._context import _wrap_response
+                return _wrap_response({"erro": "modo='pontual' requer insumo_id e data_referencia"})
+            return _impl_consultar_preco_insumo_temporal(contexto_id, insumo_id, data_referencia, projeto_id, jurisdicao_id)
+        elif modo == "tendencia":
+            return _impl_tendencia_precos_catalogo(contexto_id, jurisdicao_id)
+        else:
+            from concilium.presentation.mcp._context import _wrap_response
+            return _wrap_response({"erro": f"modo '{modo}' inválido. Use: pontual | tendencia"})
 
     @server.tool(
         description="Compara dados de RFI (Request for Information) com o catálogo master e lista divergências. dry_run=True (padrão) apenas mostra — use dry_run=False para aplicar as diferenças."
@@ -185,56 +195,43 @@ def register(server: FastMCP) -> None:
 
     @server.tool(
         description=(
-            "Lista o histórico de versões de um contexto de catálogo (ADR-062). "
-            "Retorna versão atual, histórico com datas e autores, e número total de versões. "
-            "Use antes de comparar_versoes_catalogo para saber quais versões existem."
+            "Gerencia versões de um contexto de catálogo (ADR-062) em dois modos: "
+            "'listar' — histórico de versões com datas e autores; "
+            "'comparar' — diff lado a lado entre versao_a e versao_b (requer ambas)."
         )
     )
     @permission("catalog:read")
-    def listar_versoes_catalogo(contexto_id: str) -> dict[str, Any]:
-        from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
-        from concilium.infrastructure.settings import get_storage
-
-        config_root = get_storage().config_root
-        svc = ContextoVersionService(config_root)
-        try:
-            versions = svc.list_versions(contexto_id)
-            current = svc.current_version(contexto_id)
-        except Exception as exc:
-            return {"erro": str(exc)}
-        return {
-            "contexto_id": contexto_id,
-            "versao_atual": current,
-            "total_versoes": len(versions),
-            "historico": versions,
-        }
-
-    @server.tool(
-        description=(
-            "Compara duas versões de um contexto de catálogo lado a lado (ADR-062). "
-            "Retorna campos adicionados, removidos e modificados entre as versões. "
-            "Use para auditar o que mudou entre uma versão de catálogo e outra "
-            "antes de aprovar uma atualização de preços ou composições."
-        )
-    )
-    @permission("catalog:read")
-    def comparar_versoes_catalogo(
+    def versoes_catalogo(
         contexto_id: str,
-        versao_a: str,
-        versao_b: str,
+        modo: str = "listar",
+        versao_a: str | None = None,
+        versao_b: str | None = None,
     ) -> dict[str, Any]:
+        """Gerencia versões do catálogo (ADR-062).
+
+        modos disponíveis:
+        - listar: histórico de versões — versão atual, datas, autores.
+        - comparar: diff entre versao_a e versao_b. Requer ambos os parâmetros.
+        """
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.settings import get_storage
 
         config_root = get_storage().config_root
         svc = ContextoVersionService(config_root)
         try:
-            diff = svc.compare(contexto_id, versao_a, versao_b)
+            if modo == "listar":
+                versions = svc.list_versions(contexto_id)
+                current = svc.current_version(contexto_id)
+                return {"contexto_id": contexto_id, "versao_atual": current,
+                        "total_versoes": len(versions), "historico": versions}
+            elif modo == "comparar":
+                if not versao_a or not versao_b:
+                    from concilium.presentation.mcp._context import _wrap_response
+                    return _wrap_response({"erro": "modo='comparar' requer versao_a e versao_b"})
+                diff = svc.compare(contexto_id, versao_a, versao_b)
+                return {"contexto_id": contexto_id, "versao_a": versao_a, "versao_b": versao_b, "diff": diff}
+            else:
+                from concilium.presentation.mcp._context import _wrap_response
+                return _wrap_response({"erro": f"modo '{modo}' inválido. Use: listar | comparar"})
         except Exception as exc:
             return {"erro": str(exc)}
-        return {
-            "contexto_id": contexto_id,
-            "versao_a": versao_a,
-            "versao_b": versao_b,
-            "diff": diff,
-        }

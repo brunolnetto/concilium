@@ -16,7 +16,7 @@ import os
 import pytest
 
 # Teto pós-limpeza ADR-116 (55 → 52). Subir exige decisão consciente: editar aqui.
-MCP_TOOL_CEILING = 48
+MCP_TOOL_CEILING = 40
 
 _TOOLS_GLOB = "src/concilium/presentation/mcp/tools/*.py"
 

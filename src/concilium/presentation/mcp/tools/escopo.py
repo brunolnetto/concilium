@@ -66,69 +66,71 @@ def register(server: FastMCP) -> None:
 
     @server.tool()
     @permission("project:create")
-    def configurar_escopo(
+    def gerir_escopo(
         project_id: str,
+        entidade: str,
         escopo_id: str,
-        nome: str,
-        tipo_obra: str,
-        localizacao: str,
-        data_inicio: str,
-        data_termino: str,
+        acao: str = "criar",
+        nome: str | None = None,
+        tipo_obra: str | None = None,
+        localizacao: str | None = None,
+        data_inicio: str | None = None,
+        data_termino: str | None = None,
         coordenadas_lat: float = 0.0,
         coordenadas_lng: float = 0.0,
         dias_semana: int = 6,
         horas_dia: int = 8,
-    ) -> dict[str, Any]:
-        """Cria ou atualiza um escopo de obra no projeto."""
-        store = _project(project_id)
-        try:
-            es = store.create_escopo(
-                escopo_id=escopo_id,
-                nome=nome,
-                tipo_obra=tipo_obra,
-                localizacao=localizacao,
-                coordenadas_lat=coordenadas_lat,
-                coordenadas_lng=coordenadas_lng,
-                data_inicio=data_inicio,
-                data_termino=data_termino,
-                dias_semana=dias_semana,
-                horas_dia=horas_dia,
-            )
-        except Exception as e:
-            return {"erro": str(e)}
-        return _wrap_response({"status": "OK", "escopo_id": es.escopo_id})
-
-    @server.tool()
-    @permission("project:create")
-    def gerenciar_plano(
-        project_id: str,
-        escopo_id: str,
-        acao: str,
-        nome: str | None = None,
         plano_id: str | None = None,
         hipotese: str | None = None,
     ) -> dict[str, Any]:
-        """Gerencia planos dentro de um escopo (criar, aprovar, arquivar).
+        """Cria ou gerencia escopos e planos do projeto.
 
-        Args:
-            acao: 'criar' | 'aprovar' | 'arquivar'
+        entidade: "escopo" | "plano"
+
+        Para entidade="escopo":
+          - acao="criar": cria/atualiza um escopo. Requer nome, tipo_obra, localizacao,
+            data_inicio, data_termino.
+
+        Para entidade="plano":
+          - acao="criar": cria plano no escopo. Requer nome.
+          - acao="aprovar": aprova plano. Requer plano_id.
+          - acao="arquivar": arquiva plano. Requer plano_id.
         """
         store = _project(project_id)
-        es = store.escopo(escopo_id)
 
-        if acao == "criar":
-            ps = es.create_plan(nome=nome or "Novo Plano", hipotese=hipotese)
-            return _wrap_response({"plano_id": ps.plano_id})
-        elif acao == "aprovar":
-            if not plano_id:
-                return {"erro": "plano_id obrigatório para aprovar"}
-            arquivados = es.approve_plan(plano_id)
-            return _wrap_response({"plano_aprovado": plano_id, "arquivados": arquivados})
-        elif acao == "arquivar":
-            if not plano_id:
-                return {"erro": "plano_id obrigatório para arquivar"}
-            ps = es.plan(plano_id)
-            ps.archive()
-            return _wrap_response({"status": "ARQUIVADO", "plano_id": plano_id})
+        if entidade == "escopo":
+            try:
+                es = store.create_escopo(
+                    escopo_id=escopo_id,
+                    nome=nome or escopo_id,
+                    tipo_obra=tipo_obra or "",
+                    localizacao=localizacao or "",
+                    coordenadas_lat=coordenadas_lat,
+                    coordenadas_lng=coordenadas_lng,
+                    data_inicio=data_inicio or "",
+                    data_termino=data_termino or "",
+                    dias_semana=dias_semana,
+                    horas_dia=horas_dia,
+                )
+            except Exception as e:
+                return {"erro": str(e)}
+            return _wrap_response({"status": "OK", "escopo_id": es.escopo_id})
 
-        return {"erro": f"Ação '{acao}' inválida"}
+        elif entidade == "plano":
+            es = store.escopo(escopo_id)
+            if acao == "criar":
+                ps = es.create_plan(nome=nome or "Novo Plano", hipotese=hipotese)
+                return _wrap_response({"plano_id": ps.plano_id})
+            elif acao == "aprovar":
+                if not plano_id:
+                    return {"erro": "plano_id obrigatório para aprovar"}
+                arquivados = es.approve_plan(plano_id)
+                return _wrap_response({"plano_aprovado": plano_id, "arquivados": arquivados})
+            elif acao == "arquivar":
+                if not plano_id:
+                    return {"erro": "plano_id obrigatório para arquivar"}
+                es.plan(plano_id).archive()
+                return _wrap_response({"status": "ARQUIVADO", "plano_id": plano_id})
+            return {"erro": f"acao '{acao}' inválida para plano. Use: criar | aprovar | arquivar"}
+
+        return {"erro": f"entidade '{entidade}' inválida. Use: escopo | plano"}

@@ -24,15 +24,15 @@ ALL_TOOL_NAMES = [
     "explorar_pool_recursos",
     # artifacts
     "listar_artefatos_projeto",
-    "ler_artefato_texto",
-    "baixar_artefato_binario",
-    "baixar_bundle_zip",
+    "obter_artefato",  # ADR-116 F5
+    
+    
     # benchmark (ADR-116: listar_benchmarks/executar_benchmark removidas — dup de nep039)
     "empacotar_benchmark",
     "download_benchmark_zip",
     # benchmark_nep039
     "consultar_benchmark",
-    "listar_benchmarks_nep039",
+    
     "executar_benchmark_nep039",
     "editar_benchmark",
     "marcar_benchmark_imutavel",
@@ -47,23 +47,23 @@ ALL_TOOL_NAMES = [
     "auditar_catalogo",  # ADR-116 F5: consultar_saude + avaliar_plausibilidade + verificar_integridade
     "atualizar_preco_insumo",
     "adicionar_variante_producao",
-    "consultar_preco_insumo_temporal",
-    "tendencia_precos_catalogo",
+    "historico_preco_insumo",  # ADR-116 F5
+    
     "comparar_rfi_catalogo",
     "calcular_pu_producao",
-    "listar_versoes_catalogo",
-    "comparar_versoes_catalogo",
+    "versoes_catalogo",  # ADR-116 F5
+    
     # escopo
     "consultar_estrutura_projeto",
-    "configurar_escopo",
-    "gerenciar_plano",
+    "gerir_escopo",  # ADR-116 F5
+    
     # formulario
-    "criar_projeto_formulario",
+    "criar_projeto",  # ADR-116 F5
     # pipeline
     "disparar_pipeline",
     "consultar_job_pipeline",
     "listar_jobs_pipeline",
-    "obter_estatisticas_jobs",
+    
     "cancelar_job_pipeline",
     # (ADR-116: avancar_pipeline removida — deprecada, substituída por disparar_pipeline)
     # projeto
@@ -76,7 +76,7 @@ ALL_TOOL_NAMES = [
     # replan
     "simular_cenario_replan",
     # spec
-    "criar_projeto_spec",
+    
     # system
     "ping",
     # tributacao (ADR-116 F5: 3 → 1 tool unificada)
@@ -150,8 +150,7 @@ class TestToolPermissionsCoverage:
 
         write_tools = {
             "iniciar_orcamento",
-            "criar_projeto_formulario",
-            "criar_projeto_spec",
+            "criar_projeto",
             "disparar_pipeline",
             "executar_benchmark_nep039",
             "atualizar_preco_insumo",

@@ -28,27 +28,32 @@ from concilium.infrastructure.auth.permission_guard import permission
 def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
     """Registra ferramentas de benchmark no servidor MCP."""
 
-    @server.tool(description="Consulta metadados de um benchmark sem executar o pipeline.")
+    @server.tool(description=(
+        "Consulta benchmarks NEP-039: lista todos ou detalha um específico. "
+        "Omita benchmark_id para listar todos; informe-o para obter metadados e histórico."
+    ))
     @permission("project:read")
-    def consultar_benchmark(benchmark_id: str) -> dict[str, Any]:
-        """Retorna metadados do benchmark.
+    def consultar_benchmark(benchmark_id: str | None = None) -> dict[str, Any]:
+        """Lista benchmarks disponíveis ou retorna metadados de um benchmark específico.
 
         Args:
-            benchmark_id: ID do benchmark (ex: "AGIS_2025_Q1")
-
-        Returns:
-            Dicionário com: benchmark_id, nome, origem, tags, versao, imutavel,
-            execucoes_historico, total_projetos_derivados.
+            benchmark_id: Omita para listar todos; informe para detalhar um benchmark.
         """
+        if benchmark_id is None:
+            all_benchs = store.list_all()
+            return {
+                "total": len(all_benchs),
+                "benchmarks": [
+                    {"benchmark_id": b.benchmark_id, "nome": b.nome, "origem": b.origem,
+                     "tags": b.tags, "versao": b.versao, "imutavel": b.imutavel,
+                     "criado_em": b.criado_em.isoformat()}
+                    for b in all_benchs
+                ],
+            }
         meta = store.get_metadata(benchmark_id)
         if not meta:
-            return {
-                "erro": f"Benchmark '{benchmark_id}' não encontrado",
-                "status": "NAO_ENCONTRADO",
-            }
-
+            return {"erro": f"Benchmark '{benchmark_id}' não encontrado", "status": "NAO_ENCONTRADO"}
         history = store.get_execution_history(benchmark_id, limit=10)
-
         return {
             "benchmark_id": meta.benchmark_id,
             "nome": meta.nome,
@@ -58,43 +63,12 @@ def register(server: FastMCP, store: FileSystemBenchmarkStore) -> None:
             "imutavel": meta.imutavel,
             "criado_em": meta.criado_em.isoformat(),
             "execucoes_historico": [
-                {
-                    "execution_id": e.execution_id,
-                    "projeto_id": e.projeto_id,
-                    "status": e.status,
-                    "executado_em": e.executado_em.isoformat(),
-                    "discrepancia_sumario": e.discrepancia_sumario,
-                }
+                {"execution_id": e.execution_id, "projeto_id": e.projeto_id,
+                 "status": e.status, "executado_em": e.executado_em.isoformat(),
+                 "discrepancia_sumario": e.discrepancia_sumario}
                 for e in history
             ],
             "total_projetos_derivados": len({e.projeto_id for e in history if e.status == "SUCESSO"}),
-        }
-
-    @server.tool(description="Lista benchmarks com metadados do catálogo NEP-039 (versão, imutabilidade, histórico).")
-    @permission("project:read")
-    def listar_benchmarks_nep039() -> dict[str, Any]:
-        """Retorna lista de benchmarks (versão atual de cada um).
-
-        Returns:
-            Dicionário com lista de benchmarks com: id, nome, origem, tags, versao,
-            imutavel, ultimo_acesso.
-        """
-        all_benchs = store.list_all()
-
-        return {
-            "total": len(all_benchs),
-            "benchmarks": [
-                {
-                    "benchmark_id": b.benchmark_id,
-                    "nome": b.nome,
-                    "origem": b.origem,
-                    "tags": b.tags,
-                    "versao": b.versao,
-                    "imutavel": b.imutavel,
-                    "criado_em": b.criado_em.isoformat(),
-                }
-                for b in all_benchs
-            ],
         }
 
     @server.tool(

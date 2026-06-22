@@ -34,43 +34,41 @@ def register(server: FastMCP) -> None:
 
     @server.tool()
     @permission("artifacts:download")
-    def ler_artefato_texto(project_id: str, nome_arquivo: str, versao: str | None = None) -> dict[str, Any]:
-        """Retorna o conteúdo de um artefato textual (md, json, csv, txt) como string.
-
-        Para binários (PNG, XLSX, PDF) use ``baixar_artefato_binario``.
-        """
-        store = _project(project_id)
-        try:
-            return _wrap_response(ab.read_text(store, versao, nome_arquivo))
-        except (FileNotFoundError, ValueError) as e:
-            return _wrap_response({"erro": str(e), "nome": nome_arquivo})
-
-    @server.tool()
-    @permission("artifacts:download")
-    def baixar_artefato_binario(project_id: str, nome_arquivo: str, versao: str | None = None) -> dict[str, Any]:
-        """Retorna um artefato binário (PNG, XLSX, PDF) como base64.
-
-        Arquivos abaixo de 10 MB vêm inline em ``conteudo_base64``; acima disso,
-        retorna o caminho (em produção Azure, uma URL pré-assinada — ADR-096).
-        """
-        store = _project(project_id)
-        try:
-            return _wrap_response(ab.read_binary_b64(store, versao, nome_arquivo))
-        except (FileNotFoundError, ValueError) as e:
-            return _wrap_response({"erro": str(e), "nome": nome_arquivo})
-
-    @server.tool()
-    @permission("artifacts:download")
-    def baixar_bundle_zip(
-        project_id: str, versao: str | None = None, filtro: list[str] | None = None
+    def obter_artefato(
+        project_id: str,
+        formato: str = "texto",
+        nome_arquivo: str | None = None,
+        versao: str | None = None,
+        filtro: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Empacota os entregáveis do projeto em um zip (base64) com MANIFESTO.md.
+        """Obtém um artefato do projeto em três formatos.
 
-        ``filtro`` opcional restringe por audiência (``["humano"]``, ``["agente"]``)
-        ou por nomes de arquivo específicos. PNGs são organizados sob ``graficos/``.
+        formatos disponíveis:
+        - texto: conteúdo de artefato textual (md, json, csv, txt) como string. Requer nome_arquivo.
+        - binario: artefato binário (PNG, XLSX, PDF) como base64. Requer nome_arquivo.
+        - bundle: todos os entregáveis empacotados em zip (base64) com MANIFESTO.md.
+          filtro opcional restringe por audiência (["humano"], ["agente"]) ou nomes de arquivo.
+
+        Args:
+            project_id: ID do projeto.
+            formato: "texto" | "binario" | "bundle" (padrão: "texto").
+            nome_arquivo: Nome do arquivo — obrigatório para texto e binario.
+            versao: Versão específica; omita para versão atual.
+            filtro: Só usado em bundle — filtra por audiência ou nome.
         """
         store = _project(project_id)
         try:
-            return _wrap_response(ab.build_bundle(store, versao, filtro))
+            if formato == "texto":
+                if not nome_arquivo:
+                    return _wrap_response({"erro": "formato='texto' requer nome_arquivo"})
+                return _wrap_response(ab.read_text(store, versao, nome_arquivo))
+            elif formato == "binario":
+                if not nome_arquivo:
+                    return _wrap_response({"erro": "formato='binario' requer nome_arquivo"})
+                return _wrap_response(ab.read_binary_b64(store, versao, nome_arquivo))
+            elif formato == "bundle":
+                return _wrap_response(ab.build_bundle(store, versao, filtro))
+            else:
+                return _wrap_response({"erro": f"formato '{formato}' inválido. Use: texto | binario | bundle"})
         except (FileNotFoundError, ValueError) as e:
             return _wrap_response({"erro": str(e), "project_id": project_id})
