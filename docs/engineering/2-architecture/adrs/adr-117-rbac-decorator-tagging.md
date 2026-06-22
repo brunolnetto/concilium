@@ -112,13 +112,13 @@ A política role→permissões é global, não atributo de tool — continua com
 
 ## Definition of Done
 
-- [ ] `@permission` seta `_required_permission`; runtime check inalterado
-- [ ] `patch_mcp_auth_permissions` resolve permissão pela tag (sem dict)
-- [ ] Todas as 52 tools têm `@permission` inline
-- [ ] `TOOL_PERMISSIONS` removido; `build_tool_permission_map` deriva a tabela
-- [ ] Governança: tool sem tag falha (fail-closed); cobertura 100%
-- [ ] `ROLE_PERMISSIONS` intacto
-- [ ] Suite verde sem regressão
+- [x] `@permission` seta `_required_permission`; runtime check inalterado
+- [x] `patch_mcp_auth_permissions` resolve permissão pela tag (sem dict)
+- [x] Todas as 40 tools têm `@permission` inline (52 originais → 40 após ADR-116 F5)
+- [x] `TOOL_PERMISSIONS` vira cache populado em runtime; `build_tool_permission_map` deriva a tabela
+- [x] Governança: tool sem tag falha (fail-closed); cobertura 100% (test_mcp_tool_governance)
+- [x] `ROLE_PERMISSIONS` intacto
+- [x] Suite verde sem regressão (136 testes)
 
 ---
 

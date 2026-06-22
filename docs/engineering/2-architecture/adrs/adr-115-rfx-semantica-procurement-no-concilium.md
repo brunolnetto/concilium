@@ -1,6 +1,6 @@
 # ADR-115 — Semântica de RFI/RFP/RFQ no Concilium (RFX Procurement Flow)
 
-**Status:** Implementado ✅ _(F1-F3, F5 2026-06-20; F4 manifesto rfx no report — pacotes físicos por intent deferidos)_  
+**Status:** Implementado ✅ _(F1-F3, F5 2026-06-20; F4 parcial; RFQ removido 2026-06-22 — stakeholder confirmou fluxo exclusivo RFI→RFP)_  
 **Data:** 2026-06-19  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-043 (Benchmark Application Layer), ADR-050 (CLI Unificada), ADR-102 (Pipeline Jobs), ADR-113 (PipelineMode OLTP/OLAP), ADR-114 (Golden Example)
@@ -137,11 +137,12 @@ Objetivo: manter linguagem ubíqua para o planejador sem acoplar decisão de exe
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | Padronizar semântica RFI/RFP/RFQ na documentação de produto e arquitetura | ✅ 2026-06-19 |
-| F2 | `procurement_intent` no core (`ProcurementIntent`, `PipelineProfile`, `get_pipeline_profile_for_intent`) + CLI `benchmark run --intent` + `BenchmarkRunner.run(procurement_intent=)` | ✅ 2026-06-20 |
-| F3 | Regras de execução: intent→mode (RFI→OLTP, RFP→OLAP, RFQ→LIGHT) + `validate_procurement_baseline` (RFQ exige baseline) | ✅ 2026-06-20 |
-| F4 | `ProcurementContext.to_dict()` (bloco MCP D6) + bloco `rfx` no report (manifesto: intent, path, mode, deliverables). Pacotes físicos separados por intent → deferido | ⚠️ Parcial |
-| F5 | 18 testes: enum, intent→mode, contexto, baseline RFQ, runner intent | ✅ 2026-06-20 |
+| F1 | Padronizar semântica RFI/RFP no contexto Concilium | ✅ 2026-06-19 |
+| F2 | `procurement_intent` no core (`ProcurementIntent`, `PipelineProfile`) + CLI `--intent` + `BenchmarkRunner.run(procurement_intent=)` | ✅ 2026-06-20 |
+| F3 | Regras de execução: RFI→OLTP, RFP→OLAP | ✅ 2026-06-20 |
+| F4 | Bloco `rfx` no report (manifesto: intent, path, mode, deliverables) | ✅ 2026-06-20 · parcial (pacotes físicos por intent deferidos) |
+| F5 | Testes: enum, intent→mode, contexto, runner intent | ✅ 2026-06-20 |
+| — | **RFQ removido do domínio** — stakeholder confirmou fluxo exclusivo RFI→RFP. `ProcurementIntent` agora tem apenas 2 valores; `PipelineMode.LIGHT` mantido como modo independente | ✅ 2026-06-22 |
 
 ---
 
@@ -152,11 +153,11 @@ Objetivo: manter linguagem ubíqua para o planejador sem acoplar decisão de exe
 - [x] Mapeamento explícito intent -> estágio -> modo de pipeline -> artefatos
 
 ### Fases 2–5
-- [ ] CLI aceita `--intent {rfi,rfp,rfq}` com defaults previsíveis
-- [ ] API aceita `procurement_intent` e registra no metadata da execução
-- [ ] RFQ exige baseline/versionamento de referência
-- [ ] Pacotes RFI/RFP/RFQ são gerados com manifesto e trilha auditável
-- [ ] Testes cobrindo seleção de modo, validações e artefatos por intent
+- [x] CLI aceita `--intent {rfi,rfp}` com defaults previsíveis
+- [x] `procurement_intent` passado ao `BenchmarkRunner` e registrado no bloco `rfx` do report
+- [x] `validate_procurement_baseline` valida pré-condições por intent
+- [x] Testes cobrindo seleção de modo, validações e artefatos por intent (18 testes)
+- [x] RFQ removido do domínio (2026-06-22) — `ProcurementIntent` ∈ {RFI, RFP}
 
 ---
 

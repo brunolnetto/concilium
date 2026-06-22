@@ -1,6 +1,6 @@
 # ADR-116 — Limpeza da Superfície de Tools MCP: Remoção de Legado e Governança Anti-Deriva
 
-**Status:** Implementado ✅ _(F1-F4 2026-06-20 · 55→52 tools · F5 consolidação deferida)_  
+**Status:** Implementado ✅ _(F1-F4 2026-06-20 · F5 2026-06-22 · 55→52→40 tools)_  
 **Data:** 2026-06-20  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Dependências:** ADR-037 (MCP Facade Micro→Macro), ADR-099 (RBAC role↔tool), ADR-039/ADR-043 (Benchmark), ADR-102 (Pipeline Jobs async)
@@ -103,22 +103,23 @@ Candidatos identificados, deferidos para evitar mudança ampla de contrato num s
 
 | Fase | Entregas | Status |
 |---|---|---|
-| F1 | Remover `listar_benchmarks` + `executar_benchmark` (duplicatas) do registro | ⬜ |
-| F2 | Remover `avancar_pipeline` + atualizar referências (prompts, app, error msgs) | ⬜ |
-| F3 | Limpar `TOOL_PERMISSIONS` das tools removidas | ⬜ |
-| F4 | `test_mcp_tool_governance.py`: teto + sem-duplicatas + cobertura RBAC | ⬜ |
-| F5 | Consolidação catalogo/tributacao (micro→macro) | ⏳ Fase 2 — deferida |
+| F1 | Remover `listar_benchmarks` + `executar_benchmark` (duplicatas) do registro | ✅ 2026-06-20 |
+| F2 | Remover `avancar_pipeline` + atualizar referências (prompts, app, error msgs) | ✅ 2026-06-20 |
+| F3 | Limpar `TOOL_PERMISSIONS` das tools removidas | ✅ 2026-06-20 |
+| F4 | `test_mcp_tool_governance.py`: teto + sem-duplicatas + cobertura RBAC | ✅ 2026-06-20 |
+| F5 | Consolidação 9 grupos micro→macro (tributação, catálogo, artefatos, pipeline, benchmark, escopo, projeto) | ✅ 2026-06-22 · 52→40 |
 
 ---
 
 ## Definition of Done
 
-- [ ] `listar_benchmarks` e `executar_benchmark` removidas; `_nep039` permanecem
-- [ ] `empacotar_benchmark`/`download_benchmark_zip` preservadas (sem perda de capacidade)
-- [ ] `avancar_pipeline` removida; nenhuma referência interna a ela em código ativo
-- [ ] `TOOL_PERMISSIONS` sem entradas órfãs
-- [ ] `test_mcp_tool_governance.py`: teto 52, zero duplicatas, 100% cobertura RBAC
-- [ ] Suite verde sem regressão
+- [x] `listar_benchmarks` e `executar_benchmark` removidas; `_nep039` permanecem
+- [x] `empacotar_benchmark`/`download_benchmark_zip` preservadas (sem perda de capacidade)
+- [x] `avancar_pipeline` removida; nenhuma referência interna a ela em código ativo
+- [x] `TOOL_PERMISSIONS` sem entradas órfãs (ADR-117 eliminou dict)
+- [x] `test_mcp_tool_governance.py`: teto 40, zero duplicatas, 100% cobertura RBAC
+- [x] F5: 9 consolidações → 52→40 tools (tributação, catálogo ×3, artefatos, pipeline, benchmark, escopo, projeto)
+- [x] Suite verde sem regressão
 
 ---
 
