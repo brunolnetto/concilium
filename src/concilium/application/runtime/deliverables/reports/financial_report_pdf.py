@@ -32,7 +32,29 @@ _CHART_LABELS: dict[str, str] = {
     "dependencia_eap": "Rede de Dependências da EAP",
     "hist_equipamentos": "Histograma de Utilização de Equipamentos",
     "hist_mao_obra": "Histograma de Utilização de Mão de Obra",
-    "linha_recursos_tempo": "Utilização de Recursos ao Longo do Tempo",
+}
+
+# Issue 2: captions para cada gráfico
+_CHART_CAPTIONS: dict[str, str] = {
+    "scurve_custo": "Acúmulo de custos ao longo das semanas do projeto, comparado ao planejado.",
+    "bar_direto_atividade_temporal": "Distribuição semanal do custo direto por atividade da EAP.",
+    "pool_utilizacao_temporal": "Taxa de utilização de cada equipamento do pool ao longo do tempo.",
+    "pool_custo_estado": "Custo de recursos agrupado por estado operacional (produtivo, standby, ocioso).",
+    "pool_economia": "Comparativo de custo entre execução via pool e execução autônoma por atividade.",
+    "painel_equilibrio": "Ponto de equilíbrio financeiro por atividade: receita atribuída vs. custo total.",
+    "gantt_cronograma": "Cronograma RCPSP otimizado: barras indicam início, duração e folga de cada frente.",
+    "fluxo_financeiro": "Entradas e saídas de caixa por período, evidenciando o saldo acumulado.",
+    "area_tempo_componente": "Evolução semanal dos custos decompostos em MO, EQ, Diesel e Materiais.",
+    "bar_atividade_componente": "Composição de custo (MO, EQ, Diesel, Mat) para cada atividade da EAP.",
+    "bar_categoria_componente": "Participação de cada categoria de insumo no custo direto total.",
+    "bar_combustivel_tipo_temporal": "Consumo semanal de combustível separado por tipo de equipamento.",
+    "bar_diesel_temporal": "Volume e custo do diesel consumido semana a semana.",
+    "bar_tempo_direto_categoria": "Evolução semanal do custo direto por categoria de insumo.",
+    "bar_tempo_indireto_categoria": "Evolução semanal dos custos indiretos por categoria.",
+    "bar_tempo_natureza": "Participação semanal de custos diretos vs. indiretos no custo total.",
+    "dependencia_eap": "Grafo de precedências entre atividades da Estrutura Analítica de Projeto.",
+    "hist_equipamentos": "Distribuição das horas de utilização por equipamento ao longo do projeto.",
+    "hist_mao_obra": "Distribuição das horas trabalhadas por categoria de mão de obra.",
 }
 
 
@@ -43,6 +65,12 @@ def _chart_label(filename: str) -> str:
         return _CHART_LABELS[slug]
     # Fallback: capitalize e substitui underscores por espaços
     return slug.replace("_", " ").title()
+
+
+def _chart_caption(filename: str) -> str:
+    """Retorna legenda/caption para o gráfico, ou string vazia."""
+    slug = filename.replace(".png", "")
+    return _CHART_CAPTIONS.get(slug, "")
 
 
 def _fmt_localizacao(loc: str | None) -> str:
@@ -100,6 +128,31 @@ def _safe_text(v: object) -> str:
     return html.escape(str(v or ""), quote=False)
 
 
+def _fmt_cpu_descricao(cpu_id: str) -> str:
+    """Formata um cpu_id quando a descrição está ausente.
+
+    'CPU-TERRA-ATI-003' → 'ATI 003'
+    'CPU-TERRA-ESCO-CARGA-1CAT-DMT2000' → 'ESCO CARGA 1CAT DMT2000'
+    """
+    s = cpu_id
+    # Remove prefixo 'CPU-TERRA-' ou 'CPU-' genérico
+    for prefix in ("CPU-TERRA-", "CPU-"):
+        if s.upper().startswith(prefix):
+            s = s[len(prefix):]
+            break
+    return s.replace("-", " ").title()
+
+
+def _fmt_tipo_id(tipo_id: str) -> str:
+    """Formata tipo_id de instância de recurso.
+
+    Remove sufixo de hash hexadecimal como '-cdc3632643c1', substitui underscores.
+    """
+    # Sufixo hash: hífen seguido de 12+ chars hex
+    s = re.sub(r"-[0-9a-f]{10,}$", "", tipo_id, flags=re.IGNORECASE)
+    return s.replace("_", " ").replace("-", " ").title()
+
+
 def render_financial_report_pdf(
     relatorio: dict,
     title: str,
@@ -117,6 +170,7 @@ def render_financial_report_pdf(
         from reportlab.lib.units import mm
         from reportlab.platypus import (
             Image,
+            KeepTogether,
             Paragraph,
             SimpleDocTemplate,
             Spacer,
@@ -166,11 +220,23 @@ def render_financial_report_pdf(
             textColor=colors.HexColor("#1f2933"),
             spaceAfter=1.5 * mm,
         )
+        st_caption = ParagraphStyle(
+            "caption",
+            parent=base["Normal"],
+            fontName="Helvetica-Oblique",
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#627d98"),
+            spaceAfter=1 * mm,
+        )
 
         meta = relatorio.get("meta", {}) if isinstance(relatorio, dict) else {}
         resumo = relatorio.get("resumo", {}) if isinstance(relatorio, dict) else {}
         resultado = relatorio.get("RESULTADO", {}) if isinstance(relatorio, dict) else {}
         planejamento = relatorio.get("PLANEJAMENTO", []) if isinstance(relatorio, dict) else []
+        instancias_recurso = relatorio.get("instancias_recurso", []) if isinstance(relatorio, dict) else []
+        ponto_equilibrio = relatorio.get("ponto_equilibrio", []) if isinstance(relatorio, dict) else []
+        actionable_insights = relatorio.get("ACTIONABLE_INSIGHTS", {}) if isinstance(relatorio, dict) else {}
 
         story: list = []
 
@@ -208,8 +274,8 @@ def render_financial_report_pdf(
         story.append(Paragraph(info_lines, st_body))
 
         story.append(Spacer(1, 1 * mm))
-        story.append(Paragraph("Resultado Financeiro", st_h2))
 
+        # ── Resultado Financeiro ──────────────────────────────────────────────
         preco_venda = float(resultado.get("preco_venda_total", 0.0) or 0.0)
         custo_direto = float(resultado.get("custo_direto", 0.0) or 0.0)
         custo_indireto = float(resultado.get("custo_indireto", 0.0) or 0.0)
@@ -227,7 +293,7 @@ def render_financial_report_pdf(
             textColor=colors.HexColor("#1f2933"),
         )
 
-        table_data = [
+        fin_table_data = [
             [Paragraph("<b>Indicador</b>", st_body), Paragraph("<b>Valor</b>", st_money)],
             [Paragraph("Preço de venda (c/ BDI)", st_body), Paragraph(_brl(preco_venda), st_money)],
             [Paragraph("Custo direto", st_body), Paragraph(_brl(custo_direto), st_money)],
@@ -237,8 +303,8 @@ def render_financial_report_pdf(
             [Paragraph("Margem", st_body), Paragraph(_pct(margem_pct), st_money)],
         ]
 
-        tbl = Table(table_data, colWidths=[usable_w * 0.62, usable_w * 0.38])
-        tbl.setStyle(
+        fin_tbl = Table(fin_table_data, colWidths=[usable_w * 0.62, usable_w * 0.38])
+        fin_tbl.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9e2ec")),
@@ -253,12 +319,11 @@ def render_financial_report_pdf(
                 ]
             )
         )
-        story.append(tbl)
+        # Issue 4: KeepTogether para não separar título da tabela
+        story.append(KeepTogether([Paragraph("Resultado Financeiro", st_h2), Spacer(1, 1 * mm), fin_tbl]))
 
-        if isinstance(planejamento, list) and planejamento:
-            story.append(Spacer(1, 1 * mm))
-            story.append(Paragraph("Planejamento por EAP (top 20)", st_h2))
-
+        # ── Issue 6a: Análise de Viabilidade ─────────────────────────────────
+        if isinstance(ponto_equilibrio, list) and ponto_equilibrio:
             st_small = ParagraphStyle(
                 "small",
                 parent=base["Normal"],
@@ -266,9 +331,160 @@ def render_financial_report_pdf(
                 fontSize=8,
                 leading=10,
             )
-
             st_small_right = ParagraphStyle(
                 "small_right",
+                parent=base["Normal"],
+                fontName="Helvetica",
+                fontSize=8,
+                leading=10,
+                alignment=2,
+            )
+
+            viab_data = [
+                [
+                    Paragraph("<b>Item EAP</b>", st_small),
+                    Paragraph("<b>Frentes Nec.</b>", st_small_right),
+                    Paragraph("<b>Status</b>", st_small),
+                    Paragraph("<b>PU Calibrado</b>", st_small_right),
+                ]
+            ]
+            for pe in ponto_equilibrio:
+                item_id = _safe_text(pe.get("item_id", "-"))
+                frentes = f"{float(pe.get('frentes_necessarias', 0.0) or 0.0):.3f}"
+                status = _safe_text(pe.get("status_validacao", "-") or "-")
+                pu_cal = _brl(float(pe.get("pu_cat", 0.0) or 0.0))
+                viab_data.append([
+                    Paragraph(item_id, st_small),
+                    Paragraph(frentes, st_small_right),
+                    Paragraph(status, st_small),
+                    Paragraph(pu_cal, st_small_right),
+                ])
+
+            viab_tbl = Table(
+                viab_data,
+                colWidths=[usable_w * 0.25, usable_w * 0.18, usable_w * 0.22, usable_w * 0.35],
+            )
+            viab_tbl.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9e2ec")),
+                        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#bcccdc")),
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f7fa")]),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ]
+                )
+            )
+            story.append(KeepTogether([Paragraph("Análise de Viabilidade", st_h2), Spacer(1, 1 * mm), viab_tbl]))
+
+        # ── Issue 6b: Distribuição de Custos por Tipo de Serviço ─────────────
+        if isinstance(planejamento, list) and planejamento:
+            total_mo = sum(float(it.get("subtotal_sem_bdi_mo", 0.0) or 0.0) for it in planejamento)
+            total_eq = sum(float(it.get("subtotal_sem_bdi_eq", 0.0) or 0.0) for it in planejamento)
+            total_diesel = sum(float(it.get("subtotal_sem_bdi_diesel", 0.0) or 0.0) for it in planejamento)
+            total_mat = sum(float(it.get("subtotal_sem_bdi_mat", 0.0) or 0.0) for it in planejamento)
+            total_all = total_mo + total_eq + total_diesel + total_mat or 1.0
+
+            st_small = ParagraphStyle(
+                "small2",
+                parent=base["Normal"],
+                fontName="Helvetica",
+                fontSize=8,
+                leading=10,
+            )
+            st_small_right = ParagraphStyle(
+                "small_right2",
+                parent=base["Normal"],
+                fontName="Helvetica",
+                fontSize=8,
+                leading=10,
+                alignment=2,
+            )
+
+            dist_data = [
+                [
+                    Paragraph("<b>Categoria</b>", st_small),
+                    Paragraph("<b>Subtotal (R$)</b>", st_small_right),
+                    Paragraph("<b>Participação (%)</b>", st_small_right),
+                ]
+            ]
+            for label, value in [
+                ("Mão de Obra (MO)", total_mo),
+                ("Equipamentos (EQ)", total_eq),
+                ("Combustível (DIESEL)", total_diesel),
+                ("Materiais (MAT)", total_mat),
+            ]:
+                dist_data.append([
+                    Paragraph(label, st_small),
+                    Paragraph(_brl(value), st_small_right),
+                    Paragraph(f"{100.0 * value / total_all:.1f}%", st_small_right),
+                ])
+
+            dist_tbl = Table(
+                dist_data,
+                colWidths=[usable_w * 0.45, usable_w * 0.30, usable_w * 0.25],
+            )
+            dist_tbl.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9e2ec")),
+                        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#bcccdc")),
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f7fa")]),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ]
+                )
+            )
+            story.append(KeepTogether([
+                Paragraph("Distribuição de Custos por Tipo de Serviço", st_h2),
+                Spacer(1, 1 * mm),
+                dist_tbl,
+            ]))
+
+        # ── Issue 6c: Recomendações Técnicas ─────────────────────────────────
+        if isinstance(actionable_insights, dict):
+            recs: list[str] = []
+            for section_key in ("criticidade", "sensibilidade", "intervencao"):
+                sec = actionable_insights.get(section_key, {})
+                if not isinstance(sec, dict):
+                    continue
+                # Try common keys for recommendation text
+                for field in ("notas_engenheiro", "recomendacao_primaria", "passos_repair"):
+                    val = sec.get(field)
+                    if isinstance(val, str) and val.strip():
+                        recs.append(val.strip())
+                    elif isinstance(val, list):
+                        for v in val:
+                            if isinstance(v, str) and v.strip():
+                                recs.append(v.strip())
+                            elif isinstance(v, dict):
+                                txt = v.get("descricao") or v.get("texto") or v.get("titulo") or ""
+                                if txt:
+                                    recs.append(str(txt).strip())
+
+            if recs:
+                rec_paragraphs: list = [Paragraph("Recomendações Técnicas", st_h2)]
+                for i, rec in enumerate(recs[:5]):
+                    rec_paragraphs.append(Paragraph(f"{i + 1}. {_safe_text(rec)}", st_body))
+                story.append(KeepTogether(rec_paragraphs))
+
+        # ── Issue 1+3: EAP table — all items, descriptions from cpu_id ───────
+        if isinstance(planejamento, list) and planejamento:
+            st_small = ParagraphStyle(
+                "small3",
+                parent=base["Normal"],
+                fontName="Helvetica",
+                fontSize=8,
+                leading=10,
+            )
+            st_small_right = ParagraphStyle(
+                "small_right3",
                 parent=base["Normal"],
                 fontName="Helvetica",
                 fontSize=8,
@@ -283,10 +499,14 @@ def render_financial_report_pdf(
                     Paragraph("<b>c/BDI (R$)</b>", st_small_right),
                 ]
             ]
-            for item in planejamento[:20]:
+            # Issue 3: remove [:20] limit; show all items
+            for item in planejamento:
                 item_id = _safe_text(item.get("item_id", "-"))
-                # item.get("descricao") pode retornar None explícito (JSON null)
-                desc_raw = item.get("descricao") or item.get("cpu_id") or ""
+                # Issue 1: if descricao is None/empty, format cpu_id humanely
+                desc_raw = item.get("descricao")
+                if desc_raw is None or str(desc_raw).strip() == "":
+                    cpu_id = item.get("cpu_id") or ""
+                    desc_raw = _fmt_cpu_descricao(cpu_id) if cpu_id else "-"
                 desc = _safe_text(str(desc_raw)[:80])
                 valor = _brl(float(item.get("subtotal_com_bdi", 0.0) or 0.0))
                 plan_data.append(
@@ -312,15 +532,110 @@ def render_financial_report_pdf(
                     ]
                 )
             )
-            story.append(plan_tbl)
+            # Issue 3: updated section title + Issue 4: KeepTogether
+            story.append(KeepTogether([
+                Paragraph("Quantitativos e Composição de Custos (EAP)", st_h2),
+                Spacer(1, 1 * mm),
+                plan_tbl,
+            ]))
 
+        # ── Issue 5: MOB/DESMOB table ─────────────────────────────────────────
+        if isinstance(instancias_recurso, list) and instancias_recurso:
+            st_small = ParagraphStyle(
+                "small4",
+                parent=base["Normal"],
+                fontName="Helvetica",
+                fontSize=7,
+                leading=9,
+            )
+            st_small_right = ParagraphStyle(
+                "small_right4",
+                parent=base["Normal"],
+                fontName="Helvetica",
+                fontSize=7,
+                leading=9,
+                alignment=2,
+            )
+            st_small_center = ParagraphStyle(
+                "small_center4",
+                parent=base["Normal"],
+                fontName="Helvetica",
+                fontSize=7,
+                leading=9,
+                alignment=1,
+            )
+
+            mob_data = [
+                [
+                    Paragraph("<b>Frente / Recurso</b>", st_small),
+                    Paragraph("<b>Tipo</b>", st_small),
+                    Paragraph("<b>Mob.</b>", st_small_center),
+                    Paragraph("<b>Desmob.</b>", st_small_center),
+                    Paragraph("<b>Sem. Ativas</b>", st_small_center),
+                    Paragraph("<b>Utiliz.</b>", st_small_center),
+                    Paragraph("<b>Custo Mob+Desmob</b>", st_small_right),
+                ]
+            ]
+            for inst in instancias_recurso:
+                inst_id = _safe_text(inst.get("instancia_id", "-"))
+                tipo = _safe_text(_fmt_tipo_id(inst.get("tipo_id", "-") or "-"))
+                mob = _safe_text(inst.get("semana_mobilizacao", "-") or "-")
+                demob = _safe_text(inst.get("semana_desmobilizacao", "-") or "-")
+                sem_ativas = str(inst.get("semanas_ativas", "-") or "-")
+                utilizacao = f"{float(inst.get('taxa_utilizacao_pct', 0.0) or 0.0):.0f}%"
+                custo_mob = float(inst.get("custo_mob_instancia", 0.0) or 0.0)
+                custo_demob = float(inst.get("custo_demob_instancia", 0.0) or 0.0)
+                custo_md = _brl(custo_mob + custo_demob)
+                mob_data.append([
+                    Paragraph(inst_id[:35], st_small),
+                    Paragraph(tipo[:30], st_small),
+                    Paragraph(mob, st_small_center),
+                    Paragraph(demob, st_small_center),
+                    Paragraph(sem_ativas, st_small_center),
+                    Paragraph(utilizacao, st_small_center),
+                    Paragraph(custo_md, st_small_right),
+                ])
+
+            mob_tbl = Table(
+                mob_data,
+                colWidths=[
+                    usable_w * 0.22,
+                    usable_w * 0.18,
+                    usable_w * 0.10,
+                    usable_w * 0.10,
+                    usable_w * 0.10,
+                    usable_w * 0.08,
+                    usable_w * 0.22,
+                ],
+            )
+            mob_tbl.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#d9e2ec")),
+                        ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#bcccdc")),
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f7fa")]),
+                        ("TOPPADDING", (0, 0), (-1, -1), 2),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ]
+                )
+            )
+            story.append(KeepTogether([
+                Paragraph("Ciclo de Vida dos Recursos (Mobilização e Desmobilização)", st_h2),
+                Spacer(1, 1 * mm),
+                mob_tbl,
+            ]))
+
+        # ── Issue 2+4: Charts with captions wrapped in KeepTogether ──────────
         if image_provider:
             story.append(Spacer(1, 2 * mm))
             story.append(Paragraph("Principais Gráficos", st_h2))
 
+            # Issue 5: removed 'linha_recursos_tempo.png' (confusing MOB/DESMOB chart)
             preferred = [
                 "scurve_custo.png",
-                "bar_direto_atividade_temporal.png",
                 "bar_direto_atividade_temporal.png",
                 "pool_utilizacao_temporal.png",
                 "pool_custo_estado.png",
@@ -347,9 +662,17 @@ def render_financial_report_pdf(
                     disp_w, disp_h = nat_w * scale, nat_h * scale
                     img = Image(BytesIO(content), width=disp_w, height=disp_h)
                     img.hAlign = "CENTER"
-                    story.append(Spacer(1, 2 * mm))
-                    story.append(Paragraph(_safe_text(_chart_label(name)), st_h2))
-                    story.append(img)
+                    # Issue 2: caption paragraph
+                    caption_text = _chart_caption(name)
+                    chart_block = [
+                        Spacer(1, 2 * mm),
+                        Paragraph(_safe_text(_chart_label(name)), st_h2),
+                    ]
+                    if caption_text:
+                        chart_block.append(Paragraph(_safe_text(caption_text), st_caption))
+                    chart_block.append(img)
+                    # Issue 4: KeepTogether so title doesn't orphan from image
+                    story.append(KeepTogether(chart_block))
                     images_added += 1
                 except Exception:
                     pass
@@ -368,7 +691,6 @@ def render_financial_report_pdf(
     except Exception:
         try:
             from reportlab.lib.pagesizes import A4
-            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
             from reportlab.lib.units import mm
             from reportlab.pdfgen import canvas
 
