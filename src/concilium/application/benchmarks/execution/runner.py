@@ -19,6 +19,26 @@ from ..report.report_printer import BenchmarkReportPrinter
 from ..spec.spec_loader import ProjectSpec
 
 
+def _emit_business_telemetry(spec: Any, report: dict, mode: Any) -> None:
+    """Emite métricas de negócio (margem, custo direto) ao OTel após pipeline completo."""
+    try:
+        from concilium.infrastructure.telemetry import record_project_margin
+
+        ferramenta = (report.get("resultado") or {}).get("ferramenta") or {}
+        margem_raw = ferramenta.get("margem_pct")
+        custo_direto = ferramenta.get("custo_direto")
+        if margem_raw is None:
+            return
+        record_project_margin(
+            project_id=getattr(spec, "benchmark_id", None) or str(getattr(spec, "project_slug", "unknown")),
+            margem_pct=float(margem_raw),
+            custo_direto=float(custo_direto) if custo_direto is not None else None,
+            pipeline_mode=getattr(mode, "value", str(mode)),
+        )
+    except Exception:
+        pass
+
+
 def _load_inference_service() -> Any:
     mod = importlib.import_module("concilium.application.benchmarks.inference")
     svc_cls = getattr(mod, "BenchmarkInferenceService", None)
@@ -149,6 +169,7 @@ class BenchmarkRunner:
                 }
             )
         self.report_printer.print(report)
+        _emit_business_telemetry(spec, report, mode)
 
         if mode != PipelineMode.OLAP:
             # Modo OLTP/LIGHT: sempre salva benchmark_report; quando houver perfil RFX

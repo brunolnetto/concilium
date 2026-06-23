@@ -36,6 +36,7 @@ _initialized = False
 _skill_duration_histogram = None
 _tool_calls_counter = None
 _rate_limit_exceeded_counter = None
+_project_margin_gauge = None
 
 # ── Provider references (para shutdown em testes) ─────────────────────────────
 _active_meter_providers: list = []
@@ -262,6 +263,48 @@ def record_tool_call(tool_name: str, status: str) -> None:
         _tool_calls_counter.add(1, {"tool": tool_name, "status": status})
     except Exception:
         pass
+
+
+def record_project_margin(
+    project_id: str,
+    margem_pct: float,
+    custo_direto: float | None = None,
+    pipeline_mode: str = "unknown",
+) -> None:
+    """Emite métricas de negócio (margem, custo direto) por projeto — ADR-095.
+
+    Privacidade: apenas IDs e indicadores financeiros agregados.
+    Nenhum dado de insumo, preço unitário ou atividade é enviado.
+    """
+    global _project_margin_gauge
+    if not _OTEL_AVAILABLE:
+        return
+    try:
+        if _project_margin_gauge is None:
+            _project_margin_gauge = get_meter().create_gauge(
+                "concilium.project.margem_pct",
+                description="Margem percentual do projeto após pipeline completo",
+                unit="%",
+            )
+        attrs = {"project.id": project_id, "pipeline.mode": pipeline_mode}
+        _project_margin_gauge.set(round(margem_pct * 100, 4), attrs)
+        if custo_direto is not None:
+            _log_business_metric(project_id, "custo_direto", custo_direto, pipeline_mode)
+    except Exception:
+        pass
+
+
+def _log_business_metric(project_id: str, metric: str, value: float, pipeline_mode: str) -> None:
+    import logging
+
+    _biz_log = logging.getLogger("concilium.business_metrics")
+    _biz_log.info(
+        "business_metric project_id=%s metric=%s value=%.2f pipeline_mode=%s",
+        project_id,
+        metric,
+        value,
+        pipeline_mode,
+    )
 
 
 # ── MCP tool decorator ────────────────────────────────────────────────────────

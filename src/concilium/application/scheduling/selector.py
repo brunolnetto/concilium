@@ -107,6 +107,13 @@ def explore_schedules(
     score_deadline = deadline_for_score or deadline_weeks
     algorithm = (strategy.algorithm if strategy else None) or "SerialScheduler"
 
+    _log.debug(
+        "explore_schedules: algorithm=%s n_activities=%d deadline=%dw",
+        algorithm,
+        len(dag.activities) if dag else 0,
+        deadline_weeks,
+    )
+
     # ── CP-SAT exact solver (ADR-075 Mode A) ─────────────────────────────────
     if algorithm == "CP-SAT":
         try:
@@ -122,6 +129,11 @@ def explore_schedules(
             sched = cpsat.schedule(dag=dag, pool=pool)
             if sched.feasible:
                 score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+                _log.info(
+                    "explore_schedules: CP-SAT feasible makespan=%dw quality=%.4f",
+                    sched.makespan,
+                    score,
+                )
                 return [ExploreResult("CP-SAT", sched, score)]
             raise ScheduleError(
                 "CP-SAT solver não encontrou solução viável dentro do horizonte configurado. "
@@ -145,6 +157,11 @@ def explore_schedules(
             sched = lns.schedule(dag=dag, pool=pool)
             if sched.feasible:
                 score = sched.metrics.quality_score(deadline_weeks=score_deadline)
+                _log.info(
+                    "explore_schedules: LNS feasible makespan=%dw quality=%.4f",
+                    sched.makespan,
+                    score,
+                )
                 return [ExploreResult("LNS", sched, score)]
             raise ScheduleError(
                 "LNS solver não encontrou solução viável. "
@@ -159,6 +176,9 @@ def explore_schedules(
     # Reached only when algorithm is neither CP-SAT nor LNS (direct SerialScheduler
     # invocation or explicit heuristic override). CP-SAT/LNS failures raise ScheduleError
     # and never fall through here.
+    if algorithm not in ("CP-SAT", "LNS", "SerialScheduler"):
+        # Explicit non-standard algorithm name — treat as priority rule
+        _log.debug("explore_schedules: SerialScheduler path (algorithm=%s)", algorithm)
     if heuristics is None:
         heuristics = ["MINSLK", "LPT", "MAXRES", "ES", "GR"]
 
