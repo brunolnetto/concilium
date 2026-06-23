@@ -363,9 +363,7 @@ class TestMcpArtifacts:
         register(server)
         names = list(server._tool_manager._tools.keys())
         assert "listar_artefatos_projeto" in names
-        assert "ler_artefato_texto" in names
-        assert "baixar_artefato_binario" in names
-        assert "baixar_bundle_zip" in names
+        assert "obter_artefato" in names  # ADR-116 F5: ler_texto+baixar_binario+bundle_zip→obter_artefato
 
     def test_listar_artefatos_calls_list_artifacts(self):
         from mcp.server.fastmcp import FastMCP

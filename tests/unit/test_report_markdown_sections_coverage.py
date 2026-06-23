@@ -424,7 +424,7 @@ class TestRenderOportunidades:
             ],
         }
         lines = render_oportunidades(relatorio)
-        assert any("Grafo de Oportunidades" in l for l in lines)
+        assert any("Oportunidades de Compartilhamento de Recursos" in l for l in lines)
         assert any("eap-1" in l for l in lines)
         assert any("✅" in l for l in lines)
         assert any("❌" in l for l in lines)
@@ -458,7 +458,7 @@ class TestRenderOportunidades:
             oportunidades=[],
         )
         lines = render_oportunidades(rel)
-        assert any("Grafo de Oportunidades" in l for l in lines)
+        assert any("Oportunidades de Compartilhamento de Recursos" in l for l in lines)
 
 
 # ---------------------------------------------------------------------------
@@ -541,9 +541,9 @@ class TestRenderPoolEconomiaOrigem:
         ):
             lines = render_pool_economia_origem(MagicMock())
 
-        assert any("Origem da Economia" in l for l in lines)
-        assert any("Principais economias" in l for l in lines)
-        assert any("sobrecusto" in l for l in lines)
+        assert any("Economia por Compartilhamento de Frente" in l for l in lines)
+        assert any("Principais Economias de Pool" in l for l in lines)  # ADR terminology update
+        assert any("Sobrecusto" in l or "sobrecusto" in l for l in lines)
         assert any("eap-1" in l for l in lines)
         assert any("eap-2" in l for l in lines)
 
