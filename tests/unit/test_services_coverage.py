@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,15 +13,10 @@ import pytest
 
 class TestBenchmarkDiffService:
     def _make_exec(self, exec_id, benchmark_id, versao, discrepancia=None):
-        from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
-
-        return BenchmarkExecution(
+        return SimpleNamespace(
             execution_id=exec_id,
             benchmark_id=benchmark_id,
             versao=versao,
-            projeto_id="proj-1",
-            status=BenchmarkState.SUCESSO,
-            executado_em=datetime.now(),
             discrepancia_sumario=discrepancia or {},
         )
 

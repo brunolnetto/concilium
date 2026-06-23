@@ -9,57 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 # ─── domain/benchmark/repository.py (abstract methods) ────────────────────────
-
-
-class TestBenchmarkRepositoryPort:
-    """Instantiate a minimal concrete subclass to cover the abstract method stubs."""
-
-    def _make_concrete(self):
-        from concilium.domain.benchmark.repository import BenchmarkRepositoryPort
-
-        class _Impl(BenchmarkRepositoryPort):
-            def save_metadata(self, m):
-                pass
-
-            def get_metadata(self, bid):
-                return None
-
-            def get_metadata_by_version(self, bid, v):
-                return None
-
-            def list_all(self):
-                return []
-
-            def log_execution(self, e):
-                pass
-
-            def get_execution_history(self, bid, limit=50):
-                return []
-
-            def create_new_version(self, bid, patch):
-                raise NotImplementedError
-
-            def update_metadata(self, bid, patch):
-                pass
-
-        return _Impl()
-
-    def test_concrete_subclass_works(self):
-        impl = self._make_concrete()
-        assert impl.get_metadata("x") is None
-        assert impl.list_all() == []
-        assert impl.get_execution_history("x") == []
-
-    def test_abstract_port_cannot_instantiate(self):
-        from concilium.domain.benchmark.repository import BenchmarkRepositoryPort
-
-        with pytest.raises(TypeError):
-            BenchmarkRepositoryPort()
-
-
-# ─── domain/services/planning/week_sequence.py ────────────────────────────────
-
-
 class TestWeekIndex:
     def test_seq_format(self):
         from concilium.domain.services.planning.week_sequence import week_index

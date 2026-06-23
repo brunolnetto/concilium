@@ -1,9 +1,10 @@
 """BenchmarkDiffService — Comparação estruturada de execuções de benchmark."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-
-from concilium.domain.benchmark.models import BenchmarkExecution
+from typing import Any
 
 
 @dataclass
@@ -42,7 +43,7 @@ class BenchmarkDiffResult:
 class BenchmarkDiffService:
     """Serviço para comparar execuções de benchmark e gerar diffs estruturados."""
 
-    def compare(self, exec_1: BenchmarkExecution, exec_2: BenchmarkExecution) -> BenchmarkDiffResult:
+    def compare(self, exec_1: Any, exec_2: Any) -> BenchmarkDiffResult:
         """Compara duas execuções e retorna diff estruturado.
 
         Args:

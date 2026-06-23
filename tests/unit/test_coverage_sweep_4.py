@@ -162,14 +162,6 @@ class TestGraphExporter:
 
 
 class TestStoreFactoryAdditional:
-    def test_get_benchmark_store_returns_store(self):
-        from concilium.infrastructure.storage.store_factory import get_benchmark_store
-
-        with patch("concilium.infrastructure.storage.store_factory.build_blob_storage") as mock_bs:
-            mock_bs.return_value = MagicMock()
-            store = get_benchmark_store()
-        assert store is not None
-
     def test_get_campaign_store_returns_store(self):
         from concilium.infrastructure.storage.store_factory import get_campaign_store
 

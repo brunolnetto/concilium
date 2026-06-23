@@ -140,18 +140,6 @@ class TestBuildProjectRepository:
         assert result is repo_mock
 
 
-class TestGetBenchmarkStore:
-    def test_returns_benchmark_store(self, tmp_path):
-        from concilium.infrastructure.storage.store_factory import get_benchmark_store
-
-        local_mock = MagicMock()
-        with patch("concilium.infrastructure.storage.store_factory.build_blob_storage", return_value=local_mock):
-            store = get_benchmark_store()
-        from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
-
-        assert isinstance(store, FileSystemBenchmarkStore)
-
-
 class TestGetCampaignStore:
     def test_returns_campaign_store(self, tmp_path):
         from concilium.infrastructure.storage.store_factory import get_campaign_store

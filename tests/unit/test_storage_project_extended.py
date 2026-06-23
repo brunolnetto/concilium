@@ -654,37 +654,3 @@ class TestEscopos:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  ProjectStore.init with benchmark slug
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-class TestInitWithBenchmarkSlug:
-    def test_init_with_benchmark_slug_uses_slug_as_id(self, tmp_path):
-        store = ProjectStore.init(
-            tmp_path,
-            nome="Benchmark Proj",
-            contexto_id="ctx-bm",
-            derivado_de_benchmark="AGIS-2026",
-            benchmark_versao=3,
-            benchmark_execution_id="exec-abc",
-        )
-        # Directory name should be the slug
-        assert store.root.name == "AGIS-2026"
-        meta = store.meta
-        assert meta["derivado_de_benchmark"] == "AGIS-2026"
-        assert meta["benchmark_versao"] == 3
-        assert meta["benchmark_execution_id"] == "exec-abc"
-
-    def test_init_existing_dir_ok(self, tmp_path):
-        """init() with exist_ok=True on existing dir doesn't fail."""
-        # First init
-        store1 = ProjectStore.init(tmp_path, "P1", "ctx")
-        project_id = store1.root.name
-        # Re-init same slug should not fail (exist_ok)
-        store2 = ProjectStore.init(
-            tmp_path,
-            nome="P2",
-            contexto_id="ctx",
-            derivado_de_benchmark=project_id,
-        )
-        assert store2.root.exists()
