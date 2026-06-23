@@ -297,25 +297,25 @@ class TestHcCheckSharepoint:
 
         import sys
 
+        _SP_KEY = "concilium.infrastructure.adapters.blob_storage.sharepoint"
         # Remove the module from sys.modules so the lazy import inside the function
         # will re-execute the import machinery, and we can inject a broken module.
-        original_mod = sys.modules.pop("concilium.infrastructure.adapters.blob_storage.sharepoint", None)
-        # Insert a sentinel that raises ImportError when accessed
-        monkeypatch.setitem(
-            sys.modules,
-            "concilium.infrastructure.adapters.blob_storage.sharepoint",
-            None,  # None in sys.modules causes ImportError on 'from ... import'
-        )
+        original_mod = sys.modules.pop(_SP_KEY, None)
+        # Insert a sentinel that raises ImportError when accessed.
+        # NOTE: do NOT use monkeypatch.setitem — its teardown would remove the key
+        # AFTER the finally block restores it, leaving the module absent and polluting
+        # subsequent tests that reimport SharePointBlobStorage.
+        sys.modules[_SP_KEY] = None  # type: ignore[assignment]
 
         try:
             rows = []
             self._fn()(rows)
         finally:
-            # Restore the original module
+            # Always restore the original module so no test pollution occurs
             if original_mod is not None:
-                sys.modules["concilium.infrastructure.adapters.blob_storage.sharepoint"] = original_mod
+                sys.modules[_SP_KEY] = original_mod
             else:
-                sys.modules.pop("concilium.infrastructure.adapters.blob_storage.sharepoint", None)
+                sys.modules.pop(_SP_KEY, None)
 
         assert len(rows) == 1
         name, ok, detail = rows[0]
