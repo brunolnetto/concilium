@@ -1,6 +1,6 @@
 """Unit tests for concilium.presentation.mcp.tools.formulario.
 
-Covers _suggest_cpu, _build_eap_items, and the criar_projeto_formulario tool
+Covers _suggest_cpu, _build_eap_items, and the criar_projeto tool
 registered via register().
 """
 
@@ -302,7 +302,7 @@ class TestBuildEapItems:
 
 
 # ===========================================================================
-# criar_projeto_formulario (registered tool)
+# criar_projeto (registered tool)
 # ===========================================================================
 
 
@@ -318,7 +318,7 @@ def tool_criar(tmp_path):
         register(server)
 
     tools = _get_tools(server)
-    return tools["criar_projeto_formulario"]
+    return tools["criar_projeto"]
 
 
 # Minimal kwargs shared across tests
@@ -332,7 +332,7 @@ _COMMON_KWARGS = dict(
 
 
 class TestCriarProjetoFormulario:
-    """Tests for the criar_projeto_formulario MCP tool."""
+    """Tests for the criar_projeto MCP tool."""
 
     def test_nao_mapeados_returns_pendente_without_creating_project(self, tool_criar):
         """If any service is unmapped, return pendente_mapeamento without touching storage."""
@@ -377,7 +377,7 @@ class TestCriarProjetoFormulario:
         """When all mapped and coordinator succeeds, returns status=criado."""
         server = _make_server()
         register(server)
-        tool = _get_tools(server)["criar_projeto_formulario"]
+        tool = _get_tools(server)["criar_projeto"]
 
         servicos = [
             {
@@ -448,7 +448,7 @@ class TestCriarProjetoFormulario:
         """When coord.avancar_plano raises, returns dict with 'erro' key."""
         server = _make_server()
         register(server)
-        tool = _get_tools(server)["criar_projeto_formulario"]
+        tool = _get_tools(server)["criar_projeto"]
 
         servicos = [
             {
@@ -512,7 +512,7 @@ class TestCriarProjetoFormulario:
         """When r.has_errors is True, returns status=erro_escopo with erros list."""
         server = _make_server()
         register(server)
-        tool = _get_tools(server)["criar_projeto_formulario"]
+        tool = _get_tools(server)["criar_projeto"]
 
         servicos = [
             {
@@ -591,7 +591,7 @@ class TestCriarProjetoFormulario:
         """pendente_mapeamento response includes 'instrucoes' field."""
         server = _make_server()
         register(server)
-        tool = _get_tools(server)["criar_projeto_formulario"]
+        tool = _get_tools(server)["criar_projeto"]
 
         servicos = [{"descricao": "Unknown", "quantidade": 1.0, "unidade": "un"}]
 
@@ -628,7 +628,7 @@ class TestCriarProjetoFormulario:
         """mapeados_preview sets confianca='alta' for score=2, 'media' for score=1."""
         server = _make_server()
         register(server)
-        tool = _get_tools(server)["criar_projeto_formulario"]
+        tool = _get_tools(server)["criar_projeto"]
 
         # Two services: one with explicit cpu_id (score=2), one resolved auto (score=1)
         servicos = [

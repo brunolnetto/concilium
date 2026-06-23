@@ -20,6 +20,7 @@ from concilium.presentation.mcp.tools.spec import (
     _validate_spec,
     register,
 )
+from concilium.presentation.mcp.tools.formulario import register as register_formulario
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -329,14 +330,14 @@ def _base_mocks(tmp_path):
 def _make_tool_with_patches(tmp_path, mock_rt, mock_coord, mock_store, extra_patches=None):
     """Register spec tool on a fresh server with all infra patched; return callable."""
     server = _make_server()
-    register(server)
-    tool = _get_tools(server)["criar_projeto_spec"]
+    register_formulario(server)
+    tool = _get_tools(server)["criar_projeto"]
 
     patches = {
-        "concilium.presentation.mcp.tools.spec._runtime": mock_rt,
-        "concilium.presentation.mcp.tools.spec._projetos_root": MagicMock(return_value=tmp_path),
-        "concilium.presentation.mcp.tools.spec._lifecycle_coordinator": MagicMock(return_value=mock_coord),
-        "concilium.presentation.mcp.tools.spec._wrap_response": MagicMock(side_effect=lambda d: d),
+        "concilium.presentation.mcp.tools.formulario._runtime": mock_rt,
+        "concilium.presentation.mcp.tools.formulario._projetos_root": MagicMock(return_value=tmp_path),
+        "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator": MagicMock(return_value=mock_coord),
+        "concilium.presentation.mcp.tools.formulario._wrap_response": MagicMock(side_effect=lambda d: d),
         "concilium.infrastructure.storage.project.ProjectStore.init": MagicMock(return_value=mock_store),
     }
     if extra_patches:
@@ -354,17 +355,17 @@ class TestCriarProjetoSpec:
     def test_invalid_spec_returns_erro(self, _base_mocks):
         """When _validate_spec returns errors, tool returns erro without touching infra."""
         server = _make_server()
-        register(server)
-        tool = _get_tools(server)["criar_projeto_spec"]
+        register_formulario(server)
+        tool = _get_tools(server)["criar_projeto"]
 
         with (
             patch(
                 "concilium.presentation.mcp.tools.spec._validate_spec",
                 return_value=["campo obrigatorio faltando"],
             ),
-            patch("concilium.presentation.mcp.tools.spec._runtime") as mock_rt_fn,
+            patch("concilium.presentation.mcp.tools.formulario._runtime") as mock_rt_fn,
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
         ):
@@ -378,8 +379,8 @@ class TestCriarProjetoSpec:
     def test_invalid_spec_truncates_to_10_errors(self, _base_mocks):
         """detalhes is capped at 10 entries even with many errors."""
         server = _make_server()
-        register(server)
-        tool = _get_tools(server)["criar_projeto_spec"]
+        register_formulario(server)
+        tool = _get_tools(server)["criar_projeto"]
 
         erros = [f"erro {i}" for i in range(20)]
 
@@ -389,7 +390,7 @@ class TestCriarProjetoSpec:
                 return_value=erros,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
         ):
@@ -404,8 +405,8 @@ class TestCriarProjetoSpec:
     def test_invalid_contexto_id_returns_erro(self, _base_mocks):
         """When rt.load_contexto raises, returns erro with contexto_id message."""
         server = _make_server()
-        register(server)
-        tool = _get_tools(server)["criar_projeto_spec"]
+        register_formulario(server)
+        tool = _get_tools(server)["criar_projeto"]
 
         mock_rt = MagicMock()
         mock_rt.load_contexto.side_effect = ValueError("contexto not found")
@@ -416,11 +417,11 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mock_rt,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
         ):
@@ -449,19 +450,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -501,19 +502,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -522,8 +523,8 @@ class TestCriarProjetoSpec:
             ),
         ):
             server = _make_server()
-            register(server)
-            tool = _get_tools(server)["criar_projeto_spec"]
+            register_formulario(server)
+            tool = _get_tools(server)["criar_projeto"]
             result = tool(spec=spec_with_cron)
 
         assert result["escopos"][0]["status_skill_01"] == "OK"
@@ -547,19 +548,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -568,8 +569,8 @@ class TestCriarProjetoSpec:
             ),
         ):
             server = _make_server()
-            register(server)
-            tool = _get_tools(server)["criar_projeto_spec"]
+            register_formulario(server)
+            tool = _get_tools(server)["criar_projeto"]
             result = tool(spec=_VALID_SPEC)
 
         assert "erro" in result
@@ -590,19 +591,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -611,8 +612,8 @@ class TestCriarProjetoSpec:
             ),
         ):
             server = _make_server()
-            register(server)
-            tool = _get_tools(server)["criar_projeto_spec"]
+            register_formulario(server)
+            tool = _get_tools(server)["criar_projeto"]
             result = tool(spec=_VALID_SPEC)
 
         assert result["escopos"][0]["status_skill_01"] == "ERRO"
@@ -644,19 +645,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -665,8 +666,8 @@ class TestCriarProjetoSpec:
             ),
         ):
             server = _make_server()
-            register(server)
-            tool = _get_tools(server)["criar_projeto_spec"]
+            register_formulario(server)
+            tool = _get_tools(server)["criar_projeto"]
             result = tool(spec=_VALID_SPEC)
 
         assert result["escopos"][0]["status_skill_01"] == "ERRO"
@@ -736,19 +737,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -757,8 +758,8 @@ class TestCriarProjetoSpec:
             ),
         ):
             server = _make_server()
-            register(server)
-            tool = _get_tools(server)["criar_projeto_spec"]
+            register_formulario(server)
+            tool = _get_tools(server)["criar_projeto"]
             result = tool(spec=spec_two_escopos)
 
         assert len(result["escopos"]) == 2
@@ -812,19 +813,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -833,8 +834,8 @@ class TestCriarProjetoSpec:
             ),
         ):
             server = _make_server()
-            register(server)
-            tool = _get_tools(server)["criar_projeto_spec"]
+            register_formulario(server)
+            tool = _get_tools(server)["criar_projeto"]
             result = tool(spec=spec_two)
 
         assert len(result["escopos"]) == 2
@@ -860,19 +861,19 @@ class TestCriarProjetoSpec:
                 return_value=[],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._runtime",
+                "concilium.presentation.mcp.tools.formulario._runtime",
                 return_value=mocks["mock_rt"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._projetos_root",
+                "concilium.presentation.mcp.tools.formulario._projetos_root",
                 return_value=tmp_path,
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._lifecycle_coordinator",
+                "concilium.presentation.mcp.tools.formulario._lifecycle_coordinator",
                 return_value=mocks["mock_coord"],
             ),
             patch(
-                "concilium.presentation.mcp.tools.spec._wrap_response",
+                "concilium.presentation.mcp.tools.formulario._wrap_response",
                 side_effect=lambda d: d,
             ),
             patch(
@@ -881,8 +882,8 @@ class TestCriarProjetoSpec:
             ),
         ):
             server = _make_server()
-            register(server)
-            tool = _get_tools(server)["criar_projeto_spec"]
+            register_formulario(server)
+            tool = _get_tools(server)["criar_projeto"]
             result = tool(spec=spec_no_regime)
 
         # Should succeed — not error on missing regime_trabalho

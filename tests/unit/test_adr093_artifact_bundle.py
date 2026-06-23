@@ -259,6 +259,165 @@ class TestBlobStorageTransport:
         assert res["encoding"] == "base64"
 
 
+class TestMissingLineCoverage:
+    """Targets specific lines not yet covered by existing tests."""
+
+    # -- describe_artifact ---------------------------------------------------
+    def test_describe_artifact_png_not_in_descricoes(self):
+        # Line 93: custom .png file not in _DESCRICOES
+        result = ab.describe_artifact("custom_chart.png")
+        assert "custom_chart.png" in result
+
+    def test_describe_artifact_unknown_extension(self):
+        # Line 96: fallback for unknown extension
+        result = ab.describe_artifact("dados.xyz")
+        assert "dados.xyz" in result
+
+    def test_describe_artifact_json_not_in_descricoes(self):
+        # Line 94: .json fallback
+        result = ab.describe_artifact("foo_bar.json")
+        assert "foo_bar.json" in result
+
+    # -- _resolve_version ----------------------------------------------------
+    def test_resolve_version_exception_returns_none(self):
+        # Lines 117-118: exception in current_version() → returns None
+        from concilium.application.services.artifact.artifact_bundle import _resolve_version
+
+        class _BrokenStore:
+            def current_version(self):
+                raise RuntimeError("broken")
+
+        result = _resolve_version(_BrokenStore(), None)
+        assert result is None
+
+    # -- list_artifacts with no version --------------------------------------
+    def test_list_artifacts_no_version_returns_empty(self):
+        # Line 161: resolved is None
+        class _NoVersionStore:
+            def current_version(self):
+                raise RuntimeError("no version")
+
+        result = ab.list_artifacts(_NoVersionStore(), None)
+        assert result == {"version": None, "artefatos": [], "total": 0}
+
+    # -- read_text with no version -------------------------------------------
+    def test_read_text_no_version_raises(self):
+        # Line 184: resolved is None
+        class _NoVersionStore:
+            def current_version(self):
+                raise RuntimeError("no version")
+
+        with pytest.raises(FileNotFoundError, match="versão ativa"):
+            ab.read_text(_NoVersionStore(), None, "relatorio.md")
+
+    # -- read_binary_b64 with no version -------------------------------------
+    def test_read_binary_b64_no_version_raises(self):
+        # Line 215: resolved is None
+        class _NoVersionStore:
+            def current_version(self):
+                raise RuntimeError("no version")
+
+        with pytest.raises(FileNotFoundError, match="versão ativa"):
+            ab.read_binary_b64(_NoVersionStore(), None, "chart.png")
+
+    def test_read_binary_b64_file_not_found_raises(self, store):
+        # Line 218: file doesn't exist in version
+        with pytest.raises(FileNotFoundError, match="nonexistent.png"):
+            ab.read_binary_b64(store, None, "nonexistent.png")
+
+    # -- _safe_name path traversal on a text file ----------------------------
+    def test_safe_name_raises_for_path_with_slash(self):
+        # Line 139: name != filename (contains directory component)
+        from concilium.application.services.artifact.artifact_bundle import _safe_name
+
+        with pytest.raises(ValueError, match="inválido"):
+            _safe_name("subdir/relatorio.md")
+
+    def test_safe_name_raises_for_empty_string(self):
+        # Line 139: not name
+        from concilium.application.services.artifact.artifact_bundle import _safe_name
+
+        with pytest.raises(ValueError):
+            _safe_name("")
+
+    # -- build_bundle with no version ----------------------------------------
+    def test_build_bundle_no_version_raises(self):
+        # Line 281: resolved is None
+        class _NoVersionStore:
+            def current_version(self):
+                raise RuntimeError("no version")
+
+        with pytest.raises(FileNotFoundError, match="versão ativa"):
+            ab.build_bundle(_NoVersionStore(), None)
+
+    # -- build_bundle skips missing src file ---------------------------------
+    def test_build_bundle_skips_file_if_missing_during_zip(self, tmp_path):
+        # Line 305: src.exists() → False during zip iteration
+        # Inject a fake artifact entry that points to a non-existent file.
+        import base64
+        import io
+        import zipfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        v = tmp_path / "v1"
+        (v / "outputs").mkdir(parents=True)
+        real_file = v / "outputs" / "real.md"
+        real_file.write_text("real content")
+
+        class _Store:
+            root = tmp_path
+            meta = {"nome": "Test"}
+
+            def current_version(self):
+                return "v1"
+
+        store = _Store()
+
+        # Patch list_artifacts to inject a ghost entry (file that doesn't exist on disk)
+        original_list = ab.list_artifacts
+
+        def _patched_list(s, ver):
+            result = original_list(s, ver)
+            result["artefatos"].append({
+                "nome": "ghost.md",
+                "kind": "outputs",
+                "audiencia": ab.AUDIENCIA_AGENTE,
+                "tamanho_bytes": 0,
+                "descricao": "Ghost file",
+            })
+            return result
+
+        with patch.object(ab, "list_artifacts", side_effect=_patched_list):
+            result = ab.build_bundle(store, None)
+
+        # Bundle builds successfully; ghost.md silently skipped
+        data = base64.b64decode(result["conteudo_base64"])
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            names = zf.namelist()
+        assert any("MANIFESTO.md" in n for n in names)
+        assert not any("ghost.md" in n for n in names)
+
+    # -- _iter_artifact_files skips non-file entries -------------------------
+    def test_iter_artifact_files_skips_subdirs(self, tmp_path):
+        # Line 128: f.is_file() guard
+        from concilium.application.services.artifact.artifact_bundle import _iter_artifact_files
+
+        class _S:
+            root = tmp_path
+
+        v = tmp_path / "v1"
+        outputs = v / "outputs"
+        outputs.mkdir(parents=True)
+        (outputs / "file.md").write_text("data")
+        (outputs / "subdir").mkdir()  # directory, not file
+
+        items = _iter_artifact_files(_S(), "v1")
+        names = [p.name for _, p in items]
+        assert "file.md" in names
+        assert "subdir" not in names
+
+
 class TestResumoExecutivo:
     def _relatorio(self):
         return {
@@ -279,10 +438,10 @@ class TestResumoExecutivo:
         )
 
         md = render_resumo_executivo(self._relatorio(), canonical=None)
-        assert "# Resumo Executivo — Obra Teste" in md
+        assert "# Sumário Executivo — Obra Teste" in md
         assert "APROVADO" in md
         assert "103" in md  # preço operacional
-        assert "Resultado Financeiro" in md
+        assert "Dimensionamento Financeiro" in md
 
     def test_resumo_inclui_criticas_e_levers(self):
         from types import SimpleNamespace
@@ -327,7 +486,7 @@ class TestResumoExecutivo:
         canonical = SimpleNamespace(cost_criticality_report=crit, ponto_equilibrio=[pe])
         md = render_resumo_executivo(self._relatorio(), canonical=canonical)
         assert "eap-1_5" in md
-        assert "Atividades Mais Críticas" in md
+        assert "Atividades Críticas do Cronograma" in md
         assert "Otimizar pool" in md
         # lever inviável não aparece
         assert "Sem efeito" not in md

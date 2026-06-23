@@ -206,7 +206,7 @@ class TestArtifactsTools:
             patch(f"{_ART_MOD}._project", return_value=store_mock),
             patch(f"{_ART_MOD}.ab.read_text", return_value={"conteudo": "data", "nome": "f.json"}),
         ):
-            result = tools["ler_artefato_texto"](project_id="proj-1", nome_arquivo="f.json")
+            result = tools["obter_artefato"](formato="texto", project_id="proj-1", nome_arquivo="f.json")
         assert "conteudo" in result
 
     def test_ler_artefato_texto_not_found(self, monkeypatch, tmp_path):
@@ -217,7 +217,7 @@ class TestArtifactsTools:
             patch(f"{_ART_MOD}._project", return_value=store_mock),
             patch(f"{_ART_MOD}.ab.read_text", side_effect=FileNotFoundError("missing")),
         ):
-            result = tools["ler_artefato_texto"](project_id="proj-1", nome_arquivo="missing.json")
+            result = tools["obter_artefato"](formato="texto", project_id="proj-1", nome_arquivo="missing.json")
         assert "erro" in result
 
     def test_ler_artefato_texto_value_error(self, monkeypatch, tmp_path):
@@ -228,7 +228,7 @@ class TestArtifactsTools:
             patch(f"{_ART_MOD}._project", return_value=store_mock),
             patch(f"{_ART_MOD}.ab.read_text", side_effect=ValueError("binary")),
         ):
-            result = tools["ler_artefato_texto"](project_id="proj-1", nome_arquivo="img.png")
+            result = tools["obter_artefato"](formato="texto", project_id="proj-1", nome_arquivo="img.png")
         assert "erro" in result
 
     def test_baixar_artefato_binario_happy(self, monkeypatch, tmp_path):
@@ -239,7 +239,7 @@ class TestArtifactsTools:
             patch(f"{_ART_MOD}._project", return_value=store_mock),
             patch(f"{_ART_MOD}.ab.read_binary_b64", return_value={"conteudo_base64": "abc="}),
         ):
-            result = tools["baixar_artefato_binario"](project_id="proj-1", nome_arquivo="chart.png")
+            result = tools["obter_artefato"](formato="binario", project_id="proj-1", nome_arquivo="chart.png")
         assert "conteudo_base64" in result
 
     def test_baixar_artefato_binario_not_found(self, monkeypatch, tmp_path):
@@ -250,7 +250,7 @@ class TestArtifactsTools:
             patch(f"{_ART_MOD}._project", return_value=store_mock),
             patch(f"{_ART_MOD}.ab.read_binary_b64", side_effect=FileNotFoundError("no")),
         ):
-            result = tools["baixar_artefato_binario"](project_id="proj-1", nome_arquivo="missing.png")
+            result = tools["obter_artefato"](formato="binario", project_id="proj-1", nome_arquivo="missing.png")
         assert "erro" in result
 
     def test_baixar_bundle_zip_happy(self, monkeypatch, tmp_path):
@@ -261,7 +261,7 @@ class TestArtifactsTools:
             patch(f"{_ART_MOD}._project", return_value=store_mock),
             patch(f"{_ART_MOD}.ab.build_bundle", return_value={"zip_base64": "abc="}),
         ):
-            result = tools["baixar_bundle_zip"](project_id="proj-1")
+            result = tools["obter_artefato"](formato="bundle", project_id="proj-1")
         assert "zip_base64" in result
 
     def test_baixar_bundle_zip_not_found(self, monkeypatch, tmp_path):
@@ -272,5 +272,5 @@ class TestArtifactsTools:
             patch(f"{_ART_MOD}._project", return_value=store_mock),
             patch(f"{_ART_MOD}.ab.build_bundle", side_effect=FileNotFoundError("no")),
         ):
-            result = tools["baixar_bundle_zip"](project_id="proj-1")
+            result = tools["obter_artefato"](formato="bundle", project_id="proj-1")
         assert "erro" in result

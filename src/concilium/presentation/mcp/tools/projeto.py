@@ -34,8 +34,10 @@ def register(server: FastMCP) -> None:
 
         out = []
         for p in sorted(proj_root.iterdir()):
-            if not p.is_dir():
-                continue
+            if not p.is_dir() or p.name.startswith("."):
+                continue  # pula diretórios ocultos (ex: .tool_invocations)
+            if not (p / "meta.json").exists():
+                continue  # pula diretórios sem meta.json (não são projetos)
             try:
                 store = ProjectStore(p)
                 meta = store.meta

@@ -425,8 +425,8 @@ class TestScopeGuard:
             ("listar_projetos", "project:read"),
             ("auditar_plano", "artifacts:read"),
             ("explorar_pool_recursos", "project:read"),
-            ("baixar_bundle_zip", "artifacts:download"),
-            ("criar_projeto_formulario", "project:create"),
+            ("obter_artefato", "artifacts:download"),      # ADR-116 F5: baixar_bundle_zip→obter_artefato
+            ("criar_projeto", "project:create"),            # ADR-116 F5: criar_projeto_formulario→criar_projeto
             ("disparar_pipeline", "project:run"),
         ],
     )

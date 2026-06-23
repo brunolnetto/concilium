@@ -5,9 +5,9 @@ Coverage targets:
                       auto-infer single, multi-escopo error)
   consultar_estrutura_projeto: empty escopos, multiple escopos with plans,
                                canonical resultado None vs set
-  configurar_escopo: success path, create_escopo raises
-  gerenciar_plano: criar, aprovar with/without plano_id, arquivar with/without
-                   plano_id, invalid acao
+  gerir_escopo (entidade="escopo"): success path, create_escopo raises
+  gerir_escopo (entidade="plano"): criar, aprovar with/without plano_id, arquivar with/without
+                                   plano_id, invalid acao
 """
 
 from __future__ import annotations
@@ -255,13 +255,14 @@ class TestConsultarEstruturaProjeto:
 
 
 # ===========================================================================
-# configurar_escopo
+# gerir_escopo (entidade="escopo")
 # ===========================================================================
 
 
 class TestConfigurarEscopo:
     _base_kwargs = dict(
         project_id="proj-001",
+        entidade="escopo",
         escopo_id="esc-001",
         nome="Escopo de Teste",
         tipo_obra="terraplenagem",
@@ -288,7 +289,7 @@ class TestConfigurarEscopo:
                 side_effect=lambda x: x,
             ),
         ):
-            result = tools["configurar_escopo"](**self._base_kwargs)
+            result = tools["gerir_escopo"](**self._base_kwargs)
 
         assert result["status"] == "OK"
         assert result["escopo_id"] == "esc-001"
@@ -300,7 +301,7 @@ class TestConfigurarEscopo:
         store.create_escopo.side_effect = ValueError("Dados inválidos para escopo")
 
         with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
-            result = tools["configurar_escopo"](**self._base_kwargs)
+            result = tools["gerir_escopo"](**self._base_kwargs)
 
         assert "erro" in result
         assert "Dados inválidos para escopo" in result["erro"]
@@ -314,6 +315,7 @@ class TestConfigurarEscopo:
 
         minimal_kwargs = dict(
             project_id="proj-001",
+            entidade="escopo",
             escopo_id="esc-defaults",
             nome="Mínimo",
             tipo_obra="terra",
@@ -329,7 +331,7 @@ class TestConfigurarEscopo:
                 side_effect=lambda x: x,
             ),
         ):
-            result = tools["configurar_escopo"](**minimal_kwargs)
+            result = tools["gerir_escopo"](**minimal_kwargs)
 
         assert result["status"] == "OK"
         call_kwargs = store.create_escopo.call_args.kwargs
@@ -340,7 +342,7 @@ class TestConfigurarEscopo:
 
 
 # ===========================================================================
-# gerenciar_plano
+# gerir_escopo (entidade="plano")
 # ===========================================================================
 
 
@@ -368,8 +370,9 @@ class TestGerenciarPlano:
                 side_effect=lambda x: x,
             ),
         ):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="criar",
                 nome="Plano Novo",
@@ -394,8 +397,9 @@ class TestGerenciarPlano:
                 side_effect=lambda x: x,
             ),
         ):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="criar",
             )
@@ -417,8 +421,9 @@ class TestGerenciarPlano:
                 side_effect=lambda x: x,
             ),
         ):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="aprovar",
                 plano_id="plano-aprovado",
@@ -434,8 +439,9 @@ class TestGerenciarPlano:
         store = self._make_store_with_escopo(es)
 
         with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="aprovar",
             )
@@ -459,8 +465,9 @@ class TestGerenciarPlano:
                 side_effect=lambda x: x,
             ),
         ):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="arquivar",
                 plano_id="plano-para-arquivar",
@@ -477,8 +484,9 @@ class TestGerenciarPlano:
         store = self._make_store_with_escopo(es)
 
         with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="arquivar",
             )
@@ -493,8 +501,9 @@ class TestGerenciarPlano:
         store = self._make_store_with_escopo(es)
 
         with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="deletar",
             )
@@ -518,8 +527,9 @@ class TestGerenciarPlano:
                 side_effect=lambda x: x,
             ),
         ):
-            result = tools["gerenciar_plano"](
+            result = tools["gerir_escopo"](
                 project_id="proj-001",
+                entidade="plano",
                 escopo_id="esc-001",
                 acao="criar",
                 hipotese="Hipótese otimista",

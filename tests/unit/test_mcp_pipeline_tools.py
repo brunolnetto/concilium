@@ -97,16 +97,21 @@ class TestListarJobsPipeline:
 
 
 class TestObterEstatisticasJobs:
+    """ADR-116 F5: obter_estatisticas_jobs absorvida em listar_jobs_pipeline(incluir_estatisticas=True)."""
+
     def test_estatisticas_happy(self, monkeypatch, tmp_path):
         tools = _register_tools(monkeypatch, tmp_path)
         svc_mock = MagicMock()
+        job_list_dto = MagicMock()
         stats_dto = MagicMock()
+        job_list_dto.model_dump.return_value = {"jobs": []}
         stats_dto.model_dump.return_value = {"max_concurrent_jobs": 4, "health": "OK"}
+        svc_mock.listar_jobs.return_value = job_list_dto
         svc_mock.obter_estatisticas.return_value = stats_dto
 
         with patch("concilium.application.jobs.get_job_service", return_value=svc_mock):
-            result = tools["obter_estatisticas_jobs"]()
-        assert "max_concurrent_jobs" in result or "health" in result
+            result = tools["listar_jobs_pipeline"](incluir_estatisticas=True)
+        assert "estatisticas" in result or "max_concurrent_jobs" in str(result)
 
 
 class TestCancelarJobPipeline:

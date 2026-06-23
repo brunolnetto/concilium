@@ -93,11 +93,10 @@ def tools(store):
 
 class TestRegister:
     def test_all_tools_registered(self, store):
-        """register() must register exactly the six expected tool names."""
+        """register() must register exactly the five expected tool names."""
         _, tools = _make_server_and_tools(store)
         expected = {
             "consultar_benchmark",
-            "listar_benchmarks_nep039",
             "executar_benchmark_nep039",
             "editar_benchmark",
             "marcar_benchmark_imutavel",
@@ -105,9 +104,9 @@ class TestRegister:
         }
         assert set(tools.keys()) == expected
 
-    def test_server_tool_called_six_times(self, store):
+    def test_server_tool_called_five_times(self, store):
         server, _ = _make_server_and_tools(store)
-        assert server.tool.call_count == 6
+        assert server.tool.call_count == 5
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +224,7 @@ class TestConsultarBenchmark:
 class TestListarBenchmarks:
     def test_empty_store_returns_zero(self, store, tools):
         store.list_all.return_value = []
-        result = tools["listar_benchmarks_nep039"]()
+        result = tools["consultar_benchmark"]()
         assert result["total"] == 0
         assert result["benchmarks"] == []
 
@@ -234,7 +233,7 @@ class TestListarBenchmarks:
         meta2 = _make_meta("B2", nome="Bench 2", versao=3)
         store.list_all.return_value = [meta1, meta2]
 
-        result = tools["listar_benchmarks_nep039"]()
+        result = tools["consultar_benchmark"]()
 
         assert result["total"] == 2
         assert len(result["benchmarks"]) == 2
@@ -243,7 +242,7 @@ class TestListarBenchmarks:
         meta = _make_meta()
         store.list_all.return_value = [meta]
 
-        result = tools["listar_benchmarks_nep039"]()
+        result = tools["consultar_benchmark"]()
 
         entry = result["benchmarks"][0]
         expected_keys = {"benchmark_id", "nome", "origem", "tags", "versao", "imutavel", "criado_em"}
@@ -253,7 +252,7 @@ class TestListarBenchmarks:
         meta = _make_meta("AGIS_Q1", nome="AGIS Q1", versao=5, imutavel=True)
         store.list_all.return_value = [meta]
 
-        result = tools["listar_benchmarks_nep039"]()
+        result = tools["consultar_benchmark"]()
 
         entry = result["benchmarks"][0]
         assert entry["benchmark_id"] == "AGIS_Q1"
@@ -265,7 +264,7 @@ class TestListarBenchmarks:
         meta = _make_meta()
         store.list_all.return_value = [meta]
 
-        result = tools["listar_benchmarks_nep039"]()
+        result = tools["consultar_benchmark"]()
 
         entry = result["benchmarks"][0]
         dt = datetime.fromisoformat(entry["criado_em"])

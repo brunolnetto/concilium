@@ -491,8 +491,12 @@ class TestExecuteRun:
             with patch("concilium.application.services.service_support.build_summary", return_value={}):
                 svc._execute_run(project, run_id)
 
-        # new_version should be called with base="v1"
-        project.new_version.assert_called_with(base="v1")
+        # ADR-119 F3: new_version now receives actor identity kwargs
+        call_kwargs = project.new_version.call_args
+        assert call_kwargs is not None
+        assert call_kwargs.kwargs.get("base") == "v1" or (
+            call_kwargs.args and call_kwargs.args[0] == "v1"
+        )
 
     def test_version_none_after_fork_raises_runtime_error(self, tmp_path):
         svc, project, audit, runtime = _make_svc(tmp_path=tmp_path)
