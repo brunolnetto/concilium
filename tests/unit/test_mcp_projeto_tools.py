@@ -98,9 +98,10 @@ class TestListarProjetos:
         """Lines 34-39: iterates dirs, reads ProjectStore.meta."""
         proj_root = tmp_path / "projetos"
         proj_root.mkdir()
-        # create a project directory with a meta.json
+        # create a project directory with a meta.json (required by listar_projetos filter)
         p1 = proj_root / "projeto-abc"
         p1.mkdir()
+        (p1 / "meta.json").write_text("{}")
 
         mock_store = MagicMock()
         mock_store.meta = {"nome": "Proj ABC", "contexto_id": "ctx1", "current_version": "v1"}
@@ -142,6 +143,7 @@ class TestListarProjetos:
         proj_root.mkdir()
         p1 = proj_root / "broken-proj"
         p1.mkdir()
+        (p1 / "meta.json").write_text("{}")  # required by listar_projetos filter
 
         def _bad_store(path):
             raise RuntimeError("corrupt meta")

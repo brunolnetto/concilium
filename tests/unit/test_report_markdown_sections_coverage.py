@@ -90,7 +90,7 @@ class TestRenderExecutiveSummary:
         resumo = {"projeto": "TestProj"}
         resultado = {}
         lines = render_executive_summary(resumo, resultado)
-        assert "## Sumario Executivo" in lines
+        assert "## Sumário Executivo" in lines
         assert any("TestProj" in l for l in lines)
 
     def test_with_preco_venda_status_verde(self):

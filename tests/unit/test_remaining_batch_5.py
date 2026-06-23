@@ -91,26 +91,26 @@ class TestSpecLoaderHelpers:
 
 
 class TestMcpSpecTool:
-    def test_register_adds_criar_projeto_spec(self):
+    """ADR-116 F5: criar_projeto_spec absorvida em criar_projeto(spec=...) de formulario.py."""
+
+    def test_register_adds_criar_projeto(self):
         from mcp.server.fastmcp import FastMCP
 
-        from concilium.presentation.mcp.tools.spec import register
+        from concilium.presentation.mcp.tools.formulario import register
 
         server = FastMCP("test")
         register(server)
         names = list(server._tool_manager._tools.keys())
-        assert "criar_projeto_spec" in names
+        assert "criar_projeto" in names  # consolidado de criar_projeto_formulario + criar_projeto_spec
 
-    def test_criar_projeto_spec_validation_error(self):
+    def test_criar_projeto_spec_mode_registered(self):
         from mcp.server.fastmcp import FastMCP
 
-        from concilium.presentation.mcp.tools.spec import register
+        from concilium.presentation.mcp.tools.formulario import register
 
         server = FastMCP("test")
         register(server)
-        # Tool should validate spec and return error on invalid input
-        # We just verify it's registered and callable
-        tool = server._tool_manager._tools.get("criar_projeto_spec")
+        tool = server._tool_manager._tools.get("criar_projeto")
         assert tool is not None
 
 

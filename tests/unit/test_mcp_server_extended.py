@@ -169,7 +169,7 @@ async def test_listar_projetos_no_root(monkeypatch, tmp_path):
 
 @pytest.mark.asyncio
 async def test_consultar_preco_insumo_temporal_tool(server, server_env):
-    """ADR-041: ferramenta temporal deve estar exposta e executável."""
+    """ADR-041 / ADR-116 F5: historico_preco_insumo(modo='pontual') substitui consultar_preco_insumo_temporal."""
     projects_path = server_env["projects_path"]
     project = ProjectStore.init(projects_path, "TemporalProj", "test")
     project_id = project.root.name
@@ -180,9 +180,10 @@ async def test_consultar_preco_insumo_temporal_tool(server, server_env):
     codigo = next(str(i.get("codigo")) for i in catalogo.get("insumos", []) if isinstance(i, dict) and i.get("codigo"))
 
     result = await server.call_tool(
-        "consultar_preco_insumo_temporal",
+        "historico_preco_insumo",
         arguments={
             "contexto_id": "test",
+            "modo": "pontual",
             "insumo_id": codigo,
             "data_referencia": "2026-04-15",
             "projeto_id": project_id,
