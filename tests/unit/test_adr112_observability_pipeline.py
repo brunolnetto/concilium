@@ -501,11 +501,11 @@ class TestObservabilityWorker:
             ],
         )
         worker.run(signal_type="logs")
-        # Adiciona novo blob
+        # Adiciona novo blob em data POSTERIOR — garante ordenação lexicográfica maior
         _seed_bronze(
             storage,
             "logs",
-            "2026-06-18",
+            "2026-06-19",
             [
                 {
                     "ts": "t",
