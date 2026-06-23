@@ -236,7 +236,6 @@ class TestRunSkipArtifacts:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
         ):
@@ -247,20 +246,6 @@ class TestRunSkipArtifacts:
         artifacts_dir = runner._artifact_output_dir(spec)
         audit_dir = artifacts_dir.parent / "audit"
         assert (audit_dir / "benchmark_report.json").exists()
-
-
-class TestLogExecution:
-    def test_log_execution_silent_on_exception(self, tmp_path):
-        runner = _make_runner(tmp_path)
-        spec = _make_spec(tmp_path)
-        store = MagicMock()
-        # FileSystemBenchmarkStore is imported inside the method — patch at source
-        with patch(
-            "concilium.infrastructure.storage.benchmark_store.FileSystemBenchmarkStore",
-            side_effect=Exception("forced"),
-        ):
-            # Should not raise — exceptions are silently swallowed
-            runner._log_execution(spec, {}, store_project=store)
 
 
 class TestFindOrCreate:

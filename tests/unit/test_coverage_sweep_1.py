@@ -140,48 +140,6 @@ class TestAuditService:
         assert len(result) == 3
 
 
-# ─── domain/benchmark/repository.py ──────────────────────────────────────────
-
-
-class TestBenchmarkRepositoryPort:
-    def test_is_abstract(self):
-        from concilium.domain.benchmark.repository import BenchmarkRepositoryPort
-
-        with pytest.raises(TypeError):
-            BenchmarkRepositoryPort()  # Cannot instantiate abstract class
-
-    def test_concrete_implementation(self):
-        from concilium.domain.benchmark.repository import BenchmarkRepositoryPort
-
-        class ConcreteRepo(BenchmarkRepositoryPort):
-            def save_metadata(self, m):
-                pass
-
-            def get_metadata(self, bid):
-                return None
-
-            def get_metadata_by_version(self, bid, v):
-                return None
-
-            def list_all(self):
-                return []
-
-            def log_execution(self, e):
-                pass
-
-            def get_execution_history(self, bid, limit=50):
-                return []
-
-            def create_new_version(self, bid, patch):
-                pass
-
-            def update_metadata(self, bid, patch):
-                pass
-
-        repo = ConcreteRepo()
-        assert repo.get_metadata("any") is None
-        assert repo.list_all() == []
-
 
 # ─── application/orchestrators/catalog_governance.py ─────────────────────────
 

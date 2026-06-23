@@ -4,19 +4,22 @@ Expõe dados paginados das camadas Bronze (raw), Silver (normalizado) e Gold (ag
 para consumo por ferramentas de análise, dashboards e integrações externas.
 
 Endpoints:
-  GET /observability/gold/sli                  — SLI diário (p50/p95/p99 por skill)
-  GET /observability/gold/fallback-rate        — taxa de fallbacks por skill
-  GET /observability/gold/alertas              — alertas ativos
-  GET /observability/silver/{signal_type}      — records Silver normalizados (paginados)
-  GET /observability/bronze/{signal_type}      — records Bronze raw (paginados)
-  GET /observability/status                    — checkpoints por tipo de sinal
+  GET  /observability/gold/sli                  — SLI diário (p50/p95/p99 por skill)
+  GET  /observability/gold/fallback-rate        — taxa de fallbacks por skill
+  GET  /observability/gold/alertas              — alertas ativos
+  GET  /observability/gold/cross-domain         — fallback rate × resultado financeiro por projeto
+  GET  /observability/silver/{signal_type}      — records Silver normalizados (paginados)
+  GET  /observability/bronze/{signal_type}      — records Bronze raw (paginados)
+  GET  /observability/status                    — checkpoints por tipo de sinal
+  GET  /observability/audit                     — invocações MCP recentes (ADR-118)
+  POST /observability/pipeline/run              — dispara ciclo Bronze→Silver→Gold on-demand
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 
 router = APIRouter(prefix="/observability", tags=["observability"])
 
@@ -223,3 +226,81 @@ def get_status(storage=Depends(_get_storage)) -> dict[str, Any]:
         cp = store.load(sig)
         checkpoints[sig] = dataclasses.asdict(cp) if cp else None
     return {"checkpoints": checkpoints}
+
+
+# ── Audit endpoints (ADR-118) ─────────────────────────────────────────────────
+
+
+@router.get(
+    "/audit",
+    summary="Invocações MCP recentes — audit log de tools (ADR-118)",
+    response_model=None,
+)
+def get_audit(
+    limit: int = Query(100, ge=1, le=1000, description="Máximo de registros"),
+    tool_name: str | None = Query(None, description="Filtrar por nome da tool"),
+    user_id: str | None = Query(None, description="Filtrar por user_id"),
+    status: str | None = Query(None, description="Filtrar por status: success | failed"),
+) -> dict[str, Any]:
+    from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
+
+    repo = get_tool_invocation_store()
+    if tool_name:
+        records = repo.list_by_tool(tool_name, limit=limit)
+    elif user_id:
+        records = repo.list_by_user(user_id, limit=limit)
+    else:
+        records = repo.list_recent(limit=limit)
+    if status:
+        records = [r for r in records if r.status == status]
+    total = repo.count()
+    return {
+        "items": [r.to_dict() for r in records],
+        "total_persisted": total,
+        "returned": len(records),
+    }
+
+
+# ── Gold cross-domain endpoint (ADR-112 F8) ───────────────────────────────────
+
+
+@router.get(
+    "/gold/cross-domain",
+    summary="Fallback rate × resultado financeiro por projeto (ADR-112 F8)",
+    response_model=None,
+)
+def get_cross_domain(storage=Depends(_get_storage)) -> dict[str, Any]:
+    import json
+
+    path = "observability/gold/cross_domain.json"
+    try:
+        raw = storage.ler_blob(path)
+        data = json.loads(raw.decode("utf-8"))
+    except FileNotFoundError:
+        data = []
+    return {"items": data, "total": len(data)}
+
+
+# ── Pipeline trigger (on-demand) ──────────────────────────────────────────────
+
+
+@router.post(
+    "/pipeline/run",
+    summary="Dispara ciclo Bronze→Silver→Gold on-demand (dev/ops)",
+    response_model=None,
+)
+def run_pipeline(
+    force_gold: bool = Body(False, embed=True, description="Força execução do Gold mesmo fora do intervalo"),
+    storage=Depends(_get_storage),
+) -> dict[str, Any]:
+    import datetime
+
+    from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+    scheduler = ObservabilityScheduler(
+        storage,
+        silver_interval_min=0,
+        gold_interval_min=0 if force_gold else 60,
+    )
+    result = scheduler.run_cycle(now=datetime.datetime.now(datetime.UTC))
+    return result
