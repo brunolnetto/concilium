@@ -22,6 +22,26 @@ from .scheduler import SerialScheduler
 
 _log = logging.getLogger(__name__)
 
+# ADR-121 D5: OTel span events — lazy import para não bloquear ambientes sem SDK
+try:
+    from opentelemetry import trace
+    _OTEL_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    trace = None  # type: ignore[assignment]
+    _OTEL_AVAILABLE = False
+
+
+def _span_event(name: str, attrs: dict) -> None:
+    """Emite span.add_event() no span OTel ativo. No-op se SDK ausente ou fora de span."""
+    if not _OTEL_AVAILABLE or trace is None:
+        return
+    try:
+        span = trace.get_current_span()
+        if span and span.is_recording():
+            span.add_event(name, attrs)
+    except Exception:
+        pass
+
 # ADR-075 threshold separating exact (CP-SAT) from heuristic (LNS) regime
 _CPSAT_MAX_ACTIVITIES = 200
 
@@ -113,6 +133,12 @@ def explore_schedules(
         len(dag.activities) if dag else 0,
         deadline_weeks,
     )
+    # ADR-121 D5: registra decisão de algoritmo como span event
+    _span_event("scheduling.algorithm.selected", {
+        "algorithm": algorithm,
+        "n_activities": len(dag.activities) if dag else 0,
+        "deadline_weeks": deadline_weeks,
+    })
 
     # ── CP-SAT exact solver (ADR-075 Mode A) ─────────────────────────────────
     if algorithm == "CP-SAT":
@@ -134,7 +160,13 @@ def explore_schedules(
                     sched.makespan,
                     score,
                 )
+                _span_event("scheduling.solution.found", {
+                    "algorithm": "CP-SAT",
+                    "makespan_weeks": sched.makespan,
+                    "quality_score": round(score, 4),
+                })
                 return [ExploreResult("CP-SAT", sched, score)]
+            _span_event("scheduling.solution.failed", {"algorithm": "CP-SAT", "reason": "infeasible"})
             raise ScheduleError(
                 "CP-SAT solver não encontrou solução viável dentro do horizonte configurado. "
                 f"Verifique restrições de precedência e disponibilidade do pool "
@@ -162,6 +194,11 @@ def explore_schedules(
                     sched.makespan,
                     score,
                 )
+                _span_event("scheduling.solution.found", {
+                    "algorithm": "LNS",
+                    "makespan_weeks": sched.makespan,
+                    "quality_score": round(score, 4),
+                })
                 return [ExploreResult("LNS", sched, score)]
             raise ScheduleError(
                 "LNS solver não encontrou solução viável. "

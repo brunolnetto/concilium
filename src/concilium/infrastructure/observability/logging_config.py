@@ -65,6 +65,10 @@ class _JsonFormatter(logging.Formatter):
         }
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
+        # ADR-121 D2: fallback_type (ADR-110) promovido quando presente no record extra
+        fallback_type = record.__dict__.get("fallback_type")
+        if fallback_type is not None:
+            payload["fallback_type"] = str(fallback_type)
         return json.dumps(payload, ensure_ascii=False)
 
 
@@ -75,20 +79,29 @@ class _JsonFormatter(logging.Formatter):
 _NOISY_LOGGERS = ("httpx", "httpcore", "urllib3", "azure", "opentelemetry.sdk")
 
 
-def configure_logging(level: str = "INFO", json_format: bool = True) -> None:
-    """Configura o sistema de logging do Concilium (ADR-111 D3).
+def configure_logging(
+    level: str = "INFO",
+    json_format: bool = True,
+    bronze_storage: Any | None = None,
+) -> None:
+    """Configura o sistema de logging do Concilium (ADR-111 D3, ADR-121 D3).
 
     Args:
-        level:       Nível do root logger (INFO, WARNING, DEBUG, ERROR).
-        json_format: True → JSON estruturado (produção/MCP/API).
-                     False → formato humano (dev, CLI, CI).
+        level:          Nível do root logger (INFO, WARNING, DEBUG, ERROR).
+        json_format:    True → JSON estruturado (produção/MCP/API).
+                        False → formato humano (dev, CLI, CI).
+        bronze_storage: BlobStoragePort opcional. Quando fornecido, conecta
+                        BronzeLogHandler ao root logger para alimentar o
+                        pipeline Medallion Bronze em tempo real.
 
     Idempotente: chamar duas vezes não duplica handlers.
     """
+    from concilium.infrastructure.observability.bronze_writer import BronzeLogHandler, BronzeWriter
+
     root = logging.getLogger()
     root.setLevel(level)
 
-    # Sempre remove handlers _JsonFormatter existentes antes de reconfigurar
+    # Remove handlers _JsonFormatter existentes antes de reconfigurar
     for h in root.handlers[:]:
         if isinstance(h, logging.StreamHandler) and isinstance(h.formatter, _JsonFormatter):
             root.removeHandler(h)
@@ -107,6 +120,17 @@ def configure_logging(level: str = "INFO", json_format: bool = True) -> None:
             )
         else:
             root.setLevel(level)
+
+    # ADR-121 D3: BronzeLogHandler — alimenta Medallion Bronze com logs ao vivo
+    # Remove instâncias prévias antes de adicionar para garantir idempotência
+    for h in root.handlers[:]:
+        if isinstance(h, BronzeLogHandler):
+            root.removeHandler(h)
+    if bronze_storage is not None:
+        writer = BronzeWriter(bronze_storage, "logs")
+        bronze_handler = BronzeLogHandler(writer, buffer_size=50)
+        bronze_handler.setFormatter(_JsonFormatter())
+        root.addHandler(bronze_handler)
 
     # Silenciar bibliotecas ruidosas (ADR-111 D3)
     for noisy in _NOISY_LOGGERS:

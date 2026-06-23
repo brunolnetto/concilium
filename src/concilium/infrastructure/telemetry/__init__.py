@@ -102,9 +102,10 @@ def _setup_logging() -> None:
 
     set_logger_provider(log_provider)
 
-    # Ponte: Python logging.Logger → OTel LogRecord (ADR-111 D2)
-    # Nível WARNING para não inundar o sink OTel com DEBUG/INFO
-    handler = LoggingHandler(level=logging.WARNING, logger_provider=log_provider)
+    # Ponte: Python logging.Logger → OTel LogRecord (ADR-121 D1)
+    # DEBUG — INFO e DEBUG são eventos operacionais relevantes (scheduling, catálogo, pipeline).
+    # O BatchLogRecordProcessor e o sampling do coletor OTel gerenciam volume em produção.
+    handler = LoggingHandler(level=logging.DEBUG, logger_provider=log_provider)
     logging.getLogger().addHandler(handler)
 
 

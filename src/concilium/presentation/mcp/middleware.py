@@ -18,6 +18,19 @@ from typing import Any
 
 from concilium.infrastructure.settings import get_auth
 
+# ADR-121 D4/D6: OTel propagation + baggage — importações lazy-safe
+try:
+    from opentelemetry import propagate
+    from opentelemetry.baggage import set_baggage
+    from opentelemetry.context import attach as context_attach, detach as context_detach
+    _OTEL_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _OTEL_AVAILABLE = False
+    propagate = None  # type: ignore[assignment]
+    set_baggage = None  # type: ignore[assignment]
+    context_attach = lambda ctx: None  # noqa: E731
+    context_detach = lambda tok: None  # noqa: E731
+
 
 class McpAuthMiddleware:
     """ASGI middleware: valida JWT e seta _current_roles antes de cada tool call."""
@@ -30,12 +43,27 @@ class McpAuthMiddleware:
             await self._app(scope, receive, send)
             return
 
-        # Extrai Authorization header (bytes nos headers ASGI)
-        headers = {k.lower(): v for k, v in scope.get("headers", [])}
+        # Extrai todos os headers como dict str→str para OTel propagation
+        raw_headers = scope.get("headers", [])
+        headers = {k.lower(): v for k, v in raw_headers}
+        headers_str: dict[str, str] = {
+            k.decode("latin-1"): v.decode("latin-1")
+            for k, v in raw_headers
+        }
+
         auth: str = headers.get(b"authorization", b"").decode("latin-1")
 
         token_var = None
         auth_ctx_tokens = None
+        otel_ctx_token = None  # ADR-121 D4: token de contexto OTel para detach
+
+        # ADR-121 D4: extrai traceparent/tracestate e estabelece contexto OTel
+        if _OTEL_AVAILABLE and propagate is not None:
+            try:
+                ctx = propagate.extract(headers_str)
+                otel_ctx_token = context_attach(ctx)
+            except Exception:
+                pass  # propagação OTel é best-effort
 
         if auth.startswith("Bearer "):
             raw_token = auth[7:].strip()
@@ -56,6 +84,23 @@ class McpAuthMiddleware:
                     claims.get("sub"),
                     claims.get("tid") or claims.get("tenant_id"),
                 )
+
+                # ADR-121 D6: injeta tenant_id e user_id como W3C Baggage
+                if _OTEL_AVAILABLE and set_baggage is not None:
+                    try:
+                        tenant_id = claims.get("tid") or claims.get("tenant_id")
+                        user_id = claims.get("sub")
+                        baggage_ctx = None
+                        if tenant_id:
+                            baggage_ctx = set_baggage("tenant.id", tenant_id, baggage_ctx)
+                        if user_id:
+                            baggage_ctx = set_baggage("user.id", user_id, baggage_ctx)
+                        if baggage_ctx is not None:
+                            # attach devolve token para detach no finally
+                            otel_ctx_token = context_attach(baggage_ctx)
+                    except Exception:
+                        pass  # baggage é best-effort
+
             except Exception as exc:
                 if _auth_enabled():
                     await _send_json_response(
@@ -86,6 +131,9 @@ class McpAuthMiddleware:
                 from concilium.infrastructure.auth.permission_guard import reset_auth_context
 
                 reset_auth_context(auth_ctx_tokens)
+            # ADR-121 D4/D6: desanexa contexto OTel (traceparent + baggage)
+            if otel_ctx_token is not None:
+                context_detach(otel_ctx_token)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
