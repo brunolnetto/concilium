@@ -35,19 +35,27 @@ class McpAuthMiddleware:
         auth: str = headers.get(b"authorization", b"").decode("latin-1")
 
         token_var = None
+        auth_ctx_tokens = None
 
         if auth.startswith("Bearer "):
             raw_token = auth[7:].strip()
             try:
                 from concilium.infrastructure.auth.permission_guard import (
                     _current_roles,
+                    reset_auth_context,
                     roles_from_token,
+                    set_auth_context,
                     set_roles,
                 )
                 from concilium.infrastructure.auth.token_service import decode_token
 
                 claims = decode_token(raw_token)
                 token_var = set_roles(roles_from_token(claims))
+                # ADR-118: propaga user_id (sub) e tenant_id (tid) para auditoria
+                auth_ctx_tokens = set_auth_context(
+                    claims.get("sub"),
+                    claims.get("tid") or claims.get("tenant_id"),
+                )
             except Exception as exc:
                 if _auth_enabled():
                     await _send_json_response(
@@ -74,6 +82,10 @@ class McpAuthMiddleware:
                 from concilium.infrastructure.auth.permission_guard import _current_roles
 
                 _current_roles.reset(token_var)
+            if auth_ctx_tokens is not None:
+                from concilium.infrastructure.auth.permission_guard import reset_auth_context
+
+                reset_auth_context(auth_ctx_tokens)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

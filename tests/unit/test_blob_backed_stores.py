@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
-from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
 from concilium.infrastructure.storage.campaign_store import CampaignRunStore
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -20,83 +19,8 @@ def blob_storage(tmp_path: Path) -> LocalBlobStorage:
 
 
 @pytest.fixture()
-def benchmark_store(blob_storage: LocalBlobStorage) -> FileSystemBenchmarkStore:
-    return FileSystemBenchmarkStore(storage=blob_storage, prefix=".benchmark-store")
-
-
-@pytest.fixture()
 def campaign_store(blob_storage: LocalBlobStorage) -> CampaignRunStore:
     return CampaignRunStore(storage=blob_storage, prefix="PROJ/campaigns")
-
-
-# ── BenchmarkStore via BlobStoragePort ────────────────────────────────────────
-
-
-class TestBenchmarkStoreUsesBlobPort:
-    def test_benchmark_store_uses_blob_port(self, benchmark_store: FileSystemBenchmarkStore):
-        """FileSystemBenchmarkStore is backed by BlobStoragePort (not direct Path ops)."""
-        from concilium.domain.repositories.blob_storage_port import BlobStoragePort
-
-        assert isinstance(benchmark_store._storage, BlobStoragePort)
-
-    def test_save_and_get_metadata(self, benchmark_store: FileSystemBenchmarkStore):
-        from concilium.domain.benchmark.models import BenchmarkMetadata
-
-        meta = BenchmarkMetadata(
-            benchmark_id="bm-001",
-            nome="Teste",
-            origem="unittest",
-            tags=["test"],
-            criado_em=datetime.now(UTC),
-            versao=1,
-            imutavel=False,
-        )
-        benchmark_store.save_metadata(meta)
-        loaded = benchmark_store.get_metadata("bm-001")
-        assert loaded is not None
-        assert loaded.benchmark_id == "bm-001"
-        assert loaded.nome == "Teste"
-
-    def test_get_metadata_returns_latest_version(self, benchmark_store: FileSystemBenchmarkStore):
-        from concilium.domain.benchmark.models import BenchmarkMetadata
-
-        for versao in (1, 2, 3):
-            meta = BenchmarkMetadata(
-                benchmark_id="bm-multi",
-                nome=f"v{versao}",
-                origem="unittest",
-                tags=[],
-                criado_em=datetime.now(UTC),
-                versao=versao,
-                imutavel=False,
-            )
-            benchmark_store.save_metadata(meta)
-
-        latest = benchmark_store.get_metadata("bm-multi")
-        assert latest is not None
-        assert latest.versao == 3
-
-    def test_log_execution_appends(self, benchmark_store: FileSystemBenchmarkStore):
-        from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
-
-        for i in range(3):
-            exec_ = BenchmarkExecution(
-                execution_id=f"exec-{i}",
-                benchmark_id="bm-audit",
-                versao=1,
-                projeto_id="proj-x",
-                status=BenchmarkState.SUCESSO,
-                executado_em=datetime.now(UTC),
-            )
-            benchmark_store.log_execution(exec_)
-
-        history = benchmark_store.get_execution_history("bm-audit")
-        assert len(history) == 3
-        assert {e.execution_id for e in history} == {"exec-0", "exec-1", "exec-2"}
-
-    def test_get_execution_history_empty_when_no_log(self, benchmark_store: FileSystemBenchmarkStore):
-        history = benchmark_store.get_execution_history("non-existent")
-        assert history == []
 
 
 # ── CampaignStore via BlobStoragePort ────────────────────────────────────────
@@ -221,65 +145,6 @@ class TestBuildBlobStorageFilesystem:
 
         storage = build_blob_storage()
         assert isinstance(storage, LocalBlobStorage)
-
-
-class TestStoreFactoryGetBenchmarkStore:
-    def test_get_benchmark_store_returns_filesystem_benchmark_store(self, tmp_path: Path, monkeypatch):
-        """get_benchmark_store() returns a FileSystemBenchmarkStore backed by BlobStoragePort."""
-        import concilium.infrastructure.settings as _settings
-
-        class _FakeStorage:
-            root = tmp_path
-            config_root = tmp_path
-            projects_root = tmp_path / "projetos"
-            benchmark_projects_root = None
-            backend = "filesystem"
-            projects_prefix = "projetos"
-
-            class sharepoint:
-                cache_dir = ""
-
-        monkeypatch.setattr(_settings, "get_storage", lambda: _FakeStorage())
-
-        from concilium.infrastructure.storage.store_factory import get_benchmark_store
-
-        store = get_benchmark_store()
-        assert isinstance(store, FileSystemBenchmarkStore)
-
-    def test_get_benchmark_store_is_functional(self, tmp_path: Path, monkeypatch):
-        """get_benchmark_store() returns a store that can save/load metadata."""
-        import concilium.infrastructure.settings as _settings
-
-        class _FakeStorage:
-            root = tmp_path
-            config_root = tmp_path
-            projects_root = tmp_path / "projetos"
-            benchmark_projects_root = None
-            backend = "filesystem"
-            projects_prefix = "projetos"
-
-            class sharepoint:
-                cache_dir = ""
-
-        monkeypatch.setattr(_settings, "get_storage", lambda: _FakeStorage())
-
-        from concilium.domain.benchmark.models import BenchmarkMetadata
-        from concilium.infrastructure.storage.store_factory import get_benchmark_store
-
-        store = get_benchmark_store()
-        meta = BenchmarkMetadata(
-            benchmark_id="factory-test",
-            nome="Factory Test",
-            origem="pytest",
-            tags=[],
-            criado_em=datetime.now(UTC),
-            versao=1,
-            imutavel=False,
-        )
-        store.save_metadata(meta)
-        loaded = store.get_metadata("factory-test")
-        assert loaded is not None
-        assert loaded.nome == "Factory Test"
 
 
 class TestStoreFactoryGetCampaignStore:

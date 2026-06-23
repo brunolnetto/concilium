@@ -90,6 +90,7 @@ fmt:
 # ── Coverage ──────────────────────────────────────────────────────────────────
 coverage:
 	@mkdir -p $(COV_DIR)
+	@rm -f .coverage .coverage.*
 	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short \
 		--cov=$(SRC) \
 		--cov-branch \
@@ -138,7 +139,7 @@ print(f'\n  Total rastreado: {len(files)} arquivos  |  {len(large)} blobs > 500 
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 clean:
-	rm -rf $(COV_DIR) .coverage $(LINT_REPORT)
+	rm -rf $(COV_DIR) .coverage .coverage.* $(LINT_REPORT)
 	find . -type d -name '__pycache__'   -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name '.pytest_cache' -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name '.mypy_cache'   -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true

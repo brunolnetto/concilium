@@ -85,8 +85,6 @@ class ProjectStore:
         contexto_id: str,
         catalogo_base: str | None = None,
         derivado_de_benchmark: str | None = None,
-        benchmark_versao: int | None = None,
-        benchmark_execution_id: str | None = None,
     ) -> "ProjectStore":
         """Cria novo projeto. Retorna o ProjectStore configurado."""
         # Use benchmark slug as project_id if available, otherwise generate UUID
@@ -112,8 +110,6 @@ class ProjectStore:
             "current_version": None,
             "catalogo_base": catalogo_base,
             "derivado_de_benchmark": derivado_de_benchmark,
-            "benchmark_versao": benchmark_versao,
-            "benchmark_execution_id": benchmark_execution_id,
         }
         (proj_root / cls.META_FILE).write_text(json.dumps(meta, indent=2))
         return cls(proj_root)

@@ -8,8 +8,6 @@ Linhas alvo em runner.py:
   142-143    — rfx metadata adicionado ao report
   166-180    — OLTP mode com profile: materializa entregáveis declarados
   184-222    — OLAP mode: copia artefatos para artifacts_dir
-  279        — benchmark_store.log_execution chamado com sucesso
-  295-301    — _find_or_create: benchmark_store_root existe, get_metadata retorna meta com versao
   309, 322   — _find_or_create: projeto não removido completamente (rmtree aviso)
   379        — _prepare_inputs: planejamento_ref injetado em skill-05 quando ref tem planejamento
 """
@@ -187,7 +185,6 @@ class TestRunProcurementIntent:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -231,7 +228,6 @@ class TestRunProcurementIntent:
 
         with (
             patch.object(runner, "_find_or_create", return_value=store),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -271,7 +267,6 @@ class TestRunProcurementIntent:
 
         with (
             patch.object(runner, "_find_or_create", return_value=store),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -318,7 +313,6 @@ class TestRunOltpWithProfileDeliverables:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -366,7 +360,6 @@ class TestRunOltpWithProfileDeliverables:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -406,7 +399,6 @@ class TestRunOlapArtifacts:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -444,7 +436,6 @@ class TestRunOlapArtifacts:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -475,7 +466,6 @@ class TestRunOlapArtifacts:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -487,11 +477,6 @@ class TestRunOlapArtifacts:
 
         captured = capsys.readouterr()
         assert "[WARN]" in captured.out
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# _log_execution: benchmark_store.log_execution chamado com sucesso (linha 279)
-# ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestRunOltpProfilePermissionError:
@@ -523,7 +508,6 @@ class TestRunOltpProfilePermissionError:
         with (
             patch.object(runner, "_find_or_create", return_value=store),
             patch.object(runner, "_load_referencia", return_value=None),
-            patch.object(runner, "_log_execution"),
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
@@ -540,152 +524,6 @@ class TestRunOltpProfilePermissionError:
         # The audit_dir write_text succeeds (write_text != write_bytes);
         # the deliverable write_bytes raises PermissionError → [WARN]
         assert "[WARN]" in captured.out
-
-
-class TestLogExecutionExceptionHandler:
-    """Linhas 280-281: except Exception as e: logger.warning(...)."""
-
-    def test_log_execution_warning_logged_on_internal_exception(self, tmp_path, caplog):
-        import logging
-
-        runner = _make_runner(tmp_path)
-        spec = _make_spec(tmp_path)
-        store = MagicMock()
-        store.root = tmp_path / "proj"
-
-        report = {"quality_gates": {"decision": "APROVADO"}}
-
-        # Patch from_path to return a store where log_execution raises
-        mock_benchmark_store = MagicMock()
-        mock_benchmark_store.log_execution.side_effect = RuntimeError("store corrompido")
-
-        with (
-            patch(
-                "concilium.infrastructure.storage.benchmark_store.FileSystemBenchmarkStore.from_path",
-                return_value=mock_benchmark_store,
-            ),
-            caplog.at_level(logging.WARNING, logger="concilium.application.benchmarks.execution.runner"),
-        ):
-            # deve silenciar e logar warning
-            runner._log_execution(spec, report, store_project=store)
-
-        assert any("Falha" in msg for msg in caplog.messages)
-
-
-class TestLogExecutionSuccess:
-    def test_log_execution_calls_store(self, tmp_path):
-        from concilium.application.benchmarks.execution.runner import BenchmarkRunner
-
-        runner = _make_runner(tmp_path)
-        spec = _make_spec(tmp_path)
-        store = MagicMock()
-        store.root = tmp_path / "proj"
-
-        report = {
-            "quality_gates": {
-                "decision": "APROVADO",
-                "worst_severity": "INFO",
-                "items": [{"gate": "g1"}, {"gate": "g2"}],
-            }
-        }
-
-        mock_benchmark_store = MagicMock()
-
-        with patch(
-            "concilium.infrastructure.storage.benchmark_store.FileSystemBenchmarkStore.from_path",
-            return_value=mock_benchmark_store,
-        ):
-            runner._log_execution(spec, report, store_project=store)
-
-        mock_benchmark_store.log_execution.assert_called_once()
-        execution = mock_benchmark_store.log_execution.call_args[0][0]
-        from concilium.domain.benchmark.models import BenchmarkState
-
-        assert execution.status == BenchmarkState.SUCESSO
-        assert execution.discrepancia_sumario["n_gates"] == 2
-
-    def test_log_execution_falha_status_for_reprovado(self, tmp_path):
-        runner = _make_runner(tmp_path)
-        spec = _make_spec(tmp_path)
-        store = MagicMock()
-        store.root = tmp_path / "proj"
-
-        report = {"quality_gates": {"decision": "REPROVADO"}}
-
-        mock_benchmark_store = MagicMock()
-
-        with patch(
-            "concilium.infrastructure.storage.benchmark_store.FileSystemBenchmarkStore.from_path",
-            return_value=mock_benchmark_store,
-        ):
-            runner._log_execution(spec, report, store_project=store)
-
-        execution = mock_benchmark_store.log_execution.call_args[0][0]
-        from concilium.domain.benchmark.models import BenchmarkState
-
-        assert execution.status == BenchmarkState.FALHA
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# _find_or_create: benchmark_store_root existe, get_metadata retorna meta (linhas 295-301)
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-class TestFindOrCreateNep039:
-    def test_loads_benchmark_versao_from_nep039(self, tmp_path):
-        runner = _make_runner(tmp_path)
-        # Criar .benchmark-store para forçar o branch de leitura de metadata
-        benchmark_store_root = runner.projects_root / ".benchmark-store"
-        benchmark_store_root.mkdir(parents=True, exist_ok=True)
-
-        mock_meta = MagicMock()
-        mock_meta.versao = 3
-        mock_benchmark_store = MagicMock()
-        mock_benchmark_store.get_metadata.return_value = mock_meta
-
-        store_mock = MagicMock()
-
-        with (
-            patch(
-                "concilium.infrastructure.storage.benchmark_store.FileSystemBenchmarkStore.from_path",
-                return_value=mock_benchmark_store,
-            ),
-            patch("concilium.infrastructure.storage.project.ProjectStore.init", return_value=store_mock),
-        ):
-            result = runner._find_or_create("Novo Projeto", "novo-slug", "ctx", reset=False)
-
-        assert result is store_mock
-        # benchmark_versao deve ter sido passado para ProjectStore.init
-        call_kwargs = {**{k: v for k, v in zip(
-            ["root", "nome", "contexto_id"],
-            __import__("concilium.infrastructure.storage.project", fromlist=["ProjectStore"]).ProjectStore.init.call_args[0]
-            if hasattr(__import__("concilium.infrastructure.storage.project", fromlist=["ProjectStore"]).ProjectStore.init, "call_args") else [],
-        )}}
-        # Valida que benchmark_versao foi passado
-        init_call = mock_benchmark_store.get_metadata.call_args
-        assert init_call is not None
-
-    def test_nep039_exception_is_logged_and_continues(self, tmp_path, caplog):
-        import logging
-
-        runner = _make_runner(tmp_path)
-        benchmark_store_root = runner.projects_root / ".benchmark-store"
-        benchmark_store_root.mkdir(parents=True, exist_ok=True)
-
-        store_mock = MagicMock()
-
-        with (
-            patch(
-                "concilium.infrastructure.storage.benchmark_store.FileSystemBenchmarkStore.from_path",
-                side_effect=Exception("nep039 corrompido"),
-            ),
-            patch("concilium.infrastructure.storage.project.ProjectStore.init", return_value=store_mock),
-            caplog.at_level(logging.WARNING, logger="concilium.application.benchmarks.execution.runner"),
-        ):
-            result = runner._find_or_create("Projeto X", "slug-x", "ctx", reset=False)
-
-        assert result is store_mock
-        assert any("nep039" in msg.lower() or "metadata" in msg.lower() for msg in caplog.messages)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -32,11 +32,6 @@ ALL_TOOL_NAMES = [
     "download_benchmark_zip",
     # benchmark_nep039
     "consultar_benchmark",
-    
-    "executar_benchmark_nep039",
-    "editar_benchmark",
-    "marcar_benchmark_imutavel",
-    "comparar_execucoes_benchmark",
     # campaign
     "explorar_configuracoes_go",
     "listar_runs_campanha",
@@ -160,11 +155,9 @@ class TestToolPermissionsCoverage:
             "iniciar_orcamento",
             "criar_projeto",
             "disparar_pipeline",
-            "executar_benchmark_nep039",
             "atualizar_preco_insumo",
             "adicionar_variante_producao",
             "aprovar_versao",
-            "marcar_benchmark_imutavel",
             "criar_rascunho_catalogo",   # ADR-120
             "aprovar_merge_catalogo",    # ADR-120
             "rejeitar_rascunho_catalogo", # ADR-120

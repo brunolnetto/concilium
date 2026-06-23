@@ -116,6 +116,11 @@ ignore = ["B008"]
 "tests/unit/test_application_services_refactor.py" = ["E402"]
 "**/theme.py" = ["E501"]  # CSS strings cannot be split across lines
 
+[tool.coverage.run]
+branch = true
+parallel = true
+data_file = ".coverage"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

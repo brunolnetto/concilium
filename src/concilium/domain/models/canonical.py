@@ -86,10 +86,6 @@ class Meta(BaseModel):
     # ADR-031: escopo e plano que geraram este canônico
     escopo_id: str = "default"
     plano_id: str | None = None
-    # NEP-039: Proveniência de benchmark — rastreamento de origem
-    derivado_de_benchmark: str | None = None  # "AGIS_2025_Q1"
-    benchmark_versao: int | None = None  # 1, 2, ... (auto-incrementado)
-    benchmark_execution_id: str | None = None  # UUID da execução
 
 
 class Coordenadas(BaseModel):

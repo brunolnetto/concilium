@@ -45,10 +45,13 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.application.tool_invocations.repository import reset_tool_invocation_repository
 from concilium.infrastructure.auth.permission_guard import patch_mcp_auth_permissions, validate_tool_coverage
 from concilium.infrastructure.observability.logging_config import configure_logging
+from concilium.infrastructure.storage.store_factory import get_tool_invocation_store
 from concilium.infrastructure.telemetry import patch_fastmcp_server, setup_telemetry
 from concilium.presentation.mcp._context import _config_root
+from concilium.presentation.mcp.audit import patch_fastmcp_server_with_audit
 from concilium.presentation.mcp.middleware import McpAuthMiddleware
 
 _APPS_DIR = Path(__file__).parent / "apps"
@@ -74,6 +77,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     """Monta o servidor MCP registrando todas as ferramentas dos sub-módulos."""
     setup_telemetry()
     configure_logging(json_format=True)
+    reset_tool_invocation_repository(get_tool_invocation_store())  # ADR-118: blob-backed audit
     server = FastMCP("concilium", host=host, port=port)
     system.register(server)  # ping / health — sempre primeiro
     catalogo.register(server)
@@ -87,10 +91,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     benchmark.register(server)  # execução, empacotamento e download de benchmark
 
     # NEP-039: Register benchmark metadata tools
-    from concilium.infrastructure.storage.store_factory import get_benchmark_store
-
-    benchmark_store = get_benchmark_store()
-    benchmark_nep039.register(server, benchmark_store)
+    benchmark_nep039.register(server)
 
     artifacts.register(server)  # ADR-093: listar/ler/baixar/bundle de artefatos
     tributacao.register(server)  # ADR-097 F6: INSS, IRRF, custo empregador CLT
@@ -98,6 +99,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     _register_ui_resources(server)  # ADR-101: MCP Apps — recursos ui://
     patch_fastmcp_server(server)  # ADR-095: OTEL tracing em todas as tools
     patch_mcp_auth_permissions(server)  # ADR-099: RBAC enforcement via TOOL_PERMISSIONS
+    patch_fastmcp_server_with_audit(server)  # ADR-118: audit log de invocações
     validate_tool_coverage(server)  # Loga warnings para tools sem mapeamento
     _patch_mcp_with_auth(server)  # ADR-099: JWT middleware para transport HTTP
     return server

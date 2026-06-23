@@ -150,9 +150,6 @@ class BenchmarkRunner:
             )
         self.report_printer.print(report)
 
-        # Registrar execução no BenchmarkStore para auditabilidade (NEP-039).
-        self._log_execution(spec, report, store_project=store)
-
         if mode != PipelineMode.OLAP:
             # Modo OLTP/LIGHT: sempre salva benchmark_report; quando houver perfil RFX
             # explícito, materializa também os entregáveis declarados no perfil.
@@ -241,66 +238,9 @@ class BenchmarkRunner:
         # data/{slug}/ é somente leitura: referencia.json, campaign_v{i}.json, artifacts/raw/.
         return self.projects_root / spec.slug / "artifacts" / "outputs"
 
-    def _log_execution(self, spec: ProjectSpec, report: dict, store_project: Any) -> None:
-        """Registra execução no FileSystemBenchmarkStore para auditabilidade (NEP-039).
-
-        Falha silenciosa: log de auditoria não deve quebrar o fluxo principal.
-        """
-        try:
-            import uuid
-            from datetime import datetime
-
-            from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
-            from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
-
-            benchmark_store_root = self.projects_root / ".benchmark-store"
-            benchmark_store_root.mkdir(parents=True, exist_ok=True)
-            benchmark_store = FileSystemBenchmarkStore.from_path(benchmark_store_root)
-
-            gates = report.get("quality_gates") or {}
-            decision = gates.get("decision") or "N/A"
-            status = (
-                BenchmarkState.SUCESSO if decision in {"APROVADO", "APROVADO_COM_RESSALVAS"} else BenchmarkState.FALHA
-            )
-
-            execution = BenchmarkExecution(
-                execution_id=str(uuid.uuid4()),
-                benchmark_id=spec.slug,
-                versao=1,
-                projeto_id=str(store_project.root) if store_project else "",
-                status=status,
-                executado_em=datetime.now(UTC),
-                discrepancia_sumario={
-                    "decision": decision,
-                    "worst_severity": gates.get("worst_severity"),
-                    "n_gates": len(gates.get("items") or []),
-                },
-            )
-            benchmark_store.log_execution(execution)
-        except Exception as e:
-            logger.warning(
-                "Falha ao registrar execução no benchmark store (não bloqueia o fluxo): %s", e, exc_info=True
-            )
-
     def _find_or_create(self, nome: str, benchmark_id: str, contexto_id: str, reset: bool):
 
-        from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
         from concilium.infrastructure.storage.project import ProjectStore
-
-        # Load benchmark metadata if available
-        benchmark_versao = None
-        benchmark_execution_id = None
-        benchmark_store_root = self.projects_root / ".benchmark-store"
-        if benchmark_store_root.exists():
-            try:
-                store = FileSystemBenchmarkStore.from_path(benchmark_store_root)
-                meta = store.get_metadata(benchmark_id)
-                if meta:
-                    benchmark_versao = meta.versao
-            except Exception as e:
-                logger.warning(
-                    "Falha ao carregar metadata do benchmark store (continuando sem linkage): %s", e, exc_info=True
-                )
 
         if self.projects_root.exists():
             for project_dir in self.projects_root.iterdir():
@@ -338,8 +278,6 @@ class BenchmarkRunner:
             nome,
             contexto_id,
             derivado_de_benchmark=benchmark_id,
-            benchmark_versao=benchmark_versao,
-            benchmark_execution_id=benchmark_execution_id,
         )
 
     def _load_referencia(self, spec: ProjectSpec) -> dict[str, Any] | None:
