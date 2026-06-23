@@ -21,7 +21,7 @@ def blob_storage(tmp_path: Path) -> LocalBlobStorage:
 
 @pytest.fixture()
 def benchmark_store(blob_storage: LocalBlobStorage) -> FileSystemBenchmarkStore:
-    return FileSystemBenchmarkStore(storage=blob_storage, prefix=".nep039")
+    return FileSystemBenchmarkStore(storage=blob_storage, prefix=".benchmark-store")
 
 
 @pytest.fixture()

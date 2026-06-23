@@ -23,7 +23,7 @@ def source(tmp_path):
     s.gravar_blob("projetos/proj-a/v1/canonical.json", b'{"projeto": "A"}')
     s.gravar_blob("projetos/proj-a/meta.json", b'{"id": "proj-a"}')
     s.gravar_blob("projetos/proj-b/v1/canonical.json", b'{"projeto": "B"}')
-    s.gravar_blob(".nep039/audit.jsonl", b'{"run": 1}')
+    s.gravar_blob(".benchmark-store/audit.jsonl", b'{"run": 1}')
     return s
 
 
@@ -76,7 +76,7 @@ class TestBlobMigratorCore:
         BlobMigrator().migrate(source, target)
         assert target.blob_existe("projetos/proj-a/v1/canonical.json")
         assert target.blob_existe("projetos/proj-b/v1/canonical.json")
-        assert target.blob_existe(".nep039/audit.jsonl")
+        assert target.blob_existe(".benchmark-store/audit.jsonl")
 
     def test_content_preserved(self, source, target):
         from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
@@ -90,7 +90,7 @@ class TestBlobMigratorCore:
         result = BlobMigrator().migrate(source, target, prefix="projetos/proj-a/")
         assert result.total_blobs == 2
         assert target.blob_existe("projetos/proj-a/v1/canonical.json")
-        assert not target.blob_existe(".nep039/audit.jsonl")
+        assert not target.blob_existe(".benchmark-store/audit.jsonl")
 
     def test_dry_run_copies_nothing(self, source, target):
         from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator

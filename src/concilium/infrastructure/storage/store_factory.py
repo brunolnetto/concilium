@@ -118,8 +118,16 @@ def get_benchmark_store(slug: str | None = None) -> FileSystemBenchmarkStore:  #
     from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
 
     storage = build_blob_storage()
-    prefix = ".nep039"
+    prefix = ".benchmark-store"
     return FileSystemBenchmarkStore(storage=storage, prefix=prefix)
+
+
+def get_tool_invocation_store() -> BlobToolInvocationRepository:  # type: ignore[name-defined]  # noqa: F821
+    """Retorna BlobToolInvocationRepository usando o backend configurado (ADR-118 F7)."""
+    from concilium.infrastructure.storage.tool_invocation_store import BlobToolInvocationRepository
+
+    storage = build_blob_storage()
+    return BlobToolInvocationRepository(storage=storage)
 
 
 def get_campaign_store(project_slug: str) -> CampaignRunStore:  # type: ignore[name-defined]  # noqa: F821

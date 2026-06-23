@@ -9,7 +9,7 @@ Linhas alvo em runner.py:
   166-180    — OLTP mode com profile: materializa entregáveis declarados
   184-222    — OLAP mode: copia artefatos para artifacts_dir
   279        — benchmark_store.log_execution chamado com sucesso
-  295-301    — _find_or_create: nep039_root existe, get_metadata retorna meta com versao
+  295-301    — _find_or_create: benchmark_store_root existe, get_metadata retorna meta com versao
   309, 322   — _find_or_create: projeto não removido completamente (rmtree aviso)
   379        — _prepare_inputs: planejamento_ref injetado em skill-05 quando ref tem planejamento
 """
@@ -627,16 +627,16 @@ class TestLogExecutionSuccess:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# _find_or_create: nep039_root existe, get_metadata retorna meta (linhas 295-301)
+# _find_or_create: benchmark_store_root existe, get_metadata retorna meta (linhas 295-301)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestFindOrCreateNep039:
     def test_loads_benchmark_versao_from_nep039(self, tmp_path):
         runner = _make_runner(tmp_path)
-        # Criar .nep039 para forçar o branch de leitura de metadata
-        nep039_root = runner.projects_root / ".nep039"
-        nep039_root.mkdir(parents=True, exist_ok=True)
+        # Criar .benchmark-store para forçar o branch de leitura de metadata
+        benchmark_store_root = runner.projects_root / ".benchmark-store"
+        benchmark_store_root.mkdir(parents=True, exist_ok=True)
 
         mock_meta = MagicMock()
         mock_meta.versao = 3
@@ -669,8 +669,8 @@ class TestFindOrCreateNep039:
         import logging
 
         runner = _make_runner(tmp_path)
-        nep039_root = runner.projects_root / ".nep039"
-        nep039_root.mkdir(parents=True, exist_ok=True)
+        benchmark_store_root = runner.projects_root / ".benchmark-store"
+        benchmark_store_root.mkdir(parents=True, exist_ok=True)
 
         store_mock = MagicMock()
 

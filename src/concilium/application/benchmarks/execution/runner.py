@@ -253,9 +253,9 @@ class BenchmarkRunner:
             from concilium.domain.benchmark.models import BenchmarkExecution, BenchmarkState
             from concilium.infrastructure.storage.benchmark_store import FileSystemBenchmarkStore
 
-            nep039_root = self.projects_root / ".nep039"
-            nep039_root.mkdir(parents=True, exist_ok=True)
-            benchmark_store = FileSystemBenchmarkStore.from_path(nep039_root)
+            benchmark_store_root = self.projects_root / ".benchmark-store"
+            benchmark_store_root.mkdir(parents=True, exist_ok=True)
+            benchmark_store = FileSystemBenchmarkStore.from_path(benchmark_store_root)
 
             gates = report.get("quality_gates") or {}
             decision = gates.get("decision") or "N/A"
@@ -290,10 +290,10 @@ class BenchmarkRunner:
         # Load benchmark metadata if available
         benchmark_versao = None
         benchmark_execution_id = None
-        nep039_root = self.projects_root / ".nep039"
-        if nep039_root.exists():
+        benchmark_store_root = self.projects_root / ".benchmark-store"
+        if benchmark_store_root.exists():
             try:
-                store = FileSystemBenchmarkStore.from_path(nep039_root)
+                store = FileSystemBenchmarkStore.from_path(benchmark_store_root)
                 meta = store.get_metadata(benchmark_id)
                 if meta:
                     benchmark_versao = meta.versao
