@@ -40,15 +40,8 @@ jobs:
 
       - name: Lint e validar templates
         run: |
-          az bicep build --file cd/production/bicep/main.bicep
-          az deployment group validate \
-            --resource-group "$RESOURCE_GROUP" \
-            --template-file cd/production/bicep/main.bicep \
-            --parameters cd/production/bicep/main.bicepparam \
-            --parameters opsIdentityPrincipalId="placeholder" \
-            --parameters azureStorageKey="placeholder" \
-            --output none
-          echo "✓ Templates Bicep válidos"
+          chmod +x cd/scripts/deploy.sh
+          CI=true cd/scripts/deploy.sh bootstrap --validate
 
   # ── Deploy Bicep ──────────────────────────────────────────────────────────
   deploy-infra:
@@ -67,60 +60,12 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Obter Storage Key
-        id: storage
-        run: |
-          KEY=$(az storage account keys list \
-            --account-name "${{ vars.CONCILIUM__AZURE_ACCOUNT }}" \
-            --resource-group "$RESOURCE_GROUP" \
-            --query '[0].value' -o tsv 2>/dev/null || echo "")
-          echo "key=$KEY" >> "$GITHUB_OUTPUT"
-
-      - name: Obter Principal ID do App Registration
-        id: app
-        run: |
-          APP_ID=$(az ad app list --display-name "concilium-github-actions" \
-            --query '[0].appId' -o tsv)
-          PRINCIPAL_ID=$(az ad sp show --id "$APP_ID" --query id -o tsv)
-          echo "principal_id=$PRINCIPAL_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy Bicep (what-if primeiro)
-        run: |
-          echo "=== What-if (mudanças planejadas) ==="
-          az deployment group what-if \
-            --resource-group "$RESOURCE_GROUP" \
-            --template-file cd/production/bicep/main.bicep \
-            --parameters cd/production/bicep/main.bicepparam \
-            --parameters "opsIdentityPrincipalId=${{ steps.app.outputs.principal_id }}" \
-            ${KEY:+--parameters "azureStorageKey=${{ steps.storage.outputs.key }}"} \
-            --output table || true
+      - name: Deploy infraestrutura via script
         env:
-          KEY: ${{ steps.storage.outputs.key }}
-
-      - name: Deploy Bicep (apply)
+          STORAGE_ACCOUNT: ${{ vars.CONCILIUM__AZURE_ACCOUNT }}
         run: |
-          az deployment group create \
-            --resource-group "$RESOURCE_GROUP" \
-            --template-file cd/production/bicep/main.bicep \
-            --parameters cd/production/bicep/main.bicepparam \
-            --parameters "opsIdentityPrincipalId=${{ steps.app.outputs.principal_id }}" \
-            ${KEY:+--parameters "azureStorageKey=${{ steps.storage.outputs.key }}"} \
-            --output none
-          echo "✓ Infraestrutura deployada"
-        env:
-          KEY: ${{ steps.storage.outputs.key }}
-
-      - name: Outputs do deployment
-        run: |
-          az deployment group show \
-            --resource-group "$RESOURCE_GROUP" \
-            --name main-deploy \
-            --query properties.outputs \
-            --output table 2>/dev/null || \
-          az deployment group list \
-            --resource-group "$RESOURCE_GROUP" \
-            --query '[0].properties.outputs' \
-            --output table
+          chmod +x cd/scripts/deploy.sh
+          CI=true cd/scripts/deploy.sh bootstrap
 
   # ── Configurar JWT Keys (só se não existirem) ─────────────────────────────
   setup-jwt-keys:
@@ -139,10 +84,6 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Verificar e gerar chaves JWT
-        env:
-          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          ACA_API_APP: ${{ env.ACA_API_APP }}
-          ACA_MCP_APP: ${{ env.ACA_MCP_APP }}
         run: |
           chmod +x cd/scripts/deploy.sh
           CI=true cd/scripts/deploy.sh keys

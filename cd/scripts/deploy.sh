@@ -12,7 +12,7 @@
 #   bootstrap, keys, tls, github, users, all, help
 set -euo pipefail
 
-_CI_SAFE_CMDS="keys deploy smoke promote rollback status help"
+_CI_SAFE_CMDS="keys image deploy smoke promote rollback status bootstrap help"
 
 _check_ci_safe() {
     [[ "${CI:-}" != "true" ]] && return 0
@@ -26,6 +26,7 @@ RESOURCE_GROUP="${RESOURCE_GROUP:-concilium-rg}"
 LOCATION="${LOCATION:-brazilsouth}"
 KV_NAME="${KV_NAME:-concilium-kv}"
 ACR_NAME="${ACR_NAME:-conciliumacr}"
+IMAGE_NAME="${IMAGE_NAME:-concilium}"
 AGW_NAME="${AGW_NAME:-concilium-agw}"
 ACA_API_APP="${ACA_API_APP:-concilium-api}"
 ACA_MCP_APP="${ACA_MCP_APP:-concilium-mcp}"
@@ -138,6 +139,11 @@ cmd_deploy() {
     local previous_primary
     previous_primary=$(_aca_primary_revision "$ACA_API_APP")
 
+    # Expose current active revision for CI workflows.
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+        echo "active_revision=${previous_primary}" >> "$GITHUB_OUTPUT"
+    fi
+
     step "ACA Deploy — app '$ACA_API_APP' com imagem '$image_tag'"
     [[ -n "$previous_primary" ]] && log "Revision com trafego atual: $previous_primary"
 
@@ -150,12 +156,16 @@ cmd_deploy() {
     az containerapp update \
         --name "$ACA_API_APP" \
         --resource-group "$RESOURCE_GROUP" \
-        --image "${ACR_NAME}.azurecr.io/concilium:${image_tag}" \
+        --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${image_tag}" \
         --output none
 
     local new_revision
     new_revision=$(_aca_latest_revision "$ACA_API_APP")
     [[ -n "$new_revision" ]] || die "Nao foi possivel identificar a revision criada no deploy."
+
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+        echo "deployed_revision=${new_revision}" >> "$GITHUB_OUTPUT"
+    fi
 
     _wait_revision_running "$ACA_API_APP" "$new_revision"
 
@@ -436,6 +446,58 @@ cmd_status() {
 
 # -- Platform operations ---------------------------------------------------------
 
+cmd_image() {
+    local input_tag=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --tag) input_tag="$2"; shift 2 ;;
+            *)     shift ;;
+        esac
+    done
+
+    need az
+    require_login
+
+    local resolved_tag
+    if [[ -n "$input_tag" ]]; then
+        resolved_tag="$input_tag"
+    else
+        if [[ -n "${GITHUB_SHA:-}" ]]; then
+            resolved_tag="${GITHUB_SHA:0:8}"
+        else
+            resolved_tag=$(git rev-parse --short=8 HEAD 2>/dev/null || echo "latest")
+        fi
+    fi
+
+    step "Preparar imagem no ACR"
+    log "Tag alvo: $resolved_tag"
+
+    az acr login --name "$ACR_NAME"
+
+    if [[ -n "$input_tag" ]]; then
+        az acr repository show-tags \
+            --name "$ACR_NAME" \
+            --repository "$IMAGE_NAME" \
+            --query "[?@=='${resolved_tag}']" \
+            --output tsv | grep -q . || die "Tag '${resolved_tag}' nao existe no ACR."
+        ok "Imagem verificada: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${resolved_tag}"
+    else
+        az acr build \
+            --registry "$ACR_NAME" \
+            --image "${IMAGE_NAME}:${resolved_tag}" \
+            --image "${IMAGE_NAME}:latest" \
+            --file "$REPO_ROOT/Dockerfile" \
+            --platform linux/amd64 \
+            "$REPO_ROOT"
+        ok "Imagem publicada: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${resolved_tag}"
+    fi
+
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+        echo "image_tag=${resolved_tag}" >> "$GITHUB_OUTPUT"
+    fi
+}
+
 cmd_keys() {
     ROTATE=false; [[ "${1:-}" == "--rotate" ]] && ROTATE=true
     need az; need openssl
@@ -458,8 +520,25 @@ cmd_keys() {
 }
 
 cmd_bootstrap() {
+    local mode="apply"
+    [[ "${1:-}" == "--validate" ]] && mode="validate"
+
     need az
     require_login
+
+    if [[ "$mode" == "validate" ]]; then
+        step "Validar Bicep"
+        az bicep build --file "$REPO_ROOT/cd/production/bicep/main.bicep"
+        az deployment group validate \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file "$REPO_ROOT/cd/production/bicep/main.bicep" \
+            --parameters "$REPO_ROOT/cd/production/bicep/main.bicepparam" \
+            --parameters opsIdentityPrincipalId="placeholder" \
+            --parameters azureStorageKey="placeholder" \
+            --output none
+        ok "Templates Bicep validados."
+        return 0
+    fi
 
     step "Resource Group"
     az group show --name "$RESOURCE_GROUP" &>/dev/null 2>&1 \
@@ -613,6 +692,7 @@ cmd_help() {
 Uso: deploy.sh [comando] [opcoes]
 
 -- Runtime Deployment (ACA Revisions, CI-safe) ---------------------------------
+    image [--tag TAG]             Builda imagem nova (sem --tag) ou valida tag existente
   deploy IMAGE_TAG             Cria nova revision no ACA sem promover trafego
   smoke [--revision REV]       Smoke exaustivo contra a revision/FQDN alvo
         [--url URL] [--mcp-url URL]
@@ -623,6 +703,7 @@ Uso: deploy.sh [comando] [opcoes]
 -- Platform Operations ----------------------------------------------------------
   keys [--rotate]              Gera JWT keys -> Key Vault
   bootstrap                    Provisiona infra Azure completa (idempotente)
+    bootstrap --validate         Valida Bicep (build + deployment validate)
   tls --upload <pfx>           Configura TLS com certificado PFX existente
   tls --self-signed            Configura TLS auto-assinado (staging)
   github                       Configura GitHub Secrets via gh CLI
@@ -643,6 +724,7 @@ CMD="${1:-all}"; shift 2>/dev/null || true
 _check_ci_safe "$CMD"
 
 case "$CMD" in
+    image)          cmd_image "$@" ;;
     deploy)         cmd_deploy "$@" ;;
     smoke)          cmd_smoke "$@" ;;
     promote)        cmd_promote "$@" ;;

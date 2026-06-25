@@ -29,7 +29,7 @@ jobs:
     name: Build & Push → ACR
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.tag.outputs.value }}
+      image_tag: ${{ steps.image.outputs.image_tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -41,40 +41,17 @@ jobs:
           tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Resolver tag da imagem
-        id: tag
+      - name: Build/re-deploy de imagem via script
+        id: image
         run: |
+          chmod +x cd/scripts/deploy.sh
           if [[ -n "${{ inputs.image_tag }}" ]]; then
-            echo "value=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            cd/scripts/deploy.sh image --tag "${{ inputs.image_tag }}"
           else
-            SHORT="${GITHUB_SHA:0:8}"
-            echo "value=${SHORT}" >> "$GITHUB_OUTPUT"
+            cd/scripts/deploy.sh image
           fi
 
-      - name: Build & push via ACR Tasks (cloud build)
-        if: inputs.image_tag == ''
-        run: |
-          az acr login --name conciliumacr
-          az acr build \
-            --registry conciliumacr \
-            --image "${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}" \
-            --image "${{ env.IMAGE_NAME }}:latest" \
-            --file Dockerfile \
-            --platform linux/amd64 \
-            .
-          echo "✓ Imagem: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}"
 
-      - name: Verificar imagem existente (re-deploy)
-        if: inputs.image_tag != ''
-        run: |
-          az acr login --name conciliumacr
-          az acr repository show-tags \
-            --name conciliumacr \
-            --repository "${{ env.IMAGE_NAME }}" \
-            --query "[?@=='${{ steps.tag.outputs.value }}']" \
-            --output tsv | grep -q . || \
-            (echo "Tag '${{ steps.tag.outputs.value }}' não existe no ACR" && exit 1)
-          echo "✓ Imagem verificada: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}"
 
 # ── Job 2: Deploy nova revision ACA (sem promover tráfego) ───────────────────
   deploy-revision:
@@ -83,8 +60,8 @@ jobs:
     needs: build
     environment: production
     outputs:
-      deployed_revision: ${{ steps.revision.outputs.deployed }}
-      active_revision:   ${{ steps.active.outputs.current }}
+      deployed_revision: ${{ steps.deploy.outputs.deployed_revision }}
+      active_revision:   ${{ steps.deploy.outputs.active_revision }}
 
     steps:
       - uses: actions/checkout@v4
@@ -96,17 +73,8 @@ jobs:
           tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Capturar revision ativa atual
-        id: active
-        run: |
-          CURRENT=$(az containerapp ingress traffic show \
-            --name "${{ env.ACA_API_APP }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --query "sort_by([?weight > \`0\`], &weight)[-1].revisionName" -o tsv 2>/dev/null || true)
-          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
-          echo "Active revision atual: ${CURRENT:-nenhuma}"
-
       - name: Deploy nova revision ACA
+        id: deploy
         env:
           IMAGE_TAG:       ${{ needs.build.outputs.image_tag }}
           ACA_API_APP:     ${{ env.ACA_API_APP }}
@@ -119,16 +87,6 @@ jobs:
         run: |
           chmod +x cd/scripts/deploy.sh
           cd/scripts/deploy.sh deploy "$IMAGE_TAG"
-
-      - name: Capturar revision deployada
-        id: revision
-        run: |
-          DEPLOYED=$(az containerapp revision list \
-            --name "${{ env.ACA_API_APP }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --query "sort_by(@,&properties.createdTime)[-1].name" -o tsv)
-          echo "deployed=$DEPLOYED" >> "$GITHUB_OUTPUT"
-          echo "Revision deployada: $DEPLOYED"
 
 # ── Job 3: Smoke tests contra a nova revision ────────────────────────────────
   smoke:
@@ -152,11 +110,8 @@ jobs:
       - name: Executar smoke tests exaustivos
         env:
           TARGET_REVISION:     ${{ needs.deploy-revision.outputs.deployed_revision }}
-          ACA_API_APP:         ${{ env.ACA_API_APP }}
-          ACA_MCP_APP:         ${{ env.ACA_MCP_APP }}
           SMOKE_CLIENT_ID:     ${{ vars.SMOKE_CLIENT_ID || 'smoke-test' }}
           SMOKE_CLIENT_SECRET: ${{ secrets.SMOKE_CLIENT_SECRET }}
-          RESOURCE_GROUP:      ${{ env.RESOURCE_GROUP }}
           CI: "true"
         run: |
           chmod +x cd/scripts/deploy.sh
@@ -181,17 +136,12 @@ jobs:
 
       - name: Promover revision '${{ needs.deploy-revision.outputs.deployed_revision }}' -> produção
         env:
-          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          ACA_API_APP:    ${{ env.ACA_API_APP }}
           CI: "true"
         run: |
           chmod +x cd/scripts/deploy.sh
           cd/scripts/deploy.sh promote --revision "${{ needs.deploy-revision.outputs.deployed_revision }}"
 
       - name: Resumo do deploy
-        env:
-          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          ACA_API_APP:    ${{ env.ACA_API_APP }}
         run: |
           chmod +x cd/scripts/deploy.sh
           cd/scripts/deploy.sh status
@@ -215,8 +165,6 @@ jobs:
 
       - name: Garantir tráfego na revision ativa anterior
         env:
-          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          ACA_API_APP:    ${{ env.ACA_API_APP }}
           ACTIVE_REVISION: ${{ needs.deploy-revision.outputs.active_revision }}
           CI: "true"
         run: |
