@@ -733,9 +733,7 @@ def _rra_build_resultado_section(
     # a empresa cobra pelo que realmente executa — o catálogo serve como referência de mercado, não
     # como base de precificação operacional.
     preco_venda_total = float(
-        getattr(res.venda, "total_custo_plus", None)
-        or getattr(res.venda, "total_com_bdi", None)
-        or 0.0
+        getattr(res.venda, "total_custo_plus", None) or getattr(res.venda, "total_com_bdi", None) or 0.0
     )
     # Usar custo.total do modelo como fonte autoritativa (inclui todos os componentes
     # calculados por skill-08). Fallback para recálculo local apenas quando ausente.

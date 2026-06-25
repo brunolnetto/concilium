@@ -412,7 +412,6 @@ class TestSCurveBuilder:
 
     def test_build_empty_when_no_schedule_weeks(self):
         """Covers _scb_collect_semanas returning (None, None) — _empty() branch."""
-        from unittest.mock import MagicMock
 
         canonical = _make_canonical(with_schedule=False)
         sc = SCurveBuilder().build(canonical)

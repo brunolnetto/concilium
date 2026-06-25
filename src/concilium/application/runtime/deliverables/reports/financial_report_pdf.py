@@ -138,7 +138,7 @@ def _fmt_cpu_descricao(cpu_id: str) -> str:
     # Remove prefixo 'CPU-TERRA-' ou 'CPU-' genérico
     for prefix in ("CPU-TERRA-", "CPU-"):
         if s.upper().startswith(prefix):
-            s = s[len(prefix):]
+            s = s[len(prefix) :]
             break
     return s.replace("-", " ").title()
 
@@ -353,12 +353,14 @@ def render_financial_report_pdf(
                 frentes = f"{float(pe.get('frentes_necessarias', 0.0) or 0.0):.3f}"
                 status = _safe_text(pe.get("status_validacao", "-") or "-")
                 pu_cal = _brl(float(pe.get("pu_cat", 0.0) or 0.0))
-                viab_data.append([
-                    Paragraph(item_id, st_small),
-                    Paragraph(frentes, st_small_right),
-                    Paragraph(status, st_small),
-                    Paragraph(pu_cal, st_small_right),
-                ])
+                viab_data.append(
+                    [
+                        Paragraph(item_id, st_small),
+                        Paragraph(frentes, st_small_right),
+                        Paragraph(status, st_small),
+                        Paragraph(pu_cal, st_small_right),
+                    ]
+                )
 
             viab_tbl = Table(
                 viab_data,
@@ -417,11 +419,13 @@ def render_financial_report_pdf(
                 ("Combustível (DIESEL)", total_diesel),
                 ("Materiais (MAT)", total_mat),
             ]:
-                dist_data.append([
-                    Paragraph(label, st_small),
-                    Paragraph(_brl(value), st_small_right),
-                    Paragraph(f"{100.0 * value / total_all:.1f}%", st_small_right),
-                ])
+                dist_data.append(
+                    [
+                        Paragraph(label, st_small),
+                        Paragraph(_brl(value), st_small_right),
+                        Paragraph(f"{100.0 * value / total_all:.1f}%", st_small_right),
+                    ]
+                )
 
             dist_tbl = Table(
                 dist_data,
@@ -441,11 +445,15 @@ def render_financial_report_pdf(
                     ]
                 )
             )
-            story.append(KeepTogether([
-                Paragraph("Distribuição de Custos por Tipo de Serviço", st_h2),
-                Spacer(1, 1 * mm),
-                dist_tbl,
-            ]))
+            story.append(
+                KeepTogether(
+                    [
+                        Paragraph("Distribuição de Custos por Tipo de Serviço", st_h2),
+                        Spacer(1, 1 * mm),
+                        dist_tbl,
+                    ]
+                )
+            )
 
         # ── Issue 6c: Recomendações Técnicas ─────────────────────────────────
         if isinstance(actionable_insights, dict):
@@ -533,11 +541,15 @@ def render_financial_report_pdf(
                 )
             )
             # Issue 3: updated section title + Issue 4: KeepTogether
-            story.append(KeepTogether([
-                Paragraph("Quantitativos e Composição de Custos (EAP)", st_h2),
-                Spacer(1, 1 * mm),
-                plan_tbl,
-            ]))
+            story.append(
+                KeepTogether(
+                    [
+                        Paragraph("Quantitativos e Composição de Custos (EAP)", st_h2),
+                        Spacer(1, 1 * mm),
+                        plan_tbl,
+                    ]
+                )
+            )
 
         # ── Issue 5: MOB/DESMOB table ─────────────────────────────────────────
         if isinstance(instancias_recurso, list) and instancias_recurso:
@@ -586,15 +598,17 @@ def render_financial_report_pdf(
                 custo_mob = float(inst.get("custo_mob_instancia", 0.0) or 0.0)
                 custo_demob = float(inst.get("custo_demob_instancia", 0.0) or 0.0)
                 custo_md = _brl(custo_mob + custo_demob)
-                mob_data.append([
-                    Paragraph(inst_id[:35], st_small),
-                    Paragraph(tipo[:30], st_small),
-                    Paragraph(mob, st_small_center),
-                    Paragraph(demob, st_small_center),
-                    Paragraph(sem_ativas, st_small_center),
-                    Paragraph(utilizacao, st_small_center),
-                    Paragraph(custo_md, st_small_right),
-                ])
+                mob_data.append(
+                    [
+                        Paragraph(inst_id[:35], st_small),
+                        Paragraph(tipo[:30], st_small),
+                        Paragraph(mob, st_small_center),
+                        Paragraph(demob, st_small_center),
+                        Paragraph(sem_ativas, st_small_center),
+                        Paragraph(utilizacao, st_small_center),
+                        Paragraph(custo_md, st_small_right),
+                    ]
+                )
 
             mob_tbl = Table(
                 mob_data,
@@ -622,11 +636,15 @@ def render_financial_report_pdf(
                     ]
                 )
             )
-            story.append(KeepTogether([
-                Paragraph("Ciclo de Vida dos Recursos (Mobilização e Desmobilização)", st_h2),
-                Spacer(1, 1 * mm),
-                mob_tbl,
-            ]))
+            story.append(
+                KeepTogether(
+                    [
+                        Paragraph("Ciclo de Vida dos Recursos (Mobilização e Desmobilização)", st_h2),
+                        Spacer(1, 1 * mm),
+                        mob_tbl,
+                    ]
+                )
+            )
 
         # ── Issue 2+4: Charts with captions wrapped in KeepTogether ──────────
         if image_provider:

@@ -97,15 +97,17 @@ def list_versions(
         items = []
         for v in versions:
             meta = version_history.get(v) or {}
-            items.append({
-                "version": v,
-                "criado_em": meta.get("criado_em"),
-                "criado_por": meta.get("criado_por"),
-                "role_criador": meta.get("role_criador"),
-                "procurement_intent": meta.get("procurement_intent"),
-                "forked_from": meta.get("forked_from"),
-                "motivo": meta.get("motivo"),
-            })
+            items.append(
+                {
+                    "version": v,
+                    "criado_em": meta.get("criado_em"),
+                    "criado_por": meta.get("criado_por"),
+                    "role_criador": meta.get("role_criador"),
+                    "procurement_intent": meta.get("procurement_intent"),
+                    "forked_from": meta.get("forked_from"),
+                    "motivo": meta.get("motivo"),
+                }
+            )
         # Build parent→children adjacency for tree structure
         children: dict[str, list[str]] = {}
         roots: list[str] = []

@@ -42,7 +42,7 @@ class TestIssueToken:
 
         c = _client()
         store_mock = MagicMock()
-        store_mock.get_client_roles.return_value = ["viewer"]
+        store_mock.get_client_roles.return_value = ["operator"]
         with (
             patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
             patch("concilium.infrastructure.auth.token_service.issue_token", return_value="jwt-token-123"),
@@ -85,7 +85,7 @@ class TestActivateDevice:
         rt.token_id = "RT-abc"
         rt.device_id = "dev-1"
         rt.client_id = "svc"
-        rt.roles = ["viewer"]
+        rt.roles = ["operator"]
         rt.expires_at = "2026-12-31T00:00:00Z"
         store_mock.activate_device_code.return_value = rt
         with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):

@@ -8,10 +8,9 @@ from fastapi.testclient import TestClient  # noqa: E402
 from concilium.application.services.pipeline_service import PipelineService
 from concilium.application.services.project.audit_service import AuditService
 from concilium.application.services.project.project_service import ProjectService
+from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent
 from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
 from concilium.presentation.api.app import create_app
-
-from concilium.application.skills.phase_classifier import get_pipeline_profile_for_intent
 
 pytestmark = [pytest.mark.slow]
 

@@ -14,10 +14,12 @@ from concilium.infrastructure.auth.permission_guard import permission
 def register(server: FastMCP) -> None:
     """Registra ferramentas de benchmark no servidor MCP."""
 
-    @server.tool(description=(
-        "Consulta benchmarks NEP-039: lista todos ou detalha um específico. "
-        "Omita benchmark_id para listar todos; informe-o para obter metadados."
-    ))
+    @server.tool(
+        description=(
+            "Consulta benchmarks NEP-039: lista todos ou detalha um específico. "
+            "Omita benchmark_id para listar todos; informe-o para obter metadados."
+        )
+    )
     @permission("project:read")
     def consultar_benchmark(benchmark_id: str | None = None) -> dict[str, Any]:
         """Lista benchmarks disponíveis ou detalha um benchmark específico.
@@ -66,9 +68,11 @@ def register(server: FastMCP) -> None:
             ref = _json.loads(ref_file.read_text(encoding="utf-8"))
         except Exception as e:
             return _wrap_response({"erro": str(e)})
-        return _wrap_response({
-            "benchmark_id": benchmark_id,
-            "projeto": ref.get("projeto"),
-            "eap_n_itens": len(ref.get("eap", [])),
-            "meta": ref.get("meta", {}),
-        })
+        return _wrap_response(
+            {
+                "benchmark_id": benchmark_id,
+                "projeto": ref.get("projeto"),
+                "eap_n_itens": len(ref.get("eap", [])),
+                "meta": ref.get("meta", {}),
+            }
+        )

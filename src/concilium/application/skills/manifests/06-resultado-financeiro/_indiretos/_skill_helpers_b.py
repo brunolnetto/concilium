@@ -192,7 +192,9 @@ def _custo_mob_legado(dados_mob: dict, num_pessoas_direta: int, prazo_meses: int
         )
         mobilizacoes.append(mob)
         custo_total += mob.custo_total
-    custo_pessoa_mes = dados_mob.get("custo_pessoa_mes", 1850)  # B3-known: R$1.850 legado; idealmente derivar do catálogo
+    custo_pessoa_mes = dados_mob.get(
+        "custo_pessoa_mes", 1850
+    )  # B3-known: R$1.850 legado; idealmente derivar do catálogo
     custo_total += num_pessoas_direta * custo_pessoa_mes * prazo_meses
     for b in dados_mob.get("baixadas", []):
         n_ocorrencias = len(b.get("meses_ocorrencia", []))
@@ -276,12 +278,15 @@ def _process_mob_categoria(
                 cat_obj = cat_obj.model_copy(update={"custo_fixo_total": custo})
                 logger.debug(
                     "MOB custo atualizado via mob_schedule: R$%.2f (fases: %s)",
-                    custo, list(mob_result.get("mob", {}).keys()),
+                    custo,
+                    list(mob_result.get("mob", {}).keys()),
                 )
         except Exception as e:
             logger.warning(
                 "Falha ao calcular custo MOB com mob_schedule — usando custo legado R$%.2f: %s",
-                custo, e, exc_info=True,
+                custo,
+                e,
+                exc_info=True,
             )
 
     indir = Indireto(

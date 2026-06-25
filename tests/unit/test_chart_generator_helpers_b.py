@@ -542,15 +542,18 @@ class TestChartGanttRealMatplotlib:
         out = tmp_path_factory.mktemp("gantt")
 
         _inject_gantt_globals(m)
-        std_dir = out / "std"; std_dir.mkdir()
+        std_dir = out / "std"
+        std_dir.mkdir()
         standard = m._chart_gantt(plt, std_dir, "AGIS", np, dpi=30)
 
         _inject_gantt_globals(m, SHORT_ATIVIDADES, {"DESMAT": "#8B5CF6"})
-        short_dir = out / "short"; short_dir.mkdir()
+        short_dir = out / "short"
+        short_dir.mkdir()
         short = m._chart_gantt(plt, short_dir, "X", np, dpi=30)
 
         _inject_gantt_globals(m, LONG_ATIVIDADES, {"DESMAT": "#8B5CF6"})
-        long_dir = out / "long"; long_dir.mkdir()
+        long_dir = out / "long"
+        long_dir.mkdir()
         long_ = m._chart_gantt(plt, long_dir, "LONG", np, dpi=30)
 
         return {"standard": standard, "short": short, "long": long_}

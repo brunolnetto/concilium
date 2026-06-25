@@ -45,7 +45,6 @@ TOOLS_ESPERADAS = {
     # escopo
     "consultar_estrutura_projeto",
     "gerir_escopo",  # ADR-116 F5
-    
 }
 
 

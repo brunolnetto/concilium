@@ -390,9 +390,7 @@ class TestBiiBuildMaoObra:
         from concilium.application.benchmarks.spec._spec_loader_helpers_b import _bii_build_mao_obra
 
         eq_detail = {
-            "mao_obra": [
-                {"funcao": "Engenheiro", "quantidade": 1, "custo_unitario": 10000.0, "salario_base": 8000.0}
-            ]
+            "mao_obra": [{"funcao": "Engenheiro", "quantidade": 1, "custo_unitario": 10000.0, "salario_base": 8000.0}]
         }
         result = _bii_build_mao_obra("ADM", eq_detail)
         assert result is not None

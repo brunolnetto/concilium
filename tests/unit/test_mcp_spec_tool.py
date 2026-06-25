@@ -14,13 +14,12 @@ import pytest
 from mcp.server.fastmcp import FastMCP
 
 import concilium.presentation.mcp.rate_limit as _rate_limit_mod
+from concilium.presentation.mcp.tools.formulario import register as register_formulario
 from concilium.presentation.mcp.tools.spec import (
     _resolve_tributario,
     _schema_path,
     _validate_spec,
-    register,
 )
-from concilium.presentation.mcp.tools.formulario import register as register_formulario
 
 # ---------------------------------------------------------------------------
 # Helpers

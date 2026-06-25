@@ -276,11 +276,13 @@ class TestFileProjectHandleExtended:
 
     def _make_handle(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+
         store = _make_store(tmp_path)
         return FileProjectHandle(store)
 
     def test_snapshots_property(self, tmp_path):
         from concilium.infrastructure.storage.snapshot import SnapshotStore
+
         handle = self._make_handle(tmp_path)
         assert isinstance(handle.snapshots, SnapshotStore)
 
@@ -311,7 +313,9 @@ class TestFileProjectHandleExtended:
     def test_write_canonical_raw_and_list_output_files(self, tmp_path):
         handle = self._make_handle(tmp_path)
         handle.new_version()
-        handle.write_canonical_raw({"obra": {"nome": "T", "escopo": "r", "localizacao": "X", "extensao_km": 1.0, "atividades": []}})
+        handle.write_canonical_raw(
+            {"obra": {"nome": "T", "escopo": "r", "localizacao": "X", "extensao_km": 1.0, "atividades": []}}
+        )
         assert handle.list_output_files() == []
 
     def test_save_and_load_output_file(self, tmp_path):
@@ -360,9 +364,7 @@ class TestFileProjectHandleExtended:
         # Should fall through to snapshots
         snaps_dir = handle.root / "snapshots"
         snaps_dir.mkdir(exist_ok=True)
-        (snaps_dir / "catalogo-v1.json").write_text(
-            '{"cpus": [{"codigo": "CPU-S"}]}', encoding="utf-8"
-        )
+        (snaps_dir / "catalogo-v1.json").write_text('{"cpus": [{"codigo": "CPU-S"}]}', encoding="utf-8")
         result = handle.resolve_cpu("CPU-S")
         assert result == {"codigo": "CPU-S"}
 
@@ -390,12 +392,15 @@ class TestFileProjectHandleExtended:
         log = (handle.root / "v1" / "invocations.log").read_text(encoding="utf-8")
         assert "01" in log
         # approve — need canonical first
-        handle.write_canonical_raw({"obra": {"nome": "T", "escopo": "r", "localizacao": "X", "extensao_km": 1.0, "atividades": []}})
+        handle.write_canonical_raw(
+            {"obra": {"nome": "T", "escopo": "r", "localizacao": "X", "extensao_km": 1.0, "atividades": []}}
+        )
         handle.approve("v1")
         assert "v1" in handle.meta.get("approved_versions", [])
 
     def test_list_escopos_and_escopo(self, tmp_path):
         from concilium.infrastructure.storage.escopo_store import EscopoStore
+
         handle = self._make_handle(tmp_path)
         assert handle.list_escopos() == []
         es = handle.escopo("default")
@@ -414,6 +419,7 @@ class TestFileProjectHandleExtended:
             data_termino="2026-06-30",
         )
         from concilium.infrastructure.storage.escopo_store import EscopoStore
+
         assert isinstance(es, EscopoStore)
         assert "e01" in handle.list_escopos()
 
@@ -430,6 +436,7 @@ class TestRcHelpersEdgeCases:
 
     def test_rc_try_override_bad_json(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_override
+
         f = tmp_path / "bad.json"
         f.write_text("not json")
         result = _rc_try_override(f, "CPU-1", json)
@@ -437,6 +444,7 @@ class TestRcHelpersEdgeCases:
 
     def test_rc_try_file_bad_json(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_file
+
         f = tmp_path / "bad.json"
         f.write_text("not json")
         result = _rc_try_file(f)
@@ -444,6 +452,7 @@ class TestRcHelpersEdgeCases:
 
     def test_rc_try_aggregate_bad_json(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         f = tmp_path / "bad.json"
         f.write_text("not json")
         result = _rc_try_aggregate(f, "CPU-1", json)
@@ -451,6 +460,7 @@ class TestRcHelpersEdgeCases:
 
     def test_rc_try_snapshots_bad_json_skipped(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
         (snaps_dir / "catalogo-v1.json").write_text("not json")
@@ -461,6 +471,7 @@ class TestRcHelpersEdgeCases:
     def test_rc_try_aggregate_data_is_list_not_dict(self, tmp_path):
         """When cpus.json contains a list instead of dict (no 'cpus' key), handled gracefully."""
         from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         agg = tmp_path / "cpus.json"
         # data is a plain list → data.get("cpus", data) would fail if data were not dict
         # The code does: cpus = data.get("cpus", data) if isinstance(data, dict) else data
@@ -471,6 +482,7 @@ class TestRcHelpersEdgeCases:
     def test_rc_try_aggregate_dict_without_cpus_key(self, tmp_path):
         """When top-level dict has no 'cpus' key, falls back to the dict itself — not a list."""
         from concilium.infrastructure.storage.file_project_repository import _rc_try_aggregate
+
         agg = tmp_path / "cpus.json"
         # dict without 'cpus' key → data.get("cpus", data) returns data (the dict)
         # But then it checks isinstance(cpus, list) which is False → returns None
@@ -481,6 +493,7 @@ class TestRcHelpersEdgeCases:
     def test_rc_try_snapshots_cpu_not_found_in_any(self, tmp_path):
         """CPU not found in any snapshot → returns None."""
         from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
         (snaps_dir / "catalogo-v1.json").write_text('{"cpus": [{"codigo": "CPU-A"}]}')
@@ -494,6 +507,7 @@ class TestFileProjectHandleLoadResolvedCatalog:
     def _make_handle(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "P", "ctx")
         return FileProjectHandle(store)
 
@@ -522,6 +536,7 @@ class TestFileProjectHandleAppendJsonl:
     def _make_handle(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "P", "ctx")
         return FileProjectHandle(store)
 
@@ -531,6 +546,7 @@ class TestFileProjectHandleAppendJsonl:
         lines = handle.read_lines("events.jsonl")
         assert len(lines) == 1
         import json as _json
+
         assert _json.loads(lines[0])["event"] == "test"
 
     def test_append_jsonl_multiple_entries(self, tmp_path):
@@ -547,6 +563,7 @@ class TestFileProjectHandleReadJsonBadJson:
     def _make_handle(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "P", "ctx")
         return FileProjectHandle(store)
 
@@ -568,11 +585,13 @@ class TestFileProjectHandleSaveCanonical:
     def _make_handle(self, tmp_path):
         from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "P", "ctx")
         return FileProjectHandle(store)
 
     def test_save_canonical_raises_without_version(self, tmp_path):
         from unittest.mock import MagicMock
+
         handle = self._make_handle(tmp_path)
         mock_model = MagicMock()
         mock_model.model_dump_json.return_value = '{"meta": {}}'

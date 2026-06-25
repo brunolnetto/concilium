@@ -314,7 +314,9 @@ class TestNormalizeRefIndiretos:
     def test_raw_indiretos_list(self):
         from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_indiretos
 
-        data = {"raw_indiretos": [{"categoria": "ADM", "custo_total": 500.0}, {"categoria": "TOP", "custo_total": 200.0}]}
+        data = {
+            "raw_indiretos": [{"categoria": "ADM", "custo_total": 500.0}, {"categoria": "TOP", "custo_total": 200.0}]
+        }
         result = _normalize_ref_indiretos(data)
         assert result["ADM"]["custo_com_bdi"] == 500.0
         assert result["TOP"]["custo_com_bdi"] == 200.0
@@ -339,7 +341,13 @@ class TestCompareIndiretos:
         from concilium.application.benchmarks.analysis.etapa_diffs import compare_indiretos_skill05
 
         canonical = [{"categoria": "ADM", "custo_total": 1000.0}]
-        ref = {"ADM": {"custo_com_bdi": 1000.0}, "TOP": {"custo_com_bdi": 0.0}, "LAB": {"custo_com_bdi": 0.0}, "QSMS": {"custo_com_bdi": 0.0}, "MOB": {"custo_com_bdi": 0.0}}
+        ref = {
+            "ADM": {"custo_com_bdi": 1000.0},
+            "TOP": {"custo_com_bdi": 0.0},
+            "LAB": {"custo_com_bdi": 0.0},
+            "QSMS": {"custo_com_bdi": 0.0},
+            "MOB": {"custo_com_bdi": 0.0},
+        }
         result = compare_indiretos_skill05(canonical, ref)
         assert result == []
 
@@ -347,7 +355,13 @@ class TestCompareIndiretos:
         from concilium.application.benchmarks.analysis.etapa_diffs import compare_indiretos_skill05
 
         canonical = []
-        ref = {"ADM": {"custo_com_bdi": 5000.0}, "TOP": {"custo_com_bdi": 0.0}, "LAB": {"custo_com_bdi": 0.0}, "QSMS": {"custo_com_bdi": 0.0}, "MOB": {"custo_com_bdi": 0.0}}
+        ref = {
+            "ADM": {"custo_com_bdi": 5000.0},
+            "TOP": {"custo_com_bdi": 0.0},
+            "LAB": {"custo_com_bdi": 0.0},
+            "QSMS": {"custo_com_bdi": 0.0},
+            "MOB": {"custo_com_bdi": 0.0},
+        }
         result = compare_indiretos_skill05(canonical, ref)
         adm = next(d for d in result if d["categoria"] == "ADM")
         assert "CRÍT" in adm["severidade"] or adm["severidade"].startswith("CR")
@@ -357,7 +371,13 @@ class TestCompareIndiretos:
         from concilium.application.benchmarks.analysis.etapa_diffs import compare_indiretos_skill05
 
         canonical = [{"categoria": "ADM", "custo_total": 1000.0}]
-        ref = {"ADM": {"custo_com_bdi": 0.0}, "TOP": {"custo_com_bdi": 0.0}, "LAB": {"custo_com_bdi": 0.0}, "QSMS": {"custo_com_bdi": 0.0}, "MOB": {"custo_com_bdi": 0.0}}
+        ref = {
+            "ADM": {"custo_com_bdi": 0.0},
+            "TOP": {"custo_com_bdi": 0.0},
+            "LAB": {"custo_com_bdi": 0.0},
+            "QSMS": {"custo_com_bdi": 0.0},
+            "MOB": {"custo_com_bdi": 0.0},
+        }
         result = compare_indiretos_skill05(canonical, ref)
         assert any(d["categoria"] == "ADM" for d in result)
         adm = next(d for d in result if d["categoria"] == "ADM")
@@ -498,8 +518,9 @@ class TestGdfbLoadCanonical:
         assert result == {}
 
     def test_returns_canonical_when_found(self, tmp_path):
-        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
         import json
+
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
 
         projeto_dir = tmp_path / "projetos" / "proj1"
         v1_dir = projeto_dir / "v1"
@@ -523,8 +544,9 @@ class TestGdfbLoadCanonical:
         assert result == {}
 
     def test_returns_empty_when_projeto_nome_mismatch(self, tmp_path):
-        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
         import json
+
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
 
         projeto_dir = tmp_path / "projetos" / "proj1"
         v1_dir = projeto_dir / "v1"

@@ -8,6 +8,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.infrastructure.auth.permission_guard import permission
 from concilium.infrastructure.storage.project import ProjectStore
 from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
@@ -17,8 +18,6 @@ from concilium.presentation.mcp._context import (
     _wrap_response,
 )
 
-
-from concilium.infrastructure.auth.permission_guard import permission
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas de projeto no servidor MCP."""
@@ -311,11 +310,12 @@ def register(server: FastMCP) -> None:
         }
         # ADR-119 D5: VersionAction no audit trail
         try:
+            from concilium.application.services.project.audit_service import AuditService, VersionAction
             from concilium.infrastructure.auth.permission_guard import (
                 _current_roles,
                 get_current_user_id,
             )
-            from concilium.application.services.project.audit_service import AuditService, VersionAction
+
             user_id = get_current_user_id() or "system"
             roles = list(_current_roles.get())
             va = VersionAction(

@@ -14,10 +14,7 @@ Linhas alvo em runner.py:
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -188,8 +185,10 @@ class TestRunProcurementIntent:
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
-            patch("concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
-                  return_value=fake_profile),
+            patch(
+                "concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
+                return_value=fake_profile,
+            ),
             patch("concilium.domain.models.procurement.validate_procurement_baseline"),
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
@@ -231,8 +230,10 @@ class TestRunProcurementIntent:
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
-            patch("concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
-                  return_value=fake_profile),
+            patch(
+                "concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
+                return_value=fake_profile,
+            ),
             patch("concilium.domain.models.procurement.validate_procurement_baseline") as mock_validate,
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
@@ -270,8 +271,10 @@ class TestRunProcurementIntent:
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
-            patch("concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
-                  return_value=fake_profile),
+            patch(
+                "concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
+                return_value=fake_profile,
+            ),
             patch("concilium.domain.models.procurement.validate_procurement_baseline") as mock_validate,
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
@@ -316,8 +319,10 @@ class TestRunOltpWithProfileDeliverables:
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
-            patch("concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
-                  return_value=fake_profile),
+            patch(
+                "concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
+                return_value=fake_profile,
+            ),
             patch("concilium.domain.models.procurement.validate_procurement_baseline"),
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
@@ -363,8 +368,10 @@ class TestRunOltpWithProfileDeliverables:
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
-            patch("concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
-                  return_value=fake_profile),
+            patch(
+                "concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
+                return_value=fake_profile,
+            ),
             patch("concilium.domain.models.procurement.validate_procurement_baseline"),
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
@@ -511,8 +518,10 @@ class TestRunOltpProfilePermissionError:
             patch.object(runner, "_prepare_inputs", return_value={}),
             patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
             patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
-            patch("concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
-                  return_value=fake_profile),
+            patch(
+                "concilium.application.skills.phase_classifier.get_pipeline_profile_for_intent",
+                return_value=fake_profile,
+            ),
             patch("concilium.domain.models.procurement.validate_procurement_baseline"),
             # patch write_bytes directly on Path objects created at runtime
             patch("pathlib.Path.write_bytes", side_effect=PermissionError("arquivo em uso")),

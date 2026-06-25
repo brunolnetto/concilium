@@ -145,6 +145,7 @@ class TestSkillGraphExporter:
         assert isinstance(result, dict)
         # All known phases present
         from concilium.application.skills.phase_classifier import PHASE_MAP
+
         for p in PHASE_MAP:
             assert p in result
 
@@ -171,11 +172,10 @@ class TestGetSkillNoneBranches:
     def test_to_mermaid_phases_skips_none_skill_in_phase(self):
         """Line 92: `if not skill: continue` inside phase subgraph loop."""
         from concilium.application.skills.graph_exporter import SkillGraphExporter
-        from concilium.application.skills.phase_classifier import classify_phase, PHASE_MAP
 
         registry = MagicMock()
         # Use a skill that maps to a known phase so the phase loop runs
-        from concilium.application.skills.phase_classifier import PHASE_MAP
+
         real_skill_id = "01-escopo-e-eap"
         registry.skills = {real_skill_id: MagicMock()}
         registry.get_skill.return_value = None  # returns None → triggers continue on line 92
@@ -255,7 +255,6 @@ class TestGetSkillNoneBranches:
     def test_to_mermaid_with_phases_skips_empty_phase(self):
         """Line 86: `if not phases_dict.get(phase): continue` skips empty phase."""
         from concilium.application.skills.graph_exporter import SkillGraphExporter
-        from concilium.application.skills.phase_classifier import PHASE_MAP
 
         # Registry with no skills → all phases are empty → every phase is skipped
         registry = MagicMock()

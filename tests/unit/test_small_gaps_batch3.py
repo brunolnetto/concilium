@@ -27,6 +27,7 @@ def _make_minimal_canonical():
     }
     return CanonicalModel.model_validate(data)
 
+
 # ─── _spec_loader_helpers_a.py ────────────────────────────────────────────────
 
 
@@ -316,8 +317,8 @@ class TestEscopoStore:
         return store.escopo(escopo_id)
 
     def test_plano_meta_defaults_when_no_file(self, tmp_path):
+
         from concilium.infrastructure.storage.escopo_store import PlanoStore
-        from pathlib import Path
 
         plano_dir = tmp_path / "plano-x"
         plano_dir.mkdir()
@@ -461,7 +462,6 @@ class TestEscopoStore:
         assert (new_ps.root / PlanoStore.CANONICAL_FILE).exists()
 
     def test_new_iteration_increments_versao(self, tmp_path):
-        from concilium.infrastructure.storage.escopo_store import PlanoStore
 
         es = self._make_escopo(tmp_path)
         ps = es.create_plan(nome="P")
@@ -541,7 +541,6 @@ class TestEscopoStore:
         assert ps.plano_id == "plan-fixed-1"
 
     def test_plano_approve_makes_readonly(self, tmp_path):
-        import os
         import stat
 
         es = self._make_escopo(tmp_path)
@@ -580,12 +579,12 @@ class TestEscopoStore:
     @staticmethod
     def _plano_store_cls():
         from concilium.infrastructure.storage.escopo_store import PlanoStore
+
         return PlanoStore
 
 
 # Reference to PlanoStore needed for CANONICAL_FILE constant in tests above
 from concilium.infrastructure.storage.escopo_store import PlanoStore  # noqa: E402
-
 
 # ─── domain/services/analytics/backtracking_pe_builder.py ─────────────────────
 

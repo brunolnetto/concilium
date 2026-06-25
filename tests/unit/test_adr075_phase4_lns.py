@@ -174,8 +174,6 @@ class TestLnsSchedulerMissingLineCoverage:
         from concilium.application.scheduling.models import (
             Activity,
             ActivityDAG,
-            ResourcePool,
-            ScheduleError,
         )
 
         # Force deadline impossibly tight: deadline_multiplier → near 0 means scheduler
@@ -214,11 +212,6 @@ class TestLnsSchedulerMissingLineCoverage:
         from unittest.mock import MagicMock, patch
 
         from concilium.application.scheduling.lns_scheduler import LnsScheduler
-        from concilium.application.scheduling.models import (
-            Activity,
-            ActivityDAG,
-            ResourcePool,
-        )
 
         dag, acts = _dag_chain(3, dur=2)
         scheduler = LnsScheduler(oracle=_oracle(), k_max=3)

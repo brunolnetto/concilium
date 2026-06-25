@@ -84,11 +84,13 @@ class TestConsultarBenchmarkListMode:
         import json
 
         (slug_dir / "referencia.json").write_text(
-            json.dumps({
-                "projeto": {"nome": "AGIS Q1", "tipo_obra": "viaduto"},
-                "meta": {"gerado_em": "2025-01-15"},
-                "eap": [],
-            }),
+            json.dumps(
+                {
+                    "projeto": {"nome": "AGIS Q1", "tipo_obra": "viaduto"},
+                    "meta": {"gerado_em": "2025-01-15"},
+                    "eap": [],
+                }
+            ),
             encoding="utf-8",
         )
 

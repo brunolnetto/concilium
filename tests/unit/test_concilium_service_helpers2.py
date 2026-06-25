@@ -370,7 +370,6 @@ class TestGetEnrichedCpus:
     """Covers _cs_get_enriched_cpus (lines 148-171): cache miss, hit, bundle mtime."""
 
     def _make_svc_with_catalog(self, tmp_path, cat_id="cat-enrich"):
-        from concilium.application.runtime import Runtime
 
         cats_dir = tmp_path / "catalogos" / cat_id
         cats_dir.mkdir(parents=True)
@@ -388,6 +387,7 @@ class TestGetEnrichedCpus:
 
     def test_cache_miss_calls_runtime_and_stores(self, tmp_path):
         from unittest.mock import patch
+
         from concilium.application.services._concilium_service_helpers import _cs_get_enriched_cpus
 
         svc, cat_id = self._make_svc_with_catalog(tmp_path, "cat-e1")
@@ -457,6 +457,7 @@ class TestGetEnrichedCpusOsError:
         cats_dir = tmp_path / "catalogos" / cat_id
         cats_dir.mkdir(parents=True)
         import json
+
         (cats_dir / "catalog.json").write_text(
             json.dumps({"cpus": [{"codigo": "CPU-OE", "descricao": "d", "unidade": "m"}]})
         )
@@ -467,8 +468,9 @@ class TestGetEnrichedCpusOsError:
 
     def test_oserror_on_initial_bundle_stat_falls_back_to_zero(self, tmp_path):
         """Lines 153-154: OSError on first bundle.stat() → mtime=0, cache miss, calls Runtime."""
-        from unittest.mock import patch
         from pathlib import Path
+        from unittest.mock import patch
+
         from concilium.application.services._concilium_service_helpers import _cs_get_enriched_cpus
 
         svc, cat_id = self._make_svc_minimal(tmp_path)
@@ -489,8 +491,10 @@ class TestGetEnrichedCpusOsError:
                 raise OSError("stat failed on first call")
             return original_stat(self_path, *args, **kwargs)
 
-        with patch("concilium.application.runtime.Runtime", return_value=mock_rt), \
-             patch.object(Path, "stat", patched_stat):
+        with (
+            patch("concilium.application.runtime.Runtime", return_value=mock_rt),
+            patch.object(Path, "stat", patched_stat),
+        ):
             result = _cs_get_enriched_cpus(svc, cat_id)
 
         assert isinstance(result, list)
@@ -498,8 +502,9 @@ class TestGetEnrichedCpusOsError:
 
     def test_oserror_on_post_load_bundle_stat_falls_back_to_zero(self, tmp_path):
         """Lines 167-168: OSError on second bundle.stat() (post-load) → mtime=0, stored in cache."""
-        from unittest.mock import patch
         from pathlib import Path
+        from unittest.mock import patch
+
         from concilium.application.services._concilium_service_helpers import _cs_get_enriched_cpus
 
         svc, cat_id = self._make_svc_minimal(tmp_path)
@@ -530,9 +535,11 @@ class TestGetEnrichedCpusOsError:
                 return count >= 1  # True on second check
             return original_exists(self_path)
 
-        with patch("concilium.application.runtime.Runtime", return_value=mock_rt), \
-             patch.object(Path, "stat", patched_stat), \
-             patch.object(Path, "exists", patched_exists):
+        with (
+            patch("concilium.application.runtime.Runtime", return_value=mock_rt),
+            patch.object(Path, "stat", patched_stat),
+            patch.object(Path, "exists", patched_exists),
+        ):
             result = _cs_get_enriched_cpus(svc, cat_id)
 
         assert isinstance(result, list)

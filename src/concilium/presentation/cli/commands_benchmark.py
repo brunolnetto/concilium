@@ -183,7 +183,8 @@ def run_benchmarks(
     pack: bool = typer.Option(False, "--pack", help="Empacota artefatos de saída em ZIP ao final."),
     charts: bool = typer.Option(False, "--charts", help="Gera gráficos PNG antes de empacotar (requer matplotlib)."),
     intent: str = typer.Option(
-        "", "--intent",
+        "",
+        "--intent",
         help="Intenção RFX (ADR-115): rfi (OLTP, exploração), rfp (OLAP, técnico-econômico).",
     ),
 ) -> None:

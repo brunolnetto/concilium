@@ -215,11 +215,12 @@ def register(server: FastMCP) -> None:
         """
         # Route to spec mode if spec dict is provided
         if spec is not None:
+            from concilium.infrastructure.storage.project import ProjectStore
             from concilium.presentation.mcp.tools.spec import (
                 _resolve_tributario,
                 _validate_spec,
             )
-            from concilium.infrastructure.storage.project import ProjectStore
+
             erros_spec = _validate_spec(spec)
             if erros_spec:
                 return {"erro": "Spec inválido", "detalhes": erros_spec[:10]}
@@ -242,44 +243,60 @@ def register(server: FastMCP) -> None:
                 eid = escopo_spec["escopo_id"]
                 try:
                     es = store.create_escopo(
-                        escopo_id=eid, nome=escopo_spec["nome"],
-                        tipo_obra=meta["tipo_obra"], localizacao=meta["localizacao"],
+                        escopo_id=eid,
+                        nome=escopo_spec["nome"],
+                        tipo_obra=meta["tipo_obra"],
+                        localizacao=meta["localizacao"],
                         coordenadas_lat=meta["coordenadas"]["lat"],
                         coordenadas_lng=meta["coordenadas"]["lng"],
-                        data_inicio=meta["data_inicio"], data_termino=meta["data_termino"],
-                        dias_semana=_dias, horas_dia=_horas,
+                        data_inicio=meta["data_inicio"],
+                        data_termino=meta["data_termino"],
+                        dias_semana=_dias,
+                        horas_dia=_horas,
                     )
                 except Exception as e:
                     return {"erro": f"Falha ao criar escopo '{eid}': {e}"}
                 ps = es.create_plan(nome="Plano Principal")
                 inputs_01 = {
-                    "nome": meta["nome"], "tipo_obra": meta["tipo_obra"],
-                    "localizacao": meta["localizacao"], "coordenadas": meta["coordenadas"],
+                    "nome": meta["nome"],
+                    "tipo_obra": meta["tipo_obra"],
+                    "localizacao": meta["localizacao"],
+                    "coordenadas": meta["coordenadas"],
                     "regime_trabalho": {"dias_semana": _dias, "horas_dia": _horas},
-                    "data_inicio": meta["data_inicio"], "data_termino": meta["data_termino"],
+                    "data_inicio": meta["data_inicio"],
+                    "data_termino": meta["data_termino"],
                     "versao_referencia_id": rt.load_contexto(meta["contexto_id"]).referencia_id,
-                    "eap": escopo_spec["eap"], "regime_tributario": tributario,
+                    "eap": escopo_spec["eap"],
+                    "regime_tributario": tributario,
                 }
                 if escopo_spec.get("cronograma"):
                     inputs_01["_cronograma_spec"] = escopo_spec["cronograma"]
                 try:
                     r = coord.avancar_plano("01-escopo-e-eap", store, ps, inputs=inputs_01)
                     status_01 = "ERRO" if r.has_errors else "OK"
-                    erros_01 = [{"codigo": v.codigo, "mensagem": v.mensagem} for v in r.validacoes if v.status == "ERRO"]
+                    erros_01 = [
+                        {"codigo": v.codigo, "mensagem": v.mensagem} for v in r.validacoes if v.status == "ERRO"
+                    ]
                 except Exception as e:
                     status_01, erros_01 = "ERRO", [{"codigo": "EXCECAO", "mensagem": str(e)}]
-                escopos_criados.append({"escopo_id": eid, "plano_id": ps.plano_id,
-                                        "status_skill_01": status_01, "erros": erros_01})
+                escopos_criados.append(
+                    {"escopo_id": eid, "plano_id": ps.plano_id, "status_skill_01": status_01, "erros": erros_01}
+                )
             sucesso = all(e["status_skill_01"] == "OK" for e in escopos_criados)
-            return _wrap_response({
-                "project_id": store.root.name, "escopos": escopos_criados,
-                "tributario_efetivo": tributario,
-                "proxima_skill_sugerida": "02-produtividade-climatica" if sucesso else None,
-            })
+            return _wrap_response(
+                {
+                    "project_id": store.root.name,
+                    "escopos": escopos_criados,
+                    "tributario_efetivo": tributario,
+                    "proxima_skill_sugerida": "02-produtividade-climatica" if sucesso else None,
+                }
+            )
 
         # Formulário mode (original criar_projeto_formulario logic below)
         if not nome or not contexto_id or not tipo_obra or not localizacao or not data_inicio:
-            return _wrap_response({"erro": "Parâmetros obrigatórios: nome, contexto_id, tipo_obra, localizacao, data_inicio"})
+            return _wrap_response(
+                {"erro": "Parâmetros obrigatórios: nome, contexto_id, tipo_obra, localizacao, data_inicio"}
+            )
         if servicos is None:
             servicos = []
         # ── original formulario body continues ──

@@ -1361,10 +1361,10 @@ class TestEnrichPayloadEncargos:
     """Covers _enrich_payload_encargos (lines 69-84)."""
 
     def test_reads_jurisdicao_file_and_builds_encargos(self, tmp_path):
-        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
-
         import json
         from pathlib import Path
+
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
 
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
@@ -1387,8 +1387,9 @@ class TestEnrichPayloadEncargos:
         assert payload["encargos_sociais"]["clt_horista"] == 1.95
 
     def test_no_jurisdicao_files_leaves_payload_unchanged(self, tmp_path):
-        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
         from pathlib import Path
+
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
 
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
@@ -1400,10 +1401,10 @@ class TestEnrichPayloadEncargos:
         assert "encargos_sociais" not in payload
 
     def test_uses_fallback_when_motor_missing(self, tmp_path):
-        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
-
         import json
         from pathlib import Path
+
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_encargos
 
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
@@ -1439,9 +1440,9 @@ class TestCpEmbedCatalogIfNeeded:
         project.write_json.assert_called_once_with("benchmark_reference.json", ref)
 
     def test_embeds_catalog_from_snapshot_file(self, tmp_path):
-        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
-
         import json
+
+        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
 
         snaps_dir = tmp_path / "snapshots"
         snaps_dir.mkdir()
@@ -1485,7 +1486,14 @@ class TestPsUpsertEap:
         svc._files.eap_items = "eap_items.json"
 
         items = [
-            {"item_id": "eap-1", "descricao": "Terraplenagem", "unidade": "m³", "cpu_id": "CPU-1", "ordem": 1, "quantitativo": 100.0}
+            {
+                "item_id": "eap-1",
+                "descricao": "Terraplenagem",
+                "unidade": "m³",
+                "cpu_id": "CPU-1",
+                "ordem": 1,
+                "quantitativo": 100.0,
+            }
         ]
         result = _ps_upsert_eap(svc, "proj-eap1", items)
         assert result["status_eap"] in ("RASCUNHO_PRONTO", "RASCUNHO")
@@ -1538,8 +1546,9 @@ class TestPsDeleteVersion:
             _ps_delete_version(svc, "proj-dv1", "v2")
 
     def test_delete_version_removes_and_updates_current(self):
-        from concilium.application.services.project._project_service_helpers import _ps_delete_version
         from unittest.mock import patch
+
+        from concilium.application.services.project._project_service_helpers import _ps_delete_version
 
         svc, repo, audit = _make_service()
         project = _make_project("proj-dv2", current_version="v2")
@@ -1604,8 +1613,8 @@ class TestEnrichPayloadCatalogException:
     """Covers lines 65-66: exception path in _enrich_payload_catalog."""
 
     def test_exception_silenced_when_root_raises(self, tmp_path):
+
         from concilium.application.services.project._project_service_helpers import _enrich_payload_catalog
-        from pathlib import Path
 
         # root is a plain string that has no Path operations
         project = MagicMock()
@@ -1613,6 +1622,7 @@ class TestEnrichPayloadCatalogException:
         real_snaps = tmp_path / "snapshots"
         real_snaps.mkdir()
         import json
+
         (real_snaps / "catalogo-20260101.json").write_text(json.dumps({"cpus": [{"codigo": "CPU-1"}]}))
 
         # write_json raises to trigger the except
@@ -1684,8 +1694,9 @@ class TestPsCreateProjectCatalogoBaseFallback:
     """Covers line 232: catalogo_base fallback from inputs_escopo or req.catalogo_base."""
 
     def test_catalogo_base_from_inputs_escopo(self):
-        from concilium.application.services.project._project_service_helpers import _ps_create_project
         from types import SimpleNamespace
+
+        from concilium.application.services.project._project_service_helpers import _ps_create_project
 
         svc, repo, audit = _make_service()
         project = _make_project("new-cat-p1")
@@ -1712,6 +1723,7 @@ class TestPsCreateProjectCatalogoBaseFallback:
 
         # _resolve_catalogo_base_from_context will return None/empty → fall to inputs_escopo
         from unittest.mock import patch
+
         with patch.object(svc, "list_contexto_versions", side_effect=Exception("boom")):
             result = _ps_create_project(
                 svc=svc,

@@ -348,8 +348,9 @@ def test_load_cpus_from_cpu_dir_nonexistent():
 
 
 def test_load_cpus_from_cpu_dir_list_format(tmp_path):
-    from concilium.application.runtime.mixins.catalog import CatalogMixin
     import json
+
+    from concilium.application.runtime.mixins.catalog import CatalogMixin
 
     cpu_dir = tmp_path / "cpus"
     cpu_dir.mkdir()
@@ -359,8 +360,9 @@ def test_load_cpus_from_cpu_dir_list_format(tmp_path):
 
 
 def test_load_cpus_from_cpu_dir_dict_format(tmp_path):
-    from concilium.application.runtime.mixins.catalog import CatalogMixin
     import json
+
+    from concilium.application.runtime.mixins.catalog import CatalogMixin
 
     cpu_dir = tmp_path / "cpus"
     cpu_dir.mkdir()
@@ -370,8 +372,9 @@ def test_load_cpus_from_cpu_dir_dict_format(tmp_path):
 
 
 def test_load_cpus_from_cpu_dir_single_cpu_dict(tmp_path):
-    from concilium.application.runtime.mixins.catalog import CatalogMixin
     import json
+
+    from concilium.application.runtime.mixins.catalog import CatalogMixin
 
     # dict without "cpus" key -> appended as single item
     cpu_dir = tmp_path / "cpus"
@@ -395,8 +398,9 @@ def test_load_cpus_from_cpu_dir_invalid_json_skipped(tmp_path):
 
 
 def test_load_cpus_from_json_empty_dict(tmp_path):
-    from concilium.application.runtime.mixins.catalog import CatalogMixin
     import json
+
+    from concilium.application.runtime.mixins.catalog import CatalogMixin
 
     f = tmp_path / "cpus.json"
     f.write_text(json.dumps({"other_key": []}), encoding="utf-8")
@@ -417,8 +421,9 @@ def test_load_cpus_from_json_invalid(tmp_path):
 
 
 def test_load_producoes_from_cat_dirs_list_format(tmp_path):
-    from concilium.application.runtime.mixins.catalog import CatalogMixin
     import json
+
+    from concilium.application.runtime.mixins.catalog import CatalogMixin
 
     cat_dir = tmp_path / "cat"
     prod_dir = cat_dir / "producoes"
@@ -429,8 +434,9 @@ def test_load_producoes_from_cat_dirs_list_format(tmp_path):
 
 
 def test_load_producoes_from_cat_dirs_dict_format(tmp_path):
-    from concilium.application.runtime.mixins.catalog import CatalogMixin
     import json
+
+    from concilium.application.runtime.mixins.catalog import CatalogMixin
 
     cat_dir = tmp_path / "cat"
     prod_dir = cat_dir / "produtividades"
@@ -527,7 +533,6 @@ def test_load_catalogo_from_disk_uses_cpu_dir(tmp_path):
 
 
 def test_load_catalogo_from_disk_writes_bundle(tmp_path):
-    import json as _json
 
     r = Runtime(tmp_path)
     cat_dir = tmp_path / "catalogos" / "write-cat"
@@ -539,7 +544,6 @@ def test_load_catalogo_from_disk_writes_bundle(tmp_path):
 
 
 def test_load_catalogo_cached_second_call_uses_cache(tmp_path):
-    import json as _json
 
     r = Runtime(tmp_path)
     cat_dir = tmp_path / "catalogos" / "cache-cat"
@@ -568,11 +572,12 @@ def test_get_or_create_catalog_session_exception_returns_none(tmp_path):
 
     r = Runtime(tmp_path)
     # Force CatalogSession.from_resolved to raise -> method should return None (except block line 39)
-    with _patch(
-        "concilium.infrastructure.catalog.query_engine.is_available", return_value=True
-    ), _patch(
-        "concilium.infrastructure.catalog.query_engine.CatalogSession.from_resolved",
-        side_effect=RuntimeError("forced"),
+    with (
+        _patch("concilium.infrastructure.catalog.query_engine.is_available", return_value=True),
+        _patch(
+            "concilium.infrastructure.catalog.query_engine.CatalogSession.from_resolved",
+            side_effect=RuntimeError("forced"),
+        ),
     ):
         result = r._get_or_create_catalog_session({}, "key-fail")
     assert result is None
@@ -629,7 +634,6 @@ def _make_minimal_canonical_for_execution():
 
 
 def test_process_taint_error_in_gate_skill_adds_blocked(config_root):
-    from concilium.application.runtime.mixins.execution import ExecutionMixin
     from concilium.application.skills.base import SkillResult
     from concilium.domain.models.canonical import ValidacaoItem
 
@@ -646,7 +650,6 @@ def test_process_taint_error_in_gate_skill_adds_blocked(config_root):
 
 
 def test_process_taint_success_in_gate_skill_clears_blocked(config_root):
-    from concilium.application.runtime.mixins.execution import ExecutionMixin
     from concilium.application.skills.base import SkillResult
 
     r = Runtime(config_root)
@@ -723,28 +726,28 @@ def test_process_decision_variables_applies_dv_dict(config_root):
 
 
 def test_process_side_effects_skill_04(config_root, projeto_terraplenagem):
-    from concilium.application.runtime.mixins.execution import ExecutionMixin
-    from concilium.application.skills.base import SkillResult
     from unittest.mock import patch as _patch
+
+    from concilium.application.skills.base import SkillResult
 
     r = Runtime(config_root)
     p = projeto_terraplenagem
     v = p.new_version()
     canonical = _make_minimal_canonical_for_execution()
     result = SkillResult(canonical, [])
-    with _patch(
-        "concilium.application.runtime.mixins.execution._handle_skill_04_side_effects"
-    ) as mock_04, _patch(
-        "concilium.application.runtime.mixins.execution._persist_typed_artifacts"
-    ) as mock_persist:
+    with (
+        _patch("concilium.application.runtime.mixins.execution._handle_skill_04_side_effects") as mock_04,
+        _patch("concilium.application.runtime.mixins.execution._persist_typed_artifacts") as mock_persist,
+    ):
         r._process_side_effects("04-cronograma", result, p, v)
     mock_04.assert_called_once()
     mock_persist.assert_called_once()
 
 
 def test_process_side_effects_skill_09(config_root, projeto_terraplenagem):
-    from concilium.application.skills.base import SkillResult
     from unittest.mock import patch as _patch
+
+    from concilium.application.skills.base import SkillResult
 
     r = Runtime(config_root)
     p = projeto_terraplenagem
@@ -761,8 +764,9 @@ def test_process_side_effects_skill_09(config_root, projeto_terraplenagem):
 
 
 def test_process_side_effects_skill_10(config_root, projeto_terraplenagem):
-    from concilium.application.skills.base import SkillResult
     from unittest.mock import patch as _patch
+
+    from concilium.application.skills.base import SkillResult
 
     r = Runtime(config_root)
     p = projeto_terraplenagem
@@ -770,10 +774,9 @@ def test_process_side_effects_skill_10(config_root, projeto_terraplenagem):
     canonical = _make_minimal_canonical_for_execution()
     result = SkillResult(canonical, [])
 
-    with _patch(
-        "concilium.application.runtime.mixins.execution._handle_skill_09_side_effects"
-    ) as mock_09, _patch(
-        "concilium.application.runtime.mixins.execution._persist_typed_artifacts"
+    with (
+        _patch("concilium.application.runtime.mixins.execution._handle_skill_09_side_effects") as mock_09,
+        _patch("concilium.application.runtime.mixins.execution._persist_typed_artifacts"),
     ):
         r._process_side_effects("10-relatorio-e-artefatos", result, p, v)
     mock_09.assert_called_once()

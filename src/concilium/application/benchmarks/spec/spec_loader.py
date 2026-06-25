@@ -311,8 +311,12 @@ class BenchmarkSpecLoader:
         contexto_id = ref.get("contexto_id") or (meta_block.get("contexto_id") if meta_block else None) or "mendeslobo"
         _ctx_version, _perfil_id, _perfil_version = self._lfd_resolve_context(ref, contexto_id)
 
-        data_ini = ref.get("data_inicio") or (projeto_block.get("data_inicio") if projeto_block else None) or "2025-01-01"
-        data_fim = ref.get("data_termino") or (projeto_block.get("data_termino") if projeto_block else None) or "2025-06-30"
+        data_ini = (
+            ref.get("data_inicio") or (projeto_block.get("data_inicio") if projeto_block else None) or "2025-01-01"
+        )
+        data_fim = (
+            ref.get("data_termino") or (projeto_block.get("data_termino") if projeto_block else None) or "2025-06-30"
+        )
         weeks = iso_weeks(data_ini, data_fim)
         eap = self._extract_eap(ref)
         eap = self._enrich_eap_with_cpu_ids(eap, contexto_id)
@@ -408,9 +412,7 @@ class BenchmarkSpecLoader:
                 # alias retrocompat — se localizacao já é {lat,lng}, reusa o mesmo dict.
                 "localizacao": localizacao or "Brasil",
                 "coordenadas": (
-                    localizacao
-                    if isinstance(localizacao, dict)
-                    else ref.get("coordenadas", {"lat": 0.0, "lng": 0.0})
+                    localizacao if isinstance(localizacao, dict) else ref.get("coordenadas", {"lat": 0.0, "lng": 0.0})
                 ),
                 "regime_trabalho": regime_trabalho,
                 "data_inicio": data_ini,

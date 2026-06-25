@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+
 # ─── domain/benchmark/repository.py (abstract methods) ────────────────────────
 class TestWeekIndex:
     def test_seq_format(self):
@@ -181,10 +182,10 @@ class TestConfigMixin:
 
 
 class TestPermissionGuard:
-    def test_get_permissions_viewer(self):
+    def test_get_permissions_operator_has_project_read(self):
         from concilium.infrastructure.auth.permission_guard import PROJECT_READ, get_permissions
 
-        perms = get_permissions(["viewer"])
+        perms = get_permissions(["operator"])
         assert PROJECT_READ in perms
 
     def test_get_permissions_admin_has_all(self):
@@ -217,14 +218,14 @@ class TestPermissionGuard:
 
         claims = {"scopes": ["mcp:read", "pipeline:run"]}
         result = roles_from_token(claims)
-        assert "viewer" in result
+        assert "auditor" in result  # mcp:read → auditor
         assert "operator" in result
 
-    def test_roles_from_token_empty_returns_viewer(self):
+    def test_roles_from_token_empty_returns_empty(self):
         from concilium.infrastructure.auth.permission_guard import roles_from_token
 
         result = roles_from_token({})
-        assert result == ["viewer"]
+        assert result == []  # fail-closed: JWT sem roles = sem acesso
 
     def test_require_permission_noop_when_auth_disabled(self):
         from concilium.infrastructure.auth.permission_guard import require_permission
@@ -237,7 +238,7 @@ class TestPermissionGuard:
 
         with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
             with pytest.raises(PermissionError):
-                require_permission("project:run", ["viewer"])
+                require_permission("project:run", ["auditor"])
 
     def test_require_permission_passes_with_correct_role(self):
         from concilium.infrastructure.auth.permission_guard import PROJECT_RUN, require_permission
@@ -266,7 +267,7 @@ class TestPermissionGuard:
     def test_permission_decorator_raises_when_unauthorized(self):
         from concilium.infrastructure.auth.permission_guard import permission, set_roles
 
-        set_roles(["viewer"])
+        set_roles(["auditor"])
         with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
 
             @permission("project:run")
@@ -290,7 +291,7 @@ class TestPermissionGuard:
     def test_roles_decorator_raises_when_missing(self):
         from concilium.infrastructure.auth.permission_guard import roles, set_roles
 
-        set_roles(["viewer"])
+        set_roles(["auditor"])
         with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
 
             @roles("admin", "engineer")

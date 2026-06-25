@@ -12,8 +12,6 @@ from concilium.presentation.mcp._context import (
     ConciliumRuntimeError,
     _get_or_create_trace_id,
     _lifecycle_coordinator,
-    _project,
-    _runtime,
     _wrap_response,
 )
 from concilium.presentation.mcp.rate_limit import mcp_rate_limit
@@ -66,11 +64,16 @@ def register(server: FastMCP) -> None:
                 _current_roles,
                 check_intent_allowed,
             )
+
             check_intent_allowed(procurement_intent, list(_current_roles.get()))
 
         service = get_job_service()
         job_dto = service.disparar_pipeline(
-            project_id, skill_id, inputs, escopo_id, plano_id,
+            project_id,
+            skill_id,
+            inputs,
+            escopo_id,
+            plano_id,
             procurement_intent=procurement_intent,
         )
         return _wrap_response(job_dto.model_dump())

@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers de telemetry settings
 # ─────────────────────────────────────────────────────────────────────────────
@@ -80,8 +79,9 @@ class TestSetupTelemetrySdkDisabled:
             tel._initialized = False  # reset para permitir nova execução
             with (
                 patch.object(tel, "_OTEL_AVAILABLE", True),
-                patch("concilium.infrastructure.telemetry.get_telemetry",
-                      return_value=_telemetry_settings(disabled=True)),
+                patch(
+                    "concilium.infrastructure.telemetry.get_telemetry", return_value=_telemetry_settings(disabled=True)
+                ),
                 patch.object(tel, "_setup_tracing") as mock_tracing,
                 patch.object(tel, "_setup_metrics") as mock_metrics,
                 patch.object(tel, "_setup_logging") as mock_logging,
@@ -104,8 +104,9 @@ class TestSetupTelemetryIdempotent:
             tel._initialized = False
             with (
                 patch.object(tel, "_OTEL_AVAILABLE", True),
-                patch("concilium.infrastructure.telemetry.get_telemetry",
-                      return_value=_telemetry_settings(disabled=True)),
+                patch(
+                    "concilium.infrastructure.telemetry.get_telemetry", return_value=_telemetry_settings(disabled=True)
+                ),
             ):
                 tel.setup_telemetry()
                 tel.setup_telemetry()  # segunda chamada: _initialized=True, retorna cedo
@@ -129,8 +130,10 @@ class TestSetupLoggingConsole:
         mock_handler = MagicMock()
 
         with (
-            patch("concilium.infrastructure.telemetry.get_telemetry",
-                  return_value=_telemetry_settings(console=True, endpoint=None)),
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=True, endpoint=None),
+            ),
             patch("opentelemetry.sdk._logs.LoggerProvider", return_value=mock_provider),
             patch("opentelemetry.sdk._logs.export.BatchLogRecordProcessor", return_value=mock_processor),
             patch("opentelemetry.sdk._logs.export.ConsoleLogRecordExporter", return_value=mock_exporter),
@@ -140,7 +143,7 @@ class TestSetupLoggingConsole:
             try:
                 from opentelemetry.instrumentation.logging.handler import LoggingHandler
             except ImportError:
-                from opentelemetry.sdk._logs._internal import LoggingHandler
+                pass
 
             with patch.object(tel, "_OTEL_AVAILABLE", True):
                 # Chamar diretamente para evitar interferência com _initialized
@@ -156,8 +159,10 @@ class TestSetupLoggingOtlpEndpoint:
         mock_provider = MagicMock()
 
         with (
-            patch("concilium.infrastructure.telemetry.get_telemetry",
-                  return_value=_telemetry_settings(endpoint="http://otel-collector:4318")),
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(endpoint="http://otel-collector:4318"),
+            ),
             patch("opentelemetry.sdk._logs.LoggerProvider", return_value=mock_provider),
             patch("opentelemetry.exporter.otlp.proto.http._log_exporter.OTLPLogExporter"),
             patch("opentelemetry.sdk._logs.export.BatchLogRecordProcessor"),
@@ -182,8 +187,10 @@ class TestSetupTracingConsole:
         mock_provider = MagicMock()
 
         with (
-            patch("concilium.infrastructure.telemetry.get_telemetry",
-                  return_value=_telemetry_settings(console=True, endpoint=None)),
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=True, endpoint=None),
+            ),
             patch("opentelemetry.sdk.trace.TracerProvider", return_value=mock_provider),
             patch("opentelemetry.sdk.trace.export.ConsoleSpanExporter"),
             patch("opentelemetry.sdk.trace.export.BatchSpanProcessor"),
@@ -202,8 +209,10 @@ class TestSetupTracingOtlpEndpoint:
         mock_provider = MagicMock()
 
         with (
-            patch("concilium.infrastructure.telemetry.get_telemetry",
-                  return_value=_telemetry_settings(endpoint="http://otel-collector:4318")),
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(endpoint="http://otel-collector:4318"),
+            ),
             patch("opentelemetry.sdk.trace.TracerProvider", return_value=mock_provider),
             patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter"),
             patch("opentelemetry.sdk.trace.export.BatchSpanProcessor"),
@@ -227,8 +236,10 @@ class TestSetupMetricsConsole:
         mock_provider = MagicMock()
 
         with (
-            patch("concilium.infrastructure.telemetry.get_telemetry",
-                  return_value=_telemetry_settings(console=True, endpoint=None)),
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=True, endpoint=None),
+            ),
             patch("opentelemetry.sdk.metrics.MeterProvider", return_value=mock_provider),
             patch("opentelemetry.sdk.metrics.export.ConsoleMetricExporter"),
             patch("opentelemetry.sdk.metrics.export.PeriodicExportingMetricReader"),
@@ -245,8 +256,10 @@ class TestSetupMetricsOtlpEndpoint:
         mock_provider = MagicMock()
 
         with (
-            patch("concilium.infrastructure.telemetry.get_telemetry",
-                  return_value=_telemetry_settings(endpoint="http://otel-collector:4318")),
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(endpoint="http://otel-collector:4318"),
+            ),
             patch("opentelemetry.sdk.metrics.MeterProvider", return_value=mock_provider),
             patch("opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter"),
             patch("opentelemetry.sdk.metrics.export.PeriodicExportingMetricReader"),
@@ -528,7 +541,7 @@ class TestSkillSpanException:
             ctx = tel.skill_span("01-escopo")
 
         # deve retornar um context manager válido (nullcontext)
-        from contextlib import nullcontext
+
         with ctx:
             pass  # não deve lançar
 
@@ -604,9 +617,9 @@ class TestWithTracing:
             tel._tool_calls_counter = original_counter
 
     def test_with_tracing_records_error_and_reraises(self):
-        import concilium.infrastructure.telemetry as tel
-
         import pytest
+
+        import concilium.infrastructure.telemetry as tel
 
         fake_span = MagicMock()
         fake_span.__enter__ = MagicMock(return_value=fake_span)

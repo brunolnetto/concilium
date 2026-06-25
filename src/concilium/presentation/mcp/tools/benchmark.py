@@ -13,8 +13,8 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from concilium.presentation.mcp._context import _config_root, _wrap_response
 from concilium.infrastructure.auth.permission_guard import permission
+from concilium.presentation.mcp._context import _config_root, _wrap_response
 
 
 def register(server: FastMCP) -> None:

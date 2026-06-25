@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from concilium.infrastructure.settings import get_telemetry
 from concilium.infrastructure.middleware.auth_context import AuthContextMiddleware
 from concilium.infrastructure.observability.logging_config import configure_logging
+from concilium.infrastructure.settings import get_telemetry
 from concilium.infrastructure.telemetry import setup_telemetry
 
 from .config import resolve_api_bind

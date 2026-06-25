@@ -510,9 +510,7 @@ class TestSSFFPrecedenceTypes:
         from concilium.domain.models.canonical import EapItem, PrecedenciaItem
 
         return [
-            EapItem(
-                item_id="ACT-A", ordem=1, cpu_id="CPU-1", descricao="A", unidade="m3", quantitativo=100
-            ),
+            EapItem(item_id="ACT-A", ordem=1, cpu_id="CPU-1", descricao="A", unidade="m3", quantitativo=100),
             EapItem(
                 item_id="ACT-B",
                 ordem=2,
@@ -558,7 +556,6 @@ class TestSSFFPrecedenceTypes:
     def test_ff_type_lag_preserved(self):
         """FF typed predecessor with lag=0 ends up in extended_precedences with lag=0."""
         from concilium.application.skills.manifests._04_cronograma_skill_helpers import extract_dag_from_spec_or_eap
-
         from concilium.domain.models.canonical import EapItem, PrecedenciaItem
 
         eap_items = [

@@ -11,6 +11,14 @@ try:
 except TypeError as exc:  # FastAPI/Starlette version mismatch in local env
     pytest.skip(f"Ambiente FastAPI incompatível para teste de rota: {exc}", allow_module_level=True)
 
+_app_cache: list = []
+
+
+def _get_app():
+    if not _app_cache:
+        _app_cache.append(create_app())
+    return _app_cache[0]
+
 
 class _FakeService:
     def create_contexto_version(
@@ -31,7 +39,7 @@ class _FakeService:
 
 
 def test_contexto_create_version_accepts_typed_top_level_and_make_current_alias():
-    app = create_app()
+    app = _get_app()
     app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
     client = TestClient(app)
 
@@ -52,7 +60,7 @@ def test_contexto_create_version_accepts_typed_top_level_and_make_current_alias(
 
 
 def test_perfil_create_version_rejects_invalid_range_contract():
-    app = create_app()
+    app = _get_app()
     client = TestClient(app)
 
     response = client.post(

@@ -11,7 +11,9 @@ import pytest
 
 def _make_server():
     from mcp.server.fastmcp import FastMCP
+
     from concilium.presentation.mcp.tools.tributacao import register
+
     server = FastMCP("test")
     register(server)
     return server
@@ -23,11 +25,16 @@ def _call_tributo(tipo: str, valor: float, **kwargs):
         calculate_inss_employee,
         calculate_irrf,
     )
+
     if tipo == "clt_empregador":
         result = calculate_employer_clt(valor, categoria=kwargs.get("categoria", "horista"))
-        return {"salario_base": result.salario_base, "custo_total": result.custo_total,
-                "encargos_totais": round(result.custo_total - result.salario_base, 2),
-                "categoria": kwargs.get("categoria", "horista"), "itens": result.itens}
+        return {
+            "salario_base": result.salario_base,
+            "custo_total": result.custo_total,
+            "encargos_totais": round(result.custo_total - result.salario_base, 2),
+            "categoria": kwargs.get("categoria", "horista"),
+            "itens": result.itens,
+        }
     elif tipo == "inss_empregado":
         return calculate_inss_employee(valor)
     elif tipo == "irrf":
@@ -52,6 +59,7 @@ class TestToolRegistrada:
 class TestCalcularTributosCltEmpregador:
     def test_custo_total_aproxima_encargos_clt(self):
         from concilium.domain.constants import ENCARGOS_CLT
+
         result = _call_tributo("clt_empregador", 5000.0)
         esperado = 5000.0 * (1.0 + ENCARGOS_CLT)
         assert abs(result["custo_total"] - esperado) / esperado < 0.005
@@ -99,15 +107,17 @@ class TestCalcularTributosIrrf:
 class TestIntegracaoMcpComServicoDominio:
     def test_inss_concordam(self):
         from concilium.domain.services.financial.tributacao import calculate_inss_employee
-        assert _call_tributo("inss_empregado", 5000.0) == pytest.approx(
-            calculate_inss_employee(5000.0), abs=0.01)
+
+        assert _call_tributo("inss_empregado", 5000.0) == pytest.approx(calculate_inss_employee(5000.0), abs=0.01)
 
     def test_irrf_concordam(self):
         from concilium.domain.services.financial.tributacao import calculate_irrf
+
         assert _call_tributo("irrf", 6500.0) == pytest.approx(calculate_irrf(6500.0), abs=0.01)
 
     def test_clt_concordam(self):
         from concilium.domain.services.financial.tributacao import calculate_employer_clt
+
         result_direto = calculate_employer_clt(4000.0, categoria="horista")
         result_via = _call_tributo("clt_empregador", 4000.0)
         assert result_via["custo_total"] == pytest.approx(result_direto.custo_total, abs=0.01)

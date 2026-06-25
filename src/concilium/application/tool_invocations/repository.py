@@ -14,7 +14,6 @@ import threading
 from abc import ABC, abstractmethod
 from collections import deque
 from os import getenv
-from typing import Any
 
 from concilium.application.tool_invocations.models import ToolInvocation
 

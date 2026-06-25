@@ -99,7 +99,6 @@ class TestAuthContextMiddleware:
         """Quando Bearer token válido é fornecido, user_id = claims['sub']."""
         from fastapi.testclient import TestClient
 
-
         app = app_with_middleware
         claims = _make_jwt_claims(sub="bruno@mendeslobo.com.br")
 
@@ -198,7 +197,9 @@ class TestJsonFormatterWithAuthContext:
 def _auth_app():
     """App criado uma vez por módulo para TestDirectTokenIssuance."""
     from unittest.mock import patch
+
     from fastapi.testclient import TestClient
+
     from concilium.presentation.api.app import create_app
 
     with (
@@ -292,6 +293,7 @@ class TestAuthContextHelpers:
         from unittest.mock import MagicMock
 
         import opentelemetry.trace as otel_trace
+
         from concilium.infrastructure.middleware.auth_context import _set_otel_span_attributes
 
         mock_span = MagicMock()
@@ -312,6 +314,7 @@ class TestAuthContextHelpers:
         from unittest.mock import MagicMock
 
         import opentelemetry.trace as otel_trace
+
         from concilium.infrastructure.middleware.auth_context import _set_otel_span_attributes
 
         mock_span = MagicMock()
@@ -332,6 +335,7 @@ class TestAuthContextHelpers:
         from unittest.mock import MagicMock
 
         import opentelemetry.trace as otel_trace
+
         from concilium.infrastructure.middleware.auth_context import _set_otel_span_attributes
 
         mock_span = MagicMock()

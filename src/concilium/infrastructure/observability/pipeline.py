@@ -269,12 +269,14 @@ class ObservabilityScheduler:
 
             # Cross-domain Gold (ADR-112 F8): junta fallback_rate com resultado financeiro
             try:
-                from .cross_domain import CrossDomainBuilder, default_canonical_provider
-
                 from concilium.infrastructure.settings import get_storage as _get_storage_cfg
 
+                from .cross_domain import CrossDomainBuilder, default_canonical_provider
+
                 cfg = _get_storage_cfg()
-                projects_root = getattr(cfg, "projects_root", None) or (getattr(cfg, "root", None) and cfg.root / "projetos")
+                projects_root = getattr(cfg, "projects_root", None) or (
+                    getattr(cfg, "root", None) and cfg.root / "projetos"
+                )
                 if projects_root:
                     provider = default_canonical_provider(projects_root)
                     CrossDomainBuilder(self._storage, provider).write()

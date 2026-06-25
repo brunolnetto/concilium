@@ -7,9 +7,9 @@ Clients are defined via CONCILIUM__AUTH_CLIENTS (JSON env var):
         "secret": "plaintext-dev-secret",
         "roles": ["operator"]
       },
-      "ci-runner": {
+      "bruno": {
         "secret_hash": "sha256:<hex>",
-        "roles": ["service-ci"]
+        "roles": ["engineer"]
       }
     }
 

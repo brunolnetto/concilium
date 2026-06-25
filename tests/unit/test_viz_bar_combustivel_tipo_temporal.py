@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 from concilium.application.runtime.deliverables.visualizations.cube.bar_combustivel_tipo_temporal import (
     _normalize_fuel_label,
-    _week_of_month_index,
     _week_months_contribution,
+    _week_of_month_index,
     build,
 )
 
@@ -217,6 +217,7 @@ class TestBuildEdgeCases:
 
     def test_single_fuel_wraps_axes_in_list(self):
         """Lines 115-116: num_fuels == 1 → axes wrapped in list."""
+
         def _single_ax_init_mpl():
             mock_fig = MagicMock()
             mock_ax = MagicMock()
@@ -239,6 +240,7 @@ class TestBuildEdgeCases:
 
     def test_unknown_fuel_audit_text_shown(self):
         """Lines 150-158: combustivel_nao_informado > 0 shows audit text."""
+
         def _fake_init_single_ax():
             mock_fig = MagicMock()
             mock_ax = MagicMock()
@@ -428,7 +430,7 @@ class TestBuildEdgeCases:
     def test_returns_none_when_fuels_empty_after_population(self):
         """Line 89: fuels set is empty — defensive guard after liters_by_week_and_fuel is non-empty.
         Achieved by patching the dict so values have no fuel keys."""
-        from collections import defaultdict
+
         canonical = SimpleNamespace(
             projeto=SimpleNamespace(regime_trabalho=SimpleNamespace(horas_dia=8, dias_semana=6)),
             cronograma=SimpleNamespace(
@@ -502,7 +504,6 @@ class TestBuildEdgeCases:
         # returning a contribution dict with only bucket keys (no wom index):
         # Return {("2026-01",): 5.0} — 1-tuple key would fail unpacking at line 98
         # Best approach: inject into by_fuel_monthly_wom via patching the inner defaultdict
-        from collections import defaultdict as real_defaultdict_class
 
         by_fuel_wom_calls = {"n": 0}
         orig_dd = __import__("collections").defaultdict

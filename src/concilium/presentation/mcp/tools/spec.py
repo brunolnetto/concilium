@@ -58,6 +58,7 @@ def _resolve_tributario(meta: dict, rt: Any) -> dict:
 
 from concilium.infrastructure.auth.permission_guard import permission
 
+
 def register(server: FastMCP) -> None:
     """Registra criar_projeto_spec no servidor MCP."""
 

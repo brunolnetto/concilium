@@ -755,7 +755,9 @@ class TestDieselConsumption:
 
 
 class TestCelulaAnaliticaExtraBranches:
-    def _make_cell(self, cat_insumo, prop, comp="custo_direto", natureza="direto", valor_rs=100.0, valor_fisico=0.0, unidade=""):
+    def _make_cell(
+        self, cat_insumo, prop, comp="custo_direto", natureza="direto", valor_rs=100.0, valor_fisico=0.0, unidade=""
+    ):
         return CelulaAnalitica(
             natureza=natureza,
             atividade_id="eap-01",

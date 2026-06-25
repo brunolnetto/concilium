@@ -11,9 +11,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-
 # ── _drfs_get_item_ids ────────────────────────────────────────────────────────
 
 
@@ -52,8 +49,8 @@ def test_drfs_build_week_map_non_numeric_keys():
 
 
 def test_drfs_build_week_map_numeric_keys():
-    from concilium.application.benchmarks.input_derivation.cronograma import _drfs_build_week_map
     from concilium.application.benchmarks.input_derivation import week_mapper
+    from concilium.application.benchmarks.input_derivation.cronograma import _drfs_build_week_map
 
     # numeric keys -> build iso_to_num reverse map
     semanas_meta = {"1": {"iso": "2026-W01"}, "2": {"iso": "2026-W02"}}
@@ -216,11 +213,7 @@ def test_scale_derived_equipes_uses_regime_default():
     from concilium.application.benchmarks.input_derivation.cronograma import _scale_derived_equipes
 
     # no regime_trabalho -> uses default dias_semana=6
-    ref = {
-        "cronograma": {
-            "atividades": [{"item_id": "A1", "quantitativo": 10, "producao_diaria": 100}]
-        }
-    }
+    ref = {"cronograma": {"atividades": [{"item_id": "A1", "quantitativo": 10, "producao_diaria": 100}]}}
     derived = {"A1": {"2026-W01": 1}}
     num_equipes: dict = {"A1": {"2026-W01": 1}}
     _scale_derived_equipes(ref, derived, num_equipes)
@@ -291,13 +284,7 @@ def test_derive_from_reference_schedule_activity_id_fallback():
 
     # uses activity_id when item_id absent
     result = BenchmarkInputDeriver._derive_from_reference_schedule(
-        {
-            "cronograma": {
-                "atividades": [
-                    {"activity_id": "A1", "semanas": {"2026-W01": {"num_equipes": 1}}}
-                ]
-            }
-        },
+        {"cronograma": {"atividades": [{"activity_id": "A1", "semanas": {"2026-W01": {"num_equipes": 1}}}]}},
         [{"item_id": "A1"}],
         ["2026-W01"],
     )
@@ -310,11 +297,7 @@ def test_derive_from_reference_schedule_all_zero_not_included():
 
     # has_non_zero = False -> not added to result
     result = BenchmarkInputDeriver._derive_from_reference_schedule(
-        {
-            "cronograma": {
-                "atividades": [{"item_id": "A1", "semanas": {"2026-W01": {"num_equipes": 0}}}]
-            }
-        },
+        {"cronograma": {"atividades": [{"item_id": "A1", "semanas": {"2026-W01": {"num_equipes": 0}}}]}},
         [{"item_id": "A1"}],
         ["2026-W01"],
     )
@@ -394,11 +377,7 @@ def test_derive_num_equipes_por_item_from_schedule():
     deriver = BenchmarkInputDeriver(tmp)
     eap = [{"item_id": "A1"}]
     weeks = ["2026-W01"]
-    ref = {
-        "cronograma": {
-            "atividades": [{"item_id": "A1", "semanas": {"2026-W01": {"num_equipes": 3}}}]
-        }
-    }
+    ref = {"cronograma": {"atividades": [{"item_id": "A1", "semanas": {"2026-W01": {"num_equipes": 3}}}]}}
 
     with patch.object(deriver, "_load_and_size", return_value=None):
         result = deriver.derive_num_equipes_por_item(ref, eap, weeks)

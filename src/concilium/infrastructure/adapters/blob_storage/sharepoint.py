@@ -266,6 +266,21 @@ class SharePointBlobStorage(BlobStoragePort):
         except Exception:
             return False
 
+    def deletar_blob(self, path: str) -> None:
+        """Remove um item do SharePoint via Graph DELETE (ADR-047 §D1).
+
+        Se o path for uma pasta, remove recursivamente (Graph deleta a pasta inteira).
+        Lança FileNotFoundError se o item não existir.
+        """
+        httpx = self._client()
+        r = httpx.delete(self._item_url(path), headers=self._headers())
+        if r.status_code == 404:
+            raise FileNotFoundError(f"Blob não encontrado para deletar: {path}")
+        if r.status_code not in (200, 204):
+            r.raise_for_status()
+        if self._cache:
+            self._cache.invalidate(path)
+
     def aprovar_versao(self, path: str) -> None:
         """Checkin de versão major no SharePoint (ADR-047 §D4).
 

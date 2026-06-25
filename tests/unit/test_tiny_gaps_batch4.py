@@ -65,7 +65,7 @@ class TestScopeGuard:
 
         token = set_scopes(["mcp:read", "pipeline:run"])
         roles = list(_current_roles.get())
-        assert "viewer" in roles or "operator" in roles
+        assert "auditor" in roles or "operator" in roles
 
     def test_set_scopes_unknown_defaults_to_operator(self):
         from concilium.presentation.mcp.guards.scope_guard import _current_roles, set_scopes
@@ -108,7 +108,7 @@ class TestDomainModelsInit:
         import concilium.domain.models
 
         # Access via __getattr__ — should return the real class
-        cls = getattr(concilium.domain.models, "Projeto")
+        cls = concilium.domain.models.Projeto
         assert cls is not None
 
 
@@ -420,6 +420,9 @@ class TestAnaliticaModels:
 # ─── presentation/api/routes/catalogs.py (8 missing: 63-64, 89-92, 105-106) ───
 
 
+_catalogs_app_cache: list = []  # list-as-cache para evitar global mutável
+
+
 class TestApiCatalogsRoutes:
     def _client(self, svc):
         pytest.importorskip("fastapi")
@@ -430,7 +433,9 @@ class TestApiCatalogsRoutes:
             from concilium.presentation.api.container import get_concilium_service
         except TypeError:
             pytest.skip("FastAPI incompatível")
-        app = create_app()
+        if not _catalogs_app_cache:
+            _catalogs_app_cache.append(create_app())
+        app = _catalogs_app_cache[0]
         app.dependency_overrides[get_concilium_service] = lambda: svc
         return TestClient(app, raise_server_exceptions=False)
 

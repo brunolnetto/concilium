@@ -5,8 +5,8 @@ from __future__ import annotations
 import math
 from unittest.mock import MagicMock
 
-
 # ─── helpers for building minimal CanonicalModel ──────────────────────────────
+
 
 def _make_minimal_canonical():
     """Build a CanonicalModel with only required fields populated."""
@@ -87,7 +87,7 @@ class TestMdcAccumulateAct:
         # 2026-W02 and 2026-W03 both map to January 2026
         act.distribuicao_semanal = {
             "2026-W02": self._make_dist(10.0),  # Jan 2026
-            "2026-W03": self._make_dist(5.0),   # Jan 2026
+            "2026-W03": self._make_dist(5.0),  # Jan 2026
         }
         result = {(2026, 1): 0.0}
         _mdc_accumulate_act(act, {"A1": 100.0}, result)
@@ -310,8 +310,9 @@ class TestCashFlow:
         assert result == []
 
     def test_returns_empty_when_no_project_months(self):
-        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
         from unittest.mock import patch
+
+        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
 
         canonical = self._make_canonical()
         # _project_months returns [] → n=0 → early return
@@ -324,22 +325,27 @@ class TestCashFlow:
 
     def test_total_revenue_equals_M(self):
         """Sum of all receitas over all months (incl. extra month) must equal M."""
-        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
         from unittest.mock import patch
+
+        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
 
         M = 600_000.0
         canonical = self._make_canonical(total_com_bdi=M)
         months = [(2026, 1), (2026, 2), (2026, 3)]  # n=3
 
-        with patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._project_months",
-            return_value=months,
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
-            return_value={m: 0.0 for m in months},
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
-            return_value={m: 0.0 for m in months},
+        with (
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._project_months",
+                return_value=months,
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
+                return_value={m: 0.0 for m in months},
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
+                return_value={m: 0.0 for m in months},
+            ),
         ):
             rows = _cash_flow(canonical)
 
@@ -348,22 +354,27 @@ class TestCashFlow:
 
     def test_month_1_receita_is_zero(self):
         """Receita in the first month (index 0) is always 0."""
-        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
         from unittest.mock import patch
+
+        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
 
         M = 900_000.0
         canonical = self._make_canonical(total_com_bdi=M)
         months = [(2026, 1), (2026, 2), (2026, 3)]
 
-        with patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._project_months",
-            return_value=months,
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
-            return_value={m: 0.0 for m in months},
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
-            return_value={m: 0.0 for m in months},
+        with (
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._project_months",
+                return_value=months,
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
+                return_value={m: 0.0 for m in months},
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
+                return_value={m: 0.0 for m in months},
+            ),
         ):
             rows = _cash_flow(canonical)
 
@@ -371,23 +382,28 @@ class TestCashFlow:
 
     def test_extra_month_has_residuo(self):
         """The last row corresponds to the extra month (n+1) and contains the residuo."""
-        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
         from unittest.mock import patch
+
+        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
 
         n = 3
         M = 1_000_000.0
         canonical = self._make_canonical(total_com_bdi=M)
         months = [(2026, i) for i in range(1, n + 1)]
 
-        with patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._project_months",
-            return_value=months,
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
-            return_value={m: 0.0 for m in months},
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
-            return_value={m: 0.0 for m in months},
+        with (
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._project_months",
+                return_value=months,
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
+                return_value={m: 0.0 for m in months},
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
+                return_value={m: 0.0 for m in months},
+            ),
         ):
             rows = _cash_flow(canonical)
 
@@ -399,26 +415,37 @@ class TestCashFlow:
 
     def test_row_fields_complete(self):
         """Each row contains all required keys."""
-        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
         from unittest.mock import patch
+
+        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
 
         canonical = self._make_canonical(total_com_bdi=100_000.0)
         months = [(2026, 1), (2026, 2)]
         expected_keys = {
-            "mes_label", "mes_ym", "despesa", "receita",
-            "despesa_acumulada", "receita_acumulada",
-            "saldo", "saldo_atual", "exposicao_acumulada",
+            "mes_label",
+            "mes_ym",
+            "despesa",
+            "receita",
+            "despesa_acumulada",
+            "receita_acumulada",
+            "saldo",
+            "saldo_atual",
+            "exposicao_acumulada",
         }
 
-        with patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._project_months",
-            return_value=months,
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
-            return_value={m: 0.0 for m in months},
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
-            return_value={m: 0.0 for m in months},
+        with (
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._project_months",
+                return_value=months,
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
+                return_value={m: 0.0 for m in months},
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
+                return_value={m: 0.0 for m in months},
+            ),
         ):
             rows = _cash_flow(canonical)
 
@@ -427,21 +454,26 @@ class TestCashFlow:
 
     def test_exposicao_equals_minus_saldo_atual(self):
         """exposicao_acumulada == -(saldo_atual) by definition."""
-        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
         from unittest.mock import patch
+
+        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
 
         canonical = self._make_canonical(total_com_bdi=500_000.0)
         months = [(2026, 1), (2026, 2), (2026, 3)]
 
-        with patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._project_months",
-            return_value=months,
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
-            return_value={m: 50000.0 for m in months},
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
-            return_value={m: 10000.0 for m in months},
+        with (
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._project_months",
+                return_value=months,
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
+                return_value={m: 50000.0 for m in months},
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
+                return_value={m: 10000.0 for m in months},
+            ),
         ):
             rows = _cash_flow(canonical)
 
@@ -450,22 +482,27 @@ class TestCashFlow:
 
     def test_single_month_project(self):
         """Edge: single month project (n=1): parcela_base=floor(M/1)=M, residuo=M-M*0=M."""
-        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
         from unittest.mock import patch
+
+        from concilium.infrastructure.adapters.excel.cash_flow import _cash_flow
 
         M = 200_000.0
         canonical = self._make_canonical(total_com_bdi=M)
         months = [(2026, 1)]
 
-        with patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._project_months",
-            return_value=months,
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
-            return_value={(2026, 1): 0.0},
-        ), patch(
-            "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
-            return_value={(2026, 1): 0.0},
+        with (
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._project_months",
+                return_value=months,
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_direct_costs",
+                return_value={(2026, 1): 0.0},
+            ),
+            patch(
+                "concilium.infrastructure.adapters.excel.cash_flow._monthly_indirect_costs",
+                return_value={(2026, 1): 0.0},
+            ),
         ):
             rows = _cash_flow(canonical)
 

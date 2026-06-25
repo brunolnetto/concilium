@@ -17,11 +17,8 @@ from __future__ import annotations
 
 import sys
 import types
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Private name helpers
@@ -97,8 +94,8 @@ class TestEnsureSkillPackage:
 
 class TestLoadSkillModule:
     def test_raises_import_error_when_skill_py_missing(self, tmp_path):
-        from concilium.application.skills import _load_skill_module
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _load_skill_module
 
         fake_manifests = tmp_path / "manifests"
         fake_manifests.mkdir()
@@ -112,8 +109,8 @@ class TestLoadSkillModule:
             skills_pkg._MANIFESTS = original_manifests
 
     def test_cleans_up_sys_modules_on_exec_error(self, tmp_path):
-        from concilium.application.skills import _load_skill_module, _skill_mod_name
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _load_skill_module, _skill_mod_name
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "bad-skill"
@@ -135,8 +132,8 @@ class TestLoadSkillModule:
             sys.modules.pop(mod_name, None)
 
     def test_cached_module_returned_without_re_exec(self, tmp_path):
-        from concilium.application.skills import _load_skill_module, _skill_mod_name
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _load_skill_module, _skill_mod_name
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "cached-skill"
@@ -164,8 +161,8 @@ class TestLoadSkillModule:
 
 class TestSkillProxy:
     def test_proxy_getattr_loads_module(self, tmp_path):
-        from concilium.application.skills import _SkillProxy, _skill_mod_name
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _skill_mod_name, _SkillProxy
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "proxy-skill"
@@ -190,8 +187,8 @@ class TestSkillProxy:
 
     def test_proxy_getattr_cached(self, tmp_path):
         """Second access to proxy reuses the already-loaded module."""
-        from concilium.application.skills import _SkillProxy, _skill_mod_name
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _skill_mod_name, _SkillProxy
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "proxy2-skill"
@@ -221,8 +218,8 @@ class TestSkillProxy:
 
 class TestLoadFunction:
     def test_load_recovers_from_stale_module_without_attr(self, tmp_path):
-        from concilium.application.skills import _load, _skill_mod_name
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _load, _skill_mod_name
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "stale-skill"
@@ -253,8 +250,8 @@ class TestLoadFunction:
 
 class TestDiscoverManifestIndex:
     def test_returns_empty_when_manifests_dir_missing(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_index
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_index
 
         original = skills_pkg._MANIFESTS
         skills_pkg._MANIFESTS = tmp_path / "nonexistent"
@@ -265,8 +262,8 @@ class TestDiscoverManifestIndex:
             skills_pkg._MANIFESTS = original
 
     def test_raises_on_malformed_toml(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_index
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_index
 
         manifests = tmp_path / "manifests"
         skill_dir = manifests / "bad-toml-skill"
@@ -283,8 +280,8 @@ class TestDiscoverManifestIndex:
             skills_pkg._MANIFESTS = original
 
     def test_raises_when_skill_py_absent(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_index
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_index
 
         manifests = tmp_path / "manifests"
         skill_dir = manifests / "nopy-skill"
@@ -302,8 +299,8 @@ class TestDiscoverManifestIndex:
             skills_pkg._MANIFESTS = original
 
     def test_skips_non_directory_entries(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_index
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_index
 
         manifests = tmp_path / "manifests"
         manifests.mkdir()
@@ -321,8 +318,8 @@ class TestDiscoverManifestIndex:
 
 class TestDiscoverManifestMeta:
     def test_returns_empty_when_manifests_dir_missing(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_meta
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_meta
 
         original = skills_pkg._MANIFESTS
         skills_pkg._MANIFESTS = tmp_path / "nonexistent"
@@ -333,19 +330,14 @@ class TestDiscoverManifestMeta:
             skills_pkg._MANIFESTS = original
 
     def test_meta_includes_phase_gate_status_tier(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_meta
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_meta
 
         manifests = tmp_path / "manifests"
         skill_dir = manifests / "meta-skill"
         skill_dir.mkdir(parents=True)
         toml_content = (
-            "[skill]\n"
-            'id = "meta-skill"\n'
-            'phase = "Fase Teste"\n'
-            "gate = true\n"
-            'status = "ativo"\n'
-            'tier = "oltp"\n'
+            '[skill]\nid = "meta-skill"\nphase = "Fase Teste"\ngate = true\nstatus = "ativo"\ntier = "oltp"\n'
         )
         (skill_dir / "skill.toml").write_text(toml_content, encoding="utf-8")
         (skill_dir / "skill.py").write_text("pass", encoding="utf-8")
@@ -364,8 +356,8 @@ class TestDiscoverManifestMeta:
             skills_pkg._MANIFESTS = original
 
     def test_meta_defaults_when_fields_absent(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_meta
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_meta
 
         manifests = tmp_path / "manifests"
         skill_dir = manifests / "minimal-skill"
@@ -387,8 +379,8 @@ class TestDiscoverManifestMeta:
             skills_pkg._MANIFESTS = original
 
     def test_raises_on_malformed_toml(self, tmp_path):
-        from concilium.application.skills import _discover_manifest_meta
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _discover_manifest_meta
 
         manifests = tmp_path / "manifests"
         skill_dir = manifests / "bad-skill"
@@ -411,8 +403,8 @@ class TestDiscoverManifestMeta:
 
 class TestLoadSkillStage:
     def test_load_stage_from_file(self, tmp_path):
-        from concilium.application.skills import load_skill_stage
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import load_skill_stage
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "sk-stage"
@@ -431,8 +423,8 @@ class TestLoadSkillStage:
             sys.modules.pop("stage_sk_stage__helper", None)
 
     def test_load_stage_from_subdir(self, tmp_path):
-        from concilium.application.skills import load_skill_stage
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import load_skill_stage
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "sk-subdir"
@@ -516,8 +508,8 @@ class TestLazySkillsDict:
 
     def test_get_existing_calls_getitem(self, tmp_path):
         """get() on an existing key should load and return the function."""
-        from concilium.application.skills import _LazySkillsDict
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _LazySkillsDict
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "lazy-get-skill"
@@ -533,12 +525,13 @@ class TestLazySkillsDict:
         finally:
             skills_pkg._MANIFESTS = original
             from concilium.application.skills import _skill_mod_name, _skill_pkg_name
+
             sys.modules.pop(_skill_mod_name("lazy-get-skill"), None)
             sys.modules.pop(_skill_pkg_name("lazy-get-skill"), None)
 
     def test_values_forces_all_loads(self, tmp_path):
-        from concilium.application.skills import _LazySkillsDict
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _LazySkillsDict
 
         fake_manifests = tmp_path / "manifests"
         for sid, fname in [("lz-v-skill1", "run_lz_v_skill1"), ("lz-v-skill2", "run_lz_v_skill2")]:
@@ -556,13 +549,14 @@ class TestLazySkillsDict:
         finally:
             skills_pkg._MANIFESTS = original
             from concilium.application.skills import _skill_mod_name, _skill_pkg_name
+
             for sid in ["lz-v-skill1", "lz-v-skill2"]:
                 sys.modules.pop(_skill_mod_name(sid), None)
                 sys.modules.pop(_skill_pkg_name(sid), None)
 
     def test_items_yields_id_fn_pairs(self, tmp_path):
-        from concilium.application.skills import _LazySkillsDict
         import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _LazySkillsDict
 
         fake_manifests = tmp_path / "manifests"
         skill_dir = fake_manifests / "items-skill"
@@ -581,6 +575,7 @@ class TestLazySkillsDict:
         finally:
             skills_pkg._MANIFESTS = original
             from concilium.application.skills import _skill_mod_name, _skill_pkg_name
+
             sys.modules.pop(_skill_mod_name("items-skill"), None)
             sys.modules.pop(_skill_pkg_name("items-skill"), None)
 

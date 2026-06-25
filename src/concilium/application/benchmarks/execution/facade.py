@@ -86,7 +86,7 @@ class BenchmarkFacade:
         slug: str,
         *,
         reset: bool = True,
-        mode: "PipelineMode | None" = None,
+        mode: PipelineMode | None = None,
         procurement_intent: str | None = None,
     ) -> dict[str, Any]:
         """Executa benchmark de um único projeto pelo slug.
@@ -97,7 +97,7 @@ class BenchmarkFacade:
             mode: PipelineMode.OLTP (01-06), LIGHT ou OLAP (completo, padrão).
             procurement_intent: RFX nativo (`rfi|rfp`) para escolha de caminho.
         """
-        from concilium.application.skills.phase_classifier import PipelineMode as _PM
+
         slug_upper = slug.upper()
         benchmark_dir = self.benchmarks_root / slug_upper
         ref_path = benchmark_dir / "referencia.json"

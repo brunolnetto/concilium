@@ -169,10 +169,13 @@ class TestVersionTools:
         version_svc.list_versions.return_value = [{"versao": "v1"}, {"versao": "v2"}]
         version_svc.current_version.return_value = "v2"
         with (
-            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                  return_value=version_svc),
-            patch("concilium.infrastructure.settings.get_storage",
-                  return_value=MagicMock(config_root=tmp_path / "config")),
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
         ):
             result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="listar")
         assert result["contexto_id"] == "ctx-1"
@@ -184,10 +187,13 @@ class TestVersionTools:
         version_svc = MagicMock()
         version_svc.list_versions.side_effect = FileNotFoundError("not found")
         with (
-            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                  return_value=version_svc),
-            patch("concilium.infrastructure.settings.get_storage",
-                  return_value=MagicMock(config_root=tmp_path / "config")),
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
         ):
             result = tools["versoes_catalogo"](contexto_id="ctx-missing", modo="listar")
         assert "erro" in result
@@ -198,13 +204,15 @@ class TestVersionTools:
         version_svc = MagicMock()
         version_svc.compare.return_value = {"adicionados": [], "removidos": [], "modificados": []}
         with (
-            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                  return_value=version_svc),
-            patch("concilium.infrastructure.settings.get_storage",
-                  return_value=MagicMock(config_root=tmp_path / "config")),
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
         ):
-            result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="comparar",
-                                               versao_a="v1", versao_b="v2")
+            result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="comparar", versao_a="v1", versao_b="v2")
         assert result["contexto_id"] == "ctx-1"
         assert "diff" in result
 
@@ -213,11 +221,13 @@ class TestVersionTools:
         version_svc = MagicMock()
         version_svc.compare.side_effect = ValueError("versão inválida")
         with (
-            patch("concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
-                  return_value=version_svc),
-            patch("concilium.infrastructure.settings.get_storage",
-                  return_value=MagicMock(config_root=tmp_path / "config")),
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+                return_value=version_svc,
+            ),
+            patch(
+                "concilium.infrastructure.settings.get_storage", return_value=MagicMock(config_root=tmp_path / "config")
+            ),
         ):
-            result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="comparar",
-                                               versao_a="v1", versao_b="bad")
+            result = tools["versoes_catalogo"](contexto_id="ctx-1", modo="comparar", versao_a="v1", versao_b="bad")
         assert "erro" in result

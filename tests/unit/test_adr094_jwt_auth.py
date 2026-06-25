@@ -161,10 +161,10 @@ class TestClientStore:
     def test_valid_plaintext_secret(self):
         from concilium.infrastructure.auth.client_store import validate_client
 
-        clients = {"agente": {"secret": "s3cr3t", "roles": ["viewer"]}}
+        clients = {"agente": {"secret": "s3cr3t", "roles": ["operator"]}}
         with patch.dict(os.environ, {"CONCILIUM__AUTH_CLIENTS": _make_clients_env(clients)}):
             roles = validate_client("agente", "s3cr3t")
-        assert roles == ["viewer"]
+        assert roles == ["operator"]
 
     def test_valid_hashed_secret(self):
         from concilium.infrastructure.auth.client_store import validate_client
@@ -172,17 +172,17 @@ class TestClientStore:
         clients = {
             "ci": {
                 "secret_hash": _sha256_secret("runner-pass"),
-                "roles": ["operator", "service-ci"],
+                "roles": ["operator", "engineer"],
             }
         }
         with patch.dict(os.environ, {"CONCILIUM__AUTH_CLIENTS": _make_clients_env(clients)}):
             roles = validate_client("ci", "runner-pass")
-        assert set(roles) == {"operator", "service-ci"}
+        assert set(roles) == {"operator", "engineer"}
 
     def test_wrong_secret_returns_none(self):
         from concilium.infrastructure.auth.client_store import validate_client
 
-        clients = {"agente": {"secret": "correct", "roles": ["viewer"]}}
+        clients = {"agente": {"secret": "correct", "roles": ["operator"]}}
         with patch.dict(os.environ, {"CONCILIUM__AUTH_CLIENTS": _make_clients_env(clients)}):
             result = validate_client("agente", "wrong")
         assert result is None
@@ -217,11 +217,11 @@ class TestTokenService:
 
         with patch.dict(os.environ, mock_jwt_env):
             load_key_pair.cache_clear()
-            token = issue_token("eng-01", ["operator", "viewer"], ttl=timedelta(hours=1))
+            token = issue_token("eng-01", ["operator"], ttl=timedelta(hours=1))
             claims = decode_token(token)
 
         assert claims["sub"] == "eng-01"
-        assert set(claims["roles"]) == {"operator", "viewer"}
+        assert set(claims["roles"]) == {"operator"}
         assert claims["iss"] == "concilium-auth"
         assert claims["org"] == "mendesloboconstrucao"
 
@@ -233,7 +233,7 @@ class TestTokenService:
 
         with patch.dict(os.environ, mock_jwt_env):
             load_key_pair.cache_clear()
-            token = issue_token("eng-01", ["viewer"], ttl=timedelta(seconds=-1))
+            token = issue_token("eng-01", ["operator"], ttl=timedelta(seconds=-1))
             with pytest.raises(_jwt.ExpiredSignatureError):
                 decode_token(token)
 
@@ -245,7 +245,7 @@ class TestTokenService:
 
         with patch.dict(os.environ, mock_jwt_env):
             load_key_pair.cache_clear()
-            token = issue_token("eng-01", ["viewer"], ttl=timedelta(hours=1))
+            token = issue_token("eng-01", ["operator"], ttl=timedelta(hours=1))
             tampered = token[:-5] + "XXXXX"
             with pytest.raises(_jwt.PyJWTError):
                 decode_token(tampered)
@@ -331,7 +331,7 @@ class TestJWTMiddleware:
 
         with patch.dict(os.environ, {**env, **mock_jwt_env}):
             load_key_pair.cache_clear()
-            token = issue_token("eng-01", ["viewer"], ttl=timedelta(hours=1))
+            token = issue_token("eng-01", ["operator"], ttl=timedelta(hours=1))
             resp = client.get("/health", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200
 
@@ -398,7 +398,7 @@ class TestScopeGuard:
         from concilium.presentation.mcp.guards.scope_guard import check_scope, set_roles
 
         with patch.dict(os.environ, {"CONCILIUM__AUTH_ENABLED": "1"}):
-            set_roles(["viewer"])
+            set_roles(["auditor"])
             with pytest.raises(PermissionError, match="project:run"):
                 check_scope("disparar_pipeline")
 
@@ -425,8 +425,8 @@ class TestScopeGuard:
             ("listar_projetos", "project:read"),
             ("auditar_plano", "artifacts:read"),
             ("explorar_pool_recursos", "project:read"),
-            ("obter_artefato", "artifacts:download"),      # ADR-116 F5: baixar_bundle_zip→obter_artefato
-            ("criar_projeto", "project:create"),            # ADR-116 F5: criar_projeto_formulario→criar_projeto
+            ("obter_artefato", "artifacts:download"),  # ADR-116 F5: baixar_bundle_zip→obter_artefato
+            ("criar_projeto", "project:create"),  # ADR-116 F5: criar_projeto_formulario→criar_projeto
             ("disparar_pipeline", "project:run"),
         ],
     )

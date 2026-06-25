@@ -357,7 +357,6 @@ class TestMissingLineCoverage:
         import base64
         import io
         import zipfile
-        from pathlib import Path
         from unittest.mock import patch
 
         v = tmp_path / "v1"
@@ -379,13 +378,15 @@ class TestMissingLineCoverage:
 
         def _patched_list(s, ver):
             result = original_list(s, ver)
-            result["artefatos"].append({
-                "nome": "ghost.md",
-                "kind": "outputs",
-                "audiencia": ab.AUDIENCIA_AGENTE,
-                "tamanho_bytes": 0,
-                "descricao": "Ghost file",
-            })
+            result["artefatos"].append(
+                {
+                    "nome": "ghost.md",
+                    "kind": "outputs",
+                    "audiencia": ab.AUDIENCIA_AGENTE,
+                    "tamanho_bytes": 0,
+                    "descricao": "Ghost file",
+                }
+            )
             return result
 
         with patch.object(ab, "list_artifacts", side_effect=_patched_list):

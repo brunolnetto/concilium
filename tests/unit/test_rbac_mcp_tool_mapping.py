@@ -25,8 +25,6 @@ ALL_TOOL_NAMES = [
     # artifacts
     "listar_artefatos_projeto",
     "obter_artefato",  # ADR-116 F5
-    
-    
     # benchmark (ADR-116: listar_benchmarks/executar_benchmark removidas — dup de nep039)
     "empacotar_benchmark",
     "download_benchmark_zip",
@@ -43,22 +41,18 @@ ALL_TOOL_NAMES = [
     "atualizar_preco_insumo",
     "adicionar_variante_producao",
     "historico_preco_insumo",  # ADR-116 F5
-    
     "comparar_rfi_catalogo",
     "calcular_pu_producao",
     "versoes_catalogo",  # ADR-116 F5
-    
     # escopo
     "consultar_estrutura_projeto",
     "gerir_escopo",  # ADR-116 F5
-    
     # formulario
     "criar_projeto",  # ADR-116 F5
     # pipeline
     "disparar_pipeline",
     "consultar_job_pipeline",
     "listar_jobs_pipeline",
-    
     "cancelar_job_pipeline",
     # (ADR-116: avancar_pipeline removida — deprecada, substituída por disparar_pipeline)
     # projeto
@@ -71,7 +65,6 @@ ALL_TOOL_NAMES = [
     # replan
     "simular_cenario_replan",
     # spec
-    
     # system
     "ping",
     # tributacao (ADR-116 F5: 3 → 1 tool unificada)
@@ -137,12 +130,13 @@ class TestToolPermissionsCoverage:
             "catalog:read",
             "catalog:write",
             "catalog:validate",  # ADR-120
-            "catalog:merge",     # ADR-120
+            "catalog:merge",  # ADR-120
             "artifacts:read",
             "artifacts:download",
             "financials:read",
             "auth:manage",
             "system:read",
+            "health:read",
         }
         invalid = {k: v for k, v in TOOL_PERMISSIONS.items() if v not in valid_perms}
         assert not invalid, f"Permissões inválidas: {invalid}"
@@ -158,9 +152,9 @@ class TestToolPermissionsCoverage:
             "atualizar_preco_insumo",
             "adicionar_variante_producao",
             "aprovar_versao",
-            "criar_rascunho_catalogo",   # ADR-120
-            "aprovar_merge_catalogo",    # ADR-120
-            "rejeitar_rascunho_catalogo", # ADR-120
+            "criar_rascunho_catalogo",  # ADR-120
+            "aprovar_merge_catalogo",  # ADR-120
+            "rejeitar_rascunho_catalogo",  # ADR-120
         }
         read_only = {"project:read", "catalog:read", "artifacts:read", "system:read", "catalog:validate"}
         for tool in write_tools:
@@ -256,7 +250,7 @@ class TestPatchMcpAuthPermissions:
         assert "called" in result_holder
 
     def test_unauthorized_call_raises_permission_error(self):
-        """viewer não pode chamar disparar_pipeline (project:run) quando auth ativo."""
+        """auditor não pode chamar disparar_pipeline (project:run) quando auth ativo."""
         from concilium.infrastructure.auth.permission_guard import (
             _current_roles,
             patch_mcp_auth_permissions,
@@ -269,7 +263,7 @@ class TestPatchMcpAuthPermissions:
         fn.__name__ = "disparar_pipeline"
         server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
         patch_mcp_auth_permissions(server)
-        tok = set_roles(["viewer"])
+        tok = set_roles(["auditor"])
         with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
             try:
                 with pytest.raises(PermissionError):
@@ -277,8 +271,8 @@ class TestPatchMcpAuthPermissions:
             finally:
                 _current_roles.reset(tok)
 
-    def test_viewer_can_call_read_tool(self):
-        """viewer pode chamar listar_projetos (project:read)."""
+    def test_auditor_can_call_read_tool(self):
+        """auditor pode chamar listar_projetos (project:read)."""
         from concilium.infrastructure.auth.permission_guard import (
             _current_roles,
             patch_mcp_auth_permissions,
@@ -293,7 +287,7 @@ class TestPatchMcpAuthPermissions:
         fn.__name__ = "listar_projetos"
         server = self._make_server_with_tool("listar_projetos", fn, perm="project:read")
         patch_mcp_auth_permissions(server)
-        tok = set_roles(["viewer"])
+        tok = set_roles(["auditor"])
         try:
             server._tool_manager._tools["listar_projetos"].fn()
         finally:
@@ -325,4 +319,6 @@ class TestPatchMcpAuthPermissions:
                     server._tool_manager._tools["tool_nova_sem_mapeamento"].fn()
             finally:
                 _current_roles.reset(tok)
+
+
 # ADR-120: 5 novas tools de ciclo de vida de catálogo (appended after original list close)

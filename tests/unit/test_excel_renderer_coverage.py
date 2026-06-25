@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from io import BytesIO
-from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import pytest
 

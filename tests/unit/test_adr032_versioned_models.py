@@ -256,16 +256,12 @@ class TestCircularDeps:
                 {
                     "codigo": "CPU-SUB",
                     "cpu_referencia_id": "CPU-MAIN",
-                    "composicao_itens": [
-                        {"insumo_id": "INS-PROXY", "categoria_custo": "TERCEIRIZADO"}
-                    ],
+                    "composicao_itens": [{"insumo_id": "INS-PROXY", "categoria_custo": "TERCEIRIZADO"}],
                 },
                 {
                     "codigo": "CPU-MAIN",
                     "cpu_referencia_id": None,
-                    "composicao_itens": [
-                        {"insumo_id": "INS-PROXY", "categoria_custo": "TERCEIRIZADO"}
-                    ],
+                    "composicao_itens": [{"insumo_id": "INS-PROXY", "categoria_custo": "TERCEIRIZADO"}],
                 },
             ]
         }
@@ -294,16 +290,12 @@ class TestCircularDeps:
                 {
                     "codigo": "CPU-SELF",
                     "cpu_referencia_id": "CPU-OTHER",
-                    "composicao_itens": [
-                        {"insumo_id": "INS-OTHER", "categoria_custo": "TERCEIRIZADO"}
-                    ],
+                    "composicao_itens": [{"insumo_id": "INS-OTHER", "categoria_custo": "TERCEIRIZADO"}],
                 },
                 {
                     "codigo": "CPU-OTHER",
                     "cpu_referencia_id": None,
-                    "composicao_itens": [
-                        {"insumo_id": "INS-OTHER", "categoria_custo": "TERCEIRIZADO"}
-                    ],
+                    "composicao_itens": [{"insumo_id": "INS-OTHER", "categoria_custo": "TERCEIRIZADO"}],
                 },
             ]
         }

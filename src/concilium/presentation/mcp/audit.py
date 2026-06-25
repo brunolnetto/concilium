@@ -17,6 +17,7 @@ Posição no pipeline de patches (server.py):
 
 from __future__ import annotations
 
+from datetime import UTC
 from functools import wraps
 from typing import Any
 
@@ -42,12 +43,12 @@ def _with_audit(tool_fn: Any) -> Any:
     @wraps(tool_fn)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         import uuid
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from concilium.infrastructure.auth.permission_guard import get_current_tenant_id, get_current_user_id
 
         invocation_id = f"ti-{uuid.uuid4().hex[:12]}"
-        started_at = datetime.now(timezone.utc).isoformat()
+        started_at = datetime.now(UTC).isoformat()
         input_keys = list(kwargs.keys())
         user_id = get_current_user_id()
         tenant_id = get_current_tenant_id()
@@ -62,7 +63,7 @@ def _with_audit(tool_fn: Any) -> Any:
             error_type = type(exc).__name__
             raise
         finally:
-            finished_at = datetime.now(timezone.utc).isoformat()
+            finished_at = datetime.now(UTC).isoformat()
             try:
                 _record(
                     invocation_id=invocation_id,

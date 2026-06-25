@@ -54,7 +54,10 @@ def register(server: FastMCP) -> None:
             serialize_campaign_report,
         )
         from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
-        from concilium.application.skills.phase_classifier import is_campaign_allowed_for_intent, normalize_procurement_intent
+        from concilium.application.skills.phase_classifier import (
+            is_campaign_allowed_for_intent,
+            normalize_procurement_intent,
+        )
         from concilium.domain.models.campaign.campaign import (
             GoResearchCampaignBundle,
             ParametroSweep,
@@ -77,10 +80,7 @@ def register(server: FastMCP) -> None:
             intent = normalize_procurement_intent(procurement_intent)
             if not is_campaign_allowed_for_intent(intent):
                 return {
-                    "erro": (
-                        "Campanha GO é permitida apenas para RFP. "
-                        "RFI é fase exploratória de catálogo (PU x Q)."
-                    )
+                    "erro": ("Campanha GO é permitida apenas para RFP. RFI é fase exploratória de catálogo (PU x Q).")
                 }
 
             base_spec = _load_project_base_spec(projects_root, slug)

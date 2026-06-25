@@ -37,6 +37,17 @@ class BlobStoragePort(ABC):
         """Retorna True se o blob existir no storage."""
         ...
 
+    def deletar_blob(self, path: str) -> None:
+        """Remove um blob do storage.
+
+        Implementação padrão é noop — backends sem suporte a delete devem sobrescrever.
+        Backends que suportam delete (SharePoint, S3, Azure) devem implementar.
+
+        Raises:
+            FileNotFoundError: Se o blob não existir (implementações podem omitir).
+        """
+        return
+
     def aprovar_versao(self, path: str) -> None:
         """Marca o blob como versão aprovada (imutável).
 

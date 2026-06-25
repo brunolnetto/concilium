@@ -234,8 +234,9 @@ class TestPeakDemandEdgeCases:
 
     def test_peak_demand_empty_scheduled_returns_zero_peaks(self):
         """Line 73: _peak_demand returns early when acts is empty."""
-        from concilium.application.scheduling.pool_inference import _peak_demand
         from unittest.mock import MagicMock
+
+        from concilium.application.scheduling.pool_inference import _peak_demand
 
         sched = MagicMock()
         sched.scheduled_activities = []
@@ -244,8 +245,8 @@ class TestPeakDemandEdgeCases:
 
     def test_bisect_pool_peak_cannot_meet_deadline(self):
         """Line 118: when even peak_demand pool can't meet prazo_max, returns peak."""
-        from concilium.application.scheduling.pool_inference import _bisect_pool
         from concilium.application.scheduling import Activity, ActivityDAG
+        from concilium.application.scheduling.pool_inference import _bisect_pool
 
         # 3 independent activities each needing 2 EQ, total EQ demand = 6
         acts = [
@@ -255,7 +256,7 @@ class TestPeakDemandEdgeCases:
         ]
         dag = ActivityDAG(activities=acts, precedence=[])
         serial = {"EQ": 2}  # serial_min
-        peak = {"EQ": 6}    # parallelism max
+        peak = {"EQ": 6}  # parallelism max
         # prazo_max=1 is impossibly tight — even peak can't do it
         result = _bisect_pool(acts, dag, serial, peak, prazo_max=1, horizon=100)
         # Falls back to peak when peak cannot meet prazo_max
@@ -267,16 +268,14 @@ class TestInferirPoolMinimoScheduleError:
 
     def test_schedule_error_fallback_to_serial(self):
         """When SerialScheduler raises ScheduleError on unlimited run, peak = serial_min."""
-        from unittest.mock import patch, MagicMock
-        from concilium.application.scheduling.pool_inference import inferir_pool_minimo
-        from concilium.application.scheduling import Activity, ActivityDAG
+        from unittest.mock import patch
+
         from concilium.application.scheduling.models import ScheduleError
+        from concilium.application.scheduling.pool_inference import inferir_pool_minimo
 
         acts, dag = _two_parallel_dag()
 
-        with patch(
-            "concilium.application.scheduling.pool_inference.SerialScheduler"
-        ) as MockScheduler:
+        with patch("concilium.application.scheduling.pool_inference.SerialScheduler") as MockScheduler:
             instance = MockScheduler.return_value
             instance.schedule.side_effect = ScheduleError("forced error")
             pool, diag = inferir_pool_minimo(acts, dag, {"objetivo": "minimizar_prazo"})
@@ -326,8 +325,8 @@ class TestDagFromSpecEdgeCases:
     def test_short_edge_skipped(self):
         """Line 238: edge with fewer than 2 elements is skipped."""
         from concilium.application.scheduling.pool_inference import (
-            _dag_from_spec,
             _activities_from_spec,
+            _dag_from_spec,
         )
 
         spec_acts = [
@@ -337,9 +336,9 @@ class TestDagFromSpecEdgeCases:
         acts = _activities_from_spec({"activities": spec_acts})
         spec = {
             "precedence": [
-                ["A"],          # only 1 element — skipped
-                ("A", "B"),     # valid
-                [],             # 0 elements — skipped
+                ["A"],  # only 1 element — skipped
+                ("A", "B"),  # valid
+                [],  # 0 elements — skipped
             ]
         }
         dag = _dag_from_spec(spec, acts)
@@ -348,8 +347,8 @@ class TestDagFromSpecEdgeCases:
     def test_edge_with_unknown_activity_skipped(self):
         """Line 241-242: edge referencing unknown activity ID is skipped."""
         from concilium.application.scheduling.pool_inference import (
-            _dag_from_spec,
             _activities_from_spec,
+            _dag_from_spec,
         )
 
         spec_acts = [
@@ -363,8 +362,8 @@ class TestDagFromSpecEdgeCases:
     def test_threshold_parse_error_skipped(self):
         """Lines 245-248: invalid threshold value (non-numeric) is silently skipped."""
         from concilium.application.scheduling.pool_inference import (
-            _dag_from_spec,
             _activities_from_spec,
+            _dag_from_spec,
         )
 
         spec_acts = [
@@ -381,8 +380,8 @@ class TestDagFromSpecEdgeCases:
     def test_threshold_none_skipped(self):
         """Line 246-248: threshold=None raises TypeError → silently skipped."""
         from concilium.application.scheduling.pool_inference import (
-            _dag_from_spec,
             _activities_from_spec,
+            _dag_from_spec,
         )
 
         spec_acts = [
@@ -401,8 +400,9 @@ class TestDerivarRequiredResourcesEdgeCases:
 
     def test_equipe_without_item_id_skipped(self):
         """Line 300: equipe with empty item_id is skipped."""
-        from concilium.application.scheduling import derivar_required_resources
         from types import SimpleNamespace
+
+        from concilium.application.scheduling import derivar_required_resources
 
         equip = SimpleNamespace(equip_id="ESC", num_unidades=2)
         eq_no_id = SimpleNamespace(item_id="", num_equipes_base=1, equipamentos=[equip])
@@ -411,8 +411,9 @@ class TestDerivarRequiredResourcesEdgeCases:
 
     def test_equipe_with_none_item_id_skipped(self):
         """Line 300: equipe with None item_id is skipped."""
-        from concilium.application.scheduling import derivar_required_resources
         from types import SimpleNamespace
+
+        from concilium.application.scheduling import derivar_required_resources
 
         eq_none_id = SimpleNamespace(item_id=None, num_equipes_base=1, equipamentos=[])
         req, avisos = derivar_required_resources([eq_none_id])
@@ -420,8 +421,9 @@ class TestDerivarRequiredResourcesEdgeCases:
 
     def test_equipamento_with_zero_units_skipped(self):
         """Line 307: equipamento with num_unidades=0 is skipped."""
-        from concilium.application.scheduling import derivar_required_resources
         from types import SimpleNamespace
+
+        from concilium.application.scheduling import derivar_required_resources
 
         equip_zero = SimpleNamespace(equip_id="ESC", num_unidades=0)
         equip_neg = SimpleNamespace(equip_id="CAM", num_unidades=-1)
@@ -433,8 +435,9 @@ class TestDerivarRequiredResourcesEdgeCases:
 
     def test_equipamento_with_empty_equip_id_skipped(self):
         """Line 307: equip_id='' is skipped."""
-        from concilium.application.scheduling import derivar_required_resources
         from types import SimpleNamespace
+
+        from concilium.application.scheduling import derivar_required_resources
 
         equip_no_id = SimpleNamespace(equip_id="", num_unidades=3)
         eq = SimpleNamespace(item_id="eap-2", num_equipes_base=1, equipamentos=[equip_no_id])

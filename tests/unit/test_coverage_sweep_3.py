@@ -308,6 +308,7 @@ class TestRepositorioInsumo:
         }
         repo = RepositorioInsumo(catalogo)
         from datetime import date
+
         preco, fonte = repo.resolver_preco("INS-SCD", data_referencia=date(2026, 4, 1))
         assert preco == 75.0
         assert fonte == "HISTORICO_SCD2"
@@ -320,6 +321,7 @@ class TestRepositorioInsumo:
 
     def test_atualizar_preco_creates_historico(self):
         from datetime import date
+
         from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
         catalogo = {"insumos": [{"codigo": "INS-U", "preco_unitario": 100.0}]}
@@ -332,6 +334,7 @@ class TestRepositorioInsumo:
 
     def test_atualizar_preco_closes_open_record(self):
         from datetime import date
+
         from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
         catalogo = {
@@ -503,17 +506,17 @@ class TestCommandsRunHelpers:
 
 @pytest.mark.slow
 class TestMcpServer:
-    def test_build_server_returns_server(self):
+    @pytest.fixture(scope="class")
+    def _server(self):
         from concilium.presentation.mcp.server import build_server
 
-        server = build_server()
-        assert server is not None
+        return build_server()
 
-    def test_server_has_tools(self):
-        from concilium.presentation.mcp.server import build_server
+    def test_build_server_returns_server(self, _server):
+        assert _server is not None
 
-        server = build_server()
-        tools = list(server._tool_manager._tools.keys())
+    def test_server_has_tools(self, _server):
+        tools = list(_server._tool_manager._tools.keys())
         assert len(tools) > 20  # should have many tools registered
 
 

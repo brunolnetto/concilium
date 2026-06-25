@@ -22,7 +22,9 @@ from concilium.infrastructure.settings import get_auth
 try:
     from opentelemetry import propagate
     from opentelemetry.baggage import set_baggage
-    from opentelemetry.context import attach as context_attach, detach as context_detach
+    from opentelemetry.context import attach as context_attach
+    from opentelemetry.context import detach as context_detach
+
     _OTEL_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _OTEL_AVAILABLE = False
@@ -46,10 +48,7 @@ class McpAuthMiddleware:
         # Extrai todos os headers como dict str→str para OTel propagation
         raw_headers = scope.get("headers", [])
         headers = {k.lower(): v for k, v in raw_headers}
-        headers_str: dict[str, str] = {
-            k.decode("latin-1"): v.decode("latin-1")
-            for k, v in raw_headers
-        }
+        headers_str: dict[str, str] = {k.decode("latin-1"): v.decode("latin-1") for k, v in raw_headers}
 
         auth: str = headers.get(b"authorization", b"").decode("latin-1")
 

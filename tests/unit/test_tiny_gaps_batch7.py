@@ -167,7 +167,9 @@ class TestProjectsRouteErrors:
 
     def _client_with_svc(self, app, svc):
         from fastapi.testclient import TestClient
+
         from concilium.presentation.api.container import get_concilium_service
+
         app.dependency_overrides[get_concilium_service] = lambda: svc
         return TestClient(app, raise_server_exceptions=False)
 

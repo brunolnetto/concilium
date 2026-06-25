@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
@@ -68,14 +69,16 @@ class CrossDomainBuilder:
             except Exception as e:
                 logger.warning("Falha ao obter canonical de %s: %s", pid, e)
 
-            rows.append({
-                "project_id": pid,
-                "n_total": n_total,
-                "n_fallbacks": n_fb,
-                "fallback_rate": fallback_rate,
-                "custo_direto": (canonical or {}).get("custo_direto") if canonical else None,
-                "margem_pct": (canonical or {}).get("margem_pct") if canonical else None,
-            })
+            rows.append(
+                {
+                    "project_id": pid,
+                    "n_total": n_total,
+                    "n_fallbacks": n_fb,
+                    "fallback_rate": fallback_rate,
+                    "custo_direto": (canonical or {}).get("custo_direto") if canonical else None,
+                    "margem_pct": (canonical or {}).get("margem_pct") if canonical else None,
+                }
+            )
         return rows
 
     def write(self) -> str:

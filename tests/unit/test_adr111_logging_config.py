@@ -307,6 +307,7 @@ class TestJsonFormatterWithActiveSpan:
         monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
         try:
             import opentelemetry.trace as _t
+
             _t._TRACER_PROVIDER_SET_ONCE._done = False
             _t._TRACER_PROVIDER = None
         except Exception:

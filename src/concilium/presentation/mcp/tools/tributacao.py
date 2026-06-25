@@ -44,43 +44,56 @@ def register(server: FastMCP) -> None:
         try:
             if tipo == "clt_empregador":
                 from concilium.domain.services.financial.tributacao import calculate_employer_clt
+
                 result = calculate_employer_clt(valor, categoria=categoria)
                 multiplicador = round(result.custo_total / valor, 4) if valor > 0 else 0.0
-                return _wrap_response({
-                    "tipo": tipo,
-                    "salario_base": result.salario_base,
-                    "custo_total": result.custo_total,
-                    "encargos_totais": round(result.custo_total - result.salario_base, 2),
-                    "multiplicador_efetivo": multiplicador,
-                    "categoria": categoria,
-                    "breakdown": [
-                        {"nome": item.nome, "percentual_pct": round(item.percentual * 100, 2),
-                         "valor_R$": item.valor, "base_legal": item.base_legal}
-                        for item in result.itens
-                    ],
-                })
+                return _wrap_response(
+                    {
+                        "tipo": tipo,
+                        "salario_base": result.salario_base,
+                        "custo_total": result.custo_total,
+                        "encargos_totais": round(result.custo_total - result.salario_base, 2),
+                        "multiplicador_efetivo": multiplicador,
+                        "categoria": categoria,
+                        "breakdown": [
+                            {
+                                "nome": item.nome,
+                                "percentual_pct": round(item.percentual * 100, 2),
+                                "valor_R$": item.valor,
+                                "base_legal": item.base_legal,
+                            }
+                            for item in result.itens
+                        ],
+                    }
+                )
             elif tipo == "inss_empregado":
                 from concilium.domain.services.financial.tributacao import calculate_inss_employee
+
                 inss = calculate_inss_employee(valor)
-                return _wrap_response({
-                    "tipo": tipo,
-                    "salario_bruto": valor,
-                    "inss_empregado": inss,
-                    "aliquota_efetiva_pct": round(inss / valor * 100, 2) if valor > 0 else 0,
-                    "base_irrf": round(valor - inss, 2),
-                    "referencia": "Portaria MPS/MF nº 13/2026",
-                })
+                return _wrap_response(
+                    {
+                        "tipo": tipo,
+                        "salario_bruto": valor,
+                        "inss_empregado": inss,
+                        "aliquota_efetiva_pct": round(inss / valor * 100, 2) if valor > 0 else 0,
+                        "base_irrf": round(valor - inss, 2),
+                        "referencia": "Portaria MPS/MF nº 13/2026",
+                    }
+                )
             elif tipo == "irrf":
                 from concilium.domain.services.financial.tributacao import calculate_irrf
+
                 irrf = calculate_irrf(valor)
-                return _wrap_response({
-                    "tipo": tipo,
-                    "base_calculo": valor,
-                    "irrf_mensal": irrf,
-                    "isento": irrf == 0.0,
-                    "aliquota_efetiva_pct": round(irrf / valor * 100, 2) if valor > 0 else 0,
-                    "referencia": "RFB 2026 + Lei 15.270/2025 (isencao ate R$ 5.000)",
-                })
+                return _wrap_response(
+                    {
+                        "tipo": tipo,
+                        "base_calculo": valor,
+                        "irrf_mensal": irrf,
+                        "isento": irrf == 0.0,
+                        "aliquota_efetiva_pct": round(irrf / valor * 100, 2) if valor > 0 else 0,
+                        "referencia": "RFB 2026 + Lei 15.270/2025 (isencao ate R$ 5.000)",
+                    }
+                )
             else:
                 return _wrap_response({"erro": f"tipo '{tipo}' invalido. Use: clt_empregador | inss_empregado | irrf"})
         except Exception as exc:

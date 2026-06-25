@@ -122,7 +122,9 @@ def test_query_engine_build_methods_cover_layout_variants(tmp_path):
     (prods_dir / "PROD-1.json").write_text(json.dumps({"id": "PROD-1", "cpu_id": "CPU-1"}), encoding="utf-8")
 
     # funcoes from funcoes.json
-    (tmp_path / "funcoes.json").write_text(json.dumps({"funcoes": [{"id": "FN-1", "descricao": "Op"}]}), encoding="utf-8")
+    (tmp_path / "funcoes.json").write_text(
+        json.dumps({"funcoes": [{"id": "FN-1", "descricao": "Op"}]}), encoding="utf-8"
+    )
 
     engine._build_cpus(conn)
     engine._build_insumos(conn)
@@ -341,7 +343,9 @@ def test_sharepoint_success_and_error_branches(tmp_path, monkeypatch):
 def test_graficos_edge_branches_and_campanha_paths(monkeypatch):
     # _rg_hist_accumulate_act early return (eq absent)
     totals = {"2026-W10": 0.0}
-    gmod._rg_hist_accumulate_act(SimpleNamespace(activity_id="missing", distribuicao_semanal={}), {}, "equipamentos", totals)
+    gmod._rg_hist_accumulate_act(
+        SimpleNamespace(activity_id="missing", distribuicao_semanal={}), {}, "equipamentos", totals
+    )
     assert totals["2026-W10"] == 0.0
 
     # _rg_histogram_totals no weeks branch

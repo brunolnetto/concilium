@@ -251,6 +251,7 @@ class PipelineService:
                 _current_roles,
                 get_current_user_id,
             )
+
             _actor_user_id = get_current_user_id() or run.get("actor") or "system"
             _actor_roles = list(_current_roles.get())
             _actor_role = _actor_roles[0] if _actor_roles else None

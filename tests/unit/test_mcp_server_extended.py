@@ -6,7 +6,6 @@ tools directly to exercise the business-logic bodies in server.py.
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 from pathlib import Path
@@ -120,12 +119,9 @@ async def test_listar_contextos_real_config(server):
         pass  # Known model attribute mismatch — still exercises the code path
 
 
-def test_listar_contextos_direct(server_env, monkeypatch):
-    """Call the underlying function logic directly by extracting from server."""
-    # We can test by calling build_server and examining tool list
-    srv = build_server()
-    # If server built fine and config exists, tools are registered
-    assert srv is not None
+def test_listar_contextos_direct(server):
+    """Server já construído pelo fixture de módulo — reutiliza em vez de reconstruir."""
+    assert server is not None
 
 
 def test_listar_contextos_no_dir(monkeypatch, tmp_path):
@@ -202,6 +198,8 @@ async def test_consultar_status_fresh_project(server, server_env):
     proj_id = store.root.name
     result = await server.call_tool("consultar_status", arguments={"project_id": proj_id})
     assert result is not None
+
+
 @pytest.mark.asyncio
 async def test_consultar_status_not_found(server):
     with pytest.raises(ToolError):
@@ -246,14 +244,6 @@ async def test_consultar_status_with_version_and_log(server, server_env):
 
 
 # ── tool: avancar_pipeline ────────────────────────────────────────────────────
-
-
-
-
-
-
-
-
 
 
 # ── tool: aprovar_versao ──────────────────────────────────────────────────────
@@ -465,10 +455,6 @@ async def test_iniciar_orcamento_generic_exception(server, server_env):
             },
         )
     assert result is not None
-
-
-
-
 
 
 @pytest.mark.asyncio

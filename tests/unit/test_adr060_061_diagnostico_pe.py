@@ -823,7 +823,16 @@ class TestBacktrackingPEBuilderBranches:
             "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
             "data_inicio": "2026-06-01",
             "data_termino": "2027-06-01",
-            "eap": [{"item_id": "eap-01", "ordem": 1, "cpu_id": "C", "descricao": "X", "unidade": "m3", "quantitativo": 100.0}],
+            "eap": [
+                {
+                    "item_id": "eap-01",
+                    "ordem": 1,
+                    "cpu_id": "C",
+                    "descricao": "X",
+                    "unidade": "m3",
+                    "quantitativo": 100.0,
+                }
+            ],
             "contexto_id": "t",
             "snapshot_catalogo_id": "s",
             "snapshot_perfil_id": "s",
@@ -850,8 +859,18 @@ class TestBacktrackingPEBuilderBranches:
             )
             for w in range(10)
         }
-        sched = [ScheduledActivityCanonical(activity_id="eap-01", start_week=0, end_week=9, duration_weeks=10, distribuicao_semanal=dist)]
-        cronograma = Cronograma(algorithm="manual_allocation", quality_score=1.0, makespan_weeks=10, is_feasible=True, scheduled_activities=sched)
+        sched = [
+            ScheduledActivityCanonical(
+                activity_id="eap-01", start_week=0, end_week=9, duration_weeks=10, distribuicao_semanal=dist
+            )
+        ]
+        cronograma = Cronograma(
+            algorithm="manual_allocation",
+            quality_score=1.0,
+            makespan_weeks=10,
+            is_feasible=True,
+            scheduled_activities=sched,
+        )
         pu = PrecoUnitarioCategoria(mao_obra=300.0, equipamentos=350.0, diesel=80.0, material=0.0, total=730.0)
         pu_bdi = PrecoUnitarioCategoria(mao_obra=390.0, equipamentos=455.0, diesel=104.0, material=0.0, total=949.0)
         subtotal = SubtotalSemBdiComBdi(
@@ -867,18 +886,26 @@ class TestBacktrackingPEBuilderBranches:
             preco_unitario_com_bdi=pu_bdi,
             subtotal=subtotal,
         )
-        return canonical.model_copy(update={"equipes_diretas": [equipe], "cronograma": cronograma, "planejamento": [plan]})
+        return canonical.model_copy(
+            update={"equipes_diretas": [equipe], "cronograma": cronograma, "planejamento": [plan]}
+        )
 
     def test_count_calendar_constrained_weeks_with_constrained(self):
         """_count_calendar_constrained_weeks counts weeks with fator < 0.999."""
-        from concilium.domain.services.analytics.backtracking_pe_builder import _count_calendar_constrained_weeks
         from concilium.domain.models.canonical import DistribuicaoSemanal, ScheduledActivityCanonical
+        from concilium.domain.services.analytics.backtracking_pe_builder import _count_calendar_constrained_weeks
 
         dist = {
-            "2026-W24": DistribuicaoSemanal(num_equipes=2, qtd_executada=10, qtd_acumulada=10, pct=0.1, fator_calendario=0.5),
-            "2026-W25": DistribuicaoSemanal(num_equipes=2, qtd_executada=10, qtd_acumulada=20, pct=0.1, fator_calendario=1.0),
+            "2026-W24": DistribuicaoSemanal(
+                num_equipes=2, qtd_executada=10, qtd_acumulada=10, pct=0.1, fator_calendario=0.5
+            ),
+            "2026-W25": DistribuicaoSemanal(
+                num_equipes=2, qtd_executada=10, qtd_acumulada=20, pct=0.1, fator_calendario=1.0
+            ),
         }
-        sa = ScheduledActivityCanonical(activity_id="eap-01", start_week=0, end_week=1, duration_weeks=2, distribuicao_semanal=dist)
+        sa = ScheduledActivityCanonical(
+            activity_id="eap-01", start_week=0, end_week=1, duration_weeks=2, distribuicao_semanal=dist
+        )
         count = _count_calendar_constrained_weeks(sa)
         assert count == 1
 
@@ -888,43 +915,72 @@ class TestBacktrackingPEBuilderBranches:
         assert _count_calendar_constrained_weeks(None) == 0
 
     def test_count_calendar_constrained_weeks_no_distribuicao(self):
-        from concilium.domain.services.analytics.backtracking_pe_builder import _count_calendar_constrained_weeks
         from concilium.domain.models.canonical import ScheduledActivityCanonical
+        from concilium.domain.services.analytics.backtracking_pe_builder import _count_calendar_constrained_weeks
 
-        sa = ScheduledActivityCanonical(activity_id="eap-01", start_week=0, end_week=0, duration_weeks=1, distribuicao_semanal={})
+        sa = ScheduledActivityCanonical(
+            activity_id="eap-01", start_week=0, end_week=0, duration_weeks=1, distribuicao_semanal={}
+        )
         assert _count_calendar_constrained_weeks(sa) == 0
 
     def test_get_item_cubo_hint_non_dict_explicacao(self):
-        from concilium.domain.services.analytics.backtracking_pe_builder import _get_item_cubo_hint
         from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
+        from concilium.domain.services.analytics.backtracking_pe_builder import _get_item_cubo_hint
 
         diag = DiagnosticoPERelatorio(
-            projeto_id="P", gerado_em="2026", n_itens_deficit=0, gap_total_rs=0, gap_evitavel_rs=0, gap_estrutural_rs=0,
-            fator_dominante_label="—", aviso_cross_term=False, l_medio_requerido=0, itens_deficit=(), consistencia_validada=True,
+            projeto_id="P",
+            gerado_em="2026",
+            n_itens_deficit=0,
+            gap_total_rs=0,
+            gap_evitavel_rs=0,
+            gap_estrutural_rs=0,
+            fator_dominante_label="—",
+            aviso_cross_term=False,
+            l_medio_requerido=0,
+            itens_deficit=(),
+            consistencia_validada=True,
             explicacao_natureza_periodo="not_a_dict",
         )
         hint = _get_item_cubo_hint(diag, "eap-01")
         assert hint == {}
 
     def test_get_item_cubo_hint_itens_not_dict(self):
-        from concilium.domain.services.analytics.backtracking_pe_builder import _get_item_cubo_hint
         from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
+        from concilium.domain.services.analytics.backtracking_pe_builder import _get_item_cubo_hint
 
         diag = DiagnosticoPERelatorio(
-            projeto_id="P", gerado_em="2026", n_itens_deficit=0, gap_total_rs=0, gap_evitavel_rs=0, gap_estrutural_rs=0,
-            fator_dominante_label="—", aviso_cross_term=False, l_medio_requerido=0, itens_deficit=(), consistencia_validada=True,
+            projeto_id="P",
+            gerado_em="2026",
+            n_itens_deficit=0,
+            gap_total_rs=0,
+            gap_evitavel_rs=0,
+            gap_estrutural_rs=0,
+            fator_dominante_label="—",
+            aviso_cross_term=False,
+            l_medio_requerido=0,
+            itens_deficit=(),
+            consistencia_validada=True,
             explicacao_natureza_periodo={"itens": "not_a_dict"},
         )
         hint = _get_item_cubo_hint(diag, "eap-01")
         assert hint == {}
 
     def test_get_item_cubo_hint_item_not_dict(self):
-        from concilium.domain.services.analytics.backtracking_pe_builder import _get_item_cubo_hint
         from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
+        from concilium.domain.services.analytics.backtracking_pe_builder import _get_item_cubo_hint
 
         diag = DiagnosticoPERelatorio(
-            projeto_id="P", gerado_em="2026", n_itens_deficit=0, gap_total_rs=0, gap_evitavel_rs=0, gap_estrutural_rs=0,
-            fator_dominante_label="—", aviso_cross_term=False, l_medio_requerido=0, itens_deficit=(), consistencia_validada=True,
+            projeto_id="P",
+            gerado_em="2026",
+            n_itens_deficit=0,
+            gap_total_rs=0,
+            gap_evitavel_rs=0,
+            gap_estrutural_rs=0,
+            fator_dominante_label="—",
+            aviso_cross_term=False,
+            l_medio_requerido=0,
+            itens_deficit=(),
+            consistencia_validada=True,
             explicacao_natureza_periodo={"itens": {"eap-01": "not_a_dict"}},
         )
         hint = _get_item_cubo_hint(diag, "eap-01")
@@ -961,9 +1017,7 @@ class TestBacktrackingPEBuilderBranches:
         diag = replace(
             diag,
             explicacao_natureza_periodo={
-                "itens": {
-                    "eap-01": {"natureza_dominante": "indireto", "janela_critica_iso": "2026-W28"}
-                }
+                "itens": {"eap-01": {"natureza_dominante": "indireto", "janela_critica_iso": "2026-W28"}}
             },
         )
         canonical = self._make_canonical_with_constrained_week()
@@ -984,8 +1038,8 @@ class TestBacktrackingPEBuilderBranches:
 
     def test_btpb_validacoes_val_inv_norm_fail(self):
         """VAL-INV-NORM-FAIL emitted when sol_l pe_gap_recalculado deviates too far."""
-        from concilium.domain.services.analytics.backtracking_pe_builder import _btpb_validacoes
         from concilium.domain.models.financial.backtracking_pe import BacktrackingPEItem, SolucaoInversa
+        from concilium.domain.services.analytics.backtracking_pe_builder import _btpb_validacoes
 
         # Build a BacktrackingPEItem where sol_l.pe_gap_recalculado far from pe_gap_alvo
         sol_l = SolucaoInversa(
@@ -1022,8 +1076,8 @@ class TestBacktrackingPEBuilderBranches:
         assert validacoes == []
 
     def test_find_solucao_returns_none_when_not_found(self):
-        from concilium.domain.services.analytics.backtracking_pe_builder import _find_solucao
         from concilium.domain.models.financial.backtracking_pe import SolucaoInversa
+        from concilium.domain.services.analytics.backtracking_pe_builder import _find_solucao
 
         sol = SolucaoInversa(
             parametro="L",
@@ -1044,8 +1098,8 @@ class TestBacktrackingPEBuilderBranches:
         assert _find_solucao([sol], "L") is sol  # "L" found
 
     def test_get_gap_fator_returns_zero_when_not_found(self):
-        from concilium.domain.services.analytics.backtracking_pe_builder import _get_gap_fator
         from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, FatorPE
+        from concilium.domain.services.analytics.backtracking_pe_builder import _get_gap_fator
 
         fatores = (FatorPE(codigo="F_ETA_CLIMA", gap_rs=100.0, pct_gap=0.5),)
         item = DiagnosticoPEItem(
@@ -1092,7 +1146,9 @@ class TestBacktrackingPEBuilderBranches:
             custo_equipamentos_mensal=30000,
             permanencia_meses=2.0,
         )
-        sa = ScheduledActivityCanonical(activity_id="eap-01", start_week=0, end_week=0, duration_weeks=1, distribuicao_semanal={})
+        sa = ScheduledActivityCanonical(
+            activity_id="eap-01", start_week=0, end_week=0, duration_weeks=1, distribuicao_semanal={}
+        )
         builder = BacktrackingPEBuilder()
         result = builder._solve_P(item, equipe, sa, 0.0, -20000.0)
         assert result is None

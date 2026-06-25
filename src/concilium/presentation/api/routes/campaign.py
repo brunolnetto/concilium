@@ -110,7 +110,10 @@ def run_campaign(
         serialize_campaign_report,
     )
     from concilium.application.services.campaign.campaign_service import construir_cubo, executar_campanha
-    from concilium.application.skills.phase_classifier import is_campaign_allowed_for_intent, normalize_procurement_intent
+    from concilium.application.skills.phase_classifier import (
+        is_campaign_allowed_for_intent,
+        normalize_procurement_intent,
+    )
     from concilium.domain.models.campaign.campaign import GoResearchCampaignBundle, ParametroSweep, PerfilExpectativas
     from concilium.infrastructure.settings import get_storage
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
@@ -137,10 +140,7 @@ def run_campaign(
     if not is_campaign_allowed_for_intent(intent):
         raise HTTPException(
             status_code=422,
-            detail=(
-                "Campanha GO é permitida apenas para RFP. "
-                "RFI é fase exploratória de catálogo (PU x Q)."
-            ),
+            detail=("Campanha GO é permitida apenas para RFP. RFI é fase exploratória de catálogo (PU x Q)."),
         )
 
     # Resolve campaign file

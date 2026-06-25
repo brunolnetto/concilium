@@ -9,7 +9,6 @@ Prioritizes lowest-coverage modules first:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -19,7 +18,6 @@ from openpyxl import Workbook
 from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage, SharePointCredential
 from concilium.infrastructure.adapters.excel.sheets import graficos as gmod
 from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine
-
 
 # ---------------------------------------------------------------------------
 # SharePoint adapter
@@ -110,7 +108,7 @@ def test_sharepoint_gravar_blob_large_upload_and_cache_invalidate(tmp_path, monk
     called = {"upload": False, "invalidated": False}
 
     def _upload(_httpx, path, content):
-        called["upload"] = (path == "big.bin" and len(content) > 0)
+        called["upload"] = path == "big.bin" and len(content) > 0
 
     def _invalidate(path):
         called["invalidated"] = path == "big.bin"
@@ -309,7 +307,9 @@ class _FakeConn:
         if "SELECT raw_json FROM cpus" in sql:
             cpu = {
                 "codigo": "CPU-1",
-                "composicao_itens": [{"insumo_id": "I1", "coeficiente": 2.0, "categoria_custo": "mat", "unidade": "kg"}],
+                "composicao_itens": [
+                    {"insumo_id": "I1", "coeficiente": 2.0, "categoria_custo": "mat", "unidade": "kg"}
+                ],
             }
             return _FakeResult([(json.dumps(cpu),)])
         if "SELECT raw_json FROM produtividades" in sql:

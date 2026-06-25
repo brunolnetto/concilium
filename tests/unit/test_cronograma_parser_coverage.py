@@ -12,11 +12,6 @@ Covers:
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # _load_produtividade_map edge cases
 # ---------------------------------------------------------------------------
@@ -34,8 +29,9 @@ class TestLoadProdutividadeMapEdgeCases:
         assert "2.1" not in result
 
     def test_exception_reading_file_returns_empty(self, tmp_path):
-        from concilium.application.benchmarks.cronograma_parser import _load_produtividade_map
         from unittest.mock import patch
+
+        from concilium.application.benchmarks.cronograma_parser import _load_produtividade_map
 
         tsv = tmp_path / "produtividade.txt"
         tsv.write_text("H\nH\nH\nH\n", encoding="utf-8")
@@ -118,7 +114,7 @@ class TestInferPredecessoresAdditional:
 
     def test_invalid_item_parts_in_section_do_not_crash(self):
         """Items with non-integer sub-ids in same section are silently skipped."""
-        from concilium.application.benchmarks.cronograma_parser import _infer_predecessores, CronogramaItem
+        from concilium.application.benchmarks.cronograma_parser import CronogramaItem, _infer_predecessores
 
         # Build an item with a non-numeric second part to hit ValueError branch
         bad = CronogramaItem(item_id="2.X", descricao="Bad", unidade="m", quantitativo=1.0)

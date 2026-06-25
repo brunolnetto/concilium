@@ -11,6 +11,14 @@ try:
 except TypeError as exc:
     pytest.skip(f"Ambiente FastAPI incompatível: {exc}", allow_module_level=True)
 
+_app_cache: list = []
+
+
+def _get_app():
+    if not _app_cache:
+        _app_cache.append(create_app())
+    return _app_cache[0]
+
 
 class _FakeService:
     def get_calendario_operacional(self, project_id: str, version: str | None = None):
@@ -36,7 +44,7 @@ class _FakeService:
 
 
 def test_get_calendario_operacional():
-    app = create_app()
+    app = _get_app()
     app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
     client = TestClient(app)
 
@@ -48,7 +56,7 @@ def test_get_calendario_operacional():
 
 
 def test_post_simular_calendario_operacional():
-    app = create_app()
+    app = _get_app()
     app.dependency_overrides[get_concilium_service] = lambda: _FakeService()
     client = TestClient(app)
 

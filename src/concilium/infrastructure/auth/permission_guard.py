@@ -4,12 +4,11 @@ Permissões são derivadas dos roles em runtime — não ficam no JWT.
 Isso permite alterar ROLE_PERMISSIONS sem revogar tokens existentes.
 
 Roles disponíveis:
-  viewer      → leitura de projetos e artefatos (sem dados financeiros)
-  operator    → viewer + criar + executar pipeline + dados financeiros
-  engineer    → operator + aprovar versões + escrever catálogo
-  admin       → engineer + gerir usuários e sistema
-  service-ci  → criar + executar pipeline (sem financeiro, sem aprovação)
-  auditor     → leitura + dados financeiros (sem executar nada)
+  operator        → health check + leitura + criar projetos + executar pipeline + dados financeiros
+  engineer        → operator + aprovar versões + escrever catálogo
+  admin           → engineer + gerir usuários e sistema
+  auditor         → health check + leitura + dados financeiros (sem executar nada)
+  catalog-manager → health check + especialista em catálogo (sem acesso a projetos de clientes)
 
 Decorators disponíveis (funcionam em FastAPI routes e MCP tools):
 
@@ -38,23 +37,26 @@ ARTIFACTS_READ = "artifacts:read"
 ARTIFACTS_DOWNLOAD = "artifacts:download"
 CATALOG_READ = "catalog:read"
 CATALOG_WRITE = "catalog:write"
-CATALOG_VALIDATE = "catalog:validate"   # ADR-120 D1: health/plausibility/integrity checks
-CATALOG_MERGE = "catalog:merge"         # ADR-120 D1: promoção rascunho→ativo (4 olhos)
+CATALOG_VALIDATE = "catalog:validate"  # ADR-120 D1: health/plausibility/integrity checks
+CATALOG_MERGE = "catalog:merge"  # ADR-120 D1: promoção rascunho→ativo (4 olhos)
 FINANCIALS_READ = "financials:read"
 AUTH_MANAGE = "auth:manage"
 SYSTEM_READ = "system:read"
+HEALTH_READ = "health:read"  # health check do servidor — qualquer usuário autenticado com acesso operacional
 
 # ── Mapeamento role → permissões ──────────────────────────────────────────────
 
-_VIEWER = frozenset({PROJECT_READ, ARTIFACTS_READ, CATALOG_READ})
-
-_OPERATOR = _VIEWER | frozenset(
+_OPERATOR = frozenset(
     {
+        HEALTH_READ,
+        PROJECT_READ,
         PROJECT_CREATE,
         PROJECT_RUN,
+        ARTIFACTS_READ,
         ARTIFACTS_DOWNLOAD,
+        CATALOG_READ,
+        CATALOG_VALIDATE,  # ADR-120 D3: operator pode rodar health checks de catálogo
         FINANCIALS_READ,
-        CATALOG_VALIDATE,  # ADR-120 D3: operator pode rodar health checks
     }
 )
 
@@ -64,18 +66,20 @@ _ENGINEER = _OPERATOR | frozenset({PROJECT_APPROVE, CATALOG_WRITE})
 _ADMIN = _ENGINEER | frozenset({AUTH_MANAGE, SYSTEM_READ, CATALOG_MERGE})
 
 # ADR-120 D2: catalog-manager — especialista em catálogo, sem acesso a projetos de clientes
-_CATALOG_MANAGER = frozenset({
-    CATALOG_READ,
-    CATALOG_VALIDATE,
-    CATALOG_WRITE,
-    CATALOG_MERGE,
-    FINANCIALS_READ,   # para avaliar impacto de reajuste em projetos
-})
-
-_SERVICE_CI = frozenset({PROJECT_CREATE, PROJECT_RUN})
+_CATALOG_MANAGER = frozenset(
+    {
+        HEALTH_READ,
+        CATALOG_READ,
+        CATALOG_VALIDATE,
+        CATALOG_WRITE,
+        CATALOG_MERGE,
+        FINANCIALS_READ,  # para avaliar impacto de reajuste em projetos
+    }
+)
 
 _AUDITOR = frozenset(
     {
+        HEALTH_READ,
         PROJECT_READ,
         ARTIFACTS_READ,
         ARTIFACTS_DOWNLOAD,
@@ -84,13 +88,11 @@ _AUDITOR = frozenset(
 )
 
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
-    "viewer": _VIEWER,
     "operator": _OPERATOR,
     "engineer": _ENGINEER,
     "admin": _ADMIN,
-    "service-ci": _SERVICE_CI,
     "auditor": _AUDITOR,
-    "catalog-manager": _CATALOG_MANAGER,   # ADR-120 D2
+    "catalog-manager": _CATALOG_MANAGER,  # ADR-120 D2
 }
 
 VALID_ROLES: frozenset[str] = frozenset(ROLE_PERMISSIONS.keys())
@@ -99,12 +101,10 @@ VALID_ROLES: frozenset[str] = frozenset(ROLE_PERMISSIONS.keys())
 # Cada role tem um conjunto permitido de ProcurementIntent para acionar pipeline.
 # operator → só RFI (exploração rápida, OLTP); engineer/admin → RFI + RFP (análise completa).
 ROLE_ALLOWED_INTENTS: dict[str, frozenset[str]] = {
-    "viewer":     frozenset(),
-    "operator":   frozenset({"rfi"}),
-    "engineer":   frozenset({"rfi", "rfp"}),
-    "admin":      frozenset({"rfi", "rfp"}),
-    "service-ci": frozenset({"rfi"}),
-    "auditor":    frozenset(),
+    "operator": frozenset({"rfi"}),
+    "engineer": frozenset({"rfi", "rfp"}),
+    "admin": frozenset({"rfi", "rfp"}),
+    "auditor": frozenset(),
 }
 
 
@@ -132,7 +132,7 @@ def check_intent_allowed(intent: str | None, roles: list[str]) -> None:
 # ── Mapeamento legado: scopes ADR-094 → roles ADR-099 ─────────────────────────
 
 LEGACY_SCOPE_TO_ROLE: dict[str, str] = {
-    "mcp:read": "viewer",
+    "mcp:read": "auditor",
     "mcp:write": "engineer",
     "pipeline:run": "operator",
 }
@@ -164,7 +164,7 @@ def roles_from_token(claims: dict) -> list[str]:
         role = LEGACY_SCOPE_TO_ROLE.get(scope)
         if role and role not in roles:
             roles.append(role)
-    return roles or ["viewer"]  # fallback mais seguro: viewer, não nada
+    return roles  # fail-closed: JWT sem roles = sem acesso (viewer removido)
 
 
 def require_permission(perm: str, token_roles: list[str]) -> None:
@@ -199,13 +199,9 @@ _current_roles: contextvars.ContextVar[frozenset[str]] = contextvars.ContextVar(
     "_rbac_current_roles", default=frozenset()
 )
 
-_current_user_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "_auth_current_user_id", default=None
-)
+_current_user_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("_auth_current_user_id", default=None)
 
-_current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "_auth_current_tenant_id", default=None
-)
+_current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("_auth_current_tenant_id", default=None)
 
 
 def set_roles(token_roles: list[str]) -> contextvars.Token:
@@ -213,9 +209,7 @@ def set_roles(token_roles: list[str]) -> contextvars.Token:
     return _current_roles.set(frozenset(token_roles))
 
 
-def set_auth_context(
-    user_id: str | None, tenant_id: str | None
-) -> tuple[contextvars.Token, contextvars.Token]:
+def set_auth_context(user_id: str | None, tenant_id: str | None) -> tuple[contextvars.Token, contextvars.Token]:
     """Define user_id e tenant_id extraídos do JWT no contexto de execução atual.
 
     Retorna tokens para reset no finally do middleware (ADR-118).
@@ -372,10 +366,7 @@ def build_tool_permission_map(server: Any) -> dict[str, str]:
         tools = server._tool_manager._tools
     except AttributeError:
         return {}
-    mapping = {
-        name: (_tool_required_permission(tool) or _FAILCLOSED_TOOL_PERMISSION)
-        for name, tool in tools.items()
-    }
+    mapping = {name: (_tool_required_permission(tool) or _FAILCLOSED_TOOL_PERMISSION) for name, tool in tools.items()}
     # Atualiza o cache módulo-level para consumidores name-based (ex.: scope_guard).
     TOOL_PERMISSIONS.clear()
     TOOL_PERMISSIONS.update(mapping)

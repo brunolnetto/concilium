@@ -769,7 +769,8 @@ class TestDetectarOportunidadesParaleloMissingBranches:
     """Lines 498, 504, 510, 525-528, 534, 559 in _detectar_oportunidades_paralelo."""
 
     def _make_helpers(self):
-        import importlib.util, sys
+        import importlib.util
+        import sys
         from pathlib import Path
 
         path = (
@@ -836,11 +837,14 @@ class TestDetectarOportunidadesParaleloMissingBranches:
         dag = self._dag([a, b])
         pool = self._pool({"ESC": 1})
         sched = self._sched([self._sa("A", 0, 4, {"ESC": 1}), self._sa("B", 4, 4, {"ESC": 1})], 8)
-        costs = {"_comment": "not a dict", "ESC": {
-            "custo_mob_unit": 10_000.0,
-            "custo_contrato_semana_unit": 5_000.0,
-            "unidade_faturamento": "mes",
-        }}
+        costs = {
+            "_comment": "not a dict",
+            "ESC": {
+                "custo_mob_unit": 10_000.0,
+                "custo_contrato_semana_unit": 5_000.0,
+                "unidade_faturamento": "mes",
+            },
+        }
         result = h._detectar_oportunidades_paralelo(sched, dag, pool, costs, 0.0)
         # ESC not found because custo_contrato_semana_unit not set → check gracefully
         assert isinstance(result, list)
@@ -927,7 +931,6 @@ class TestDetectarOportunidadesParaleloMissingBranches:
         # Simplify: C IS in dag/act_map but not in cpm_lf — that's a different path.
         # Instead test: pool=1, back-to-back, gap covered by nothing else → criterion 4 filters
         result = h._detectar_oportunidades_paralelo(
-            sched, dag, pool, costs, 0.0,
-            limite_producao_por_tipo={"ESC": "equipamento"}
+            sched, dag, pool, costs, 0.0, limite_producao_por_tipo={"ESC": "equipamento"}
         )
         assert isinstance(result, list)

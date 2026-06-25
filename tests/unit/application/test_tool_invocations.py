@@ -8,9 +8,7 @@ Cobre:
 
 from __future__ import annotations
 
-import json
 import pytest
-
 
 # ── F1: ROLE_ALLOWED_INTENTS ──────────────────────────────────────────────────
 
@@ -18,63 +16,62 @@ import pytest
 class TestRoleAllowedIntents:
     def test_operator_allows_only_rfi(self):
         from concilium.infrastructure.auth.permission_guard import ROLE_ALLOWED_INTENTS
+
         assert "rfi" in ROLE_ALLOWED_INTENTS["operator"]
         assert "rfp" not in ROLE_ALLOWED_INTENTS["operator"]
 
     def test_engineer_allows_rfi_and_rfp(self):
         from concilium.infrastructure.auth.permission_guard import ROLE_ALLOWED_INTENTS
+
         assert "rfi" in ROLE_ALLOWED_INTENTS["engineer"]
         assert "rfp" in ROLE_ALLOWED_INTENTS["engineer"]
 
     def test_admin_allows_rfi_and_rfp(self):
         from concilium.infrastructure.auth.permission_guard import ROLE_ALLOWED_INTENTS
+
         assert ROLE_ALLOWED_INTENTS["admin"] == frozenset({"rfi", "rfp"})
 
-    def test_service_ci_allows_only_rfi(self):
+    def test_auditor_allows_no_intents(self):
         from concilium.infrastructure.auth.permission_guard import ROLE_ALLOWED_INTENTS
-        assert ROLE_ALLOWED_INTENTS["service-ci"] == frozenset({"rfi"})
 
-    def test_viewer_and_auditor_allow_nothing(self):
-        from concilium.infrastructure.auth.permission_guard import ROLE_ALLOWED_INTENTS
-        assert ROLE_ALLOWED_INTENTS["viewer"] == frozenset()
         assert ROLE_ALLOWED_INTENTS["auditor"] == frozenset()
 
 
 class TestCheckIntentAllowed:
     def test_no_auth_always_passes(self, monkeypatch):
         from concilium.infrastructure.auth.permission_guard import check_intent_allowed
+
         monkeypatch.setattr("concilium.infrastructure.auth.permission_guard._auth_enabled", lambda: False)
         check_intent_allowed("rfp", ["operator"])  # would fail with auth
 
     def test_none_intent_always_passes(self, monkeypatch):
         from concilium.infrastructure.auth.permission_guard import check_intent_allowed
+
         monkeypatch.setattr("concilium.infrastructure.auth.permission_guard._auth_enabled", lambda: True)
-        check_intent_allowed(None, ["viewer"])  # no intent = no check
+        check_intent_allowed(None, ["operator"])  # no intent = no check
 
     def test_operator_rfp_raises(self, monkeypatch):
         from concilium.infrastructure.auth.permission_guard import check_intent_allowed
+
         monkeypatch.setattr("concilium.infrastructure.auth.permission_guard._auth_enabled", lambda: True)
         with pytest.raises(PermissionError, match="rfp"):
             check_intent_allowed("rfp", ["operator"])
 
     def test_operator_rfi_passes(self, monkeypatch):
         from concilium.infrastructure.auth.permission_guard import check_intent_allowed
+
         monkeypatch.setattr("concilium.infrastructure.auth.permission_guard._auth_enabled", lambda: True)
         check_intent_allowed("rfi", ["operator"])  # should not raise
 
     def test_engineer_rfp_passes(self, monkeypatch):
         from concilium.infrastructure.auth.permission_guard import check_intent_allowed
+
         monkeypatch.setattr("concilium.infrastructure.auth.permission_guard._auth_enabled", lambda: True)
         check_intent_allowed("rfp", ["engineer"])  # should not raise
 
-    def test_service_ci_rfp_raises(self, monkeypatch):
-        from concilium.infrastructure.auth.permission_guard import check_intent_allowed
-        monkeypatch.setattr("concilium.infrastructure.auth.permission_guard._auth_enabled", lambda: True)
-        with pytest.raises(PermissionError):
-            check_intent_allowed("rfp", ["service-ci"])
-
     def test_error_message_suggests_correct_role(self, monkeypatch):
         from concilium.infrastructure.auth.permission_guard import check_intent_allowed
+
         monkeypatch.setattr("concilium.infrastructure.auth.permission_guard._auth_enabled", lambda: True)
         with pytest.raises(PermissionError) as exc_info:
             check_intent_allowed("rfp", ["operator"])
@@ -88,6 +85,7 @@ class TestCheckIntentAllowed:
 class TestVersionMetaExtension:
     def test_new_version_stores_criado_por(self, tmp_path):
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "TestProj", "test")
         store.new_version(criado_por="joao.silva", role_criador="operator", procurement_intent="rfi")
         v = store.current_version()
@@ -98,6 +96,7 @@ class TestVersionMetaExtension:
 
     def test_new_version_stores_forked_from(self, tmp_path):
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "TestProj", "test")
         store.new_version()  # v1
         store.new_version(forked_from="v1", criado_por="maria.santos", procurement_intent="rfp")
@@ -109,11 +108,13 @@ class TestVersionMetaExtension:
 
     def test_missing_version_returns_empty_dict(self, tmp_path):
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "TestProj", "test")
         assert store.get_version_meta("v99") == {}
 
     def test_version_history_persists_across_instances(self, tmp_path):
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "TestProj", "test")
         store.new_version(criado_por="actor-x", procurement_intent="rfi")
         # re-open
@@ -123,6 +124,7 @@ class TestVersionMetaExtension:
 
     def test_none_fields_stored_gracefully(self, tmp_path):
         from concilium.infrastructure.storage.project import ProjectStore
+
         store = ProjectStore.init(tmp_path, "TestProj", "test")
         store.new_version()  # all None
         meta = store.get_version_meta(store.current_version())
@@ -136,6 +138,7 @@ class TestVersionMetaExtension:
 class TestVersionAction:
     def test_version_action_fields(self):
         from concilium.application.services.project.audit_service import VersionAction
+
         va = VersionAction(
             action="fork",
             version_afetada="v2",
@@ -151,6 +154,7 @@ class TestVersionAction:
 
     def test_version_action_to_dict(self):
         from concilium.application.services.project.audit_service import VersionAction
+
         va = VersionAction(action="approve", version_afetada="v1", actor_id="admin")
         d = va.to_dict()
         assert d["action"] == "approve"
@@ -160,6 +164,7 @@ class TestVersionAction:
     def test_audit_service_log_version_action(self, tmp_path):
         from concilium.application.services.project.audit_service import AuditService, VersionAction
         from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+
         repo = FileProjectRepository(tmp_path)
         handle = repo.create_project("TestProj", "test")
         svc = AuditService()
@@ -181,6 +186,7 @@ class TestForkVersionTracking:
         from concilium.application.services.project.project_files import DEFAULT_PROJECT_FILES
         from concilium.application.services.project.project_service import ProjectService
         from concilium.infrastructure.storage.file_project_repository import FileProjectRepository
+
         repo = FileProjectRepository(tmp_path)
         handle = repo.create_project("TestProj", "test")
         svc = ProjectService(repo, AuditService(), DEFAULT_PROJECT_FILES)
@@ -188,6 +194,7 @@ class TestForkVersionTracking:
 
     def test_fork_stores_forked_from(self, tmp_path):
         from concilium.infrastructure.storage.project import ProjectStore
+
         svc, handle = self._make_service_and_project(tmp_path)
         project_id = handle.meta.get("id")
         # Create initial version with authorship
@@ -202,6 +209,7 @@ class TestForkVersionTracking:
 
     def test_fork_inherits_intent(self, tmp_path):
         from concilium.infrastructure.storage.project import ProjectStore
+
         svc, handle = self._make_service_and_project(tmp_path)
         project_id = handle.meta.get("id")
         store = ProjectStore(handle.root)

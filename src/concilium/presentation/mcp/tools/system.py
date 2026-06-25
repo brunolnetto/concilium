@@ -6,6 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import (
     _config_root,
     _projetos_root,
@@ -14,13 +15,11 @@ from concilium.presentation.mcp._context import (
 )
 
 
-from concilium.infrastructure.auth.permission_guard import permission
-
 def register(server: FastMCP) -> None:
     """Registra ferramentas de sistema no servidor MCP."""
 
     @server.tool()
-    @permission("system:read")
+    @permission("health:read")
     def ping() -> dict[str, Any]:
         """Verifica a saúde do servidor MCP sem criar nem alterar dados.
 

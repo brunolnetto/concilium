@@ -282,7 +282,7 @@ class TestLimparJobsExpirados:
 
     def test_limpar_jobs_expirados_keeps_recent_terminal_jobs(self, job_config, job_repository):
         """Terminal jobs within TTL must NOT be removed."""
-        from datetime import UTC, datetime, timedelta
+        from datetime import UTC, datetime
 
         from concilium.application.jobs.repository import InMemoryJobRepository
         from concilium.application.jobs.service import JobService
@@ -439,8 +439,10 @@ class TestExecutarPipelineAsync:
         mock_store.escopo.return_value = mock_escopo
         job_service._project_factory = lambda pid: mock_store
 
-        with patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-1"), \
-             patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", return_value={"done": True}):
+        with (
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-1"),
+            patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", return_value={"done": True}),
+        ):
             job_service._executar_pipeline_async(job_id)
 
         result_job = job_service._repo.get(job_id)
@@ -456,8 +458,13 @@ class TestExecutarPipelineAsync:
         mock_store = MagicMock()
         job_service._project_factory = lambda pid: mock_store
 
-        with patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-f"), \
-             patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", side_effect=RuntimeError("pipeline crash")):
+        with (
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-f"),
+            patch(
+                "concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano",
+                side_effect=RuntimeError("pipeline crash"),
+            ),
+        ):
             job_service._executar_pipeline_async(job_id)
 
         result_job = job_service._repo.get(job_id)
@@ -469,7 +476,9 @@ class TestExecutarPipelineAsync:
         """Worker transitions to ERRO when no active plan and plano_id is None."""
         from unittest.mock import MagicMock, patch
 
-        job_id = self._fresh_waiting_job(job_service, "job-async-noplan", "proj-noplan", escopo_id="esc-np", plano_id=None)
+        job_id = self._fresh_waiting_job(
+            job_service, "job-async-noplan", "proj-noplan", escopo_id="esc-np", plano_id=None
+        )
 
         mock_store = MagicMock()
         mock_escopo = MagicMock()
@@ -533,11 +542,12 @@ class TestCancelarJob:
 
     def test_cancelar_job_terminal_raises(self, job_service):
         """Cancelling a terminal job raises ValueError."""
+        from datetime import UTC, datetime
+
         from concilium.application.jobs.repository import InMemoryJobRepository
         from concilium.application.jobs.service import JobService
         from concilium.application.jobs.state import PipelineJobStateMachine
         from concilium.infrastructure.settings import JobsSettings
-        from datetime import UTC, datetime
 
         repo = InMemoryJobRepository()
         cfg = JobsSettings(max_concurrent_jobs=2, job_ttl_hours=1, job_gc_interval_minutes=5)
@@ -575,11 +585,12 @@ class TestListarJobsStatusCounts:
 
     def test_listar_jobs_counts_cancelado(self, job_service):
         """CANCELADO status must be counted in estatisticas."""
+        from datetime import UTC, datetime
+
         from concilium.application.jobs.repository import InMemoryJobRepository
         from concilium.application.jobs.service import JobService
         from concilium.application.jobs.state import PipelineJobStateMachine
         from concilium.infrastructure.settings import JobsSettings
-        from datetime import UTC, datetime
 
         repo = InMemoryJobRepository()
         cfg = JobsSettings(max_concurrent_jobs=2, job_ttl_hours=1, job_gc_interval_minutes=5)
@@ -638,8 +649,9 @@ class TestGarbageCollectorLoop:
     def test_gc_loop_calls_limpar_when_event_not_set(self):
         """The GC loop calls _limpar_jobs_expirados at least once before stopping."""
         import threading
-        from concilium.application.jobs.service import JobService
+
         from concilium.application.jobs.repository import InMemoryJobRepository
+        from concilium.application.jobs.service import JobService
         from concilium.infrastructure.settings import JobsSettings
 
         repo = InMemoryJobRepository()
@@ -671,8 +683,9 @@ class TestExecutarPipelineFallbackMcp:
 
     def test_fallback_mcp_path_on_factory_none(self):
         """When runtime_factory/project_factory are None, the MCP fallback is used."""
-        from unittest.mock import MagicMock, patch
         from datetime import UTC, datetime
+        from unittest.mock import MagicMock, patch
+
         from concilium.application.jobs.repository import InMemoryJobRepository
         from concilium.application.jobs.service import JobService
         from concilium.application.jobs.state import PipelineJobStateMachine
@@ -711,10 +724,12 @@ class TestExecutarPipelineFallbackMcp:
         mock_escopo.plan.return_value = mock_plan
         mock_store.escopo.return_value = mock_escopo
 
-        with patch("concilium.presentation.mcp._context._runtime", return_value=mock_rt), \
-             patch("concilium.presentation.mcp._context._project", return_value=mock_store), \
-             patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-mcp"), \
-             patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", return_value={"mcp": True}):
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=mock_rt),
+            patch("concilium.presentation.mcp._context._project", return_value=mock_store),
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-mcp"),
+            patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", return_value={"mcp": True}),
+        ):
             svc._executar_pipeline_async("job-mcp-fallback")
 
         result_job = repo.get("job-mcp-fallback")
@@ -726,6 +741,7 @@ class TestListarJobsStatusCountsConcludedAndError:
 
     def _make_job(self, job_id, status_str, repo):
         from datetime import UTC, datetime
+
         from concilium.application.jobs.state import PipelineJobStateMachine
 
         now = datetime.now(UTC).isoformat()
@@ -771,7 +787,7 @@ class TestListarJobsStatusCountsConcludedAndError:
 
         listing = svc.listar_jobs()
         assert listing.estatisticas.concluido == 2  # line 328
-        assert listing.estatisticas.erro == 1       # line 330
+        assert listing.estatisticas.erro == 1  # line 330
 
 
 if __name__ == "__main__":

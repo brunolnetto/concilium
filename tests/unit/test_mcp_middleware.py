@@ -270,7 +270,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         receive = AsyncMock()
         send = AsyncMock()
 
-        fake_claims = {"roles": ["viewer"], "sub": "u1"}
+        fake_claims = {"roles": ["operator"], "sub": "u1"}
         fake_token_var = MagicMock()
 
         with self._patch_auth_enabled(True):
@@ -280,7 +280,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
             ):
                 with patch(
                     "concilium.infrastructure.auth.permission_guard.roles_from_token",
-                    return_value=["viewer"],
+                    return_value=["operator"],
                 ) as mock_roles_from:
                     with patch(
                         "concilium.infrastructure.auth.permission_guard.set_roles",

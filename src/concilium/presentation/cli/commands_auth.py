@@ -39,19 +39,18 @@ def add_user(
     client_id: str = typer.Option(..., "--id", "-i", help="ID do cliente/usuário."),
     secret: str | None = typer.Option(None, "--secret", "-s", help="Secret. Gerado automaticamente se omitido."),
     role: str = typer.Option(
-        "operator", "--role", "-r", help="Role RBAC: viewer | operator | engineer | admin | service-ci | auditor"
+        "operator", "--role", "-r", help="Role RBAC: operator | engineer | admin | auditor | catalog-manager"
     ),
     notes: str = typer.Option("", "--notes", help="Observações opcionais."),
 ) -> None:
     """Registra um novo usuário/cliente no auth store.
 
     Roles disponíveis:
-      viewer     — leitura de projetos e artefatos
-      operator   — viewer + criar projetos + executar pipeline + dados financeiros
-      engineer   — operator + aprovar versões + escrever catálogo
-      admin      — acesso completo incluindo gestão de usuários
-      service-ci — criar + executar pipeline (sem dados financeiros, sem aprovar)
-      auditor    — leitura + dados financeiros (sem executar)
+      operator       — leitura + criar projetos + executar pipeline + dados financeiros
+      engineer       — operator + aprovar versões + escrever catálogo
+      admin          — acesso completo incluindo gestão de usuários
+      auditor        — leitura + dados financeiros (sem executar)
+      catalog-manager — especialista em catálogo (sem acesso a projetos de clientes)
     """
     from concilium.infrastructure.auth.auth_store import get_auth_store
 

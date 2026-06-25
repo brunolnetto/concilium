@@ -17,7 +17,6 @@ Covers:
 from __future__ import annotations
 
 import os
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -190,6 +189,7 @@ class TestFpdf2ImageProvider:
 class TestFpdf2ExceptionFallback:
     def test_returns_none_when_fpdf_unavailable(self):
         import builtins
+
         import concilium.application.runtime.deliverables.reports.pdf_renderer as mod
 
         orig_use_rl = mod._USE_REPORTLAB
@@ -293,6 +293,7 @@ class TestFpdf2TempFileCleanup:
     def test_temp_file_cleaned_up_after_render(self, tmp_path):
         """Temp files created for images are deleted in the finally block."""
         import tempfile
+
         import concilium.application.runtime.deliverables.reports.pdf_renderer as mod
 
         orig_use_rl = mod._USE_REPORTLAB

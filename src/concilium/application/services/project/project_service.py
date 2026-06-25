@@ -307,6 +307,7 @@ class ProjectService:
             _current_roles,
             get_current_user_id,
         )
+
         user_id = get_current_user_id() or actor
         roles = list(_current_roles.get())
         role_criador = roles[0] if roles else None
@@ -332,6 +333,7 @@ class ProjectService:
         }
         # ADR-119 D5: VersionAction no audit trail
         from .audit_service import VersionAction
+
         va = VersionAction(
             action="fork",
             version_afetada=new_version,
@@ -341,8 +343,11 @@ class ProjectService:
             detalhes={"forked_from": base_version},
         )
         self._audit_service.log(
-            project, action="fork_version", actor=actor,
-            payload={"base_version": base_version}, result=payload,
+            project,
+            action="fork_version",
+            actor=actor,
+            payload={"base_version": base_version},
+            result=payload,
             version_action=va,
         )
         return payload

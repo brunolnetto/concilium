@@ -26,7 +26,6 @@ import pytest
 
 from concilium.infrastructure.storage.project import ProjectStore
 
-
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -83,6 +82,7 @@ class TestSaveCanonical:
         store = _make_store(tmp_path)
         # No version created yet
         from unittest.mock import MagicMock
+
         model = MagicMock()
         model.model_dump_json.return_value = '{"meta": {"versao_schema": "1.0"}}'
         with pytest.raises(ValueError, match="Nenhuma versão ativa"):
@@ -94,10 +94,11 @@ class TestSaveCanonical:
         vpath = store.root / v
         # Create a canonical.json and make it read-only (simulates approved version)
         cf = vpath / ProjectStore.CANONICAL_FILE
-        cf.write_text('{}', encoding="utf-8")
+        cf.write_text("{}", encoding="utf-8")
         os.chmod(cf, 0o444)
 
         from unittest.mock import MagicMock
+
         model = MagicMock()
         model.model_dump_json.return_value = '{"meta": {}}'
         with pytest.raises(PermissionError, match="APROVADA"):
@@ -121,7 +122,7 @@ class TestWriteCanonicalRaw:
         v = store.new_version()
         vpath = store.root / v
         cf = vpath / ProjectStore.CANONICAL_FILE
-        cf.write_text('{}', encoding="utf-8")
+        cf.write_text("{}", encoding="utf-8")
         os.chmod(cf, 0o444)
 
         with pytest.raises(PermissionError, match="read-only"):
@@ -179,8 +180,6 @@ class TestResolveCpu:
 
     def test_resolve_from_aggregate_cpus_json_list(self, tmp_path):
         """resolve_cpu reads cpus.json aggregate file."""
-        import sys
-        from pathlib import Path
 
         store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="test-cat")
         # The aggregate file path is: concilium_root/config/catalogos/{cat}/cpus.json
@@ -421,7 +420,7 @@ class TestApprove:
         v = store.new_version()
         vpath = store.root / v
         cf = vpath / ProjectStore.CANONICAL_FILE
-        cf.write_text('{}', encoding="utf-8")
+        cf.write_text("{}", encoding="utf-8")
         (vpath / ProjectStore.INVOCATIONS_LOG).write_text("", encoding="utf-8")
 
         store.approve(v)
@@ -542,7 +541,9 @@ class TestIsReadonly:
 class TestProjectStoreInit:
     def test_init_with_benchmark_slug(self, tmp_path):
         store = ProjectStore.init(
-            tmp_path, "Benchmark", "ctx",
+            tmp_path,
+            "Benchmark",
+            "ctx",
             derivado_de_benchmark="BENCH-001",
         )
         assert store.root.name == "BENCH-001"
@@ -550,6 +551,7 @@ class TestProjectStoreInit:
 
     def test_init_without_slug_uses_uuid(self, tmp_path):
         import uuid
+
         store = ProjectStore.init(tmp_path, "Proj", "ctx")
         # Name should be a valid UUID
         uuid.UUID(store.root.name)
@@ -562,16 +564,12 @@ class TestProjectStoreInit:
 
     def test_init_preserves_existing_overrides(self, tmp_path):
         """exist_ok=True: re-init preserves existing overlay data."""
-        store = ProjectStore.init(
-            tmp_path, "Bench", "ctx", derivado_de_benchmark="BENCH-PRESERVED"
-        )
+        store = ProjectStore.init(tmp_path, "Bench", "ctx", derivado_de_benchmark="BENCH-PRESERVED")
         overlay_file = store.root / "overrides" / "cpus_overlay.json"
         overlay_file.write_text('{"CPU-EXISTING": {"x": 1}}', encoding="utf-8")
 
         # Re-init same slug
-        store2 = ProjectStore.init(
-            tmp_path, "Bench", "ctx", derivado_de_benchmark="BENCH-PRESERVED"
-        )
+        store2 = ProjectStore.init(tmp_path, "Bench", "ctx", derivado_de_benchmark="BENCH-PRESERVED")
         data = json.loads(overlay_file.read_text(encoding="utf-8"))
         assert "CPU-EXISTING" in data
 
@@ -599,23 +597,38 @@ class TestCreateEscopo:
     def test_create_escopo_raises_if_exists(self, tmp_path):
         store = _make_store(tmp_path)
         store.create_escopo(
-            escopo_id="e1", nome="E1", tipo_obra="terra",
-            localizacao="SP", coordenadas_lat=-23.5, coordenadas_lng=-46.6,
-            data_inicio="2026-01-01", data_termino="2026-12-31",
+            escopo_id="e1",
+            nome="E1",
+            tipo_obra="terra",
+            localizacao="SP",
+            coordenadas_lat=-23.5,
+            coordenadas_lng=-46.6,
+            data_inicio="2026-01-01",
+            data_termino="2026-12-31",
         )
         with pytest.raises(FileExistsError, match="já existe"):
             store.create_escopo(
-                escopo_id="e1", nome="E1 dup", tipo_obra="terra",
-                localizacao="SP", coordenadas_lat=-23.5, coordenadas_lng=-46.6,
-                data_inicio="2026-01-01", data_termino="2026-12-31",
+                escopo_id="e1",
+                nome="E1 dup",
+                tipo_obra="terra",
+                localizacao="SP",
+                coordenadas_lat=-23.5,
+                coordenadas_lng=-46.6,
+                data_inicio="2026-01-01",
+                data_termino="2026-12-31",
             )
 
     def test_create_escopo_writes_meta(self, tmp_path):
         store = _make_store(tmp_path)
         es = store.create_escopo(
-            escopo_id="e2", nome="Escopo 2", tipo_obra="pavimentacao",
-            localizacao="RJ", coordenadas_lat=-22.9, coordenadas_lng=-43.2,
-            data_inicio="2026-02-01", data_termino="2026-08-31",
+            escopo_id="e2",
+            nome="Escopo 2",
+            tipo_obra="pavimentacao",
+            localizacao="RJ",
+            coordenadas_lat=-22.9,
+            coordenadas_lng=-43.2,
+            data_inicio="2026-02-01",
+            data_termino="2026-08-31",
         )
         assert es is not None
         assert "e2" in store.list_escopos()

@@ -10,6 +10,19 @@ from fastapi.testclient import TestClient
 pytestmark = pytest.mark.slow  # create_app() por fixture = ~3.5s por teste
 
 
+@pytest.fixture(scope="module")
+def _adr112_app():
+    """Cria o app uma única vez por módulo — evita ~3.5s × 30 testes = ~100s."""
+    from concilium.presentation.api.app import create_app
+
+    with (
+        patch("concilium.presentation.api.app.setup_telemetry"),
+        patch("concilium.presentation.api.app.configure_logging"),
+    ):
+        app = create_app()
+    yield app
+
+
 @pytest.fixture
 def storage(tmp_path):
     from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
@@ -18,24 +31,18 @@ def storage(tmp_path):
 
 
 @pytest.fixture
-def client(storage):
+def client(_adr112_app, storage):
     """TestClient com dependency_overrides para _get_storage → storage isolado.
 
     Mockamos setup_telemetry para evitar que PeriodicExportingMetricReader inicie
     threads de background que causam "I/O operation on closed file" ao encerrar pytest.
     """
-    from concilium.presentation.api.app import create_app
     from concilium.presentation.api.routes.observability import _get_storage
 
-    with (
-        patch("concilium.presentation.api.app.setup_telemetry"),
-        patch("concilium.presentation.api.app.configure_logging"),
-    ):
-        app = create_app()
-    app.dependency_overrides[_get_storage] = lambda: storage
-    with TestClient(app, raise_server_exceptions=True) as c:
+    _adr112_app.dependency_overrides[_get_storage] = lambda: storage
+    with TestClient(_adr112_app, raise_server_exceptions=True) as c:
         yield c
-    app.dependency_overrides.clear()
+    _adr112_app.dependency_overrides.pop(_get_storage, None)
 
 
 def _seed_silver_logs(storage, records):

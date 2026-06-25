@@ -20,7 +20,7 @@ import pytest
 
 _GOLDEN_REF = Path(__file__).parents[2] / "benchmarks/data/GOLDEN/referencia.json"
 _ABS_TOL = 0.0001  # 0.01% — invariantes algébricos
-_REG_TOL = 0.005   # 0.5%  — invariantes de regressão
+_REG_TOL = 0.005  # 0.5%  — invariantes de regressão
 
 
 @pytest.fixture(scope="module")
@@ -33,6 +33,7 @@ def golden_ref() -> dict:
 # Tipo 1: Invariantes algébricos (não precisam do pipeline)
 # Falha = bug de fórmula ou dados inconsistentes no referencia.json
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestAlgebraicInvariants:
     """Verifica Q×PU=subtotal e consistência do referencia.json sem rodar o pipeline."""
@@ -55,8 +56,7 @@ class TestAlgebraicInvariants:
             expected = round(q * pu_total, 2)
             desvio = abs(expected - subtotal) / max(abs(subtotal), 1.0)
             assert desvio <= _ABS_TOL, (
-                f"{item_id}: Q={q} × PU={pu_total} = {expected} ≠ subtotal_sem_bdi={subtotal} "
-                f"(desvio={desvio:.4%})"
+                f"{item_id}: Q={q} × PU={pu_total} = {expected} ≠ subtotal_sem_bdi={subtotal} (desvio={desvio:.4%})"
             )
 
     def test_pu_components_sum_to_total(self, golden_ref):
@@ -97,6 +97,7 @@ class TestAlgebraicInvariants:
 # Falha = mudança arquitetural; atualizar golden com commit 'golden(update): razão'
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="module")
 def golden_benchmark(config_root):
     """Executa o pipeline GOLDEN e retorna o canonical + report.
@@ -112,6 +113,7 @@ def golden_benchmark(config_root):
     facade.run_single("GOLDEN", reset=True, mode=PipelineMode.OLTP)
 
     from concilium.infrastructure.storage.project import ProjectStore
+
     agis_store_root = facade.projects_root / "GOLDEN"
     if not agis_store_root.exists():
         pytest.skip("GOLDEN benchmark não foi executado — rodar manualmente com --run-golden")
@@ -133,12 +135,8 @@ class TestGoldenRegression:
     def test_custo_direto_instancial_leq_custo_catalogo(self, golden_benchmark):
         """Invariante ADR-085: custo_instancial ≤ custo_catálogo (Q×PU)."""
         ref = json.loads(_GOLDEN_REF.read_text(encoding="utf-8"))
-        custo_catalogo = sum(
-            float(p["subtotal"]["sem_bdi"]["total"]) for p in ref.get("planejamento", [])
-        )
-        custo_instancial = sum(
-            eq.custo_total for eq in golden_benchmark.equipes_diretas
-        )
+        custo_catalogo = sum(float(p["subtotal"]["sem_bdi"]["total"]) for p in ref.get("planejamento", []))
+        custo_instancial = sum(eq.custo_total for eq in golden_benchmark.equipes_diretas)
         assert custo_instancial <= custo_catalogo * (1 + _ABS_TOL), (
             f"Invariante ADR-085 violada: custo_instancial={custo_instancial:,.2f} > "
             f"custo_catalogo={custo_catalogo:,.2f}"
@@ -148,15 +146,14 @@ class TestGoldenRegression:
     def test_margem_pct_above_minimum(self, golden_benchmark):
         """Invariante ADR-060: margem_pct ≥ MARGEM_MINIMA (5%)."""
         from concilium.domain.constants import MARGEM_MINIMA
+
         resultado = getattr(golden_benchmark, "resultado", None)
         if resultado is None:
             pytest.skip("Canonical sem resultado — pipeline OLAP necessário")
         margem = getattr(resultado, "margem_pct", None) or getattr(resultado, "margem_bruta", None)
         if margem is None:
             pytest.skip("Margem não calculada neste modo de pipeline")
-        assert margem >= MARGEM_MINIMA, (
-            f"Margem {margem:.2%} abaixo do mínimo {MARGEM_MINIMA:.2%} (ADR-060)"
-        )
+        assert margem >= MARGEM_MINIMA, f"Margem {margem:.2%} abaixo do mínimo {MARGEM_MINIMA:.2%} (ADR-060)"
 
     @pytest.mark.slow
     def test_all_three_eap_items_scheduled(self, golden_benchmark):
@@ -171,8 +168,7 @@ class TestGoldenRegression:
         """Makespan deve estar entre 4 e 20 semanas para o GOLDEN."""
         makespan = golden_benchmark.cronograma.makespan_weeks
         assert 4 <= makespan <= 20, (
-            f"Makespan {makespan} fora do intervalo esperado [4, 20] semanas. "
-            "Verifique as produtividades dos CPUs."
+            f"Makespan {makespan} fora do intervalo esperado [4, 20] semanas. Verifique as produtividades dos CPUs."
         )
 
     @pytest.mark.slow
@@ -226,6 +222,7 @@ class TestGoldenRegression:
 # Tipo 3: Invariantes matemáticos da saída (pós-pipeline)
 # Verificam consistência interna do canonical — não dependem de valores absolutos
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestCanonicalMathInvariants:
     """Verifica invariantes matemáticos internos do canonical GOLDEN."""

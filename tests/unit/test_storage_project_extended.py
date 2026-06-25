@@ -488,6 +488,7 @@ class TestOutputSubdirAndFallback:
         store.new_version()
         # v1 exists but no outputs/ subdir is created after the fact
         import shutil
+
         shutil.rmtree(store.root / "v1" / "outputs")
         assert store.list_output_files() == []
 
@@ -501,9 +502,7 @@ class TestNewVersionWithBase:
     def test_new_version_copies_from_explicit_base(self, tmp_path):
         store = _init_store(tmp_path)
         store.new_version()  # v1
-        (store.root / "v1" / "canonical.json").write_text(
-            json.dumps(_make_minimal_canonical()), encoding="utf-8"
-        )
+        (store.root / "v1" / "canonical.json").write_text(json.dumps(_make_minimal_canonical()), encoding="utf-8")
         store.new_version()  # v2 (no explicit base, copies v1)
         # Create v3 explicitly from v1
         store.new_version(base="v1")
@@ -535,9 +534,7 @@ class TestResolveCpu:
         snaps_dir = store.root / "snapshots"
         snaps_dir.mkdir(exist_ok=True)
         snap_data = {"cpus": [{"codigo": "CPU-SNAP", "descricao": "snapshot cpu"}]}
-        (snaps_dir / "catalogo-v1.json").write_text(
-            json.dumps(snap_data), encoding="utf-8"
-        )
+        (snaps_dir / "catalogo-v1.json").write_text(json.dumps(snap_data), encoding="utf-8")
         result = store.resolve_cpu("CPU-SNAP")
         assert result is not None
         assert result["codigo"] == "CPU-SNAP"
@@ -647,7 +644,9 @@ class TestEscopos:
             bdi_perfil_id="bdi-001",
         )
         import json as _json
+
         from concilium.infrastructure.storage.escopo_store import EscopoStore
+
         meta = _json.loads((es.root / EscopoStore.ESCOPO_FILE).read_text(encoding="utf-8"))
         assert meta["dias_semana"] == 5
         assert meta["bdi_perfil_id"] == "bdi-001"

@@ -30,6 +30,7 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
 
 from concilium.infrastructure.auth.permission_guard import permission
 
+
 def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de catálogo."""
 
@@ -97,6 +98,7 @@ def register(server: FastMCP) -> None:
             return _impl_verificar_integridade_catalogo(contexto_id, alpha_clt, alpha_pj, preco_diesel)
         else:
             from concilium.presentation.mcp._context import _wrap_response
+
             return _wrap_response({"erro": f"modo '{modo}' inválido. Use: saude | plausibilidade | integridade"})
 
     # ── Mutação / atualização ────────────────────────────────────────────────
@@ -159,12 +161,16 @@ def register(server: FastMCP) -> None:
         if modo == "pontual":
             if not insumo_id or not data_referencia:
                 from concilium.presentation.mcp._context import _wrap_response
+
                 return _wrap_response({"erro": "modo='pontual' requer insumo_id e data_referencia"})
-            return _impl_consultar_preco_insumo_temporal(contexto_id, insumo_id, data_referencia, projeto_id, jurisdicao_id)
+            return _impl_consultar_preco_insumo_temporal(
+                contexto_id, insumo_id, data_referencia, projeto_id, jurisdicao_id
+            )
         elif modo == "tendencia":
             return _impl_tendencia_precos_catalogo(contexto_id, jurisdicao_id)
         else:
             from concilium.presentation.mcp._context import _wrap_response
+
             return _wrap_response({"erro": f"modo '{modo}' inválido. Use: pontual | tendencia"})
 
     @server.tool(
@@ -222,16 +228,22 @@ def register(server: FastMCP) -> None:
             if modo == "listar":
                 versions = svc.list_versions(contexto_id)
                 current = svc.current_version(contexto_id)
-                return {"contexto_id": contexto_id, "versao_atual": current,
-                        "total_versoes": len(versions), "historico": versions}
+                return {
+                    "contexto_id": contexto_id,
+                    "versao_atual": current,
+                    "total_versoes": len(versions),
+                    "historico": versions,
+                }
             elif modo == "comparar":
                 if not versao_a or not versao_b:
                     from concilium.presentation.mcp._context import _wrap_response
+
                     return _wrap_response({"erro": "modo='comparar' requer versao_a e versao_b"})
                 diff = svc.compare(contexto_id, versao_a, versao_b)
                 return {"contexto_id": contexto_id, "versao_a": versao_a, "versao_b": versao_b, "diff": diff}
             else:
                 from concilium.presentation.mcp._context import _wrap_response
+
                 return _wrap_response({"erro": f"modo '{modo}' inválido. Use: listar | comparar"})
         except Exception as exc:
             return {"erro": str(exc)}
@@ -280,16 +292,18 @@ def register(server: FastMCP) -> None:
             )
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
-        return _wrap_response({
-            "contexto_id": contexto_id,
-            "rascunho_id": new_v["version"],
-            "versao_ativa": current_v,
-            "descricao": descricao,
-            "criado_por": actor,
-            "status": "RASCUNHO",
-            "nota": "Use atualizar_preco_insumo/adicionar_variante_producao para editar. "
-                    "Use aprovar_merge_catalogo para promover (requer catalog:merge).",
-        })
+        return _wrap_response(
+            {
+                "contexto_id": contexto_id,
+                "rascunho_id": new_v["version"],
+                "versao_ativa": current_v,
+                "descricao": descricao,
+                "criado_por": actor,
+                "status": "RASCUNHO",
+                "nota": "Use atualizar_preco_insumo/adicionar_variante_producao para editar. "
+                "Use aprovar_merge_catalogo para promover (requer catalog:merge).",
+            }
+        )
 
     @server.tool(
         description=(
@@ -319,12 +333,14 @@ def register(server: FastMCP) -> None:
             diff = svc.compare(contexto_id, current_v, rascunho_id)
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
-        return _wrap_response({
-            "contexto_id": contexto_id,
-            "versao_ativa": current_v,
-            "rascunho_id": rascunho_id,
-            "divergencias": diff,
-        })
+        return _wrap_response(
+            {
+                "contexto_id": contexto_id,
+                "versao_ativa": current_v,
+                "rascunho_id": rascunho_id,
+                "divergencias": diff,
+            }
+        )
 
     @server.tool(
         description=(
@@ -357,15 +373,17 @@ def register(server: FastMCP) -> None:
         # Estimativa de impacto: conta insumos modificados e projetos que os usam
         modificados = diff.get("modificados", {})
         n_insumos = len(modificados)
-        return _wrap_response({
-            "contexto_id": contexto_id,
-            "versao_ativa": current_v,
-            "rascunho_id": rascunho_id,
-            "n_insumos_afetados": n_insumos,
-            "insumos_modificados": list(modificados.keys())[:20],
-            "impacto_estimado": "indisponível — requer recálculo full de projetos ativos",
-            "nota": "Para impacto preciso, execute disparar_pipeline nos projetos após o merge.",
-        })
+        return _wrap_response(
+            {
+                "contexto_id": contexto_id,
+                "versao_ativa": current_v,
+                "rascunho_id": rascunho_id,
+                "n_insumos_afetados": n_insumos,
+                "insumos_modificados": list(modificados.keys())[:20],
+                "impacto_estimado": "indisponível — requer recálculo full de projetos ativos",
+                "nota": "Para impacto preciso, execute disparar_pipeline nos projetos após o merge.",
+            }
+        )
 
     @server.tool(
         description=(
@@ -413,20 +431,23 @@ def register(server: FastMCP) -> None:
                 meta_file = entity_dir / f"{contexto_id}.json"
                 if meta_file.exists():
                     import json as _json
+
                     meta = _json.loads(meta_file.read_text(encoding="utf-8"))
                     meta["current_version"] = rascunho_id
                     meta_file.write_text(_json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
-        return _wrap_response({
-            "contexto_id": contexto_id,
-            "versao_anterior": versao_anterior,
-            "versao_ativa": rascunho_id,
-            "aprovado_por": actor,
-            "role_aprovador": roles[0] if roles else None,
-            "justificativa": justificativa,
-            "status": "APROVADO",
-        })
+        return _wrap_response(
+            {
+                "contexto_id": contexto_id,
+                "versao_anterior": versao_anterior,
+                "versao_ativa": rascunho_id,
+                "aprovado_por": actor,
+                "role_aprovador": roles[0] if roles else None,
+                "justificativa": justificativa,
+                "status": "APROVADO",
+            }
+        )
 
     @server.tool(
         description=(
@@ -450,7 +471,6 @@ def register(server: FastMCP) -> None:
         """
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.auth.permission_guard import (
-            _current_roles,
             get_current_user_id,
         )
         from concilium.infrastructure.settings import get_storage
@@ -466,7 +486,7 @@ def register(server: FastMCP) -> None:
             versao_ativa = svc.current_version(contexto_id)
             # Sinaliza rejeição no arquivo do rascunho
             import json as _json
-            from pathlib import Path
+
             rascunho_file = config_root / "contextos" / contexto_id / "versions" / f"{rascunho_id}.json"
             if rascunho_file.exists():
                 data = _json.loads(rascunho_file.read_text(encoding="utf-8"))
@@ -476,11 +496,106 @@ def register(server: FastMCP) -> None:
                 rascunho_file.write_text(_json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as exc:
             return _wrap_response({"erro": str(exc)})
-        return _wrap_response({
-            "contexto_id": contexto_id,
-            "rascunho_id": rascunho_id,
-            "versao_ativa": versao_ativa,
-            "rejeitado_por": actor,
-            "motivo": motivo,
-            "status": "REJEITADO",
-        })
+        return _wrap_response(
+            {
+                "contexto_id": contexto_id,
+                "rascunho_id": rascunho_id,
+                "versao_ativa": versao_ativa,
+                "rejeitado_por": actor,
+                "motivo": motivo,
+                "status": "REJEITADO",
+            }
+        )
+
+    # ── Pesquisa de mercado ──────────────────────────────────────────────────
+
+    @server.tool(
+        description=(
+            "Gera planilha de pesquisa de mercado (Mapa de Cotação ou Aferição de Produtividade). "
+            "Retorna o arquivo Excel em base64 para envio a fornecedores. "
+            "Exclusivo do catalog-manager — não exige acesso a projetos de clientes."
+        )
+    )
+    @permission("catalog:read")
+    def exportar_pesquisa_mercado(
+        contexto_id: str = "mendeslobo",
+        jurisdicao_id: str = "",
+        tipo: str = "price",
+    ) -> dict[str, Any]:
+        """Gera planilha de pesquisa de mercado para coleta de preços com fornecedores.
+
+        Tipos disponíveis:
+          price        — Mapa de Cotação: lista insumos (material/mão-de-obra/equipamento)
+                         com preços de benchmark e campos em branco para o fornecedor preencher.
+          productivity — Aferição de Produtividade: lista CPUs com índices de referência
+                         e campos para registro de produtividade observada em campo.
+
+        Args:
+            contexto_id:   ID do contexto de catálogo (default: "mendeslobo").
+            jurisdicao_id: ID da jurisdição para benchmark regional (default: do contexto).
+            tipo:          Tipo da pesquisa: "price" ou "productivity".
+
+        Returns:
+            nome_arquivo, tamanho_mb, conteudo_base64 (xlsx), instrucao de uso.
+        """
+        import base64
+        import tempfile
+
+        from concilium.presentation.mcp._context import _runtime, _wrap_response
+
+        if tipo not in ("price", "productivity"):
+            return _wrap_response({"erro": f"Tipo inválido '{tipo}'. Use 'price' ou 'productivity'."})
+
+        try:
+            rt = _runtime()
+            ctx = rt.load_contexto(contexto_id)
+            catalogo = rt.load_catalogo(ctx.catalogo_id)
+            catalogo["identidade_visual"] = rt.load_tema(ctx.tema_id).to_catalogo_dict()
+        except Exception as exc:
+            return _wrap_response({"erro": f"Falha ao carregar contexto '{contexto_id}': {exc}"})
+
+        jur_id = jurisdicao_id or ctx.jurisdicao_id
+
+        try:
+            if tipo == "price":
+                from concilium.infrastructure.exporters.price_survey import PriceSurveyExporter
+
+                exporter = PriceSurveyExporter(catalogo, jurisdicao_id=jur_id)
+                nome = f"mapa_cotacao_{contexto_id}_{jur_id}.xlsx"
+            else:
+                from concilium.infrastructure.exporters.productivity_survey import ProductivitySurveyExporter
+
+                exporter = ProductivitySurveyExporter(catalogo, jurisdicao_id=jur_id)
+                nome = f"afericao_produtividade_{contexto_id}_{jur_id}.xlsx"
+
+            with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+                tmp_path = Path(tmp.name)
+
+            exporter.export(tmp_path)
+            size_mb = round(tmp_path.stat().st_size / (1024 * 1024), 3)
+
+            if size_mb > 20:
+                return _wrap_response(
+                    {
+                        "aviso": f"Planilha ({size_mb} MB) muito grande para transferência inline.",
+                        "instrucao": "Execute via CLI: concilium catalog survey --type price",
+                    }
+                )
+
+            conteudo_b64 = base64.b64encode(tmp_path.read_bytes()).decode("ascii")
+            tmp_path.unlink(missing_ok=True)
+        except Exception as exc:
+            return _wrap_response({"erro": f"Falha ao gerar pesquisa: {exc}"})
+
+        return _wrap_response(
+            {
+                "nome_arquivo": nome,
+                "tipo": tipo,
+                "contexto_id": contexto_id,
+                "jurisdicao_id": jur_id,
+                "tamanho_mb": size_mb,
+                "conteudo_base64": conteudo_b64,
+                "encoding": "base64",
+                "instrucao": "Decodifique base64 e salve como .xlsx. Campos destacados em amarelo são para preenchimento do fornecedor.",
+            }
+        )

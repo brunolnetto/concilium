@@ -64,8 +64,10 @@ def _shared_app():
     """App FastAPI criado uma vez por módulo — ~1.5s poupado por teste."""
     from unittest.mock import patch as _patch
 
-    with _patch("concilium.presentation.api.app.setup_telemetry"), \
-         _patch("concilium.presentation.api.app.configure_logging"):
+    with (
+        _patch("concilium.presentation.api.app.setup_telemetry"),
+        _patch("concilium.presentation.api.app.configure_logging"),
+    ):
         app = create_app()
     return app
 
@@ -251,6 +253,7 @@ class TestMcpCampaignTools:
     def _server(self):
         """FastMCP com campaign tools — criado uma vez por classe (~2s)."""
         from mcp.server.fastmcp import FastMCP
+
         from concilium.presentation.mcp.tools import campaign
 
         server = FastMCP("test-concilium")
@@ -259,6 +262,7 @@ class TestMcpCampaignTools:
 
     def _build_server(self):
         from mcp.server.fastmcp import FastMCP
+
         from concilium.presentation.mcp.tools import campaign
 
         server = FastMCP("test-concilium")

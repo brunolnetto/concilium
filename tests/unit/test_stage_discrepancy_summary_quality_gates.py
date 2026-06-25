@@ -202,8 +202,18 @@ def test_ct_sum_equipes_costs_empty():
 
 def test_ct_sum_equipes_costs_aggregates():
     equipes = [
-        {"custo_mao_obra_mensal": 100, "custo_equipamentos_mensal": 200, "custo_combustivel_total_mensal": 50, "custo_material_mensal": 10},
-        {"custo_mao_obra_mensal": 200, "custo_equipamentos_mensal": 300, "custo_combustivel_total_mensal": None, "custo_material_mensal": None},
+        {
+            "custo_mao_obra_mensal": 100,
+            "custo_equipamentos_mensal": 200,
+            "custo_combustivel_total_mensal": 50,
+            "custo_material_mensal": 10,
+        },
+        {
+            "custo_mao_obra_mensal": 200,
+            "custo_equipamentos_mensal": 300,
+            "custo_combustivel_total_mensal": None,
+            "custo_material_mensal": None,
+        },
     ]
     mo, eq, diesel, mat = _ct_sum_equipes_costs(equipes)
     assert mo == 300.0
@@ -219,8 +229,20 @@ def test_ct_sum_equipes_costs_aggregates():
 
 def test_bs_count_flag_rows_mixed():
     rows = [
-        {"flags": {"sem_praticabilidade_planilha_fonte": True, "tem_zerados_em_equipes": True, "tem_zerados_em_planejamento": False}},
-        {"flags": {"sem_praticabilidade_planilha_fonte": False, "tem_zerados_em_equipes": False, "tem_zerados_em_planejamento": True}},
+        {
+            "flags": {
+                "sem_praticabilidade_planilha_fonte": True,
+                "tem_zerados_em_equipes": True,
+                "tem_zerados_em_planejamento": False,
+            }
+        },
+        {
+            "flags": {
+                "sem_praticabilidade_planilha_fonte": False,
+                "tem_zerados_em_equipes": False,
+                "tem_zerados_em_planejamento": True,
+            }
+        },
         {"flags": {}},
     ]
     sem_prat, com_eq, com_pl = _bs_count_flag_rows(rows)
@@ -242,7 +264,16 @@ def test_bs_aggregate_gates_nao_disponivel():
 
 
 def test_bs_aggregate_gates_critical_metric():
-    rows = [{"quality_gates": {"status_final": "REPROVADO", "worst_severity": "S2", "critical_metric_over_10pct": True, "action_report_abertas": 3}}]
+    rows = [
+        {
+            "quality_gates": {
+                "status_final": "REPROVADO",
+                "worst_severity": "S2",
+                "critical_metric_over_10pct": True,
+                "action_report_abertas": 3,
+            }
+        }
+    ]
     _, _, _, crit_over_10, abertos = _bs_aggregate_gates(rows)
     assert crit_over_10 == 1
     assert abertos == 3

@@ -11,9 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
+from unittest.mock import MagicMock
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -60,9 +58,8 @@ class TestReadSilverLogs:
         storage.listar_blobs.return_value = ["observability/silver/logs/blanks.ndjson"]
         # blob com linhas em branco entre registros válidos
         storage.ler_blob.return_value = (
-            '\n{"project_id": "P1", "fallback_type": "MINSLK"}\n\n'
-            '{"project_id": "P1"}\n'
-        ).encode("utf-8")
+            b'\n{"project_id": "P1", "fallback_type": "MINSLK"}\n\n{"project_id": "P1"}\n'
+        )
 
         builder = CrossDomainBuilder(storage, canonical_provider=lambda pid: None)
         rows = builder.build()

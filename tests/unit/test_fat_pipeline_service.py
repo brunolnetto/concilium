@@ -494,9 +494,7 @@ class TestExecuteRun:
         # ADR-119 F3: new_version now receives actor identity kwargs
         call_kwargs = project.new_version.call_args
         assert call_kwargs is not None
-        assert call_kwargs.kwargs.get("base") == "v1" or (
-            call_kwargs.args and call_kwargs.args[0] == "v1"
-        )
+        assert call_kwargs.kwargs.get("base") == "v1" or (call_kwargs.args and call_kwargs.args[0] == "v1")
 
     def test_version_none_after_fork_raises_runtime_error(self, tmp_path):
         svc, project, audit, runtime = _make_svc(tmp_path=tmp_path)

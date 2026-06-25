@@ -14,9 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # F1-D1  LoggingHandler em DEBUG
@@ -29,6 +27,7 @@ class TestLoggingHandlerLevel:
     def test_logging_handler_level_constant_is_debug(self):
         """O módulo telemetry usa logging.DEBUG ao instanciar LoggingHandler (ADR-121 D1)."""
         import inspect
+
         import concilium.infrastructure.telemetry as tel_mod
 
         src = inspect.getsource(tel_mod)
@@ -37,11 +36,11 @@ class TestLoggingHandlerLevel:
             "Esperado: LoggingHandler(level=logging.DEBUG, logger_provider=...)"
         )
 
-
     def test_telemetry_module_uses_debug_level(self):
         """Verifica que o módulo telemetry não usa logging.WARNING para o LoggingHandler."""
         import ast
         import inspect
+
         import concilium.infrastructure.telemetry as tel_mod
 
         src = inspect.getsource(tel_mod)
@@ -49,11 +48,12 @@ class TestLoggingHandlerLevel:
         tree = ast.parse(src)
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
-                func = getattr(node.func, "id", None) or getattr(
-                    getattr(node.func, "attr", None), "__str__", lambda: ""
-                )()
-                if "LoggingHandler" not in str(getattr(node.func, "id", "")) \
-                   and "LoggingHandler" not in str(getattr(node.func, "attr", "")):
+                func = (
+                    getattr(node.func, "id", None) or getattr(getattr(node.func, "attr", None), "__str__", lambda: "")()
+                )
+                if "LoggingHandler" not in str(getattr(node.func, "id", "")) and "LoggingHandler" not in str(
+                    getattr(node.func, "attr", "")
+                ):
                     continue
                 for kw in node.keywords:
                     if kw.arg == "level":
@@ -93,9 +93,7 @@ class TestJsonFormatterFallbackType:
         record = self._make_record("pool relaxado", extra={"fallback_type": "pool_relaxation"})
         output = fmt.format(record)
         parsed = json.loads(output)
-        assert parsed.get("fallback_type") == "pool_relaxation", (
-            "fallback_type ausente no JSON — ADR-121 D2"
-        )
+        assert parsed.get("fallback_type") == "pool_relaxation", "fallback_type ausente no JSON — ADR-121 D2"
 
     def test_fallback_type_absent_when_not_set(self):
         from concilium.infrastructure.observability.logging_config import _JsonFormatter
@@ -243,21 +241,22 @@ class TestMiddlewareTraceparentExtraction:
             inner_called.append(True)
 
         middleware = McpAuthMiddleware(inner_app)
-        scope = self._make_scope([
-            (b"traceparent", b"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"),
-        ])
+        scope = self._make_scope(
+            [
+                (b"traceparent", b"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"),
+            ]
+        )
 
         with patch("concilium.presentation.mcp.middleware.propagate") as mock_prop:
             mock_prop.extract.return_value = {}
-            asyncio.get_event_loop().run_until_complete(
-                middleware(scope, AsyncMock(), AsyncMock())
-            )
+            asyncio.get_event_loop().run_until_complete(middleware(scope, AsyncMock(), AsyncMock()))
             mock_prop.extract.assert_called_once()
             carrier_arg = mock_prop.extract.call_args[0][0]
-            assert "traceparent" in carrier_arg or b"traceparent" in carrier_arg or \
-                   any("traceparent" in str(k) for k in carrier_arg), (
-                "propagate.extract() chamado sem traceparent na carrier"
-            )
+            assert (
+                "traceparent" in carrier_arg
+                or b"traceparent" in carrier_arg
+                or any("traceparent" in str(k) for k in carrier_arg)
+            ), "propagate.extract() chamado sem traceparent na carrier"
 
     def test_missing_traceparent_does_not_raise(self):
         """Request sem traceparent não deve quebrar o middleware."""
@@ -272,9 +271,7 @@ class TestMiddlewareTraceparentExtraction:
         with patch("concilium.presentation.mcp.middleware.propagate", create=True) as mock_prop:
             mock_prop.extract.return_value = {}
             # Deve executar sem exceção
-            asyncio.get_event_loop().run_until_complete(
-                middleware(scope, AsyncMock(), AsyncMock())
-            )
+            asyncio.get_event_loop().run_until_complete(middleware(scope, AsyncMock(), AsyncMock()))
 
     def test_traceparent_context_detached_after_request(self):
         """O contexto OTel anexado é desanexado no finally mesmo se o app interno levanta."""
@@ -284,21 +281,24 @@ class TestMiddlewareTraceparentExtraction:
             raise RuntimeError("inner failure")
 
         middleware = McpAuthMiddleware(failing_app)
-        scope = self._make_scope([
-            (b"traceparent", b"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"),
-        ])
+        scope = self._make_scope(
+            [
+                (b"traceparent", b"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"),
+            ]
+        )
 
         detach_calls = []
 
-        with patch("concilium.presentation.mcp.middleware.propagate") as mock_prop, \
-             patch("concilium.presentation.mcp.middleware.context_detach") as mock_detach:
+        with (
+            patch("concilium.presentation.mcp.middleware.propagate") as mock_prop,
+            patch("concilium.presentation.mcp.middleware.context_detach") as mock_detach,
+        ):
             mock_prop.extract.return_value = {}
 
             import contextlib
+
             with contextlib.suppress(RuntimeError):
-                asyncio.get_event_loop().run_until_complete(
-                    middleware(scope, AsyncMock(), AsyncMock())
-                )
+                asyncio.get_event_loop().run_until_complete(middleware(scope, AsyncMock(), AsyncMock()))
             # detach deve ter sido chamado mesmo com exceção
             mock_detach.assert_called()
 
@@ -323,6 +323,7 @@ class TestSchedulingSpanEvents:
             ActivityDAG,
             ResourcePool,
         )
+
         a1 = Activity(activity_id="A1", description="Test", duration_weeks=2, required_resources={"T1": 1})
         dag = ActivityDAG(activities=[a1])
         pool = ResourcePool(resources={"T1": 2})
@@ -331,7 +332,6 @@ class TestSchedulingSpanEvents:
     def test_algorithm_selected_event_emitted(self, monkeypatch):
         """explore_schedules emite 'scheduling.algorithm.selected' com atributos."""
         from concilium.application.scheduling.models import SchedulingStrategy
-        from concilium.application.scheduling import selector
 
         span = self._make_mock_span()
 
@@ -343,6 +343,7 @@ class TestSchedulingSpanEvents:
             dag, pool = self._make_dag_and_pool()
             try:
                 from concilium.application.scheduling.selector import explore_schedules
+
                 explore_schedules(
                     activities=list(dag.activities),
                     dag=dag,
@@ -355,14 +356,11 @@ class TestSchedulingSpanEvents:
 
         # Deve ter chamado add_event ao menos uma vez
         events = [call[0][0] for call in span.add_event.call_args_list]
-        assert any("scheduling" in e for e in events), (
-            f"Nenhum span event de scheduling emitido. Events: {events}"
-        )
+        assert any("scheduling" in e for e in events), f"Nenhum span event de scheduling emitido. Events: {events}"
 
     def test_algorithm_selected_event_has_correct_attributes(self, monkeypatch):
         """O evento 'scheduling.algorithm.selected' carrega algorithm e n_activities."""
         from concilium.application.scheduling.models import SchedulingStrategy
-        from concilium.application.scheduling import selector
 
         span = self._make_mock_span()
         strategy = SchedulingStrategy(algorithm="MINSLK", heuristics=["MINSLK"], timeout_seconds=0)
@@ -372,6 +370,7 @@ class TestSchedulingSpanEvents:
             dag, pool = self._make_dag_and_pool()
             try:
                 from concilium.application.scheduling.selector import explore_schedules
+
                 explore_schedules(
                     activities=list(dag.activities),
                     dag=dag,
@@ -383,13 +382,9 @@ class TestSchedulingSpanEvents:
                 pass
 
         # Procura o evento scheduling.algorithm.selected
-        selected_calls = [
-            call for call in span.add_event.call_args_list
-            if "algorithm.selected" in str(call[0][0])
-        ]
+        selected_calls = [call for call in span.add_event.call_args_list if "algorithm.selected" in str(call[0][0])]
         assert selected_calls, "scheduling.algorithm.selected não emitido"
-        attrs = selected_calls[0][0][1] if len(selected_calls[0][0]) > 1 else \
-                selected_calls[0][1].get("attributes", {})
+        attrs = selected_calls[0][0][1] if len(selected_calls[0][0]) > 1 else selected_calls[0][1].get("attributes", {})
         assert "algorithm" in str(attrs), "atributo 'algorithm' ausente no evento"
         assert "n_activities" in str(attrs), "atributo 'n_activities' ausente no evento"
 
@@ -413,6 +408,7 @@ class TestSchedulingSpanEvents:
         except Exception as e:
             # Apenas ScheduleError (sem ortools) é aceitável — RuntimeError não
             from concilium.application.scheduling.models import ScheduleError
+
             if not isinstance(e, ScheduleError):
                 raise AssertionError(f"Exceção inesperada: {e}") from e
 
@@ -449,16 +445,16 @@ class TestMiddlewareBaggageInjection:
         middleware = McpAuthMiddleware(inner_app)
         scope = self._make_scope_with_token()
 
-        with patch("concilium.presentation.mcp.middleware.set_baggage", fake_set_baggage, create=True), \
-             patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode, \
-             patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=["viewer"]), \
-             patch("concilium.presentation.mcp.middleware.propagate") as mock_prop:
-            mock_decode.return_value = {"sub": "usr-42", "tid": "tenant-abc", "roles": ["viewer"]}
+        with (
+            patch("concilium.presentation.mcp.middleware.set_baggage", fake_set_baggage, create=True),
+            patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode,
+            patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=["operator"]),
+            patch("concilium.presentation.mcp.middleware.propagate") as mock_prop,
+        ):
+            mock_decode.return_value = {"sub": "usr-42", "tid": "tenant-abc", "roles": ["operator"]}
             mock_prop.extract.return_value = {}
 
-            asyncio.get_event_loop().run_until_complete(
-                middleware(scope, AsyncMock(), AsyncMock())
-            )
+            asyncio.get_event_loop().run_until_complete(middleware(scope, AsyncMock(), AsyncMock()))
 
         keys_set = [k for k, _ in baggage_set_calls]
         assert "tenant.id" in keys_set, f"tenant.id não injetado como baggage. Calls: {baggage_set_calls}"
@@ -479,16 +475,16 @@ class TestMiddlewareBaggageInjection:
         middleware = McpAuthMiddleware(inner_app)
         scope = self._make_scope_with_token()
 
-        with patch("concilium.presentation.mcp.middleware.set_baggage", fake_set_baggage, create=True), \
-             patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode, \
-             patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=["operator"]), \
-             patch("concilium.presentation.mcp.middleware.propagate") as mock_prop:
+        with (
+            patch("concilium.presentation.mcp.middleware.set_baggage", fake_set_baggage, create=True),
+            patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode,
+            patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=["operator"]),
+            patch("concilium.presentation.mcp.middleware.propagate") as mock_prop,
+        ):
             mock_decode.return_value = {"sub": "usr-007", "tid": "mendeslobo", "roles": ["operator"]}
             mock_prop.extract.return_value = {}
 
-            asyncio.get_event_loop().run_until_complete(
-                middleware(scope, AsyncMock(), AsyncMock())
-            )
+            asyncio.get_event_loop().run_until_complete(middleware(scope, AsyncMock(), AsyncMock()))
 
         assert captured.get("tenant.id") == "mendeslobo"
         assert captured.get("user.id") == "usr-007"
@@ -509,16 +505,16 @@ class TestMiddlewareBaggageInjection:
         middleware = McpAuthMiddleware(inner_app)
         scope = self._make_scope_with_token()
 
-        with patch("concilium.presentation.mcp.middleware.set_baggage", fake_set_baggage, create=True), \
-             patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode, \
-             patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=["viewer"]), \
-             patch("concilium.presentation.mcp.middleware.propagate") as mock_prop:
-            mock_decode.return_value = {"roles": ["viewer"]}  # sem sub nem tid
+        with (
+            patch("concilium.presentation.mcp.middleware.set_baggage", fake_set_baggage, create=True),
+            patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode,
+            patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=["operator"]),
+            patch("concilium.presentation.mcp.middleware.propagate") as mock_prop,
+        ):
+            mock_decode.return_value = {"roles": ["operator"]}  # sem sub nem tid
             mock_prop.extract.return_value = {}
 
-            asyncio.get_event_loop().run_until_complete(
-                middleware(scope, AsyncMock(), AsyncMock())
-            )
+            asyncio.get_event_loop().run_until_complete(middleware(scope, AsyncMock(), AsyncMock()))
 
         # None não deve ser injetado como valor de baggage
         none_values = [(k, v) for k, v in baggage_calls if v is None]
@@ -534,17 +530,18 @@ class TestMiddlewareBaggageInjection:
         middleware = McpAuthMiddleware(failing_inner)
         scope = self._make_scope_with_token()
 
-        with patch("concilium.presentation.mcp.middleware.set_baggage", return_value={}, create=True), \
-             patch("concilium.presentation.mcp.middleware.context_detach") as mock_detach, \
-             patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode, \
-             patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=[]), \
-             patch("concilium.presentation.mcp.middleware.propagate") as mock_prop:
+        with (
+            patch("concilium.presentation.mcp.middleware.set_baggage", return_value={}, create=True),
+            patch("concilium.presentation.mcp.middleware.context_detach") as mock_detach,
+            patch("concilium.infrastructure.auth.token_service.decode_token") as mock_decode,
+            patch("concilium.infrastructure.auth.permission_guard.roles_from_token", return_value=[]),
+            patch("concilium.presentation.mcp.middleware.propagate") as mock_prop,
+        ):
             mock_decode.return_value = {"sub": "u", "tid": "t"}
             mock_prop.extract.return_value = {}
 
             import contextlib
+
             with contextlib.suppress(RuntimeError):
-                asyncio.get_event_loop().run_until_complete(
-                    middleware(scope, AsyncMock(), AsyncMock())
-                )
+                asyncio.get_event_loop().run_until_complete(middleware(scope, AsyncMock(), AsyncMock()))
             mock_detach.assert_called()
