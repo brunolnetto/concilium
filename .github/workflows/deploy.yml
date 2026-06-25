@@ -1,4 +1,4 @@
-name: Build → Blue-Green Deploy
+name: Build -> ACA Revisions Deploy
 
 on:
   push:
@@ -15,8 +15,8 @@ env:
   IMAGE_NAME:      concilium
   RESOURCE_GROUP:  ${{ vars.RESOURCE_GROUP || 'concilium-rg' }}
   LOCATION:        brazilsouth
-  AGW_NAME:        concilium-agw
-  ACI_BASE:        concilium-cg
+  ACA_API_APP:     ${{ vars.ACA_API_APP || 'concilium-api' }}
+  ACA_MCP_APP:     ${{ vars.ACA_MCP_APP || 'concilium-mcp' }}
   KV_NAME:         concilium-kv
 
 permissions:
@@ -76,15 +76,15 @@ jobs:
             (echo "Tag '${{ steps.tag.outputs.value }}' não existe no ACR" && exit 1)
           echo "✓ Imagem verificada: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.value }}"
 
-# ── Job 2: Deploy slot inativo (Green) ───────────────────────────────────────
-  deploy-green:
-    name: Deploy → Slot Inativo
+# ── Job 2: Deploy nova revision ACA (sem promover tráfego) ───────────────────
+  deploy-revision:
+    name: Deploy -> Nova Revision
     runs-on: ubuntu-latest
     needs: build
     environment: production
     outputs:
-      inactive_slot: ${{ steps.slots.outputs.inactive }}
-      active_slot:   ${{ steps.slots.outputs.active }}
+      deployed_revision: ${{ steps.revision.outputs.deployed }}
+      active_revision:   ${{ steps.active.outputs.current }}
 
     steps:
       - uses: actions/checkout@v4
@@ -96,19 +96,21 @@ jobs:
           tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Determinar slots ativo/inativo
-        id: slots
+      - name: Capturar revision ativa atual
+        id: active
         run: |
-          ACTIVE=$(az group show --name "${{ env.RESOURCE_GROUP }}" \
-            --query "tags.active_slot" -o tsv 2>/dev/null | tr -d '[:space:]' || echo "blue")
-          [[ "$ACTIVE" == "blue" ]] && INACTIVE="green" || INACTIVE="blue"
-          echo "active=$ACTIVE"   >> "$GITHUB_OUTPUT"
-          echo "inactive=$INACTIVE" >> "$GITHUB_OUTPUT"
-          echo "Active: $ACTIVE → Deploying to: $INACTIVE"
+          CURRENT=$(az containerapp ingress traffic show \
+            --name "${{ env.ACA_API_APP }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "sort_by([?weight > \`0\`], &weight)[-1].revisionName" -o tsv 2>/dev/null || true)
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Active revision atual: ${CURRENT:-nenhuma}"
 
-      - name: Deploy slot '${{ steps.slots.outputs.inactive }}'
+      - name: Deploy nova revision ACA
         env:
           IMAGE_TAG:       ${{ needs.build.outputs.image_tag }}
+          ACA_API_APP:     ${{ env.ACA_API_APP }}
+          ACA_MCP_APP:     ${{ env.ACA_MCP_APP }}
           AZURE_ACCOUNT:   ${{ vars.CONCILIUM__AZURE_ACCOUNT }}
           AZURE_CONTAINER: ${{ vars.CONCILIUM__AZURE_CONTAINER }}
           AZURE_KEY:       ${{ secrets.CONCILIUM__AZURE_KEY }}
@@ -118,11 +120,21 @@ jobs:
           chmod +x cd/scripts/deploy.sh
           cd/scripts/deploy.sh deploy "$IMAGE_TAG"
 
-# ── Job 3: Smoke Tests contra o slot inativo ─────────────────────────────────
+      - name: Capturar revision deployada
+        id: revision
+        run: |
+          DEPLOYED=$(az containerapp revision list \
+            --name "${{ env.ACA_API_APP }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "sort_by(@,&properties.createdTime)[-1].name" -o tsv)
+          echo "deployed=$DEPLOYED" >> "$GITHUB_OUTPUT"
+          echo "Revision deployada: $DEPLOYED"
+
+# ── Job 3: Smoke tests contra a nova revision ────────────────────────────────
   smoke:
-    name: Smoke Tests → Slot '${{ needs.deploy-green.outputs.inactive_slot }}'
+    name: Smoke Tests -> Revision '${{ needs.deploy-revision.outputs.deployed_revision }}'
     runs-on: ubuntu-latest
-    needs: [build, deploy-green]
+    needs: [build, deploy-revision]
 
     steps:
       - uses: actions/checkout@v4
@@ -139,21 +151,22 @@ jobs:
 
       - name: Executar smoke tests exaustivos
         env:
-          INACTIVE_SLOT:       ${{ needs.deploy-green.outputs.inactive_slot }}
+          TARGET_REVISION:     ${{ needs.deploy-revision.outputs.deployed_revision }}
+          ACA_API_APP:         ${{ env.ACA_API_APP }}
+          ACA_MCP_APP:         ${{ env.ACA_MCP_APP }}
           SMOKE_CLIENT_ID:     ${{ vars.SMOKE_CLIENT_ID || 'smoke-test' }}
           SMOKE_CLIENT_SECRET: ${{ secrets.SMOKE_CLIENT_SECRET }}
           RESOURCE_GROUP:      ${{ env.RESOURCE_GROUP }}
-          ACI_BASE:            ${{ env.ACI_BASE }}
           CI: "true"
         run: |
           chmod +x cd/scripts/deploy.sh
-          cd/scripts/deploy.sh smoke --slot "$INACTIVE_SLOT"
+          cd/scripts/deploy.sh smoke --revision "$TARGET_REVISION"
 
 # ── Job 4a: Promote (smoke passou) ───────────────────────────────────────────
   promote:
-    name: Promote → Produção
+    name: Promote -> Produção
     runs-on: ubuntu-latest
-    needs: [build, deploy-green, smoke]
+    needs: [build, deploy-revision, smoke]
     if: needs.smoke.result == 'success'
 
     steps:
@@ -166,26 +179,28 @@ jobs:
           tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Promover slot '${{ needs.deploy-green.outputs.inactive_slot }}' → produção
+      - name: Promover revision '${{ needs.deploy-revision.outputs.deployed_revision }}' -> produção
         env:
           RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          AGW_NAME:       ${{ env.AGW_NAME }}
-          ACI_BASE:       ${{ env.ACI_BASE }}
+          ACA_API_APP:    ${{ env.ACA_API_APP }}
           CI: "true"
         run: |
           chmod +x cd/scripts/deploy.sh
-          cd/scripts/deploy.sh promote
+          cd/scripts/deploy.sh promote --revision "${{ needs.deploy-revision.outputs.deployed_revision }}"
 
       - name: Resumo do deploy
+        env:
+          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
+          ACA_API_APP:    ${{ env.ACA_API_APP }}
         run: |
           chmod +x cd/scripts/deploy.sh
           cd/scripts/deploy.sh status
 
 # ── Job 4b: Rollback (smoke falhou) ──────────────────────────────────────────
   rollback:
-    name: Rollback — Manter Produção Atual
+    name: Rollback -> Manter Produção Atual
     runs-on: ubuntu-latest
-    needs: [deploy-green, smoke]
+    needs: [deploy-revision, smoke]
     if: needs.smoke.result == 'failure'
 
     steps:
@@ -198,18 +213,23 @@ jobs:
           tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deletar slot '${{ needs.deploy-green.outputs.inactive_slot }}' (produção intacta)
+      - name: Garantir tráfego na revision ativa anterior
         env:
           RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
-          ACI_BASE:       ${{ env.ACI_BASE }}
+          ACA_API_APP:    ${{ env.ACA_API_APP }}
+          ACTIVE_REVISION: ${{ needs.deploy-revision.outputs.active_revision }}
           CI: "true"
         run: |
           chmod +x cd/scripts/deploy.sh
-          cd/scripts/deploy.sh rollback
+          if [[ -n "$ACTIVE_REVISION" ]]; then
+            cd/scripts/deploy.sh rollback --revision "$ACTIVE_REVISION"
+          else
+            echo "::warning::Nenhuma revision ativa anterior encontrada; rollback de tráfego ignorado."
+          fi
 
       - name: Notificar falha
         run: |
           echo "::error::Smoke tests falharam — rollback executado automaticamente."
-          echo "::error::Slot '${{ needs.deploy-green.outputs.inactive_slot }}' deletado."
-          echo "::error::Produção (${{ needs.deploy-green.outputs.active_slot }}) intacta."
+          echo "::error::Revision testada: '${{ needs.deploy-revision.outputs.deployed_revision }}'."
+          echo "::error::Produção mantida em '${{ needs.deploy-revision.outputs.active_revision }}'."
           exit 1

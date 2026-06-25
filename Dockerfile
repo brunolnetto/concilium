@@ -4,8 +4,10 @@
 #
 # Ambos os stages usam Docker Hub (sem autenticação ghcr.io necessária).
 
-# ── Stage 1: builder ─────────────────────────────────────────────────────────
-FROM python:3.12-slim-bookworm AS builder
+# ─────────────────────────────────────────────────────────────
+# Stage 1: builder (resolve deps + build wheel)
+# ─────────────────────────────────────────────────────────────
+FROM python:3.13-slim-bookworm AS builder
 
 RUN pip install --no-cache-dir uv
 
@@ -16,41 +18,40 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /workspace/concilium
 
+# Dependencies first (cache layer)
+COPY pyproject.toml uv.lock ./
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project
 
-COPY . /workspace/concilium
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked
+# Source code
+COPY . .
 
-# ── Stage 2: final (sem uv, sem deps de dev) ─────────────────────────────────
-# Usar o mesmo sabor Debian do builder para garantir compatibilidade do interpretador Python
-FROM python:3.12-slim-bookworm
+# Build wheel (this is the key simplification)
+RUN uv build
 
-# Usuário não-root para segurança em produção
+
+# ─────────────────────────────────────────────────────────────
+# Stage 2: runtime (clean + deterministic)
+# ─────────────────────────────────────────────────────────────
+FROM python:3.13-slim-bookworm
+
 RUN groupadd --system --gid 999 nonroot \
  && useradd --system --gid 999 --uid 999 --create-home nonroot
 
-# Copia o ambiente virtual e o código do builder
-COPY --from=builder --chown=nonroot:nonroot /workspace/concilium /workspace/concilium
+WORKDIR /app
 
-# Executáveis do venv (concilium-api, concilium-ui, concilium-mcp) no PATH
-ENV PATH="/workspace/concilium/.venv/bin:$PATH"
+# Install wheel (no venv copying, no path coupling)
+COPY --from=builder /workspace/concilium/dist/*.whl /tmp/
 
-WORKDIR /workspace/concilium
+RUN pip install --no-cache-dir /tmp/*.whl \
+ && rm -rf /tmp/*.whl
 
 USER nonroot
 
-# Porta 8000: FastAPI REST
-# Porta 8080: FastMCP MCP server (transport HTTP)
 EXPOSE 8000 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 ENTRYPOINT []
-
-# Default: API — sobreposto por `command` no compose / ACI
-CMD ["concilium-api"]

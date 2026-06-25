@@ -97,6 +97,9 @@ markers = [
     "slow: testes lentos (>5s)",
 ]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.mypy]
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]
@@ -120,6 +123,9 @@ ignore = ["B008"]
 branch = true
 parallel = true
 data_file = ".coverage"
+omit = [
+    "src/concilium/presentation/*",
+]
 
 [build-system]
 requires = ["hatchling"]

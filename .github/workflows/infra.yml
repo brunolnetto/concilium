@@ -1,4 +1,4 @@
-name: Infra → Bicep Deploy
+name: Infra -> ACA Platform Deploy
 
 # Dispara quando os templates Bicep mudam OU manualmente para bootstrap inicial
 on:
@@ -16,6 +16,8 @@ on:
 env:
   RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP || 'concilium-rg' }}
   LOCATION: brazilsouth
+  ACA_API_APP: ${{ vars.ACA_API_APP || 'concilium-api' }}
+  ACA_MCP_APP: ${{ vars.ACA_MCP_APP || 'concilium-mcp' }}
 
 permissions:
   id-token: write
@@ -137,6 +139,10 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Verificar e gerar chaves JWT
+        env:
+          RESOURCE_GROUP: ${{ env.RESOURCE_GROUP }}
+          ACA_API_APP: ${{ env.ACA_API_APP }}
+          ACA_MCP_APP: ${{ env.ACA_MCP_APP }}
         run: |
           chmod +x cd/scripts/deploy.sh
           CI=true cd/scripts/deploy.sh keys

@@ -108,11 +108,8 @@ from codebase_stats import CodebaseStatsReporter; \
 import pathlib, json; \
 rep = '$(TEST_REPORT)'; \
 rep_ok = pathlib.Path(rep).exists() and 'tests' in json.loads(pathlib.Path(rep).read_text()); \
-r = CodebaseStatsReporter( \
-    coverage_file='$(COV_DIR)/coverage.json', \
-    report_file=rep if rep_ok else None, \
-    radon_root='src', fs_root='src', tree_root='src'); \
-p = r.save_report('$(COV_DIR)/report.md', include_tree=False, blame_limit=0); \
+r = CodebaseStatsReporter(coverage_file='$(COV_DIR)/coverage.json', report_file=rep if rep_ok else None, radon_root='src', fs_root='src', tree_root='src'); \
+p = r.save_report('$(COV_DIR)/report.md', include_tree=False, blame_limit=0, threshold=100); \
 print(f'  Codebase stats → {p}')"
 
 # ── File sizes / Disk usage ───────────────────────────────────────────────────
