@@ -27,63 +27,29 @@ jobs:
   # ── Valida Bicep antes de deployar ────────────────────────────────────────
   validate:
     name: Validar Bicep
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Lint e validar templates
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          CI=true cd/scripts/deploy.sh bootstrap --validate
+    uses: ./.github/workflows/_run-deploy-command.yml
+    secrets: inherit
+    with:
+      command: |
+        cd/scripts/deploy.sh bootstrap --validate
 
   # ── Deploy Bicep ──────────────────────────────────────────────────────────
   deploy-infra:
     name: Deploy Infraestrutura
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_run-deploy-command.yml
     needs: validate
     environment: production
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy infraestrutura via script
-        env:
-          STORAGE_ACCOUNT: ${{ vars.CONCILIUM__AZURE_ACCOUNT }}
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          CI=true cd/scripts/deploy.sh bootstrap
+    secrets: inherit
+    with:
+      command: |
+        cd/scripts/deploy.sh bootstrap
 
   # ── Configurar JWT Keys (só se não existirem) ─────────────────────────────
   setup-jwt-keys:
     name: Setup JWT Keys (se ausentes)
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_run-deploy-command.yml
     needs: deploy-infra
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Verificar e gerar chaves JWT
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          CI=true cd/scripts/deploy.sh keys
+    secrets: inherit
+    with:
+      command: |
+        cd/scripts/deploy.sh keys

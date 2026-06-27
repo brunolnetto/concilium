@@ -9,10 +9,10 @@
 #   status                  -> mostra revisions e pesos de trafego
 #
 # Platform Operations:
-#   bootstrap, keys, tls, github, users, all, help
+#   bootstrap, keys, github, configure, users, all, help
 set -euo pipefail
 
-_CI_SAFE_CMDS="keys image deploy smoke promote rollback status bootstrap help"
+_CI_SAFE_CMDS="keys image deploy smoke promote rollback status bootstrap configure help"
 
 _check_ci_safe() {
     [[ "${CI:-}" != "true" ]] && return 0
@@ -27,16 +27,16 @@ LOCATION="${LOCATION:-brazilsouth}"
 KV_NAME="${KV_NAME:-concilium-kv}"
 ACR_NAME="${ACR_NAME:-conciliumacr}"
 IMAGE_NAME="${IMAGE_NAME:-concilium}"
-AGW_NAME="${AGW_NAME:-concilium-agw}"
 ACA_API_APP="${ACA_API_APP:-concilium-api}"
 ACA_MCP_APP="${ACA_MCP_APP:-concilium-mcp}"
-DNS_ZONE="${DNS_ZONE:-mendesloboconstrucao.com.br}"
-GITHUB_REPO="${GITHUB_REPO:-mendeslobo/concilium}"
-STORAGE_ACCOUNT="${STORAGE_ACCOUNT:-conciliumstorage}"
-API_HOST="${API_HOST:-api.${DNS_ZONE}}"
-MCP_HOST="${MCP_HOST:-mcp.${DNS_ZONE}}"
+GITHUB_REPO="${GITHUB_REPO:-mendes-lobo-construcao/agente-gerente-de-engenharia}"
 SMOKE_CLIENT_ID="${SMOKE_CLIENT_ID:-smoke-test}"
 SMOKE_CLIENT_SECRET="${SMOKE_CLIENT_SECRET:-}"
+SP_TENANT_ID="${SP_TENANT_ID:-}"
+SP_CLIENT_ID="${SP_CLIENT_ID:-}"
+SP_CLIENT_SECRET="${SP_CLIENT_SECRET:-}"
+SP_DRIVE_ID="${SP_DRIVE_ID:-}"
+SP_ROOT_PATH="${SP_ROOT_PATH:-Concilium/prod}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
@@ -144,6 +144,7 @@ cmd_deploy() {
         echo "active_revision=${previous_primary}" >> "$GITHUB_OUTPUT"
     fi
 
+    # ── Deploy API (blue-green) ───────────────────────────────────────────────
     step "ACA Deploy — app '$ACA_API_APP' com imagem '$image_tag'"
     [[ -n "$previous_primary" ]] && log "Revision com trafego atual: $previous_primary"
 
@@ -185,8 +186,23 @@ cmd_deploy() {
 
     local new_url
     new_url=$(_aca_revision_url "$ACA_API_APP" "$new_revision")
-    ok "Revision pronta: $new_revision"
+    ok "Revision API pronta: $new_revision"
     log "URL da revision: $new_url"
+
+    # ── Deploy MCP (rolling update — mesma imagem, comando diferente) ─────────
+    if _aca_app_exists "$ACA_MCP_APP"; then
+        step "ACA Deploy — app '$ACA_MCP_APP' com imagem '$image_tag'"
+        az containerapp update \
+            --name "$ACA_MCP_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${image_tag}" \
+            --output none
+        local mcp_revision
+        mcp_revision=$(_aca_latest_revision "$ACA_MCP_APP")
+        _wait_revision_running "$ACA_MCP_APP" "$mcp_revision"
+        ok "Revision MCP pronta: $mcp_revision"
+    fi
+
     echo "  Proximo passo: cd/scripts/deploy.sh smoke --revision $new_revision"
 }
 
@@ -202,14 +218,24 @@ cmd_smoke() {
         esac
     done
 
+    need az; require_login
     if [[ -n "$TARGET_REVISION" ]]; then
-        need az
-        require_login
         TARGET_URL=$(_aca_revision_url "$ACA_API_APP" "$TARGET_REVISION")
         TARGET_MCP="${TARGET_MCP:-${TARGET_URL}/mcp}"
     else
-        TARGET_URL="${TARGET_URL:-${BASE_URL:-https://${API_HOST}}}"
-        TARGET_MCP="${TARGET_MCP:-https://${MCP_HOST}/mcp}"
+        if [[ -z "$TARGET_URL" ]]; then
+            local fqdn; fqdn=$(az containerapp show \
+                --name "$ACA_API_APP" --resource-group "$RESOURCE_GROUP" \
+                --query 'properties.configuration.ingress.fqdn' -o tsv 2>/dev/null)
+            [[ -n "$fqdn" ]] || die "Nao foi possivel resolver FQDN de '$ACA_API_APP'. Use --url ou --revision."
+            TARGET_URL="https://${fqdn}"
+        fi
+        if [[ -z "$TARGET_MCP" ]]; then
+            local mcp_fqdn; mcp_fqdn=$(az containerapp show \
+                --name "$ACA_MCP_APP" --resource-group "$RESOURCE_GROUP" \
+                --query 'properties.configuration.ingress.fqdn' -o tsv 2>/dev/null)
+            TARGET_MCP="https://${mcp_fqdn}/mcp"
+        fi
     fi
 
     need curl; need jq
@@ -568,61 +594,134 @@ cmd_bootstrap() {
         --output none 2>/dev/null || ok "Role assignment ja existe."
 
     step "Deploy Bicep"
-    STORAGE_KEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" \
-        --resource-group "$RESOURCE_GROUP" --query '[0].value' -o tsv 2>/dev/null || echo "")
     az deployment group create \
         --resource-group "$RESOURCE_GROUP" \
         --template-file "$REPO_ROOT/cd/production/bicep/main.bicep" \
         --parameters "$REPO_ROOT/cd/production/bicep/main.bicepparam" \
         --parameters "opsIdentityPrincipalId=$OPS_PRINCIPAL" \
-        ${STORAGE_KEY:+--parameters "azureStorageKey=$STORAGE_KEY"} \
         --output none
     ok "Bicep deploy concluido."
 
     step "Resumo"
     echo -e "  ${G}App Registration${NC}: $APP_ID  (Tenant: $(az account show --query tenantId -o tsv))"
-    echo -e "\n  ${Y}Nameservers para o Registro.br:${NC}"
-    az network dns zone show --resource-group "$RESOURCE_GROUP" \
-        --name "$DNS_ZONE" --query "nameServers" -o tsv 2>/dev/null | sed 's/^/    /'
     echo
-    echo "  Proximos: $0 keys -> $0 tls -> $0 github"
+    echo "  Proximos: $0 keys -> $0 github -> $0 configure"
 }
 
-cmd_tls() {
-    MODE="${1:-}"; CERT_FILE="${2:-}"
-    [[ -z "$MODE" ]] && die "Use: $0 tls --upload cert.pfx  ou  $0 tls --self-signed"
+cmd_configure() {
     need az; need openssl
     require_login
-    KV_CERT_NAME="tls-cert"
-    if [[ "$MODE" == "--self-signed" ]]; then
-        warn "Self-signed: apenas para staging."
-        TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
-        openssl req -x509 -newkey rsa:2048 -keyout "$TMP/k.pem" -out "$TMP/c.pem" \
-            -days 365 -nodes -subj "/CN=${API_HOST}" 2>/dev/null
-        openssl pkcs12 -export -in "$TMP/c.pem" -inkey "$TMP/k.pem" \
-            -out "$TMP/cert.pfx" -passout pass: 2>/dev/null
-        CERT_FILE="$TMP/cert.pfx"
-    fi
-    az keyvault certificate import --vault-name "$KV_NAME" --name "$KV_CERT_NAME" \
-        --file "$CERT_FILE" --password "" --output none 2>/dev/null || \
-    az keyvault certificate import --vault-name "$KV_NAME" --name "$KV_CERT_NAME" \
-        --file "$CERT_FILE" --output none
-    CERT_ID=$(az keyvault certificate show --vault-name "$KV_NAME" \
-        --name "$KV_CERT_NAME" --query 'id' -o tsv)
-    az network application-gateway ssl-cert create \
-        --gateway-name "$AGW_NAME" --resource-group "$RESOURCE_GROUP" \
-        --name "$KV_CERT_NAME" --key-vault-secret-id "$CERT_ID" --output none 2>/dev/null || \
-    az network application-gateway ssl-cert update \
-        --gateway-name "$AGW_NAME" --resource-group "$RESOURCE_GROUP" \
-        --name "$KV_CERT_NAME" --key-vault-secret-id "$CERT_ID" --output none
-    for args in "api-https-listener 443 $API_HOST" "mcp-https-listener 443 $MCP_HOST"; do
-        read -r lname lport lhost <<< "$args"
-        az network application-gateway http-listener create \
-            --gateway-name "$AGW_NAME" --resource-group "$RESOURCE_GROUP" \
-            --name "$lname" --frontend-port "$lport" --protocol Https \
-            --ssl-cert "$KV_CERT_NAME" --host-name "$lhost" --output none 2>/dev/null || true
-    done
-    ok "TLS configurado: https://${API_HOST}  https://${MCP_HOST}"
+
+    [[ -n "$SP_TENANT_ID" ]]     || die "SP_TENANT_ID nao definido."
+    [[ -n "$SP_CLIENT_ID" ]]     || die "SP_CLIENT_ID nao definido."
+    [[ -n "$SP_CLIENT_SECRET" ]] || die "SP_CLIENT_SECRET nao definido."
+    [[ -n "$SP_DRIVE_ID" ]]      || die "SP_DRIVE_ID nao definido."
+    [[ -n "$SMOKE_CLIENT_SECRET" ]] || die "SMOKE_CLIENT_SECRET nao definido."
+
+    local smoke_hash
+    smoke_hash="sha256:$(printf '%s' "$SMOKE_CLIENT_SECRET" | openssl dgst -sha256 -hex | sed 's/^.* //')"
+    local auth_clients="{\"${SMOKE_CLIENT_ID}\":{\"secret_hash\":\"${smoke_hash}\",\"roles\":[\"operator\"]}}"
+    local kv_url="https://${KV_NAME}.vault.azure.net"
+
+    _apply_yaml() {
+        local app="$1" yaml_file="$2"
+        _aca_app_exists "$app" || die "Container App '$app' nao encontrado."
+        az containerapp update \
+            --name "$app" \
+            --resource-group "$RESOURCE_GROUP" \
+            --yaml "$yaml_file" \
+            --output none
+        ok "$app configurado."
+    }
+
+    # ── MCP ───────────────────────────────────────────────────────────────────
+    step "Configurar env vars — $ACA_MCP_APP"
+    local mcp_yaml; mcp_yaml=$(mktemp /tmp/mcp-configure-XXXXXX.yaml)
+    cat > "$mcp_yaml" << EOF
+properties:
+  template:
+    containers:
+      - name: ${ACA_MCP_APP}
+        image: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+        command:
+          - concilium-mcp
+        env:
+          - name: CONCILIUM__CONFIG_ROOT
+            value: /app
+          - name: CONCILIUM__STORE_BACKEND
+            value: sharepoint
+          - name: CONCILIUM__SP_TENANT_ID
+            value: ${SP_TENANT_ID}
+          - name: CONCILIUM__SP_CLIENT_ID
+            value: ${SP_CLIENT_ID}
+          - name: CONCILIUM__SP_CLIENT_SECRET
+            value: "${SP_CLIENT_SECRET}"
+          - name: CONCILIUM__SP_DRIVE_ID
+            value: "${SP_DRIVE_ID}"
+          - name: CONCILIUM__SP_ROOT_PATH
+            value: ${SP_ROOT_PATH}
+          - name: CONCILIUM__AUTH_ENABLED
+            value: "1"
+          - name: CONCILIUM__AUTH_CLIENTS
+            value: '${auth_clients}'
+          - name: CONCILIUM__JWT_KEY_VAULT_URL
+            value: ${kv_url}
+          - name: CONCILIUM__MCP_TRANSPORT
+            value: streamable-http
+          - name: CONCILIUM__MCP_HOST
+            value: "0.0.0.0"
+          - name: CONCILIUM__MCP_PORT
+            value: "8080"
+          - name: OTEL_SERVICE_NAME
+            value: concilium-mcp
+EOF
+    _apply_yaml "$ACA_MCP_APP" "$mcp_yaml"
+    rm -f "$mcp_yaml"
+
+    # ── API ───────────────────────────────────────────────────────────────────
+    step "Configurar env vars — $ACA_API_APP"
+    local api_yaml; api_yaml=$(mktemp /tmp/api-configure-XXXXXX.yaml)
+    cat > "$api_yaml" << EOF
+properties:
+  template:
+    containers:
+      - name: ${ACA_API_APP}
+        image: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+        command:
+          - concilium-api
+        env:
+          - name: CONCILIUM__CONFIG_ROOT
+            value: /app
+          - name: CONCILIUM__STORE_BACKEND
+            value: sharepoint
+          - name: CONCILIUM__SP_TENANT_ID
+            value: ${SP_TENANT_ID}
+          - name: CONCILIUM__SP_CLIENT_ID
+            value: ${SP_CLIENT_ID}
+          - name: CONCILIUM__SP_CLIENT_SECRET
+            value: "${SP_CLIENT_SECRET}"
+          - name: CONCILIUM__SP_DRIVE_ID
+            value: "${SP_DRIVE_ID}"
+          - name: CONCILIUM__SP_ROOT_PATH
+            value: ${SP_ROOT_PATH}
+          - name: CONCILIUM__AUTH_ENABLED
+            value: "1"
+          - name: CONCILIUM__AUTH_CLIENTS
+            value: '${auth_clients}'
+          - name: CONCILIUM__JWT_KEY_VAULT_URL
+            value: ${kv_url}
+          - name: CONCILIUM__API_HOST
+            value: "0.0.0.0"
+          - name: CONCILIUM__API_PORT
+            value: "8000"
+          - name: OTEL_SERVICE_NAME
+            value: concilium-api
+EOF
+    _apply_yaml "$ACA_API_APP" "$api_yaml"
+    rm -f "$api_yaml"
+
+    ok "Configuracao aplicada em ambos os containers."
+    echo "  Proximos passos: cd/scripts/deploy.sh github"
 }
 
 cmd_github() {
@@ -639,24 +738,26 @@ cmd_github() {
     _s "AZURE_CLIENT_ID"       "$APP_ID"
     _s "AZURE_TENANT_ID"       "$(az account show --query tenantId -o tsv)"
     _s "AZURE_SUBSCRIPTION_ID" "$(az account show --query id -o tsv)"
-    _v "RESOURCE_GROUP"             "$RESOURCE_GROUP"
-    _v "CONCILIUM__AZURE_ACCOUNT"   "$STORAGE_ACCOUNT"
-    _v "CONCILIUM__AZURE_CONTAINER" "concilium-projetos"
-    _v "ACA_API_APP"                "$ACA_API_APP"
-    _v "ACA_MCP_APP"                "$ACA_MCP_APP"
+    _v "RESOURCE_GROUP"        "$RESOURCE_GROUP"
+    _v "ACA_API_APP"           "$ACA_API_APP"
+    _v "ACA_MCP_APP"           "$ACA_MCP_APP"
+    _v "ACR_NAME"              "$ACR_NAME"
+    _v "IMAGE_NAME"            "$IMAGE_NAME"
+    _v "SMOKE_CLIENT_ID"       "$SMOKE_CLIENT_ID"
 
-    SKEY=$(az storage account keys list --account-name "$STORAGE_ACCOUNT" \
-        --resource-group "$RESOURCE_GROUP" --query '[0].value' -o tsv 2>/dev/null || echo "")
-    [[ -n "$SKEY" ]] && _s "CONCILIUM__AZURE_KEY" "$SKEY" || \
-        { read -r -s -p "  Azure Storage Key: " SKEY; echo; _s "CONCILIUM__AZURE_KEY" "$SKEY"; }
+    local sp_secret="${SP_CLIENT_SECRET:-}"
+    [[ -z "$sp_secret" ]] && { read -r -s -p "  SP_CLIENT_SECRET: " sp_secret; echo; }
+    _s "CONCILIUM__SP_CLIENT_SECRET" "$sp_secret"
 
     read -r -p "  OTEL Endpoint (Enter pula): " OTEL
     [[ -n "$OTEL" ]] && _s "OTEL_EXPORTER_OTLP_ENDPOINT" "$OTEL"
 
-    read -r -s -p "  SMOKE_CLIENT_SECRET (Enter pula): " SMKS; echo
-    [[ -n "$SMKS" ]] && _s "SMOKE_CLIENT_SECRET" "$SMKS"
+    local smks="${SMOKE_CLIENT_SECRET:-}"
+    [[ -z "$smks" ]] && { read -r -s -p "  SMOKE_CLIENT_SECRET: " smks; echo; }
+    _s "SMOKE_CLIENT_SECRET" "$smks"
 
-    ok "GitHub Secrets configurados."
+    ok "GitHub Secrets/Vars configurados."
+    echo "  Proximos passos: cd/scripts/deploy.sh configure"
 }
 
 cmd_users() {
@@ -681,7 +782,6 @@ cmd_all() {
     step "Sequencia operacional completa"
     cmd_bootstrap
     cmd_keys
-    cmd_tls --self-signed
     cmd_github
 }
 
@@ -701,20 +801,20 @@ Uso: deploy.sh [comando] [opcoes]
   status                       Mostra revisions e pesos de trafego
 
 -- Platform Operations ----------------------------------------------------------
+  configure                    Aplica env vars em ambos os containers ACA (idempotente)
   keys [--rotate]              Gera JWT keys -> Key Vault
-  bootstrap                    Provisiona infra Azure completa (idempotente)
+  bootstrap                    Provisiona infra Azure base (idempotente)
     bootstrap --validate         Valida Bicep (build + deployment validate)
-  tls --upload <pfx>           Configura TLS com certificado PFX existente
-  tls --self-signed            Configura TLS auto-assinado (staging)
-  github                       Configura GitHub Secrets via gh CLI
+  github                       Configura GitHub Secrets/Vars via gh CLI
   users [comando]              Executa comando de usuarios via az containerapp exec
-  all                          Executa bootstrap -> keys -> tls -> github
+  all                          Executa bootstrap -> keys -> github
 
 Variaveis de ambiente (CI/CD):
-  RESOURCE_GROUP LOCATION KV_NAME ACR_NAME AGW_NAME
-  ACA_API_APP ACA_MCP_APP DNS_ZONE GITHUB_REPO STORAGE_ACCOUNT
-  AZURE_ACCOUNT AZURE_CONTAINER AZURE_KEY OTEL_ENDPOINT
+  RESOURCE_GROUP LOCATION KV_NAME ACR_NAME IMAGE_NAME
+  ACA_API_APP ACA_MCP_APP GITHUB_REPO
+  SP_TENANT_ID SP_CLIENT_ID SP_CLIENT_SECRET SP_DRIVE_ID SP_ROOT_PATH
   SMOKE_CLIENT_ID SMOKE_CLIENT_SECRET
+  OTEL_EXPORTER_OTLP_ENDPOINT
 EOF
 }
 
@@ -731,9 +831,9 @@ case "$CMD" in
     rollback)       cmd_rollback "$@" ;;
     status)         cmd_status "$@" ;;
 
+    configure)      cmd_configure "$@" ;;
     keys)           cmd_keys "$@" ;;
     bootstrap)      cmd_bootstrap "$@" ;;
-    tls)            cmd_tls "$@" ;;
     github)         cmd_github "$@" ;;
     users)          cmd_users "$@" ;;
     all)            cmd_all "$@" ;;

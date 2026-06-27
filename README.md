@@ -141,81 +141,137 @@ concilium validate project "Projeto Exemplo"
 concilium project approve "Projeto Exemplo@v1" --as eng_senior
 ```
 
-## Variaveis de ambiente (resumo)
+## Variaveis de ambiente
 
-Arquivo de referencia: `.env.example`.
+Referencia completa: `src/concilium/infrastructure/settings.py`.
 
-### Diretorios
+### Desenvolvimento local
 
-- `CONCILIUM__ROOT`
-- `CONCILIUM__CONFIG_ROOT`
-- `CONCILIUM__PROJECTS_ROOT`
-- `CONCILIUM__BENCHMARK_PROJECTS_ROOT`
-- `CONCILIUM__STORE_BACKEND` (opções: `local_json`, `sharepoint`, `s3`; default: `filesystem`)
+Arquivos usados pelo `cd/development/docker-compose.yml` (nao commitados):
 
-Backends de store:
+- `.env.api` — vars da API (HOST, PORT, STORE_BACKEND, AUTH)
+- `.env.ui` — vars da UI (UI_HOST, UI_PORT, UI_API_BASE_URL)
 
-1. `local_json` (alias: `filesystem`) — store local por diretório/JSON
-2. `sharepoint` — via Graph API (`concilium[sharepoint]`)
-3. `s3` — via S3 API com `aioboto3` (`concilium[s3]`)
+```bash
+# Exemplo minimo .env.api para dev local com filesystem
+CONCILIUM__API_HOST=0.0.0.0
+CONCILIUM__STORE_BACKEND=filesystem
+CONCILIUM__AUTH_ENABLED=0
+OTEL_SDK_DISABLED=true
+```
 
-### Runtime config (transicao de YAML para env/file)
+Profiles de compose:
 
-Precedencia do arquivo de runtime:
+```bash
+docker compose -f cd/development/docker-compose.yml --profile api up --build
+docker compose -f cd/development/docker-compose.yml --profile deploy up --build
+```
 
-1. `CONCILIUM__RUNTIME_CONFIG_FILE`
-2. `CONCILIUM__CONFIG_FILE` (legado)
-3. `CONCILIUM__CONFIG_ROOT/concilium.yaml`
+## Deploy em producao (ACA + SharePoint)
 
-Formatos suportados: `.yaml/.yml`, `.json`, `.toml`.
+### Visao geral do pipeline
 
-Override granular por env (sem editar arquivo):
+```
+bootstrap -> keys -> github -> configure -> [image -> deploy -> smoke -> promote]
+```
 
-- Prefixo: `CONCILIUM__CFG__`
-- Exemplo: `CONCILIUM__CFG__progress__spi__ahead_threshold=1.1`
+### Variaveis por escopo
 
-### Mapping de benchmark (EAP -> CPU)
+#### Azure Container Apps — env vars dos containers
 
-Precedencia:
+Aplicadas via `deploy.sh configure` (idempotente). Necessitam das variaveis de ambiente
+`SP_*` e `SMOKE_CLIENT_SECRET` definidas antes de executar.
 
-1. `CONCILIUM__BENCHMARK_CPU_MAPPING_RULES_FILE`
-2. `CONCILIUM__CPU_MAPPING_RULES_FILE` (legado, apenas transicao)
-3. default interno em `config/referencias/cpu_mapping_rules.json`
+| Variavel | API | MCP | Valor |
+|---|:---:|:---:|---|
+| `CONCILIUM__CONFIG_ROOT` | ✓ | ✓ | `/app` |
+| `CONCILIUM__STORE_BACKEND` | ✓ | ✓ | `sharepoint` |
+| `CONCILIUM__SP_TENANT_ID` | ✓ | ✓ | tenant do Entra ID |
+| `CONCILIUM__SP_CLIENT_ID` | ✓ | ✓ | App Registration client ID |
+| `CONCILIUM__SP_CLIENT_SECRET` | ✓ | ✓ | client secret do App Registration |
+| `CONCILIUM__SP_DRIVE_ID` | ✓ | ✓ | Drive ID do SharePoint |
+| `CONCILIUM__SP_ROOT_PATH` | ✓ | ✓ | `Concilium/prod` |
+| `CONCILIUM__AUTH_ENABLED` | ✓ | ✓ | `1` |
+| `CONCILIUM__AUTH_CLIENTS` | ✓ | ✓ | JSON gerado por `configure` a partir de `SMOKE_CLIENT_SECRET` |
+| `CONCILIUM__JWT_KEY_VAULT_URL` | ✓ | ✓ | `https://concilium-kv.vault.azure.net` |
+| `CONCILIUM__API_HOST` | ✓ | — | `0.0.0.0` |
+| `CONCILIUM__API_PORT` | ✓ | — | `8000` |
+| `CONCILIUM__MCP_TRANSPORT` | — | ✓ | `streamable-http` |
+| `CONCILIUM__MCP_HOST` | — | ✓ | `0.0.0.0` |
+| `CONCILIUM__MCP_PORT` | — | ✓ | `8080` |
+| `OTEL_SERVICE_NAME` | ✓ | ✓ | `concilium-api` / `concilium-mcp` |
 
-### API/UI desacopladas
+#### GitHub Secrets
 
-- Bind da API:
-	- `CONCILIUM__API_HOST`
-	- `CONCILIUM__API_PORT`
-- URL canonica da API:
-	- `CONCILIUM__API_BASE_URL`
-- Bind da UI:
-	- `CONCILIUM__UI_HOST`
-	- `CONCILIUM__UI_PORT`
-- URL da API consumida pela UI:
-	- `CONCILIUM__UI_API_BASE_URL`
+Configurados via `deploy.sh github`. Mascarados nos logs do Actions.
 
-Precedencia da URL da API na UI:
+| Secret | Descricao |
+|---|---|
+| `AZURE_CLIENT_ID` | App Registration OIDC para o GitHub Actions |
+| `AZURE_TENANT_ID` | Tenant ID do Entra ID |
+| `AZURE_SUBSCRIPTION_ID` | Subscription ID do Azure |
+| `CONCILIUM__SP_CLIENT_SECRET` | Client secret do App Registration SharePoint |
+| `SMOKE_CLIENT_SECRET` | Secret do cliente `smoke-test` para smoke tests |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint OTLP para telemetria (opcional) |
 
-1. `CONCILIUM__UI_API_BASE_URL`
-2. `CONCILIUM__API_BASE_URL`
-3. `http://{CONCILIUM__API_HOST}:{CONCILIUM__API_PORT}`
+#### GitHub Variables
 
-Arquivos de referencia para deploy desacoplado:
+| Variable | Valor |
+|---|---|
+| `RESOURCE_GROUP` | `concilium-rg` |
+| `ACA_API_APP` | `concilium-api` |
+| `ACA_MCP_APP` | `concilium-mcp` |
+| `ACR_NAME` | `conciliumacr` |
+| `IMAGE_NAME` | `concilium` |
+| `SMOKE_CLIENT_ID` | `smoke-test` |
 
-- `.env.api.example`
-- `.env.ui.example`
+#### Azure Key Vault (`concilium-kv`)
 
-Arquivos usados pelo `cd/development/docker-compose.yml`:
+Secrets buscados em runtime pela Managed Identity (`CONCILIUM__JWT_KEY_VAULT_URL`).
 
-- `.env.api`
-- `.env.ui`
+| Secret | Conteudo |
+|---|---|
+| `jwt-private-key` | Chave privada RS256 PEM (gerada por `deploy.sh keys`) |
+| `jwt-public-key` | Chave publica RS256 PEM |
 
-Profiles de deploy:
+### Sequencia de primeiro deploy
 
-- API: `docker compose -f cd/development/docker-compose.yml --profile api up --build`
-- UI: `docker compose -f cd/development/docker-compose.yml --profile ui up --build`
-- Stack completo: `docker compose -f cd/development/docker-compose.yml --profile deploy up --build`
+```bash
+# 1. Provisionar infra (idempotente)
+deploy.sh bootstrap
+
+# 2. Gerar JWT keys no Key Vault
+deploy.sh keys
+
+# 3. Configurar GitHub Secrets/Vars
+SP_CLIENT_SECRET=<secret> SMOKE_CLIENT_SECRET=<secret> deploy.sh github
+
+# 4. Aplicar env vars nos containers ACA
+SP_TENANT_ID=<tid> SP_CLIENT_ID=<cid> SP_CLIENT_SECRET=<secret> \
+SP_DRIVE_ID=<did> SMOKE_CLIENT_SECRET=<secret> \
+deploy.sh configure
+
+# 5. Build e deploy da imagem
+deploy.sh image
+deploy.sh deploy <tag>
+deploy.sh smoke --revision <revision>
+deploy.sh promote --revision <revision>
+```
+
+### Rotacao do SMOKE_CLIENT_SECRET
+
+```bash
+# Gerar novo secret
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Re-aplicar configuracao com o novo secret
+SP_TENANT_ID=<tid> SP_CLIENT_ID=<cid> SP_CLIENT_SECRET=<secret> \
+SP_DRIVE_ID=<did> SMOKE_CLIENT_SECRET=<novo-secret> \
+deploy.sh configure
+
+# Atualizar GitHub Secret
+gh secret set SMOKE_CLIENT_SECRET --body "<novo-secret>" --repo mendeslobo/concilium
+```
 
 ## Qualidade e manutencao
 

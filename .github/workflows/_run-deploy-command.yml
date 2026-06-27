@@ -1,0 +1,60 @@
+name: Reusable - Run Deploy Script Command
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        description: "Shell command(s) that invoke cd/scripts/deploy.sh"
+        required: true
+        type: string
+    outputs:
+      image_tag:
+        description: "Image tag emitted by deploy.sh image"
+        value: ${{ jobs.run-command.outputs.image_tag }}
+      active_revision:
+        description: "Current active revision emitted by deploy.sh deploy"
+        value: ${{ jobs.run-command.outputs.active_revision }}
+      deployed_revision:
+        description: "Deployed revision emitted by deploy.sh deploy"
+        value: ${{ jobs.run-command.outputs.deployed_revision }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  run-command:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.exec.outputs.image_tag }}
+      active_revision: ${{ steps.exec.outputs.active_revision }}
+      deployed_revision: ${{ steps.exec.outputs.deployed_revision }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Executar comando deploy.sh
+        id: exec
+        env:
+          CI: "true"
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP || 'concilium-rg' }}
+          LOCATION: brazilsouth
+          ACR_NAME: conciliumacr
+          IMAGE_NAME: concilium
+          ACA_API_APP: ${{ vars.ACA_API_APP || 'concilium-api' }}
+          ACA_MCP_APP: ${{ vars.ACA_MCP_APP || 'concilium-mcp' }}
+          AZURE_ACCOUNT: ${{ vars.CONCILIUM__AZURE_ACCOUNT }}
+          AZURE_CONTAINER: ${{ vars.CONCILIUM__AZURE_CONTAINER }}
+          AZURE_KEY: ${{ secrets.CONCILIUM__AZURE_KEY }}
+          OTEL_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          SMOKE_CLIENT_ID: ${{ vars.SMOKE_CLIENT_ID || 'smoke-test' }}
+          SMOKE_CLIENT_SECRET: ${{ secrets.SMOKE_CLIENT_SECRET }}
+        run: |
+          chmod +x cd/scripts/deploy.sh
+          ${{ inputs.command }}

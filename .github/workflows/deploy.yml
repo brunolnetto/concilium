@@ -10,15 +10,6 @@ on:
         required: false
         default: ""
 
-env:
-  REGISTRY:        conciliumacr.azurecr.io
-  IMAGE_NAME:      concilium
-  RESOURCE_GROUP:  ${{ vars.RESOURCE_GROUP || 'concilium-rg' }}
-  LOCATION:        brazilsouth
-  ACA_API_APP:     ${{ vars.ACA_API_APP || 'concilium-api' }}
-  ACA_MCP_APP:     ${{ vars.ACA_MCP_APP || 'concilium-mcp' }}
-  KV_NAME:         concilium-kv
-
 permissions:
   id-token: write
   contents: read
@@ -27,157 +18,67 @@ jobs:
 # ── Job 1: Build & Push ───────────────────────────────────────────────────────
   build:
     name: Build & Push → ACR
-    runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.image.outputs.image_tag }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Build/re-deploy de imagem via script
-        id: image
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          if [[ -n "${{ inputs.image_tag }}" ]]; then
-            cd/scripts/deploy.sh image --tag "${{ inputs.image_tag }}"
-          else
-            cd/scripts/deploy.sh image
-          fi
+    uses: ./.github/workflows/_run-deploy-command.yml
+    secrets: inherit
+    with:
+      command: |
+        if [[ -n "${{ inputs.image_tag }}" ]]; then
+          cd/scripts/deploy.sh image --tag "${{ inputs.image_tag }}"
+        else
+          cd/scripts/deploy.sh image
+        fi
 
 
 
 # ── Job 2: Deploy nova revision ACA (sem promover tráfego) ───────────────────
   deploy-revision:
     name: Deploy -> Nova Revision
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_run-deploy-command.yml
     needs: build
     environment: production
-    outputs:
-      deployed_revision: ${{ steps.deploy.outputs.deployed_revision }}
-      active_revision:   ${{ steps.deploy.outputs.active_revision }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy nova revision ACA
-        id: deploy
-        env:
-          IMAGE_TAG:       ${{ needs.build.outputs.image_tag }}
-          ACA_API_APP:     ${{ env.ACA_API_APP }}
-          ACA_MCP_APP:     ${{ env.ACA_MCP_APP }}
-          AZURE_ACCOUNT:   ${{ vars.CONCILIUM__AZURE_ACCOUNT }}
-          AZURE_CONTAINER: ${{ vars.CONCILIUM__AZURE_CONTAINER }}
-          AZURE_KEY:       ${{ secrets.CONCILIUM__AZURE_KEY }}
-          OTEL_ENDPOINT:   ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          CI: "true"
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          cd/scripts/deploy.sh deploy "$IMAGE_TAG"
+    secrets: inherit
+    with:
+      command: |
+        cd/scripts/deploy.sh deploy "${{ needs.build.outputs.image_tag }}"
 
 # ── Job 3: Smoke tests contra a nova revision ────────────────────────────────
   smoke:
     name: Smoke Tests -> Revision '${{ needs.deploy-revision.outputs.deployed_revision }}'
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_run-deploy-command.yml
     needs: [build, deploy-revision]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Aguardar estabilização (30s)
-        run: sleep 30
-
-      - name: Executar smoke tests exaustivos
-        env:
-          TARGET_REVISION:     ${{ needs.deploy-revision.outputs.deployed_revision }}
-          SMOKE_CLIENT_ID:     ${{ vars.SMOKE_CLIENT_ID || 'smoke-test' }}
-          SMOKE_CLIENT_SECRET: ${{ secrets.SMOKE_CLIENT_SECRET }}
-          CI: "true"
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          cd/scripts/deploy.sh smoke --revision "$TARGET_REVISION"
+    secrets: inherit
+    with:
+      command: |
+        sleep 30
+        cd/scripts/deploy.sh smoke --revision "${{ needs.deploy-revision.outputs.deployed_revision }}"
 
 # ── Job 4a: Promote (smoke passou) ───────────────────────────────────────────
   promote:
     name: Promote -> Produção
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_run-deploy-command.yml
     needs: [build, deploy-revision, smoke]
     if: needs.smoke.result == 'success'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Promover revision '${{ needs.deploy-revision.outputs.deployed_revision }}' -> produção
-        env:
-          CI: "true"
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          cd/scripts/deploy.sh promote --revision "${{ needs.deploy-revision.outputs.deployed_revision }}"
-
-      - name: Resumo do deploy
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          cd/scripts/deploy.sh status
+    secrets: inherit
+    with:
+      command: |
+        cd/scripts/deploy.sh promote --revision "${{ needs.deploy-revision.outputs.deployed_revision }}"
+        cd/scripts/deploy.sh status
 
 # ── Job 4b: Rollback (smoke falhou) ──────────────────────────────────────────
   rollback:
     name: Rollback -> Manter Produção Atual
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/_run-deploy-command.yml
     needs: [deploy-revision, smoke]
     if: needs.smoke.result == 'failure'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Login Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Garantir tráfego na revision ativa anterior
-        env:
-          ACTIVE_REVISION: ${{ needs.deploy-revision.outputs.active_revision }}
-          CI: "true"
-        run: |
-          chmod +x cd/scripts/deploy.sh
-          if [[ -n "$ACTIVE_REVISION" ]]; then
-            cd/scripts/deploy.sh rollback --revision "$ACTIVE_REVISION"
-          else
-            echo "::warning::Nenhuma revision ativa anterior encontrada; rollback de tráfego ignorado."
-          fi
-
-      - name: Notificar falha
-        run: |
-          echo "::error::Smoke tests falharam — rollback executado automaticamente."
-          echo "::error::Revision testada: '${{ needs.deploy-revision.outputs.deployed_revision }}'."
-          echo "::error::Produção mantida em '${{ needs.deploy-revision.outputs.active_revision }}'."
-          exit 1
+    secrets: inherit
+    with:
+      command: |
+        if [[ -n "${{ needs.deploy-revision.outputs.active_revision }}" ]]; then
+          cd/scripts/deploy.sh rollback --revision "${{ needs.deploy-revision.outputs.active_revision }}"
+        else
+          echo "::warning::Nenhuma revision ativa anterior encontrada; rollback de trafego ignorado."
+        fi
+        echo "::error::Smoke tests falharam — rollback executado automaticamente."
+        echo "::error::Revision testada: '${{ needs.deploy-revision.outputs.deployed_revision }}'."
+        echo "::error::Producao mantida em '${{ needs.deploy-revision.outputs.active_revision }}'."
+        exit 1

@@ -1,6 +1,6 @@
-// Módulo: Azure Key Vault — ADR-094 Fase 1
-// Armazena chaves RS256 do JWT e certificado TLS.
-// ACI acessa via Managed Identity (sem credenciais em variáveis de ambiente).
+// Módulo: Azure Key Vault
+// Armazena chaves RS256 do JWT.
+// ACA acessa via Managed Identity (sem credenciais em variáveis de ambiente).
 
 @description('Região Azure')
 param location string
@@ -8,8 +8,8 @@ param location string
 @description('Nome do Key Vault (globalmente único, 3-24 chars)')
 param keyVaultName string
 
-@description('Principal ID da Managed Identity do ACI (recebe Secrets User)')
-param aciIdentityPrincipalId string
+@description('Principal ID da Managed Identity do ACA (recebe Secrets User)')
+param acaIdentityPrincipalId string
 
 @description('Principal ID da Managed Identity de deploy/ops (recebe Secrets Officer)')
 param opsIdentityPrincipalId string
@@ -24,22 +24,22 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: subscription().tenantId
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    enableRbacAuthorization: true   // RBAC em vez de access policies
-    publicNetworkAccess: 'Enabled'  // ACI público precisa de acesso — restringir com VNet em hardening futuro
+    enableRbacAuthorization: true
+    publicNetworkAccess: 'Enabled'
   }
 }
 
-// ── RBAC: ACI lê segredos (Managed Identity do container) ────────────────────
+// ── RBAC: ACA lê segredos (Managed Identity do container) ────────────────────
 
-resource aciSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, aciIdentityPrincipalId, 'SecretsUser')
+resource acaSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, acaIdentityPrincipalId, 'SecretsUser')
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
       '4633458b-17de-408a-b874-0445c86b69e6'  // Key Vault Secrets User
     )
-    principalId: aciIdentityPrincipalId
+    principalId: acaIdentityPrincipalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -53,21 +53,6 @@ resource opsSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01' 
     roleDefinitionId: subscriptionResourceId(
       'Microsoft.Authorization/roleDefinitions',
       'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'  // Key Vault Secrets Officer
-    )
-    principalId: opsIdentityPrincipalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// ── RBAC: App Gateway lê certificados TLS ────────────────────────────────────
-
-resource appGwCertUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, opsIdentityPrincipalId, 'CertUser')
-  scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'db79e9a7-68ee-4b58-9aeb-b90e7c24fcba'  // Key Vault Certificate User
     )
     principalId: opsIdentityPrincipalId
     principalType: 'ServicePrincipal'
