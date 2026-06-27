@@ -38,7 +38,6 @@ jobs:
     name: Deploy Infraestrutura
     uses: ./.github/workflows/_run-deploy-command.yml
     needs: validate
-    environment: production
     secrets: inherit
     with:
       command: |
