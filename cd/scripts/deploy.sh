@@ -221,7 +221,12 @@ cmd_smoke() {
     need az; require_login
     if [[ -n "$TARGET_REVISION" ]]; then
         TARGET_URL=$(_aca_revision_url "$ACA_API_APP" "$TARGET_REVISION")
-        TARGET_MCP="${TARGET_MCP:-${TARGET_URL}/mcp}"
+        if [[ -z "$TARGET_MCP" ]]; then
+            local mcp_fqdn; mcp_fqdn=$(az containerapp show \
+                --name "$ACA_MCP_APP" --resource-group "$RESOURCE_GROUP" \
+                --query 'properties.configuration.ingress.fqdn' -o tsv 2>/dev/null)
+            TARGET_MCP="https://${mcp_fqdn}/mcp"
+        fi
     else
         if [[ -z "$TARGET_URL" ]]; then
             local fqdn; fqdn=$(az containerapp show \
@@ -666,6 +671,8 @@ properties:
             value: '${auth_clients}'
           - name: CONCILIUM__JWT_KEY_VAULT_URL
             value: ${kv_url}
+          - name: CONCILIUM__PROJECTS_ROOT
+            value: /tmp/projetos
           - name: CONCILIUM__MCP_TRANSPORT
             value: streamable-http
           - name: CONCILIUM__MCP_HOST
@@ -710,6 +717,8 @@ properties:
             value: '${auth_clients}'
           - name: CONCILIUM__JWT_KEY_VAULT_URL
             value: ${kv_url}
+          - name: CONCILIUM__PROJECTS_ROOT
+            value: /tmp/projetos
           - name: CONCILIUM__API_HOST
             value: "0.0.0.0"
           - name: CONCILIUM__API_PORT
