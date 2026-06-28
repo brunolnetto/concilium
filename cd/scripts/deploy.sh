@@ -323,8 +323,8 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
         _check "X-RateLimit-Limit header presente" bash -c \
             "curl -s --max-time 10 -D - -o /dev/null \
                 -X POST '${TARGET_URL}/auth/token' \
-                -H 'Content-Type: application/x-www-form-urlencoded' \
-                -d 'grant_type=client_credentials&client_id=probe&client_secret=probe' \
+                -H 'Content-Type: application/json' \
+                -d '{\"client_id\":\"probe\",\"client_secret\":\"probe\"}' \
                 | grep -qi 'x-ratelimit-limit'"
 
         _check "RBAC: 403 em endpoint restrito (project:approve sem permissao)" bash -c \
@@ -354,6 +354,7 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
                 -X POST '${TARGET_MCP}' \
                 -H 'Authorization: Bearer ${TOKEN}' \
                 -H 'Content-Type: application/json' \
+                -H 'Accept: application/json, text/event-stream' \
                 -d '{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":1}' 2>/dev/null || echo '{}')
              echo \"\$RESP\" | jq -e '.result.tools | length > 0' > /dev/null"
 
