@@ -192,6 +192,11 @@ cmd_deploy() {
     # ── Deploy MCP (rolling update — mesma imagem, comando diferente) ─────────
     if _aca_app_exists "$ACA_MCP_APP"; then
         step "ACA Deploy — app '$ACA_MCP_APP' com imagem '$image_tag'"
+        az containerapp revision set-mode \
+            --name "$ACA_MCP_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --mode multiple \
+            --output none
         az containerapp update \
             --name "$ACA_MCP_APP" \
             --resource-group "$RESOURCE_GROUP" \
@@ -200,7 +205,12 @@ cmd_deploy() {
         local mcp_revision
         mcp_revision=$(_aca_latest_revision "$ACA_MCP_APP")
         _wait_revision_running "$ACA_MCP_APP" "$mcp_revision"
-        ok "Revision MCP pronta: $mcp_revision"
+        az containerapp ingress traffic set \
+            --name "$ACA_MCP_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --revision-weight "${mcp_revision}=100" \
+            --output none
+        ok "Revision MCP pronta: $mcp_revision (100% trafego)"
     fi
 
     echo "  Proximo passo: cd/scripts/deploy.sh smoke --revision $new_revision"
