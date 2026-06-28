@@ -244,8 +244,8 @@ cmd_smoke() {
 
     _check() {
         local name="$1"; shift
-        if "$@" &>/dev/null 2>&1; then ok "$name"; ((PASS++))
-        else warn "FALHOU: $name"; ((FAIL++)); fi
+        if "$@" &>/dev/null 2>&1; then ok "$name"; (( ++PASS )) || true
+        else warn "FALHOU: $name"; (( ++FAIL )) || true; fi
     }
 
     step "Smoke Tests Exaustivos -> $TARGET_URL"
@@ -259,8 +259,8 @@ cmd_smoke() {
             -d "{\"client_id\":\"${SMOKE_CLIENT_ID}\",\"client_secret\":\"${SMOKE_CLIENT_SECRET}\"}" \
             | jq -r '.access_token // empty' 2>/dev/null || echo "")
         [[ -n "$TOKEN" ]] \
-            && { ok "POST /auth/token -> JWT emitido"; ((PASS++)); } \
-            || { warn "FALHOU: POST /auth/token"; ((FAIL++)); }
+            && { ok "POST /auth/token -> JWT emitido"; (( ++PASS )) || true; } \
+            || { warn "FALHOU: POST /auth/token"; (( ++FAIL )) || true; }
     else
         warn "SMOKE_CLIENT_SECRET nao definido — checks de auth pulados."
     fi
