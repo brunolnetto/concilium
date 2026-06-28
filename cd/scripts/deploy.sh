@@ -53,6 +53,17 @@ confirm() { [[ "${CI:-}" == "true" ]] && return 0; read -r -p "  $* [s/N] " r; [
 require_login() { az account show &>/dev/null || die "Execute: az login"; }
 az_secret_exists() { az keyvault secret show --vault-name "$KV_NAME" --name "$1" &>/dev/null 2>&1; }
 
+_az_retry() {
+    local attempt=0 max=5 delay=10
+    until "$@" 2>&1; do
+        attempt=$((attempt + 1))
+        [[ $attempt -ge $max ]] && { echo "  Falhou apos $max tentativas: $*" >&2; return 1; }
+        warn "  OperationInProgress — aguardando ${delay}s (tentativa $attempt/$max)..."
+        sleep "$delay"
+        delay=$((delay * 2))
+    done
+}
+
 # -- ACA Revisions: helpers ------------------------------------------------------
 
 _aca_app_exists() {
@@ -171,13 +182,13 @@ cmd_deploy() {
     _wait_revision_running "$ACA_API_APP" "$new_revision"
 
     if [[ -n "$previous_primary" && "$previous_primary" != "$new_revision" ]]; then
-        az containerapp ingress traffic set \
+        _az_retry az containerapp ingress traffic set \
             --name "$ACA_API_APP" \
             --resource-group "$RESOURCE_GROUP" \
             --revision-weight "${previous_primary}=100" "${new_revision}=0" \
             --output none
     else
-        az containerapp ingress traffic set \
+        _az_retry az containerapp ingress traffic set \
             --name "$ACA_API_APP" \
             --resource-group "$RESOURCE_GROUP" \
             --revision-weight "${new_revision}=100" \
@@ -205,7 +216,7 @@ cmd_deploy() {
         local mcp_revision
         mcp_revision=$(_aca_latest_revision "$ACA_MCP_APP")
         _wait_revision_running "$ACA_MCP_APP" "$mcp_revision"
-        az containerapp ingress traffic set \
+        _az_retry az containerapp ingress traffic set \
             --name "$ACA_MCP_APP" \
             --resource-group "$RESOURCE_GROUP" \
             --revision-weight "${mcp_revision}=100" \
