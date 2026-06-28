@@ -4,11 +4,13 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+from concilium.application.skills import run_relatorio_e_artefatos
 
 # ---------------------------------------------------------------------------
 # Module loader — use correct import pattern so coverage.py can track it
 # ---------------------------------------------------------------------------
 
+_ = run_relatorio_e_artefatos
 _MOD = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_a"]
 
 # Extract names used in patch() calls (need the dotted module path)

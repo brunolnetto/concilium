@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.models.analytics.analitica import CurvaABCInsumo, InsumoDetalheAtividade, ItemCurvaABC
+from concilium.domain.models.catalog.catalogo import _infer_tipo_combustivel
 
 
 def _accumulate_funcoes_de_equipe(custo_acum: dict, equipe: object) -> None:
@@ -39,11 +40,14 @@ def _accumulate_equipamentos_de_equipe(custo_acum: dict, equipe: object) -> None
         custo_acum[eid]["custo_total"] += custo_eq
         custo_acum[eid]["atividades"].add(item_id)
         if custo_comb > 0:
-            diesel_key = f"{eid}__DIESEL"
-            custo_acum[diesel_key]["descricao"] = f"Diesel: {equip.descricao or eid}"
-            custo_acum[diesel_key]["categoria"] = "DIESEL"
-            custo_acum[diesel_key]["custo_total"] += custo_comb
-            custo_acum[diesel_key]["atividades"].add(item_id)
+            tc = getattr(equip, "tipo_combustivel", None) or _infer_tipo_combustivel(eid)
+            tc_upper = str(tc).upper()
+            comb_key = f"{eid}__{tc_upper}"
+            custo_acum[comb_key]["descricao"] = f"{tc_upper}: {equip.descricao or eid}"
+            custo_acum[comb_key]["categoria"] = "COMBUSTIVEL"
+            custo_acum[comb_key]["tipo_combustivel"] = str(tc)
+            custo_acum[comb_key]["custo_total"] += custo_comb
+            custo_acum[comb_key]["atividades"].add(item_id)
 
 
 def _build_custo_acum(equipes_diretas: list) -> dict:
@@ -119,11 +123,13 @@ def _build_equipamentos_detalhes(detalhes: list, equipamentos, perm: float) -> N
         )
         if equip.custo_combustivel_mensal > 0:
             custo_comb = round(equip.custo_combustivel_mensal * perm, 2)
+            tc = getattr(equip, "tipo_combustivel", None) or _infer_tipo_combustivel(eid)
+            tc_upper = str(tc).upper()
             detalhes.append(
                 InsumoDetalheAtividade(
-                    insumo_id=f"{eid}__DIESEL",
-                    descricao=f"Diesel: {equip.descricao or eid}",
-                    categoria="DIESEL",
+                    insumo_id=f"{eid}__{tc_upper}",
+                    descricao=f"{tc_upper}: {equip.descricao or eid}",
+                    categoria="COMBUSTIVEL",
                     num_unidades=float(equip.num_unidades),
                     custo_unitario_mensal=equip.custo_combustivel_mensal,
                     permanencia_meses=perm,

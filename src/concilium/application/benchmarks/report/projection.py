@@ -120,11 +120,14 @@ def _build_breakdown_direto_pu_q(cat_totals: dict[str, float], custo_direto: Any
         cat_totals["mao_obra"] + cat_totals["equipamentos"] + cat_totals["diesel"] + cat_totals["materiais"]
     )
     computed_catalog_total = cat_total if cat_total > 0 else total_from_components
+    comb_total = round(cat_totals["diesel"], 2)
     return {
         "base": "pu_q",
         "mao_obra_total": round(cat_totals["mao_obra"], 2),
         "equipamentos_total": round(cat_totals["equipamentos"], 2),
-        "diesel_total": round(cat_totals["diesel"], 2),
+        "combustivel_total": comb_total,
+        "combustivel_por_tipo": cat_totals.get("combustivel_por_tipo", {}),
+        "diesel_total": comb_total,  # ADR-107 D5: alias backward compat
         "materiais_total": round(cat_totals["materiais"], 2),
         "direto_total": round(computed_catalog_total, 2),
         "direto_total_pu_q": round(computed_catalog_total, 2),
@@ -133,11 +136,14 @@ def _build_breakdown_direto_pu_q(cat_totals: dict[str, float], custo_direto: Any
 
 
 def _build_breakdown_direto_equipes(eq_totals: dict[str, float]) -> dict[str, Any]:
+    comb_total = round(eq_totals["diesel"], 2)
     return {
         "base": "equipes",
         "mao_obra_total": round(eq_totals["mao_obra"], 2),
         "equipamentos_total": round(eq_totals["equipamentos"], 2),
-        "diesel_total": round(eq_totals["diesel"], 2),
+        "combustivel_total": comb_total,
+        "combustivel_por_tipo": eq_totals.get("combustivel_por_tipo", {}),
+        "diesel_total": comb_total,  # ADR-107 D5: alias backward compat
         "materiais_total": round(eq_totals["materiais"], 2),
         "direto_total": round(eq_totals["total"], 2),
         "direto_total_equipes": round(eq_totals["total"], 2),
@@ -161,14 +167,25 @@ def _accumulate_planejamento(planejamento: list) -> tuple[bool, dict[str, float]
     return has_catalog, totals
 
 
-def _accumulate_equipes(equipes_diretas: list) -> dict[str, float]:
+def _accumulate_equipes(equipes_diretas: list) -> dict[str, float | dict]:
     """Acumula custos por categoria a partir de custo_inst_* quando disponível.
 
     Dois paths:
     1. Estágio 4 (com pool contracts): usa custo_inst_* (decomposição oficial — ADR-104)
     2. Estágio 1/3 (sem pool): fallback heurístico — menos preciso mas funciona
+
+    ADR-107 D5: popula também "combustivel_por_tipo" com breakdown por TipoCombustivel.
     """
-    totals = {"mao_obra": 0.0, "equipamentos": 0.0, "diesel": 0.0, "materiais": 0.0, "total": 0.0}
+    from concilium.domain.models.catalog.catalogo import _infer_tipo_combustivel
+
+    totals: dict[str, float | dict] = {
+        "mao_obra": 0.0,
+        "equipamentos": 0.0,
+        "diesel": 0.0,
+        "materiais": 0.0,
+        "total": 0.0,
+        "combustivel_por_tipo": {},  # ADR-107 D5
+    }
 
     for equipe in equipes_diretas:
         # PATH 1: Se tem decomposição instancial (Estágio 4), usar dados oficiais (ADR-104)
@@ -186,6 +203,19 @@ def _accumulate_equipes(equipes_diretas: list) -> dict[str, float]:
                 totals["equipamentos"] += equipe.custo_equipamentos_mensal * fator
                 totals["diesel"] += equipe.custo_combustivel_total_mensal * fator
                 totals["materiais"] += getattr(equipe, "custo_material_mensal", 0.0) * fator
+
+        # ADR-107 D5: breakdown por tipo de combustível via equipamentos da equipe
+        for equip in getattr(equipe, "equipamentos", []) or []:
+            comb_val = float(getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0)
+            if comb_val <= 0:
+                continue
+            perm = float(getattr(equipe, "permanencia_meses", 0.0) or 0.0)
+            tc = getattr(equip, "tipo_combustivel", None) or _infer_tipo_combustivel(
+                getattr(equip, "equip_id", "") or ""
+            )
+            tc_key = str(tc)
+            cpt = totals["combustivel_por_tipo"]
+            cpt[tc_key] = round(cpt.get(tc_key, 0.0) + comb_val * perm, 2)
 
     # NEP-043 original: "custo_total = custo de 1 frente → multiplicar por num_equipes_base".
     # ADR-091: a normalização de custo_total em skill-05 já divide pelo número de frentes
