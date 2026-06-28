@@ -68,7 +68,7 @@ jobs:
     name: Rollback -> Manter Produção Atual
     uses: ./.github/workflows/_run-deploy-command.yml
     needs: [deploy-revision, smoke]
-    if: needs.smoke.result == 'failure'
+    if: failure() && needs.smoke.result == 'failure'
     secrets: inherit
     with:
       command: |
