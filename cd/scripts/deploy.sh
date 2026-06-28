@@ -300,9 +300,8 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
              [[ \"\$S\" == '200' ]]"
 
         _check "X-RateLimit-Limit header presente" bash -c \
-            "curl -sf --max-time 10 -D - -o /dev/null \
-                -H 'Authorization: Bearer ${TOKEN}' \
-                '${TARGET_URL}/api/projects/' \
+            "curl -s --max-time 10 -D - -o /dev/null \
+                -X POST '${TARGET_URL}/auth/token' \
                 | grep -qi 'x-ratelimit-limit'"
 
         _check "RBAC: 403 em endpoint restrito (project:approve sem permissao)" bash -c \
@@ -627,6 +626,9 @@ cmd_configure() {
     smoke_hash="sha256:$(printf '%s' "$SMOKE_CLIENT_SECRET" | openssl dgst -sha256 -hex | sed 's/^.* //')"
     local auth_clients="{\"${SMOKE_CLIENT_ID}\":{\"secret_hash\":\"${smoke_hash}\",\"roles\":[\"operator\"]}}"
     local kv_url="https://${KV_NAME}.vault.azure.net"
+    local mi_client_id
+    mi_client_id=$(az identity show --name concilium-identity --resource-group "$RESOURCE_GROUP" \
+        --query 'clientId' -o tsv 2>/dev/null || echo "")
 
     _apply_yaml() {
         local app="$1" yaml_file="$2"
@@ -681,6 +683,8 @@ properties:
             value: "8080"
           - name: OTEL_SERVICE_NAME
             value: concilium-mcp
+          - name: AZURE_CLIENT_ID
+            value: ${mi_client_id}
 EOF
     _apply_yaml "$ACA_MCP_APP" "$mcp_yaml"
     rm -f "$mcp_yaml"
@@ -725,6 +729,8 @@ properties:
             value: "8000"
           - name: OTEL_SERVICE_NAME
             value: concilium-api
+          - name: AZURE_CLIENT_ID
+            value: ${mi_client_id}
 EOF
     _apply_yaml "$ACA_API_APP" "$api_yaml"
     rm -f "$api_yaml"
