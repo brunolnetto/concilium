@@ -300,7 +300,7 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
              [[ \"\$S\" == '200' ]]"
 
         _check "X-RateLimit-Limit header presente" bash -c \
-            "curl -sf --max-time 10 -I \
+            "curl -sf --max-time 10 -D - -o /dev/null \
                 -H 'Authorization: Bearer ${TOKEN}' \
                 '${TARGET_URL}/api/projects/' \
                 | grep -qi 'x-ratelimit-limit'"
@@ -317,7 +317,7 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
 
     if [[ -n "$TOKEN" ]]; then
         _check "GET /api/catalogs (catalog:read)" bash -c \
-            "S=\$(curl -so /dev/null -w '%{http_code}' --max-time 15 \
+            "S=\$(curl -sLo /dev/null -w '%{http_code}' --max-time 15 \
                 -H 'Authorization: Bearer ${TOKEN}' '${TARGET_URL}/api/catalogs/')
              [[ \"\$S\" == '200' ]]"
     fi

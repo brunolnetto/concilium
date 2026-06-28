@@ -40,10 +40,11 @@ RUN groupadd --system --gid 999 nonroot \
 
 WORKDIR /app
 
-# Install wheel (no venv copying, no path coupling)
+# Install wheel with azure extra (Key Vault for JWT keys in production)
 COPY --from=builder /workspace/concilium/dist/*.whl /tmp/
 
-RUN pip install --no-cache-dir /tmp/*.whl \
+RUN wheel=$(ls /tmp/*.whl) \
+ && pip install --no-cache-dir "${wheel}[azure]" \
  && rm -rf /tmp/*.whl
 
 USER nonroot
