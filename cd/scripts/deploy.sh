@@ -350,11 +350,19 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
 
     if [[ -n "$TOKEN" ]]; then
         _check "MCP tools/list com token" bash -c \
-            "RESP=\$(curl -sf --max-time 20 \
+            "AUTH='Authorization: Bearer ${TOKEN}'
+             CT='Content-Type: application/json'
+             AC='Accept: application/json, text/event-stream'
+             INIT_RESP=\$(curl -sf --max-time 15 -D /tmp/mcp_init_hdr.txt \
                 -X POST '${TARGET_MCP}' \
-                -H 'Authorization: Bearer ${TOKEN}' \
-                -H 'Content-Type: application/json' \
-                -H 'Accept: application/json, text/event-stream' \
+                -H \"\$AUTH\" -H \"\$CT\" -H \"\$AC\" \
+                -d '{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":0,\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"smoke\",\"version\":\"1\"}}}' \
+                2>/dev/null || echo '{}')
+             SID=\$(grep -i '^mcp-session-id:' /tmp/mcp_init_hdr.txt | tr -d '\\r' | awk '{print \$2}')
+             RESP=\$(curl -sf --max-time 20 \
+                -X POST '${TARGET_MCP}' \
+                -H \"\$AUTH\" -H \"\$CT\" -H \"\$AC\" \
+                -H \"mcp-session-id: \$SID\" \
                 -d '{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":1}' 2>/dev/null || echo '{}')
              echo \"\$RESP\" | jq -e '.result.tools | length > 0' > /dev/null"
 
