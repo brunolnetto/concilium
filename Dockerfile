@@ -21,8 +21,7 @@ WORKDIR /workspace/concilium
 # Dependencies first (cache layer)
 COPY pyproject.toml uv.lock ./
 
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-install-project
+RUN uv sync --locked --no-install-project
 
 # Source code
 COPY . .
