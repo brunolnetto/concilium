@@ -1,6 +1,6 @@
 # ADR-107 — Generalização do Tipo de Combustível: DIESEL → COMBUSTIVEL com tipo_combustivel
 
-**Status:** Implementado ✅ _(D1–D4, D6 concluídos 2026-06-10; D5 analytics aguarda ADR-106)_  
+**Status:** Implementado ✅ _(D1–D6 concluídos; D5 2026-06-27: curva_abc_builder usa tipo_combustivel, projection emite combustivel_total+combustivel_por_tipo backward-compat diesel_total, CuboCombustivelFace builder em cubo_combustivel_builder.py)_  
 **Data:** 2026-06-09  
 **Contexto:** MendesLobo Construtora — Concilium  
 **Depende de:** ADR-030, ADR-082, ADR-085, ADR-090, ADR-092  

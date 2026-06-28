@@ -1,6 +1,6 @@
 # ADR-097 — Modelagem de Tributação Social sobre Salário Base (Brasil, 2026)
 
-**Status:** Implementado ✅ _(F1-F5 completos; F6 People & Finance MCP 💡)_
+**Status:** Implementado ✅ _(F1-F6 completos 2026-06-27: calcular_tributos MCP tool em presentation/mcp/tools/tributacao.py, testes em test_adr097_f6_mcp_tributacao.py)_
 **Data:** 2026-06-01
 **Contexto:** MendesLobo Construtora — Concilium
 **Dependências:** ADR-056 (constantes de domínio), ADR-009 (custos indiretos), ADR-023 (BDI)

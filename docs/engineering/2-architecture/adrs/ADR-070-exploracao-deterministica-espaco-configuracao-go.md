@@ -1,6 +1,6 @@
 # ADR-070: Exploração Determinística do Espaço de Configuração Operacional para Viabilidade de GO
 
-**Status:** ⚠️ Parcialmente Implementado — núcleo entregue via ADR-108/109 _(reclassificado 2026-06-19)_  
+**Status:** Implementado ✅ _(F1–F3+F5 completos 2026-06-27: explorar_configuracoes_go MCP tool, executar_campanha com ThreadPoolExecutor, curar_shortlist com Pareto O+EF; F4 CPU-alternativo deferido — requer catálogo enriquecido)_  
 **Data original:** 2026-05-23  
 **Reavaliação:** 2026-06-11 — correção de status + mapeamento ao estado atual + path revisado  
 **Relacionado:** ADR-004, ADR-005, ADR-006, ADR-020, ADR-021, ADR-022, ADR-051, ADR-060, ADR-061, ADR-108, ADR-109, ADR-113, NEP-042, NEP-043

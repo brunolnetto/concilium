@@ -1,0 +1,944 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+% ── Tema ──────────────────────────────────────────────────────────────────────
+\usetheme{Madrid}
+\usecolortheme{default}
+\usefonttheme{professionalfonts}
+
+% Paleta MendesLobo: azul estrutura + laranja acento
+\definecolor{mlblue}{RGB}{18,52,86}
+\definecolor{mlorange}{RGB}{214,100,28}
+\definecolor{mlgray}{RGB}{240,242,245}
+\definecolor{mlgreen}{RGB}{39,120,71}
+\definecolor{mlred}{RGB}{180,35,35}
+
+\setbeamercolor{structure}{fg=mlblue}
+\setbeamercolor{frametitle}{bg=mlblue,fg=white}
+\setbeamercolor{title}{bg=mlblue,fg=white}
+\setbeamercolor{block title}{bg=mlblue,fg=white}
+\setbeamercolor{block body}{bg=mlgray}
+\setbeamercolor{alerted text}{fg=mlorange}
+\setbeamercolor{example text}{fg=mlgreen}
+\setbeamertemplate{navigation symbols}{}
+
+% ── Pacotes ───────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[portuguese]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fontawesome5}
+
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  backgroundcolor=\color{mlgray},
+  frame=single,
+  rulecolor=\color{mlblue!30},
+  xleftmargin=2pt,xrightmargin=2pt,
+}
+
+% ── Comandos utilitários ───────────────────────────────────────────────────────
+\newcommand{\yes}{\textcolor{mlgreen}{\faCheck}}
+\newcommand{\no}{\textcolor{mlred}{---}}
+\newcommand{\half}{\textcolor{mlorange}{$\circ$}}
+\newcommand{\role}[1]{\texttt{\small #1}}
+\newcommand{\tool}[1]{\texttt{\footnotesize #1}}
+\newcommand{\skill}[2]{\textbf{S#1}~#2}
+
+% ── Metadados ─────────────────────────────────────────────────────────────────
+\title[Concilium — Visão Técnica]{Concilium\\[4pt]\large Pipeline, Catálogo, Roles \& Workflows}
+\subtitle{Mendes Lobo Construção}
+\author{Bruno Peixoto}
+\date{\today}
+\institute{Uso interno --- confidencial}
+
+% ── Início ────────────────────────────────────────────────────────────────────
+\begin{document}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Agenda}
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+% =============================================================================
+\section{Arquitetura Geral}
+% =============================================================================
+
+\begin{frame}{Concilium em uma Página}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{block}{O que é}
+      Sistema de \textbf{orçamentação e planejamento} de obras de infraestrutura
+      que combina:
+      \begin{itemize}
+        \item Pipeline de skills determinística e auditável
+        \item Catálogo versionado de insumos e composições (CPU)
+        \item Fachada MCP para agentes de IA e usuários humanos
+        \item Pool de recursos compartilhados com otimização RCPSP
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Fluxo de valor}
+      {\small Lista de serviços $\;\to\;$ EAP $\;\to\;$ Cronograma $\;\to\;$
+      Pool $\;\to\;$ \textbf{Resultado financeiro auditável}}
+    \end{block}
+
+    \column{0.44\textwidth}
+    \begin{tikzpicture}[
+        box/.style={draw=mlblue,fill=mlgray,rounded corners=3pt,
+                    minimum width=3.2cm,minimum height=0.55cm,
+                    font=\scriptsize\ttfamily,align=center},
+        arr/.style={-{Stealth[length=5pt]},mlblue,thick},
+        every node/.style={font=\scriptsize}
+      ]
+      \node[box] (mcp)   {Fachada MCP (48 tools)};
+      \node[box,below=0.25cm of mcp] (pipe) {Pipeline de Skills (08)};
+      \node[box,below=0.25cm of pipe] (can)  {Canônico JSON (versionado)};
+      \node[box,below=0.25cm of can]  (cat)  {Catálogo (contexto)};
+      \node[box,below=0.25cm of cat]  (infra){Azure ACA (blue-green)};
+      \draw[arr] (mcp) -- (pipe);
+      \draw[arr] (pipe) -- (can);
+      \draw[arr] (can) -- (cat);
+      \draw[arr] (cat) -- (infra);
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+% =============================================================================
+\section{Pipeline de Skills}
+% =============================================================================
+
+\begin{frame}{Pipeline: Composição de 8 Skills}
+  \begin{tikzpicture}[
+      skill/.style={draw=mlblue,fill=mlgray,rounded corners=3pt,
+                    minimum width=2.1cm,minimum height=1.0cm,align=center,
+                    font=\tiny},
+      arr/.style={-{Stealth[length=4pt]},mlblue,thick},
+      lbl/.style={font=\tiny\itshape,text=mlblue,align=center},
+    ]
+    % Nodes
+    \node[skill] (s1) {\textbf{01}\\\scriptsize Escopo\\EAP};
+    \node[skill,right=0.5cm of s1] (s2) {\textbf{02}\\\scriptsize Prod.\\Climática};
+    \node[skill,right=0.5cm of s2] (s3) {\textbf{03}\\\scriptsize Catálogo\\CPU};
+    \node[skill,right=0.5cm of s3] (s4) {\textbf{04}\\\scriptsize Cronograma\\RCPSP};
+    \node[skill,right=0.5cm of s4] (s5) {\textbf{05}\\\scriptsize Equipes\\Pool};
+    \node[skill,below=0.6cm of s5] (s6) {\textbf{06}\\\scriptsize Resultado\\Financeiro};
+    \node[skill,left=0.5cm of s6]  (s7) {\textbf{07}\\\scriptsize Indiretos\\BDI};
+    \node[skill,left=0.5cm of s7]  (s8) {\textbf{08}\\\scriptsize Artefatos\\Entrega};
+    % Arrows horizontal
+    \foreach \a/\b in {s1/s2,s2/s3,s3/s4,s4/s5}
+      \draw[arr] (\a) -- (\b);
+    % Turn-down
+    \draw[arr] (s5) -- (s6);
+    % Arrows return
+    \foreach \a/\b in {s6/s7,s7/s8}
+      \draw[arr] (\a) -- (\b);
+    % Canonical label
+    \node[lbl,above=0.15cm of s3] {Canônico JSON};
+    \node[lbl,below=0.15cm of s7] {Canônico JSON};
+  \end{tikzpicture}
+
+  \vspace{4pt}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+    \begin{itemize}\scriptsize
+      \item Cada skill recebe o canônico da skill anterior como \textbf{entrada}
+      \item Saída é persistida e versionada (imutável após aprovação)
+      \item Execução assíncrona via worker pool (\texttt{disparar\_pipeline})
+    \end{itemize}
+    \column{0.5\textwidth}
+    \begin{itemize}\scriptsize
+      \item Skills são \textbf{idempotentes}: mesmo input $\to$ mesmo output
+      \item Re-execução com novo catálogo ou override gera novo plano
+      \item Artefatos (PDF/XLSX) gerados na skill 08
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+% ── Skills em detalhe ─────────────────────────────────────────────────────────
+\begin{frame}{Skills: Responsabilidades e Outputs}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\textwidth}{@{}c p{2.8cm} X p{3.0cm}@{}}
+    \toprule
+    \textbf{\#} & \textbf{Nome} & \textbf{Responsabilidade} & \textbf{Output chave} \\
+    \midrule
+    01 & Escopo \& EAP & Normaliza serviços, cria itens da EAP com quantitativos e precedências & EAP validada, DAG de atividades \\
+    02 & Prod.\ Climática & Consulta precipitação histórica; calcula $\lambda_j$ por semana ISO & \texttt{Praticabilidade} semanal \\
+    03 & Catálogo CPU & Resolve CPUs, composições de equipe e PU de catálogo ($p_i^c$) & \texttt{EquipeDireta} por item \\
+    04 & Cronograma & Resolve RCPSP: início/fim por atividade, $m_{ij}$, path crítico & \texttt{ScheduledActivity} + pool spec \\
+    05 & Equipes \& Pool & Contrato de pool, custo instancial por lifecycle, $\tilde{C}_i$ & \texttt{EquipeDireta.custo\_total} \\
+    06 & Resultado Financeiro & $p_i^o$, bridge N1$\to$N2$\to$N3, custo por categoria & \texttt{Planejamento}, \texttt{CustoTotal} \\
+    07 & Indiretos \& BDI & TOP/LAB/ADM/QSMS/MOB + BDI por categoria; valor de venda & \texttt{Venda}, \texttt{MemorialBDI} \\
+    08 & Artefatos & Empacota PDF memorial, XLSX, cubo analítico, benchmark ZIP & Bundle versionado \\
+    \bottomrule
+  \end{tabularx}
+\end{frame}
+
+% =============================================================================
+\section{Regras de Negócio}
+% =============================================================================
+
+\begin{frame}{Regras de Negócio: Custo Operacional}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Custo horário de catálogo $\gamma_i$}
+      \[
+        \gamma_i = \sum_{r \in R_i} \gamma_r
+        = \frac{\tilde{C}_i^{\text{sem}}}{h_{\text{sem}}}
+      \]
+      Decomposto em MO, EQ, combustível, material.
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Preço unitário de catálogo $p_i^c$}
+      \[
+        p_i^c = \frac{\gamma_i}{\rho_i}
+        = \frac{\sum_r C_r^{\text{sem}}}{P_i \cdot h_{\text{sem}}}
+      \]
+      $\rho_i$: produtividade horária da equipe-padrão.
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Identidade de auditoria (NEP-043)}
+      \[
+        p_i^c \cdot Q_i = \tilde{C}_{i}^{\text{op}} \quad \text{se } \eta=1
+      \]
+      Verifica bridge skill-05 $\leftrightarrow$ skill-06.
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{Preço unitário operacional $p_i^o$}
+      \[
+        p_i^o = p_i^c \cdot \underbrace{
+          \frac{\sum_j m_{ij}}{\sum_j \delta_j\,\lambda_j\,m_{ij}}
+        }_{\tau_i \;\geq\; 1}
+      \]
+      $\delta_j = d_j/d$: fração de dias na semana $j$.\\
+      $\lambda_j$: praticabilidade climática.\\
+      $\tau_i \geq 1$: custo operacional sempre $\geq$ catálogo.
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Lifecycle engine (ADR-106)}
+      \[
+        \tilde{C}_i = \underbrace{c_{\text{mo}} \cdot n_{\text{prod}}}_{\text{ativo MO}}
+        + \underbrace{c_{\text{eq}} \cdot n_{\text{prod}}}_{\text{ativo EQ}}
+        + \underbrace{c_{\text{mo}} \cdot n_{\text{idle}}}_{\text{ocioso MO}}
+        + \underbrace{c_{\text{eq}}^{\rho} \cdot n_{\text{idle}}}_{\text{ocioso EQ}}
+        + c_{\text{mob/demob}}
+      \]
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Regras de Negócio: BDI e Valor de Venda}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{Estrutura do BDI (ADR-023 / TCU)}
+      Por categoria de recurso $r$:
+      \[
+        \beta_r = \frac{AC + DF + R + L + \text{tributos}}{1 - L - \text{tributos}}
+      \]
+      \medskip
+      \begin{tabular}{ll}\scriptsize
+        Material    & $\beta_{\text{mat}}$ \\
+        Diesel      & $\beta_{\text{diesel}}$ \\
+        Mão-de-obra & $\beta_{\text{mo}}$ \\
+        Equipamentos & $\beta_{\text{eq}}$ \\
+      \end{tabular}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Valor de venda direto}
+      \[
+        V_i^D = \sum_{j}\sum_{r \in A_i} \beta_r \cdot \gamma_r \cdot h \cdot d \cdot m_{ij}
+      \]
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{Valor de venda indireto}
+      \[
+        V_i^I = \sum_{j}\sum_{q \in B_i} \beta_r \cdot \gamma_q \cdot h \cdot d
+      \]
+      Indiretos (TOP/LAB/ADM/QSMS/MOB) não têm $m_{ij}$ --- permanência = duração do projeto.
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Métricas gerenciais}
+      \begin{align*}
+        \frac{\tilde{C}^I}{\tilde{C}^D} &: \text{razão indireto/direto} \\[4pt]
+        \frac{V - \tilde{C}}{\tilde{C}} &: \text{margem de operacionalização}
+      \end{align*}
+    \end{block}
+    \vspace{4pt}
+    \begin{alertblock}{\small Memorial BDI (ADR-057)}
+      \scriptsize Trilha auditável: salário $\to$ custo $\to$ BDI $\to$ PV.
+      Hash SHA-256 garante integridade.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Regras de Negócio: Pool de Recursos (RCPSP)}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \begin{block}{O que é o pool}
+      Conjunto de recursos (equipamentos + equipes) compartilhados entre atividades:
+      \[
+        P \supseteq \biguplus_i R_i, \quad m_{ij} \leq \#\{R_i\}
+      \]
+      Contratos de capacidade (ADR-071): custo do pool é rateado proporcionalmente
+      pela fração de atribuição $\phi_i$.
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Scheduler RCPSP (skill-04)}
+      Minimiza makespan sujeito a:
+      \begin{itemize}\scriptsize
+        \item Precedências FS/SS/FF com lag e $\theta$ de conclusão (ADR-081)
+        \item Capacidade do pool (recursos simultâneos $\leq$ disponíveis)
+        \item Janelas de praticabilidade $\lambda_j$
+      \end{itemize}
+      Solver: CP-SAT (OR-Tools) com fallback MINSLK.
+    \end{block}
+
+    \column{0.46\textwidth}
+    \begin{block}{Cubo analítico de pool (ADR-086)}
+      7 faces de análise:
+      \begin{enumerate}\scriptsize
+        \item \textbf{Ciclo de vida} de cada instância
+        \item \textbf{Custo por estado} (ativo/ocioso/mob/demob)
+        \item \textbf{Utilização temporal} (histograma semanal)
+        \item \textbf{Atividade $\times$ instância}
+        \item \textbf{Causa de custo} (produtivo/ocioso/mobilização)
+        \item \textbf{Economia de pool} vs.\ dedicado
+        \item \textbf{Cadeia de perpetuação} de custo
+      \end{enumerate}
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{\small Campanha GO (what-if formal)}
+      \scriptsize Executa $N$ cenários em paralelo variando regime,
+      frentes e composição. Retorna shortlist Pareto $O \times EF$.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% =============================================================================
+\section{Execução Versionada}
+% =============================================================================
+
+\begin{frame}{Execução Versionada: Escopos e Planos}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{block}{Hierarquia (ADR-031)}
+      \begin{tikzpicture}[
+          box/.style={draw=mlblue,fill=mlgray,rounded corners=2pt,
+                      minimum width=3.0cm,font=\tiny,align=center,
+                      inner sep=3pt},
+          arr/.style={-{Stealth[length=3pt]},mlblue},
+        ]
+        \node[box,fill=mlblue!10] (proj) {Projeto};
+        \node[box,below=0.2cm of proj] (esc) {Escopo (limites físicos)};
+        \node[box,below=0.2cm of esc,fill=mlgreen!15] (plan_a) {Plano Principal \textbf{APROVADO}};
+        \node[box,below=0.15cm of plan_a] (plan_b) {Plano Alternativo EM\_ANDAMENTO};
+        \node[box,below=0.15cm of plan_b,fill=gray!15,text=gray] (plan_c) {Plano C \textit{ARQUIVADO}};
+        \draw[arr] (proj) -- (esc);
+        \draw[arr] (esc) -- (plan_a);
+        \draw[arr,dashed] (plan_a) -- (plan_b);
+        \draw[arr,dashed] (plan_b) -- (plan_c);
+      \end{tikzpicture}
+    \end{block}
+
+    \column{0.44\textwidth}
+    \begin{block}{Estados de plano}
+      \[
+        \texttt{RASCUNHO} \to \texttt{EM\_ANDAMENTO} \to \texttt{APROVADO}
+      \]
+      \[
+        \texttt{EM\_ANDAMENTO} \to \texttt{ARQUIVADO}
+      \]
+      \vspace{2pt}
+      {\scriptsize Apenas 1 plano APROVADO por escopo. Aprovação congela
+      todos os artefatos e o snapshot do catálogo.}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{O que cada plano preserva}
+      \begin{itemize}\scriptsize
+        \item Canônico JSON após cada skill
+        \item Inputs de skill (overrides, pool\_config)
+        \item Log de invocações e status
+        \item Snapshot imutável do catálogo (ADR-041)
+        \item Perfil BDI com hash SHA-256
+        \item Artefatos PDF/XLSX/JSON
+      \end{itemize}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Execução Versionada: Reprodutibilidade}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \begin{block}{Snapshot de catálogo por execução}
+      \begin{lstlisting}
+projetos/{uuid}/snapshots/
+  insumos_overlay.json   # precos usados
+  cpus_bundle.json       # composicoes
+  jurisdicao.json        # encargos/tributacao
+      \end{lstlisting}
+      \vspace{2pt}
+      {\scriptsize Re-executar a pipeline com o mesmo snapshot
+      produz o mesmo resultado --- mesmo que o catálogo tenha
+      mudado depois.}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Rastreabilidade completa}
+      \begin{lstlisting}
+Projeto {uuid}
+  Plano {plano_id}
+    contexto_version: "v2"
+    snapshot: v2_2026-06-01.json
+    resultado.custo: R$ 43.8M
+      \end{lstlisting}
+    \end{block}
+
+    \column{0.46\textwidth}
+    \begin{block}{Jobs assíncronos (worker pool)}
+      \begin{tikzpicture}[
+          st/.style={draw=mlblue,fill=mlgray,rounded corners=2pt,
+                     minimum width=1.6cm,font=\tiny,align=center,
+                     inner sep=3pt},
+          arr/.style={-{Stealth[length=3pt]},mlblue,thick},
+        ]
+        \node[st] (q) {AGUARDANDO\\FILA};
+        \node[st,right=0.3cm of q] (r) {EM\\EXECUCAO};
+        \node[st,fill=mlgreen!20,above right=0.2cm and 0.3cm of r] (ok) {CONCLUIDO};
+        \node[st,fill=mlred!20,below right=0.2cm and 0.3cm of r] (err) {ERRO};
+        \node[st,fill=gray!20,right=0.3cm of ok] (can) {CANCELADO};
+        \draw[arr] (q) -- (r);
+        \draw[arr] (r) -- (ok);
+        \draw[arr] (r) -- (err);
+        \draw[arr] (r) -- (can);
+      \end{tikzpicture}
+      \vspace{2pt}
+      {\scriptsize \texttt{disparar\_pipeline} retorna \texttt{job\_id}
+      imediatamente. Polling via \texttt{consultar\_job\_pipeline}.}
+    \end{block}
+    \vspace{4pt}
+    \begin{alertblock}{\small Comparação entre planos}
+      \scriptsize \texttt{comparar\_planos(plano\_a, plano\_b)} retorna
+      lado a lado: custo direto/indireto, margem, prazo, composição BDI.
+    \end{alertblock}
+    \vspace{4pt}
+    \begin{block}{BDI versionado dentro do projeto}
+      \scriptsize \texttt{salvar\_perfil\_bdi} gera \texttt{perfil\_id},
+      versão incremental e diff campo a campo.
+      Hash de conteúdo previne adulteração silenciosa.
+    \end{block}
+  \end{columns}
+\end{frame}
+
+% =============================================================================
+\section{Gerenciamento de Catálogo}
+% =============================================================================
+
+\begin{frame}{Catálogo: Estrutura e Versionamento (ADR-062)}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \begin{block}{O que compõe um contexto}
+      \begin{itemize}\scriptsize
+        \item \textbf{Insumos} --- preços de MO, EQ, material, diesel
+        \item \textbf{CPUs} --- composições padrão de equipe + PU
+        \item \textbf{Produções} --- $\rho_i$ por condição/variante
+        \item \textbf{Jurisdições} --- encargos e regime tributário
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Estrutura de arquivos}
+      \begin{lstlisting}
+config/contextos/mendeslobo/
+  contexto.json      # metadados
+  current            # "v3"
+  versions/
+    v1.json
+    v2.json          # SINAPI jun/26
+    v3.json          # diesel set/26
+      \end{lstlisting}
+    \end{block}
+    \vspace{4pt}
+    \begin{alertblock}{\small Isolamento de projetos}
+      \scriptsize Projetos existentes \textbf{não são afetados} por nova versão
+      de catálogo. Cada projeto captura \texttt{contexto\_version} na criação.
+    \end{alertblock}
+
+    \column{0.46\textwidth}
+    \begin{block}{Fluxo de atualização}
+      \begin{tikzpicture}[
+          box/.style={draw=mlblue,fill=mlgray,rounded corners=2pt,
+                      minimum width=3.4cm,font=\tiny,align=center,
+                      inner sep=3pt},
+          arr/.style={-{Stealth[length=3pt]},mlblue},
+        ]
+        \node[box] (rfi) {Pesquisa de mercado / SINAPI};
+        \node[box,below=0.2cm of rfi] (cmp) {\texttt{comparar\_rfi\_catalogo}\\divergências vs.\ master};
+        \node[box,below=0.2cm of cmp] (upd) {\texttt{atualizar\_preco\_insumo}\\rastreabilidade: quem, quando, motivo};
+        \node[box,below=0.2cm of upd] (ras) {\texttt{criar\_rascunho\_catalogo}};
+        \node[box,below=0.2cm of ras,fill=mlgreen!15] (mrg) {\texttt{aprovar\_merge\_catalogo}\\(admin / cat-manager)};
+        \draw[arr] (rfi) -- (cmp);
+        \draw[arr] (cmp) -- (upd);
+        \draw[arr] (upd) -- (ras);
+        \draw[arr] (ras) -- (mrg);
+      \end{tikzpicture}
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{\small Regra dos quatro olhos}
+      \scriptsize \texttt{engineer} pode criar e editar rascunho, mas
+      \textbf{não pode} fazer merge. Apenas \texttt{admin} ou \texttt{cat-manager}
+      aprovam o merge.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Catálogo: Diagnóstico e Previsão de Impacto}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \begin{block}{Ferramentas de diagnóstico}
+      \begin{tabularx}{\linewidth}{@{}l X@{}}
+        \toprule
+        \textbf{Tool} & \textbf{O que faz} \\
+        \midrule
+        \tool{auditar\_catalogo} & \% CPUs calculáveis, inconsistências \\
+        \tool{listar\_divergencias} & Diff entre rascunho e master \\
+        \tool{consultar\_impacto} & $\Delta$PU em todos os itens afetados \\
+        \tool{historico\_preco} & Série histórica de insumo \\
+        \tool{calcular\_tributos} & Encargos CLT/PJ sem persistir \\
+        \bottomrule
+      \end{tabularx}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Simulação sem persistir}
+      \begin{lstlisting}
+calcular_pu_producao(
+  contexto="mendeslobo",
+  cpu_id="PROD-TERRA-ESCO-001",
+  preco_diesel=6.80
+)
+# Retorna PU recalculada -- sem alterar catálogo
+      \end{lstlisting}
+    \end{block}
+
+    \column{0.46\textwidth}
+    \begin{block}{Produtividade como artefato (ADR-007)}
+      \begin{itemize}\scriptsize
+        \item \texttt{Producao.valor\_horario} --- $\rho_i$ versionado
+        \item Origem: calibrado contra obra real, tabela de referência ou regressão
+        \item Qualidade: intervalo de confiança, $n$ amostras, desvio padrão
+        \item \texttt{fator\_producao(nova\_composicao)}: escala $\rho$ para equipes alternativas
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Encargos e regime tributário (ADR-097)}
+      \begin{tabular}{ll}\scriptsize
+        Horista CLT  & 177{,}70\% \quad (vigente abr/2026) \\
+        Mensalista   & 106{,}00\% \\
+        PJ           & 6{,}00\% \\
+      \end{tabular}\\[4pt]
+      {\scriptsize Grupos A--F separados para reconciliação fe\_nec com $PU_{\text{sbdi}}$ (NEP-037).}
+    \end{block}
+    \vspace{4pt}
+    \begin{alertblock}{\small Benchmark (NEP-039)}
+      \scriptsize Projetos de referência são \textbf{imutáveis} após aprovação.
+      Edição cria versão $v+1$ automaticamente.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+% =============================================================================
+\section{Roles e Tools}
+% =============================================================================
+
+\begin{frame}{Roles: Cinco Perfis de Acesso}
+  \begin{columns}[T]
+    \column{0.56\textwidth}
+    \begin{block}{Perfis e responsabilidades}
+      \renewcommand{\arraystretch}{1.15}
+      \begin{tabularx}{\linewidth}{@{}l X r@{}}
+        \toprule
+        \textbf{Role} & \textbf{Responsabilidade principal} & \textbf{Tools} \\
+        \midrule
+        \role{operator}     & Precificação RFI baseada em catálogo & 36 \\
+        \role{engineer}     & Planejamento completo RFI + RFP      & 40 \\
+        \role{admin}        & Aprovações e gestão de catálogo       & 42 \\
+        \role{auditor}      & Leitura de projetos e artefatos       & 16 \\
+        \role{cat-manager}  & Gestão exclusiva do catálogo          & 18 \\
+        \bottomrule
+      \end{tabularx}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Permissões granulares (ADR-099)}
+      \begin{tabular}{ll}\scriptsize
+        \texttt{project:read}    & Consulta de projetos/artefatos \\
+        \texttt{project:create}  & Criação e edição de projetos \\
+        \texttt{project:run}     & Execução da pipeline \\
+        \texttt{project:approve} & Aprovação de versões \\
+        \texttt{catalog:read}    & Leitura do catálogo \\
+        \texttt{catalog:write}   & Edição de catálogo \\
+        \texttt{catalog:merge}   & Aprovação de merge \\
+        \texttt{artifacts:*}     & Leitura e download \\
+        \texttt{financials:read} & Resultados de campanha \\
+      \end{tabular}
+    \end{block}
+
+    \column{0.40\textwidth}
+    \begin{alertblock}{\small Intent RFI vs.\ RFP}
+      \scriptsize \role{operator} só pode disparar pipeline com
+      \texttt{intent=RFI} (estimativa de preço).\\[4pt]
+      \role{engineer}/\role{admin} podem disparar com
+      \texttt{intent=RFP} (planejamento completo com pool e cronograma detalhado).\\[4pt]
+      Validado em \texttt{permission\_guard.py} via \texttt{INTENT\_PERMISSIONS}.
+    \end{alertblock}
+    \vspace{4pt}
+    \begin{exampleblock}{\small Cat-manager sem projetos}
+      \scriptsize \role{cat-manager} não tem acesso a projetos ---
+      vê apenas catálogo e resultados de campanha.
+      Segregação de domínio intencional.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Matriz Role × Tool (resumo)}
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.1}
+  \begin{tabularx}{\textwidth}{@{}X c c c c c@{}}
+    \toprule
+    \textbf{Grupo / Tool} & \role{oper} & \role{eng} & \role{adm} & \role{aud} & \role{cat} \\
+    \midrule
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Sistema}} \\
+    \tool{ping}                      & \yes & \yes & \yes & \yes & \yes \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Projetos --- leitura}} \\
+    \tool{listar\_projetos}, \tool{consultar\_status}, \tool{comparar\_planos}\ldots & \yes & \yes & \yes & \yes & \no \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Projetos --- criação}} \\
+    \tool{criar\_projeto}, \tool{iniciar\_orcamento}, \tool{nova\_versao}\ldots & \yes & \yes & \yes & \no & \no \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Projetos --- execução}} \\
+    \tool{disparar\_pipeline}        & \half~RFI & \yes & \yes & \no & \no \\
+    \tool{explorar\_configuracoes\_go} & \half~RFI & \yes & \yes & \no & \no \\
+    \tool{simular\_cenario\_replan}  & \yes & \yes & \yes & \no & \no \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Projetos --- aprovação}} \\
+    \tool{aprovar\_versao}           & \no & \yes & \yes & \no & \no \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Catálogo --- leitura}} \\
+    \tool{pesquisar\_catalogo}, \tool{historico\_preco}\ldots & \yes & \yes & \yes & \no & \yes \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Catálogo --- escrita}} \\
+    \tool{atualizar\_preco\_insumo}, \tool{criar\_rascunho}\ldots & \no & \yes & \yes & \no & \yes \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Catálogo --- merge}} \\
+    \tool{aprovar\_merge\_catalogo}  & \no & \no & \yes & \no & \yes \\[2pt]
+    \multicolumn{6}{@{}l}{\scriptsize\textit{Financeiro}} \\
+    \tool{obter\_resultado\_campanha}, \tool{comparar\_rfi\_catalogo} & \yes & \yes & \yes & \yes & \yes \\
+    \bottomrule
+    \multicolumn{6}{@{}l}{\scriptsize \yes~acesso pleno \quad \half~acesso parcial (RFI) \quad \no~sem permissão} \\
+  \end{tabularx}
+\end{frame}
+
+% =============================================================================
+\section{Workflows por Role}
+% =============================================================================
+
+\begin{frame}{Workflow: Operator}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{block}{Caso de uso principal: estimativa de preço (RFI)}
+      \begin{tikzpicture}[
+          box/.style={draw=mlblue,fill=mlgray,rounded corners=2pt,
+                      minimum width=4.0cm,font=\scriptsize,
+                      align=left,inner sep=4pt},
+          arr/.style={-{Stealth[length=3.5pt]},mlblue,thick},
+        ]
+        \node[box] (p1) {\texttt{ping()} --- confirmar sistema OK};
+        \node[box,below=0.18cm of p1] (p2) {\texttt{listar\_contextos()} + \texttt{pesquisar\_catalogo()}};
+        \node[box,below=0.18cm of p2] (p3) {\texttt{criar\_projeto\_formulario()} ou \texttt{iniciar\_orcamento()}};
+        \node[box,below=0.18cm of p3] (p4) {\texttt{disparar\_pipeline(intent=\textbf{RFI})}};
+        \node[box,below=0.18cm of p4] (p5) {\texttt{consultar\_job\_pipeline()} --- aguardar};
+        \node[box,below=0.18cm of p5] (p6) {\texttt{consultar\_status()} + \texttt{auditar\_plano()}};
+        \node[box,fill=mlorange!20,below=0.18cm of p6] (p7) {\faArrowRight\ \textbf{HANDOFF} para engineer};
+        \foreach \a/\b in {p1/p2,p2/p3,p3/p4,p4/p5,p5/p6,p6/p7}
+          \draw[arr] (\a) -- (\b);
+      \end{tikzpicture}
+    \end{block}
+
+    \column{0.44\textwidth}
+    \begin{block}{O que operator pode e não pode}
+      \textbf{Pode:}
+      \begin{itemize}\scriptsize
+        \item Criar projetos e iniciar orçamentos
+        \item Executar pipeline completa com \texttt{intent=RFI}
+        \item Consultar catálogo, histórico de preços
+        \item Simular cenários lineares (\texttt{simular\_cenario\_replan})
+        \item Acessar artefatos e benchmarks
+        \item Empacotar benchmark ZIP
+      \end{itemize}
+      \vspace{4pt}
+      \textbf{Não pode:}
+      \begin{itemize}\scriptsize
+        \item Disparar pipeline com \texttt{intent=RFP}
+        \item Aprovar versões de planos
+        \item Editar catálogo
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{alertblock}{\small Handoff H1}
+      \scriptsize Após \texttt{disparar\_pipeline(RFI)}, a versão entra em
+      \texttt{EM\_VALIDACAO}. Engineer ou admin executam \texttt{aprovar\_versao}.
+    \end{alertblock}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Workflow: Engineer}
+  \begin{columns}[T]
+    \column{0.52\textwidth}
+    \begin{block}{Caso de uso: planejamento completo (RFP)}
+      \begin{tikzpicture}[
+          box/.style={draw=mlblue,fill=mlgray,rounded corners=2pt,
+                      minimum width=4.2cm,font=\scriptsize,
+                      align=left,inner sep=4pt},
+          arr/.style={-{Stealth[length=3.5pt]},mlblue,thick},
+        ]
+        \node[box] (e1) {Skills 01--03 via \texttt{disparar\_pipeline(RFI)}};
+        \node[box,below=0.18cm of e1] (e2) {\texttt{explorar\_configuracoes\_go(RFP)} --- sweep};
+        \node[box,below=0.18cm of e2] (e3) {\texttt{disparar\_pipeline(intent=\textbf{RFP})} --- skills 04--08};
+        \node[box,below=0.18cm of e3] (e4) {\texttt{explorar\_pool\_recursos()} --- 7 faces analíticas};
+        \node[box,below=0.18cm of e4] (e5) {\texttt{comparar\_planos()} --- \texttt{nova\_versao()} se necessário};
+        \node[box,fill=mlgreen!20,below=0.18cm of e5] (e6) {\texttt{aprovar\_versao()} --- plano congelado};
+        \node[box,fill=mlorange!20,below=0.18cm of e6] (e7) {\faArrowRight\ Rascunho catálogo \textbf{HANDOFF} admin};
+        \foreach \a/\b in {e1/e2,e2/e3,e3/e4,e4/e5,e5/e6,e6/e7}
+          \draw[arr] (\a) -- (\b);
+      \end{tikzpicture}
+    \end{block}
+
+    \column{0.44\textwidth}
+    \begin{block}{Capacidades exclusivas}
+      \begin{itemize}\scriptsize
+        \item \texttt{aprovar\_versao} (operator não pode)
+        \item \texttt{disparar\_pipeline(intent=RFP)}
+        \item Editar catálogo (\texttt{atualizar\_preco\_insumo},\\
+              \texttt{adicionar\_variante\_producao})
+        \item Criar rascunho de catálogo
+        \item \texttt{salvar\_perfil\_bdi} com versionamento
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Handoffs gerados pelo engineer}
+      \textbf{H2} Exploração RFI $\to$ análise RFP completa\\[2pt]
+      \textbf{H3} Rascunho catálogo $\to$ admin/cat-manager para merge
+      \begin{lstlisting}
+engineer:
+  criar_rascunho_catalogo()
+  atualizar_preco_insumo()
+  listar_divergencias_rascunho()
+    -- HANDOFF --
+  admin / cat-manager:
+    aprovar_merge_catalogo()
+      \end{lstlisting}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Workflows: Admin, Auditor e Cat-Manager}
+  \begin{columns}[T]
+    \column{0.32\textwidth}
+    \begin{block}{\role{admin} (42 tools)}
+      \begin{itemize}\scriptsize
+        \item Tudo de engineer +
+        \item \texttt{aprovar\_merge\_catalogo}
+        \item \texttt{rejeitar\_rascunho\_catalogo}
+        \item Gestão de usuários (CLI)
+        \item Aprovação de versões e merges de catálogo sem restrição
+      \end{itemize}
+      \vspace{4pt}
+      \textbf{Handoff H4:}\\
+      {\scriptsize CLI cria usuário $\to$ email com \texttt{claude\_desktop\_config.json} $\to$ usuário inicia sessão MCP}
+    \end{block}
+
+    \column{0.32\textwidth}
+    \begin{block}{\role{auditor} (16 tools)}
+      \begin{itemize}\scriptsize
+        \item Somente leitura de projetos e artefatos
+        \item Acessa resultado de campanha (\texttt{obter\_resultado\_campanha})
+        \item Compara RFI vs.\ catálogo (\texttt{comparar\_rfi\_catalogo})
+        \item \textbf{Não} cria, edita, executa ou aprova nada
+        \item Caso de uso: auditoria de conformidade, análise pós-obra
+      \end{itemize}
+      \vspace{4pt}
+      {\scriptsize \texttt{auditar\_plano} e \texttt{download\_benchmark\_zip} são as
+      principais ferramentas de trabalho.}
+    \end{block}
+
+    \column{0.32\textwidth}
+    \begin{block}{\role{cat-manager} (18 tools)}
+      \begin{itemize}\scriptsize
+        \item Gestão completa do catálogo
+        \item Cria rascunho, edita insumos, aprova merge
+        \item Acessa \texttt{obter\_resultado\_campanha} e \texttt{comparar\_rfi\_catalogo}
+        \item \textbf{Não} vê projetos, planos ou artefatos de obra
+      \end{itemize}
+      \vspace{4pt}
+      \textbf{Workflow típico:}\\
+      {\scriptsize \texttt{criar\_rascunho} $\to$ \texttt{atualizar\_preco\_insumo}  $\to$ \texttt{listar\_divergencias} $\to$ \texttt{aprovar\_merge\_catalogo}}
+    \end{block}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Handoffs entre Roles}
+  \begin{tikzpicture}[
+      role/.style={draw=mlblue,fill=mlblue!10,rounded corners=3pt,
+                   minimum width=2.0cm,minimum height=0.7cm,
+                   font=\small\bfseries,align=center},
+      act/.style={draw=mlblue!50,fill=mlgray,rounded corners=2pt,
+                  minimum width=3.4cm,font=\scriptsize,align=center,
+                  inner sep=3pt},
+      arr/.style={-{Stealth[length=4pt]},mlblue,thick},
+      hoff/.style={-{Stealth[length=4pt]},mlorange,thick,dashed},
+    ]
+    % H1
+    \node[role] (op1) {operator};
+    \node[act,right=0.4cm of op1]  (a1) {\texttt{disparar\_pipeline(RFI)}\\versão EM\_VALIDACAO};
+    \node[role,right=0.4cm of a1]  (en1) {engineer};
+    \node[act,right=0.4cm of en1]  (b1) {\texttt{aprovar\_versao()}\\versão APROVADO};
+    \draw[arr] (op1) -- (a1);
+    \draw[hoff] (a1) -- node[above,font=\tiny\itshape,mlorange]{H1} (en1);
+    \draw[arr] (en1) -- (b1);
+
+    % H2
+    \node[role,below=0.7cm of op1] (op2) {operator};
+    \node[act,right=0.4cm of op2]  (a2) {\texttt{explorar\_go(RFI)}\\campanha inicial};
+    \node[role,right=0.4cm of a2]  (en2) {engineer};
+    \node[act,right=0.4cm of en2]  (b2) {\texttt{explorar\_go(RFP)}\\planejamento completo};
+    \draw[arr] (op2) -- (a2);
+    \draw[hoff] (a2) -- node[above,font=\tiny\itshape,mlorange]{H2} (en2);
+    \draw[arr] (en2) -- (b2);
+
+    % H3
+    \node[role,below=0.7cm of op2] (en3) {engineer};
+    \node[act,right=0.4cm of en3]  (a3) {\texttt{criar\_rascunho}\\+ \texttt{atualizar\_preco}};
+    \node[role,right=0.4cm of a3]  (ad3) {admin /\\cat-mgr};
+    \node[act,right=0.4cm of ad3]  (b3) {\texttt{aprovar\_merge}\\catálogo publicado};
+    \draw[arr] (en3) -- (a3);
+    \draw[hoff] (a3) -- node[above,font=\tiny\itshape,mlorange]{H3} (ad3);
+    \draw[arr] (ad3) -- (b3);
+
+    % H4
+    \node[role,below=0.7cm of en3] (ad4) {admin};
+    \node[act,right=0.4cm of ad4]  (a4) {CLI: criar usuário\\email config};
+    \node[role,right=0.4cm of a4]  (us4) {novo\\usuário};
+    \node[act,right=0.4cm of us4]  (b4) {configura Claude Desktop\\inicia sessão MCP};
+    \draw[arr] (ad4) -- (a4);
+    \draw[hoff] (a4) -- node[above,font=\tiny\itshape,mlorange]{H4} (us4);
+    \draw[arr] (us4) -- (b4);
+  \end{tikzpicture}
+  \vspace{6pt}
+  {\scriptsize
+    \textbf{H1} Execução $\to$ aprovação (operator $\to$ engineer/admin) \quad
+    \textbf{H2} RFI $\to$ RFP completo (operator $\to$ engineer) \\
+    \textbf{H3} Rascunho catálogo $\to$ merge (engineer $\to$ admin/cat-manager) \quad
+    \textbf{H4} Onboarding (admin $\to$ novo usuário)
+  }
+\end{frame}
+
+% =============================================================================
+\section{Infraestrutura}
+% =============================================================================
+
+\begin{frame}{Infraestrutura: Azure ACA, Blue-Green e CI/CD}
+  \begin{columns}[T]
+    \column{0.50\textwidth}
+    \begin{block}{Azure Container Apps (ACA)}
+      \begin{itemize}\scriptsize
+        \item Migrado de ACI para ACA (blue-green nativo via revisions)
+        \item Blue-green sem downtime: nova revisão recebe 0\% tráfego,
+              smoke pass $\to$ 100\% tráfego, revisão anterior desmobilizada
+        \item 14 checks de smoke test (saúde, catálogo, projetos, worker pool)
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Pipeline CI/CD (GitHub Actions)}
+      \begin{tabular}{ll}\scriptsize
+        \texttt{ci.yml}     & lint + typecheck + testes unitários \\
+        \texttt{deploy.yml} & blue-green deploy via \texttt{deploy.sh} \\
+        \texttt{infra.yml}  & Bicep --- infraestrutura como código \\
+      \end{tabular}\\[4pt]
+      {\scriptsize \texttt{deploy.sh} é o entrypoint único: image / deploy /
+      smoke / promote / rollback / status / bootstrap / keys}
+    \end{block}
+    \vspace{4pt}
+    \begin{alertblock}{\small Rollback automático}
+      \scriptsize Se smoke falha, rollback automático restitui revisão anterior.
+      Sem intervenção manual.
+    \end{alertblock}
+
+    \column{0.46\textwidth}
+    \begin{block}{Segurança e autenticação (ADR-099)}
+      \begin{itemize}\scriptsize
+        \item JWT obrigatório em todas as tools MCP
+        \item \texttt{McpAuthMiddleware} valida token e role
+        \item \texttt{PermissionGuard} verifica permissão por tool
+        \item \texttt{INTENT\_PERMISSIONS} para restrição de intent
+        \item Rate limits por operação crítica
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{block}{Observabilidade}
+      \begin{itemize}\scriptsize
+        \item OpenTelemetry (LoggingHandler + traces)
+        \item Logfire desabilitável via \texttt{PYDANTIC\_DISABLE\_PLUGINS}
+        \item Notificações de resultado via email (ADR-123)
+        \item Worker pool com 4 workers e fila de jobs
+      \end{itemize}
+    \end{block}
+    \vspace{4pt}
+    \begin{exampleblock}{\small SharePoint (em implantação)}
+      \scriptsize Integração SharePoint para distribuição de artefatos
+      e relatórios aos stakeholders.
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% =============================================================================
+\section{Encerramento}
+% =============================================================================
+
+\begin{frame}{Resumo Executivo}
+  \begin{columns}[T]
+    \column{0.48\textwidth}
+    \begin{block}{O que entregamos}
+      \begin{enumerate}\small
+        \item \textbf{Pipeline auditável} de 8 skills: escopo $\to$ cronograma $\to$ pool $\to$ resultado financeiro
+        \item \textbf{Versionamento completo}: planos, catálogo, BDI, snapshots imutáveis
+        \item \textbf{Regras de negócio formalizadas}: $p_i^c$, $p_i^o = p_i^c \cdot \tau_i$, lifecycle engine, BDI TCU
+        \item \textbf{5 roles} com 43 tools e regra dos quatro olhos para catálogo
+        \item \textbf{Infraestrutura blue-green} com zero downtime e rollback automático
+      \end{enumerate}
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{Garantias do sistema}
+      \begin{itemize}\small
+        \item \textbf{Reprodutibilidade}: snapshot por execução garante mesmo resultado com mesmo input
+        \item \textbf{Auditabilidade}: trilha completa catálogo $\to$ custo $\to$ BDI $\to$ venda com hash
+        \item \textbf{Isolamento}: mudança de catálogo não quebra projetos existentes
+        \item \textbf{Otimização}: RCPSP com CP-SAT minimiza makespan respeitando pool
+        \item \textbf{What-if}: campanha GO com $N$ cenários Pareto $O \times EF$
+      \end{itemize}
+    \end{block}
+  \end{columns}
+  \vspace{8pt}
+  \begin{center}
+    \Large\textbf{Concilium} \\[4pt]
+    {\normalsize Orçamentação de infraestrutura: auditável, versionada, otimizada.}
+  \end{center}
+\end{frame}
+
+\end{document}
