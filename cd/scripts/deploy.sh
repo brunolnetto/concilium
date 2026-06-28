@@ -119,8 +119,8 @@ _wait_revision_running() {
             --revision "$revision" \
             --query "properties.runningState" -o tsv 2>/dev/null || echo "Provisioning")
 
-        [[ "$state" == "Running" ]] && { ok "  '$revision' Running"; return 0; }
-        [[ "$state" == "Failed" ]] && die "Revision '$revision' falhou durante o deploy."
+        [[ "$state" == "Running" || "$state" == "RunningAtMaxScale" ]] && { ok "  '$revision' $state"; return 0; }
+        [[ "$state" == "Failed" || "$state" == "Deactivated" || "$state" == "Stopped" ]] && die "Revision '$revision' falhou: $state"
         echo "  Estado: $state ($i/$max)..."
         sleep 10
     done
