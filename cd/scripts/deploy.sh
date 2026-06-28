@@ -364,7 +364,9 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
                 -H \"\$AUTH\" -H \"\$CT\" -H \"\$AC\" \
                 -H \"mcp-session-id: \$SID\" \
                 -d '{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"id\":1}' 2>/dev/null || echo '{}')
-             echo \"\$RESP\" | jq -e '.result.tools | length > 0' > /dev/null"
+             PARSED=\$(echo \"\$RESP\" | grep '^data: ' | sed 's/^data: //' | head -1)
+             [ -z \"\$PARSED\" ] && PARSED=\"\$RESP\"
+             echo \"\$PARSED\" | jq -e '.result.tools | length > 0' > /dev/null"
 
         _check "MCP 401 sem token" bash -c \
             "S=\$(curl -so /dev/null -w '%{http_code}' --max-time 10 \
