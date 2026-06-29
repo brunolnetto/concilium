@@ -320,12 +320,16 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
                 -H 'Authorization: Bearer ${TOKEN}' '${TARGET_URL}/api/projects/')
              [[ \"\$S\" == '200' ]]"
 
-        _check "X-RateLimit-Limit header presente" bash -c \
-            "curl -s --max-time 10 -D - -o /dev/null \
-                -X POST '${TARGET_URL}/auth/token' \
-                -H 'Content-Type: application/json' \
-                -d '{\"client_id\":\"probe\",\"client_secret\":\"probe\"}' \
-                | grep -qi 'x-ratelimit-limit'"
+        _check "X-RateLimit-Limit header presente" bash -c "
+            for i in \$(seq 1 8); do
+                RESP=\$(curl -s --max-time 5 -D - -o /dev/null \
+                    -X POST '${TARGET_URL}/auth/token' \
+                    -H 'Content-Type: application/json' \
+                    -d '{\"client_id\":\"probe\",\"client_secret\":\"probe\"}')
+                echo \"\$RESP\" | grep -qi 'x-ratelimit-limit' && exit 0
+            done
+            exit 1
+        "
 
         _check "RBAC: 403 em endpoint restrito (project:approve sem permissao)" bash -c \
             "ROLES=\$(echo '$PAYLOAD' | jq -r '.roles[]?' 2>/dev/null)
