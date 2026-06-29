@@ -20,28 +20,44 @@ SKIP_MARKERS := -m "not slow and not flaky"
 # de imports pesados (requests, OTel exporters, protobuf) se instalado no env.
 TEST_ENV     := PYDANTIC_DISABLE_PLUGINS=__all__ OTEL_SDK_DISABLED=true
 
+DEPLOY := cd/scripts/deploy.sh
+
 .PHONY: help test test-slow test-flaky lint lint-report type-check fmt \
-        coverage codebase-stats file-sizes size clean
+        coverage codebase-stats file-sizes size clean \
+        status smoke image promote rollback \
+        configure configure-smtp keys bootstrap github-secrets users deploy-all
 
 # ── Default ───────────────────────────────────────────────────────────────────
 help:
 	@echo ""
 	@echo "  Concilium — targets disponíveis"
 	@echo ""
-	@echo "  Rápidos (< 1 min)"
+	@echo "  Dev / Qualidade"
 	@echo "    make test           Testes unitários (exclui slow e flaky)"
 	@echo "    make lint           Ruff: exibe violações"
-	@echo "    make lint-report    Ruff: gera $(LINT_REPORT) agrupado por regra para agente de código"
+	@echo "    make lint-report    Ruff: gera $(LINT_REPORT) agrupado por regra"
 	@echo "    make type-check     Mypy: checagem estática de tipos"
 	@echo "    make fmt            Ruff: formata + corrige imports in-place"
-	@echo ""
-	@echo "  Lentos (> 1 min)"
 	@echo "    make coverage       Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"
-	@echo "    make codebase-stats Análise completa → $(COV_DIR)/report.md (requer make coverage)"
+	@echo "    make codebase-stats Análise completa → $(COV_DIR)/report.md"
+	@echo "    make file-sizes     Maiores arquivos (detecta blobs acidentais)"
+	@echo "    make clean          Remove caches e artefatos temporários"
 	@echo ""
-	@echo "  Utilitários"
-	@echo "    make file-sizes     Maiores arquivos no repositório (detecta blobs acidentais)"
-	@echo "    make clean          Remove caches, artefatos temporários e relatórios"
+	@echo "  Deploy (wraps cd/scripts/deploy.sh)"
+	@echo "    make status                    Revisions ACA e pesos de tráfego"
+	@echo "    make image         [TAG=x]     Build + push imagem para ACR"
+	@echo "    make smoke         [REV=x]     Smoke tests contra revision ou produção"
+	@echo "    make promote       [REV=x]     Direciona 100% do tráfego para revision"
+	@echo "    make rollback      [REV=x]     Rollback para revision anterior"
+	@echo ""
+	@echo "  Plataforma"
+	@echo "    make configure                 Aplica env vars nos containers ACA"
+	@echo "    make configure-smtp            Grava SMTP_PASSWORD no Key Vault + env vars"
+	@echo "    make keys          [ROTATE=1]  Gera (ou rotaciona) JWT keys → Key Vault"
+	@echo "    make bootstrap     [VALIDATE=1] Provisiona infra Azure (idempotente)"
+	@echo "    make github-secrets            Configura GitHub Secrets/Vars via gh CLI"
+	@echo "    make users         CMD='...'   Executa comando de auth via az containerapp exec"
+	@echo "    make deploy-all                bootstrap → keys → github-secrets"
 	@echo ""
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
@@ -133,6 +149,44 @@ large=[(s,p) for s,p in files if s>524288]; \
 [print(f'  ⚠  {s/1024:>8.1f} KB  {p}') for s,p in large] if large \
   else print('  Nenhum arquivo > 500 KB fora do .venv.'); \
 print(f'\n  Total rastreado: {len(files)} arquivos  |  {len(large)} blobs > 500 KB')"
+
+# ── Deploy & Infra (wrappers para cd/scripts/deploy.sh) ──────────────────────
+
+status:
+	$(DEPLOY) status
+
+image:
+	$(DEPLOY) image $(if $(TAG),--tag $(TAG),)
+
+smoke:
+	$(DEPLOY) smoke $(if $(REV),--revision $(REV),)
+
+promote:
+	$(DEPLOY) promote $(if $(REV),--revision $(REV),)
+
+rollback:
+	$(DEPLOY) rollback $(if $(REV),--revision $(REV),)
+
+configure:
+	$(DEPLOY) configure
+
+configure-smtp:
+	$(DEPLOY) configure-smtp
+
+keys:
+	$(DEPLOY) keys $(if $(ROTATE),--rotate,)
+
+bootstrap:
+	$(DEPLOY) bootstrap $(if $(VALIDATE),--validate,)
+
+github-secrets:
+	$(DEPLOY) github
+
+users:
+	$(DEPLOY) users "$(CMD)"
+
+deploy-all:
+	$(DEPLOY) all
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 clean:
