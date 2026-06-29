@@ -646,6 +646,46 @@ cmd_bootstrap() {
     echo "  Proximos: $0 keys -> $0 github -> $0 configure"
 }
 
+cmd_configure_smtp() {
+    need az
+    require_login
+
+    local smtp_pwd="${SMTP_PASSWORD:-}"
+    if [[ -z "$smtp_pwd" ]]; then
+        read -r -s -p "SMTP_PASSWORD (Gmail App Password): " smtp_pwd; echo
+    fi
+    [[ -n "$smtp_pwd" ]] || die "SMTP_PASSWORD nao fornecido."
+
+    step "Gravando smtp-password no Key Vault '$KV_NAME'"
+    printf '%s' "$smtp_pwd" | az keyvault secret set \
+        --vault-name "$KV_NAME" --name smtp-password --value "@-" --output none
+    ok "smtp-password gravado."
+
+    local smtp_envs=(
+        "CONCILIUM__SMTP_HOST=smtp.gmail.com"
+        "CONCILIUM__SMTP_PORT=587"
+        "CONCILIUM__SMTP_USER=brunolnetto@gmail.com"
+        "CONCILIUM__SMTP_FROM=brunolnetto@gmail.com"
+        "CONCILIUM__NOTIFICATIONS_ENABLED=1"
+    )
+
+    for app in "$ACA_MCP_APP" "$ACA_API_APP"; do
+        if _aca_app_exists "$app"; then
+            step "Aplicando env vars SMTP em '$app'"
+            az containerapp update \
+                --name "$app" \
+                --resource-group "$RESOURCE_GROUP" \
+                --set-env-vars "${smtp_envs[@]}" \
+                --output none
+            ok "$app atualizado."
+        else
+            warn "Container '$app' nao encontrado — pulando."
+        fi
+    done
+
+    ok "SMTP configurado. A senha e lida do Key Vault via Managed Identity no startup."
+}
+
 cmd_configure() {
     need az; need openssl
     require_login
@@ -884,6 +924,7 @@ Uso: deploy.sh [comando] [opcoes]
 
 -- Platform Operations ----------------------------------------------------------
   configure                    Aplica env vars em ambos os containers ACA (idempotente)
+  configure-smtp               Grava SMTP_PASSWORD no Key Vault e seta env vars SMTP (nao requer SP vars)
   keys [--rotate]              Gera JWT keys -> Key Vault
   bootstrap                    Provisiona infra Azure base (idempotente)
     bootstrap --validate         Valida Bicep (build + deployment validate)
@@ -914,6 +955,7 @@ case "$CMD" in
     status)         cmd_status "$@" ;;
 
     configure)      cmd_configure "$@" ;;
+    configure-smtp) cmd_configure_smtp "$@" ;;
     keys)           cmd_keys "$@" ;;
     bootstrap)      cmd_bootstrap "$@" ;;
     github)         cmd_github "$@" ;;
