@@ -884,20 +884,29 @@ cmd_github() {
 
 cmd_users() {
     local app_name="${USERS_APP:-$ACA_MCP_APP}"
-    local exec_cmd="${*:-python -m concilium.auth.bootstrap_users}"
+    # Sem args: abre shell interativo. Com args: executa o subcomando como string via /bin/sh -c
+    local exec_cmd="${*:-}"
 
     need az
     require_login
     _aca_app_exists "$app_name" || die "Container App '$app_name' nao encontrado."
 
-    step "Criacao/Gestao de usuarios via ACA exec"
+    step "Gestao de usuarios via ACA exec"
     log "App alvo: $app_name"
-    log "Comando: $exec_cmd"
 
-    az containerapp exec \
-        --name "$app_name" \
-        --resource-group "$RESOURCE_GROUP" \
-        --command "$exec_cmd"
+    if [[ -z "$exec_cmd" ]]; then
+        log "Abrindo shell interativo — use 'concilium ops auth --help' para ver os comandos"
+        az containerapp exec \
+            --name "$app_name" \
+            --resource-group "$RESOURCE_GROUP" \
+            --command "/bin/sh"
+    else
+        log "Comando: $exec_cmd"
+        az containerapp exec \
+            --name "$app_name" \
+            --resource-group "$RESOURCE_GROUP" \
+            --command "/bin/sh" -- -c "$exec_cmd"
+    fi
 }
 
 cmd_all() {
