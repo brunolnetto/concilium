@@ -126,8 +126,10 @@ def main() -> None:
     import uvicorn
 
     from concilium.infrastructure.settings import get_api, startup_check
+    from concilium.infrastructure.storage.store_factory import ensure_storage_root
 
     startup_check()
+    ensure_storage_root()
 
     host, port = resolve_api_bind()
     reload = get_api().reload

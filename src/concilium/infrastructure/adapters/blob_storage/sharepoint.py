@@ -172,9 +172,6 @@ class SharePointBlobStorage(BlobStoragePort):
 
         httpx = self._client()
 
-        if not self._root_ensured:
-            self._ensure_root_path(httpx)
-            self._root_ensured = True
 
         if len(content) < _LARGE_FILE_THRESHOLD:
             self._gravar_pequeno(httpx, path, content)
@@ -325,6 +322,13 @@ class SharePointBlobStorage(BlobStoragePort):
         except Exception:  # noqa: BLE001
             return None
         return None
+
+    def ensure_root_path(self) -> None:
+        """Cria root_path no SharePoint se não existir (chame no startup da aplicação)."""
+        if self._root_ensured:
+            return
+        self._ensure_root_path(self._client())
+        self._root_ensured = True
 
     def _ensure_root_path(self, httpx: Any) -> None:
         """Cria root_path no SharePoint se não existir (idempotente, segmento a segmento)."""

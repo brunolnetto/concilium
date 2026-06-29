@@ -130,6 +130,21 @@ def get_campaign_store(project_slug: str) -> CampaignRunStore:  # type: ignore[n
     return CampaignRunStore(storage=storage, prefix=prefix)
 
 
+def ensure_storage_root() -> None:
+    """Garante que o root_path do backend de storage existe no startup da aplicação.
+
+    No-op para filesystem, S3, Azure e GDrive. Para SharePoint, cria os segmentos
+    do CONCILIUM__SP_ROOT_PATH via Graph API se não existirem.
+    """
+    if resolve_store_backend() != "sharepoint":
+        return
+    from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
+
+    storage = build_blob_storage()
+    if isinstance(storage, SharePointBlobStorage):
+        storage.ensure_root_path()
+
+
 def build_project_repository(projects_root: Path) -> ProjectRepository:
     """Build ProjectRepository according to CONCILIUM__STORE_BACKEND.
 

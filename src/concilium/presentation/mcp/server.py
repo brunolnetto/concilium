@@ -173,8 +173,10 @@ def main() -> None:
         raise RuntimeError(f"Configuração inválida: {config_root} não é diretório.")
 
     from concilium.infrastructure.settings import get_mcp, startup_check
+    from concilium.infrastructure.storage.store_factory import ensure_storage_root
 
     startup_check()
+    ensure_storage_root()
     mcp = get_mcp()
     transport = mcp.transport
     if transport != "stdio":
