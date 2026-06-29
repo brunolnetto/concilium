@@ -2,10 +2,12 @@
 
 Storage strategy:
   Device codes     → in-memory only (1h TTL; ephemeral by design)
-  Refresh tokens   → JSON file (90d TTL, revocable, persists across restarts)
-  Clients (file)   → JSON file (additive to CONCILIUM__AUTH_CLIENTS env var)
+  Refresh tokens   → BlobStoragePort (90d TTL, revocable, persists across restarts)
+  Clients          → BlobStoragePort (additive to CONCILIUM__AUTH_CLIENTS env var)
 
-Data directory: CONCILIUM__AUTH_DATA_PATH  (default: ~/.concilium/auth/)
+Backend: usa o mesmo CONCILIUM__STORE_BACKEND da aplicação (SharePoint, S3, filesystem…).
+Blobs são gravados com prefixo "auth/" para isolar dos dados de projeto.
+Filesystem local (CONCILIUM__AUTH_DATA_PATH) é mantido como fallback e para dev.
 
 Thread-safety: internal threading.Lock protects all mutations.
 """
@@ -128,30 +130,41 @@ class AuthStore:
     REFRESH_TOKEN_TTL = timedelta(days=90)
     DEVICE_CODE_TTL = timedelta(hours=1)
 
-    def __init__(self, data_dir: Path | None = None) -> None:
-        if data_dir is None:
-            raw = get_auth().data_path.strip()
-            data_dir = Path(raw).expanduser().resolve() if raw else Path.home() / ".concilium" / "auth"
-        self._dir = data_dir
-        self._dir.mkdir(parents=True, exist_ok=True)
+    def __init__(
+        self,
+        data_dir: Path | None = None,
+        storage=None,  # BlobStoragePort | None
+        prefix: str = "auth",
+    ) -> None:
+        self._prefix = prefix.strip("/")
+        if storage is not None:
+            self._storage = storage
+        else:
+            from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+            if data_dir is None:
+                raw = get_auth().data_path.strip()
+                data_dir = Path(raw).expanduser().resolve() if raw else Path.home() / ".concilium" / "auth"
+            self._storage = LocalBlobStorage(root_dir=data_dir)
         self._lock = threading.Lock()
         self._device_codes: dict[str, DeviceCodeRecord] = {}  # in-memory only
 
-    # ── File helpers ──────────────────────────────────────────────────────────
+    # ── Storage helpers ───────────────────────────────────────────────────────
 
-    def _path(self, name: str) -> Path:
-        return self._dir / name
+    def _blob(self, name: str) -> str:
+        return f"{self._prefix}/{name}" if self._prefix else name
 
     def _read(self, name: str) -> list[dict]:
-        p = self._path(name)
-        if not p.exists():
+        try:
+            return json.loads(self._storage.ler_blob(self._blob(name)))
+        except FileNotFoundError:
             return []
-        return json.loads(p.read_text(encoding="utf-8"))
 
     def _write(self, name: str, records: list[dict]) -> None:
-        p = self._path(name)
-        p.write_text(json.dumps(records, indent=2, ensure_ascii=False), encoding="utf-8")
-        p.chmod(0o600)
+        self._storage.gravar_blob(
+            self._blob(name),
+            json.dumps(records, indent=2, ensure_ascii=False).encode(),
+        )
 
     # ── Client management ─────────────────────────────────────────────────────
 
@@ -409,10 +422,24 @@ _store_lock = threading.Lock()
 
 
 def get_auth_store() -> AuthStore:
-    """Return the process-wide AuthStore singleton."""
+    """Return the process-wide AuthStore singleton.
+
+    Usa o mesmo CONCILIUM__STORE_BACKEND da aplicação. Para filesystem
+    (dev/CI), grava em CONCILIUM__AUTH_DATA_PATH ou ~/.concilium/auth/.
+    Para SharePoint/S3/Azure, grava em {root_path}/auth/.
+    """
     global _store
     if _store is None:
         with _store_lock:
             if _store is None:
-                _store = AuthStore()
+                from concilium.infrastructure.storage.store_factory import (
+                    build_blob_storage,
+                    resolve_store_backend,
+                )
+
+                backend = resolve_store_backend()
+                if backend == "filesystem":
+                    _store = AuthStore()  # usa data_dir local (CONCILIUM__AUTH_DATA_PATH)
+                else:
+                    _store = AuthStore(storage=build_blob_storage(), prefix="auth")
     return _store
