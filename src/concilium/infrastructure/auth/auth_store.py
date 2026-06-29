@@ -19,6 +19,7 @@ import hmac
 import json
 import secrets
 import threading
+import time
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -148,6 +149,8 @@ class AuthStore:
             self._storage = LocalBlobStorage(root_dir=data_dir)
         self._lock = threading.Lock()
         self._device_codes: dict[str, DeviceCodeRecord] = {}  # in-memory only
+        self._clients_cache: list[dict] | None = None
+        self._clients_cache_at: float = 0.0
 
     # ── Storage helpers ───────────────────────────────────────────────────────
 
@@ -165,6 +168,22 @@ class AuthStore:
             self._blob(name),
             json.dumps(records, indent=2, ensure_ascii=False).encode(),
         )
+
+    _CLIENTS_TTL = 30.0  # seconds; clients.json muda apenas em operações admin
+
+    def _read_clients(self) -> list[dict]:
+        """Lê clients.json com cache TTL de 30s para evitar round-trips ao SharePoint."""
+        now = time.monotonic()
+        if self._clients_cache is not None and now - self._clients_cache_at < self._CLIENTS_TTL:
+            return self._clients_cache
+        data = self._read("clients.json")
+        self._clients_cache = data
+        self._clients_cache_at = now
+        return data
+
+    def _invalidate_clients_cache(self) -> None:
+        self._clients_cache = None
+        self._clients_cache_at = 0.0
 
     # ── Client management ─────────────────────────────────────────────────────
 
@@ -195,7 +214,7 @@ class AuthStore:
             raise ValueError(f"Roles inválidos: {invalid}. Válidos: {sorted(VALID_ROLES)}")
 
         with self._lock:
-            existing = [ClientRecord(**r) for r in self._read("clients.json")]
+            existing = [ClientRecord(**r) for r in self._read_clients()]
             if any(r.client_id == client_id for r in existing):
                 raise ValueError(f"Client '{client_id}' already exists.")
             record = ClientRecord(
@@ -208,24 +227,26 @@ class AuthStore:
             )
             existing.append(record)
             self._write("clients.json", [asdict(r) for r in existing])
+            self._invalidate_clients_cache()
             return record
 
     def list_clients(self) -> list[ClientRecord]:
         with self._lock:
-            records = self._read("clients.json")
+            records = self._read_clients()
             # Backward-compat: JSON files sem campo 'email' recebem default ""
             return [ClientRecord(**{**{"email": ""}, **r}) for r in records]
 
     def remove_client(self, client_id: str) -> bool:
         """Deactivates a client. Returns True if found."""
         with self._lock:
-            raw = self._read("clients.json")
+            raw = self._read_clients()
             records = [ClientRecord(**{**{"email": ""}, **r}) for r in raw]
             before = len(records)
             records = [r for r in records if r.client_id != client_id]
             if len(records) == before:
                 return False
             self._write("clients.json", [asdict(r) for r in records])
+            self._invalidate_clients_cache()
             return True
 
     def get_client_roles(self, client_id: str, secret: str) -> list[str] | None:
@@ -235,7 +256,7 @@ class AuthStore:
         Historical clients with 'scopes' are mapped to equivalent roles.
         """
         with self._lock:
-            raw = self._read("clients.json")
+            raw = self._read_clients()
             records = [ClientRecord(**{**{"email": ""}, **r}) for r in raw]
         for r in records:
             if r.client_id == client_id and r.active and _verify(secret, r.secret_hash):
