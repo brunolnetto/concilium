@@ -894,19 +894,14 @@ cmd_users() {
     step "Gestao de usuarios via ACA exec"
     log "App alvo: $app_name"
 
-    if [[ -z "$exec_cmd" ]]; then
-        log "Abrindo shell interativo — use 'concilium ops auth --help' para ver os comandos"
-        az containerapp exec \
-            --name "$app_name" \
-            --resource-group "$RESOURCE_GROUP" \
-            --command "/bin/sh"
-    else
-        log "Comando: $exec_cmd"
-        az containerapp exec \
-            --name "$app_name" \
-            --resource-group "$RESOURCE_GROUP" \
-            --command "/bin/sh" -- -c "$exec_cmd"
-    fi
+    local cmd="${exec_cmd:-/bin/sh}"
+    [[ -z "$exec_cmd" ]] && log "Abrindo shell interativo — use 'concilium ops auth --help'"
+    [[ -n "$exec_cmd" ]] && log "Comando: $cmd"
+
+    az containerapp exec \
+        --name "$app_name" \
+        --resource-group "$RESOURCE_GROUP" \
+        --command "$cmd"
 }
 
 cmd_all() {
