@@ -1,6 +1,7 @@
 """Porta de abstração para Blob Storage (ADR-033 §D1)."""
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class BlobStoragePort(ABC):
@@ -66,3 +67,11 @@ class BlobStoragePort(ABC):
         (ex.: local) sinalizam ausência, e o chamador recai no transporte base64.
         """
         return None
+
+    def health_check(self) -> dict[str, Any]:
+        """Verifica a conectividade e disponibilidade do backend de storage.
+
+        Implementação padrão — backends concretos devem sobrescrever com uma
+        verificação real (ex.: GET no drive, HEAD no bucket, stat no filesystem).
+        """
+        return {"status": "ok", "backend": "unknown"}

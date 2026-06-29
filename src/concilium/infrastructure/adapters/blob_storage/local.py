@@ -1,6 +1,7 @@
 """Implementação local (Filesystem) do BlobStoragePort (ADR-033 §D1)."""
 
 from pathlib import Path
+from typing import Any
 
 from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
@@ -67,6 +68,13 @@ class LocalBlobStorage(BlobStoragePort):
             return p.exists() and p.is_file()
         except ValueError:
             return False
+
+    def health_check(self) -> dict[str, Any]:
+        return {
+            "status": "ok" if self.root_dir.exists() else "error",
+            "backend": "filesystem",
+            "root": str(self.root_dir),
+        }
 
     def aprovar_versao(self, path: str) -> None:
         """Torna o blob somente-leitura (chmod 444) — equivalente local ao checkin SharePoint."""

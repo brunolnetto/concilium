@@ -116,6 +116,7 @@ def test_sharepoint_gravar_blob_large_upload_and_cache_invalidate(tmp_path, monk
     monkeypatch.setattr(storage, "_gravar_upload_session", _upload)
     monkeypatch.setattr(storage._cache, "invalidate", _invalidate)
     monkeypatch.setattr(storage, "_client", lambda: SimpleNamespace())
+    storage._root_ensured = True  # skip ensure_root_path — not under test here
 
     storage.gravar_blob("big.bin", b"x" * (4 * 1024 * 1024))
     assert called["upload"] is True

@@ -50,6 +50,7 @@ class SharePointBlobStorage(BlobStoragePort):
         self._read_only = read_only
         self._offline = offline
         self._cache: _BlobCache | None = _BlobCache(cache_dir, ttl_minutes=cache_ttl_minutes) if cache_dir else None
+        self._root_ensured = False
 
     @classmethod
     def from_env(cls, *, cache_dir: Path | None = None) -> SharePointBlobStorage:
@@ -170,6 +171,10 @@ class SharePointBlobStorage(BlobStoragePort):
             raise PermissionError(f"Storage configurado como read-only: {path}")
 
         httpx = self._client()
+
+        if not self._root_ensured:
+            self._ensure_root_path(httpx)
+            self._root_ensured = True
 
         if len(content) < _LARGE_FILE_THRESHOLD:
             self._gravar_pequeno(httpx, path, content)
@@ -320,6 +325,37 @@ class SharePointBlobStorage(BlobStoragePort):
         except Exception:  # noqa: BLE001
             return None
         return None
+
+    def _ensure_root_path(self, httpx: Any) -> None:
+        """Cria root_path no SharePoint se não existir (idempotente, segmento a segmento)."""
+        if not self._root_path:
+            return
+        r = httpx.get(
+            f"{_GRAPH_BASE}/drives/{self._drive_id}/root:/{self._root_path}",
+            headers=self._headers(),
+            timeout=10.0,
+        )
+        if r.status_code == 200:
+            return
+        if r.status_code != 404:
+            r.raise_for_status()
+        segments = self._root_path.split("/")
+        current = ""
+        for segment in segments:
+            if current:
+                url = f"{_GRAPH_BASE}/drives/{self._drive_id}/root:/{current}:/children"
+            else:
+                url = f"{_GRAPH_BASE}/drives/{self._drive_id}/root/children"
+            r = httpx.post(
+                url,
+                headers=self._headers({"Content-Type": "application/json"}),
+                json={"name": segment, "folder": {}, "@microsoft.graph.conflictBehavior": "replace"},
+                timeout=10.0,
+            )
+            if r.status_code not in (200, 201):
+                r.raise_for_status()
+            current = f"{current}/{segment}".lstrip("/") if current else segment
+        logger.info("SharePoint root_path criado: %s", self._root_path)
 
     def health_check(self) -> dict[str, Any]:
         """Verifica conectividade com o SharePoint Drive (ADR-047 §D7)."""

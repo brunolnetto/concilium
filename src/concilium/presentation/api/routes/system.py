@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 from fastapi.responses import RedirectResponse
 
@@ -16,8 +18,16 @@ def root() -> RedirectResponse:
 
 
 @router.get("/health", summary="Health check")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, Any]:
+    from concilium.infrastructure.storage.store_factory import build_blob_storage
+
+    try:
+        storage_health = build_blob_storage().health_check()
+    except Exception as exc:
+        storage_health = {"status": "error", "message": str(exc)}
+
+    overall = "ok" if storage_health.get("status") == "ok" else "degraded"
+    return {"status": overall, "storage": storage_health}
 
 
 @router.post("/catalog/reload", summary="Invalidate in-memory catalog cache and force reload from disk")

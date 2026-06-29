@@ -78,10 +78,18 @@ def register(server: FastMCP) -> None:
                         }
                     )
 
+        # Saúde do blob storage
+        from concilium.infrastructure.storage.store_factory import build_blob_storage
+
+        try:
+            storage_health = build_blob_storage().health_check()
+        except Exception as exc:
+            storage_health = {"status": "error", "message": str(exc)}
+
         # Status geral
-        if not config_dir.exists():
+        if not config_dir.exists() or storage_health.get("status") == "error":
             status_geral = "ERRO"
-        elif any(c.get("status") != "SAUDAVEL" for c in catalogos):
+        elif any(c.get("status") != "SAUDAVEL" for c in catalogos) or storage_health.get("status") not in ("ok", "SAUDAVEL"):
             status_geral = "DEGRADADO"
         else:
             status_geral = "SAUDAVEL"
@@ -96,5 +104,6 @@ def register(server: FastMCP) -> None:
                 "contextos": contexto_ids,
                 "total_projetos": n_projetos,
                 "catalogos": catalogos,
+                "storage": storage_health,
             }
         )

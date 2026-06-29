@@ -540,7 +540,9 @@ class TestSystemRoutes:
         from concilium.presentation.api.routes.system import health
 
         result = health()
-        assert result == {"status": "ok"}
+        assert result["status"] in ("ok", "degraded")
+        assert "storage" in result
+        assert result["storage"]["status"] in ("ok", "error")
 
     def test_root_redirects(self):
         from fastapi.responses import RedirectResponse
