@@ -877,14 +877,33 @@ class SmtpSettings:
 
     @classmethod
     def from_env(cls) -> SmtpSettings:
+        password = _str("CONCILIUM__SMTP_PASSWORD", "")
+        if not password:
+            password = _read_smtp_password_from_kv() or ""
         return cls(
             host=_str("CONCILIUM__SMTP_HOST", ""),
             port=_int("CONCILIUM__SMTP_PORT", 587),
             user=_str("CONCILIUM__SMTP_USER", ""),
-            password=_str("CONCILIUM__SMTP_PASSWORD", ""),
+            password=password,
             from_addr=_str("CONCILIUM__SMTP_FROM", "concilium@mendesloboconstrucao.com.br"),
             enabled=_flag("CONCILIUM__NOTIFICATIONS_ENABLED"),
         )
+
+
+def _read_smtp_password_from_kv() -> str | None:
+    """Lê smtp-password do Key Vault via Managed Identity (mesmo padrão do JWT)."""
+    kv_url = _str("CONCILIUM__JWT_KEY_VAULT_URL", "").strip()
+    if not kv_url:
+        return None
+    try:
+        from azure.identity import DefaultAzureCredential
+        from azure.keyvault.secrets import SecretClient
+
+        client = SecretClient(vault_url=kv_url, credential=DefaultAzureCredential())
+        value = client.get_secret("smtp-password").value or ""
+        return value.strip() or None
+    except Exception:
+        return None
 
 
 _smtp: SmtpSettings | None = None

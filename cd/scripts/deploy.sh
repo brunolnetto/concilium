@@ -655,11 +655,20 @@ cmd_configure() {
     [[ -n "$SP_CLIENT_SECRET" ]] || die "SP_CLIENT_SECRET nao definido."
     [[ -n "$SP_DRIVE_ID" ]]      || die "SP_DRIVE_ID nao definido."
     [[ -n "$SMOKE_CLIENT_SECRET" ]] || die "SMOKE_CLIENT_SECRET nao definido."
+    [[ -n "$SMTP_PASSWORD" ]]    || warn "SMTP_PASSWORD nao definido — notificacoes desabilitadas."
 
     local smoke_hash
     smoke_hash="sha256:$(printf '%s' "$SMOKE_CLIENT_SECRET" | openssl dgst -sha256 -hex | sed 's/^.* //')"
     local auth_clients="{\"${SMOKE_CLIENT_ID}\":{\"secret_hash\":\"${smoke_hash}\",\"roles\":[\"operator\"]}}"
     local kv_url="https://${KV_NAME}.vault.azure.net"
+
+    # Grava smtp-password no Key Vault (idempotente)
+    if [[ -n "${SMTP_PASSWORD:-}" ]]; then
+        step "Gravando smtp-password no Key Vault"
+        printf '%s' "$SMTP_PASSWORD" | az keyvault secret set \
+            --vault-name "$KV_NAME" --name smtp-password --value "@-" --output none
+        ok "smtp-password gravado."
+    fi
     local mi_client_id
     mi_client_id=$(az identity show --name concilium-identity --resource-group "$RESOURCE_GROUP" \
         --query 'clientId' -o tsv 2>/dev/null || echo "")
@@ -719,6 +728,16 @@ properties:
             value: concilium-mcp
           - name: AZURE_CLIENT_ID
             value: ${mi_client_id}
+          - name: CONCILIUM__SMTP_HOST
+            value: smtp.gmail.com
+          - name: CONCILIUM__SMTP_PORT
+            value: "587"
+          - name: CONCILIUM__SMTP_USER
+            value: brunolnetto@gmail.com
+          - name: CONCILIUM__SMTP_FROM
+            value: brunolnetto@gmail.com
+          - name: CONCILIUM__NOTIFICATIONS_ENABLED
+            value: "1"
 EOF
     _apply_yaml "$ACA_MCP_APP" "$mcp_yaml"
     rm -f "$mcp_yaml"
@@ -765,6 +784,16 @@ properties:
             value: concilium-api
           - name: AZURE_CLIENT_ID
             value: ${mi_client_id}
+          - name: CONCILIUM__SMTP_HOST
+            value: smtp.gmail.com
+          - name: CONCILIUM__SMTP_PORT
+            value: "587"
+          - name: CONCILIUM__SMTP_USER
+            value: brunolnetto@gmail.com
+          - name: CONCILIUM__SMTP_FROM
+            value: brunolnetto@gmail.com
+          - name: CONCILIUM__NOTIFICATIONS_ENABLED
+            value: "1"
 EOF
     _apply_yaml "$ACA_API_APP" "$api_yaml"
     rm -f "$api_yaml"
@@ -804,6 +833,10 @@ cmd_github() {
     local smks="${SMOKE_CLIENT_SECRET:-}"
     [[ -z "$smks" ]] && { read -r -s -p "  SMOKE_CLIENT_SECRET: " smks; echo; }
     _s "SMOKE_CLIENT_SECRET" "$smks"
+
+    local smtp_pwd="${SMTP_PASSWORD:-}"
+    [[ -z "$smtp_pwd" ]] && { read -r -s -p "  SMTP_PASSWORD (Gmail App Password): " smtp_pwd; echo; }
+    [[ -n "$smtp_pwd" ]] && _s "SMTP_PASSWORD" "$smtp_pwd"
 
     ok "GitHub Secrets/Vars configurados."
     echo "  Proximos passos: cd/scripts/deploy.sh configure"
