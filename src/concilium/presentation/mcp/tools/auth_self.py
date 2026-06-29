@@ -1,0 +1,127 @@
+"""MCP tools para gestão de dispositivos próprios (ADR-123 F5)."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from mcp.server.fastmcp import FastMCP
+
+from concilium.infrastructure.auth.permission_guard import AUTH_SELF, permission
+
+
+def register(server: FastMCP) -> None:
+    """Registra ferramentas de self-service de autenticação no servidor MCP."""
+
+    @server.tool()
+    @permission(AUTH_SELF)
+    def listar_meus_dispositivos() -> dict[str, Any]:
+        """Lista os dispositivos ativos do usuário autenticado atual.
+
+        Retorna todos os refresh tokens ativos (não revogados, não expirados)
+        associados ao client_id do JWT atual.
+
+        Use para verificar quais dispositivos têm acesso à sua conta antes
+        de iniciar uma revogação seletiva com revogar_meu_dispositivo().
+        """
+        from concilium.infrastructure.auth.auth_store import get_auth_store
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
+
+        client_id = get_current_user_id()
+        if client_id is None:
+            return {
+                "status": "error",
+                "message": "Identidade do usuário não disponível no contexto atual.",
+                "dispositivos": [],
+            }
+
+        store = get_auth_store()
+        devices = store.list_devices(client_id=client_id)
+
+        return {
+            "status": "ok",
+            "client_id": client_id,
+            "total": len(devices),
+            "dispositivos": [
+                {
+                    "device_id": d.device_id,
+                    "device_name": d.device_name,
+                    "issued_at": d.issued_at,
+                    "expires_at": d.expires_at,
+                    "last_used_at": d.last_used_at or None,
+                }
+                for d in devices
+            ],
+        }
+
+    @server.tool()
+    @permission(AUTH_SELF)
+    def revogar_meu_dispositivo(device_id: str) -> dict[str, Any]:
+        """Solicita a revogação de um dispositivo próprio via self-service.
+
+        Cria um pedido de revogação pendente e envia email de confirmação
+        para o endereço cadastrado. O usuário deve clicar no link do email
+        para confirmar e efetivar a revogação.
+
+        Args:
+            device_id: ID do dispositivo a revogar (use listar_meus_dispositivos()
+                       para obter os IDs disponíveis).
+
+        Retorna o revoke_token e instruções. A revogação só é efetivada após
+        confirmação via email (link válido por 24h).
+        """
+        from concilium.infrastructure.auth.auth_store import get_auth_store
+        from concilium.infrastructure.auth.permission_guard import get_current_user_id
+        from concilium.infrastructure.services.notification_service import get_notification_service
+
+        client_id = get_current_user_id()
+        if client_id is None:
+            return {
+                "status": "error",
+                "message": "Identidade do usuário não disponível no contexto atual.",
+            }
+
+        store = get_auth_store()
+
+        # Verifica que o dispositivo pertence ao usuário atual
+        devices = store.list_devices(client_id=client_id)
+        device_ids = {d.device_id for d in devices}
+        if device_id not in device_ids:
+            return {
+                "status": "error",
+                "message": (
+                    f"Dispositivo '{device_id}' não encontrado nos dispositivos ativos do usuário '{client_id}'. "
+                    f"Dispositivos ativos: {sorted(device_ids) or ['(nenhum)']}"
+                ),
+            }
+
+        # Cria pedido de revogação pendente
+        pending = store.create_revoke_pending(client_id=client_id, device_id=device_id)
+
+        # Tenta buscar email do cliente para enviar notificação
+        clients = {c.client_id: c for c in store.list_clients()}
+        client = clients.get(client_id)
+        client_email = client.email if client else ""
+
+        if client_email:
+            get_notification_service().notify_revoke_pending(
+                client_id=client_id,
+                device_id=device_id,
+                email=client_email,
+                revoke_token=pending.revoke_token,
+            )
+
+        return {
+            "status": "pending",
+            "revoke_token": pending.revoke_token,
+            "device_id": device_id,
+            "expires_at": pending.expires_at,
+            "message": (
+                f"Pedido de revogação do dispositivo '{device_id}' criado. "
+                + (
+                    f"Um email de confirmação foi enviado para {client_email}. "
+                    "Clique no link do email para confirmar a revogação (válido por 24h)."
+                    if client_email
+                    else "Nenhum email cadastrado. Use o endpoint /auth/revoke-confirm/{revoke_token} para confirmar."
+                )
+            ),
+        }

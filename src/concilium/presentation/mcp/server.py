@@ -58,6 +58,7 @@ _APPS_DIR = Path(__file__).parent / "apps"
 from concilium.presentation.mcp.tools import (
     analise,
     artifacts,
+    auth_self,
     benchmark,
     benchmark_nep039,
     campaign,
@@ -80,6 +81,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     reset_tool_invocation_repository(get_tool_invocation_store())  # ADR-118: blob-backed audit
     server = FastMCP("concilium", host=host, port=port)
     system.register(server)  # ping / health — sempre primeiro
+    auth_self.register(server)  # ADR-123 F5: self-service de dispositivos
     catalogo.register(server)
     projeto.register(server)
     pipeline.register(server)

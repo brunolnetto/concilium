@@ -42,6 +42,7 @@ def add_user(
         "operator", "--role", "-r", help="Role RBAC: operator | engineer | admin | auditor | catalog-manager"
     ),
     notes: str = typer.Option("", "--notes", help="Observações opcionais."),
+    email: str | None = typer.Option(None, "--email", "-e", help="Email do usuário para notificações (ADR-123)."),
 ) -> None:
     """Registra um novo usuário/cliente no auth store.
 
@@ -51,8 +52,14 @@ def add_user(
       admin          — acesso completo incluindo gestão de usuários
       auditor        — leitura + dados financeiros (sem executar)
       catalog-manager — especialista em catálogo (sem acesso a projetos de clientes)
+
+    Se --email for fornecido, gera automaticamente um device code inicial e envia
+    o claude_desktop_config.json por email (ADR-123 F2).
     """
+    import json as _json
+
     from concilium.infrastructure.auth.auth_store import get_auth_store
+    from concilium.infrastructure.services.notification_service import get_notification_service
 
     store = get_auth_store()
     generated = secret is None
@@ -60,7 +67,7 @@ def add_user(
         secret = secrets.token_urlsafe(32)
 
     try:
-        record = store.add_client(client_id, secret, [role], notes)
+        record = store.add_client(client_id, secret, [role], notes, email=email or "")
     except ValueError as e:
         rprint(f"[red]Erro:[/red] {e}")
         raise typer.Exit(1)
@@ -70,6 +77,40 @@ def add_user(
     if generated:
         rprint("\n[yellow]Secret gerado (guarde agora — não será exibido de novo):[/yellow]")
         rprint(f"  [bold]{secret}[/bold]")
+
+    if email:
+        # ADR-123 F2: auto-gerar device code e enviar email de boas-vindas
+        from concilium.infrastructure.settings import get_storage
+
+        device_id = f"{client_id}-default"
+        device_record = store.create_device_code(
+            client_id=client_id,
+            device_id=device_id,
+            device_name="Dispositivo inicial",
+        )
+
+        config_block = {
+            "mcpServers": {
+                "concilium": {
+                    "command": "concilium-mcp-proxy",
+                    "env": {
+                        "CONCILIUM_DEVICE_CODE": device_record.code,
+                        "CONCILIUM_DEVICE_ID": device_id,
+                        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
+                    },
+                }
+            }
+        }
+        config_json = _json.dumps(config_block, indent=2, ensure_ascii=False)
+
+        get_notification_service().notify_user_created(
+            client_id=client_id,
+            role=role,
+            email=email,
+            config_json=config_json,
+        )
+        rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
+        rprint(f"  Device code: [bold]{device_record.code}[/bold]")
 
 
 @app.command("list-users")

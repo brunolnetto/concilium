@@ -58,6 +58,19 @@ class ClientRecord:
     active: bool = True
     notes: str = ""
     scopes: list[str] = field(default_factory=list)  # legado ADR-094, ignorado se roles presente
+    email: str = ""  # ADR-123: endereço de email do usuário para notificações
+
+
+@dataclass
+class RevokePendingRecord:
+    """Solicitação de revogação de dispositivo aguardando confirmação (ADR-123 F3)."""
+
+    revoke_token: str  # token opaco para URL de confirmação
+    client_id: str
+    device_id: str
+    requested_at: str  # ISO-8601
+    expires_at: str  # ISO-8601 (+24h)
+    confirmed: bool = False
 
 
 @dataclass
@@ -149,6 +162,7 @@ class AuthStore:
         roles: list[str],
         notes: str = "",
         scopes: list[str] | None = None,  # legado — convertido para roles
+        email: str = "",  # ADR-123: endereço de email para notificações
     ) -> ClientRecord:
         """Register a new client. Raises ValueError if client_id already exists."""
         from concilium.infrastructure.auth.permission_guard import (
@@ -177,6 +191,7 @@ class AuthStore:
                 roles=effective_roles,
                 created_at=_iso(_now()),
                 notes=notes,
+                email=email,
             )
             existing.append(record)
             self._write("clients.json", [asdict(r) for r in existing])
@@ -184,12 +199,15 @@ class AuthStore:
 
     def list_clients(self) -> list[ClientRecord]:
         with self._lock:
-            return [ClientRecord(**r) for r in self._read("clients.json")]
+            records = self._read("clients.json")
+            # Backward-compat: JSON files sem campo 'email' recebem default ""
+            return [ClientRecord(**{**{"email": ""}, **r}) for r in records]
 
     def remove_client(self, client_id: str) -> bool:
         """Deactivates a client. Returns True if found."""
         with self._lock:
-            records = [ClientRecord(**r) for r in self._read("clients.json")]
+            raw = self._read("clients.json")
+            records = [ClientRecord(**{**{"email": ""}, **r}) for r in raw]
             before = len(records)
             records = [r for r in records if r.client_id != client_id]
             if len(records) == before:
@@ -204,7 +222,8 @@ class AuthStore:
         Historical clients with 'scopes' are mapped to equivalent roles.
         """
         with self._lock:
-            records = [ClientRecord(**r) for r in self._read("clients.json")]
+            raw = self._read("clients.json")
+            records = [ClientRecord(**{**{"email": ""}, **r}) for r in raw]
         for r in records:
             if r.client_id == client_id and r.active and _verify(secret, r.secret_hash):
                 return r.roles
@@ -321,6 +340,66 @@ class AuthStore:
             if count:
                 self._write("refresh_tokens.json", [asdict(t) for t in tokens])
         return count
+
+    # ── Revoke pending (ADR-123 F3) ───────────────────────────────────────────
+
+    REVOKE_PENDING_TTL = timedelta(hours=24)
+
+    def create_revoke_pending(self, client_id: str, device_id: str) -> RevokePendingRecord:
+        """Cria um pedido de revogação pendente com token opaco. Persiste em revoke_pending.json."""
+        revoke_token = secrets.token_urlsafe(32)
+        now = _now()
+        record = RevokePendingRecord(
+            revoke_token=revoke_token,
+            client_id=client_id,
+            device_id=device_id,
+            requested_at=_iso(now),
+            expires_at=_iso(now + self.REVOKE_PENDING_TTL),
+            confirmed=False,
+        )
+        with self._lock:
+            existing = [RevokePendingRecord(**r) for r in self._read("revoke_pending.json")]
+            existing.append(record)
+            self._write("revoke_pending.json", [asdict(r) for r in existing])
+        return record
+
+    def get_revoke_pending(self, revoke_token: str) -> RevokePendingRecord | None:
+        """Busca um pedido de revogação pelo token. Retorna None se não encontrado ou expirado."""
+        with self._lock:
+            records = [RevokePendingRecord(**r) for r in self._read("revoke_pending.json")]
+        now = _now()
+        for rec in records:
+            if rec.revoke_token == revoke_token:
+                if _parse(rec.expires_at) < now:
+                    return None  # expirado
+                return rec
+        return None
+
+    def confirm_revoke(self, revoke_token: str) -> bool:
+        """Confirma a revogação: marca como confirmado e revoga o dispositivo.
+
+        Returns True se encontrado e válido (não expirado, não já confirmado).
+        """
+        with self._lock:
+            records = [RevokePendingRecord(**r) for r in self._read("revoke_pending.json")]
+            now = _now()
+            found = False
+            device_id_to_revoke: str | None = None
+            for rec in records:
+                if rec.revoke_token == revoke_token:
+                    if _parse(rec.expires_at) < now or rec.confirmed:
+                        return False
+                    rec.confirmed = True
+                    device_id_to_revoke = rec.device_id
+                    found = True
+                    break
+            if not found:
+                return False
+            self._write("revoke_pending.json", [asdict(r) for r in records])
+
+        if device_id_to_revoke:
+            self.revoke_device(device_id_to_revoke)
+        return True
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────

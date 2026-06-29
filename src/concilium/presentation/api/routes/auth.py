@@ -1,8 +1,10 @@
-"""Auth endpoints — ADR-094.
+"""Auth endpoints — ADR-094 / ADR-123.
 
 POST /auth/token          — emissão de JWT via client_id/client_secret (Fase 2)
 POST /auth/device/activate — troca device code por refresh token (Fase 1 proxy)
 POST /auth/token/refresh   — troca refresh token por access token (Fase 1 proxy)
+POST /auth/revoke-pending/{revoke_token}  — inicia revogação self-service (ADR-123 F4)
+POST /auth/revoke-confirm/{revoke_token}  — confirma revogação self-service (ADR-123 F4)
 """
 
 from __future__ import annotations
@@ -213,3 +215,111 @@ def issue_user_token(request: Request, response: Response, body: IssueTokenReque
         access_token=token,
         expires_in=int(ttl.total_seconds()),
     )
+
+
+# ── Self-service revoke (ADR-123 F4) ─────────────────────────────────────────
+
+
+class RevokePendingResponse(BaseModel):
+    status: str
+    message: str
+
+
+class RevokeConfirmResponse(BaseModel):
+    status: str
+    device_id: str
+
+
+@router.post(
+    "/revoke-pending/{revoke_token}",
+    response_model=RevokePendingResponse,
+    summary="Iniciar revogação self-service de dispositivo (ADR-123 F4)",
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("5/minute", key_func=get_remote_address)
+def revoke_pending(request: Request, response: Response, revoke_token: str) -> RevokePendingResponse:
+    """Usuário clica no link do email de novo dispositivo para iniciar a revogação.
+
+    Busca o RevokePendingRecord pelo token e envia email de confirmação com link
+    para o passo final. Retorna 404 se token não encontrado ou expirado.
+
+    Não requer autenticação JWT — o token do link é a prova de posse do email.
+    """
+    import logging as _logging
+
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+    from concilium.infrastructure.services.notification_service import get_notification_service
+
+    _log = _logging.getLogger(__name__)
+
+    store = get_auth_store()
+    record = store.get_revoke_pending(revoke_token)
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Token de revogação não encontrado, expirado ou já utilizado.",
+        )
+
+    # Tenta buscar email do cliente para enviar confirmação
+    clients = {c.client_id: c for c in store.list_clients()}
+    client = clients.get(record.client_id)
+    client_email = client.email if client else ""
+
+    if client_email:
+        get_notification_service().notify_revoke_pending(
+            client_id=record.client_id,
+            device_id=record.device_id,
+            email=client_email,
+            revoke_token=revoke_token,
+        )
+        _log.info(
+            "revoke-pending: enviado email de confirmação para '%s' (device='%s')",
+            record.client_id,
+            record.device_id,
+        )
+
+    return RevokePendingResponse(
+        status="confirmation_sent",
+        message=(
+            f"Confirmação de revogação do dispositivo '{record.device_id}' enviada. "
+            "Verifique seu email e clique no link de confirmação para concluir."
+            if client_email
+            else "Solicitação recebida. Nenhum email de confirmação configurado para este usuário."
+        ),
+    )
+
+
+@router.post(
+    "/revoke-confirm/{revoke_token}",
+    response_model=RevokeConfirmResponse,
+    summary="Confirmar revogação self-service de dispositivo (ADR-123 F4)",
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("5/minute", key_func=get_remote_address)
+def revoke_confirm(request: Request, response: Response, revoke_token: str) -> RevokeConfirmResponse:
+    """Usuário clica no link de confirmação do email para efetivar a revogação.
+
+    Chama confirm_revoke() que marca como confirmado e revoga o dispositivo.
+    Retorna 404 se token não encontrado, expirado ou já confirmado.
+
+    Não requer autenticação JWT — o token do link é a prova de posse do email.
+    """
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+
+    store = get_auth_store()
+    record = store.get_revoke_pending(revoke_token)
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Token de revogação não encontrado, expirado ou já confirmado.",
+        )
+
+    device_id = record.device_id
+    ok = store.confirm_revoke(revoke_token)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Token de revogação não encontrado, expirado ou já confirmado.",
+        )
+
+    return RevokeConfirmResponse(status="revoked", device_id=device_id)

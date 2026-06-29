@@ -41,6 +41,7 @@ CATALOG_VALIDATE = "catalog:validate"  # ADR-120 D1: health/plausibility/integri
 CATALOG_MERGE = "catalog:merge"  # ADR-120 D1: promoção rascunho→ativo (4 olhos)
 FINANCIALS_READ = "financials:read"
 AUTH_MANAGE = "auth:manage"
+AUTH_SELF = "auth:self"  # ADR-123 F5: gestão de dispositivos próprios (self-service)
 SYSTEM_READ = "system:read"
 HEALTH_READ = "health:read"  # health check do servidor — qualquer usuário autenticado com acesso operacional
 
@@ -57,6 +58,7 @@ _OPERATOR = frozenset(
         CATALOG_READ,
         CATALOG_VALIDATE,  # ADR-120 D3: operator pode rodar health checks de catálogo
         FINANCIALS_READ,
+        AUTH_SELF,  # ADR-123 F5: todos os roles têm self-service de dispositivos
     }
 )
 
@@ -74,6 +76,7 @@ _CATALOG_MANAGER = frozenset(
         CATALOG_WRITE,
         CATALOG_MERGE,
         FINANCIALS_READ,  # para avaliar impacto de reajuste em projetos
+        AUTH_SELF,  # ADR-123 F5
     }
 )
 
@@ -84,6 +87,7 @@ _AUDITOR = frozenset(
         ARTIFACTS_READ,
         ARTIFACTS_DOWNLOAD,
         FINANCIALS_READ,
+        AUTH_SELF,  # ADR-123 F5
     }
 )
 

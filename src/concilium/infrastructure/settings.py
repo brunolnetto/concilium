@@ -95,6 +95,13 @@ CONCILIUM__JOB_GC_INTERVAL_MINUTES    [opt]   60               JobsSettings.job_
 CONCILIUM__CAMPAIGN_CARDINALITY_THRESHOLD  [opt]  10000        CampaignSettings.cardinality_threshold
 CONCILIUM__CAMPAIGN_MAX_WORKERS           [opt]  6             CampaignSettings.max_workers
 CONCILIUM__CAMPAIGN_SECONDS_PER_SCENARIO  [opt]  6             CampaignSettings.seconds_per_scenario
+── SMTP / Notificações (SmtpSettings — ADR-123) ─────────────────────────────
+CONCILIUM__SMTP_HOST                      [opt]  —             SmtpSettings.host
+CONCILIUM__SMTP_PORT                      [opt]  587           SmtpSettings.port
+CONCILIUM__SMTP_USER                      [opt]  —             SmtpSettings.user
+CONCILIUM__SMTP_PASSWORD                  [opt]  —             SmtpSettings.password
+CONCILIUM__SMTP_FROM                      [opt]  concilium@… SmtpSettings.from_addr
+CONCILIUM__NOTIFICATIONS_ENABLED          [opt]  false         SmtpSettings.enabled
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Variáveis de infra de testes (não produção):
@@ -843,6 +850,54 @@ def get_campaign() -> CampaignSettings:
     return _campaign
 
 
+# ── SmtpSettings (ADR-123) ────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class SmtpSettings:
+    """Configuração SMTP para envio de emails transacionais (ADR-123)."""
+
+    host: str
+    """CONCILIUM__SMTP_HOST — servidor SMTP."""
+
+    port: int
+    """CONCILIUM__SMTP_PORT — porta SMTP (default: 587)."""
+
+    user: str
+    """CONCILIUM__SMTP_USER — usuário de autenticação SMTP."""
+
+    password: str
+    """CONCILIUM__SMTP_PASSWORD — senha de autenticação SMTP."""
+
+    from_addr: str
+    """CONCILIUM__SMTP_FROM — endereço remetente."""
+
+    enabled: bool
+    """CONCILIUM__NOTIFICATIONS_ENABLED — habilita envio real de email (default: False)."""
+
+    @classmethod
+    def from_env(cls) -> SmtpSettings:
+        return cls(
+            host=_str("CONCILIUM__SMTP_HOST", ""),
+            port=_int("CONCILIUM__SMTP_PORT", 587),
+            user=_str("CONCILIUM__SMTP_USER", ""),
+            password=_str("CONCILIUM__SMTP_PASSWORD", ""),
+            from_addr=_str("CONCILIUM__SMTP_FROM", "concilium@mendesloboconstrucao.com.br"),
+            enabled=_flag("CONCILIUM__NOTIFICATIONS_ENABLED"),
+        )
+
+
+_smtp: SmtpSettings | None = None
+
+
+def get_smtp() -> SmtpSettings:
+    _refresh_if_env_changed()
+    global _smtp
+    if _smtp is None:
+        _smtp = SmtpSettings.from_env()
+    return _smtp
+
+
 # ── Validação de startup ──────────────────────────────────────────────────────
 
 
@@ -940,8 +995,8 @@ def _check_auth(auth: AuthSettings) -> list[str]:
 
 def _reset_all() -> None:
     """Invalida todos os singletons. Usar em fixtures de teste para isolar env vars."""
-    global _api, _mcp, _mcp_proxy, _ui, _auth, _storage, _telemetry, _runtime, _campaign, _last_env_fingerprint
-    _api = _mcp = _mcp_proxy = _ui = _auth = _storage = _telemetry = _runtime = _campaign = None
+    global _api, _mcp, _mcp_proxy, _ui, _auth, _storage, _telemetry, _runtime, _campaign, _smtp, _last_env_fingerprint
+    _api = _mcp = _mcp_proxy = _ui = _auth = _storage = _telemetry = _runtime = _campaign = _smtp = None
     _last_env_fingerprint = None
 
 
