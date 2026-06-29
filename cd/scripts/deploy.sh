@@ -435,6 +435,27 @@ cmd_promote() {
         --output none
 
     ok "Trafego de producao agora aponta 100% para '$target_revision'."
+
+    # Desativa todas as revisions que não recebem tráfego para liberar réplicas idle.
+    log "Desativando revisions sem trafego..."
+    local old_revs
+    old_revs=$(az containerapp revision list \
+        --name "$ACA_API_APP" \
+        --resource-group "$RESOURCE_GROUP" \
+        --query "[?properties.active && name != '$target_revision'].name" \
+        --output tsv 2>/dev/null)
+
+    local count=0
+    while IFS= read -r rev; do
+        [[ -z "$rev" ]] && continue
+        az containerapp revision deactivate \
+            --name "$ACA_API_APP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --revision "$rev" \
+            --output none 2>/dev/null && (( count++ )) || true
+    done <<< "$old_revs"
+
+    [[ $count -gt 0 ]] && ok "$count revision(s) desativada(s)." || log "Nenhuma revision extra para desativar."
 }
 
 cmd_rollback() {
