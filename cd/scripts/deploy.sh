@@ -901,7 +901,8 @@ cmd_users() {
     az containerapp exec \
         --name "$app_name" \
         --resource-group "$RESOURCE_GROUP" \
-        --command "$cmd"
+        --command "$cmd" || true
+    stty sane 2>/dev/null || true  # restaura terminal após az containerapp exec quebrar o modo raw
 }
 
 cmd_all() {
