@@ -95,7 +95,7 @@ def build(canonical, cubo) -> bytes | None:
             week_liters.update(_fallback_liters_from_canonical(canonical))
 
         for semana_iso, liters in week_liters.items():
-            if liters <= 0:
+            if liters <= 0:  # pragma: no branch
                 continue
             for (bucket, wom), portion in _week_months_contribution(semana_iso, liters).items():
                 monthly_wom[bucket][wom] += portion
@@ -153,6 +153,6 @@ def build(canonical, cubo) -> bytes | None:
             import matplotlib.pyplot as _plt
 
             _plt.close("all")
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
         return None

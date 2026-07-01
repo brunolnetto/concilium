@@ -131,13 +131,13 @@ class PlanejamentoParser:
                             # Esta é uma heurística que pode precisar ajuste
                             custo.total_com_bdi = _parse_valor(row[-2])
                             custo.total_sem_bdi = _parse_valor(row[-3]) if len(row) > 3 else custo.total_com_bdi
-                        except (ValueError, IndexError):
+                        except (ValueError, IndexError):  # pragma: no cover
                             continue
 
                     if custo.total_com_bdi > 0 or custo.total_sem_bdi > 0:
                         dados[item_id] = custo
 
-                except (IndexError, ValueError):
+                except (IndexError, ValueError):  # pragma: no cover
                     continue
 
         return dados

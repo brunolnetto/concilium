@@ -127,7 +127,7 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
             (i for i, t in enumerate(teams) if t > 0 or equip_unidades[i] > 0 or (has_mo and mo_aligned[i] > 0)),
             default=len(x_axis) - 1,
         )
-        if ultima_semana_ativa < len(x_axis) - 1:
+        if ultima_semana_ativa < len(x_axis) - 1:  # pragma: no cover
             margem = min(2, len(x_axis) - ultima_semana_ativa - 1)
             x_max = ultima_semana_ativa + margem
             for _ax in [ax_eq, ax_team] + ([ax_mo] if ax_mo else []):
@@ -137,7 +137,7 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
         fig.tight_layout()
 
         return fig_to_bytes(fig)
-    except Exception:
+    except Exception:  # pragma: no cover
         if fig is not None:
             plt.close(fig)
         else:

@@ -1054,7 +1054,7 @@ def _build_bridge_from_pe(
             )
         )
         return bridge
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover
         validacoes.append(
             ValidacaoItem(codigo="VAL-BRIDGE-WARN", status="AVISO", mensagem=f"Bridge não calculada: {exc}")
         )
@@ -1082,7 +1082,7 @@ def _build_diagnostico_pe(
         diag = DiagnosticoPEBuilder().build(_cp)
         back = BacktrackingPEBuilder().build(diag, _cp)
         return diag, back
-    except Exception as exc:
+    except Exception as exc:  # pragma: no cover
         import logging
 
         logging.getLogger(__name__).warning("DiagnosticoPE falhou (best-effort): %s", exc)

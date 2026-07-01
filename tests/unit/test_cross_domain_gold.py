@@ -57,9 +57,7 @@ class TestReadSilverLogs:
         storage = MagicMock()
         storage.listar_blobs.return_value = ["observability/silver/logs/blanks.ndjson"]
         # blob com linhas em branco entre registros válidos
-        storage.ler_blob.return_value = (
-            b'\n{"project_id": "P1", "fallback_type": "MINSLK"}\n\n{"project_id": "P1"}\n'
-        )
+        storage.ler_blob.return_value = b'\n{"project_id": "P1", "fallback_type": "MINSLK"}\n\n{"project_id": "P1"}\n'
 
         builder = CrossDomainBuilder(storage, canonical_provider=lambda pid: None)
         rows = builder.build()

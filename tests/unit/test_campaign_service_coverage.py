@@ -481,3 +481,373 @@ class TestConstruirCubo:
         assert cubo.cobertura_pct == 0.0
         assert len(cubo.faces) == 0
         assert len(cubo.dimensoes) == 0
+
+
+# ---------------------------------------------------------------------------
+# _set_path — line 217->exit (d not dict at intermediate node)
+# ---------------------------------------------------------------------------
+
+
+class TestSetPathDNotDict:
+    def test_set_path_list_at_intermediate_no_crash(self):
+        """Line 217->exit: d is not dict at intermediate node → skip."""
+        from concilium.application.services.campaign.campaign_service import _set_path
+
+        d = [1, 2, 3]  # list, not dict
+        _set_path(d, ["key", "sub"], 42)
+        assert d == [1, 2, 3]  # unchanged
+
+    def test_set_path_none_at_intermediate(self):
+        from concilium.application.services.campaign.campaign_service import _set_path
+
+        _set_path(None, ["key", "sub"], 42)  # no crash
+
+
+# ---------------------------------------------------------------------------
+# _apply_post_load_overrides — lines 238, 243
+# ---------------------------------------------------------------------------
+
+
+class TestApplyPostLoadOverridesBranches:
+    def test_non_inputs_key_skipped(self):
+        """Line 238: key not starting with 'inputs_' → continue."""
+        from types import SimpleNamespace
+
+        from concilium.application.services.campaign.campaign_service import _apply_post_load_overrides
+
+        spec_obj = SimpleNamespace()
+        _apply_post_load_overrides(spec_obj, {"meta.prazo": 10})  # not inputs_ → skip
+        assert not hasattr(spec_obj, "meta")
+
+    def test_none_attr_skipped(self):
+        """Line 243: getattr returns None → continue."""
+        from types import SimpleNamespace
+
+        from concilium.application.services.campaign.campaign_service import _apply_post_load_overrides
+
+        spec_obj = SimpleNamespace()  # has no inputs_cronograma attr
+        _apply_post_load_overrides(spec_obj, {"inputs_cronograma.deadline_weeks": 52})
+        # getattr(spec_obj, "inputs_cronograma", None) = None → skip
+
+
+# ---------------------------------------------------------------------------
+# _set_path_per_item — lines 293->295, 297->exit
+# ---------------------------------------------------------------------------
+
+
+class TestSetPathPerItemBranches:
+    def test_leaf_d_not_dict_returns(self):
+        """Lines 293->295: not rest, d is not dict → skip (no assignment)."""
+        from concilium.application.services.campaign.campaign_service import _set_path_per_item
+
+        d = [1, 2, 3]  # list, not dict
+        _set_path_per_item(d, ["key"], 42, "item1")
+        assert d == [1, 2, 3]  # unchanged
+
+    def test_intermediate_d_not_dict_returns(self):
+        """Line 297->exit: rest non-empty, d is not dict → exit."""
+        from concilium.application.services.campaign.campaign_service import _set_path_per_item
+
+        d = [1, 2, 3]
+        _set_path_per_item(d, ["key", "sub"], 42, "item1")
+        assert d == [1, 2, 3]
+
+
+# ---------------------------------------------------------------------------
+# extrair_vetor_O — lines 318->321 (scheduled_activities fallback, acts empty)
+# ---------------------------------------------------------------------------
+
+
+class TestExtrairVetorO:
+    def test_prazo_from_scheduled_activities(self):
+        """Lines 318->321: makespan_semanas absent → max(end_week) from acts."""
+        from concilium.application.services.campaign.campaign_service import extrair_vetor_O
+
+        canonical = {
+            "cronograma": {
+                "scheduled_activities": [
+                    {"end_week": 45},
+                    {"end_week": 52},
+                    {"end_week": 38},
+                ]
+            }
+        }
+        v = extrair_vetor_O(canonical, None)
+        assert v.prazo_semanas == 52
+
+    def test_prazo_none_when_no_acts(self):
+        """Line 318->321 False branch: no makespan, no acts → prazo stays None."""
+        from concilium.application.services.campaign.campaign_service import extrair_vetor_O
+
+        v = extrair_vetor_O({}, None)
+        assert v.prazo_semanas is None
+
+    def test_folga_computed_when_both_available(self):
+        """prazo and prazo_contratual → folga = contratual - makespan."""
+        from concilium.application.services.campaign.campaign_service import extrair_vetor_O
+
+        canonical = {"cronograma": {"makespan_semanas": 48}}
+        v = extrair_vetor_O(canonical, 52)
+        assert v.folga_semanas == pytest.approx(4.0)
+
+
+# ---------------------------------------------------------------------------
+# _cubo_analitico_agregado — lines 384->370 (empty aid), 388 (total <= 0)
+# ---------------------------------------------------------------------------
+
+
+class TestCuboAnaliticoAgregadoBranches:
+    def test_empty_atividade_id_not_counted(self):
+        """Line 384->370: aid='' is skipped (no entry in por_atividade)."""
+        from concilium.application.services.campaign.campaign_service import _cubo_analitico_agregado
+
+        canonical = {
+            "cubo_analitico": {
+                "celulas": [
+                    {
+                        "componente_bdi": "custo_direto",
+                        "valor_rs": 100.0,
+                        "categoria_insumo": "mao_obra",
+                        "propriedade": "",
+                        "atividade_id": "",
+                    },
+                ]
+            }
+        }
+        result = _cubo_analitico_agregado(canonical)
+        assert result["share_mo"] == pytest.approx(1.0)
+        assert result.get("hhi") is None  # por_atividade empty → hhi None
+
+    def test_total_zero_returns_empty_dict(self):
+        """Line 388: total <= 0 → return {} (no custo_direto celulas)."""
+        from concilium.application.services.campaign.campaign_service import _cubo_analitico_agregado
+
+        canonical = {
+            "cubo_analitico": {
+                "celulas": [
+                    {
+                        "valor_rs": 0.0,
+                        "componente_bdi": "bdi",
+                        "categoria_insumo": "",
+                        "propriedade": "",
+                        "atividade_id": "",
+                    }
+                ]
+            }
+        }
+        result = _cubo_analitico_agregado(canonical)
+        assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# _domina_O, _domina_EF — lines 535, 545
+# ---------------------------------------------------------------------------
+
+
+class TestDominaFunctions:
+    def test_domina_O_all_none_returns_false(self):
+        """Line 535: all dims are None → return False."""
+        from concilium.application.services.campaign.campaign_service import _domina_O
+
+        a = _make_cenario("a", prazo=None, fe_nec=None, gap=None)
+        b = _make_cenario("b", prazo=None, fe_nec=None, gap=None)
+        assert _domina_O(a, b) is False
+
+    def test_domina_EF_margem_none_returns_false(self):
+        """Line 545: margem_pct is None → return False."""
+        from concilium.application.services.campaign.campaign_service import _domina_EF
+
+        a = _make_cenario("a", margem=None)
+        b = _make_cenario("b", margem=None)
+        assert _domina_EF(a, b) is False
+
+
+# ---------------------------------------------------------------------------
+# _build_justificativa — lines 578->580, 582->585, 586->588, 588->594
+# ---------------------------------------------------------------------------
+
+
+class TestBuildJustificativaBranches:
+    def _make_with_none_fields(self):
+        """CenarioAvaliado with fe_nec=None, itens_criticos_pct=None, margem=None, ratio=None."""
+        v_O = VetorEspacoO(
+            prazo_semanas=40,
+            folga_semanas=None,
+            fe_nec_medio=None,
+            itens_criticos_pct=None,
+            gap_pool_total=0.0,
+        )
+        v_EF = VetorEspacoEF(margem_pct=None, custo_indireto=None, ratio_pool_vs_cat=None)
+        perfil = PerfilExpectativas()
+        return CenarioAvaliado(
+            cenario_id="xn",
+            parametros_variados={},
+            viabilidade="APROVADO",
+            vetor_O=v_O,
+            vetor_EF=v_EF,
+            classificacao_O=classificar_O(v_O, perfil),
+            classificacao_EF=classificar_EF(v_EF, perfil),
+        )
+
+    def test_fe_nec_none_no_fe_destaque(self):
+        """Line 578->580: fe_nec_medio is None → no fe_nec destaque."""
+        from concilium.application.services.campaign.campaign_service import _build_justificativa
+
+        c = self._make_with_none_fields()
+        just = _build_justificativa(c, "test")
+        assert not any("fe_nec" in d for d in just.destaques_O)
+
+    def test_itens_criticos_none_no_destaque(self):
+        """Line 582->585: itens_criticos_pct is None → no criticos destaque."""
+        from concilium.application.services.campaign.campaign_service import _build_justificativa
+
+        c = self._make_with_none_fields()
+        just = _build_justificativa(c, "test")
+        assert not any("criticos" in d for d in just.destaques_O)
+
+    def test_margem_none_no_margem_destaque(self):
+        """Line 586->588: margem_pct is None → no margem destaque."""
+        from concilium.application.services.campaign.campaign_service import _build_justificativa
+
+        c = self._make_with_none_fields()
+        just = _build_justificativa(c, "test")
+        assert not any("Margem" in d for d in just.destaques_EF)
+
+    def test_ratio_none_no_pool_destaque(self):
+        """Line 588->594: ratio_pool_vs_cat is None → no pool destaque."""
+        from concilium.application.services.campaign.campaign_service import _build_justificativa
+
+        c = self._make_with_none_fields()
+        just = _build_justificativa(c, "test")
+        assert not any("Pool" in d for d in just.destaques_EF)
+
+    def test_ratio_above_1_above_market_label(self):
+        """Line 592: ratio > 1 → 'acima mercado' label."""
+        from concilium.application.services.campaign.campaign_service import _build_justificativa
+
+        v_O = VetorEspacoO(prazo_semanas=40)
+        v_EF = VetorEspacoEF(margem_pct=0.12, ratio_pool_vs_cat=1.2)
+        perfil = PerfilExpectativas()
+        c = CenarioAvaliado(
+            cenario_id="r2",
+            parametros_variados={},
+            viabilidade="APROVADO",
+            vetor_O=v_O,
+            vetor_EF=v_EF,
+            classificacao_O=classificar_O(v_O, perfil),
+            classificacao_EF=classificar_EF(v_EF, perfil),
+        )
+        just = _build_justificativa(c, "test")
+        assert any("acima mercado" in d for d in just.destaques_EF)
+
+    def test_itens_criticos_nonzero_pct_destaque(self):
+        """Line 582->583: non-zero non-None itens_criticos → percentage destaque."""
+        from concilium.application.services.campaign.campaign_service import _build_justificativa
+
+        v_O = VetorEspacoO(prazo_semanas=40, itens_criticos_pct=0.3)
+        v_EF = VetorEspacoEF(margem_pct=0.12)
+        perfil = PerfilExpectativas()
+        c = CenarioAvaliado(
+            cenario_id="cr",
+            parametros_variados={},
+            viabilidade="APROVADO",
+            vetor_O=v_O,
+            vetor_EF=v_EF,
+            classificacao_O=classificar_O(v_O, perfil),
+            classificacao_EF=classificar_EF(v_EF, perfil),
+        )
+        just = _build_justificativa(c, "test")
+        assert any("criticos" in d for d in just.destaques_O)
+
+
+# ---------------------------------------------------------------------------
+# executar_campanha — lines 810-871 (via mocked _run_campaign_task)
+# ---------------------------------------------------------------------------
+
+
+class TestExecutarCampanha:
+    def test_executar_campanha_basic(self):
+        """Lines 810-871: full executar_campanha with mocked task runner."""
+        from unittest.mock import patch
+
+        from concilium.application.services.campaign.campaign_service import executar_campanha
+        from concilium.domain.models.campaign.campaign import (
+            GoResearchCampaignBundle,
+            ParametroSweep,
+            PerfilExpectativas,
+        )
+
+        bundle = GoResearchCampaignBundle(
+            base_spec={"slug": "test-spec", "id": "test-spec"},
+            sweep=[ParametroSweep(campo="meta.prazo", valores=[40, 52])],
+            perfil_expectativas=PerfilExpectativas(),
+            top_k=2,
+        )
+
+        prebuilt = _make_cenario("c1", margem=0.12, prazo=40)
+
+        with patch(
+            "concilium.application.services.campaign.campaign_service._run_campaign_task", return_value=prebuilt
+        ):
+            output = executar_campanha(bundle, config_root="/tmp", projects_root="/tmp", num_workers=1)
+
+        assert output.n_cenarios_avaliados == 2
+        assert output.status in {"SUCESSO", "SUCESSO_PARCIAL", "FRONTEIRA_UNICA", "INCONCLUSO", "BLOQUEADO"}
+
+    def test_executar_campanha_cardinality_warning(self):
+        """Lines 816-827: cardinality > threshold → warning emitted."""
+        import warnings
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.services.campaign.campaign_service import executar_campanha
+        from concilium.domain.models.campaign.campaign import (
+            GoResearchCampaignBundle,
+            ParametroSweep,
+            PerfilExpectativas,
+        )
+
+        bundle = GoResearchCampaignBundle(
+            base_spec={"slug": "big"},
+            sweep=[ParametroSweep(campo="meta.x", valores=list(range(20)))],
+            perfil_expectativas=PerfilExpectativas(),
+        )
+
+        cfg_mock = MagicMock()
+        cfg_mock.cardinality_threshold = 5
+        cfg_mock.max_workers = 3
+        cfg_mock.seconds_per_scenario = 10
+
+        prebuilt = _make_cenario("c1")
+
+        with (
+            patch("concilium.application.services.campaign.campaign_service._run_campaign_task", return_value=prebuilt),
+            patch("concilium.infrastructure.settings.get_campaign", return_value=cfg_mock),
+        ):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                executar_campanha(bundle, config_root="/tmp", projects_root="/tmp", num_workers=1)
+
+        assert any("cardinality" in str(warning.message).lower() for warning in w)
+
+
+# ---------------------------------------------------------------------------
+# sugerir_levers_cpu_alternativo — lines 1108, 1112
+# ---------------------------------------------------------------------------
+
+
+class TestSugerirLeversCpuAlternativo:
+    def test_non_dict_item_skipped(self):
+        """Line 1108: non-dict item in eap → continue."""
+        from concilium.application.services.campaign.campaign_service import sugerir_levers_cpu_alternativo
+
+        spec = {"eap": ["string_item", None, 42]}
+        result = sugerir_levers_cpu_alternativo(spec, config_root="/tmp")
+        assert result == []
+
+    def test_missing_item_id_skipped(self):
+        """Line 1112: item without item_id or cpu_id → continue."""
+        from concilium.application.services.campaign.campaign_service import sugerir_levers_cpu_alternativo
+
+        spec = {"eap": [{"item_id": "", "cpu_id": "CPU1"}, {"item_id": "I1", "cpu_id": ""}]}
+        result = sugerir_levers_cpu_alternativo(spec, config_root="/tmp")
+        assert result == []

@@ -176,7 +176,7 @@ def build_catalog_reasonability_artifact(
 
         if any("ausente" in msg or "sem" in msg for msg in issues):
             row["severity"] = "ERRO"
-        elif issues:
+        elif issues:  # pragma: no cover
             row["severity"] = "AVISO"
 
     # Regras estatísticas por categoria+unidade

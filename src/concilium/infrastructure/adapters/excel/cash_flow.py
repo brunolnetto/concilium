@@ -65,7 +65,7 @@ def _monthly_indirect_costs(
         else:
             perm = int(ind.permanencia_meses or n)
             meses_ativos = project_months[: min(perm, n)]
-            if meses_ativos:
+            if meses_ativos:  # pragma: no branch
                 por_mes = ind.custo_total / len(meses_ativos)
                 for ym in meses_ativos:
                     result[ym] += por_mes

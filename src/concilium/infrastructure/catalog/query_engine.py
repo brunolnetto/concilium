@@ -41,7 +41,7 @@ try:
     import duckdb as _duckdb
 
     _AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _AVAILABLE = False
 
 

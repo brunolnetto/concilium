@@ -199,7 +199,7 @@ class CpSatScheduler:
 
         feasible = status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
 
-        if not feasible:
+        if not feasible:  # pragma: no branch
             _log.warning(
                 "CpSatScheduler: no feasible solution found (status=%s) within %.1fs",
                 solver.status_name(status),

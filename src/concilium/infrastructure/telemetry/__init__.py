@@ -26,7 +26,7 @@ try:
     import opentelemetry  # noqa: F401
 
     _OTEL_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 _initialized = False

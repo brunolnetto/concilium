@@ -281,3 +281,95 @@ def test_atividade_instancia_so_fisica_sem_imputacao():
     cubo = CuboPoolInstancialBuilder().build(canonical)
     prod_w = cubo.semanas_por_estado()["prod"]
     assert sum(r["machine_weeks"] for r in proj["rows"]) == prod_w
+
+
+# ─── Missing branch coverage ──────────────────────────────────────────────────
+
+
+def test_unknown_face_falls_back_to_ciclo_vida():
+    """Line 183: unknown face name defaults to instancia_ciclo_vida."""
+    canonical, _, _ = _build_pool(["W01", "W02"])
+    proj = resolve_cubo_pool_projection(canonical, face="face_que_nao_existe")
+    assert proj["face"] == "instancia_ciclo_vida"
+
+
+def test_filter_by_atividade_id():
+    """Lines 192-196: atividade_id filter slices the cubo."""
+    canonical, _, _ = _build_pool(["W01", "W02", "W03"])
+    proj = resolve_cubo_pool_projection(canonical, face="atividade_instancia", atividade_id="eap-A")
+    assert all(r["atividade_id"] == "eap-A" for r in proj["rows"])
+
+
+def test_filter_by_instancia_id():
+    """Lines 192-196: instancia_id with dash triggers tipo/num parsing."""
+    canonical, _, _ = _build_pool(["W01", "W02"])
+    # instancia_id "ESC-1" should parse tipo="ESC", num=1
+    proj = resolve_cubo_pool_projection(canonical, face="instancia_ciclo_vida", instancia_id="ESC-1")
+    assert proj is not None  # no exception
+
+
+def test_filter_by_instancia_id_no_dash():
+    """Lines 192-196: instancia_id without dash → tipo=None, inst_num=None."""
+    canonical, _, _ = _build_pool(["W01", "W02"])
+    proj = resolve_cubo_pool_projection(canonical, face="instancia_ciclo_vida", instancia_id="NOHYPHEN")
+    assert proj is not None
+
+
+def test_truncation_when_rows_exceed_top_n():
+    """Lines 228-230: operator_meta.truncado = True when rows > top_n."""
+    canonical, _, _ = _build_pool([f"W{n:02d}" for n in range(1, 10)])
+    # economia_pool has 2 rows (eap-A + eap-B), so top_n=1 triggers truncation
+    proj = resolve_cubo_pool_projection(canonical, face="economia_pool", top_n=1)
+    assert proj["operator_meta"].get("truncado") is True
+    assert len(proj["rows"]) == 1
+
+
+def test_autonomo_total_zero_when_custo_zero():
+    """Line 87: _autonomo_total_por_item returns 0.0 when custo_total_autonomo == 0."""
+    from concilium.application.services.analytics.cubo_pool_projection import _autonomo_total_por_item
+
+    eq = SimpleNamespace(custo_total_autonomo=0.0, num_equipes_base=2)
+    result = _autonomo_total_por_item(eq)
+    assert result == 0.0
+
+
+def test_baseline_skips_empty_item_id():
+    """Line 105: item_id='' in planejamento is skipped (continue)."""
+    from concilium.application.services.analytics.cubo_pool_projection import _baseline_homogenea_por_item
+
+    empty_plan = SimpleNamespace(item_id="", subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=500.0)))
+    canonical = SimpleNamespace(planejamento=[empty_plan], equipes_diretas=[])
+    baseline, _ = _baseline_homogenea_por_item(canonical)
+    assert "" not in baseline
+
+
+def test_economia_pool_sem_baseline_triggers_warning():
+    """Line 492, 545: atividade without baseline emits warning narrative."""
+    from unittest.mock import MagicMock
+
+    from concilium.application.services.analytics.cubo_pool_projection import _face_economia_pool
+
+    # Create a mock cubo and partition with custo_total_autonomo=0 → aut=0
+    mock_cubo = MagicMock()
+    mock_cubo.custo_total = 5000.0
+    mock_cubo.custo_por_estado.return_value = {}
+    mock_cubo.custo_por_componente.return_value = {}
+
+    mock_p = MagicMock()
+    mock_p.item_id = "A1"
+    mock_p.custo_total_autonomo = 0.0
+    mock_p.custo_total_particionado = 1000.0
+    mock_p.custo_produtivo_exclusivo = 1000.0
+    mock_p.custo_produtivo_compartilhado = 0.0
+    mock_p.custo_ocioso_imputado = 0.0
+    mock_p.custo_mob_imputado = 0.0
+    mock_p.custo_demob_imputado = 0.0
+
+    mock_c = MagicMock()
+    mock_c.particao_por_item = [mock_p]
+    contratos = [mock_c]
+
+    columns, rows, narrativa, _ = _face_economia_pool(
+        mock_cubo, contratos, [], baseline_por_item={}, baseline_source_by_item={}
+    )
+    assert any("sem baseline" in n for n in narrativa)

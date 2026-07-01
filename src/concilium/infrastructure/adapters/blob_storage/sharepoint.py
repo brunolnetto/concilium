@@ -172,7 +172,6 @@ class SharePointBlobStorage(BlobStoragePort):
 
         httpx = self._client()
 
-
         if len(content) < _LARGE_FILE_THRESHOLD:
             self._gravar_pequeno(httpx, path, content)
         else:

@@ -295,24 +295,19 @@ def _impl_catalog_cure_plausibility(
 
     Itens não-automatizáveis são reportados para revisão manual.
     """
-    import importlib.util
+    from concilium.application.catalog.cure_plausibility import (
+        CureReport,
+        cure_duplicatas,
+        cure_erros_fisicos,
+        cure_locacao_mensal,
+        cure_stale_rfi,
+        report_manual,
+    )
+    from concilium.application.catalog.cure_plausibility import ROOT as CURE_ROOT
 
     console = Console()
-    tools_dir = Path(__file__).resolve().parents[4].parent / "tools"
-    script = tools_dir / "cure_plausibility.py"
 
-    if not script.exists():
-        rprint(f"[red]Script não encontrado: {script}[/red]")
-        raise typer.Exit(2)
-
-    spec = importlib.util.spec_from_file_location("cure_plausibility", script)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
-
-    import json
-
-    bundle_path = mod.ROOT / f"config/catalogos/{contexto_id}/.catalog_bundle.json"
+    bundle_path = CURE_ROOT / f"config/catalogos/{contexto_id}/.catalog_bundle.json"
     if not bundle_path.exists():
         rprint(f"[red]Bundle não encontrado: {bundle_path}[/red]")
         raise typer.Exit(1)
@@ -324,12 +319,12 @@ def _impl_catalog_cure_plausibility(
     mode = "APPLY" if apply else "DRY-RUN"
     console.print(f"\n[bold]Curação de Plausibilidade [{mode}][/bold] — contexto: {contexto_id}")
 
-    report = mod.CureReport()
-    insumos = mod.cure_erros_fisicos(insumos, report, apply)
-    insumos, producoes = mod.cure_duplicatas(insumos, producoes, report, apply)
-    insumos = mod.cure_stale_rfi(insumos, report, apply)
-    insumos = mod.cure_locacao_mensal(insumos, report, apply)
-    mod.report_manual(insumos, producoes, report)
+    report = CureReport()
+    insumos = cure_erros_fisicos(insumos, report, apply)
+    insumos, producoes = cure_duplicatas(insumos, producoes, report, apply)
+    insumos = cure_stale_rfi(insumos, report, apply)
+    insumos = cure_locacao_mensal(insumos, report, apply)
+    report_manual(insumos, producoes, report)
 
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Categoria")

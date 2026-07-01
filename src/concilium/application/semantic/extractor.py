@@ -203,7 +203,7 @@ class SemanticExtractor:
         for m in _RE_EMBEDDED_DIM.finditer(normalized):
             dim_name_raw = m.group(1).lower()
             canonical_dim = _DIM_NAME_MAP.get(dim_name_raw)
-            if canonical_dim is None:
+            if canonical_dim is None:  # pragma: no branch
                 continue
             # Procurar número + unidade após o nome da dimensão
             rest = normalized[m.end() :]

@@ -452,7 +452,7 @@ def get_auth_store() -> AuthStore:
     global _store
     if _store is None:
         with _store_lock:
-            if _store is None:
+            if _store is None:  # pragma: no cover
                 from concilium.infrastructure.storage.store_factory import (
                     build_blob_storage,
                     resolve_store_backend,

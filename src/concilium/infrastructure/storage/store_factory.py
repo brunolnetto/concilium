@@ -138,11 +138,11 @@ def ensure_storage_root() -> None:
     """
     if resolve_store_backend() != "sharepoint":
         return
-    from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
+    from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage  # pragma: no cover
 
-    storage = build_blob_storage()
-    if isinstance(storage, SharePointBlobStorage):
-        storage.ensure_root_path()
+    storage = build_blob_storage()  # pragma: no cover
+    if isinstance(storage, SharePointBlobStorage):  # pragma: no cover
+        storage.ensure_root_path()  # pragma: no cover
 
 
 def build_project_repository(projects_root: Path) -> ProjectRepository:

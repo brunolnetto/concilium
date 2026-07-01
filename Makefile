@@ -1,137 +1,93 @@
 # ── Concilium — Makefile ──────────────────────────────────────────────────────
-# Targets rápidos (< 1 min):   test  lint  lint-report  type-check  fmt
-# Targets lentos  (> 1 min):   test  coverage  codebase-stats
-# Utilitários:                  file-sizes  clean
+# Targets rápidos (< 1 min):   test  check
+# Targets lentos  (> 1 min):   coverage  codebase-stats
+# Utilitários:                  clean
 # ─────────────────────────────────────────────────────────────────────────────
 
 PYTHON      := python3
 PACKAGE     := concilium
 SRC         := src/$(PACKAGE)
-TESTS_UNIT  := tests/unit
 TESTS_ALL   := tests
 COV_DIR     := .coverage-reports
-LINT_REPORT := .lint-report.json
 TEST_REPORT  := $(COV_DIR)/test-report.json
+OPT          ?= lint,type,fmt,fsizes
 # Exclude skill manifests (dirs with dashes are not valid Python package names)
 MYPY_EXCLUDE := --exclude 'src/concilium/application/skills/manifests'
-SKIP_MARKERS := -m "not slow and not flaky"
+COMMA := ,
+SKIP  ?=
+_SKIP_EXPR := $(subst $(COMMA), and not ,$(SKIP))
+_SKIP_M    := $(if $(SKIP),-m "not $(_SKIP_EXPR)",)
 # Desabilita logfire pydantic plugin antes do primeiro import de pydantic.
 # logfire 4.x instala entry-point 'pydantic:logfire-plugin' que acrescenta ~10-15s
 # de imports pesados (requests, OTel exporters, protobuf) se instalado no env.
 TEST_ENV     := PYDANTIC_DISABLE_PLUGINS=__all__ OTEL_SDK_DISABLED=true
 
-DEPLOY := cd/scripts/deploy.sh
+DEPLOY    := cd/scripts/deploy.sh
+PROVISION := cd/scripts/provision.sh
 
-.PHONY: help test test-slow test-flaky lint lint-report type-check fmt \
-        coverage codebase-stats file-sizes size clean \
+.PHONY: help test check _check_lint _check_type _check_fmt _check_fsizes \
+        cov cov-stats clean \
         status smoke image promote rollback \
-        configure configure-smtp keys bootstrap github-secrets users deploy-all
+        configure keys bootstrap github-secrets exec concilium deploy-all
 
 # ── Default ───────────────────────────────────────────────────────────────────
 help:
 	@echo ""
 	@echo "  Concilium — targets disponíveis"
 	@echo ""
-	@echo "  Dev / Qualidade"
-	@echo "    make test           Testes unitários (exclui slow e flaky)"
-	@echo "    make lint           Ruff: exibe violações"
-	@echo "    make lint-report    Ruff: gera $(LINT_REPORT) agrupado por regra"
-	@echo "    make type-check     Mypy: checagem estática de tipos"
-	@echo "    make fmt            Ruff: formata + corrige imports in-place"
-	@echo "    make coverage       Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"
-	@echo "    make codebase-stats Análise completa → $(COV_DIR)/report.md"
-	@echo "    make file-sizes     Maiores arquivos (detecta blobs acidentais)"
-	@echo "    make clean          Remove caches e artefatos temporários"
+	@echo "  Qualidade"
+	@echo "    make clean                             Remove caches e artefatos temporários"
+	@echo "    make test  [SKIP=slow,flaky]           Testes (SKIP= exclui markers por vírgula)"
+	@echo "    make cov                               Cobertura → $(COV_DIR)/"
+	@echo "    make cov-stats                         Análise completa → $(COV_DIR)/report.md"
+	@echo "    make check [OPT=lint,type,fmt,fsizes]  lint · type · fmt · file-sizes"
 	@echo ""
-	@echo "  Deploy (wraps cd/scripts/deploy.sh)"
-	@echo "    make status                    Revisions ACA e pesos de tráfego"
-	@echo "    make image         [TAG=x]     Build + push imagem para ACR"
-	@echo "    make smoke         [REV=x]     Smoke tests contra revision ou produção"
-	@echo "    make promote       [REV=x]     Direciona 100% do tráfego para revision"
-	@echo "    make rollback      [REV=x]     Rollback para revision anterior"
+	@echo "  Deploy"
+	@echo "    make status                  Revisions ACA e pesos de tráfego"
+	@echo "    make image       [TAG=x]     Build + push imagem para ACR"
+	@echo "    make smoke       [REV=x]     Smoke tests contra revision ou produção"
+	@echo "    make promote     [REV=x]     Direciona 100% do tráfego para revision"
+	@echo "    make rollback    [REV=x]     Rollback para revision anterior"
 	@echo ""
 	@echo "  Plataforma"
-	@echo "    make configure                 Aplica env vars nos containers ACA"
-	@echo "    make configure-smtp            Grava SMTP_PASSWORD no Key Vault + env vars"
-	@echo "    make keys          [ROTATE=1]  Gera (ou rotaciona) JWT keys → Key Vault"
-	@echo "    make bootstrap     [VALIDATE=1] Provisiona infra Azure (idempotente)"
-	@echo "    make github-secrets            Configura GitHub Secrets/Vars via gh CLI"
-	@echo "    make users         CMD='...'   Executa comando de auth via az containerapp exec"
-	@echo "    make deploy-all                bootstrap → keys → github-secrets"
+	@echo "    make bootstrap   [VALIDATE=1] Provisiona infra Azure (idempotente)"
+	@echo "    make keys        [ROTATE=1]  Gera (ou rotaciona) JWT keys → Key Vault"
+	@echo "    make github-secrets          Configura GitHub Secrets/Vars via gh CLI"
+	@echo "    make deploy-all              bootstrap → keys → github-secrets"
+	@echo "    make configure               Aplica env vars nos containers ACA"
+	@echo "    make exec              CMD='...'  az containerapp exec (shell se CMD omitido)"
+	@echo "    make concilium [args]            concilium <args> no container (CMD= para flags --)"
 	@echo ""
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test:
-	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(SKIP_MARKERS)
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(_SKIP_M)
 
-test-slow:
-	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short -m slow
+# ── Check (lint · type · fmt · fsizes) ────────────────────────────────────────
+check:
+	@for opt in $$(echo "$(OPT)" | tr ',' ' '); do \
+		$(MAKE) -s _check_$$opt || exit 1; \
+	done
 
-test-flaky:
-	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short -m flaky
-
-# ── Lint ──────────────────────────────────────────────────────────────────────
-lint:
-	$(PYTHON) -m ruff check $(SRC) tests/ --ignore B008 || true
-	@$(PYTHON) -m ruff check $(SRC) tests/ --output-format json 2>/dev/null \
+_check_lint:
+	@$(PYTHON) -m ruff check $(SRC) tests/ --ignore B008 --output-format json 2>/dev/null \
 		| $(PYTHON) -c "\
 import json,sys; d=json.load(sys.stdin); \
+[print(f\"{x['filename']}:{x['location']['row']}:{x['location']['column']}: {x['code']} {x['message']}\") for x in d]; \
 from collections import Counter; codes=Counter(x['code'] for x in d); \
 fx=Counter(x['code'] for x in d if x.get('fix')); \
 total=sum(codes.values()); ftotal=sum(fx.values()); \
-print(f'\n  {total} violações ({ftotal} auto-corrigíveis com make fmt)'); \
-print('  Top 5:', ', '.join(f\"{c}×{n}\" for c,n in codes.most_common(5)))"
+print(f'\n  {total} violações ({ftotal} auto-corrigíveis com make check OPT=fmt)' if d else '  Sem violações.'); \
+print('  Top 5:', ', '.join(f\"{c}×{n}\" for c,n in codes.most_common(5))) if d else None" || true
 
-# Gera $(LINT_REPORT) agrupado por regra + severidade para leitura pelo agente de código.
-lint-report:
-	@$(PYTHON) -m ruff check $(SRC) tests/ --output-format json 2>/dev/null \
-		| $(PYTHON) scripts/dev/lint_report.py > $(LINT_REPORT)
-	@echo "  Lint report → $(LINT_REPORT)"
-	@$(PYTHON) -c "\
-import json; r=json.load(open('$(LINT_REPORT)')); \
-[print(f\"  {g['code']:<8} {g['count']:>4}  {'✓' if g['auto_fix'] else ' '}  {g['description']}\") \
- for g in sorted(r['by_rule'], key=lambda x: -x['count'])[:15]]; \
-print(f\"\n  Total: {r['summary']['total']}  fixable: {r['summary']['fixable']}  manual: {r['summary']['manual']}\")"
-
-# ── Type check ────────────────────────────────────────────────────────────────
-type-check:
+_check_type:
 	$(PYTHON) -m mypy $(SRC) --ignore-missing-imports --no-error-summary $(MYPY_EXCLUDE)
 
-# ── Format ────────────────────────────────────────────────────────────────────
-fmt:
+_check_fmt:
 	$(PYTHON) -m ruff format $(SRC) tests/
 	$(PYTHON) -m ruff check --fix $(SRC) tests/ || true
-	@echo "  Auto-fix concluído. Violações remanescentes → make lint-report"
 
-# ── Coverage ──────────────────────────────────────────────────────────────────
-coverage:
-	@mkdir -p $(COV_DIR)
-	@rm -f .coverage .coverage.*
-	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short \
-		--cov=$(SRC) \
-		--cov-branch \
-		--cov-report=json:$(COV_DIR)/coverage.json \
-		--json-report --json-report-file=$(TEST_REPORT) \
-		--cov-report=term-missing:skip-covered \
-		--durations=50 -rXs
-	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"
-
-# ── Codebase stats ────────────────────────────────────────────────────────────
-codebase-stats:
-	@test -f $(COV_DIR)/coverage.json || (echo "Run 'make coverage' first." && exit 1)
-	@$(PYTHON) -c "\
-from codebase_stats import CodebaseStatsReporter; \
-import pathlib, json; \
-rep = '$(TEST_REPORT)'; \
-rep_ok = pathlib.Path(rep).exists() and 'tests' in json.loads(pathlib.Path(rep).read_text()); \
-r = CodebaseStatsReporter(coverage_file='$(COV_DIR)/coverage.json', report_file=rep if rep_ok else None, radon_root='src', fs_root='src', tree_root='src'); \
-p = r.save_report('$(COV_DIR)/report.md', include_tree=False, blame_limit=0, threshold=100); \
-print(f'  Codebase stats → {p}')"
-
-# ── File sizes / Disk usage ───────────────────────────────────────────────────
-# Reporta uso por diretório e detecta arquivos grandes (> 500 KB).
-# Use 'make size' para o resumo rápido por pasta.
-size file-sizes:
+_check_fsizes:
 	@echo ""
 	@echo "  Uso por diretório (inclui .venv e ignorados pelo Git):"
 	@echo "  ────────────────────────────────────────────────────────"
@@ -150,7 +106,32 @@ large=[(s,p) for s,p in files if s>524288]; \
   else print('  Nenhum arquivo > 500 KB fora do .venv.'); \
 print(f'\n  Total rastreado: {len(files)} arquivos  |  {len(large)} blobs > 500 KB')"
 
-# ── Deploy & Infra (wrappers para cd/scripts/deploy.sh) ──────────────────────
+# ── Coverage ──────────────────────────────────────────────────────────────────
+cov:
+	@mkdir -p $(COV_DIR)
+	@rm -f .coverage .coverage.*
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short \
+		--cov=$(SRC) \
+		--cov-branch \
+		--cov-report=json:$(COV_DIR)/coverage.json \
+		--json-report --json-report-file=$(TEST_REPORT) \
+		--cov-report=term-missing:skip-covered \
+		--durations=50 -rXs
+	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"´
+	$(MAKE) cov-stats
+
+# ── Codebase stats ────────────────────────────────────────────────────────────
+cov-stats:
+	@$(PYTHON) -c "\
+from codebase_stats import CodebaseStatsReporter; \
+import pathlib, json; \
+rep = '$(TEST_REPORT)'; \
+rep_ok = pathlib.Path(rep).exists() and 'tests' in json.loads(pathlib.Path(rep).read_text()); \
+r = CodebaseStatsReporter(coverage_file='$(COV_DIR)/coverage.json', report_file=rep if rep_ok else None, radon_root='src', fs_root='src', tree_root='src'); \
+p = r.save_report('$(COV_DIR)/report.md', include_tree=False, blame_limit=0, threshold=100); \
+print(f'  Codebase stats → {p}')"
+
+# ── Runtime CI/CD (wrappers para deploy.sh) ──────────────────────────────────
 
 status:
 	$(DEPLOY) status
@@ -167,33 +148,40 @@ promote:
 rollback:
 	$(DEPLOY) rollback $(if $(REV),--revision $(REV),)
 
-configure:
-	$(DEPLOY) configure
+# ── Plataforma (wrappers para provision.sh) ───────────────────────────────────
 
-configure-smtp:
-	$(DEPLOY) configure-smtp
+configure:
+	$(PROVISION) configure
 
 keys:
-	$(DEPLOY) keys $(if $(ROTATE),--rotate,)
+	$(PROVISION) keys $(if $(ROTATE),--rotate,)
 
 bootstrap:
-	$(DEPLOY) bootstrap $(if $(VALIDATE),--validate,)
+	$(PROVISION) bootstrap $(if $(VALIDATE),--validate,)
 
 github-secrets:
-	$(DEPLOY) github
+	$(PROVISION) github
 
-users:
-	$(DEPLOY) users "$(CMD)"
+# `make concilium ops auth list` — palavras extras viram _CONCILIUM_ARGS.
+# Para args com flags (--help, --client-id ...) use CMD=: make concilium CMD="ops --help"
+ifeq (concilium,$(firstword $(MAKECMDGOALS)))
+  _CONCILIUM_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(foreach _w,$(_CONCILIUM_ARGS),$(eval $(_w):;@:))
+endif
+
+exec:
+	$(PROVISION) exec "$(CMD)"
+
+concilium:
+	$(PROVISION) exec "concilium $(or $(_CONCILIUM_ARGS),$(CMD))"
 
 deploy-all:
-	$(DEPLOY) all
+	$(PROVISION) all
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 clean:
-	rm -rf $(COV_DIR) .coverage .coverage.* $(LINT_REPORT)
-	find . -type d -name '__pycache__'   -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name '.pytest_cache' -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name '.mypy_cache'   -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name '.ruff_cache'   -not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true
+	rm -rf $(COV_DIR) .coverage .coverage.* .lint-report.json
+	find . -type d \( -name '__pycache__' -o -name '.pytest_cache' -o -name '.mypy_cache' -o -name '.ruff_cache' \) \
+		-not -path './.git/*' -not -path './.venv/*' -exec rm -rf {} + 2>/dev/null || true
 	find . -name '*.pyc' -not -path './.venv/*' -delete 2>/dev/null || true
 	@echo "  Caches limpos."

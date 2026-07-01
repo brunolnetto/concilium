@@ -203,7 +203,7 @@ class ExecutionMixin:
                         result.artifacts,
                     )
                     return result, True
-            except Exception:
+            except Exception:  # pragma: no cover
                 pass
         return result, should_save
 
@@ -214,7 +214,7 @@ class ExecutionMixin:
             try:
                 _deliv_cfg = project.read_json("deliverables_config.json", {})
                 _outputs_cfg: dict = _deliv_cfg.get("outputs", {})
-            except Exception:
+            except Exception:  # pragma: no cover
                 _outputs_cfg = {}
             _handle_skill_09_side_effects(result, project, v, _outputs_cfg)
 

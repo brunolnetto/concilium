@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-# deploy.sh — Entrypoint unico de deploy do Concilium.
+# deploy.sh — Runtime CI/CD do Concilium (revisões ACA).
 #
-# Runtime Deployment (ACA Revisions):
-#   deploy IMAGE_TAG        -> cria nova revision sem promover trafego
-#   smoke --revision REV    -> smoke exaustivo contra FQDN da revision
-#   promote --revision REV  -> direciona 100% do trafego para a revision
-#   rollback [--revision]   -> volta para revision anterior (ou especificada)
-#   status                  -> mostra revisions e pesos de trafego
+# Comandos:
+#   image [--tag TAG]       Builda imagem nova ou valida tag existente no ACR
+#   deploy IMAGE_TAG        Cria nova revision sem promover trafego (blue/green)
+#   smoke [--revision REV]  Smoke exaustivo contra a revision alvo
+#   promote [--revision]    Direciona 100% do trafego para a revision
+#   rollback [--revision]   Volta para revision anterior (ou especificada)
+#   status                  Mostra revisions e pesos de trafego
 #
-# Platform Operations:
-#   bootstrap, keys, github, configure, users, all, help
+# Para provisionamento de plataforma (bootstrap, configure, domain, keys, github)
+# use: cd/scripts/provision.sh
+#
+# Pode ser "sourced" por provision.sh para reutilizar utilitarios comuns
+# sem executar o dispatcher (guard BASH_SOURCE no final do arquivo).
 set -euo pipefail
 
-_CI_SAFE_CMDS="keys image deploy smoke promote rollback status bootstrap configure help"
+_CI_SAFE_CMDS="image deploy smoke promote rollback status help"
 
 _check_ci_safe() {
     [[ "${CI:-}" != "true" ]] && return 0
@@ -136,215 +140,6 @@ _wait_revision_running() {
         sleep 10
     done
     die "Revision '$revision' nao ficou Running em $((max*10))s."
-}
-
-# -- ACA Domain: helpers ---------------------------------------------------------
-
-_aca_env_name() {
-    local app_name="$1"
-    az containerapp show --name "$app_name" --resource-group "$RESOURCE_GROUP" \
-        --query "properties.environmentId" -o tsv 2>/dev/null | awk -F'/' '{print $NF}'
-}
-
-_aca_verification_id() {
-    local env_name="$1"
-    az containerapp env show --name "$env_name" --resource-group "$RESOURCE_GROUP" \
-        --query "properties.customDomainConfiguration.customDomainVerificationId" -o tsv 2>/dev/null
-}
-
-_dns_poll() {
-    local hostname="$1" verification_id="$2" app_fqdn="$3"
-    local max=60 i=0
-
-    log "Verificando propagacao DNS para '$hostname'..."
-    while true; do
-        i=$((i+1))
-        [[ $i -gt $max ]] && die "Timeout aguardando DNS (${max}x30s = $((max*30/60))min). Verifique os registros e tente novamente."
-
-        local txt_val cname_val
-        txt_val=$(dig +short TXT "asuid.${hostname}" 2>/dev/null | tr -d '"' | head -1)
-        cname_val=$(dig +short CNAME "${hostname}" 2>/dev/null | sed 's/\.$//' | head -1)
-
-        local txt_ok=false cname_ok=false
-        [[ "$txt_val"   == "$verification_id" ]] && txt_ok=true
-        [[ "$cname_val" == "$app_fqdn"        ]] && cname_ok=true
-
-        if $txt_ok && $cname_ok; then
-            ok "DNS propagado: TXT e CNAME corretos."
-            return 0
-        fi
-
-        $txt_ok   || log "  TXT   asuid.${hostname}: esperado='${verification_id}' atual='${txt_val:-<vazio>}'"
-        $cname_ok || log "  CNAME ${hostname}: esperado='${app_fqdn}' atual='${cname_val:-<vazio>}'"
-        echo "  ($i/$max) Aguardando 30s..."
-        sleep 30
-    done
-}
-
-_cert_poll() {
-    local env_name="$1" cert_name="$2"
-    local max=36 i=0
-
-    log "Aguardando provisionamento do certificado '$cert_name'..."
-    while true; do
-        i=$((i+1))
-        [[ $i -gt $max ]] && die "Timeout aguardando certificado (${max}x10s = $((max*10/60))min)."
-
-        local state
-        state=$(az containerapp env certificate show \
-            --name "$env_name" \
-            --resource-group "$RESOURCE_GROUP" \
-            --certificate "$cert_name" \
-            --query "properties.provisioningState" -o tsv 2>/dev/null || echo "Pending")
-
-        [[ "$state" == "Succeeded" ]] && { ok "Certificado provisionado."; return 0; }
-        [[ "$state" == "Failed"    ]] && die "Falha ao provisionar certificado '$cert_name'."
-
-        echo "  Estado: $state ($i/$max)..."
-        sleep 10
-    done
-}
-
-# -- ACA Domain: commands --------------------------------------------------------
-
-cmd_domain_prepare() {
-    local app_name=""  hostname=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --app)      app_name="$2"; shift 2 ;;
-            --hostname) hostname="$2"; shift 2 ;;
-            *)          shift ;;
-        esac
-    done
-
-    [[ -n "$app_name" ]]  || app_name="$ACA_API_APP"
-    [[ -n "$hostname" ]]  || die "--hostname e obrigatorio (ex: api.exemplo.com.br)."
-
-    need az; require_login
-    _aca_app_exists "$app_name" || die "Container App '$app_name' nao encontrado."
-
-    local env_name app_fqdn verification_id
-    env_name=$(_aca_env_name "$app_name")
-    app_fqdn=$(az containerapp show --name "$app_name" --resource-group "$RESOURCE_GROUP" \
-        --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null)
-    verification_id=$(_aca_verification_id "$env_name")
-
-    [[ -n "$verification_id" ]] || die "Nao foi possivel obter verificationId do ambiente '$env_name'."
-
-    step "Instrucoes DNS para: $hostname"
-    echo
-    echo -e "  ${N}Crie os seguintes registros no seu provedor DNS (ex: HostGator):${NC}"
-    echo
-    printf "  %-8s %-40s %s\n" "Tipo" "Nome" "Valor"
-    printf "  %-8s %-40s %s\n" "────" "────────────────────────────────────────" "─────────────────────────────────────────"
-    printf "  ${G}%-8s${NC} %-40s %s\n" "CNAME"  "${hostname}."         "${app_fqdn}."
-    printf "  ${G}%-8s${NC} %-40s %s\n" "TXT"    "asuid.${hostname}."   "${verification_id}"
-    echo
-    echo "  App:       $app_name"
-    echo "  Ambiente:  $env_name"
-    echo
-
-    if [[ "${CI:-}" == "true" ]]; then
-        log "Modo CI: exibindo instrucoes e saindo. Execute quando o DNS estiver pronto:"
-        echo "  cd/scripts/deploy.sh domain finalize --app $app_name --hostname $hostname"
-        return 0
-    fi
-
-    read -r -p "  Pressione ENTER quando os registros DNS estiverem criados (Ctrl+C para cancelar)... "
-    echo
-    cmd_domain_finalize --app "$app_name" --hostname "$hostname"
-}
-
-cmd_domain_finalize() {
-    local app_name="" hostname=""
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --app)      app_name="$2"; shift 2 ;;
-            --hostname) hostname="$2"; shift 2 ;;
-            *)          shift ;;
-        esac
-    done
-
-    [[ -n "$app_name" ]]  || app_name="$ACA_API_APP"
-    [[ -n "$hostname" ]]  || die "--hostname e obrigatorio."
-
-    need az; need dig; require_login
-    _aca_app_exists "$app_name" || die "Container App '$app_name' nao encontrado."
-
-    local env_name app_fqdn verification_id
-    env_name=$(_aca_env_name "$app_name")
-    app_fqdn=$(az containerapp show --name "$app_name" --resource-group "$RESOURCE_GROUP" \
-        --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null)
-    verification_id=$(_aca_verification_id "$env_name")
-
-    # Estado 1: propagacao DNS
-    step "Estado 1/4 — Propagacao DNS"
-    _dns_poll "$hostname" "$verification_id" "$app_fqdn"
-
-    # Estado 2: adicionar hostname ao app
-    step "Estado 2/4 — Hostname bind"
-    _az_retry az containerapp hostname add \
-        --name "$app_name" \
-        --resource-group "$RESOURCE_GROUP" \
-        --hostname "$hostname" \
-        --output none
-    ok "Hostname '$hostname' adicionado ao app '$app_name'."
-
-    # Estado 3: criar e aguardar Managed Certificate
-    step "Estado 3/4 — Managed Certificate"
-    local cert_name="cert-$(echo "$hostname" | tr '.' '-')"
-
-    az containerapp env certificate create \
-        --name "$env_name" \
-        --resource-group "$RESOURCE_GROUP" \
-        --certificate-name "$cert_name" \
-        --hostname "$hostname" \
-        --output none 2>/dev/null || log "Certificado ja existe — aguardando estado."
-
-    _cert_poll "$env_name" "$cert_name"
-
-    # Estado 4: vincular certificado ao hostname
-    step "Estado 4/4 — Vincular certificado"
-    _az_retry az containerapp hostname bind \
-        --name "$app_name" \
-        --resource-group "$RESOURCE_GROUP" \
-        --hostname "$hostname" \
-        --environment "$env_name" \
-        --certificate "$cert_name" \
-        --output none
-    ok "Certificado vinculado a '$hostname'."
-
-    # Verificacao final HTTPS
-    step "Verificacao HTTPS"
-    local max_v=12 v=0
-    while true; do
-        v=$((v+1))
-        [[ $v -gt $max_v ]] && { warn "HTTPS ainda nao responde — verifique manualmente: https://${hostname}/health"; break; }
-        if curl -sf --max-time 10 "https://${hostname}/health" &>/dev/null; then
-            ok "HTTPS respondendo: https://${hostname}/health"
-            break
-        fi
-        echo "  ($v/$max_v) Aguardando 10s..."
-        sleep 10
-    done
-
-    ok "Dominio '$hostname' configurado e ativo."
-}
-
-cmd_domain() {
-    local subcmd="${1:-help}"; shift 2>/dev/null || true
-    case "$subcmd" in
-        prepare)  cmd_domain_prepare  "$@" ;;
-        finalize) cmd_domain_finalize "$@" ;;
-        *)
-            echo "Uso: deploy.sh domain <prepare|finalize> [opcoes]"
-            echo
-            echo "  prepare  --app APP --hostname HOST   Gera instrucoes DNS; aguarda ENTER (nao-CI)"
-            echo "  finalize --app APP --hostname HOST   Policia DNS, cria cert, faz bind, verifica HTTPS"
-            ;;
-    esac
 }
 
 # -- ACA Revisions: runtime deployment ------------------------------------------
@@ -844,8 +639,6 @@ cmd_status() {
     fi
 }
 
-# -- Platform operations ---------------------------------------------------------
-
 cmd_image() {
     local input_tag=""
 
@@ -898,355 +691,6 @@ cmd_image() {
     fi
 }
 
-cmd_keys() {
-    ROTATE=false; [[ "${1:-}" == "--rotate" ]] && ROTATE=true
-    need az; need openssl
-    require_login
-
-    step "JWT Keys RS256 -> Key Vault '$KV_NAME'"
-    if az_secret_exists "jwt-private-key" && [[ "$ROTATE" == "false" ]]; then
-        ok "Chaves ja existem. Use --rotate para substitui-las."; return 0
-    fi
-    [[ "$ROTATE" == "true" ]] && { warn "Rotacao: tokens antigos expiram em <=8h."; confirm "Confirmar?"; }
-
-    PRIVATE_PEM=$(openssl genrsa 2048 2>/dev/null)
-    PUBLIC_PEM=$(echo "$PRIVATE_PEM" | openssl rsa -pubout 2>/dev/null)
-    echo "$PRIVATE_PEM" | az keyvault secret set --vault-name "$KV_NAME" \
-        --name "jwt-private-key" --value "$(cat)" --output none
-    echo "$PUBLIC_PEM" | az keyvault secret set --vault-name "$KV_NAME" \
-        --name "jwt-public-key" --value "$(cat)" --output none
-    unset PRIVATE_PEM PUBLIC_PEM
-    ok "jwt-private-key e jwt-public-key armazenados."
-}
-
-cmd_bootstrap() {
-    local mode="apply"
-    [[ "${1:-}" == "--validate" ]] && mode="validate"
-
-    need az
-    require_login
-
-    if [[ "$mode" == "validate" ]]; then
-        step "Validar Bicep"
-        az bicep build --file "$REPO_ROOT/cd/production/bicep/main.bicep"
-        az deployment group validate \
-            --resource-group "$RESOURCE_GROUP" \
-            --template-file "$REPO_ROOT/cd/production/bicep/main.bicep" \
-            --parameters "$REPO_ROOT/cd/production/bicep/main.bicepparam" \
-            --parameters opsIdentityPrincipalId="placeholder" \
-            --parameters azureStorageKey="placeholder" \
-            --output none
-        ok "Templates Bicep validados."
-        return 0
-    fi
-
-    step "Resource Group"
-    az group show --name "$RESOURCE_GROUP" &>/dev/null 2>&1 \
-        && ok "Ja existe." \
-        || { az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none; ok "Criado."; }
-
-    step "App Registration OIDC"
-    APP_NAME="concilium-github-actions"
-    APP_ID=$(az ad app list --display-name "$APP_NAME" --query '[0].appId' -o tsv 2>/dev/null || echo "")
-    if [[ -z "$APP_ID" ]]; then
-        APP_ID=$(az ad app create --display-name "$APP_NAME" --query appId -o tsv)
-        az ad sp create --id "$APP_ID" --output none 2>/dev/null || true
-        ok "Criado: $APP_ID"
-    else
-        ok "Ja existe: $APP_ID"
-    fi
-
-    az ad app federated-credential create --id "$APP_ID" --parameters \
-        "{\"name\":\"github-main\",\"issuer\":\"https://token.actions.githubusercontent.com\",\
-\"subject\":\"repo:${GITHUB_REPO}:ref:refs/heads/main\",\"audiences\":[\"api://AzureADTokenExchange\"]}" \
-        2>/dev/null || ok "Federated credential ja existe."
-
-    OPS_PRINCIPAL=$(az ad sp show --id "$APP_ID" --query id -o tsv)
-    SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-    az role assignment create --assignee "$OPS_PRINCIPAL" --role Contributor \
-        --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}" \
-        --output none 2>/dev/null || ok "Role assignment ja existe."
-
-    step "Deploy Bicep"
-    az deployment group create \
-        --resource-group "$RESOURCE_GROUP" \
-        --template-file "$REPO_ROOT/cd/production/bicep/main.bicep" \
-        --parameters "$REPO_ROOT/cd/production/bicep/main.bicepparam" \
-        --parameters "opsIdentityPrincipalId=$OPS_PRINCIPAL" \
-        --output none
-    ok "Bicep deploy concluido."
-
-    step "Resumo"
-    echo -e "  ${G}App Registration${NC}: $APP_ID  (Tenant: $(az account show --query tenantId -o tsv))"
-    echo
-    echo "  Proximos: $0 keys -> $0 github -> $0 configure"
-}
-
-cmd_configure_smtp() {
-    need az
-    require_login
-
-    local smtp_pwd="${SMTP_PASSWORD:-}"
-    if [[ -z "$smtp_pwd" ]]; then
-        read -r -s -p "SMTP_PASSWORD (Gmail App Password): " smtp_pwd; echo
-    fi
-    [[ -n "$smtp_pwd" ]] || die "SMTP_PASSWORD nao fornecido."
-
-    step "Gravando smtp-password no Key Vault '$KV_NAME'"
-    printf '%s' "$smtp_pwd" | az keyvault secret set \
-        --vault-name "$KV_NAME" --name smtp-password --value "@-" --output none
-    ok "smtp-password gravado."
-
-    local smtp_envs=(
-        "CONCILIUM__SMTP_HOST=smtp.gmail.com"
-        "CONCILIUM__SMTP_PORT=587"
-        "CONCILIUM__SMTP_USER=brunolnetto@gmail.com"
-        "CONCILIUM__SMTP_FROM=brunolnetto@gmail.com"
-        "CONCILIUM__NOTIFICATIONS_ENABLED=1"
-    )
-
-    for app in "$ACA_MCP_APP" "$ACA_API_APP"; do
-        if _aca_app_exists "$app"; then
-            step "Aplicando env vars SMTP em '$app'"
-            az containerapp update \
-                --name "$app" \
-                --resource-group "$RESOURCE_GROUP" \
-                --set-env-vars "${smtp_envs[@]}" \
-                --output none
-            ok "$app atualizado."
-        else
-            warn "Container '$app' nao encontrado — pulando."
-        fi
-    done
-
-    ok "SMTP configurado. A senha e lida do Key Vault via Managed Identity no startup."
-}
-
-cmd_configure() {
-    need az; need openssl
-    require_login
-
-    [[ -n "$SP_TENANT_ID" ]]     || die "SP_TENANT_ID nao definido."
-    [[ -n "$SP_CLIENT_ID" ]]     || die "SP_CLIENT_ID nao definido."
-    [[ -n "$SP_CLIENT_SECRET" ]] || die "SP_CLIENT_SECRET nao definido."
-    [[ -n "$SP_DRIVE_ID" ]]      || die "SP_DRIVE_ID nao definido."
-    [[ -n "$SMOKE_CLIENT_SECRET" ]] || die "SMOKE_CLIENT_SECRET nao definido."
-    [[ -n "$SMTP_PASSWORD" ]]    || warn "SMTP_PASSWORD nao definido — notificacoes desabilitadas."
-
-    local smoke_hash
-    smoke_hash="sha256:$(printf '%s' "$SMOKE_CLIENT_SECRET" | openssl dgst -sha256 -hex | sed 's/^.* //')"
-    local auth_clients="{\"${SMOKE_CLIENT_ID}\":{\"secret_hash\":\"${smoke_hash}\",\"roles\":[\"operator\"]}}"
-    local kv_url="https://${KV_NAME}.vault.azure.net"
-
-    # Grava smtp-password no Key Vault (idempotente)
-    if [[ -n "${SMTP_PASSWORD:-}" ]]; then
-        step "Gravando smtp-password no Key Vault"
-        printf '%s' "$SMTP_PASSWORD" | az keyvault secret set \
-            --vault-name "$KV_NAME" --name smtp-password --value "@-" --output none
-        ok "smtp-password gravado."
-    fi
-    local mi_client_id
-    mi_client_id=$(az identity show --name concilium-identity --resource-group "$RESOURCE_GROUP" \
-        --query 'clientId' -o tsv 2>/dev/null || echo "")
-
-    _apply_yaml() {
-        local app="$1" yaml_file="$2"
-        _aca_app_exists "$app" || die "Container App '$app' nao encontrado."
-        az containerapp update \
-            --name "$app" \
-            --resource-group "$RESOURCE_GROUP" \
-            --yaml "$yaml_file" \
-            --output none
-        ok "$app configurado."
-    }
-
-    # ── MCP ───────────────────────────────────────────────────────────────────
-    step "Configurar env vars — $ACA_MCP_APP"
-    local mcp_yaml; mcp_yaml=$(mktemp /tmp/mcp-configure-XXXXXX.yaml)
-    cat > "$mcp_yaml" << EOF
-properties:
-  template:
-    containers:
-      - name: ${ACA_MCP_APP}
-        image: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
-        command:
-          - concilium-mcp
-        env:
-          - name: CONCILIUM__CONFIG_ROOT
-            value: /app
-          - name: CONCILIUM__STORE_BACKEND
-            value: sharepoint
-          - name: CONCILIUM__SP_TENANT_ID
-            value: ${SP_TENANT_ID}
-          - name: CONCILIUM__SP_CLIENT_ID
-            value: ${SP_CLIENT_ID}
-          - name: CONCILIUM__SP_CLIENT_SECRET
-            value: "${SP_CLIENT_SECRET}"
-          - name: CONCILIUM__SP_DRIVE_ID
-            value: "${SP_DRIVE_ID}"
-          - name: CONCILIUM__SP_ROOT_PATH
-            value: ${SP_ROOT_PATH}
-          - name: CONCILIUM__AUTH_ENABLED
-            value: "1"
-          - name: CONCILIUM__AUTH_CLIENTS
-            value: '${auth_clients}'
-          - name: CONCILIUM__JWT_KEY_VAULT_URL
-            value: ${kv_url}
-          - name: CONCILIUM__PROJECTS_ROOT
-            value: /tmp/projetos
-          - name: CONCILIUM__MCP_TRANSPORT
-            value: streamable-http
-          - name: CONCILIUM__MCP_HOST
-            value: "0.0.0.0"
-          - name: CONCILIUM__MCP_PORT
-            value: "8080"
-          - name: OTEL_SERVICE_NAME
-            value: concilium-mcp
-          - name: AZURE_CLIENT_ID
-            value: ${mi_client_id}
-          - name: CONCILIUM__SMTP_HOST
-            value: smtp.gmail.com
-          - name: CONCILIUM__SMTP_PORT
-            value: "587"
-          - name: CONCILIUM__SMTP_USER
-            value: brunolnetto@gmail.com
-          - name: CONCILIUM__SMTP_FROM
-            value: brunolnetto@gmail.com
-          - name: CONCILIUM__NOTIFICATIONS_ENABLED
-            value: "1"
-EOF
-    _apply_yaml "$ACA_MCP_APP" "$mcp_yaml"
-    rm -f "$mcp_yaml"
-
-    # ── API ───────────────────────────────────────────────────────────────────
-    step "Configurar env vars — $ACA_API_APP"
-    local api_yaml; api_yaml=$(mktemp /tmp/api-configure-XXXXXX.yaml)
-    cat > "$api_yaml" << EOF
-properties:
-  template:
-    containers:
-      - name: ${ACA_API_APP}
-        image: ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
-        command:
-          - concilium-api
-        env:
-          - name: CONCILIUM__CONFIG_ROOT
-            value: /app
-          - name: CONCILIUM__STORE_BACKEND
-            value: sharepoint
-          - name: CONCILIUM__SP_TENANT_ID
-            value: ${SP_TENANT_ID}
-          - name: CONCILIUM__SP_CLIENT_ID
-            value: ${SP_CLIENT_ID}
-          - name: CONCILIUM__SP_CLIENT_SECRET
-            value: "${SP_CLIENT_SECRET}"
-          - name: CONCILIUM__SP_DRIVE_ID
-            value: "${SP_DRIVE_ID}"
-          - name: CONCILIUM__SP_ROOT_PATH
-            value: ${SP_ROOT_PATH}
-          - name: CONCILIUM__AUTH_ENABLED
-            value: "1"
-          - name: CONCILIUM__AUTH_CLIENTS
-            value: '${auth_clients}'
-          - name: CONCILIUM__JWT_KEY_VAULT_URL
-            value: ${kv_url}
-          - name: CONCILIUM__PROJECTS_ROOT
-            value: /tmp/projetos
-          - name: CONCILIUM__API_HOST
-            value: "0.0.0.0"
-          - name: CONCILIUM__API_PORT
-            value: "8000"
-          - name: OTEL_SERVICE_NAME
-            value: concilium-api
-          - name: AZURE_CLIENT_ID
-            value: ${mi_client_id}
-          - name: CONCILIUM__SMTP_HOST
-            value: smtp.gmail.com
-          - name: CONCILIUM__SMTP_PORT
-            value: "587"
-          - name: CONCILIUM__SMTP_USER
-            value: brunolnetto@gmail.com
-          - name: CONCILIUM__SMTP_FROM
-            value: brunolnetto@gmail.com
-          - name: CONCILIUM__NOTIFICATIONS_ENABLED
-            value: "1"
-EOF
-    _apply_yaml "$ACA_API_APP" "$api_yaml"
-    rm -f "$api_yaml"
-
-    ok "Configuracao aplicada em ambos os containers."
-    echo "  Proximos passos: cd/scripts/deploy.sh github"
-}
-
-cmd_github() {
-    need az; need gh
-    require_login
-    gh auth status &>/dev/null || die "gh auth login"
-
-    _s() { echo -n "  $1... "; echo "$2" | gh secret set "$1" --repo "$GITHUB_REPO"; echo -e "${G}OK${NC}"; }
-    _v() { echo -n "  $1... "; gh variable set "$1" --body "$2" --repo "$GITHUB_REPO"; echo -e "${G}OK${NC}"; }
-
-    APP_ID=$(az ad app list --display-name "concilium-github-actions" --query '[0].appId' -o tsv || echo "")
-    [[ -z "$APP_ID" ]] && die "App Registration nao encontrado. Execute bootstrap primeiro."
-
-    _s "AZURE_CLIENT_ID"       "$APP_ID"
-    _s "AZURE_TENANT_ID"       "$(az account show --query tenantId -o tsv)"
-    _s "AZURE_SUBSCRIPTION_ID" "$(az account show --query id -o tsv)"
-    _v "RESOURCE_GROUP"        "$RESOURCE_GROUP"
-    _v "ACA_API_APP"           "$ACA_API_APP"
-    _v "ACA_MCP_APP"           "$ACA_MCP_APP"
-    _v "ACR_NAME"              "$ACR_NAME"
-    _v "IMAGE_NAME"            "$IMAGE_NAME"
-    _v "SMOKE_CLIENT_ID"       "$SMOKE_CLIENT_ID"
-
-    local sp_secret="${SP_CLIENT_SECRET:-}"
-    [[ -z "$sp_secret" ]] && { read -r -s -p "  SP_CLIENT_SECRET: " sp_secret; echo; }
-    _s "CONCILIUM__SP_CLIENT_SECRET" "$sp_secret"
-
-    read -r -p "  OTEL Endpoint (Enter pula): " OTEL
-    [[ -n "$OTEL" ]] && _s "OTEL_EXPORTER_OTLP_ENDPOINT" "$OTEL"
-
-    local smks="${SMOKE_CLIENT_SECRET:-}"
-    [[ -z "$smks" ]] && { read -r -s -p "  SMOKE_CLIENT_SECRET: " smks; echo; }
-    _s "SMOKE_CLIENT_SECRET" "$smks"
-
-    local smtp_pwd="${SMTP_PASSWORD:-}"
-    [[ -z "$smtp_pwd" ]] && { read -r -s -p "  SMTP_PASSWORD (Gmail App Password): " smtp_pwd; echo; }
-    [[ -n "$smtp_pwd" ]] && _s "SMTP_PASSWORD" "$smtp_pwd"
-
-    ok "GitHub Secrets/Vars configurados."
-    echo "  Proximos passos: cd/scripts/deploy.sh configure"
-}
-
-cmd_users() {
-    local app_name="${USERS_APP:-$ACA_MCP_APP}"
-    # Sem args: abre shell interativo. Com args: executa o subcomando como string via /bin/sh -c
-    local exec_cmd="${*:-}"
-
-    need az
-    require_login
-    _aca_app_exists "$app_name" || die "Container App '$app_name' nao encontrado."
-
-    step "Gestao de usuarios via ACA exec"
-    log "App alvo: $app_name"
-
-    local cmd="${exec_cmd:-/bin/sh}"
-    [[ -z "$exec_cmd" ]] && log "Abrindo shell interativo — use 'concilium ops auth --help'"
-    [[ -n "$exec_cmd" ]] && log "Comando: $cmd"
-
-    az containerapp exec \
-        --name "$app_name" \
-        --resource-group "$RESOURCE_GROUP" \
-        --command "$cmd" || true
-    stty sane 2>/dev/null || true  # restaura terminal após az containerapp exec quebrar o modo raw
-}
-
-cmd_all() {
-    step "Sequencia operacional completa"
-    cmd_bootstrap
-    cmd_keys
-    cmd_github
-}
 
 # -- Help -----------------------------------------------------------------------
 
@@ -1255,70 +699,41 @@ cmd_help() {
 Uso: deploy.sh [comando] [opcoes]
 
 -- Runtime Deployment (ACA Revisions, CI-safe) ---------------------------------
-    image [--tag TAG]             Builda imagem nova (sem --tag) ou valida tag existente
-  deploy IMAGE_TAG             Cria nova revision (API+MCP) sem promover trafego (blue/green)
-  smoke [--revision REV]       Smoke exaustivo contra a revision API alvo
-        [--mcp-revision REV]   Smoke contra revision MCP especifica (fallback: app FQDN)
+  image [--tag TAG]             Builda imagem nova (sem --tag) ou valida tag existente
+  deploy IMAGE_TAG              Cria nova revision (API+MCP) sem promover trafego (blue/green)
+  smoke [--revision REV]        Smoke exaustivo contra a revision API alvo
+        [--mcp-revision REV]    Smoke contra revision MCP especifica (fallback: app FQDN)
         [--url URL] [--mcp-url URL]
-  promote [--revision REV]     Direciona 100% do trafego para a revision API
-          [--mcp-revision REV] Idem para o MCP (fallback: latest revision)
-  rollback [--revision REV]    Volta para revision anterior da API (ou especificada)
+  promote [--revision REV]      Direciona 100% do trafego para a revision API
+          [--mcp-revision REV]  Idem para o MCP (fallback: latest revision)
+  rollback [--revision REV]     Volta para revision anterior da API (ou especificada)
            [--mcp-revision REV] Idem para o MCP
-  status                       Mostra revisions e pesos de trafego
+  status                        Mostra revisions e pesos de trafego
 
--- Custom Domain (Human-in-the-Loop) --------------------------------------------
-  domain prepare --app APP --hostname HOST
-                               Exibe registros DNS necessarios; aguarda ENTER (modo interativo)
-                               Em CI imprime instrucoes e sai (execute finalize manualmente)
-  domain finalize --app APP --hostname HOST
-                               Policia propagacao DNS -> cria Managed Certificate ->
-                               vincula hostname -> verifica HTTPS
-
--- Platform Operations ----------------------------------------------------------
-  configure                    Aplica env vars em ambos os containers ACA (idempotente)
-  configure-smtp               Grava SMTP_PASSWORD no Key Vault e seta env vars SMTP (nao requer SP vars)
-  keys [--rotate]              Gera JWT keys -> Key Vault
-  bootstrap                    Provisiona infra Azure base (idempotente)
-    bootstrap --validate         Valida Bicep (build + deployment validate)
-  github                       Configura GitHub Secrets/Vars via gh CLI
-  users [comando]              Executa comando de usuarios via az containerapp exec
-  all                          Executa bootstrap -> keys -> github
+Para provisionamento de plataforma use: cd/scripts/provision.sh help
 
 Variaveis de ambiente (CI/CD):
-  RESOURCE_GROUP LOCATION KV_NAME ACR_NAME IMAGE_NAME
-  ACA_API_APP ACA_MCP_APP GITHUB_REPO
-  SP_TENANT_ID SP_CLIENT_ID SP_CLIENT_SECRET SP_DRIVE_ID SP_ROOT_PATH
+  RESOURCE_GROUP ACA_API_APP ACA_MCP_APP ACR_NAME IMAGE_NAME
   SMOKE_CLIENT_ID SMOKE_CLIENT_SECRET
-  OTEL_EXPORTER_OTLP_ENDPOINT
 EOF
 }
 
-# -- Dispatcher -----------------------------------------------------------------
+# -- Dispatcher (guard: nao executa quando sourced por provision.sh) ------------
 
-CMD="${1:-all}"; shift 2>/dev/null || true
-_check_ci_safe "$CMD"
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    CMD="${1:-status}"; shift 2>/dev/null || true
+    _check_ci_safe "$CMD"
 
-case "$CMD" in
-    image)          cmd_image "$@" ;;
-    deploy)         cmd_deploy "$@" ;;
-    smoke)          cmd_smoke "$@" ;;
-    promote)        cmd_promote "$@" ;;
-    rollback)       cmd_rollback "$@" ;;
-    status)         cmd_status "$@" ;;
-
-    domain)         cmd_domain "$@" ;;
-
-    configure)      cmd_configure "$@" ;;
-    configure-smtp) cmd_configure_smtp "$@" ;;
-    keys)           cmd_keys "$@" ;;
-    bootstrap)      cmd_bootstrap "$@" ;;
-    github)         cmd_github "$@" ;;
-    users)          cmd_users "$@" ;;
-    all)            cmd_all "$@" ;;
-
-    help|--help|-h) cmd_help ;;
-
-    *)
-        die "Comando desconhecido: '$CMD'. Use '$0 help'."
-        ;;
-esac
+    case "$CMD" in
+        image)          cmd_image "$@" ;;
+        deploy)         cmd_deploy "$@" ;;
+        smoke)          cmd_smoke "$@" ;;
+        promote)        cmd_promote "$@" ;;
+        rollback)       cmd_rollback "$@" ;;
+        status)         cmd_status "$@" ;;
+        help|--help|-h) cmd_help ;;
+        *)
+            die "Comando desconhecido: '$CMD'. Use '$0 help' ou 'provision.sh help' para operacoes de plataforma."
+            ;;
+    esac
+fi

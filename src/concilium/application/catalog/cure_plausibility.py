@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
 """
 Curação cirúrgica de anomalias de plausibilidade do catálogo Concilium.
 
 Uso:
-    python tools/cure_plausibility.py --contexto mendeslobo          # dry-run
-    python tools/cure_plausibility.py --contexto mendeslobo --apply  # aplica
+    python -m concilium.application.catalog.cure_plausibility --contexto mendeslobo
+    python -m concilium.application.catalog.cure_plausibility --contexto mendeslobo --apply
 
 Ações automáticas:
   1. ERROS FÍSICOS
@@ -26,7 +25,6 @@ Não automáticas (reportadas apenas):
 from __future__ import annotations
 
 import argparse
-import io
 import json
 import re
 import sys
@@ -35,10 +33,7 @@ from collections import defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[4]
 
 # ── Constantes ────────────────────────────────────────────────────────────────
 SALARIO_MINIMO_MENSAL = 1_518.0   # R$ Brasil 2025

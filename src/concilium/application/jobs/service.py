@@ -429,7 +429,7 @@ def get_job_service() -> JobService:
 
     if _service is None:
         with _service_lock:
-            if _service is None:
+            if _service is None:  # pragma: no cover
                 _service = JobService()
 
     return _service

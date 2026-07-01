@@ -313,6 +313,175 @@ class TestSharePointBlobStorage:
                 result = storage.health_check()
             assert result["status"] == "error"
 
+    def test_client_raises_when_httpx_not_installed(self):
+        """Lines 75-76: _client() raises ImportError when httpx is missing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            with patch.dict("sys.modules", {"httpx": None}):
+                with pytest.raises(ImportError, match="httpx"):
+                    storage._client()
+
+    def test_ler_blob_cached_reraises_when_not_offline(self):
+        """Line 135: exception in cached fetch re-raises when offline=False."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._cache.put("file.json", b"cached", "etag-1", "Mon")
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = OSError("connection reset")
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                with pytest.raises(OSError):
+                    storage.ler_blob("file.json")
+
+    def test_deletar_blob_success(self):
+        """Lines 277-284: deletar_blob sends DELETE and invalidates cache."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._cache.put("del.json", b"data", "e", "m")
+            mock_resp = MagicMock()
+            mock_resp.status_code = 204
+            mock_resp.raise_for_status = MagicMock()
+            mock_httpx = MagicMock()
+            mock_httpx.delete.return_value = mock_resp
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                storage.deletar_blob("del.json")
+            mock_httpx.delete.assert_called_once()
+            assert storage._cache.get("del.json") is None
+
+    def test_deletar_blob_404_raises_file_not_found(self):
+        """Lines 279-280: 404 on DELETE raises FileNotFoundError."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            mock_resp = MagicMock()
+            mock_resp.status_code = 404
+            mock_httpx = MagicMock()
+            mock_httpx.delete.return_value = mock_resp
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                with pytest.raises(FileNotFoundError):
+                    storage.deletar_blob("missing.json")
+
+    def test_deletar_blob_without_cache(self):
+        """deletar_blob without cache_dir (self._cache is None) does not crash."""
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import (
+            SharePointBlobStorage,
+            SharePointCredential,
+        )
+
+        cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
+        cred._app = MagicMock()
+        cred._app.acquire_token_for_client.return_value = {"access_token": "tok"}
+        storage = SharePointBlobStorage("drive-1", "Concilium/test", cred)
+        mock_resp = MagicMock()
+        mock_resp.status_code = 204
+        mock_resp.raise_for_status = MagicMock()
+        mock_httpx = MagicMock()
+        mock_httpx.delete.return_value = mock_resp
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            storage.deletar_blob("some.json")
+
+    def test_ensure_root_path_idempotent(self):
+        """Lines 328-331: ensure_root_path is a no-op on second call."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            mock_httpx = self._mock_httpx(200, json_data={"name": "root"})
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                storage.ensure_root_path()
+                storage.ensure_root_path()  # second call does nothing
+            assert mock_httpx.get.call_count == 1
+
+    def test_ensure_root_path_empty_root_path_is_noop(self):
+        """Lines 335-337: _ensure_root_path early returns when root_path is empty."""
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import (
+            SharePointBlobStorage,
+            SharePointCredential,
+        )
+
+        cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
+        cred._app = MagicMock()
+        cred._app.acquire_token_for_client.return_value = {"access_token": "tok"}
+        storage = SharePointBlobStorage("drive-1", "", cred)
+        mock_httpx = MagicMock()
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            storage._ensure_root_path(mock_httpx)
+        mock_httpx.get.assert_not_called()
+
+    def test_ensure_root_path_creates_when_not_exists(self):
+        """Lines 342-362: _ensure_root_path creates folder segments when 404."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            # First GET → 404 (root doesn't exist), then POST for each segment
+            get_resp = MagicMock()
+            get_resp.status_code = 404
+            post_resp = MagicMock()
+            post_resp.status_code = 201
+            post_resp.raise_for_status = MagicMock()
+            mock_httpx = MagicMock()
+            mock_httpx.get.return_value = get_resp
+            mock_httpx.post.return_value = post_resp
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                storage.ensure_root_path()
+            # "Concilium/test" has 2 segments → 2 POST calls
+            assert mock_httpx.post.call_count == 2
+
+    def test_ensure_root_path_already_exists_returns_early(self):
+        """Lines 342-343: _ensure_root_path returns early when root already exists (200)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            mock_httpx = self._mock_httpx(200, json_data={"name": "root"})
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                storage._ensure_root_path(mock_httpx)
+            mock_httpx.post.assert_not_called()
+
+    def test_deletar_blob_non_404_non_204_calls_raise_for_status(self):
+        """Line 282: deletar_blob with unexpected status calls r.raise_for_status()."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            mock_resp = MagicMock()
+            mock_resp.status_code = 500
+            mock_resp.raise_for_status = MagicMock(side_effect=Exception("server error"))
+            mock_httpx = MagicMock()
+            mock_httpx.delete.return_value = mock_resp
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                with pytest.raises(Exception, match="server error"):
+                    storage.deletar_blob("bad.json")
+
+    def test_aprovar_versao_404_raises_file_not_found(self):
+        """Line 300: aprovar_versao with 404 raises FileNotFoundError."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            mock_httpx = self._mock_httpx(404)
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                with pytest.raises(FileNotFoundError, match="não encontrado"):
+                    storage.aprovar_versao("v1/canonical.json")
+
+    def test_ensure_root_path_get_non_200_non_404_raises(self):
+        """Line 345: _ensure_root_path raises when GET returns unexpected status."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            get_resp = MagicMock()
+            get_resp.status_code = 500
+            get_resp.raise_for_status = MagicMock(side_effect=Exception("internal server error"))
+            mock_httpx = MagicMock()
+            mock_httpx.get.return_value = get_resp
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                with pytest.raises(Exception, match="internal server error"):
+                    storage.ensure_root_path()
+
+    def test_ensure_root_path_post_failure_calls_raise_for_status(self):
+        """Line 360: _ensure_root_path raises when POST returns unexpected status."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            get_resp = MagicMock()
+            get_resp.status_code = 404
+            post_resp = MagicMock()
+            post_resp.status_code = 500
+            post_resp.raise_for_status = MagicMock(side_effect=Exception("folder create failed"))
+            mock_httpx = MagicMock()
+            mock_httpx.get.return_value = get_resp
+            mock_httpx.post.return_value = post_resp
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                with pytest.raises(Exception, match="folder create failed"):
+                    storage.ensure_root_path()
+
     def test_offline_mode_uses_stale_cache(self):
         from concilium.infrastructure.adapters.blob_storage.sharepoint import (
             SharePointBlobStorage,
@@ -534,3 +703,315 @@ class TestStorageProjectRepository:
             h = repo.create_project("Test", "ctx")
             assert h.read_json("overrides/cpus_override.json", None) == {}
             assert h.read_json("overrides/bdi_override.json", None) == {}
+
+
+# ---------------------------------------------------------------------------
+# SharePointBlobStorage — from_env
+# ---------------------------------------------------------------------------
+
+
+class TestSharePointFromEnv:
+    def test_from_env_success(self):
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import (
+            SharePointBlobStorage,
+            SharePointCredential,
+        )
+
+        mock_sp = MagicMock()
+        mock_sp.drive_id = "drive-123"
+        mock_sp.root_path = "Concilium/data"
+        mock_storage_settings = MagicMock()
+        mock_storage_settings.sharepoint = mock_sp
+        mock_cred = MagicMock(spec=SharePointCredential)
+        mock_cred._app = MagicMock()
+
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.sharepoint.get_storage", return_value=mock_storage_settings
+        ):
+            with patch.object(SharePointCredential, "from_env", return_value=mock_cred):
+                storage = SharePointBlobStorage.from_env()
+
+        assert storage._drive_id == "drive-123"
+        assert storage._root_path == "Concilium/data"
+
+    def test_from_env_missing_drive_id_raises(self):
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
+
+        mock_sp = MagicMock()
+        mock_sp.drive_id = ""
+        mock_storage_settings = MagicMock()
+        mock_storage_settings.sharepoint = mock_sp
+
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.sharepoint.get_storage", return_value=mock_storage_settings
+        ):
+            with pytest.raises(OSError, match="CONCILIUM__SP_DRIVE_ID"):
+                SharePointBlobStorage.from_env()
+
+
+# ---------------------------------------------------------------------------
+# SharePointBlobStorage — missing coverage paths
+# ---------------------------------------------------------------------------
+
+
+def _make_storage_no_cache():
+    from concilium.infrastructure.adapters.blob_storage.sharepoint import (
+        SharePointBlobStorage,
+        SharePointCredential,
+    )
+
+    cred = SharePointCredential(tenant_id="t", client_id="c", client_secret="s")
+    cred._app = MagicMock()
+    cred._app.acquire_token_for_client.return_value = {"access_token": "tok"}
+    return SharePointBlobStorage("drive-1", "Concilium/test", cred)
+
+
+class TestSharePointLerBlobEdgeCases:
+    def _mock_resp(self, status: int, content: bytes = b"", json_data=None, headers=None):
+        r = MagicMock()
+        r.status_code = status
+        r.content = content
+        r.headers = headers or {}
+        if json_data is not None:
+            r.json.return_value = json_data
+        r.raise_for_status = MagicMock()
+        return r
+
+    def test_ler_blob_without_cache(self):
+        """Line 100→104: no cache_dir → goes directly to _ler_blob_direct."""
+        storage = _make_storage_no_cache()
+        mock_httpx = MagicMock()
+        mock_httpx.get.return_value = self._mock_resp(200, content=b"direct_data")
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.ler_blob("file.json")
+        assert result == b"direct_data"
+
+    def test_ler_blob_cached_etag_200_refetches(self):
+        """Lines 118-128: ETag check returns 200 → re-fetch content from content_url."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._cache.put("file.json", b"old_content", "etag-old", "Mon")
+
+            check_resp = self._mock_resp(200, headers={"ETag": "etag-new", "Last-Modified": "Tue"})
+            content_resp = self._mock_resp(200, content=b"new_content")
+
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = [check_resp, content_resp]
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                result = storage.ler_blob("file.json")
+            assert result == b"new_content"
+
+    def test_ler_blob_cached_offline_exception_uses_stale(self):
+        """Lines 131-134: exception during ETag check while offline → returns stale cache."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._offline = True
+            storage._cache.put("file.json", b"stale_data", "etag-1", "Mon")
+
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = OSError("connection refused")
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                result = storage.ler_blob("file.json")
+            assert result == b"stale_data"
+
+    def test_ler_blob_direct_offline_stale_returns_content(self):
+        """Lines 140-143: offline mode + expired cache → _ler_blob_direct returns stale."""
+        import datetime
+
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._offline = True
+            storage._cache.put("file.json", b"stale_content", "etag-1", "Mon")
+            # Force TTL expiry so _ler_blob_cached returns None
+            storage._cache._ttl = datetime.timedelta(seconds=0)
+
+            mock_httpx = MagicMock()
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                result = storage.ler_blob("file.json")
+            assert result == b"stale_content"
+
+    def test_ler_blob_direct_offline_no_cache_raises(self):
+        """Line 144: offline mode, no stale cache → FileNotFoundError."""
+        storage = _make_storage_no_cache()
+        storage._offline = True
+        mock_httpx = MagicMock()
+        with pytest.raises(FileNotFoundError, match="Modo offline"):
+            storage._ler_blob_direct("missing.json", mock_httpx)
+
+    def test_ler_blob_direct_http_exception_wraps(self):
+        """Lines 151-152: network exception → FileNotFoundError with original cause."""
+        storage = _make_storage_no_cache()
+        mock_httpx = MagicMock()
+        mock_httpx.get.side_effect = OSError("connection timeout")
+        with pytest.raises(FileNotFoundError, match="Erro ao acessar SharePoint"):
+            storage._ler_blob_direct("file.json", mock_httpx)
+
+
+class TestSharePointGravarBlobEdgeCases:
+    def test_gravar_blob_without_cache(self):
+        """Line 181→exit: gravar_blob without cache_dir skips cache invalidation."""
+        storage = _make_storage_no_cache()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.raise_for_status = MagicMock()
+        mock_httpx = MagicMock()
+        mock_httpx.put.return_value = mock_resp
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            storage.gravar_blob("file.json", b"content")
+        mock_httpx.put.assert_called_once()
+
+    def test_gravar_large_file_uses_upload_session(self):
+        """Lines 179, 200-222: content >= 4 MB triggers _gravar_upload_session."""
+        storage = _make_storage_no_cache()
+
+        post_resp = MagicMock()
+        post_resp.raise_for_status = MagicMock()
+        post_resp.json.return_value = {"uploadUrl": "https://upload.graph.microsoft.com/abc"}
+
+        put_resp = MagicMock()
+        put_resp.raise_for_status = MagicMock()
+
+        mock_httpx = MagicMock()
+        mock_httpx.post.return_value = post_resp
+        mock_httpx.put.return_value = put_resp
+
+        large_content = b"x" * (5 * 1024 * 1024)  # 5 MB > 4 MB threshold
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            storage.gravar_blob("large.bin", large_content)
+
+        mock_httpx.post.assert_called_once()
+        assert mock_httpx.put.called
+
+
+class TestSharePointListarBlobsEdgeCases:
+    def test_listar_blobs_offline_exception_returns_empty(self):
+        """Lines 238-241: offline mode + exception → returns empty list."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._offline = True
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = OSError("network error")
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                result = storage.listar_blobs("config")
+            assert result == []
+
+    def test_listar_blobs_not_offline_exception_raises(self):
+        """Line 242: NOT offline + exception → raises FileNotFoundError."""
+        storage = _make_storage_no_cache()
+        mock_httpx = MagicMock()
+        mock_httpx.get.side_effect = OSError("network error")
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            with pytest.raises(FileNotFoundError):
+                storage.listar_blobs("config")
+
+    def test_listar_blobs_404_returns_empty(self):
+        """Line 245: GET returns 404 → returns empty list."""
+        storage = _make_storage_no_cache()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 404
+        mock_httpx = MagicMock()
+        mock_httpx.get.return_value = mock_resp
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.listar_blobs("missing")
+        assert result == []
+
+    def test_listar_blobs_with_subfolder_recursion(self):
+        """Lines 253-254: folder item triggers recursive listar_blobs call."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+
+            parent_resp = MagicMock()
+            parent_resp.status_code = 200
+            parent_resp.raise_for_status = MagicMock()
+            parent_resp.json.return_value = {
+                "value": [
+                    {"name": "subdir", "folder": {}},
+                    {"name": "root_file.json", "file": {}},
+                ]
+            }
+
+            sub_resp = MagicMock()
+            sub_resp.status_code = 200
+            sub_resp.raise_for_status = MagicMock()
+            sub_resp.json.return_value = {"value": [{"name": "inner.json", "file": {}}]}
+
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = [parent_resp, sub_resp]
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                blobs = storage.listar_blobs("root")
+
+            assert len(blobs) == 2
+            assert any("root_file.json" in b for b in blobs)
+            assert any("inner.json" in b for b in blobs)
+
+
+class TestSharePointBlobExisteEdgeCases:
+    def test_blob_existe_exception_returns_false(self):
+        """Lines 268-269: exception during GET → returns False."""
+        storage = _make_storage_no_cache()
+        mock_httpx = MagicMock()
+        mock_httpx.get.side_effect = OSError("network failure")
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.blob_existe("file.json")
+        assert result is False
+
+
+class TestSharePointGerarUrlTemporaria:
+    def test_gerar_url_success(self):
+        """Lines 310-321: createLink 200 → returns webUrl."""
+        storage = _make_storage_no_cache()
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"link": {"webUrl": "https://share.example.com/abc"}}
+        mock_httpx = MagicMock()
+        mock_httpx.post.return_value = post_resp
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            url = storage.gerar_url_temporaria("doc.pdf")
+        assert url == "https://share.example.com/abc"
+
+    def test_gerar_url_201(self):
+        """Lines 320-321: createLink 201 also returns webUrl."""
+        storage = _make_storage_no_cache()
+        post_resp = MagicMock()
+        post_resp.status_code = 201
+        post_resp.json.return_value = {"link": {"webUrl": "https://share.example.com/xyz"}}
+        mock_httpx = MagicMock()
+        mock_httpx.post.return_value = post_resp
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            url = storage.gerar_url_temporaria("doc.pdf")
+        assert url == "https://share.example.com/xyz"
+
+    def test_gerar_url_exception_returns_none(self):
+        """Lines 322-323: exception during createLink → returns None."""
+        storage = _make_storage_no_cache()
+        mock_httpx = MagicMock()
+        mock_httpx.post.side_effect = OSError("forbidden")
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            url = storage.gerar_url_temporaria("doc.pdf")
+        assert url is None
+
+    def test_gerar_url_non_2xx_returns_none(self):
+        """Line 324: createLink returns 403 → returns None."""
+        storage = _make_storage_no_cache()
+        post_resp = MagicMock()
+        post_resp.status_code = 403
+        mock_httpx = MagicMock()
+        mock_httpx.post.return_value = post_resp
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            url = storage.gerar_url_temporaria("doc.pdf")
+        assert url is None
+
+
+class TestSharePointHealthCheckEdgeCases:
+    def test_health_check_non_200_returns_error_code(self):
+        """Line 381: GET returns non-200 → error dict with status code."""
+        storage = _make_storage_no_cache()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 503
+        mock_httpx = MagicMock()
+        mock_httpx.get.return_value = mock_resp
+        with patch.dict("sys.modules", {"httpx": mock_httpx}):
+            result = storage.health_check()
+        assert result["status"] == "error"
+        assert result["code"] == 503
+        assert result["backend"] == "sharepoint"

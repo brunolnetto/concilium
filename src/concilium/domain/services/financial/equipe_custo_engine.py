@@ -39,9 +39,9 @@ class CustoEquipeDecomposicao:
     idle_mo: float  # MO integral (CLT não permite taxa reduzida)
     idle_eq: float  # EQ à taxa de locação reduzida ρ
 
-    # Mob / demob
-    mob: float  # Custo de entrada no pool/projeto (evento)
-    demob: float  # Custo de saída (early dismissal ou fim normal)
+    # Mob / demob — custos indiretos (BDI/DI), não custo produtivo (ADR-125)
+    mob: float  # Custo de mobilização (evento de entrada no pool/projeto)
+    demob: float  # Custo de desmobilização (early dismissal ou fim normal)
 
     # Janelas de mob (ADR-106 F5 — default=0 até catálogo ter leadtime_mob_semanas)
     mob_window: float = 0.0  # (c_mo + c_eq_locacao) × leadtime_mob_semanas
@@ -50,7 +50,9 @@ class CustoEquipeDecomposicao:
     # Semanas off (custo zero — antes do mob ou após demob)
     semanas_off: int = 0
 
-    # Total (IC-3: soma de todos os componentes acima)
+    # Custo contratual completo = custo_pool + mob + demob + windows (IC-3).
+    # Para precificação operacional use custo_pool; para custo de produção use custo_produtivo.
+    # mob/demob são custos indiretos (BDI/DI) — ver ADR-125.
     total: float = field(default=0.0)
 
     def __post_init__(self) -> None:
@@ -68,6 +70,31 @@ class CustoEquipeDecomposicao:
         )
         if self.total == 0.0 and computed > 0:
             self.total = round(computed, 2)
+
+    @property
+    def custo_produtivo(self) -> float:
+        """C_prod_i — custo das semanas ativas (contrato lockado do pool para a atividade).
+
+        Exclui ociosidade (idle) e mob/demob. Base de cálculo de γ_i (ADR-125).
+        """
+        return round(
+            self.ativo_mo + self.ativo_eq + self.ativo_comb + self.ativo_mat,
+            2,
+        )
+
+    @property
+    def custo_pool(self) -> float:
+        """C_pool_i — custo direto agregado do contrato, do início ao fim da cadeia.
+
+        Inclui ociosidade (κ aplica-se ao equipamento em standby), exclui mob/demob.
+        Custo direto usado para precificação operacional: p_i^o = C_pool_i / Q_i (ADR-125).
+
+        total = custo_pool + mob + demob + mob_window + demob_window
+        """
+        return round(
+            self.ativo_mo + self.ativo_eq + self.ativo_comb + self.ativo_mat + self.idle_mo + self.idle_eq,
+            2,
+        )
 
 
 def _fill_custo_inst_sem_pool(equipes: list) -> None:

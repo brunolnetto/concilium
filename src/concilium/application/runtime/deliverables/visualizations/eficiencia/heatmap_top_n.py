@@ -24,8 +24,9 @@ def plot_heatmap_top_n(
 ) -> Any:
     """Heatmap de eficiência restrito ao Top-N atividades por perda.
 
-    `fator` pode ser "E" (total), "S" (alocação), "P_r" (praticabilidade)
-    ou "W" (gestão). Título inclui aviso explícito de restrição.
+    `fator` pode ser "E" (total), "S" (alocação), "W" (gestão),
+    "P_r" (praticabilidade — alias legado para Eta_clima) ou "Eta_plan" / "Eta_clima".
+    Título inclui aviso explícito de restrição.
     Retorna figura matplotlib ou None.
     """
     try:
@@ -39,8 +40,17 @@ def plot_heatmap_top_n(
         return None
 
     top_ids = [p["item_id"] for p in pareto]
-    field_map = {"E": campo.E, "S": campo.S, "P_r": campo.P_r, "W": campo.W}
-    field = field_map.get(fator, campo.E)
+    field_map = {
+        "Eta_plan": campo.Eta_plan,
+        "Eta_clima": campo.Eta_clima,
+        "Delta": campo.Delta,
+        # controle (None no planejamento — fallback para Eta_plan)
+        "E": campo.E or campo.Eta_plan,
+        "S": campo.S or campo.Eta_plan,
+        "W": campo.W or campo.Eta_plan,
+        "P_r": campo.Eta_clima,  # alias legado — praticabilidade ≈ eficiência climática
+    }
+    field = field_map.get(fator, campo.Eta_plan)
 
     # Semanas onde ao menos uma atividade Top-N está ativa
     semanas_ativas: list[str] = []

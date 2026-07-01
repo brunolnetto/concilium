@@ -854,3 +854,190 @@ class TestObservabilityCLI:
         result = runner.invoke(observability_app, ["status"])
         assert result.exit_code == 0
         assert "logs" in result.output
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Missing branch coverage
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestReadNdjsonInvalidLine:
+    """Line 65-66: json.JSONDecodeError em linha inválida é ignorada com warning."""
+
+    def test_invalid_line_skipped_returns_valid_records(self, storage, caplog):
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
+        worker = ObservabilityWorker(storage)
+        # Write an NDJSON blob with one valid + one invalid line
+        path = "bronze/logs/2026-06-30/test.ndjson"
+        content = '{"event_id": "e1", "msg": "ok"}\nnot-valid-json\n'
+        storage.gravar_blob(path, content.encode())
+
+        with caplog.at_level(logging.WARNING):
+            records = worker._read_ndjson(path)
+
+        assert len(records) == 1
+        assert records[0]["event_id"] == "e1"
+        assert any("inválida" in r.message for r in caplog.records)
+
+
+class TestReadSilverExceptionSwallowed:
+    """Lines 114-115: exceção durante ler_blob é silenciada em read_silver."""
+
+    def test_exception_in_ler_blob_returns_partial(self, storage):
+        from unittest.mock import patch
+
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
+        worker = ObservabilityWorker(storage)
+        # Save one valid blob and simulate failure on a second
+        path1 = "silver/logs/2026-06-30/records.ndjson"
+        storage.gravar_blob(path1, b'{"event_id":"e1"}\n')
+
+        original_listar = storage.listar_blobs
+        original_ler = storage.ler_blob
+
+        def patched_ler(path):
+            if "records.ndjson" in path and "broken" in path:
+                raise OSError("network error")
+            return original_ler(path)
+
+        def patched_listar(prefix):
+            if "silver/logs" in prefix:
+                return [path1, "silver/logs/2026-06-30/broken.ndjson"]
+            return original_listar(prefix)
+
+        with patch.object(storage, "listar_blobs", patched_listar):
+            with patch.object(storage, "ler_blob", patched_ler):
+                records = worker.read_silver("logs")
+
+        # Partial results from the valid blob
+        assert any(r.get("event_id") == "e1" for r in records)
+
+
+class TestRunSinceFilter:
+    """Line 147: elif since: filtra blobs pelo fragmento de data."""
+
+    def test_since_filters_blobs_by_date_fragment(self, storage):
+        from concilium.infrastructure.observability.bronze_writer import BronzeWriter
+        from concilium.infrastructure.observability.pipeline import ObservabilityWorker
+
+        # Write blobs on two different dates
+        writer = BronzeWriter(storage, signal_type="logs")
+        writer.write_batch([{"event_id": "old", "ts": "2026-06-01T00:00:00Z"}], date="2026-06-01")
+        writer.write_batch([{"event_id": "new", "ts": "2026-06-30T00:00:00Z"}], date="2026-06-30")
+
+        worker = ObservabilityWorker(storage)
+        # since="2026-06-30" should only pick up the newer blob
+        result = worker.run(signal_type="logs", since="2026-06-30")
+        assert result["blobs_processed"] == 1
+        assert result["records_processed"] == 1
+
+
+class TestSchedulerLastRunValueError:
+    """Lines 215-216: _last_run retorna None quando last_processed_ts é inválido."""
+
+    def test_corrupt_ts_returns_none(self, storage):
+        from concilium.infrastructure.observability.checkpoint_store import Checkpoint, CheckpointStore
+        from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+        CheckpointStore(storage).save(
+            Checkpoint(
+                signal_type="__sched_silver__",
+                last_processed_path="",
+                last_processed_ts="not-a-datetime",
+                records_processed=0,
+            )
+        )
+        scheduler = ObservabilityScheduler(storage)
+        result = scheduler._last_run("__sched_silver__")
+        assert result is None
+
+
+class TestSchedulerRunCycleDefaultNow:
+    """Line 242: run_cycle usa datetime.now quando now não é passado."""
+
+    def test_run_cycle_without_now_succeeds(self, storage):
+        from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+        scheduler = ObservabilityScheduler(storage, silver_interval_min=0, gold_interval_min=9999)
+        result = scheduler.run_cycle()  # no now= argument
+        assert "silver_ran" in result
+
+
+class TestSchedulerSilverException:
+    """Lines 253-254: exceção em worker.run é capturada e logada."""
+
+    def test_silver_worker_exception_logged(self, storage, caplog):
+        from unittest.mock import patch
+
+        from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+        scheduler = ObservabilityScheduler(storage, silver_interval_min=0, gold_interval_min=9999)
+
+        import datetime
+
+        def boom(self, signal_type="logs", full_reload=False, since=None):
+            raise RuntimeError("silver exploded")
+
+        from concilium.infrastructure.observability import pipeline as pm
+
+        with patch.object(pm.ObservabilityWorker, "run", boom):
+            with caplog.at_level(logging.WARNING):
+                result = scheduler.run_cycle(now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC))
+
+        assert result["silver_ran"] is True  # mark ran even on partial failure
+        assert any("Silver" in r.message for r in caplog.records)
+
+
+class TestSchedulerGoldException:
+    """Lines 267-268: exceção no GoldAggregator é capturada e logada."""
+
+    def test_gold_aggregator_exception_logged(self, storage, caplog):
+        from unittest.mock import patch
+
+        from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+        scheduler = ObservabilityScheduler(storage, silver_interval_min=9999, gold_interval_min=0)
+
+        import datetime
+
+        with patch(
+            "concilium.infrastructure.observability.gold_aggregator.GoldAggregator.write_gold",
+            side_effect=RuntimeError("gold failed"),
+        ):
+            with caplog.at_level(logging.WARNING):
+                result = scheduler.run_cycle(now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC))
+
+        assert any("Gold" in r.message for r in caplog.records)
+
+
+class TestSchedulerCrossDomainException:
+    """Lines 284-286: exceção em CrossDomain é capturada; result['cross_domain_ran']=False."""
+
+    def test_cross_domain_failure_sets_flag_false(self, storage, caplog):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+        scheduler = ObservabilityScheduler(storage, silver_interval_min=9999, gold_interval_min=0)
+
+        import datetime
+
+        mock_cfg = MagicMock()
+        mock_cfg.projects_root = "/fake/projects"
+
+        # GoldAggregator succeeds; CrossDomain import fails
+        with patch("concilium.infrastructure.observability.gold_aggregator.GoldAggregator.write_gold"):
+            with patch("concilium.infrastructure.settings.get_storage", return_value=mock_cfg):
+                with patch(
+                    "concilium.infrastructure.observability.cross_domain.default_canonical_provider",
+                    side_effect=RuntimeError("cross domain boom"),
+                ):
+                    with caplog.at_level(logging.WARNING):
+                        result = scheduler.run_cycle(
+                            now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC)
+                        )
+
+        assert result.get("cross_domain_ran") is False
+        assert any("CrossDomain" in r.message for r in caplog.records)

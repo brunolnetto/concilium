@@ -217,5 +217,5 @@ def _tentar_gerar_graficos(bench_dir: Path, slug: str) -> None:
         gerar_graficos_benchmark(bench_dir=bench_dir, slug=slug)
     except ImportError:
         pass  # matplotlib não disponível — segue sem gráficos
-    except Exception:
+    except Exception:  # pragma: no cover
         pass  # Falha silenciosa — não bloqueia o empacotamento

@@ -188,17 +188,40 @@ class TestPermissionGuard:
         perms = get_permissions(["operator"])
         assert PROJECT_READ in perms
 
-    def test_get_permissions_admin_has_all(self):
+    def test_get_permissions_admin_it_focused(self):
+        # admin (TI) tem permissões de infraestrutura e catálogo — não herda de engineer.
         from concilium.infrastructure.auth.permission_guard import (
             AUTH_MANAGE,
+            CATALOG_MERGE,
+            CATALOG_READ,
+            CATALOG_VALIDATE,
+            FINANCIALS_READ,
+            HEALTH_READ,
             PROJECT_APPROVE,
             PROJECT_READ,
             PROJECT_RUN,
+            SYSTEM_READ,
             get_permissions,
         )
 
         perms = get_permissions(["admin"])
-        assert all(p in perms for p in [PROJECT_READ, PROJECT_RUN, PROJECT_APPROVE, AUTH_MANAGE])
+        # admin = engineer + auth:manage + system:read + catalog:merge
+        assert all(
+            p in perms
+            for p in [
+                AUTH_MANAGE,
+                SYSTEM_READ,
+                CATALOG_MERGE,
+                CATALOG_READ,
+                CATALOG_VALIDATE,
+                FINANCIALS_READ,
+                HEALTH_READ,
+            ]
+        )
+        # admin herda todas as permissões de engineer/operator também
+        assert PROJECT_READ in perms
+        assert PROJECT_RUN in perms
+        assert PROJECT_APPROVE in perms
 
     def test_get_permissions_unknown_role(self):
         from concilium.infrastructure.auth.permission_guard import get_permissions

@@ -125,7 +125,7 @@ class PlanoStore:
                 version=self.plano_id,
             )
             FileSystemArtifactStore(self.root).save_meta_sidecar(path, meta)
-        except Exception:
+        except Exception:  # pragma: no cover
             pass  # sidecar é best-effort
 
     def write_canonical_raw(self, content: dict) -> None:

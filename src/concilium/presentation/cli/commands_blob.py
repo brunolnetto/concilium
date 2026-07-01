@@ -1,12 +1,13 @@
 """CLI para operações de blob storage — migração entre backends.
 
 Comandos:
-    concilium blob migrate   — copia blobs de source para target
-    concilium blob status    — lista blobs e estatísticas do backend atual
+    concilium ops blob migrate   — copia blobs de source para target
+    concilium ops blob status    — lista blobs e estatísticas do backend atual
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -18,50 +19,90 @@ blob_app = typer.Typer(
     no_args_is_help=True,
 )
 
-
-def _make_source_storage():
-    """Instancia storage de origem (lê env vars de source)."""
-    from concilium.infrastructure.storage.store_factory import build_blob_storage
-
-    return build_blob_storage()
+_BACKEND_HELP = "Backend: filesystem | azure_blob | sharepoint | s3 | gdrive. Padrão: CONCILIUM__STORE_BACKEND."
 
 
-def _make_target_storage():
-    """Instancia storage de destino (lê env vars de target).
+def _make_storage(backend: str, root: str = "") -> "BlobStoragePort":  # type: ignore[name-defined]  # noqa: F821
+    """Instancia um BlobStoragePort a partir do tipo de backend explícito.
 
-    Em produção, trocar as env vars antes de chamar este comando:
-        CONCILIUM__STORE_BACKEND=azure_blob
-        CONCILIUM__AZURE_ACCOUNT=...
-        CONCILIUM__AZURE_CONTAINER=...
+    Se *backend* for vazio, cai no comportamento padrão (CONCILIUM__STORE_BACKEND).
+    Credenciais são sempre lidas das env vars padrão do lado correspondente
+    (CONCILIUM__SP_*, CONCILIUM__AZURE_*, CONCILIUM__S3_* …).
     """
-    from concilium.infrastructure.storage.store_factory import build_blob_storage
+    from concilium.infrastructure.storage.store_factory import _BACKEND_ALIASES, build_blob_storage
 
-    return build_blob_storage()
+    if not backend:
+        return build_blob_storage(root_override=Path(root) if root else None)
+
+    canonical = _BACKEND_ALIASES.get(backend.strip().lower(), backend.strip().lower())
+
+    if canonical == "filesystem":
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+        return LocalBlobStorage(root_dir=Path(root) if root else Path("."))
+    if canonical == "sharepoint":
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
+
+        return SharePointBlobStorage.from_env()
+    if canonical in ("azure", "azure_blob"):
+        from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
+
+        return AzureBlobStorage.from_env()
+    if canonical == "s3":
+        from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
+
+        return S3BlobStorage.from_env()
+    if canonical == "gdrive":
+        from concilium.infrastructure.adapters.blob_storage.gdrive import GoogleDriveBlobStorage
+
+        return GoogleDriveBlobStorage.from_env()
+    raise typer.BadParameter(
+        f"Backend desconhecido: '{backend}'. Valores válidos: filesystem, azure_blob, sharepoint, s3, gdrive.",
+        param_hint="--source-backend / --target-backend",
+    )
 
 
 @blob_app.command("migrate")
 def migrate(
+    source_backend: Annotated[str, typer.Option("--source-backend", "-s", help=_BACKEND_HELP)] = "",
+    source_root: Annotated[str, typer.Option("--source-root", help="Diretório raiz (apenas backend filesystem).")] = "",
+    target_backend: Annotated[str, typer.Option("--target-backend", "-t", help=_BACKEND_HELP)] = "",
+    target_root: Annotated[str, typer.Option("--target-root", help="Diretório raiz (apenas backend filesystem).")] = "",
     prefix: Annotated[str, typer.Option(help="Prefixo de blobs a migrar. Vazio = todos.")] = "",
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Lista blobs sem copiar.")] = False,
     no_overwrite: Annotated[bool, typer.Option("--no-overwrite", help="Pula blobs já existentes no target.")] = False,
     log_interval: Annotated[int, typer.Option(help="Log de progresso a cada N blobs.")] = 50,
+    workers: Annotated[int, typer.Option("--workers", "-w", help="Threads paralelas de upload (default: 1).")] = 1,
 ) -> None:
-    """Migra blobs do storage de origem para o storage de destino.
+    """Migra blobs entre dois backends de storage.
 
-    Usa as variáveis de ambiente CONCILIUM__STORE_BACKEND_SOURCE e
-    CONCILIUM__STORE_BACKEND_TARGET (ou o backend padrão para ambos).
+    Cada lado (source/target) é configurado independentemente via --source-backend
+    e --target-backend. Credenciais vêm das variáveis de ambiente locais do
+    respectivo backend — o comando pode ser executado de qualquer máquina, fora
+    do container de hospedagem.
 
-    Exemplo:
-        # Migrar projetos/ de filesystem para Azure Blob:
-        CONCILIUM__STORE_BACKEND=azure_blob \\
-        CONCILIUM__AZURE_ACCOUNT=minha-conta \\
-        CONCILIUM__AZURE_CONTAINER=prod \\
-        concilium blob migrate --prefix projetos/
+    Exemplos:
+
+        # Filesystem local → SharePoint (credenciais SP setadas localmente):
+        concilium ops blob migrate \\
+            --source-backend filesystem --source-root ./backup \\
+            --target-backend sharepoint
+
+        # SharePoint → Azure Blob:
+        concilium ops blob migrate \\
+            --source-backend sharepoint \\
+            --target-backend azure_blob
+
+        # Dry-run de um prefixo específico:
+        concilium ops blob migrate \\
+            --source-backend filesystem --source-root ./data \\
+            --target-backend sharepoint \\
+            --prefix projetos/ --dry-run
     """
     from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
 
-    source = _make_source_storage()
-    target = _make_target_storage()
+    source = _make_storage(source_backend, source_root)
+    target = _make_storage(target_backend, target_root)
 
     if dry_run:
         rprint("[bold yellow]▶ Modo dry-run — nenhum blob será copiado[/bold yellow]")
@@ -74,7 +115,7 @@ def migrate(
         if n % 10 == 0 or n == total:
             rprint(f"  [dim]{n}/{total}[/dim] {path}")
 
-    result = BlobMigrator(log_interval=log_interval).migrate(
+    result = BlobMigrator(log_interval=log_interval, workers=workers).migrate(
         source=source,
         target=target,
         prefix=prefix,
@@ -99,10 +140,12 @@ def migrate(
 
 @blob_app.command("status")
 def status(
+    backend: Annotated[str, typer.Option("--backend", "-b", help=_BACKEND_HELP)] = "",
+    root: Annotated[str, typer.Option("--root", help="Diretório raiz (apenas backend filesystem).")] = "",
     prefix: Annotated[str, typer.Option(help="Prefixo a listar. Vazio = todos.")] = "",
 ) -> None:
-    """Lista blobs e estatísticas do backend configurado."""
-    storage = _make_source_storage()
+    """Lista blobs e estatísticas de um backend de storage."""
+    storage = _make_storage(backend, root)
     blobs = storage.listar_blobs(prefix)
     rprint(f"[bold]Backend:[/bold] {type(storage).__name__}")
     rprint(f"[bold]Prefix:[/bold] '{prefix or '*'}'")

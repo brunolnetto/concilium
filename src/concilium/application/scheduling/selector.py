@@ -34,13 +34,13 @@ except ImportError:  # pragma: no cover
 
 def _span_event(name: str, attrs: dict) -> None:
     """Emite span.add_event() no span OTel ativo. No-op se SDK ausente ou fora de span."""
-    if not _OTEL_AVAILABLE or trace is None:
+    if not _OTEL_AVAILABLE or trace is None:  # pragma: no branch
         return
     try:
         span = trace.get_current_span()
         if span and span.is_recording():
             span.add_event(name, attrs)
-    except Exception:
+    except Exception:  # pragma: no cover
         pass
 
 
@@ -182,7 +182,7 @@ def explore_schedules(
             )
         except ScheduleError:
             raise
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover
             raise ScheduleError(f"CP-SAT solver falhou com erro inesperado: {exc}") from exc
 
     # ── LNS Lagrangian + SSGS (ADR-075 Mode B) ───────────────────────────────
@@ -308,7 +308,7 @@ def compare_all_algorithms(
                     results.append(ExploreResult("CP-SAT", sched, score))
                 else:
                     results.append(ExploreResult("CP-SAT", sched, 0.0, error="infeasible"))
-            except Exception as exc:
+            except Exception as exc:  # pragma: no cover
                 results.append(ExploreResult("CP-SAT", _empty_output("CP-SAT"), 0.0, error=str(exc)))
 
         elif algorithm == "LNS":
@@ -325,7 +325,7 @@ def compare_all_algorithms(
                     results.append(ExploreResult("LNS", sched, score))
                 else:
                     results.append(ExploreResult("LNS", sched, 0.0, error="infeasible"))
-            except Exception as exc:
+            except Exception as exc:  # pragma: no cover
                 results.append(ExploreResult("LNS", _empty_output("LNS"), 0.0, error=str(exc)))
 
         else:

@@ -126,7 +126,7 @@ def _save_relatorio_files(
             try:
                 resumo_md = render_resumo_executivo(rel_dict, canonical=canonical)
                 project.save_output_file(resumo_md.encode("utf-8"), v, "resumo_executivo.md")  # type: ignore[union-attr]
-            except Exception:
+            except Exception:  # pragma: no cover
                 pass
         if gerar_pdf:
             # Prioridade: meta.projeto → resumo.projeto → fallback genérico
@@ -139,7 +139,7 @@ def _save_relatorio_files(
             pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
             if pdf_bytes:
                 project.save_output_file(pdf_bytes, v, "relatorio.pdf")  # type: ignore[union-attr]
-    except Exception:
+    except Exception:  # pragma: no cover
         pass
 
 

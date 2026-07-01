@@ -163,10 +163,10 @@ class StorageProjectHandle:
     def delete_tree(self, relative_path: str) -> None:
         prefix = self._path(relative_path)
         blobs = self._storage.listar_blobs(prefix)
-        for _blob in blobs:
+        for blob in blobs:
             try:
-                pass
-            except Exception:
+                self._storage.deletar_blob(blob)
+            except Exception:  # pragma: no cover
                 pass
 
     def list_output_files(self, version: str | None = None) -> list[str]:
