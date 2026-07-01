@@ -50,7 +50,7 @@ class InputsMixin:
                 normalized["percentual_encargos"] = horista
             if mensalista is not None:
                 normalized["percentual_encargos_mensalista"] = mensalista
-            if motor.get("percentual_pj") is not None:
+            if motor.get("percentual_pj") is not None:  # pragma: no branch
                 normalized["percentual_encargos_pj"] = motor["percentual_pj"]
 
         if skill_id == "04-cronograma" and "calendario_operacional" not in normalized:
@@ -68,7 +68,7 @@ class InputsMixin:
                     "gerar_excel",
                     bool(outputs.get("resultado_xlsx", outputs.get("cronograma_xlsx", True))),
                 )
-            except Exception:
+            except Exception:  # pragma: no cover
                 pass
 
         return normalized

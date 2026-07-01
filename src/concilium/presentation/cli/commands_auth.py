@@ -80,7 +80,6 @@ def add_user(
 
     if email:
         # ADR-123 F2: auto-gerar device code e enviar email de boas-vindas
-        from concilium.infrastructure.settings import get_storage
 
         device_id = f"{client_id}-default"
         device_record = store.create_device_code(

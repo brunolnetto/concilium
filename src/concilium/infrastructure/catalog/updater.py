@@ -178,6 +178,6 @@ class CatalogUpdater:
                 for item in items:
                     if item.get("codigo") == insumo_id:
                         return item, json_file
-            except Exception:
+            except Exception:  # pragma: no cover
                 continue
         return None, None

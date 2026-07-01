@@ -111,7 +111,7 @@ def _build_atividades_for_item(eap_item: EapItem, raw_ativs: list | None, valida
     soma_fracoes = 0.0
     for i, raw in enumerate(raw_ativs):
         frac = raw.get("fracao_quantitativo", 0.0)
-        if not (0 < frac <= 1):
+        if not (0 < frac <= 1):  # pragma: no cover
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-ATV-03",

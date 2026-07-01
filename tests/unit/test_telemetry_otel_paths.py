@@ -26,6 +26,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers de telemetry settings
 # ─────────────────────────────────────────────────────────────────────────────
@@ -796,3 +798,103 @@ class TestNoOpStubs:
 
         instrument = _NoOpInstrument()
         instrument.record(100, {"skill": "01"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# record_project_margin + _log_business_metric (lines 281–308)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestRecordProjectMargin:
+    """Lines 281-295: record_project_margin creates gauge and logs business metric."""
+
+    def _otel_available_ctx(self):
+        """Returns a context where _OTEL_AVAILABLE is True and instruments are reset."""
+        import concilium.infrastructure.telemetry as tel
+
+        return tel
+
+    def test_returns_early_when_otel_unavailable(self):
+        from unittest.mock import patch
+
+        import concilium.infrastructure.telemetry as tel
+
+        with patch.object(tel, "_OTEL_AVAILABLE", False):
+            # Should not raise and should not set gauge
+            tel.record_project_margin("proj-1", 0.25)
+
+    def test_creates_gauge_and_sets_value(self):
+        from unittest.mock import MagicMock, patch
+
+        import concilium.infrastructure.telemetry as tel
+
+        mock_gauge = MagicMock()
+        mock_meter = MagicMock()
+        mock_meter.create_gauge.return_value = mock_gauge
+
+        with patch.object(tel, "_OTEL_AVAILABLE", True):
+            with patch.object(tel, "_project_margin_gauge", None):
+                with patch("concilium.infrastructure.telemetry.get_meter", return_value=mock_meter):
+                    with patch("concilium.infrastructure.telemetry._log_business_metric"):
+                        tel.record_project_margin("proj-1", 0.25, pipeline_mode="oltp")
+                        # Restore after patching
+                        tel._project_margin_gauge = None
+
+        mock_meter.create_gauge.assert_called_once()
+        mock_gauge.set.assert_called_once()
+        args = mock_gauge.set.call_args[0]
+        assert args[0] == pytest.approx(25.0, rel=1e-3)
+
+    def test_reuses_existing_gauge(self):
+        from unittest.mock import MagicMock, patch
+
+        import concilium.infrastructure.telemetry as tel
+
+        existing_gauge = MagicMock()
+        with patch.object(tel, "_OTEL_AVAILABLE", True):
+            with patch.object(tel, "_project_margin_gauge", existing_gauge):
+                with patch("concilium.infrastructure.telemetry._log_business_metric"):
+                    tel.record_project_margin("proj-2", 0.10)
+
+        existing_gauge.set.assert_called_once()
+
+    def test_logs_custo_direto_when_provided(self):
+        from unittest.mock import MagicMock, patch
+
+        import concilium.infrastructure.telemetry as tel
+
+        existing_gauge = MagicMock()
+        with patch.object(tel, "_OTEL_AVAILABLE", True):
+            with patch.object(tel, "_project_margin_gauge", existing_gauge):
+                with patch("concilium.infrastructure.telemetry._log_business_metric") as mock_log:
+                    tel.record_project_margin("proj-3", 0.15, custo_direto=500000.0)
+
+        mock_log.assert_called_once_with("proj-3", "custo_direto", 500000.0, "unknown")
+
+    def test_silences_exception(self):
+        from unittest.mock import patch
+
+        import concilium.infrastructure.telemetry as tel
+
+        with patch.object(tel, "_OTEL_AVAILABLE", True):
+            with patch.object(tel, "_project_margin_gauge", None):
+                with patch("concilium.infrastructure.telemetry.get_meter", side_effect=RuntimeError("meter down")):
+                    # Must not raise
+                    tel.record_project_margin("proj-4", 0.30)
+                    tel._project_margin_gauge = None
+
+
+class TestLogBusinessMetric:
+    """Lines 298-308: _log_business_metric uses logging.getLogger and logs info."""
+
+    def test_logs_to_business_metrics_logger(self, caplog):
+        import logging
+
+        import concilium.infrastructure.telemetry as tel
+
+        with caplog.at_level(logging.INFO, logger="concilium.business_metrics"):
+            tel._log_business_metric("proj-5", "custo_direto", 123456.78, "olap")
+
+        assert any("business_metric" in r.message for r in caplog.records)
+        assert any("proj-5" in r.message for r in caplog.records)
+        assert any("custo_direto" in r.message for r in caplog.records)

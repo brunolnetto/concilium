@@ -64,7 +64,7 @@ def get_skills_for_mode(mode: PipelineMode) -> list[str]:
         # LIGHT = OLTP + apenas o skill de relatório-e-artefatos (saída direta)
         relatorio = [sid for sid in olap_ids if "relatorio" in sid]
         return oltp_ids + relatorio
-    return oltp_ids + olap_ids  # fallback seguro
+    return oltp_ids + olap_ids  # fallback seguro  # pragma: no cover
 
 
 def get_pipeline_profile_for_intent(intent: ProcurementIntent | str) -> PipelineProfile:

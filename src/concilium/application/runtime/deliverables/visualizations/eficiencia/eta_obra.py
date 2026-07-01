@@ -30,14 +30,15 @@ def plot_eta_obra(campo: CampoEficiencia, *, title: str = "Eficiência Global da
     semanas = campo.semanas
     valores = [eta_serie.get(s, float("nan")) for s in semanas]
 
-    # Banda: mín/máx de η por semana entre atividades
+    # Banda: mín/máx de η_plan por semana entre atividades
     minimos = []
     maximos = []
+    eta_field = campo.E or campo.Eta_plan  # E=None no planejamento
     for sem in semanas:
         vals = [
-            (campo.E.get(iid) or {}).get(sem)
+            (eta_field.get(iid) or {}).get(sem)
             for iid in campo.atividades
-            if (campo.E.get(iid) or {}).get(sem) is not None
+            if (eta_field.get(iid) or {}).get(sem) is not None
         ]
         vals = [v for v in vals if v is not None]
         minimos.append(min(vals) if vals else float("nan"))

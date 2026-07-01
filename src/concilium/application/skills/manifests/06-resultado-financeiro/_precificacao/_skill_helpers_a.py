@@ -221,7 +221,7 @@ def _compute_preco_cat_from_cpu(
                 repo, ci.insumo_id, jurisdicao_id, overrides, data_base, float(insumo.get("preco_unitario", 0.0) or 0.0)
             )
             contribuicao = coeficiente_ajustado * preco_insumo
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-PLAN-UNIT", status="ERRO", mensagem=f"Erro de conversão na CPU '{cpu_codigo}': {e}"

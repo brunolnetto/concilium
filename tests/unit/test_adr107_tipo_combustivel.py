@@ -183,8 +183,9 @@ class TestCurvaABCBuilderD5:
     """D5: curva_abc_builder usa tipo_combustivel em vez de __DIESEL hardcoded."""
 
     def test_chave_usa_tipo_combustivel_explicito(self):
-        from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
         from types import SimpleNamespace
+
+        from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
 
         equip = _make_equip("EX-001", custo_combustivel_mensal=500.0, tipo_combustivel="eletrico")
         equipe = _make_equipe("ITEM-A", [equip])
@@ -199,8 +200,9 @@ class TestCurvaABCBuilderD5:
         assert "EX-001__DIESEL" not in ids
 
     def test_chave_infere_diesel_s10_quando_tipo_none(self):
-        from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
         from types import SimpleNamespace
+
+        from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
 
         equip = _make_equip("DIESEL-S10-EX", custo_combustivel_mensal=300.0, tipo_combustivel=None)
         equipe = _make_equipe("ITEM-B", [equip])
@@ -215,8 +217,9 @@ class TestCurvaABCBuilderD5:
         assert any("DIESEL_S10" in i or "DIESEL" in i for i in ids)
 
     def test_categoria_combustivel_nao_diesel(self):
-        from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
         from types import SimpleNamespace
+
+        from concilium.domain.services.analytics.curva_abc_builder import CurvaABCBuilder
 
         equip = _make_equip("EX-CNG", custo_combustivel_mensal=200.0, tipo_combustivel="cng")
         equipe = _make_equipe("ITEM-C", [equip])
@@ -235,7 +238,10 @@ class TestProjectionD5:
     """D5: projection.py emite combustivel_total + combustivel_por_tipo."""
 
     def test_breakdown_equipes_tem_combustivel_total(self):
-        from concilium.application.benchmarks.report.projection import _accumulate_equipes, _build_breakdown_direto_equipes
+        from concilium.application.benchmarks.report.projection import (
+            _accumulate_equipes,
+            _build_breakdown_direto_equipes,
+        )
 
         equip = _make_equip("DIESEL-S10-EX", custo_combustivel_mensal=1000.0, tipo_combustivel="diesel_s10")
         equipe = _make_equipe("ITEM-D", [equip], permanencia_meses=3.0)

@@ -240,3 +240,64 @@ class TestCatalogLoader:
         loader = CatalogLoader.from_config(config_root=config_root, project_root=tmp_path)
         assert loader.backend == CatalogBackend.LOCAL_JSON
         assert loader.ttl_minutes == 30
+
+
+# ─── Missing branch coverage ──────────────────────────────────────────────────
+
+
+class TestCatalogLoaderMissingBranches:
+    def test_read_snapshot_cache_corrupt_returns_none(self, tmp_path):
+        """Lines 62-63: corrupt cache file returns None."""
+        from concilium.infrastructure.catalog.catalog_loader import _read_cache
+
+        project_root = tmp_path
+        cache_dir = tmp_path / ".concilium" / "catalog_cache" / "test_cat"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "latest.json").write_text("NOT_VALID_JSON{{{", encoding="utf-8")
+        result = _read_cache(project_root, "test_cat")
+        assert result is None
+
+    def test_load_local_json_duckdb_exception_falls_back(self, tmp_path):
+        """Lines 169-179: DuckDB engine raises → falls back to JSON loader."""
+        from unittest.mock import patch
+
+        from concilium.infrastructure.catalog.catalog_loader import CatalogLoader
+
+        config_root = tmp_path
+        cat_dir = config_root / "catalogos" / "cat1"
+        _write_catalog(cat_dir, _minimal_cpus(1))
+
+        loader = CatalogLoader(config_root=config_root, project_root=tmp_path, ttl_minutes=0)
+
+        with patch("concilium.infrastructure.catalog.query_engine.CatalogQueryEngine") as MockDuck:
+            MockDuck.return_value.is_ready.side_effect = RuntimeError("duckdb broken")
+            snapshot, _ = loader.load("cat1")
+
+        assert snapshot is not None
+        assert len(snapshot.cpus) >= 1
+
+    def test_llj_load_cpus_single_file_path(self, tmp_path):
+        """Line 91->89: reads cpus.json when cpus/ dir does not exist."""
+        from concilium.infrastructure.catalog.catalog_loader import _llj_load_cpus
+
+        cat_dir = tmp_path
+        (cat_dir / "cpus.json").write_text(json.dumps({"cpus": _minimal_cpus(2)}), encoding="utf-8")
+        cpus = _llj_load_cpus(cat_dir)
+        assert len(cpus) == 2
+
+    def test_sharepoint_backend_raises_without_storage(self, tmp_path):
+        """Lines 406-407: SharePoint backend without storage raises ValueError."""
+        loader = CatalogLoader(
+            config_root=tmp_path,
+            backend=CatalogBackend.SHAREPOINT,
+        )
+        with pytest.raises(ValueError, match="sharepoint_storage"):
+            loader.load("any_catalog")
+
+    def test_unknown_backend_raises(self, tmp_path):
+        """Line 413-414: unknown backend raises ValueError."""
+        loader = CatalogLoader(config_root=tmp_path, backend=CatalogBackend.LOCAL_JSON)
+        # Force an unknown backend value by patching
+        loader.backend = "invalid_backend"  # type: ignore[assignment]
+        with pytest.raises((ValueError, AttributeError)):
+            loader.load("any")

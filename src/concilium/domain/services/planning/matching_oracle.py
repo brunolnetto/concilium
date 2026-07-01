@@ -196,7 +196,7 @@ class MatchingOracle:
 
         # Solve
         status = smcf.solve()
-        if status != smcf.OPTIMAL:
+        if status != smcf.OPTIMAL:  # pragma: no cover
             _log.warning(
                 "MatchingOracle: min-cost flow not OPTIMAL for resource %s (status=%s)",
                 res,

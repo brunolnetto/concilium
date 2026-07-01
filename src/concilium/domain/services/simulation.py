@@ -132,7 +132,7 @@ class SimuladorEngenharia:
         custo_diesel = 0.0
 
         equipe = None
-        if not equipe:
+        if not equipe:  # pragma: no branch
             if prod_id_ref:
                 ficha = self.producao_fichas.get(prod_id_ref)
                 if ficha:

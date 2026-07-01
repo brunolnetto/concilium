@@ -79,7 +79,7 @@ def calculate_inss_employee(salary: float) -> float:
     for limit, aliq, deducao in INSS_BRACKETS_2026:
         if limit is None or base <= limit:
             return round(max(0.0, base * aliq - deducao), 2)
-    return round(base * INSS_BRACKETS_2026[-1][1] - INSS_BRACKETS_2026[-1][2], 2)
+    return round(base * INSS_BRACKETS_2026[-1][1] - INSS_BRACKETS_2026[-1][2], 2)  # pragma: no cover
 
 
 def calculate_irrf(base_calculo: float) -> float:

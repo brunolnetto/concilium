@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -270,15 +268,13 @@ def _impl_catalog_cure_schema(
     apply: bool = typer.Option(True, "--apply/--dry-run", help="Aplica correções (padrão: --apply)"),
 ) -> None:
     """Executa curação estrita para remover/migrar campos legados do catálogo."""
-    script = Path("scripts") / "cure_catalog.py"
-    if not script.exists():
-        rprint(f"[red]Script não encontrado:[/red] {script}")
-        raise typer.Exit(2)
+    from concilium.application.catalog.cure_schema import run
 
-    cmd = [sys.executable, str(script), "--contexto", contexto_id]
-    if apply:
-        cmd.append("--apply")
-
-    result = subprocess.run(cmd, check=False)
-    if result.returncode != 0:
-        raise typer.Exit(result.returncode)
+    try:
+        run(contexto_id, apply)
+    except FileNotFoundError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    except RuntimeError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc

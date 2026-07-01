@@ -241,3 +241,106 @@ class TestParidadeComHelperExistente:
         assert novo.ativo_eq == pytest.approx(atual["ativo_eq"], abs=0.01)
         assert novo.idle_mo == pytest.approx(atual["idle_mo"], abs=0.01)
         assert novo.total == pytest.approx(atual["total"], abs=0.01)
+
+
+# ── ADR-125: hierarquia C_prod / C_pool / total ──────────────────────────────
+
+
+class TestCustoProdutivo:
+    """ADR-125 — C_prod ≤ C_pool ≤ total.
+
+    C_prod  = semanas ativas (base de γ_i)
+    C_pool  = ativo + ocioso, sem mob/demob (base de p_i^o = C_pool / Q)
+    total   = C_pool + mob + demob + windows (custo contratual completo)
+    mob/demob → custos indiretos (BDI/DI)
+    """
+
+    def test_custo_produtivo_somente_ativo(self):
+        """C_prod = semanas ativas — idle (κ) não é produção."""
+        _, Engine = _import()
+        result = Engine().calcular(
+            prod_weeks=10,
+            idle_weeks=3,
+            c_mo=1000,
+            c_eq=400,
+            c_comb=200,
+            c_mat=100,
+            c_idle_eq=80,
+        )
+        esperado = 10 * (1000 + 400 + 200 + 100)
+        assert result.custo_produtivo == pytest.approx(esperado, abs=0.01)
+
+    def test_custo_pool_inclui_idle(self):
+        """C_pool = C_prod + idle (CLT irredutível, κ aplicado ao equipamento)."""
+        _, Engine = _import()
+        result = Engine().calcular(
+            prod_weeks=10,
+            idle_weeks=3,
+            c_mo=1000,
+            c_eq=400,
+            c_comb=0,
+            c_mat=0,
+            c_idle_eq=80,
+        )
+        assert result.custo_pool == pytest.approx(
+            result.custo_produtivo + result.idle_mo + result.idle_eq,
+            abs=0.01,
+        )
+
+    def test_custo_pool_exclui_mob_demob(self):
+        """C_pool não inclui mob/demob (custos indiretos de canteiro)."""
+        _, Engine = _import()
+        result = Engine().calcular(
+            prod_weeks=10,
+            idle_weeks=0,
+            c_mo=1000,
+            c_eq=400,
+            c_comb=200,
+            c_mat=100,
+            c_idle_eq=80,
+            c_mob=2000,
+            c_demob=1500,
+        )
+        assert result.custo_pool == pytest.approx(result.custo_produtivo, abs=0.01)
+        assert result.total == pytest.approx(result.custo_pool + 2000 + 1500, abs=0.01)
+
+    def test_hierarquia_c_prod_le_c_pool_le_total(self):
+        """Invariante ADR-125: C_prod ≤ C_pool ≤ total."""
+        _, Engine = _import()
+        result = Engine().calcular(
+            prod_weeks=8,
+            idle_weeks=2,
+            c_mo=800,
+            c_eq=300,
+            c_comb=0,
+            c_mat=0,
+            c_idle_eq=60,
+            c_mob=3000,
+            c_demob=3000,
+        )
+        assert result.custo_produtivo <= result.custo_pool
+        assert result.custo_pool <= result.total
+
+    def test_custo_pool_exclui_mob_window(self):
+        """Janelas de mob/demob (leadtime/lag) também são indiretos — excluídas de C_pool."""
+        _, Engine = _import()
+        result = Engine().calcular(
+            prod_weeks=10,
+            idle_weeks=0,
+            c_mo=1000,
+            c_eq=400,
+            c_comb=0,
+            c_mat=0,
+            c_idle_eq=400,
+            c_mob=1000,
+            c_demob=1000,
+            leadtime_mob_semanas=2,
+            lag_demob_semanas=1,
+        )
+        assert result.mob_window > 0
+        assert result.demob_window > 0
+        assert result.custo_pool == pytest.approx(result.custo_produtivo, abs=0.01)
+        assert result.total == pytest.approx(
+            result.custo_pool + result.mob + result.demob + result.mob_window + result.demob_window,
+            abs=0.01,
+        )

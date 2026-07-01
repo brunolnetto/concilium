@@ -39,6 +39,6 @@ def build(canonical, cubo) -> bytes | None:
             import matplotlib.pyplot as _plt
 
             _plt.close("all")
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
         return None

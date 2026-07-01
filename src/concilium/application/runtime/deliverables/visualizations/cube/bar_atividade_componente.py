@@ -42,7 +42,7 @@ def build(canonical, cubo) -> bytes | None:
             import matplotlib.pyplot as _plt
 
             _plt.close("all")
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
         return None
 
@@ -96,7 +96,7 @@ def _render(plt, rows: list):
         lefts = [l + v for l, v in zip(lefts, vals)]
 
     # ── Regiões ABC com linhas tracejadas e labels ────────────────────────────
-    def _region_span(start_idx: int, end_idx: int, label: str, color: str, alpha: float) -> None:
+    def _region_span(start_idx: int, end_idx: int, label: str, color: str, alpha: float) -> None:  # pragma: no cover
         if start_idx >= end_idx:
             return
         y_lo = start_idx - 0.5

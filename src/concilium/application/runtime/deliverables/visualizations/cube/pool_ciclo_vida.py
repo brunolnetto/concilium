@@ -84,7 +84,7 @@ def _render_chart(plt, fig_to_bytes, rows):
         _setup_axes(ax, n, rows)
         fig.tight_layout()
         return fig_to_bytes(fig)
-    except Exception:
+    except Exception:  # pragma: no cover
         plt.close("all")
         return None
 

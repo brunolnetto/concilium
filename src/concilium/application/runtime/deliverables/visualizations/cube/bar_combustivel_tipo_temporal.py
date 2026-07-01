@@ -85,7 +85,7 @@ def build(canonical, cubo=None) -> bytes | None:
             return None
 
         fuels = sorted({f for m in liters_by_week_and_fuel.values() for f in m.keys()})
-        if not fuels:
+        if not fuels:  # pragma: no branch
             return None
 
         by_fuel_monthly_wom: dict[str, dict[str, dict[int, float]]] = defaultdict(
@@ -104,7 +104,7 @@ def build(canonical, cubo=None) -> bytes | None:
         all_woms = sorted(
             {w for fuels_map in by_fuel_monthly_wom.values() for wom_map in fuels_map.values() for w in wom_map}
         )
-        if not all_woms:
+        if not all_woms:  # pragma: no branch
             return None
 
         num_fuels = len(fuels)

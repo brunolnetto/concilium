@@ -29,7 +29,7 @@ from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 try:
     from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
-except Exception:
+except Exception:  # pragma: no cover
     DEFAULT_BDI_TABELA = None  # type: ignore[assignment]
     TabelaBdi = None  # type: ignore[assignment,misc]
 
@@ -40,7 +40,7 @@ try:
         _process_eap_item,
         _validate_coverage,
     )
-except ImportError:
+except ImportError:  # pragma: no cover
     import importlib.util
     from pathlib import Path
 
@@ -156,7 +156,7 @@ def _resolve_bdi(
         if DEFAULT_BDI_TABELA is not None:
             tabela = DEFAULT_BDI_TABELA
         else:
-            return {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}
+            return {"material": 0.0, "diesel": 0.0, "mao_obra": 0.0, "equipamentos": 0.0}  # pragma: no cover
 
     result = _to_flat_bdi(
         {

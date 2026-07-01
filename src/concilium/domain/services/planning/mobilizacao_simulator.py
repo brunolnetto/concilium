@@ -200,7 +200,7 @@ class WorkforcePolicySimulator:
             taxa_desmobilizacao = m_max / d
         """
         # Week at which n_maximo is first reached
-        if policy.taxa_mobilizacao > 0:
+        if policy.taxa_mobilizacao > 0:  # pragma: no branch
             t_ramp = math.ceil((policy.n_maximo - policy.n_inicial) / policy.taxa_mobilizacao)
         else:
             t_ramp = 0

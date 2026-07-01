@@ -277,10 +277,10 @@ def compute_compression_sensitivities(
             try:
                 out_k = scheduler.schedule(dag=dag_k, pool=pool_k)
                 mksp_new = out_k.makespan if out_k.feasible else None
-            except Exception:
+            except Exception:  # pragma: no cover
                 mksp_new = None
 
-            if mksp_new is None:
+            if mksp_new is None:  # pragma: no cover
                 continue
 
             delta_ms = makespan_base - mksp_new

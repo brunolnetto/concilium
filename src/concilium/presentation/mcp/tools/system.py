@@ -89,7 +89,10 @@ def register(server: FastMCP) -> None:
         # Status geral
         if not config_dir.exists() or storage_health.get("status") == "error":
             status_geral = "ERRO"
-        elif any(c.get("status") != "SAUDAVEL" for c in catalogos) or storage_health.get("status") not in ("ok", "SAUDAVEL"):
+        elif any(c.get("status") != "SAUDAVEL" for c in catalogos) or storage_health.get("status") not in (
+            "ok",
+            "SAUDAVEL",
+        ):
             status_geral = "DEGRADADO"
         else:
             status_geral = "SAUDAVEL"

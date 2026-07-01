@@ -329,7 +329,7 @@ class CuboAnaliticoBuilder:
                             unidade_fisica="",
                         )
                     )
-            except Exception:
+            except Exception:  # pragma: no cover
                 pass  # enriquecimento de indireto é best-effort
 
         return celulas

@@ -1,18 +1,19 @@
-"""NEP-036: Campo de Eficiência E ∈ ℝ^{I×T} — Formulação Matricial.
+"""ADR-124 / NEP-036: Campo de Eficiência — Fase de Planejamento.
 
-O campo de eficiência materializa a estrutura atividade × semana do modelo
-de produção, permitindo análise em múltiplos níveis (NEP-035, Seção 9–11):
+ADR-124 reformula a decomposição para separar planejamento de controle:
+
+  Planejamento: η_plan = η_clima · δ  (sempre disponíveis)
+  Controle:     η_total = η_s · η_plan · η_w  (S/W/E=None até haver execução real)
 
   Nível 1 (Global):   η_obra(t) = Σ_i Q[i,t] / Σ_i Q_max[i,t]
-  Nível 2 (Causal):   decomposição η_s / η_p / η_w + termo cruzado eps_cross
+  Nível 2 (Causal):   decomposição η_clima / δ ponderada por capacidade
   Nível 3 (Pareto):   perdas físicas ordenadas por atividade
-  Nível 4 (Fatorial): E[i,j], S[i,j], P_r[i,j], W[i,j] por atividade+semana
+  Nível 4 (Fatorial): Eta_clima[i,j] e Delta[i,j] por atividade+semana
 
-Propriedade log-linear (Seção 22):
-  log(E) = log(S) + log(P_r) + log(W)  (aditivo: base para ANOVA e regressão)
+Propriedade log-linear:
+  log(Eta_plan_ij) = log(Eta_clima_j) + log(Delta_j)
 
-Estrutura sparse: {item_id: {semana_iso: valor}} — não aloca a matriz densa
-quando atividades têm janelas disjuntas (typical para obras grandes).
+Estrutura sparse: {item_id: {semana_iso: valor}} — não aloca a matriz densa.
 """
 
 from __future__ import annotations
@@ -24,31 +25,44 @@ from typing import Any
 
 @dataclass
 class CampoEficiencia:
-    """Campo de eficiência E ∈ ℝ^{I×T} materializado do canônico.
+    """Campo de eficiência materializado do canônico — fase de planejamento.
+
+    Superfícies de planejamento (sempre disponíveis):
+      Eta_clima  — η_clima_j = fator_chuva (praticabilidade climática, estocástica)
+      Delta      — δ_j = fator_calendario  (coeficiente calendário, controlável)
+      Eta_plan   — η_plan = η_clima · δ    (eficiência agregada do planejamento)
+
+    Superfícies de controle (None no planejamento):
+      S  — η_s = n_j / n_max  (alocação; requer execução real)
+      W  — η_w residual de gestão (requer produção real vs. planejada)
+      E  — η_total = η_s · η_plan · η_w
 
     Todos os campos são dicts esparsos: {item_id: {semana_iso: float}}.
-    Semanas fora da janela de uma atividade simplesmente não têm entrada.
     """
 
-    E: dict[str, dict[str, float]] = field(default_factory=dict)  # η total = η_s·η_p·η_w
-    S: dict[str, dict[str, float]] = field(default_factory=dict)  # η_s (alocação)
-    P_r: dict[str, dict[str, float]] = field(default_factory=dict)  # η_p (praticabilidade)
-    W: dict[str, dict[str, float]] = field(default_factory=dict)  # η_w (gestão)
-    Q: dict[str, dict[str, float]] = field(default_factory=dict)  # produção realizada q_ij
-    Q_max: dict[str, dict[str, float]] = field(default_factory=dict)  # capacidade máxima q_max_ij
+    # ── Planejamento ────────────────────────────────────────────────────────────
+    Eta_clima: dict[str, dict[str, float]] = field(default_factory=dict)
+    Delta: dict[str, dict[str, float]] = field(default_factory=dict)
+    Eta_plan: dict[str, dict[str, float]] = field(default_factory=dict)
+    Q: dict[str, dict[str, float]] = field(default_factory=dict)
+    Q_max: dict[str, dict[str, float]] = field(default_factory=dict)
 
-    # metadados
-    atividades: list[str] = field(default_factory=list)  # I atividades
-    semanas: list[str] = field(default_factory=list)  # T semanas da obra (ordenadas)
+    # ── Controle — None no planejamento ─────────────────────────────────────────
+    S: dict[str, dict[str, float]] | None = None  # CONTROLE: η_s = n_j/n_max
+    W: dict[str, dict[str, float]] | None = None  # CONTROLE: gestão residual
+    E: dict[str, dict[str, float]] | None = None  # CONTROLE: η_total
+
+    # ── Metadados ──────────────────────────────────────────────────────────────
+    atividades: list[str] = field(default_factory=list)
+    semanas: list[str] = field(default_factory=list)
 
     # ── Nível 1: série temporal global ────────────────────────────────────────
 
     def eta_obra(self) -> dict[str, float]:
-        """η_obra(t) = Σ_i Q[i,t] / Σ_i Q_max[i,t] para cada semana t.
+        """η_obra(t) = Σ_i Q[i,t] / Σ_i Q_max[i,t] — série semanal.
 
-        Métrica executiva global (Nível 1 da hierarquia). Não confundir com a
-        média simples de eficiências: é a razão das somas, ponderada pela
-        capacidade de cada atividade.
+        Em planejamento: Q/Q_max = η_plan por construção.
+        Em controle: Q = produção realizada.
         """
         soma_q: dict[str, float] = {}
         soma_qmax: dict[str, float] = {}
@@ -57,54 +71,45 @@ class CampoEficiencia:
                 soma_q[sem] = soma_q.get(sem, 0.0) + q
             for sem, qm in (self.Q_max.get(item_id) or {}).items():
                 soma_qmax[sem] = soma_qmax.get(sem, 0.0) + qm
-        return {sem: soma_q.get(sem, 0.0) / soma_qmax[sem] for sem, qmax in soma_qmax.items() if qmax > 0}
+        return {sem: soma_q.get(sem, 0.0) / qmax for sem, qmax in soma_qmax.items() if qmax > 0}
 
     # ── Nível 2: decomposição causal global ───────────────────────────────────
 
     def decomposicao_causal(self) -> dict[str, float]:
-        """Contribuição ponderada de cada fator para η_global.
+        """Contribuição ponderada de η_clima e δ para η_plan global.
 
-        Retorna η_s_global, η_p_global, η_w_global e eps_cross (termo de
-        acoplamento). |eps_cross| > 0.05 indica que os fatores não são
-        separáveis no agregado — a decomposição é diagnóstica por semana,
-        não por média global (Seção 5 do modelo).
+        Ponderação por q_max_celula (capacidade), não por número de equipes.
         """
         q_max_list: list[float] = []
-        eta_s_list: list[float] = []
-        eta_p_list: list[float] = []
-        eta_w_list: list[float] = []
-        eta_list: list[float] = []
+        clima_list: list[float] = []
+        delta_list: list[float] = []
+        plan_list: list[float] = []
+
         for item_id in self.atividades:
-            for sem in self.E.get(item_id) or {}:
+            for sem in self.Eta_plan.get(item_id) or {}:
                 qm = (self.Q_max.get(item_id) or {}).get(sem, 0.0)
                 if qm <= 0:
                     continue
                 q_max_list.append(qm)
-                eta_s_list.append((self.S.get(item_id) or {}).get(sem, 1.0))
-                eta_p_list.append((self.P_r.get(item_id) or {}).get(sem, 1.0))
-                eta_w_list.append((self.W.get(item_id) or {}).get(sem, 1.0))
-                eta_list.append((self.E.get(item_id) or {}).get(sem, 1.0))
+                clima_list.append((self.Eta_clima.get(item_id) or {}).get(sem, 1.0))
+                delta_list.append((self.Delta.get(item_id) or {}).get(sem, 1.0))
+                plan_list.append((self.Eta_plan.get(item_id) or {}).get(sem, 1.0))
 
         if not q_max_list:
-            return {"eta_s_global": 1.0, "eta_p_global": 1.0, "eta_w_global": 1.0, "eta_global": 1.0, "eps_cross": 0.0}
+            return {"eta_clima_global": 1.0, "delta_global": 1.0, "eta_plan_global": 1.0}
 
         Q_total = sum(q_max_list)
         alpha = [qm / Q_total for qm in q_max_list]
-        eta_s_g = sum(a * e for a, e in zip(alpha, eta_s_list, strict=True))
-        eta_p_g = sum(a * e for a, e in zip(alpha, eta_p_list, strict=True))
-        eta_w_g = sum(a * e for a, e in zip(alpha, eta_w_list, strict=True))
-        eta_g = sum(a * e for a, e in zip(alpha, eta_list, strict=True))
-        eps_cross = eta_g - eta_s_g * eta_p_g * eta_w_g
+        eta_clima_g = sum(a * e for a, e in zip(alpha, clima_list, strict=True))
+        delta_g = sum(a * d for a, d in zip(alpha, delta_list, strict=True))
+        eta_plan_g = sum(a * e for a, e in zip(alpha, plan_list, strict=True))
         return {
-            "eta_s_global": round(eta_s_g, 4),
-            "eta_p_global": round(eta_p_g, 4),
-            "eta_w_global": round(eta_w_g, 4),
-            "eta_global": round(eta_g, 4),
-            "eps_cross": round(eps_cross, 4),
-            "acoplamento_material": abs(eps_cross) > 0.05,
+            "eta_clima_global": round(eta_clima_g, 4),
+            "delta_global": round(delta_g, 4),
+            "eta_plan_global": round(eta_plan_g, 4),
         }
 
-    # ── Nível 2b: perdas físicas e custo ─────────────────────────────────────
+    # ── Nível 2b: perdas físicas ──────────────────────────────────────────────
 
     def perda_fisica(self) -> dict[str, dict[str, float]]:
         """L[i,t] = Q_max[i,t] - Q[i,t] em unidades físicas (m³, t, km)."""
@@ -120,13 +125,9 @@ class CampoEficiencia:
     # ── Nível 3: Pareto de atividades ─────────────────────────────────────────
 
     def pareto_perdas(self, top_n: int = 10) -> list[dict[str, Any]]:
-        """Top-N atividades por perda física total Σ_t L[i,t] (decrescente).
-
-        Permite drill-down: "eap-1_7 perdeu 3.500 m³ na janela de execução".
-        O top_n evita o heatmap de 16.000 células (Seção 9 do modelo).
-        """
-        perdas_totais = []
+        """Top-N atividades por perda física total Σ_t L[i,t] (decrescente)."""
         pf = self.perda_fisica()
+        perdas_totais = []
         for item_id in self.atividades:
             total_perda = sum((pf.get(item_id) or {}).values())
             total_qmax = sum((self.Q_max.get(item_id) or {}).values())
@@ -148,10 +149,10 @@ class CampoEficiencia:
     # ── Log-linear: base para ANOVA e regressão ────────────────────────────────
 
     def log_linear(self) -> dict[str, dict[str, dict[str, float]]]:
-        """log(E), log(S), log(P_r), log(W) para decomposição aditiva.
+        """log(Eta_plan), log(Eta_clima), log(Delta) para decomposição aditiva.
 
-        Propriedade: log(E_ij) = log(S_ij) + log(P_r_ij) + log(W_ij)
-        Células com valor 0 são representadas como NaN (log(0) indefinido).
+        Propriedade: log(Eta_plan_ij) = log(Eta_clima_j) + log(Delta_j)
+        Células com valor 0 são NaN (log(0) indefinido).
         """
 
         def _log_field(f: dict[str, dict[str, float]]) -> dict[str, dict[str, float]]:
@@ -161,23 +162,21 @@ class CampoEficiencia:
             }
 
         return {
-            "log_E": _log_field(self.E),
-            "log_S": _log_field(self.S),
-            "log_P_r": _log_field(self.P_r),
-            "log_W": _log_field(self.W),
+            "log_Eta_plan": _log_field(self.Eta_plan),
+            "log_Eta_clima": _log_field(self.Eta_clima),
+            "log_Delta": _log_field(self.Delta),
         }
 
 
 class EficienciaFieldBuilder:
-    """Constrói CampoEficiencia a partir do canônico do projeto.
+    """Constrói CampoEficiencia (fase de planejamento) a partir do canônico.
 
-    Requer que as células de DistribuicaoSemanal tenham sido populadas pela
-    NEP-035 (campos eta_s, eta_p, eta_w, q_max_celula). Se ausentes, usa
-    fator_total como η e N_equipes × producao_base como q_max (compatibilidade).
+    Lê fator_clima e fator_calendario de cada DistribuicaoSemanal (ADR-068).
+    S, W, E permanecem None — fase de controle não implementada.
     """
 
     def build(self, canonical: Any) -> CampoEficiencia:
-        """Materializa o campo E a partir de canonical.cronograma."""
+        """Materializa o campo a partir de canonical.cronograma."""
         cronograma = getattr(canonical, "cronograma", None)
         if cronograma is None:
             return CampoEficiencia()
@@ -195,28 +194,24 @@ class EficienciaFieldBuilder:
                 continue
 
             campo.atividades.append(item_id)
-            campo.E[item_id] = {}
-            campo.S[item_id] = {}
-            campo.P_r[item_id] = {}
-            campo.W[item_id] = {}
+            campo.Eta_clima[item_id] = {}
+            campo.Delta[item_id] = {}
+            campo.Eta_plan[item_id] = {}
             campo.Q[item_id] = {}
             campo.Q_max[item_id] = {}
 
             for sem, cell in dist.items():
                 semanas_set.add(sem)
-                eta = float(getattr(cell, "fator_total", getattr(cell, "eficiencia", 1.0)))
-                eta_s = float(getattr(cell, "eta_s", 1.0))
-                eta_p = float(getattr(cell, "eta_p", float(getattr(cell, "fator_clima", 1.0))))
-                eta_w = float(getattr(cell, "eta_w", float(getattr(cell, "eficiencia", 1.0))))
+                eta_clima = float(getattr(cell, "fator_clima", 1.0))
+                delta = float(getattr(cell, "fator_calendario", 1.0))
+                eta_plan = round(eta_clima * delta, 6)
                 q = float(getattr(cell, "qtd_executada", 0.0))
                 q_max = float(getattr(cell, "q_max_celula", 0.0))
-                campo.E[item_id][sem] = round(eta, 6)
-                campo.S[item_id][sem] = round(eta_s, 6)
-                campo.P_r[item_id][sem] = round(eta_p, 6)
-                campo.W[item_id][sem] = round(eta_w, 6)
+                campo.Eta_clima[item_id][sem] = round(eta_clima, 6)
+                campo.Delta[item_id][sem] = round(delta, 6)
+                campo.Eta_plan[item_id][sem] = eta_plan
                 campo.Q[item_id][sem] = round(q, 4)
                 campo.Q_max[item_id][sem] = round(q_max, 4)
 
-        # Semanas ordenadas cronologicamente
         campo.semanas = sorted(semanas_set)
         return campo

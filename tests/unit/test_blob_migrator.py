@@ -158,23 +158,31 @@ class TestBlobMigrateCLI:
         assert "migrate" in result.output
 
     def test_cli_migrate_dry_run(self, tmp_path):
-        from unittest.mock import patch
-
         from typer.testing import CliRunner
 
         from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
         from concilium.presentation.cli.commands_blob import blob_app
 
-        src = LocalBlobStorage(tmp_path / "src")
+        src_dir = tmp_path / "src"
+        tgt_dir = tmp_path / "tgt"
+        src_dir.mkdir()
+        tgt_dir.mkdir()
+        src = LocalBlobStorage(src_dir)
         src.gravar_blob("test/file.json", b"{}")
-        tgt = LocalBlobStorage(tmp_path / "tgt")
 
-        with (
-            patch("concilium.presentation.cli.commands_blob._make_source_storage", return_value=src),
-            patch("concilium.presentation.cli.commands_blob._make_target_storage", return_value=tgt),
-        ):
-            runner = CliRunner()
-            result = runner.invoke(blob_app, ["migrate", "--dry-run"])
+        runner = CliRunner()
+        result = runner.invoke(
+            blob_app,
+            [
+                "migrate",
+                "--source-backend", "filesystem",
+                "--source-root", str(src_dir),
+                "--target-backend", "filesystem",
+                "--target-root", str(tgt_dir),
+                "--dry-run",
+            ],
+        )
 
         assert result.exit_code == 0
+        tgt = LocalBlobStorage(tgt_dir)
         assert not tgt.blob_existe("test/file.json")

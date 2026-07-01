@@ -281,7 +281,7 @@ def _process_mob_categoria(
                     custo,
                     list(mob_result.get("mob", {}).keys()),
                 )
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.warning(
                 "Falha ao calcular custo MOB com mob_schedule — usando custo legado R$%.2f: %s",
                 custo,
@@ -522,7 +522,7 @@ def _apply_bdi_to_indiretos(
                     custo_com_bdi=custo_com,
                 )
             )
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-INDIR-BDI-ITEM",

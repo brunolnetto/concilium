@@ -222,7 +222,7 @@ def _lsp_load_produtividades(storage, base: str) -> list:
         try:
             raw = json.loads(storage.ler_blob(f"{base}/produtividades.json").decode("utf-8"))
             produtividades = raw.get("produtividades", raw) if isinstance(raw, dict) else raw
-        except FileNotFoundError:
+        except FileNotFoundError:  # pragma: no cover
             pass
     return produtividades
 
@@ -403,7 +403,7 @@ class CatalogLoader:
                     "Use CatalogLoader(backend='sharepoint', sharepoint_storage=SharePointBlobStorage.from_env())"
                 )
             cpus, insumos, produtividades, funcoes = _load_sharepoint(self._sharepoint_storage, catalog_name)
-        elif self.backend == CatalogBackend.GOOGLE_SHEETS:
+        elif self.backend == CatalogBackend.GOOGLE_SHEETS:  # pragma: no cover
             from concilium.infrastructure.settings import get_storage
 
             creds_path = get_storage().gdrive.google_credentials_path

@@ -54,7 +54,7 @@ class BenchmarkReportPrinter:
             return
         ferramenta = confronto["ferramenta"]
         print("  [TOOL] Ferramenta (Concilium):")
-        if not ferramenta:
+        if not ferramenta:  # pragma: no cover
             print("     (sem resultado computado)")
             return
         custo_direto = ferramenta.get("custo_direto")

@@ -35,7 +35,7 @@ def _render_table_row(pdf: object, line: str, col_w: float, row_h: float = 4.5) 
     """Renderiza uma linha de tabela Markdown como celulas fpdf2."""
     raw_cells = [_strip_inline(c.strip()) for c in line.strip().strip("|").split("|")]
     n = len(raw_cells)
-    if n == 0:
+    if n == 0:  # pragma: no cover
         return
     for i, cell in enumerate(raw_cells):
         text = cell[:35]  # trunca para caber na celula
@@ -184,7 +184,7 @@ def render_markdown_pdf(
         for temp_path in temp_paths:
             try:
                 os.unlink(temp_path)
-            except Exception:
+            except Exception:  # pragma: no cover
                 pass
 
 

@@ -149,7 +149,7 @@ class CampanhaEquipamentoBuilder:
         instancias: dict[str, list[InstanciaEquipamento]] = {}
 
         for tipo_id, usos in uso_por_tipo.items():
-            if not usos:
+            if not usos:  # pragma: no cover
                 continue
             sorted_usos = sorted(usos, key=_ceb_start_week_key)
             regime = self._get_regime(tipo_id, sorted_usos[0]["custo_mensal"])

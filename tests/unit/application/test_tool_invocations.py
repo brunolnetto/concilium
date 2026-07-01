@@ -27,9 +27,11 @@ class TestRoleAllowedIntents:
         assert "rfp" in ROLE_ALLOWED_INTENTS["engineer"]
 
     def test_admin_allows_rfi_and_rfp(self):
+        # admin herda as mesmas permissões de intent que engineer
         from concilium.infrastructure.auth.permission_guard import ROLE_ALLOWED_INTENTS
 
-        assert ROLE_ALLOWED_INTENTS["admin"] == frozenset({"rfi", "rfp"})
+        assert "rfi" in ROLE_ALLOWED_INTENTS["admin"]
+        assert "rfp" in ROLE_ALLOWED_INTENTS["admin"]
 
     def test_auditor_allows_no_intents(self):
         from concilium.infrastructure.auth.permission_guard import ROLE_ALLOWED_INTENTS

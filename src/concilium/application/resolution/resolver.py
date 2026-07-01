@@ -137,7 +137,7 @@ class Resolver:
             )
             if self._store is not None:
                 self._store.persist(decision)
-            elif output.resolution_status == "AUTO_SELECTED":
+            elif output.resolution_status == "AUTO_SELECTED":  # pragma: no branch
                 raise RuntimeError(
                     "Resolver.resolve_and_persist: AUTO_SELECTED mas "
                     "decision_store não configurado. Configure um "

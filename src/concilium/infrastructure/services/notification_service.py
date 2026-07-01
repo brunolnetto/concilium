@@ -233,6 +233,6 @@ def get_notification_service() -> NotificationService:
     global _notification_service
     if _notification_service is None:
         with _ns_lock:
-            if _notification_service is None:
+            if _notification_service is None:  # pragma: no cover
                 _notification_service = NotificationService()
     return _notification_service

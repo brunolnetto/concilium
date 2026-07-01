@@ -4,6 +4,7 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from concilium.application.skills import run_relatorio_e_artefatos
 
 # ---------------------------------------------------------------------------

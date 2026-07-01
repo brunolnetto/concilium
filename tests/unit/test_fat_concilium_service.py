@@ -1150,6 +1150,25 @@ class TestGetCuboAnalitico:
         result = svc.get_cubo_analitico("p1", version="v1")
         assert result["cubo_analitico"] == {"rows": []}
 
+    def test_builds_cubo_when_canonical_has_none(self):
+        """Lines 622-624: CuboAnaliticoBuilder is invoked when canonical.cubo_analitico is None."""
+        svc, deps = _make_svc()
+        canonical = MagicMock()
+        canonical.cubo_analitico = None  # force builder path
+        project = _make_project_mock()
+        project.load_canonical.return_value = canonical
+        deps.repository.get_project.return_value = project
+        from unittest.mock import patch
+
+        mock_cubo = MagicMock()
+        mock_cubo.to_dict.return_value = {"built": True}
+        with patch(
+            "concilium.domain.services.analytics.cubo_analitico_builder.CuboAnaliticoBuilder.build",
+            return_value=mock_cubo,
+        ):
+            result = svc.get_cubo_analitico("p1")
+        assert result["cubo_analitico"] is not None
+
 
 # ─── get_cubo_projection_contract (static) ───────────────────────────────────
 
@@ -1270,3 +1289,118 @@ class TestGetCuboAnaliticoProjectionValidation:
         result = svc.get_cubo_analitico_projection("p1", face="tempo_natureza")
         assert result["rows"] == []
         assert result["face"] == "tempo_natureza"
+
+
+# ─── get_calendario_operacional (lines 536–568) ───────────────────────────────
+
+
+class TestGetCalendarioOperacional:
+    def test_returns_empty_semanas_when_no_canonical(self):
+        svc, deps = _make_svc()
+        deps.repository.get_project.side_effect = Exception("not found")
+        deps.project_service.get_last_canonical.return_value = None
+        result = svc.get_calendario_operacional("p1")
+        assert result["semanas"] == []
+
+    def test_returns_semanas_with_climate_factors_from_cronograma(self):
+        """Lines 544-568: semanas enriched with fator_clima/fator_total from cronograma."""
+        from types import SimpleNamespace
+
+        svc, deps = _make_svc()
+
+        dist = SimpleNamespace(fator_clima=0.9, fator_total=0.85, eficiencia=1.0)
+        sa = MagicMock()
+        sa.distribuicao_semanal = {"2026-W01": dist}
+
+        cron = MagicMock()
+        cron.scheduled_activities = [sa]
+
+        cal_row = MagicMock()
+        cal_row.model_dump.return_value = {"semana_iso": "2026-W01", "dias_uteis_base": 5}
+
+        canonical = MagicMock()
+        canonical.calendario_operacional = [cal_row]
+        canonical.cronograma = cron
+
+        project = _make_project_mock()
+        project.load_canonical.return_value = canonical
+        deps.repository.get_project.return_value = project
+
+        result = svc.get_calendario_operacional("p1")
+        assert len(result["semanas"]) == 1
+        row = result["semanas"][0]
+        assert row["fator_clima"] == pytest.approx(0.9, rel=1e-3)
+        assert row["fator_total"] == pytest.approx(0.85, rel=1e-3)
+
+    def test_returns_semanas_without_cronograma(self):
+        """Lines 557-566: rows processed without cronograma factor enrichment."""
+        svc, deps = _make_svc()
+
+        cal_row = MagicMock()
+        cal_row.model_dump.return_value = {"semana_iso": "2026-W02", "dias_uteis_base": 3}
+
+        canonical = MagicMock()
+        canonical.calendario_operacional = [cal_row]
+        canonical.cronograma = None
+
+        project = _make_project_mock()
+        project.load_canonical.return_value = canonical
+        deps.repository.get_project.return_value = project
+
+        result = svc.get_calendario_operacional("p1")
+        assert len(result["semanas"]) == 1
+        assert result["semanas"][0]["fator_clima"] == pytest.approx(1.0)
+
+
+# ─── get_cubo_pool_projection with real canonical (lines 649–673) ────────────
+
+
+class TestGetCuboPoolProjectionWithCanonical:
+    def test_returns_projection_when_canonical_exists(self):
+        """Lines 649-673: projection result returned when canonical is not None."""
+        from unittest.mock import patch
+
+        svc, deps = _make_svc()
+        canonical = MagicMock()
+        project = _make_project_mock()
+        project.load_canonical.return_value = canonical
+        deps.repository.get_project.return_value = project
+
+        mock_proj = {"face": "instancia_ciclo_vida", "rows": [], "version": "v1"}
+        with patch(
+            "concilium.application.services.analytics.cubo_pool_projection.resolve_cubo_pool_projection",
+            return_value=mock_proj,
+        ):
+            result = svc.get_cubo_pool_projection("p1", face="instancia_ciclo_vida")
+        assert result["face"] == "instancia_ciclo_vida"
+
+
+# ─── simulate/validate mobilizacao_policy (lines 936, 939) ───────────────────
+
+
+class TestMobilizacaoPolicyDelegates:
+    def test_simulate_mobilizacao_policy_delegates(self):
+        """Line 936: delegates to _cs_simulate_mobilizacao_policy."""
+        from unittest.mock import patch
+
+        svc, _ = _make_svc()
+        with patch(
+            "concilium.application.services.concilium_service._cs_simulate_mobilizacao_policy",
+            return_value={"ok": True},
+        ) as mock_fn:
+            result = svc.simulate_mobilizacao_policy("p1", {"items": []})
+        mock_fn.assert_called_once()
+        assert result == {"ok": True}
+
+    def test_validate_mobilizacao_policies_delegates(self):
+        """Line 939: delegates to _cs_validate_mobilizacao_policies."""
+        from unittest.mock import patch
+
+        svc, _ = _make_svc()
+        with patch(
+            "concilium.application.services.concilium_service._cs_validate_mobilizacao_policies",
+            return_value=[],
+        ) as mock_fn:
+            result = svc.validate_mobilizacao_policies("p1")
+        mock_fn.assert_called_once()
+        assert result == []

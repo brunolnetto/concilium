@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
 """
 Curação do catálogo Concilium — alinha dados aos schemas normalizados.
 
 Uso:
-    python scripts/cure_catalog.py --contexto mendeslobo          # dry-run (relatório)
-    python scripts/cure_catalog.py --contexto mendeslobo --apply  # aplica mudanças
+    python -m concilium.application.catalog.cure_schema --contexto mendeslobo
+    python -m concilium.application.catalog.cure_schema --contexto mendeslobo --apply
 
 Ações automáticas:
     - Producao: migra campo legado `equipe` → `composicao_padrao_equipe`
@@ -28,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import io
 import json
 import re
 import sys
@@ -41,17 +39,12 @@ from statistics import median
 # RefResolver emite deprecation warning no import em jsonschema>=4.18.
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*RefResolver is deprecated.*")
 
-# Forca UTF-8 no stdout para evitar UnicodeEncodeError no Windows (cp1252)
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-
 try:
     from jsonschema import Draft202012Validator, RefResolver
-except ImportError:
-    print("Instale jsonschema: uv add jsonschema", file=sys.stderr)
-    sys.exit(2)
+except ImportError as _e:
+    raise ImportError("Instale jsonschema: uv add jsonschema") from _e
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_ROOT = ROOT / "config" / "schemas" / "catalog"
 
 
@@ -721,8 +714,7 @@ def cure_contextual(cpus: list[dict], prods: list[dict], insumos: list[dict], re
 def _context_base(contexto_id: str) -> Path:
     base = ROOT / "config" / "catalogos" / contexto_id
     if not base.exists():
-        print(f"Contexto não encontrado: {contexto_id}", file=sys.stderr)
-        sys.exit(1)
+        raise FileNotFoundError(f"Contexto não encontrado: {contexto_id}")
     return base
 
 
@@ -761,20 +753,16 @@ def _persist_entity_files(entries: list[tuple[Path, dict]], apply: bool) -> int:
     return written
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ── Public API ────────────────────────────────────────────────────────────────
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Curação do catálogo Concilium")
-    parser.add_argument("--contexto", required=True, help="ID do contexto (ex: mendeslobo)")
-    parser.add_argument("--apply", action="store_true", help="Aplica mudanças (padrão: dry-run)")
-    args = parser.parse_args()
-
-    mode = "APPLY" if args.apply else "DRY-RUN"
+def run(contexto_id: str, apply: bool = False) -> None:
+    """Executa a curação do catálogo. Levanta RuntimeError em caso de erros residuais."""
+    mode = "APPLY" if apply else "DRY-RUN"
     print(f"\n{'='*60}")
-    print(f"  Curação do catálogo [{mode}] — contexto: {args.contexto}")
+    print(f"  Curação do catálogo [{mode}] — contexto: {contexto_id}")
     print(f"{'='*60}\n")
 
-    base = _context_base(args.contexto)
+    base = _context_base(contexto_id)
     bundle_path = base / ".catalog_bundle.json"
     cpu_entries = _load_entity_files(base, ("cpus",))
     insumo_entries = _load_entity_files(base, ("insumos",))
@@ -786,16 +774,15 @@ def main() -> None:
 
     report = CurationReport()
 
-    cured_prods = [cure_producao(p, report, args.apply) for p in prods]
-    cured_cpus = [cure_cpu(c, report, args.apply) for c in cpus]
-    cured_insumos = [cure_insumo(i, report, args.apply) for i in insumos]
-    cure_contextual(cured_cpus, cured_prods, cured_insumos, report, args.apply)
+    cured_prods = [cure_producao(p, report, apply) for p in prods]
+    cured_cpus = [cure_cpu(c, report, apply) for c in cpus]
+    cured_insumos = [cure_insumo(i, report, apply) for i in insumos]
+    cure_contextual(cured_cpus, cured_prods, cured_insumos, report, apply)
 
-    # Relatório de ações
     if report.fixed:
         print(f"[AUTO] {len(report.fixed)} correção(ões) automática(s):")
         for m in report.fixed:
-            prefix = "  ✓" if args.apply else "  → (dry-run)"
+            prefix = "  ✓" if apply else "  → (dry-run)"
             print(f"{prefix} {m}")
 
     if report.manual:
@@ -808,8 +795,7 @@ def main() -> None:
         for m in report.skipped:
             print(f"  · {m}")
 
-    # Persiste se --apply
-    if args.apply:
+    if apply:
         n_cpus = _persist_entity_files([(p, obj) for (p, _), obj in zip(cpu_entries, cured_cpus, strict=False)], True)
         n_prods = _persist_entity_files([(p, obj) for (p, _), obj in zip(prod_entries, cured_prods, strict=False)], True)
         n_ins = _persist_entity_files([(p, obj) for (p, _), obj in zip(insumo_entries, cured_insumos, strict=False)], True)
@@ -818,7 +804,6 @@ def main() -> None:
             bundle_path.unlink()
             print(f"  Bundle invalidado: {bundle_path}")
 
-    # Validação final contra schemas
     print(f"\n{'─'*60}")
     print("  Validação residual contra schemas normalizados")
     print(f"{'─'*60}")
@@ -827,11 +812,11 @@ def main() -> None:
     prod_v = _make_validator(_load_schema("producao.schema.json"))
     ins_v = _make_validator(_load_schema("insumo.schema.json"))
 
-    data_to_validate = cured_cpus if args.apply else cpus
+    data_to_validate = cured_cpus if apply else cpus
     erros = (
         _validate_all(data_to_validate, cpu_v, "CPU")
-        + _validate_all(cured_prods if args.apply else prods, prod_v, "PRODUCAO")
-        + _validate_all(cured_insumos if args.apply else insumos, ins_v, "INSUMO")
+        + _validate_all(cured_prods if apply else prods, prod_v, "PRODUCAO")
+        + _validate_all(cured_insumos if apply else insumos, ins_v, "INSUMO")
     )
 
     if erros:
@@ -840,12 +825,26 @@ def main() -> None:
             print(f"  ✗ {e}")
         if len(erros) > 50:
             print(f"  ... mais {len(erros) - 50} erros")
-        if not args.apply:
+        if not apply:
             print("\n[INFO] Execução em DRY-RUN: para persistir correções, execute novamente com --apply.")
         print()
-        sys.exit(1)
+        raise RuntimeError(f"{len(erros)} erro(s) residual(is) após curação do catálogo '{contexto_id}'")
     else:
         print("\n  ✓ Nenhum erro residual — catálogo em conformidade com os schemas.\n")
+
+
+# ── CLI entry point ────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Curação do catálogo Concilium")
+    parser.add_argument("--contexto", required=True, help="ID do contexto (ex: mendeslobo)")
+    parser.add_argument("--apply", action="store_true", help="Aplica mudanças (padrão: dry-run)")
+    args = parser.parse_args()
+    try:
+        run(args.contexto, args.apply)
+    except (FileNotFoundError, RuntimeError) as exc:
+        print(f"[ERRO] {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

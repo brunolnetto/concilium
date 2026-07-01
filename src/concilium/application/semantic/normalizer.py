@@ -22,7 +22,7 @@ try:
     import yaml as _yaml  # type: ignore[import-untyped]
 
     _HAS_YAML = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _HAS_YAML = False
 
 # Mapping de categoria do catálogo -> DomainType

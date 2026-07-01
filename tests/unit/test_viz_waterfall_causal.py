@@ -1,4 +1,4 @@
-"""Tests for waterfall_causal eficiencia visualization."""
+"""ADR-124 / NEP-036 — Waterfall causal: η_clima / δ / η_plan (planejamento)."""
 
 from __future__ import annotations
 
@@ -16,121 +16,56 @@ def _plot(campo, **kwargs):
 def _make_campo(decomposicao=None):
     campo = MagicMock()
     campo.decomposicao_causal.return_value = decomposicao or {
-        "eta_s_global": 0.9,
-        "eta_p_global": 0.85,
-        "eta_w_global": 0.95,
-        "eta_global": 0.72,
-        "eps_cross": -0.03,
-        "acoplamento_material": False,
+        "eta_clima_global": 0.88,
+        "delta_global": 0.95,
+        "eta_plan_global": 0.836,
     }
     return campo
+
+
+def _mock_ax_and_fig(n_bars: int = 3):
+    mock_fig = MagicMock()
+    mock_ax = MagicMock()
+    mock_bars = [MagicMock() for _ in range(n_bars)]
+    for bar in mock_bars:
+        bar.get_x.return_value = 0.0
+        bar.get_width.return_value = 1.0
+        bar.get_height.return_value = 0.9
+    mock_ax.bar.return_value = mock_bars
+    return mock_fig, mock_ax
 
 
 class TestPlotWaterfallCausal:
     def test_decomposicao_causal_is_called(self):
         campo = _make_campo()
-        mock_fig = MagicMock()
-        mock_ax = MagicMock()
-        mock_bars = [MagicMock() for _ in range(5)]
-        for bar in mock_bars:
-            bar.get_x.return_value = 0.0
-            bar.get_width.return_value = 1.0
-            bar.get_height.return_value = 0.9
-        mock_ax.bar.return_value = mock_bars
-        with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
-            _plot(campo)
-        campo.decomposicao_causal.assert_called()
-
-    def test_returns_figure_with_default_data(self):
-        campo = _make_campo()
-        mock_fig = MagicMock()
-        mock_ax = MagicMock()
-        mock_bars = [MagicMock() for _ in range(5)]
-        for bar in mock_bars:
-            bar.get_x.return_value = 0.0
-            bar.get_width.return_value = 1.0
-            bar.get_height.return_value = 0.9
-        mock_ax.bar.return_value = mock_bars
-        with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
-            result = _plot(campo)
-        assert result is mock_fig
-
-    def test_calls_decomposicao_causal(self):
-        campo = _make_campo()
-        mock_fig = MagicMock()
-        mock_ax = MagicMock()
-        mock_bars = [MagicMock() for _ in range(5)]
-        for bar in mock_bars:
-            bar.get_x.return_value = 0.0
-            bar.get_width.return_value = 1.0
-            bar.get_height.return_value = 0.9
-        mock_ax.bar.return_value = mock_bars
+        mock_fig, mock_ax = _mock_ax_and_fig()
         with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
             _plot(campo)
         campo.decomposicao_causal.assert_called_once()
 
+    def test_returns_figure(self):
+        campo = _make_campo()
+        mock_fig, mock_ax = _mock_ax_and_fig()
+        with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
+            result = _plot(campo)
+        assert result is mock_fig
+
     def test_accepts_custom_title(self):
         campo = _make_campo()
-        mock_fig = MagicMock()
-        mock_ax = MagicMock()
-        mock_bars = [MagicMock() for _ in range(5)]
-        for bar in mock_bars:
-            bar.get_x.return_value = 0.0
-            bar.get_width.return_value = 1.0
-            bar.get_height.return_value = 0.9
-        mock_ax.bar.return_value = mock_bars
+        mock_fig, mock_ax = _mock_ax_and_fig()
         with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
             result = _plot(campo, title="Waterfall Teste")
         mock_ax.set_title.assert_called_with("Waterfall Teste")
         assert result is mock_fig
 
-    def test_eps_cross_positive_uses_grey_color(self):
-        campo = _make_campo(
-            decomposicao={
-                "eta_s_global": 0.9,
-                "eta_p_global": 0.85,
-                "eta_w_global": 0.95,
-                "eta_global": 0.72,
-                "eps_cross": 0.02,
-                "acoplamento_material": False,
-            }
-        )
-        mock_fig = MagicMock()
-        mock_ax = MagicMock()
-        mock_bars = [MagicMock() for _ in range(5)]
-        for bar in mock_bars:
-            bar.get_x.return_value = 0.0
-            bar.get_width.return_value = 1.0
-            bar.get_height.return_value = 0.9
-        mock_ax.bar.return_value = mock_bars
-        with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
-            result = _plot(campo)
-        # Bar called with colors list — eps positive → grey (#9E9E9E)
-        call_kwargs = mock_ax.bar.call_args[1]
-        colors = call_kwargs.get("color", [])
-        assert "#9E9E9E" in colors
-
-    def test_acoplamento_material_adds_annotation(self):
-        campo = _make_campo(
-            decomposicao={
-                "eta_s_global": 0.9,
-                "eta_p_global": 0.85,
-                "eta_w_global": 0.95,
-                "eta_global": 0.72,
-                "eps_cross": -0.1,
-                "acoplamento_material": True,
-            }
-        )
-        mock_fig = MagicMock()
-        mock_ax = MagicMock()
-        mock_bars = [MagicMock() for _ in range(5)]
-        for bar in mock_bars:
-            bar.get_x.return_value = 0.0
-            bar.get_width.return_value = 1.0
-            bar.get_height.return_value = 0.9
-        mock_ax.bar.return_value = mock_bars
+    def test_tres_barras_planejamento(self):
+        """Waterfall de planejamento tem exatamente 3 barras: η_clima, δ, η_plan."""
+        campo = _make_campo()
+        mock_fig, mock_ax = _mock_ax_and_fig()
         with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
             _plot(campo)
-        mock_ax.annotate.assert_called_once()
-        annotation_text = mock_ax.annotate.call_args[0][0]
-        assert "Acoplamento" in annotation_text
+        call_args = mock_ax.bar.call_args
+        labels = call_args[0][0]
+        assert len(labels) == 3
+        assert any("clima" in lbl.lower() for lbl in labels)
+        assert any("calend" in lbl.lower() or "δ" in lbl for lbl in labels)

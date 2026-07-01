@@ -632,3 +632,139 @@ class TestCreateEscopo:
         )
         assert es is not None
         assert "e2" in store.list_escopos()
+
+
+# ── load_canonical FileNotFoundError retry path ───────────────────────────────
+
+
+class TestLoadCanonicalFileNotFoundOnRead:
+    def test_file_disappears_between_exists_and_read_retries(self, tmp_path, monkeypatch):
+        """Lines 214-219: path.exists() True but read raises FileNotFoundError → retry → success."""
+        from unittest.mock import MagicMock, patch
+
+        store = _make_store(tmp_path)
+        v = store.new_version()
+        vpath = store.root / v
+        vpath.mkdir(exist_ok=True)
+        (vpath / ProjectStore.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+
+        import concilium.infrastructure.storage.project as _proj_mod
+
+        call_count = [0]
+        fake_model = MagicMock()
+
+        def _flaky_validate(text, **kw):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                raise FileNotFoundError("simulated race condition")
+            return fake_model
+
+        monkeypatch.setattr(_proj_mod.time, "sleep", lambda _: None)
+        with patch.object(_proj_mod.CanonicalModel, "model_validate_json", side_effect=_flaky_validate):
+            result = store.load_canonical()
+        assert result is fake_model
+        assert call_count[0] == 2
+
+    def test_all_retries_exhausted_returns_none(self, tmp_path, monkeypatch):
+        """Lines 217-219: all 3 retries raise FileNotFoundError → return None."""
+        from unittest.mock import patch
+
+        store = _make_store(tmp_path)
+        v = store.new_version()
+        vpath = store.root / v
+        vpath.mkdir(exist_ok=True)
+        (vpath / ProjectStore.CANONICAL_FILE).write_text("{}", encoding="utf-8")
+
+        import concilium.infrastructure.storage.project as _proj_mod
+
+        monkeypatch.setattr(_proj_mod.time, "sleep", lambda _: None)
+        with patch.object(
+            _proj_mod.CanonicalModel,
+            "model_validate_json",
+            side_effect=FileNotFoundError("always fails"),
+        ):
+            result = store.load_canonical()
+        assert result is None
+
+
+# ── save_canonical sidecar failure path ──────────────────────────────────────
+
+
+class TestSaveCanonicalSidecarFailure:
+    def test_sidecar_exception_does_not_raise_canonical_preserved(self, tmp_path, monkeypatch):
+        """Lines 260-263: sidecar write exception is caught, canonical is preserved."""
+        from unittest.mock import MagicMock, patch
+
+        store = _make_store(tmp_path)
+        v = store.new_version()
+
+        model = MagicMock()
+        model.model_dump_json.return_value = '{"meta": {"versao_schema": "2.0"}}'
+
+        # FileSystemArtifactStore is imported locally inside save_canonical; patch at source
+        with patch(
+            "concilium.infrastructure.storage.artifact_store.FileSystemArtifactStore.save_meta_sidecar",
+            side_effect=RuntimeError("sidecar boom"),
+        ):
+            store.save_canonical(model)
+
+        # Canonical file must have been written despite sidecar failure
+        cf = store.root / v / ProjectStore.CANONICAL_FILE
+        assert cf.exists()
+        assert "versao_schema" in cf.read_text()
+
+
+# ── resolve_cpu paths ─────────────────────────────────────────────────────────
+
+
+class TestResolveCpu:
+    def test_returns_none_when_no_override_no_catalogo_no_snapshots(self, tmp_path):
+        store = _make_store(tmp_path)
+        result = store.resolve_cpu("CPU-NONEXISTENT")
+        assert result is None
+
+    def test_override_json_returned_first(self, tmp_path):
+        store = _make_store(tmp_path)
+        v = store.new_version()
+        override_dir = store.root / "overrides"
+        override_dir.mkdir(exist_ok=True)
+        import json as _json
+
+        (override_dir / "cpus_override.json").write_text(
+            _json.dumps({"CPU-TEST": {"codigo": "CPU-TEST", "descricao": "Test"}}),
+            encoding="utf-8",
+        )
+        result = store.resolve_cpu("CPU-TEST")
+        assert result is not None
+        assert result["codigo"] == "CPU-TEST"
+
+    def test_snapshot_fallback_finds_cpu(self, tmp_path):
+        """Lines 415-424: CPU found in snapshots/ directory."""
+        store = _make_store(tmp_path)
+        snap_dir = store.root / "snapshots"
+        snap_dir.mkdir(exist_ok=True)
+        import json as _json
+
+        snap_data = {"cpus": [{"codigo": "CPU-SNAP", "descricao": "From snapshot"}]}
+        (snap_dir / "catalogo-2024-01.json").write_text(_json.dumps(snap_data), encoding="utf-8")
+        result = store.resolve_cpu("CPU-SNAP")
+        assert result is not None
+        assert result["codigo"] == "CPU-SNAP"
+
+    def test_snapshot_returns_none_when_cpu_not_found(self, tmp_path):
+        store = _make_store(tmp_path)
+        snap_dir = store.root / "snapshots"
+        snap_dir.mkdir(exist_ok=True)
+        import json as _json
+
+        (snap_dir / "catalogo-2024-01.json").write_text(_json.dumps({"cpus": [{"codigo": "OTHER"}]}), encoding="utf-8")
+        result = store.resolve_cpu("CPU-MISSING")
+        assert result is None
+
+    def test_snapshot_bad_json_continues_gracefully(self, tmp_path):
+        store = _make_store(tmp_path)
+        snap_dir = store.root / "snapshots"
+        snap_dir.mkdir(exist_ok=True)
+        (snap_dir / "catalogo-2024-01.json").write_text("NOT JSON", encoding="utf-8")
+        result = store.resolve_cpu("CPU-ANY")
+        assert result is None

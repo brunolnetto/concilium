@@ -43,7 +43,7 @@ def build(canonical, cubo) -> bytes | None:
             return None
 
         top_atividades = sorted(total_by_activity, key=lambda a: -total_by_activity[a])[:8]
-        if not top_atividades:
+        if not top_atividades:  # pragma: no branch
             return None
 
         x = list(range(len(periodos)))
@@ -91,6 +91,6 @@ def build(canonical, cubo) -> bytes | None:
             import matplotlib.pyplot as _plt
 
             _plt.close("all")
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
         return None

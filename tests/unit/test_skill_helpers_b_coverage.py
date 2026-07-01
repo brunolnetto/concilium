@@ -33,6 +33,9 @@ _build_memorial_bdi = _mod._build_memorial_bdi
 _get_bdi_value = _mod._get_bdi_value
 _rbf_resolve_tabela_perfil = _mod._rbf_resolve_tabela_perfil
 _rbf_try_tax_scenario = _mod._rbf_try_tax_scenario
+_rbf_try_manual_bdi = _mod._rbf_try_manual_bdi
+_resolve_bdi_rates = _mod._resolve_bdi_rates
+_classificar_margem = _mod._classificar_margem
 
 ValidacaoItem = _mod.ValidacaoItem
 DEFAULT_BDI_TABELA = _mod.DEFAULT_BDI_TABELA
@@ -416,3 +419,107 @@ class TestRbfTryTaxScenario:
         assert "VAL-CONSOL-BDI-REGIME" in codes
         statuses = [v.status for v in validacoes if v.codigo == "VAL-CONSOL-BDI-REGIME"]
         assert "AVISO" in statuses
+
+
+# ---------------------------------------------------------------------------
+# _rbf_try_manual_bdi — lines 184-201
+# ---------------------------------------------------------------------------
+
+
+class TestRbfTryManualBdi:
+    def test_no_bdi_aplicado_returns_none(self):
+        validacoes: list = []
+        assert _rbf_try_manual_bdi({}, validacoes) is None
+
+    def test_non_dict_bdi_aplicado_returns_none(self):
+        validacoes: list = []
+        assert _rbf_try_manual_bdi({"bdi_aplicado": "0.15"}, validacoes) is None
+
+    def test_valid_dict_returns_five_tuple(self):
+        validacoes: list = []
+        inputs = {"bdi_aplicado": {"mao_obra": 0.15, "material": 0.10, "diesel": 0.05}}
+        result = _rbf_try_manual_bdi(inputs, validacoes)
+        assert result is not None
+        assert len(result) == 5
+        rates, tabela, fonte, regime, override = result
+        assert fonte == "inputs.bdi_aplicado"
+        assert tabela is None
+        assert override is True
+        assert rates["mao_obra"] == pytest.approx(0.15)
+        assert rates["material"] == pytest.approx(0.10)
+
+    def test_valid_dict_appends_aviso_validation(self):
+        validacoes: list = []
+        _rbf_try_manual_bdi({"bdi_aplicado": {"mao_obra": 0.12}}, validacoes)
+        codes = [v.codigo for v in validacoes]
+        assert "VAL-CONSOL-BDI-FONTE" in codes
+        statuses = [v.status for v in validacoes if v.codigo == "VAL-CONSOL-BDI-FONTE"]
+        assert "AVISO" in statuses
+
+    def test_equipamentos_defaults_to_servicos_fallback(self):
+        validacoes: list = []
+        inputs = {"bdi_aplicado": {"mao_obra": 0.20, "servicos": 0.18}}
+        result = _rbf_try_manual_bdi(inputs, validacoes)
+        assert result is not None
+        rates = result[0]
+        assert rates["equipamentos"] == pytest.approx(0.18)
+
+    def test_servicos_defaults_to_mo_when_missing(self):
+        validacoes: list = []
+        inputs = {"bdi_aplicado": {"mao_obra": 0.20}}
+        result = _rbf_try_manual_bdi(inputs, validacoes)
+        assert result is not None
+        rates = result[0]
+        assert rates["equipamentos"] == pytest.approx(0.20)
+
+
+# ---------------------------------------------------------------------------
+# _resolve_bdi_rates early returns — lines 219, 222
+# ---------------------------------------------------------------------------
+
+
+class TestResolveBdiRatesEarlyReturns:
+    def test_manual_bdi_path_returns_rates(self):
+        validacoes: list = []
+        inputs = {"bdi_aplicado": {"mao_obra": 0.15, "material": 0.08}}
+        rates = _resolve_bdi_rates(inputs, validacoes)
+        assert isinstance(rates, dict)
+        assert rates["mao_obra"] == pytest.approx(0.15)
+
+    def test_default_tabela_path_returns_rates(self):
+        validacoes: list = []
+        inputs = {}
+        rates = _resolve_bdi_rates(inputs, validacoes)
+        assert isinstance(rates, dict)
+        assert "mao_obra" in rates
+
+
+# ---------------------------------------------------------------------------
+# _classificar_margem
+# ---------------------------------------------------------------------------
+
+
+class TestClassificarMargem:
+    def _alvo(self):
+        return {"min": 0.10, "max": 0.20}
+
+    def _aceitavel(self):
+        return {"min": 0.05, "max": 0.25}
+
+    def test_within_alvo_returns_verde(self):
+        assert _classificar_margem(0.15, self._alvo(), self._aceitavel()) == "VERDE"
+
+    def test_boundary_alvo_min_returns_verde(self):
+        assert _classificar_margem(0.10, self._alvo(), self._aceitavel()) == "VERDE"
+
+    def test_boundary_alvo_max_returns_verde(self):
+        assert _classificar_margem(0.20, self._alvo(), self._aceitavel()) == "VERDE"
+
+    def test_within_aceitavel_not_alvo_returns_amarelo(self):
+        assert _classificar_margem(0.07, self._alvo(), self._aceitavel()) == "AMARELO"
+
+    def test_below_aceitavel_returns_vermelho(self):
+        assert _classificar_margem(0.02, self._alvo(), self._aceitavel()) == "VERMELHO"
+
+    def test_above_aceitavel_returns_vermelho(self):
+        assert _classificar_margem(0.30, self._alvo(), self._aceitavel()) == "VERMELHO"
