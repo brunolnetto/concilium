@@ -138,6 +138,215 @@ _wait_revision_running() {
     die "Revision '$revision' nao ficou Running em $((max*10))s."
 }
 
+# -- ACA Domain: helpers ---------------------------------------------------------
+
+_aca_env_name() {
+    local app_name="$1"
+    az containerapp show --name "$app_name" --resource-group "$RESOURCE_GROUP" \
+        --query "properties.environmentId" -o tsv 2>/dev/null | awk -F'/' '{print $NF}'
+}
+
+_aca_verification_id() {
+    local env_name="$1"
+    az containerapp env show --name "$env_name" --resource-group "$RESOURCE_GROUP" \
+        --query "properties.customDomainConfiguration.customDomainVerificationId" -o tsv 2>/dev/null
+}
+
+_dns_poll() {
+    local hostname="$1" verification_id="$2" app_fqdn="$3"
+    local max=60 i=0
+
+    log "Verificando propagacao DNS para '$hostname'..."
+    while true; do
+        i=$((i+1))
+        [[ $i -gt $max ]] && die "Timeout aguardando DNS (${max}x30s = $((max*30/60))min). Verifique os registros e tente novamente."
+
+        local txt_val cname_val
+        txt_val=$(dig +short TXT "asuid.${hostname}" 2>/dev/null | tr -d '"' | head -1)
+        cname_val=$(dig +short CNAME "${hostname}" 2>/dev/null | sed 's/\.$//' | head -1)
+
+        local txt_ok=false cname_ok=false
+        [[ "$txt_val"   == "$verification_id" ]] && txt_ok=true
+        [[ "$cname_val" == "$app_fqdn"        ]] && cname_ok=true
+
+        if $txt_ok && $cname_ok; then
+            ok "DNS propagado: TXT e CNAME corretos."
+            return 0
+        fi
+
+        $txt_ok   || log "  TXT   asuid.${hostname}: esperado='${verification_id}' atual='${txt_val:-<vazio>}'"
+        $cname_ok || log "  CNAME ${hostname}: esperado='${app_fqdn}' atual='${cname_val:-<vazio>}'"
+        echo "  ($i/$max) Aguardando 30s..."
+        sleep 30
+    done
+}
+
+_cert_poll() {
+    local env_name="$1" cert_name="$2"
+    local max=36 i=0
+
+    log "Aguardando provisionamento do certificado '$cert_name'..."
+    while true; do
+        i=$((i+1))
+        [[ $i -gt $max ]] && die "Timeout aguardando certificado (${max}x10s = $((max*10/60))min)."
+
+        local state
+        state=$(az containerapp env certificate show \
+            --name "$env_name" \
+            --resource-group "$RESOURCE_GROUP" \
+            --certificate "$cert_name" \
+            --query "properties.provisioningState" -o tsv 2>/dev/null || echo "Pending")
+
+        [[ "$state" == "Succeeded" ]] && { ok "Certificado provisionado."; return 0; }
+        [[ "$state" == "Failed"    ]] && die "Falha ao provisionar certificado '$cert_name'."
+
+        echo "  Estado: $state ($i/$max)..."
+        sleep 10
+    done
+}
+
+# -- ACA Domain: commands --------------------------------------------------------
+
+cmd_domain_prepare() {
+    local app_name=""  hostname=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --app)      app_name="$2"; shift 2 ;;
+            --hostname) hostname="$2"; shift 2 ;;
+            *)          shift ;;
+        esac
+    done
+
+    [[ -n "$app_name" ]]  || app_name="$ACA_API_APP"
+    [[ -n "$hostname" ]]  || die "--hostname e obrigatorio (ex: api.exemplo.com.br)."
+
+    need az; require_login
+    _aca_app_exists "$app_name" || die "Container App '$app_name' nao encontrado."
+
+    local env_name app_fqdn verification_id
+    env_name=$(_aca_env_name "$app_name")
+    app_fqdn=$(az containerapp show --name "$app_name" --resource-group "$RESOURCE_GROUP" \
+        --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null)
+    verification_id=$(_aca_verification_id "$env_name")
+
+    [[ -n "$verification_id" ]] || die "Nao foi possivel obter verificationId do ambiente '$env_name'."
+
+    step "Instrucoes DNS para: $hostname"
+    echo
+    echo -e "  ${N}Crie os seguintes registros no seu provedor DNS (ex: HostGator):${NC}"
+    echo
+    printf "  %-8s %-40s %s\n" "Tipo" "Nome" "Valor"
+    printf "  %-8s %-40s %s\n" "────" "────────────────────────────────────────" "─────────────────────────────────────────"
+    printf "  ${G}%-8s${NC} %-40s %s\n" "CNAME"  "${hostname}."         "${app_fqdn}."
+    printf "  ${G}%-8s${NC} %-40s %s\n" "TXT"    "asuid.${hostname}."   "${verification_id}"
+    echo
+    echo "  App:       $app_name"
+    echo "  Ambiente:  $env_name"
+    echo
+
+    if [[ "${CI:-}" == "true" ]]; then
+        log "Modo CI: exibindo instrucoes e saindo. Execute quando o DNS estiver pronto:"
+        echo "  cd/scripts/deploy.sh domain finalize --app $app_name --hostname $hostname"
+        return 0
+    fi
+
+    read -r -p "  Pressione ENTER quando os registros DNS estiverem criados (Ctrl+C para cancelar)... "
+    echo
+    cmd_domain_finalize --app "$app_name" --hostname "$hostname"
+}
+
+cmd_domain_finalize() {
+    local app_name="" hostname=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --app)      app_name="$2"; shift 2 ;;
+            --hostname) hostname="$2"; shift 2 ;;
+            *)          shift ;;
+        esac
+    done
+
+    [[ -n "$app_name" ]]  || app_name="$ACA_API_APP"
+    [[ -n "$hostname" ]]  || die "--hostname e obrigatorio."
+
+    need az; need dig; require_login
+    _aca_app_exists "$app_name" || die "Container App '$app_name' nao encontrado."
+
+    local env_name app_fqdn verification_id
+    env_name=$(_aca_env_name "$app_name")
+    app_fqdn=$(az containerapp show --name "$app_name" --resource-group "$RESOURCE_GROUP" \
+        --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null)
+    verification_id=$(_aca_verification_id "$env_name")
+
+    # Estado 1: propagacao DNS
+    step "Estado 1/4 — Propagacao DNS"
+    _dns_poll "$hostname" "$verification_id" "$app_fqdn"
+
+    # Estado 2: adicionar hostname ao app
+    step "Estado 2/4 — Hostname bind"
+    _az_retry az containerapp hostname add \
+        --name "$app_name" \
+        --resource-group "$RESOURCE_GROUP" \
+        --hostname "$hostname" \
+        --output none
+    ok "Hostname '$hostname' adicionado ao app '$app_name'."
+
+    # Estado 3: criar e aguardar Managed Certificate
+    step "Estado 3/4 — Managed Certificate"
+    local cert_name="cert-$(echo "$hostname" | tr '.' '-')"
+
+    az containerapp env certificate create \
+        --name "$env_name" \
+        --resource-group "$RESOURCE_GROUP" \
+        --certificate-name "$cert_name" \
+        --hostname "$hostname" \
+        --output none 2>/dev/null || log "Certificado ja existe — aguardando estado."
+
+    _cert_poll "$env_name" "$cert_name"
+
+    # Estado 4: vincular certificado ao hostname
+    step "Estado 4/4 — Vincular certificado"
+    _az_retry az containerapp hostname bind \
+        --name "$app_name" \
+        --resource-group "$RESOURCE_GROUP" \
+        --hostname "$hostname" \
+        --environment "$env_name" \
+        --certificate "$cert_name" \
+        --output none
+    ok "Certificado vinculado a '$hostname'."
+
+    # Verificacao final HTTPS
+    step "Verificacao HTTPS"
+    local max_v=12 v=0
+    while true; do
+        v=$((v+1))
+        [[ $v -gt $max_v ]] && { warn "HTTPS ainda nao responde — verifique manualmente: https://${hostname}/health"; break; }
+        if curl -sf --max-time 10 "https://${hostname}/health" &>/dev/null; then
+            ok "HTTPS respondendo: https://${hostname}/health"
+            break
+        fi
+        echo "  ($v/$max_v) Aguardando 10s..."
+        sleep 10
+    done
+
+    ok "Dominio '$hostname' configurado e ativo."
+}
+
+cmd_domain() {
+    local subcmd="${1:-help}"; shift 2>/dev/null || true
+    case "$subcmd" in
+        prepare)  cmd_domain_prepare  "$@" ;;
+        finalize) cmd_domain_finalize "$@" ;;
+        *)
+            echo "Uso: deploy.sh domain <prepare|finalize> [opcoes]"
+            echo
+            echo "  prepare  --app APP --hostname HOST   Gera instrucoes DNS; aguarda ENTER (nao-CI)"
+            echo "  finalize --app APP --hostname HOST   Policia DNS, cria cert, faz bind, verifica HTTPS"
+            ;;
+    esac
+}
+
 # -- ACA Revisions: runtime deployment ------------------------------------------
 
 cmd_deploy() {
@@ -1057,6 +1266,14 @@ Uso: deploy.sh [comando] [opcoes]
            [--mcp-revision REV] Idem para o MCP
   status                       Mostra revisions e pesos de trafego
 
+-- Custom Domain (Human-in-the-Loop) --------------------------------------------
+  domain prepare --app APP --hostname HOST
+                               Exibe registros DNS necessarios; aguarda ENTER (modo interativo)
+                               Em CI imprime instrucoes e sai (execute finalize manualmente)
+  domain finalize --app APP --hostname HOST
+                               Policia propagacao DNS -> cria Managed Certificate ->
+                               vincula hostname -> verifica HTTPS
+
 -- Platform Operations ----------------------------------------------------------
   configure                    Aplica env vars em ambos os containers ACA (idempotente)
   configure-smtp               Grava SMTP_PASSWORD no Key Vault e seta env vars SMTP (nao requer SP vars)
@@ -1088,6 +1305,8 @@ case "$CMD" in
     promote)        cmd_promote "$@" ;;
     rollback)       cmd_rollback "$@" ;;
     status)         cmd_status "$@" ;;
+
+    domain)         cmd_domain "$@" ;;
 
     configure)      cmd_configure "$@" ;;
     configure-smtp) cmd_configure_smtp "$@" ;;
