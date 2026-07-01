@@ -1,0 +1,60 @@
+Glossário:
+
+	Atividade
+	Natureza: Atividades diretas e indiretas
+	Categoria: Classificação da natureza das atividades
+		Indiretas: TOP, LAB, ADM, QSMS, MOB
+		Diretas: Atividades de execução da obra
+	BDI: Benefícios e despesas indiretas
+		Serviços: único
+		Indiretas: único
+		Diretas: material, diesel, mão-de-obra
+
+Notação:
+	A_i: Atividade direta i
+	B_ii: Atividade indireta i
+	R_i: Recursos da atividades
+	\rho_i: Produtividade horária da atividade direta i [un/h]
+	h: horas trabalhadas no dia [h/dia]
+	d_j: dias trabalhados na semana j [dias]
+	\lambda_j: praticabilidade da semana j [%]
+	\gamma_i: Custo horário := \sum\limits_{r \in R_i} \gamma_r [moeda/h]
+	p_i^c: Preço unitário de catálogo de A_i := \frac{\gamma_i}{\rho_i} [moeda/un] 
+	p_i^o: Preço unitário operacional de A_i := \frac{\tilde{C}_i}{Q_i}
+	P: Pool de recursos :- \left\{ r \in R_i, i \in \mathbb{N}_{>0}^{#\{A_i\}} \vert P \supseteq \biguplus\limits_{i} R_i \right\}
+	m_{ij}: Quantidade de equipes da atividade i na semana j := \left\{ m_{ij} \in \mathbb{N}_{>0}^{#\{A_i\}} \vert m_{ij} \leq \#\{R_i\} \right\}
+	t_i: duração da atividade A_i := (t_i^0, t_i^f)
+	t: duração da obra := (t^0, t^f) = \left( \min\limits_{i} t_i^0, \max\limits_{i} t_i^f \right)
+	T_i: tempo de execução da atividade A_i := t_i^f - t_i^0
+	T: tempo total da obra := t^f - t^0
+	\beta_r: BDI da categoria de recurso r [%]
+	\tilde{C}^I: Custo indireto := \sum\limits_{i} \tilde{C}_i^I 
+	\tilde{C}^D: Custo direto := \sum\limits_{i} \tilde{C}_i^D
+	\tilde{C}: Custo operacional total := \sum\limits_{i} \tilde{C}_i
+	\tilde{V}_i^D: Valor de venda do custo direto := \sum\limits_{i} V_i^D
+	\tilde{V}_i^I: Valor de venda do custo indireto := \sum\limits_{i} V_i^I
+
+Métricas:
+	\frac{C^I}{C^D}: Razão entre custos indiretos e diretos
+	\frac{C^I}{C^D + C^I}: Razão entre custos indiretos e totais
+	\frac{V - C}{C}: Margem de venda para operacionalização
+
+Formulário:
+
+	\tilde{C} = \sum\limits_{i} \tilde{C}_i
+	\tilde{C}_i = \tilde{C}_i^D + \tilde{C}_i^I
+	V = \sum\limits_{i} V_i
+	\tilde{C}_i = V_i^D + V_i^I
+	V_i^D = \sum\limits_{j \in (t_i^0, t_i^f)} \sum\limits_{r \in A_i} \beta_r * \gamma_r * h * d * m_{ij}
+	V_i^I = \sum\limits_{j \in (t_i^0, t_i^f)} \sum\limits_{q \in B_i} \beta_r * \gamma_q * h * d
+	p_i^c ?\leq p_i^o: 
+		Q_i = \sum\limits_{j \in (t_i^0, t_i^f)} q_{ij}
+		q_{ij} = \rho_i * h * d_j * m_{ij} * \lambda_j
+		p_i^o = \frac{\tilde{C}_i}{Q_i} 
+			  = \frac{\sum\limits_{j \in (t_i^0, t_i^f)} \gamma_i * h * d * m_{ij}}{\sum\limits_{j \in (t_i^0, t_i^f)} \rho_i * h * d_j * m_{ij} * \lambda_j}
+			  = \frac{\gamma_i }{\rho_i} \frac{\sum\limits_{j \in (t_i^0, t_i^f)} h * d * m_{ij}}{\sum\limits_{j \in (t_i^0, t_i^f)} h * \underbrackets{d_j}_{\coloneqq \delta_j d} * m_{ij} * \lambda_j}
+			  = \underbrace{\frac{\gamma_i }{\rho_i}}_{p_i^c} \frac{\sum\limits_{j \in (t_i^0, t_i^f)} h * d * m_{ij}}{\sum\limits_{j \in (t_i^0, t_i^f)} h * \underbrackets{d_j}_{\coloneqq \delta_j d} * m_{ij} * \lambda_j}
+			  = p_i^c * \underbracket{\frac{\sum\limits_{j \in (t_i^0, t_i^f)} m_{ij}}{\sum\limits_{j \in (t_i^0, t_i^f)} \delta_j * \lambda_j * m_{ij}}}_{\tau_i \leq 1}
+			  = p_i^c * \tau_i
+
+
