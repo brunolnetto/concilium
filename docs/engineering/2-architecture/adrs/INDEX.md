@@ -236,6 +236,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [124](adr-124-reformulacao-modelo-eficiencia-planejamento-vs-controle.md) | Reformulação do Modelo de Eficiência: Separação entre Fase de Planejamento e Controle | 💡 Proposta 2026-06-28 | NEP-035, NEP-036, ADR-068, ADR-046 |
 | [125](adr-125-separacao-custo-produtivo-pool-mob-demob-indireto.md) | Hierarquia de Custo: C_prod / C_pool / Contrato; Mob/Demob como Custo Indireto | 💡 Proposta 2026-06-28 | ADR-085, ADR-106, ADR-124, NEP-028 |
 | [126](adr-126-project-ownership.md) | Project Ownership: `owner_id` em `ProjectMeta`, distinto de autoria por versão (ADR-119); autorização combinada (role + ownership) para ações destrutivas; handover híbrido; propagação de remove-user | 💡 Proposta 2026-07-02 | ADR-099, ADR-117, ADR-118, ADR-119, ADR-094 |
+| [127](adr-127-regime-contrato-vs-precificacao-horaria.md) | Regime de Contrato (Contínuo/Mensal) vs. Precificação Horária: consolida `rental_unit`/`unidade_faturamento`/custo idle já implementados (só documentação, sem código novo); multa de rescisão avaliada e descartada de escopo | ✅ Implementado 2026-07-02 | ADR-080, ADR-108, ADR-125 |
 
 **Legenda:** ✅ Implementado/Decidido · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 
