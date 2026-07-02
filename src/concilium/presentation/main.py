@@ -213,7 +213,7 @@ def _load_auth() -> None:
         add_user,
         list_devices,
         list_users,
-        new_device,
+        regenerate_code,
         remove_user,
         revoke_device,
     )
@@ -221,7 +221,7 @@ def _load_auth() -> None:
     auth_app.command("add-user")(add_user)
     auth_app.command("list-users")(list_users)
     auth_app.command("remove-user")(remove_user)
-    auth_app.command("new-device")(new_device)
+    auth_app.command("regenerate-code")(regenerate_code)
     auth_app.command("list-devices")(list_devices)
     auth_app.command("revoke-device")(revoke_device)
 

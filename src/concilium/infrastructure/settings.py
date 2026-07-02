@@ -63,6 +63,10 @@ CONCILIUM__MCP_HOST                   [opt]   0.0.0.0          McpSettings.host
 CONCILIUM__MCP_PORT                   [opt]   8080             McpSettings.port
 CONCILIUM__MCP_RATE_LIMIT_CALLS       [opt]   10               McpSettings.rate_limit_calls
 CONCILIUM__MCP_RATE_LIMIT_PERIOD_S    [opt]   60               McpSettings.rate_limit_period_s
+── MCP Proxy (concilium-mcp-proxy) ──────────────────────────────────────────
+CONCILIUM_SERVER_URL                  [opt]   https://mcp...   McpProxySettings.server_url
+CONCILIUM_CLIENT_CODE                 [req]   —                McpProxySettings.client_code
+                                                                (device_id é auto-detectado, sem env var)
 ── UI Streamlit (UiSettings) ────────────────────────────────────────────────
 CONCILIUM__UI_HOST                    [opt]   127.0.0.1        UiSettings.host
 CONCILIUM__UI_PORT                    [opt]   8501             UiSettings.port
@@ -332,23 +336,37 @@ def get_mcp() -> McpSettings:
 
 @dataclass(frozen=True)
 class McpProxySettings:
-    """Configuração do proxy stdio -> HTTP do MCP."""
+    """Configuração do proxy stdio -> HTTP do MCP (simplificada)."""
 
     server_url: str
-    """CONCILIUM_SERVER_URL — URL base do servidor MCP HTTP."""
+    """CONCILIUM_SERVER_URL — URL base do servidor MCP HTTP (streamable-http)."""
+
+    client_code: str
+    """CONCILIUM_CLIENT_CODE — código de ativação para bootstrap de refresh token."""
 
     device_id: str
-    """CONCILIUM_DEVICE_ID — identificador local do dispositivo."""
-
-    device_code: str
-    """CONCILIUM_DEVICE_CODE — código de ativação para bootstrap de refresh token."""
+    """Device ID auto-detectado (hostname ou username)."""
 
     @classmethod
     def from_env(cls) -> McpProxySettings:
+        import platform
+        import socket
+
+        server_url = _str("CONCILIUM_SERVER_URL", "https://mcp.mendesloboconstrucao.com.br").rstrip("/")
+        client_code = _str("CONCILIUM_CLIENT_CODE", "")
+        
+        # Auto-detecta device_id: hostname ou username@hostname
+        try:
+            hostname = socket.gethostname()
+            username = platform.node() or ""
+            device_id = f"{username}-{hostname}" if username else hostname
+        except Exception:
+            device_id = "unknown-device"
+
         return cls(
-            server_url=_str("CONCILIUM_SERVER_URL", "https://mcp.mendesloboconstrucao.com.br").rstrip("/"),
-            device_id=_str("CONCILIUM_DEVICE_ID", "default"),
-            device_code=_str("CONCILIUM_DEVICE_CODE", ""),
+            server_url=server_url,
+            client_code=client_code,
+            device_id=device_id,
         )
 
 

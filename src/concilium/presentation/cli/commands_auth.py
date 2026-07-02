@@ -1,13 +1,16 @@
 """concilium auth — gestão de usuários e dispositivos.
 
-Comandos de administrador para o sistema de autenticação por device code.
+Comandos de administrador para o sistema de autenticação. Cada usuário recebe um
+client_code reutilizável no cadastro (add-user) — o mesmo código ativa quantos
+dispositivos ele precisar no Claude Desktop, sem exigir um cadastro por TI a cada
+dispositivo novo.
 
 Uso típico:
-  # Criar usuário
-  concilium auth add-user --id bruno --scope mcp:read --scope pipeline:run
+  # Criar usuário (gera client_code reutilizável)
+  concilium auth add-user --id bruno --role operator
 
-  # Gerar device code para o usuário configurar o Claude Desktop
-  concilium auth new-device --user bruno --device "macbook-bruno"
+  # Regenerar o client_code do usuário (ex: vazamento do código original)
+  concilium auth regenerate-code --user bruno
 
   # Listar dispositivos ativos
   concilium auth list-devices
@@ -53,8 +56,12 @@ def add_user(
       auditor        — leitura + dados financeiros (sem executar)
       catalog-manager — especialista em catálogo (sem acesso a projetos de clientes)
 
-    Se --email for fornecido, gera automaticamente um device code inicial e envia
-    o claude_desktop_config.json por email (ADR-123 F2).
+    Sempre gera um client_code reutilizável de bootstrap — o mesmo código serve
+    para ativar quantos dispositivos o usuário precisar (Claude Desktop em casa,
+    no trabalho, etc.), sem depender do admin/TI para cadastrar cada um.
+
+    Se --email for fornecido, o claude_desktop_config.json pronto é enviado por
+    email automaticamente (ADR-123 F2).
     """
     import json as _json
 
@@ -65,43 +72,36 @@ def add_user(
     generated = secret is None
     if generated:
         secret = secrets.token_urlsafe(32)
+    client_code = "RCODE-" + secrets.token_hex(16).upper()
 
     try:
-        record = store.add_client(client_id, secret, [role], notes, email=email or "")
+        record = store.add_client(client_id, secret, [role], notes, email=email or "", client_code=client_code)
     except ValueError as e:
         rprint(f"[red]Erro:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
     rprint(f"[green]✓ Usuário '{record.client_id}' criado.[/green]")
     rprint(f"  Role    : {', '.join(record.roles)}")
     if generated:
         rprint("\n[yellow]Secret gerado (guarde agora — não será exibido de novo):[/yellow]")
         rprint(f"  [bold]{secret}[/bold]")
+    rprint("\n[yellow]Client code gerado (guarde agora — não será exibido de novo):[/yellow]")
+    rprint(f"  [bold]{client_code}[/bold]")
 
-    if email:
-        # ADR-123 F2: auto-gerar device code e enviar email de boas-vindas
-
-        device_id = f"{client_id}-default"
-        device_record = store.create_device_code(
-            client_id=client_id,
-            device_id=device_id,
-            device_name="Dispositivo inicial",
-        )
-
-        config_block = {
-            "mcpServers": {
-                "concilium": {
-                    "command": "concilium-mcp-proxy",
-                    "env": {
-                        "CONCILIUM_DEVICE_CODE": device_record.code,
-                        "CONCILIUM_DEVICE_ID": device_id,
-                        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
-                    },
-                }
+    config_block = {
+        "mcpServers": {
+            "concilium": {
+                "command": "concilium-mcp-proxy",
+                "env": {
+                    "CONCILIUM_CLIENT_CODE": client_code,
+                    "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
+                },
             }
         }
-        config_json = _json.dumps(config_block, indent=2, ensure_ascii=False)
+    }
+    config_json = _json.dumps(config_block, indent=2, ensure_ascii=False)
 
+    if email:
         get_notification_service().notify_user_created(
             client_id=client_id,
             role=role,
@@ -109,7 +109,11 @@ def add_user(
             config_json=config_json,
         )
         rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
-        rprint(f"  Device code: [bold]{device_record.code}[/bold]")
+    else:
+        rprint("\n[bold]Cole em claude_desktop_config.json:[/bold]")
+        rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
+        rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]\n")
+        typer.echo(config_json)
 
 
 @app.command("list-users")
@@ -154,7 +158,6 @@ def remove_user(
         typer.confirm(f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?", abort=True)
 
     store = get_auth_store()
-    revoked = store.revoke_device(client_id)  # revoga por client_id via list_devices
     # Revoke all devices for this client
     devices = store.list_devices(client_id=client_id)
     for d in devices:
@@ -170,47 +173,40 @@ def remove_user(
 # ── Dispositivos ──────────────────────────────────────────────────────────────
 
 
-@app.command("new-device")
-def new_device(
+@app.command("regenerate-code")
+def regenerate_code(
     user: str = typer.Option(..., "--user", "-u", help="client_id do usuário."),
-    device: str = typer.Option(..., "--device", "-d", help="Nome do dispositivo (ex: macbook-bruno)."),
-    scopes: list[str] | None = typer.Option(None, "--scope", help="Escopos. Default: herda do usuário."),
-    expires: str = typer.Option("1h", "--expires", "-e", help="Expiração do código (ex: 1h, 30m)."),
     show_config: bool = typer.Option(
         True, "--config/--no-config", help="Exibir bloco JSON para claude_desktop_config."
     ),
 ) -> None:
-    """Gera um device code de uso único para o usuário configurar o Claude Desktop."""
+    """Gera um novo client_code para o usuário (invalida o anterior).
+
+    O client_code é reutilizável em quantos dispositivos o usuário precisar —
+    não é necessário gerar um código por dispositivo. Use este comando apenas
+    se o usuário perdeu o código original ou se ele vazou e precisa ser trocado.
+    """
     import json as _json
 
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     store = get_auth_store()
-    record = store.create_device_code(
-        client_id=user,
-        device_id=device,
-        device_name=device,
-        scopes=scopes,
-    )
+    client_code = store.regenerate_client_code(user)
+    if client_code is None:
+        rprint(f"[red]Erro:[/red] usuário '{user}' não encontrado.")
+        raise typer.Exit(1)
 
-    rprint(f"\n[green]✓ Device code gerado para '{user}' / '{device}'[/green]")
-    rprint(f"  Código  : [bold]{record.code}[/bold]")
-    rprint(f"  Expira  : {record.expires_at[:19].replace('T', ' ')} UTC")
-    rprint(f"  Roles   : {', '.join(record.roles)}")
-    rprint("  [dim]Uso único — inválido após primeiro uso ou após expirar.[/dim]")
+    rprint(f"\n[green]✓ Client code regenerado para '{user}'[/green]")
+    rprint(f"  Código  : [bold]{client_code}[/bold]")
+    rprint("  [dim]Reutilizável em quantos dispositivos o usuário precisar.[/dim]")
 
     if show_config:
-        from concilium.infrastructure.settings import get_storage
-
-        storage = get_storage()
-
         config_block = {
             "mcpServers": {
                 "concilium": {
                     "command": "concilium-mcp-proxy",
                     "env": {
-                        "CONCILIUM_DEVICE_CODE": record.code,
-                        "CONCILIUM_DEVICE_ID": device,
+                        "CONCILIUM_CLIENT_CODE": client_code,
                         "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
                     },
                 }

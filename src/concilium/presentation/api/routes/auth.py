@@ -75,7 +75,7 @@ def issue_token(request: Request, response: Response, body: TokenRequest) -> Tok
 
 
 class DeviceActivateRequest(BaseModel):
-    device_code: str = Field(description="Código RCODE-* gerado pelo admin.")
+    device_code: str = Field(description="client_code do usuário (formato RCODE-*).")
     device_name: str = Field(default="", description="Nome legível do dispositivo (opcional).")
 
 
@@ -90,24 +90,25 @@ class DeviceActivateResponse(BaseModel):
 @router.post(
     "/device/activate",
     response_model=DeviceActivateResponse,
-    summary="Ativar dispositivo com device code (uso único)",
+    summary="Ativar dispositivo com client_code do usuário",
     status_code=status.HTTP_200_OK,
 )
 @limiter.limit("10/minute", key_func=get_remote_address)
 def activate_device(request: Request, response: Response, body: DeviceActivateRequest) -> DeviceActivateResponse:
-    """Troca um device code (RCODE-*) por um refresh token persistente.
+    """Troca o client_code do usuário (RCODE-*) por um refresh token do dispositivo.
 
-    O device code é de uso único e expira em 1h.
+    O client_code é reutilizável — não é consumido nem expira — e pode ativar
+    quantos dispositivos o usuário precisar, cada um identificado por device_name.
     O refresh token retornado tem validade de 90 dias e deve ser armazenado
     localmente pelo proxy em `~/.concilium/tokens/` (chmod 600).
     """
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
-    rt = get_auth_store().activate_device_code(body.device_code)
+    rt = get_auth_store().activate_device_code(body.device_code, device_name=body.device_name)
     if rt is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Device code inválido, já utilizado ou expirado.",
+            detail="client_code inválido ou usuário inativo.",
         )
     return DeviceActivateResponse(
         refresh_token=rt.token_id,

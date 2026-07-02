@@ -18,9 +18,9 @@ def _setup_store_with_token(tmp_path, client_id="cli-1", device_id="dev-1"):
     from concilium.infrastructure.auth.auth_store import AuthStore
 
     store = AuthStore(data_dir=tmp_path)
-    store.add_client(client_id, "secret", ["operator"])
-    code_rec = store.create_device_code(client_id, device_id, f"{device_id}-name")
-    rt = store.activate_device_code(code_rec.code)
+    client_code = f"RCODE-{client_id}"
+    store.add_client(client_id, "secret", ["operator"], client_code=client_code)
+    rt = store.activate_device_code(client_code, device_name=device_id)
     return store, rt
 
 
@@ -37,15 +37,11 @@ class TestAuthStoreRefreshTokenLoopMisses:
         from concilium.infrastructure.auth.auth_store import AuthStore
 
         store = AuthStore(data_dir=tmp_path)
-        store.add_client("c1", "s1", ["operator"])
+        store.add_client("c1", "s1", ["operator"], client_code="RCODE-c1")
 
-        # Issue token for device-A
-        code_a = store.create_device_code("c1", "dev-A", "Device A")
-        store.activate_device_code(code_a.code)
-
-        # Issue token for device-B
-        code_b = store.create_device_code("c1", "dev-B", "Device B")
-        store.activate_device_code(code_b.code)
+        # Issue token for device-A and device-B via the same reusable client_code
+        store.activate_device_code("RCODE-c1", device_name="dev-A")
+        store.activate_device_code("RCODE-c1", device_name="dev-B")
 
         # Revoking device-A: the loop hits dev-B's token → if device_id==dev-A: False
         count = store.revoke_device("dev-A")

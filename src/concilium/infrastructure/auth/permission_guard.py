@@ -42,6 +42,7 @@ CATALOG_MERGE = "catalog:merge"  # ADR-120 D1: promoção rascunho→ativo (4 ol
 FINANCIALS_READ = "financials:read"
 AUTH_MANAGE = "auth:manage"
 AUTH_SELF = "auth:self"  # ADR-123 F5: gestão de dispositivos próprios (self-service)
+AUTH_PUBLIC = "auth:public"  # bootstrap sem token (ativar_dispositivo, renovar_token) — sempre permitido
 SYSTEM_READ = "system:read"
 HEALTH_READ = "health:read"  # health check do servidor — qualquer usuário autenticado com acesso operacional
 
@@ -275,7 +276,9 @@ def permission(perm: str):
     def decorator(fn: Any) -> Any:
         @wraps(fn)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            if _auth_enabled():
+            # AUTH_PUBLIC: bootstrap sem token (ex: ativar_dispositivo) — sempre permitido,
+            # não passa por _auth_enabled()/roles pois é chamado antes de existir qualquer token.
+            if perm != AUTH_PUBLIC and _auth_enabled():
                 token_roles = _get_roles_from_context(kwargs)
                 if perm not in get_permissions(token_roles):
                     raise PermissionError(
@@ -404,7 +407,8 @@ def patch_mcp_auth_permissions(server: Any) -> None:
         def _make_wrapper(fn: Any, perm: str) -> Any:
             @wraps(fn)
             def _auth_wrapper(*args: Any, **kwargs: Any) -> Any:
-                if _auth_enabled():
+                # AUTH_PUBLIC: bootstrap sem token — ver permission() acima.
+                if perm != AUTH_PUBLIC and _auth_enabled():
                     token_roles = list(_current_roles.get())
                     if perm not in get_permissions(token_roles):
                         raise PermissionError(

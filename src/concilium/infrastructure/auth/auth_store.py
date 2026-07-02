@@ -62,6 +62,7 @@ class ClientRecord:
     notes: str = ""
     scopes: list[str] = field(default_factory=list)  # legado ADR-094, ignorado se roles presente
     email: str = ""  # ADR-123: endereço de email do usuário para notificações
+    client_code_hash: str = ""  # "sha256:<hex>" — código reutilizável de bootstrap (1 por usuário, N dispositivos)
 
 
 @dataclass
@@ -74,18 +75,6 @@ class RevokePendingRecord:
     requested_at: str  # ISO-8601
     expires_at: str  # ISO-8601 (+24h)
     confirmed: bool = False
-
-
-@dataclass
-class DeviceCodeRecord:
-    code: str  # "RCODE-<hex>"
-    client_id: str
-    device_id: str
-    device_name: str
-    roles: list[str]  # ADR-099
-    expires_at: str  # ISO-8601
-    used: bool = False
-    scopes: list[str] = field(default_factory=list)  # legado
 
 
 @dataclass
@@ -112,14 +101,14 @@ class AuthStore:
 
         store = get_auth_store()
 
-        # Admin: create client
-        store.add_client("bruno", "secret123", ["mcp:read", "pipeline:run"])
+        # Admin: create client com um client_code reutilizável de bootstrap
+        client_code = "RCODE-" + secrets.token_hex(16).upper()
+        store.add_client("bruno", "secret123", ["mcp:read", "pipeline:run"], client_code=client_code)
 
-        # Admin: create device code for client
-        code = store.create_device_code("bruno", "macbook-bruno", "macbook-bruno", ...)
-
-        # User (proxy): activate device code once → refresh token persisted locally
-        rt = store.activate_device_code(code.code)
+        # User (proxy): activate client_code em qualquer dispositivo → refresh token
+        # próprio daquele dispositivo, persistido localmente. O client_code nunca é
+        # consumido: pode ser reutilizado em quantos dispositivos o usuário quiser.
+        rt = store.activate_device_code(client_code, device_name="macbook-bruno")
 
         # User (proxy): exchange refresh token → access token via token_service
         token_record = store.use_refresh_token(rt.token_id)
@@ -129,7 +118,6 @@ class AuthStore:
     """
 
     REFRESH_TOKEN_TTL = timedelta(days=90)
-    DEVICE_CODE_TTL = timedelta(hours=1)
 
     def __init__(
         self,
@@ -148,7 +136,6 @@ class AuthStore:
                 data_dir = Path(raw).expanduser().resolve() if raw else Path.home() / ".concilium" / "auth"
             self._storage = LocalBlobStorage(root_dir=data_dir)
         self._lock = threading.Lock()
-        self._device_codes: dict[str, DeviceCodeRecord] = {}  # in-memory only
         self._clients_cache: list[dict] | None = None
         self._clients_cache_at: float = 0.0
 
@@ -195,6 +182,7 @@ class AuthStore:
         notes: str = "",
         scopes: list[str] | None = None,  # legado — convertido para roles
         email: str = "",  # ADR-123: endereço de email para notificações
+        client_code: str = "",  # código de bootstrap reutilizável (ver activate_device_code)
     ) -> ClientRecord:
         """Register a new client. Raises ValueError if client_id already exists."""
         from concilium.infrastructure.auth.permission_guard import (
@@ -224,6 +212,7 @@ class AuthStore:
                 created_at=_iso(_now()),
                 notes=notes,
                 email=email,
+                client_code_hash=_hash(client_code) if client_code else "",
             )
             existing.append(record)
             self._write("clients.json", [asdict(r) for r in existing])
@@ -274,63 +263,50 @@ class AuthStore:
         """Legado ADR-094: alias para get_client_roles()."""
         return self.get_client_roles(client_id, secret)
 
-    # ── Device codes ──────────────────────────────────────────────────────────
+    # ── Client code (bootstrap reutilizável, 1 por usuário / N dispositivos) ────
 
-    def create_device_code(
-        self,
-        client_id: str,
-        device_id: str,
-        device_name: str,
-        roles: list[str] | None = None,
-        scopes: list[str] | None = None,  # legado
-    ) -> DeviceCodeRecord:
-        """Create a single-use device code for a client.
+    def regenerate_client_code(self, client_id: str) -> str | None:
+        """Generate and persist a new client_code for client_id, replacing any previous one.
 
-        roles defaults to the client's roles from the file store.
+        Returns the plaintext code (shown once), or None if client_id doesn't exist.
         """
-        from concilium.infrastructure.auth.permission_guard import LEGACY_SCOPE_TO_ROLE
-
-        effective_roles = list(roles or [])
-        if not effective_roles and scopes:
-            effective_roles = list({LEGACY_SCOPE_TO_ROLE.get(s, "operator") for s in scopes})
-        if not effective_roles:
-            clients = {r.client_id: r for r in self.list_clients()}
-            if client_id in clients:
-                effective_roles = clients[client_id].roles
-            else:
-                effective_roles = ["operator"]
-
         code = "RCODE-" + secrets.token_hex(16).upper()
-        record = DeviceCodeRecord(
-            code=code,
-            client_id=client_id,
-            device_id=device_id,
-            device_name=device_name,
-            roles=effective_roles,
-            expires_at=_iso(_now() + self.DEVICE_CODE_TTL),
-        )
         with self._lock:
-            self._device_codes[code] = record
-        return record
+            raw = self._read_clients()
+            records = [ClientRecord(**r) for r in raw]
+            for r in records:
+                if r.client_id == client_id:
+                    r.client_code_hash = _hash(code)
+                    self._write("clients.json", [asdict(x) for x in records])
+                    self._invalidate_clients_cache()
+                    return code
+        return None
 
-    def activate_device_code(self, code: str) -> RefreshTokenRecord | None:
-        """Consume a device code and persist a new refresh token.
+    def activate_device_code(self, client_code: str, device_name: str = "") -> RefreshTokenRecord | None:
+        """Exchange a per-user client_code for a new refresh token bound to device_name.
 
-        Returns None if the code is invalid, already used, or expired.
+        Unlike the legacy per-device single-use code, client_code is never consumed:
+        the same code can activate any number of devices, each getting its own
+        refresh token keyed by device_name. Returns None if the code doesn't match
+        any active client.
         """
         with self._lock:
-            rec = self._device_codes.get(code)
-            if rec is None or rec.used or _parse(rec.expires_at) < _now():
+            records = [ClientRecord(**r) for r in self._read_clients()]
+            client = next(
+                (r for r in records if r.active and r.client_code_hash and _verify(client_code, r.client_code_hash)),
+                None,
+            )
+            if client is None:
                 return None
-            rec.used = True
 
+            device_id = device_name or client.client_id
             token_id = "RT-" + secrets.token_hex(32)
             rt = RefreshTokenRecord(
                 token_id=token_id,
-                client_id=rec.client_id,
-                device_id=rec.device_id,
-                device_name=rec.device_name,
-                roles=rec.roles,
+                client_id=client.client_id,
+                device_id=device_id,
+                device_name=device_name or device_id,
+                roles=client.roles,
                 issued_at=_iso(_now()),
                 expires_at=_iso(_now() + self.REFRESH_TOKEN_TTL),
             )

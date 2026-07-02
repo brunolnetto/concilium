@@ -1,305 +1,345 @@
-﻿# Concilium
+﻿# Agente Gerente de Engenharia
 
-Framework deterministico para planejamento temporal e financeiro de obras, com
-pipeline manifest-driven de skills, versionamento de projeto e interfaces via
-CLI, API, UI e MCP.
+Este repositório contém o **Agente Gerente de Engenharia**, um assistente de IA especializado em planejamento e gestão de obras de construção civil, construído sobre o framework `Concilium`.
 
-## Visao geral
+O agente atua como um especialista sênior, realizando análises de viabilidade, estimativas de custo, planejamento de cronograma e otimização de recursos com base em dados técnicos e financeiros.
 
-- Core de execucao em pipeline por skills, com validacoes e artefatos versionados.
-- Catalogo tecnicamente governado (CPU, insumos, producoes/produtividades).
-- Persistencia por projeto/versao com trilha de execucao.
-- Operacao por multiplas superficies:
-	- CLI (`concilium`)
-	- API HTTP (`concilium-api`)
-	- UI Streamlit (`concilium-ui`)
-	- MCP server (ferramentas para agentes)
+---
 
-## Stack
+## 📋 Visão Geral do Projeto
 
-- Python 3.11+
-- Typer + Rich (CLI)
-- FastAPI + Uvicorn (API)
-- Streamlit (UI)
-- Pydantic v2 (modelos)
-- FastMCP (MCP server)
-- Pytest + Ruff + Mypy (qualidade)
+O objetivo deste projeto é fornecer uma interface inteligente e automatizada para o planejamento de obras. O agente é capaz de:
 
-## Estrutura principal
+- **Analisar e Orçar:** Calcular custos diretos e indiretos, aplicar BDI e encargos, e gerar orçamentos detalhados.
+- **Planejar e Otimizar:** Criar cronogramas de execução, alocar equipes e equipamentos, e analisar a produtividade.
+- **Validar e Decidir:** Avaliar a viabilidade financeira dos projetos, calcular margens de lucro, ponto de equilíbrio e analisar cenários.
+- **Gerar Relatórios:** Consolidar dados e gerar artefatos como relatórios executivos e diagnósticos de criticidade.
 
-- `src/concilium/presentation/main.py`: entrada da CLI
-- `src/concilium/presentation/api/app.py`: app FastAPI
-- `src/concilium/presentation/ui/prototype_streamlit.py`: UI Streamlit
-- `src/concilium/application/runtime.py`: orquestracao do runtime
-- `src/concilium/application/skills/manifests/`: skills por manifesto `skill.toml`
-- `src/concilium/infrastructure/storage/`: armazenamento de projeto e versao
-- `config/`: contextos, perfis, catalogos, referencias e jurisdicoes
-- `tests/unit` e `tests/integration`: testes automatizados
+### Arquitetura e Core
 
-## Skills atualmente presentes
+O framework **Concilium** utiliza uma arquitetura de pipeline orientada a skills:
 
-As skills sao auto-descobertas em
-`src/concilium/application/skills/manifests`:
+- Pipeline manifest-driven com validações e artefatos versionados
+- Catálogo tecnicamente governado (CPU, insumos, produções/produtividades)
+- Persistência por projeto/versão com trilha de execução
+- Operação por múltiplas interfaces: CLI, API, UI e MCP
 
-- `01-escopo-e-eap`
-- `02-produtividade-climatica`
-- `03-catalogo-de-recursos`
-- `04-cronograma`
-- `05-equipes-e-alocacao`
-- `06-precificacao-unitaria`
-- `07-custos-indiretos`
-- `08-consolidacao-financeira`
-- `09-relatorio-e-artefatos`
-- `10-diagnostico-criticidade`
-- `11-avaliacao-intervencoes`
-- `12-registro-decisoes`
-- `13-assessor-replanejamento`
-- `14-explorador-cenarios`
-- `15-relatorio-executivo`
+### Stack Tecnológica
 
-## Instalacao
+- **Python 3.11+**
+- **Typer + Rich** (CLI)
+- **FastAPI + Uvicorn** (API)
+- **Streamlit** (UI)
+- **Pydantic v2** (modelos e validação)
+- **FastMCP** (MCP server)
+- **Pytest + Ruff + Mypy** (qualidade e testes)
 
-### Desenvolvimento
+### Skills Disponíveis
+
+As skills são auto-descobertas em `src/concilium/application/skills/manifests/`:
+
+- `01-escopo-e-eap` — Estruturação analítica do projeto
+- `02-produtividade-climatica` — Análise de fatores ambientais
+- `03-catalogo-de-recursos` — Gestão de insumos e recursos
+- `04-cronograma` — Planejamento temporal
+- `05-equipes-e-alocacao` — Alocação de mão de obra e equipamentos
+- `06-precificacao-unitaria` — Cálculo de custos unitários
+- `07-custos-indiretos` — Custos administrativos e indiretos
+- `08-consolidacao-financeira` — Consolidação orçamentária
+- `09-relatorio-e-artefatos` — Geração de documentação
+- `10-diagnostico-criticidade` — Análise de riscos
+- `11-avaliacao-intervencoes` — Avaliação de mudanças
+- `12-registro-decisoes` — Rastreabilidade de decisões
+- `13-assessor-replanejamento` — Assistente de replanejamento
+- `14-explorador-cenarios` — Análise de cenários
+- `15-relatorio-executivo` — Relatórios gerenciais
+
+---
+
+## 🚀 Como Começar
+
+### Instalação para Desenvolvimento
 
 ```bash
+# 1. Clone o repositório
+git clone https://github.com/mendes-lobo-construcao/agente-gerente-de-engenharia.git
+cd agente-gerente-de-engenharia
+
+# 2. Crie e ative um ambiente virtual
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\Activate.ps1  # Windows PowerShell
+
+# 3. Instale as dependências em modo de desenvolvimento
 pip install -e ".[dev]"
+
+# 4. Configure os hooks de pre-commit
 pre-commit install
 ```
 
-### Instalacao limpa
+### Instalação Limpa (Produção)
 
 ```bash
 python -m venv .venv
-# Linux/macOS
 source .venv/bin/activate
-# Windows PowerShell
-# .venv\Scripts\Activate.ps1
-
 pip install --upgrade pip
 pip install .
 
+# Verifique a instalação
 concilium --help
 concilium-api --help
 concilium-ui --help
 ```
 
-## Execucao local
+---
 
-### CLI
+## 💻 Como Usar
+
+O agente pode ser operado através de múltiplas interfaces:
+
+### 1. Linha de Comando (CLI)
+
+A CLI é a principal forma de interação para automação e execução de fluxos.
 
 ```bash
+# Comandos disponíveis
 concilium --help
 concilium project --help
 concilium configuration --help
 concilium catalog --help
+
+# Fluxo básico de projeto
+concilium project init "Meu Projeto" --contexto samples
+concilium project status "Meu Projeto"
+concilium project run 01-escopo-e-eap --project "Meu Projeto"
+concilium validate project "Meu Projeto"
+concilium project approve "Meu Projeto@v1" --as eng_senior
 ```
 
-### API
+### 2. API (Servidor HTTP)
+
+A API permite integração com outros sistemas.
 
 ```bash
+# Iniciar o servidor
 concilium-api
 ```
 
-Default local: `127.0.0.1:8000`.
-Swagger: `http://127.0.0.1:8000/swagger`.
+- **Endpoint:** `http://127.0.0.1:8000`
+- **Documentação Swagger:** `http://127.0.0.1:8000/swagger`
 
-### UI
+### MCP Proxy Remoto
+
+Para conectar ao servidor MCP em produção via proxy, configure:
+
+```json
+{
+  "mcpServers": {
+    "concilium": {
+      "command": "concilium-mcp-proxy",
+      "env": {
+        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
+        "CONCILIUM_CLIENT_CODE": "RCODE-..."
+      }
+    }
+  }
+}
+```
+
+**Notas:**
+- `CONCILIUM_CLIENT_CODE`: Código fornecido pelo administrador para ativar o dispositivo
+- `device_id`: Auto-detectado (hostname ou username@hostname) - não precisa configurar
+- Tokens são armazenados localmente em `~/.concilium/tokens/` (chmod 600)
+
+### 3. Interface de Usuário (UI)
+
+Interface visual baseada em Streamlit.
 
 ```bash
+# Iniciar a aplicação
 concilium-ui
 ```
 
-Default local: `127.0.0.1:8501`.
+- **Endpoint:** `http://127.0.0.1:8501`
 
-## Execucao com Docker Compose
+### 4. Docker Compose (Desenvolvimento)
 
 ```bash
+# Subir todos os serviços
 docker compose -f cd/development/docker-compose.yml up --build
+
+# Profiles específicos
+docker compose -f cd/development/docker-compose.yml --profile api up --build
+docker compose -f cd/development/docker-compose.yml --profile deploy up --build
 ```
 
-Servicos:
+**Serviços disponíveis:**
+- API: `http://localhost:8000`
+- UI: `http://localhost:8501`
 
-- API em `http://localhost:8000`
-- UI em `http://localhost:8501`
+---
 
-## Fluxo rapido de projeto (CLI)
+## 📁 Estrutura do Projeto
 
-```bash
-# Criar projeto
-concilium project init "Projeto Exemplo" --contexto samples
-
-# Ver status
-concilium project status "Projeto Exemplo"
-
-# Rodar skill
-concilium project run 01-escopo-e-eap --project "Projeto Exemplo" --inputs '{}'
-
-# Validar projeto
-concilium validate project "Projeto Exemplo"
-
-# Aprovar versao
-concilium project approve "Projeto Exemplo@v1" --as eng_senior
+```
+agente-gerente-de-engenharia/
+├── src/concilium/           # Código-fonte principal
+│   ├── application/         # Lógica de negócio e skills
+│   ├── domain/              # Entidades e modelos de domínio
+│   ├── presentation/        # Interfaces (CLI, API, UI)
+│   └── infrastructure/      # Adapters e serviços externos
+├── config/                  # Configurações e catálogos
+│   ├── catalogos/          # Catálogos de insumos
+│   ├── contextos/          # Contextos de projeto
+│   ├── perfis/             # Perfis de cálculo
+│   ├── jurisdicoes/        # Dados jurisdicionais
+│   └── referencias/        # Referências (CPU, ANP, etc.)
+├── tests/                   # Testes automatizados
+│   ├── unit/               # Testes unitários
+│   └── integration/        # Testes de integração
+├── scripts/                 # Scripts de automação
+│   ├── dev/                # Scripts de desenvolvimento
+│   ├── catalog/            # Scripts de catálogo
+│   └── benchmark/          # Scripts de benchmark
+├── docs/                    # Documentação técnica
+│   ├── engineering/        # Documentação de engenharia
+│   └── product/            # Documentação de produto
+├── projetos/               # Dados de projetos (local)
+├── cd/                     # Configurações de deploy
+│   ├── development/        # Docker Compose para dev
+│   └── production/         # Infraestrutura (Bicep/Azure)
+└── benchmarks/             # Benchmarks e validações
 ```
 
-## Variaveis de ambiente
+### Arquivos Principais
 
-Referencia completa: `src/concilium/infrastructure/settings.py`.
+- `src/concilium/presentation/main.py` — Entrada da CLI
+- `src/concilium/presentation/api/app.py` — Aplicação FastAPI
+- `src/concilium/presentation/ui/prototype_streamlit.py` — Interface Streamlit
+- `src/concilium/application/runtime.py` — Orquestração do runtime
+- `src/concilium/infrastructure/settings.py` — Configurações e variáveis de ambiente
 
-### Desenvolvimento local
+---
 
-Arquivos usados pelo `cd/development/docker-compose.yml` (nao commitados):
+## ⚙️ Configuração
 
-- `.env.api` — vars da API (HOST, PORT, STORE_BACKEND, AUTH)
-- `.env.ui` — vars da UI (UI_HOST, UI_PORT, UI_API_BASE_URL)
+### Variáveis de Ambiente
+
+Referência completa: `src/concilium/infrastructure/settings.py`.
+
+#### Desenvolvimento Local
+
+Arquivos de configuração (não commitados):
+- `.env.api` — Variáveis da API
+- `.env.ui` — Variáveis da UI
+
+**Exemplo mínimo para desenvolvimento local:**
 
 ```bash
-# Exemplo minimo .env.api para dev local com filesystem
+# .env.api
 CONCILIUM__API_HOST=0.0.0.0
 CONCILIUM__STORE_BACKEND=filesystem
 CONCILIUM__AUTH_ENABLED=0
 OTEL_SDK_DISABLED=true
 ```
 
-Profiles de compose:
+---
+
+## 🚢 Deploy em Produção (Azure Container Apps + SharePoint)
+
+### Pipeline de Deploy
+
+```
+bootstrap → keys → github → configure → [image → deploy → smoke → promote]
+```
+
+### Sequência de Primeiro Deploy
 
 ```bash
-docker compose -f cd/development/docker-compose.yml --profile api up --build
-docker compose -f cd/development/docker-compose.yml --profile deploy up --build
+# 1. Provisionar infraestrutura
+cd/scripts/deploy.sh bootstrap
+
+# 2. Gerar chaves JWT no Key Vault
+cd/scripts/deploy.sh keys
+
+# 3. Configurar GitHub Secrets/Variables
+SP_CLIENT_SECRET=<secret> SMOKE_CLIENT_SECRET=<secret> \
+  cd/scripts/deploy.sh github
+
+# 4. Aplicar variáveis de ambiente nos containers
+SP_TENANT_ID=<tid> SP_CLIENT_ID=<cid> SP_CLIENT_SECRET=<secret> \
+SP_DRIVE_ID=<did> SMOKE_CLIENT_SECRET=<secret> \
+  cd/scripts/deploy.sh configure
+
+# 5. Build, deploy e validação
+cd/scripts/deploy.sh image
+cd/scripts/deploy.sh deploy <tag>
+cd/scripts/deploy.sh smoke --revision <revision>
+cd/scripts/deploy.sh promote --revision <revision>
 ```
 
-## Deploy em producao (ACA + SharePoint)
+### Variáveis de Ambiente (Produção)
 
-### Visao geral do pipeline
+**Azure Container Apps:**
 
-```
-bootstrap -> keys -> github -> configure -> [image -> deploy -> smoke -> promote]
-```
-
-### Variaveis por escopo
-
-#### Azure Container Apps — env vars dos containers
-
-Aplicadas via `deploy.sh configure` (idempotente). Necessitam das variaveis de ambiente
-`SP_*` e `SMOKE_CLIENT_SECRET` definidas antes de executar.
-
-| Variavel | API | MCP | Valor |
-|---|:---:|:---:|---|
+| Variável | API | MCP | Descrição |
+|----------|:---:|:---:|-----------|
 | `CONCILIUM__CONFIG_ROOT` | ✓ | ✓ | `/app` |
 | `CONCILIUM__STORE_BACKEND` | ✓ | ✓ | `sharepoint` |
-| `CONCILIUM__SP_TENANT_ID` | ✓ | ✓ | tenant do Entra ID |
+| `CONCILIUM__SP_TENANT_ID` | ✓ | ✓ | Tenant do Entra ID |
 | `CONCILIUM__SP_CLIENT_ID` | ✓ | ✓ | App Registration client ID |
-| `CONCILIUM__SP_CLIENT_SECRET` | ✓ | ✓ | client secret do App Registration |
+| `CONCILIUM__SP_CLIENT_SECRET` | ✓ | ✓ | Client secret |
 | `CONCILIUM__SP_DRIVE_ID` | ✓ | ✓ | Drive ID do SharePoint |
 | `CONCILIUM__SP_ROOT_PATH` | ✓ | ✓ | `Concilium/prod` |
 | `CONCILIUM__AUTH_ENABLED` | ✓ | ✓ | `1` |
-| `CONCILIUM__AUTH_CLIENTS` | ✓ | ✓ | JSON gerado por `configure` a partir de `SMOKE_CLIENT_SECRET` |
-| `CONCILIUM__JWT_KEY_VAULT_URL` | ✓ | ✓ | `https://concilium-kv.vault.azure.net` |
+| `CONCILIUM__JWT_KEY_VAULT_URL` | ✓ | ✓ | Key Vault URL |
 | `CONCILIUM__API_HOST` | ✓ | — | `0.0.0.0` |
 | `CONCILIUM__API_PORT` | ✓ | — | `8000` |
 | `CONCILIUM__MCP_TRANSPORT` | — | ✓ | `streamable-http` |
 | `CONCILIUM__MCP_HOST` | — | ✓ | `0.0.0.0` |
 | `CONCILIUM__MCP_PORT` | — | ✓ | `8080` |
-| `OTEL_SERVICE_NAME` | ✓ | ✓ | `concilium-api` / `concilium-mcp` |
 
-#### GitHub Secrets
+**GitHub Secrets:**
 
-Configurados via `deploy.sh github`. Mascarados nos logs do Actions.
+- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
+- `CONCILIUM__SP_CLIENT_SECRET`, `SMOKE_CLIENT_SECRET`
+- `OTEL_EXPORTER_OTLP_ENDPOINT` (opcional)
 
-| Secret | Descricao |
-|---|---|
-| `AZURE_CLIENT_ID` | App Registration OIDC para o GitHub Actions |
-| `AZURE_TENANT_ID` | Tenant ID do Entra ID |
-| `AZURE_SUBSCRIPTION_ID` | Subscription ID do Azure |
-| `CONCILIUM__SP_CLIENT_SECRET` | Client secret do App Registration SharePoint |
-| `SMOKE_CLIENT_SECRET` | Secret do cliente `smoke-test` para smoke tests |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Endpoint OTLP para telemetria (opcional) |
+**Azure Key Vault (`concilium-kv`):**
 
-#### GitHub Variables
+- `jwt-private-key` — Chave privada RS256 PEM
+- `jwt-public-key` — Chave pública RS256 PEM
 
-| Variable | Valor |
-|---|---|
-| `RESOURCE_GROUP` | `concilium-rg` |
-| `ACA_API_APP` | `concilium-api` |
-| `ACA_MCP_APP` | `concilium-mcp` |
-| `ACR_NAME` | `conciliumacr` |
-| `IMAGE_NAME` | `concilium` |
-| `SMOKE_CLIENT_ID` | `smoke-test` |
-
-#### Azure Key Vault (`concilium-kv`)
-
-Secrets buscados em runtime pela Managed Identity (`CONCILIUM__JWT_KEY_VAULT_URL`).
-
-| Secret | Conteudo |
-|---|---|
-| `jwt-private-key` | Chave privada RS256 PEM (gerada por `deploy.sh keys`) |
-| `jwt-public-key` | Chave publica RS256 PEM |
-
-### Sequencia de primeiro deploy
-
-```bash
-# 1. Provisionar infra (idempotente)
-deploy.sh bootstrap
-
-# 2. Gerar JWT keys no Key Vault
-deploy.sh keys
-
-# 3. Configurar GitHub Secrets/Vars
-SP_CLIENT_SECRET=<secret> SMOKE_CLIENT_SECRET=<secret> deploy.sh github
-
-# 4. Aplicar env vars nos containers ACA
-SP_TENANT_ID=<tid> SP_CLIENT_ID=<cid> SP_CLIENT_SECRET=<secret> \
-SP_DRIVE_ID=<did> SMOKE_CLIENT_SECRET=<secret> \
-deploy.sh configure
-
-# 5. Build e deploy da imagem
-deploy.sh image
-deploy.sh deploy <tag>
-deploy.sh smoke --revision <revision>
-deploy.sh promote --revision <revision>
-```
-
-### Rotacao do SMOKE_CLIENT_SECRET
+### Rotação de Secrets
 
 ```bash
 # Gerar novo secret
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# Re-aplicar configuracao com o novo secret
+# Re-aplicar configuração
 SP_TENANT_ID=<tid> SP_CLIENT_ID=<cid> SP_CLIENT_SECRET=<secret> \
 SP_DRIVE_ID=<did> SMOKE_CLIENT_SECRET=<novo-secret> \
-deploy.sh configure
+  cd/scripts/deploy.sh configure
 
 # Atualizar GitHub Secret
-gh secret set SMOKE_CLIENT_SECRET --body "<novo-secret>" --repo mendeslobo/concilium
+gh secret set SMOKE_CLIENT_SECRET --body "<novo-secret>" \
+  --repo mendes-lobo-construcao/agente-gerente-de-engenharia
 ```
 
-## Qualidade e manutencao
+---
+
+## 🤝 Como Contribuir
+
+Agradecemos o interesse em contribuir! Seguimos diretrizes rigorosas de qualidade.
+
+### Governança de Commits
+
+Este repositório implementa governança automatizada de commits com **Conventional Commits**.
+
+#### Setup Inicial
 
 ```bash
-# Testes rapidos
-make test
-
-# Lint
-make lint
-
-# Type check
-make type-check
-
-# Formatacao
-make fmt
-
-# Cobertura
-make coverage
-```
-
-## Governanca de commits
-
-Este repositorio implementa governanca automatizada de commits para manter qualidade e rastreabilidade do historico.
-
-### Setup inicial
-
-```bash
-# Automatico (recomendado)
+# Automático (recomendado)
 python scripts/dev/setup_commit_governance.py
 
 # Manual
@@ -308,34 +348,72 @@ pre-commit install --hook-type commit-msg
 git config commit.template .git-commit-template
 ```
 
-### Regras principais
+#### Regras de Commits
 
-- **Limites tecnicos**: ≤15 arquivos (recomendado), ≤30 arquivos (maximo)
-- **Formato obrigatorio**: `tipo(escopo): mensagem` (Conventional Commits)
-- **Tipos validos**: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `style`, `build`, `ci`, `chore`, `revert`
+- **Formato obrigatório:** `tipo(escopo): mensagem`
+- **Tipos válidos:** `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `style`, `build`, `ci`, `chore`, `revert`
+- **Limites técnicos:** ≤15 arquivos (recomendado), ≤30 arquivos (máximo)
 
-### Ferramentas
+**Exemplos:**
+```bash
+feat(api): adiciona endpoint de status do projeto
+fix(cronograma): corrige cálculo de dias úteis
+refactor(skills): reorganiza estrutura de manifests
+docs(readme): atualiza instruções de instalação
+```
+
+#### Ferramentas de Validação
 
 ```bash
-# Validar tamanho antes de commitar
+# Validar tamanho do commit antes de commitar
 python scripts/dev/validate_commit_size.py
 
-# Auditar historico
+# Auditar histórico de commits
 python scripts/dev/audit_commit_history.py
 
 # Ver hotspots (arquivos mais modificados)
 python scripts/dev/audit_commit_history.py --detailed
 ```
 
-### Documentacao
+### Qualidade de Código
 
-- **Guia completo**: [COMMIT_GOVERNANCE.md](COMMIT_GOVERNANCE.md)
-- **Guia rapido**: [COMMIT_GOVERNANCE_QUICKSTART.md](COMMIT_GOVERNANCE_QUICKSTART.md)
-- **Conventional Commits**: https://www.conventionalcommits.org/
+```bash
+# Executar testes
+make test
 
-## Documentacao tecnica
+# Lint (verificação de estilo)
+make lint
 
-- Arquitetura e ADRs: `docs/engineering/0-architecture/`
-- NEPs e backlog de produto: `docs/engineering/2-development/neps/`
-- Notas tecnicas de engenharia: `docs/engineering/3-technical_notes/`
+# Type checking (verificação de tipos)
+make type-check
 
+# Formatação automática
+make fmt
+
+# Cobertura de testes
+make coverage
+```
+
+### Documentação
+
+Consulte os seguintes recursos para mais informações:
+
+- **[COMMIT_GOVERNANCE.md](COMMIT_GOVERNANCE.md)** — Guia completo de governança
+- **[COMMIT_GOVERNANCE_QUICKSTART.md](COMMIT_GOVERNANCE_QUICKSTART.md)** — Guia rápido
+- **[Conventional Commits](https://www.conventionalcommits.org/)** — Especificação oficial
+- **`docs/engineering/`** — Documentação técnica e ADRs
+- **`docs/product/`** — Documentação de produto e NEPs
+
+---
+
+## 📚 Documentação Técnica
+
+- **Arquitetura e ADRs:** `docs/engineering/0-architecture/`
+- **NEPs e Backlog de Produto:** `docs/engineering/2-development/neps/`
+- **Notas Técnicas de Engenharia:** `docs/engineering/3-technical_notes/`
+
+---
+
+## 📄 Licença
+
+Este projeto é propriedade de **Mendes Lobo Construção**. Todos os direitos reservados.

@@ -3,6 +3,10 @@
 Extrai o Bearer token do header Authorization, decodifica o JWT e seta
 _current_roles contextvar ANTES de cada invocação de tool MCP.
 
+Tools públicos (não requerem auth):
+  - ativar_dispositivo: bootstrap de novo dispositivo
+  - renovar_token: obter access_token de refresh_token
+
 Por que ASGI puro (não BaseHTTPMiddleware):
   BaseHTTPMiddleware usa anyio.create_task_group() internamente, o que cria
   um novo contexto de task e torna os contextvars invisíveis ao handler.
@@ -14,9 +18,18 @@ streamable_http_app() e sse_app() com este middleware.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from concilium.infrastructure.settings import get_auth
+
+# Tools que não requerem autenticação (bootstrap)
+_PUBLIC_TOOLS: frozenset[str] = frozenset({"ativar_dispositivo", "renovar_token"})
+
+# Métodos de protocolo MCP que não requerem autenticação.
+# notifications/initialized é obrigatório no handshake streamable-http: sem ele o
+# FastMCP não processa tools/call — precisa passar antes de existir qualquer token.
+_PUBLIC_METHODS: frozenset[str] = frozenset({"initialize", "ping", "notifications/initialized"})
 
 # ADR-121 D4/D6: OTel propagation + baggage — importações lazy-safe
 try:
@@ -49,6 +62,9 @@ class McpAuthMiddleware:
         raw_headers = scope.get("headers", [])
         headers = {k.lower(): v for k, v in raw_headers}
         headers_str: dict[str, str] = {k.decode("latin-1"): v.decode("latin-1") for k, v in raw_headers}
+
+        # Verifica se é uma chamada de tool público (não requer auth)
+        is_public_tool = await _is_public_tool_call(scope, receive)
 
         auth: str = headers.get(b"authorization", b"").decode("latin-1")
 
@@ -101,7 +117,7 @@ class McpAuthMiddleware:
                         pass  # baggage é best-effort
 
             except Exception as exc:
-                if _auth_enabled():
+                if _auth_enabled() and not is_public_tool:
                     await _send_json_response(
                         send,
                         401,
@@ -109,8 +125,8 @@ class McpAuthMiddleware:
                         headers=[(b"www-authenticate", b"Bearer")],
                     )
                     return
-                # AUTH_ENABLED=0 → ignorar erros de token (modo dev)
-        elif _auth_enabled():
+                # AUTH_ENABLED=0 ou tool público → ignorar erros de token
+        elif _auth_enabled() and not is_public_tool:
             await _send_json_response(
                 send,
                 401,
@@ -120,6 +136,9 @@ class McpAuthMiddleware:
             return
 
         try:
+            # Se lemos o body para detectar tool público, precisamos re-emitir
+            if "_body" in scope:
+                receive = _make_cached_receive(scope["_body"], receive)
             await self._app(scope, receive, send)
         finally:
             if token_var is not None:
@@ -136,6 +155,75 @@ class McpAuthMiddleware:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+
+def _make_cached_receive(body: bytes, original_receive: Any):
+    """Cria um receive() que re-emite o body já lido pelo middleware.
+
+    Chamadas seguintes DELEGAM ao receive original em vez de fabricar
+    http.disconnect: o transporte streamable-http chama receive() enquanto
+    streama a resposta SSE para detectar desconexão do cliente — um
+    disconnect falso aborta o stream antes de qualquer evento ser enviado.
+    """
+    sent = False
+
+    async def receive():
+        nonlocal sent
+        if not sent:
+            sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        # Bloqueia até o cliente desconectar de verdade (ou novo frame chegar).
+        return await original_receive()
+
+    return receive
+
+
+async def _is_public_tool_call(scope: dict, receive: Any) -> bool:
+    """Detecta se a requisição é uma chamada de tool público (não requer auth).
+
+    Lê o corpo da requisição de forma não-destrutiva e verifica se é uma
+    chamada de tool que está em _PUBLIC_TOOLS.
+
+    NOTA: Esta função modifica o scope["_body"] para cachear o body lido.
+    O ASGI app downstream deve ler de scope["_body"] em vez de receive().
+    """
+    # Cache do body para evitar múltiplas leituras
+    if "_body" in scope:
+        body_bytes = scope["_body"]
+    else:
+        # Lê o body completo
+        body_bytes = b""
+        while True:
+            message = await receive()
+            if message["type"] == "http.request":
+                body_bytes += message.get("body", b"")
+                if not message.get("more_body", False):
+                    break
+            elif message["type"] == "http.disconnect":
+                return False
+
+        # Cacheia para o app downstream
+        scope["_body"] = body_bytes
+
+    if not body_bytes:
+        return False
+
+    try:
+        data = json.loads(body_bytes.decode("utf-8"))
+        method = data.get("method", "")
+
+        # Métodos de protocolo público (initialize, ping, notifications/initialized)
+        if method in _PUBLIC_METHODS:
+            return True
+
+        # Tools públicos via tools/call
+        if method == "tools/call":
+            tool_name = data.get("params", {}).get("name", "")
+            return tool_name in _PUBLIC_TOOLS
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        pass
+
+    return False
 
 
 def _auth_enabled() -> bool:

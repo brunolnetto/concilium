@@ -34,6 +34,16 @@ def _auth_header(token: str) -> list:
     return [(b"authorization", f"Bearer {token}".encode("latin-1"))]
 
 
+def _make_receive(body: bytes = b"{}") -> AsyncMock:
+    """ASGI receive() mock returning a single complete http.request message.
+
+    A bare AsyncMock() has no notion of ASGI message shape: _is_public_tool_call()
+    loops `while True: message = await receive()` until it sees more_body=False,
+    so an unconfigured mock spins forever instead of raising.
+    """
+    return AsyncMock(return_value={"type": "http.request", "body": body, "more_body": False})
+
+
 class _CapturingSend:
     """Async callable that records every ASGI message sent to it."""
 
@@ -157,7 +167,7 @@ async def test_non_http_scope_forwarded(scope_type):
     inner = AsyncMock()
     mw = McpAuthMiddleware(inner)
     scope = _make_scope(scope_type)
-    receive = AsyncMock()
+    receive = _make_receive()
     send = AsyncMock()
     await mw(scope, receive, send)
     inner.assert_awaited_once_with(scope, receive, send)
@@ -182,7 +192,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=[])
-        receive = AsyncMock()
+        receive = _make_receive()
         send = _CapturingSend()
         with self._patch_auth_enabled(True):
             await mw(scope, receive, send)
@@ -194,7 +204,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=[])
-        receive = AsyncMock()
+        receive = _make_receive()
         send = _CapturingSend()
         with self._patch_auth_enabled(True):
             await mw(scope, receive, send)
@@ -206,7 +216,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=[])
-        receive = AsyncMock()
+        receive = _make_receive()
         send = _CapturingSend()
         with self._patch_auth_enabled(True):
             await mw(scope, receive, send)
@@ -218,7 +228,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("bad.token.here"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = _CapturingSend()
         with self._patch_auth_enabled(True):
             with patch(
@@ -234,7 +244,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("bad.token"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = _CapturingSend()
         with self._patch_auth_enabled(True):
             with patch(
@@ -250,7 +260,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("bad.token"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = _CapturingSend()
         exc_msg = "signature has expired"
         with self._patch_auth_enabled(True):
@@ -267,7 +277,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("good.token.here"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
 
         fake_claims = {"roles": ["operator"], "sub": "u1"}
@@ -289,14 +299,18 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
                         with patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_var:
                             await mw(scope, receive, send)
 
-        inner.assert_awaited_once_with(scope, receive, send)
+        inner.assert_awaited_once()
+        awaited_scope, awaited_receive, awaited_send = inner.await_args.args
+        assert awaited_scope == scope
+        assert awaited_send is send
+        assert callable(awaited_receive)  # body-caching wrapper replaces the original receive()
 
     @pytest.mark.asyncio
     async def test_valid_token_resets_contextvar_in_finally(self):
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("good.token"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
 
         fake_claims = {"roles": ["operator"], "sub": "u2"}
@@ -333,7 +347,7 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
 
         mw = McpAuthMiddleware(raising_app)
         scope = _make_scope("http", headers=_auth_header("good.token"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
 
         fake_claims = {"roles": ["admin"], "sub": "u3"}
@@ -382,11 +396,15 @@ class TestMcpAuthMiddlewareHttpAuthDisabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=[])
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
         with self._patch_auth_disabled():
             await mw(scope, receive, send)
-        inner.assert_awaited_once_with(scope, receive, send)
+        inner.assert_awaited_once()
+        awaited_scope, awaited_receive, awaited_send = inner.await_args.args
+        assert awaited_scope == scope
+        assert awaited_send is send
+        assert callable(awaited_receive)  # body-caching wrapper replaces the original receive()
 
     @pytest.mark.asyncio
     async def test_missing_auth_header_no_401_sent(self):
@@ -394,7 +412,7 @@ class TestMcpAuthMiddlewareHttpAuthDisabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=[])
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
         with self._patch_auth_disabled():
             await mw(scope, receive, send)
@@ -406,7 +424,7 @@ class TestMcpAuthMiddlewareHttpAuthDisabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("bad.token"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
         with self._patch_auth_disabled():
             with patch(
@@ -414,7 +432,11 @@ class TestMcpAuthMiddlewareHttpAuthDisabled:
                 side_effect=Exception("some jwt error"),
             ):
                 await mw(scope, receive, send)
-        inner.assert_awaited_once_with(scope, receive, send)
+        inner.assert_awaited_once()
+        awaited_scope, awaited_receive, awaited_send = inner.await_args.args
+        assert awaited_scope == scope
+        assert awaited_send is send
+        assert callable(awaited_receive)  # body-caching wrapper replaces the original receive()
 
     @pytest.mark.asyncio
     async def test_invalid_token_no_401_when_auth_disabled(self):
@@ -422,7 +444,7 @@ class TestMcpAuthMiddlewareHttpAuthDisabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("bad.token"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
         with self._patch_auth_disabled():
             with patch(
@@ -438,7 +460,7 @@ class TestMcpAuthMiddlewareHttpAuthDisabled:
         inner = AsyncMock()
         mw = McpAuthMiddleware(inner)
         scope = _make_scope("http", headers=_auth_header("bad.token"))
-        receive = AsyncMock()
+        receive = _make_receive()
         send = AsyncMock()
         mock_current_roles = MagicMock()
         with self._patch_auth_disabled():
@@ -469,7 +491,7 @@ async def test_non_http_scopes_always_forwarded(scope_type):
     inner = AsyncMock()
     mw = McpAuthMiddleware(inner)
     scope = _make_scope(scope_type)
-    receive = AsyncMock()
+    receive = _make_receive()
     send = AsyncMock()
     await mw(scope, receive, send)
     inner.assert_awaited_once_with(scope, receive, send)
@@ -486,7 +508,7 @@ async def test_authorization_header_without_bearer_prefix_auth_enabled():
     inner = AsyncMock()
     mw = McpAuthMiddleware(inner)
     scope = _make_scope("http", headers=[(b"authorization", b"Basic dXNlcjpwYXNz")])
-    receive = AsyncMock()
+    receive = _make_receive()
     send = _CapturingSend()
     mock_auth = MagicMock()
     mock_auth.enabled = True
@@ -502,13 +524,17 @@ async def test_authorization_header_without_bearer_prefix_auth_disabled():
     inner = AsyncMock()
     mw = McpAuthMiddleware(inner)
     scope = _make_scope("http", headers=[(b"authorization", b"Basic dXNlcjpwYXNz")])
-    receive = AsyncMock()
+    receive = _make_receive()
     send = AsyncMock()
     mock_auth = MagicMock()
     mock_auth.enabled = False
     with patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth):
         await mw(scope, receive, send)
-    inner.assert_awaited_once_with(scope, receive, send)
+    inner.assert_awaited_once()
+    awaited_scope, awaited_receive, awaited_send = inner.await_args.args
+    assert awaited_scope == scope
+    assert awaited_send is send
+    assert callable(awaited_receive)  # body-caching wrapper replaces the original receive()
 
 
 @pytest.mark.asyncio

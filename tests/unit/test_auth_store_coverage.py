@@ -62,18 +62,21 @@ class TestAuthStore:
         result = store.get_client_roles("nobody", "s")
         assert result is None
 
-    def test_create_device_code(self, tmp_path):
+    def test_regenerate_client_code(self, tmp_path):
         store = self._make_store(tmp_path)
         store.add_client("dev", "s", ["operator"])
-        code = store.create_device_code("dev", "device-1", "My Device")
-        assert code.client_id == "dev"
-        assert len(code.code) > 0
+        code = store.regenerate_client_code("dev")
+        assert code is not None
+        assert code.startswith("RCODE-")
+
+    def test_regenerate_client_code_unknown_client_returns_none(self, tmp_path):
+        store = self._make_store(tmp_path)
+        assert store.regenerate_client_code("ghost") is None
 
     def test_activate_device_code(self, tmp_path):
         store = self._make_store(tmp_path)
-        store.add_client("act", "s", ["operator"])
-        code = store.create_device_code("act", "dev-act", "Dev")
-        token = store.activate_device_code(code.code)
+        store.add_client("act", "s", ["operator"], client_code="RCODE-act")
+        token = store.activate_device_code("RCODE-act", device_name="dev-act")
         assert token.client_id == "act"
 
     def test_activate_device_code_invalid_returns_none_or_raises(self, tmp_path):
@@ -85,28 +88,35 @@ class TestAuthStore:
         except (KeyError, ValueError, Exception):
             pass  # expected
 
+    def test_activate_device_code_same_code_activates_multiple_devices(self, tmp_path):
+        """client_code is reusable — not consumed on first activation."""
+        store = self._make_store(tmp_path)
+        store.add_client("multi", "s", ["operator"], client_code="RCODE-multi")
+        first = store.activate_device_code("RCODE-multi", device_name="laptop")
+        second = store.activate_device_code("RCODE-multi", device_name="desktop")
+        assert first.device_id == "laptop"
+        assert second.device_id == "desktop"
+        assert first.token_id != second.token_id
+
     def test_use_refresh_token(self, tmp_path):
         store = self._make_store(tmp_path)
-        store.add_client("rt", "s", ["operator"])
-        code = store.create_device_code("rt", "dev-rt", "D")
-        token = store.activate_device_code(code.code)
+        store.add_client("rt", "s", ["operator"], client_code="RCODE-rt")
+        token = store.activate_device_code("RCODE-rt", device_name="dev-rt")
         record = store.use_refresh_token(token.token_id)
         assert record is not None
         assert record.client_id == "rt"
 
     def test_revoke_device(self, tmp_path):
         store = self._make_store(tmp_path)
-        store.add_client("rv", "s", ["operator"])
-        code = store.create_device_code("rv", "dev-rv", "D")
-        store.activate_device_code(code.code)
+        store.add_client("rv", "s", ["operator"], client_code="RCODE-rv")
+        store.activate_device_code("RCODE-rv", device_name="dev-rv")
         count = store.revoke_device("dev-rv")
         assert count >= 0
 
     def test_list_devices(self, tmp_path):
         store = self._make_store(tmp_path)
-        store.add_client("ld", "s", ["operator"])
-        code = store.create_device_code("ld", "dev-ld", "D")
-        store.activate_device_code(code.code)
+        store.add_client("ld", "s", ["operator"], client_code="RCODE-ld")
+        store.activate_device_code("RCODE-ld", device_name="dev-ld")
         devices = store.list_devices("ld")
         assert any(d.device_id == "dev-ld" for d in devices)
 
@@ -144,18 +154,12 @@ class TestAuthStoreMissingLines:
         result_bad = store.validate_client("vc", "wrong")
         assert result_bad is None
 
-    # line 295: create_device_code with scopes
-    def test_create_device_code_with_scopes(self, tmp_path):
+    # activate_device_code roles always come from the matched client's roles
+    def test_activate_device_code_uses_client_roles(self, tmp_path):
         store = self._make_store(tmp_path)
-        store.add_client("dc_scope", "s", ["operator"])
-        code = store.create_device_code("dc_scope", "dev", "Dev", scopes=["project:read"])
-        assert len(code.roles) > 0
-
-    # line 301: create_device_code when client not in store → default operator
-    def test_create_device_code_unknown_client_defaults_operator(self, tmp_path):
-        store = self._make_store(tmp_path)
-        code = store.create_device_code("ghost_client", "dev-ghost", "Ghost")
-        assert "operator" in code.roles
+        store.add_client("dc_scope", "s", roles=[], scopes=["project:read"], client_code="RCODE-dc")
+        token = store.activate_device_code("RCODE-dc", device_name="dev")
+        assert len(token.roles) > 0
 
     # line 353: use_refresh_token with nonexistent token_id → None
     def test_use_refresh_token_not_found_returns_none(self, tmp_path):
@@ -200,9 +204,8 @@ class TestAuthStoreMissingLines:
     # lines 417-436: confirm_revoke
     def test_confirm_revoke_happy_path(self, tmp_path):
         store = self._make_store(tmp_path)
-        store.add_client("cfr", "s", ["operator"])
-        code = store.create_device_code("cfr", "dev-cfr", "Dev")
-        store.activate_device_code(code.code)
+        store.add_client("cfr", "s", ["operator"], client_code="RCODE-cfr")
+        store.activate_device_code("RCODE-cfr", device_name="dev-cfr")
         pending = store.create_revoke_pending("cfr", "dev-cfr")
         result = store.confirm_revoke(pending.revoke_token)
         assert result is True

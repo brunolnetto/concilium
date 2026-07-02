@@ -1,31 +1,32 @@
-"""concilium-mcp-proxy — bridge stdio ↔ HTTP MCP com auth automática (ADR-094).
+"""concilium-mcp-proxy — bridge stdio ↔ HTTP MCP com auth automática.
 
 Fluxo de autenticação (totalmente transparente para o usuário):
 
   1ª execução (sem token em cache):
-      CONCILIUM_DEVICE_CODE → POST /auth/device/activate → refresh_token
-      refresh_token salvo em ~/.concilium/tokens/<DEVICE_ID>.json (chmod 600)
+      CONCILIUM_CLIENT_CODE → MCP tool ativar_dispositivo() → refresh_token
+      refresh_token salvo em ~/.concilium/tokens/<device_id>.json (chmod 600)
 
   Execuções seguintes:
-      Lê refresh_token do cache → POST /auth/token/refresh → access_token (8h)
-      Se refresh_token expirou → tenta reativar com CONCILIUM_DEVICE_CODE
+      Lê refresh_token do cache → MCP tool renovar_token() → access_token (8h)
+      Se refresh_token expirou → tenta reativar com CONCILIUM_CLIENT_CODE
 
   Auto-renovação em background:
       Thread monitora TTL do access_token → renova 10min antes do vencimento
 
-Configuração do usuário (claude_desktop_config.json):
+Configuração simplificada (claude_desktop_config.json):
   {
     "mcpServers": {
       "concilium": {
         "command": "concilium-mcp-proxy",
         "env": {
-          "CONCILIUM_DEVICE_CODE": "RCODE-...",
-          "CONCILIUM_DEVICE_ID":   "macbook-nome",
-          "CONCILIUM_SERVER_URL":  "https://mcp.mendesloboconstrucao.com.br"
+          "CONCILIUM_SERVER_URL":  "https://mcp.mendesloboconstrucao.com.br",
+          "CONCILIUM_CLIENT_CODE": "RCODE-..."
         }
       }
     }
   }
+
+  device_id é auto-detectado (hostname ou username@hostname).
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import NoReturn
 
 from concilium.infrastructure.settings import get_mcp_proxy
 
@@ -43,13 +45,14 @@ from concilium.infrastructure.settings import get_mcp_proxy
 
 _MCP_PROXY_SETTINGS = get_mcp_proxy()
 _SERVER_URL = _MCP_PROXY_SETTINGS.server_url
+_CLIENT_CODE = _MCP_PROXY_SETTINGS.client_code
 _DEVICE_ID = _MCP_PROXY_SETTINGS.device_id
-_DEVICE_CODE = _MCP_PROXY_SETTINGS.device_code
 
 _TOKEN_DIR = Path.home() / ".concilium" / "tokens"
 _TOKEN_DIR.mkdir(parents=True, exist_ok=True)
 
 _RENEW_BEFORE_S = 600  # renova 10 min antes do vencimento
+_REQUEST_ID_COUNTER = 0  # contador para IDs de requisições MCP internas
 
 # ── Token cache (local file) ──────────────────────────────────────────────────
 
@@ -74,32 +77,216 @@ def _save_cache(data: dict) -> None:
     p.chmod(0o600)
 
 
+# ── MCP Tool Call Helpers ─────────────────────────────────────────────────────
+
+
+def _mcp_call(http_client, tool_name: str, args: dict, access_token: str | None = None, session_id: str = "") -> dict:
+    """Faz uma chamada MCP tool via HTTP.
+
+    Args:
+        http_client: httpx.Client
+        tool_name: Nome do tool MCP (ex: "ativar_dispositivo")
+        args: Argumentos do tool
+        access_token: Bearer token (None para tools públicos)
+        session_id: MCP session ID (streamable-http)
+
+    Returns:
+        Resultado do tool (dict) ou levanta exceção
+    """
+    global _REQUEST_ID_COUNTER
+    _REQUEST_ID_COUNTER += 1
+
+    request = {
+        "jsonrpc": "2.0",
+        "id": _REQUEST_ID_COUNTER,
+        "method": "tools/call",
+        "params": {
+            "name": tool_name,
+            "arguments": args,
+        },
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    }
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+    if session_id:
+        headers["mcp-session-id"] = session_id
+
+    # Use stream para SSE responses - FastMCP pode retornar SSE mesmo para tools/call
+    with http_client.stream(
+        "POST",
+        f"{_SERVER_URL}/mcp",
+        json=request,
+        headers=headers,
+        timeout=30.0,
+    ) as resp:
+        if resp.status_code != 200:
+            error_text = b"".join(resp.iter_bytes()).decode("utf-8", errors="replace")
+            raise RuntimeError(f"HTTP {resp.status_code}: {error_text[:200]}")
+
+        # Lê o body - pode ser JSON puro ou SSE (text/event-stream)
+        content_type = resp.headers.get("content-type", "")
+
+        if "text/event-stream" in content_type:
+            # Resposta SSE - extrai linha "data: {...}"
+            result_json = None
+            try:
+                for line in resp.iter_lines():
+                    if line.startswith("data:"):
+                        data = line[5:].strip()
+                        if data and data != "[DONE]":
+                            result_json = data
+                            break
+            except Exception:
+                # Servidor pode fechar conexão prematuramente - isso é OK se já temos dados
+                pass
+
+            if not result_json:
+                raise RuntimeError("Nenhum dado recebido no SSE stream")
+
+            result = json.loads(result_json)
+        else:
+            # Resposta JSON pura
+            body_bytes = b""
+            try:
+                for chunk in resp.iter_bytes():
+                    body_bytes += chunk
+            except Exception:
+                # Servidor pode fechar conexão - tenta parsear o que foi recebido
+                pass
+
+            if not body_bytes:
+                raise RuntimeError("Resposta vazia do servidor")
+
+            result = json.loads(body_bytes.decode("utf-8"))
+
+        if "error" in result:
+            raise RuntimeError(f"MCP error: {result['error']}")
+
+        return result.get("result", {})
+
+
+# ── Session initialization (streamable-http protocol) ─────────────────────────
+
+
+def _initialize_session(http_client, access_token: str | None = None) -> str:
+    """Inicializa sessão MCP via protocolo streamable-http.
+
+    Args:
+        http_client: httpx.Client
+        access_token: Bearer token (None para handshake público)
+
+    Returns:
+        mcp-session-id extraído do header da resposta
+    """
+    global _REQUEST_ID_COUNTER
+    _REQUEST_ID_COUNTER += 1
+
+    request = {
+        "jsonrpc": "2.0",
+        "id": _REQUEST_ID_COUNTER,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "concilium-mcp-proxy", "version": "1.0"},
+        },
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    }
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
+    # Usa stream=True mas fecha logo após receber o header
+    with http_client.stream(
+        "POST",
+        f"{_SERVER_URL}/mcp",
+        json=request,
+        headers=headers,
+        timeout=30.0,
+    ) as resp:
+        if resp.status_code != 200:
+            # Lê body apenas em caso de erro
+            error_text = b"".join(resp.iter_bytes()).decode("utf-8", errors="replace")
+            raise RuntimeError(f"HTTP {resp.status_code}: {error_text[:200]}")
+
+        session_id = resp.headers.get("mcp-session-id", "")
+        if not session_id:
+            raise RuntimeError("Servidor não retornou mcp-session-id no header")
+
+        # Tenta ler um chunk do SSE stream, mas ignora se o servidor fechar prematuramente
+        # O importante é ter o session_id do header
+        try:
+            # Lê um chunk para evitar "ASGI callable returned without completing response"
+            _ = next(resp.iter_bytes(chunk_size=1024), None)
+        except Exception:
+            # Servidor pode fechar conexão - não é erro se já temos session_id
+            pass
+
+    # Handshake MCP: o servidor só processa tools/call depois de receber
+    # notifications/initialized — sem isso o SSE fica aberto sem dados para sempre.
+    notif_headers = dict(headers)
+    notif_headers["mcp-session-id"] = session_id
+    http_client.post(
+        f"{_SERVER_URL}/mcp",
+        json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+        headers=notif_headers,
+        timeout=30.0,
+    )
+
+    return session_id
+
+
 # ── Auth helpers ──────────────────────────────────────────────────────────────
 
 
-def _activate(http_client) -> str:
-    """Exchange device code for refresh token. Returns token_id."""
-    if not _DEVICE_CODE:
+def _activate(http_client, session_id: str) -> str:
+    """Exchange client code for refresh token via MCP tool ativar_dispositivo."""
+    if not _CLIENT_CODE:
         _die(
-            "CONCILIUM_DEVICE_CODE não configurado e nenhum token em cache encontrado.\n"
-            "Contate o admin para obter um novo device code."
+            "CONCILIUM_CLIENT_CODE não configurado e nenhum token em cache encontrado.\n"
+            "Contate o admin para obter um novo código de cliente."
         )
-    resp = http_client.post(
-        f"{_SERVER_URL}/auth/device/activate",
-        json={"device_code": _DEVICE_CODE, "device_name": _DEVICE_ID},
-        timeout=30,
-    )
-    if resp.status_code != 200:
-        _die(f"Ativação falhou ({resp.status_code}): {resp.text}")
-    data = resp.json()
-    cache = _load_cache()
-    cache["refresh_token"] = data["refresh_token"]
-    cache["scopes"] = data.get("scopes", [])
-    _save_cache(cache)
-    return data["refresh_token"]
+
+    try:
+        result = _mcp_call(
+            http_client,
+            "ativar_dispositivo",
+            {"client_code": _CLIENT_CODE, "device_name": _DEVICE_ID},
+            access_token=None,  # tool público
+            session_id=session_id,
+        )
+
+        # Extrai o resultado do content
+        content = result.get("content", [])
+        if not content:
+            raise RuntimeError("Resposta vazia de ativar_dispositivo")
+
+        data = json.loads(content[0].get("text", "{}"))
+
+        if data.get("status") != "ok":
+            raise RuntimeError(data.get("message", "Ativação falhou"))
+
+        refresh_token = data["refresh_token"]
+        cache = _load_cache()
+        cache["refresh_token"] = refresh_token
+        cache["device_id"] = data.get("device_id", _DEVICE_ID)
+        cache["client_id"] = data.get("client_id")
+        _save_cache(cache)
+
+        return refresh_token
+
+    except Exception as e:
+        _die(f"Ativação falhou: {e}")
 
 
-def _get_access_token(http_client) -> tuple[str, float]:
+def _get_access_token(http_client, session_id: str) -> tuple[str, float]:
     """Return (access_token, expire_at_unix). Activates or refreshes as needed."""
     import time as _time
 
@@ -107,30 +294,56 @@ def _get_access_token(http_client) -> tuple[str, float]:
     refresh_token = cache.get("refresh_token")
 
     if refresh_token:
-        resp = http_client.post(
-            f"{_SERVER_URL}/auth/token/refresh",
-            json={"refresh_token": refresh_token},
-            timeout=30,
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            expires_in = data.get("expires_in", 28800)
-            return data["access_token"], _time.time() + expires_in
-        # refresh token invalid — re-activate
-        _log("Refresh token expirado/revogado. Re-ativando...")
+        try:
+            result = _mcp_call(
+                http_client,
+                "renovar_token",
+                {"refresh_token": refresh_token},
+                access_token=None,  # tool público
+                session_id=session_id,
+            )
 
-    # Activate device code → new refresh token
-    refresh_token = _activate(http_client)
-    resp = http_client.post(
-        f"{_SERVER_URL}/auth/token/refresh",
-        json={"refresh_token": refresh_token},
-        timeout=30,
+            # Extrai o resultado do content
+            content = result.get("content", [])
+            if not content:
+                raise RuntimeError("Resposta vazia de renovar_token")
+
+            data = json.loads(content[0].get("text", "{}"))
+
+            if data.get("status") != "ok":
+                raise RuntimeError(data.get("message", "Renovação falhou"))
+
+            access_token = data["access_token"]
+            expires_in = data.get("expires_in", 28800)
+            return access_token, _time.time() + expires_in
+
+        except Exception:
+            _log("Refresh token expirado/revogado. Re-ativando...")
+
+    # Activate client code → new refresh token
+    refresh_token = _activate(http_client, session_id)
+
+    # Tenta novamente renovar com o novo refresh_token
+    result = _mcp_call(
+        http_client,
+        "renovar_token",
+        {"refresh_token": refresh_token},
+        access_token=None,
+        session_id=session_id,
     )
-    if resp.status_code != 200:
-        _die(f"Falha ao obter access token ({resp.status_code}): {resp.text}")
-    data = resp.json()
+
+    content = result.get("content", [])
+    if not content:
+        _die("Falha ao obter access token: resposta vazia")
+
+    data = json.loads(content[0].get("text", "{}"))
+
+    if data.get("status") != "ok":
+        _die(f"Falha ao obter access token: {data.get('message')}")
+
+    access_token = data["access_token"]
     expires_in = data.get("expires_in", 28800)
-    return data["access_token"], _time.time() + expires_in
+    return access_token, _time.time() + expires_in
 
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -140,7 +353,7 @@ def _log(msg: str) -> None:
     print(f"[concilium-mcp-proxy] {msg}", file=sys.stderr, flush=True)
 
 
-def _die(msg: str) -> None:
+def _die(msg: str) -> NoReturn:
     _log(f"ERRO: {msg}")
     sys.exit(1)
 
@@ -151,9 +364,10 @@ def _die(msg: str) -> None:
 class _State:
     """Shared mutable state between the main loop and the token refresh thread."""
 
-    def __init__(self, access_token: str, expire_at: float) -> None:
+    def __init__(self, access_token: str, expire_at: float, session_id: str = "") -> None:
         self.access_token = access_token
         self.expire_at = expire_at
+        self.session_id = session_id
         self.lock = threading.Lock()
 
 
@@ -162,10 +376,11 @@ def _refresh_loop(state: _State, http_client) -> None:
     while True:
         with state.lock:
             remaining = state.expire_at - time.time()
+            session_id = state.session_id
         sleep_for = max(1, remaining - _RENEW_BEFORE_S)
         time.sleep(sleep_for)
         try:
-            token, expire_at = _get_access_token(http_client)
+            token, expire_at = _get_access_token(http_client, session_id)
             with state.lock:
                 state.access_token = token
                 state.expire_at = expire_at
@@ -196,6 +411,7 @@ async def _bridge(state: _State, http_client) -> None:
 
         with state.lock:
             token = state.access_token
+            session_id = state.session_id
 
         try:
             resp = http_client.post(
@@ -205,13 +421,14 @@ async def _bridge(state: _State, http_client) -> None:
                     "Authorization": f"Bearer {token}",
                     "Content-Type": "application/json",
                     "Accept": "application/json, text/event-stream",
+                    "mcp-session-id": session_id,
                 },
                 timeout=300.0,
             )
 
             # Handle 401: token might have just expired, retry once with fresh token
             if resp.status_code == 401:
-                new_token, expire_at = _get_access_token(http_client)
+                new_token, expire_at = _get_access_token(http_client, session_id)
                 with state.lock:
                     state.access_token = new_token
                     state.expire_at = expire_at
@@ -222,6 +439,7 @@ async def _bridge(state: _State, http_client) -> None:
                         "Authorization": f"Bearer {new_token}",
                         "Content-Type": "application/json",
                         "Accept": "application/json, text/event-stream",
+                        "mcp-session-id": session_id,
                     },
                     timeout=300.0,
                 )
@@ -270,10 +488,15 @@ def main() -> None:
     _log(f"Iniciando proxy → {_SERVER_URL} (device: {_DEVICE_ID})")
 
     with httpx.Client() as http:
-        access_token, expire_at = _get_access_token(http)
+        # Inicializa sessão MCP (streamable-http protocol)
+        session_id = _initialize_session(http)
+        _log(f"Sessão MCP iniciada (ID: {session_id[:12]}...)")
+
+        # Obtém access token via tools públicos (ativar_dispositivo + renovar_token)
+        access_token, expire_at = _get_access_token(http, session_id)
         _log("Autenticado com sucesso.")
 
-        state = _State(access_token, expire_at)
+        state = _State(access_token, expire_at, session_id)
 
         # Background token refresh thread
         t = threading.Thread(target=_refresh_loop, args=(state, http), daemon=True)

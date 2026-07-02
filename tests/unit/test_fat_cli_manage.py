@@ -630,46 +630,41 @@ class TestPrintCatalogValidationResults:
 
 
 class TestImplCatalogCureSchema:
-    def test_exits_2_when_script_missing(self, tmp_path, monkeypatch):
+    """_impl_catalog_cure_schema delega para cure_schema.run() (execução in-process,
+    não mais um script externo) — mocka run() diretamente."""
+
+    def test_context_not_found_exits_1(self):
         from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
-
-        monkeypatch.chdir(tmp_path)
-        import typer
-
-        with pytest.raises((SystemExit, typer.Exit)) as exc_info:
-            _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
-        exc = exc_info.value
-        code = getattr(exc, "code", None) if isinstance(exc, SystemExit) else getattr(exc, "exit_code", None)
-        assert code == 2
-
-    def test_runs_script_and_exits_on_nonzero(self, tmp_path, monkeypatch):
-        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
-
-        scripts_dir = tmp_path / "scripts"
-        scripts_dir.mkdir()
-        script = scripts_dir / "cure_catalog.py"
-        script.write_text("import sys; sys.exit(42)", encoding="utf-8")
-        monkeypatch.chdir(tmp_path)
 
         import typer
 
-        with pytest.raises((SystemExit, typer.Exit)) as exc_info:
-            _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
-        exc = exc_info.value
-        code = getattr(exc, "code", None) if isinstance(exc, SystemExit) else getattr(exc, "exit_code", None)
-        assert code == 42
+        with patch(
+            "concilium.application.catalog.cure_schema.run",
+            side_effect=FileNotFoundError("Contexto não encontrado: ctx1"),
+        ):
+            with pytest.raises(typer.Exit) as exc_info:
+                _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
+        assert exc_info.value.exit_code == 1
 
-    def test_runs_script_dry_run_no_apply_flag(self, tmp_path, monkeypatch):
+    def test_residual_errors_exit_1(self):
         from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
 
-        scripts_dir = tmp_path / "scripts"
-        scripts_dir.mkdir()
-        script = scripts_dir / "cure_catalog.py"
-        script.write_text("import sys; sys.exit(0)", encoding="utf-8")
-        monkeypatch.chdir(tmp_path)
+        import typer
 
-        # Should not raise
-        _impl_catalog_cure_schema(contexto_id="ctx1", apply=False)
+        with patch(
+            "concilium.application.catalog.cure_schema.run",
+            side_effect=RuntimeError("erros residuais na curação"),
+        ):
+            with pytest.raises(typer.Exit) as exc_info:
+                _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
+        assert exc_info.value.exit_code == 1
+
+    def test_success_does_not_raise_and_forwards_apply_flag(self):
+        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
+
+        with patch("concilium.application.catalog.cure_schema.run") as mock_run:
+            _impl_catalog_cure_schema(contexto_id="ctx1", apply=False)
+        mock_run.assert_called_once_with("ctx1", False)
 
 
 class TestImplCatalogAuditReasonability:

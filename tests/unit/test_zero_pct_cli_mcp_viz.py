@@ -23,7 +23,7 @@ import pytest
 _fake_proxy_settings = MagicMock()
 _fake_proxy_settings.server_url = "https://mcp.example.com"
 _fake_proxy_settings.device_id = "test-device"
-_fake_proxy_settings.device_code = "RCODE-TEST"
+_fake_proxy_settings.client_code = "RCODE-TEST"
 
 
 @pytest.fixture(scope="module")
@@ -38,7 +38,7 @@ def proxy_module():
         # Patch the module-level vars that were set at import time
         _proxy_mod._SERVER_URL = "https://mcp.example.com"
         _proxy_mod._DEVICE_ID = "test-device"
-        _proxy_mod._DEVICE_CODE = "RCODE-TEST"
+        _proxy_mod._CLIENT_CODE = "RCODE-TEST"
         return _proxy_mod
 
 

@@ -25,7 +25,7 @@ TEST_ENV     := PYDANTIC_DISABLE_PLUGINS=__all__ OTEL_SDK_DISABLED=true
 DEPLOY    := cd/scripts/deploy.sh
 PROVISION := cd/scripts/provision.sh
 
-.PHONY: help test check _check_lint _check_type _check_fmt _check_fsizes \
+.PHONY: help test test-file check _check_lint _check_type _check_fmt _check_fsizes \
         cov cov-stats clean \
         status smoke image promote rollback \
         configure keys bootstrap github-secrets exec concilium deploy-all
@@ -37,7 +37,8 @@ help:
 	@echo ""
 	@echo "  Qualidade"
 	@echo "    make clean                             Remove caches e artefatos temporários"
-	@echo "    make test  [SKIP=slow,flaky]           Testes (SKIP= exclui markers por vírgula)"
+	@echo "    make test  [SKIP=slow,flaky]           Testes, agrupados por arquivo (-v)"
+	@echo "    make test-file FILE=path/to_test.py    Roda um único arquivo de teste (-v)"
 	@echo "    make cov                               Cobertura → $(COV_DIR)/"
 	@echo "    make cov-stats                         Análise completa → $(COV_DIR)/report.md"
 	@echo "    make check [OPT=lint,type,fmt,fsizes]  lint · type · fmt · file-sizes"
@@ -60,8 +61,14 @@ help:
 	@echo ""
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+# -v (em vez de -q) imprime "arquivo::teste PASSED/FAILED" linha a linha, na ordem
+# de coleta (por arquivo) — facilita achar rápido onde travou/quebrou.
 test:
-	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short $(_SKIP_M)
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -v --tb=short $(_SKIP_M)
+
+# make test-file FILE=tests/unit/test_auth_store_coverage.py
+test-file:
+	$(TEST_ENV) $(PYTHON) -m pytest $(FILE) -v --tb=short $(_SKIP_M)
 
 # ── Check (lint · type · fmt · fsizes) ────────────────────────────────────────
 check:
@@ -110,13 +117,15 @@ print(f'\n  Total rastreado: {len(files)} arquivos  |  {len(large)} blobs > 500 
 cov:
 	@mkdir -p $(COV_DIR)
 	@rm -f .coverage .coverage.*
-	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) -q --tb=short \
+	$(TEST_ENV) $(PYTHON) -m pytest $(TESTS_ALL) --tb=short \
 		--cov=$(SRC) \
 		--cov-branch \
+		--tb=short \
 		--cov-report=json:$(COV_DIR)/coverage.json \
 		--json-report --json-report-file=$(TEST_REPORT) \
 		--cov-report=term-missing:skip-covered \
-		--durations=50 -rXs
+		--no-header \
+		--durations=50 -rA
 	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"´
 	$(MAKE) cov-stats
 

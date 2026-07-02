@@ -1,9 +1,11 @@
-"""Unit tests for concilium.presentation.mcp.proxy (ADR-094).
+"""Unit tests for concilium.presentation.mcp.proxy (ADR-094 / refactor MCP-protocol auth).
 
 Covers:
   - _load_cache / _save_cache round-trip
-  - _activate happy-path and error branches
-  - _get_access_token caching, fallback, expires_in default
+  - _mcp_call: JSON and SSE response parsing, error branches
+  - _initialize_session: session_id extraction from header
+  - _activate: happy-path and error branches (via client_code, MCP tool ativar_dispositivo)
+  - _get_access_token: cached refresh_token renewal, fallback to _activate
   - _refresh_loop background thread (one iteration)
   - _bridge async bridge: JSON response, SSE, 401-retry, non-200, malformed JSON
   - _write_error structure
@@ -35,6 +37,41 @@ def _make_response(status_code: int = 200, body: dict | str = "", headers=None):
         resp.json.side_effect = json.JSONDecodeError("bad", "", 0)
     resp.headers = headers or {}
     return resp
+
+
+class _FakeStreamResponse:
+    """Mimics the context manager returned by httpx.Client.stream(...)."""
+
+    def __init__(self, status_code=200, headers=None, chunks=None, lines=None):
+        self.status_code = status_code
+        self.headers = headers or {}
+        self._chunks = chunks or []
+        self._lines = lines or []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def iter_bytes(self, chunk_size=None):
+        yield from self._chunks
+
+    def iter_lines(self):
+        yield from self._lines
+
+
+def _stream_client(response: _FakeStreamResponse) -> MagicMock:
+    """Build a MagicMock httpx.Client whose .stream(...) returns `response`."""
+    http = MagicMock()
+    http.stream.return_value = response
+    return http
+
+
+def _tool_result(status: str = "ok", **fields) -> dict:
+    """Build an MCP tools/call 'result' payload as FastMCP wraps it: {"content": [...]}"""
+    payload = {"status": status, **fields}
+    return {"content": [{"text": json.dumps(payload)}]}
 
 
 # ---------------------------------------------------------------------------
@@ -94,83 +131,196 @@ class TestLoadSaveCache:
 
 
 # ---------------------------------------------------------------------------
+# _mcp_call
+# ---------------------------------------------------------------------------
+
+
+class TestMcpCall:
+    def test_json_response_returns_result(self):
+        """Plain JSON response: 'result' field is returned."""
+        resp = _FakeStreamResponse(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            chunks=[json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"ok": True}}).encode()],
+        )
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            result = proxy_mod._mcp_call(http, "foo", {"a": 1})
+
+        assert result == {"ok": True}
+
+    def test_sse_response_parses_data_line(self):
+        """SSE response: first 'data: {...}' line (that isn't [DONE]) is parsed."""
+        resp = _FakeStreamResponse(
+            status_code=200,
+            headers={"content-type": "text/event-stream"},
+            lines=['data: {"jsonrpc":"2.0","id":1,"result":{"x":1}}', "", "data: [DONE]"],
+        )
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            result = proxy_mod._mcp_call(http, "foo", {})
+
+        assert result == {"x": 1}
+
+    def test_non_200_raises_runtime_error(self):
+        resp = _FakeStreamResponse(status_code=500, chunks=[b"boom"])
+        http = _stream_client(resp)
+
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            pytest.raises(RuntimeError, match="HTTP 500"),
+        ):
+            proxy_mod._mcp_call(http, "foo", {})
+
+    def test_mcp_error_field_raises_runtime_error(self):
+        resp = _FakeStreamResponse(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            chunks=[json.dumps({"jsonrpc": "2.0", "id": 1, "error": {"message": "nope"}}).encode()],
+        )
+        http = _stream_client(resp)
+
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            pytest.raises(RuntimeError, match="MCP error"),
+        ):
+            proxy_mod._mcp_call(http, "foo", {})
+
+    def test_empty_json_body_raises(self):
+        resp = _FakeStreamResponse(status_code=200, headers={"content-type": "application/json"}, chunks=[])
+        http = _stream_client(resp)
+
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            pytest.raises(RuntimeError, match="vazia"),
+        ):
+            proxy_mod._mcp_call(http, "foo", {})
+
+    def test_sse_no_data_raises(self):
+        resp = _FakeStreamResponse(status_code=200, headers={"content-type": "text/event-stream"}, lines=[])
+        http = _stream_client(resp)
+
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            pytest.raises(RuntimeError, match="SSE"),
+        ):
+            proxy_mod._mcp_call(http, "foo", {})
+
+
+# ---------------------------------------------------------------------------
+# _initialize_session
+# ---------------------------------------------------------------------------
+
+
+class TestInitializeSession:
+    def test_returns_session_id_from_header(self):
+        resp = _FakeStreamResponse(status_code=200, headers={"mcp-session-id": "sess-123"}, chunks=[b""])
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            session_id = proxy_mod._initialize_session(http)
+
+        assert session_id == "sess-123"
+
+    def test_missing_session_id_raises(self):
+        resp = _FakeStreamResponse(status_code=200, headers={}, chunks=[b""])
+        http = _stream_client(resp)
+
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            pytest.raises(RuntimeError, match="mcp-session-id"),
+        ):
+            proxy_mod._initialize_session(http)
+
+    def test_non_200_raises(self):
+        resp = _FakeStreamResponse(status_code=401, chunks=[b"unauthorized"])
+        http = _stream_client(resp)
+
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            pytest.raises(RuntimeError, match="HTTP 401"),
+        ):
+            proxy_mod._initialize_session(http)
+
+
+# ---------------------------------------------------------------------------
 # _activate
 # ---------------------------------------------------------------------------
 
 
 class TestActivate:
     def test_happy_path_writes_refresh_token_and_returns_it(self, tmp_path):
-        """_activate POSTs to /auth/device/activate, saves refresh_token, returns it."""
+        """_activate calls MCP tool ativar_dispositivo, saves refresh_token, returns it."""
         http = MagicMock()
-        http.post.return_value = _make_response(200, {"refresh_token": "rt-xxx", "scopes": ["*"]})
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "dev1"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
-            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-test"),
+            patch.object(
+                proxy_mod,
+                "_mcp_call",
+                return_value=_tool_result(refresh_token="rt-xxx", device_id="dev1", client_id="bruno"),
+            ) as mock_call,
         ):
-            result = proxy_mod._activate(http)
+            result = proxy_mod._activate(http, "sess-1")
 
         assert result == "rt-xxx"
-        http.post.assert_called_once()
-        call_kwargs = http.post.call_args
-        assert "/auth/device/activate" in call_kwargs[0][0]
+        mock_call.assert_called_once()
+        assert mock_call.call_args[0][1] == "ativar_dispositivo"
+        assert mock_call.call_args[0][2] == {"client_code": "RCODE-test", "device_name": "dev1"}
 
-        # Verify cache was written
         with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "dev1"):
             cache = proxy_mod._load_cache()
         assert cache["refresh_token"] == "rt-xxx"
-        assert cache["scopes"] == ["*"]
+        assert cache["client_id"] == "bruno"
 
-    def test_non_200_calls_sys_exit(self, tmp_path):
-        """_activate calls sys.exit on non-200 response."""
+    def test_mcp_call_failure_calls_sys_exit(self, tmp_path):
+        """_activate calls sys.exit when the MCP call itself raises."""
         http = MagicMock()
-        http.post.return_value = _make_response(403, "Forbidden")
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "dev2"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
-            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_mcp_call", side_effect=RuntimeError("HTTP 403: Forbidden")),
         ):
             with pytest.raises(SystemExit):
-                proxy_mod._activate(http)
+                proxy_mod._activate(http, "sess-2")
 
-    def test_missing_device_code_calls_sys_exit(self, tmp_path):
-        """_activate calls sys.exit when _DEVICE_CODE is empty."""
+    def test_missing_client_code_calls_sys_exit(self, tmp_path):
+        """_activate calls sys.exit when _CLIENT_CODE is empty, without calling the server."""
         http = MagicMock()
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "dev3"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
-            patch.object(proxy_mod, "_DEVICE_CODE", ""),
+            patch.object(proxy_mod, "_CLIENT_CODE", ""),
+            patch.object(proxy_mod, "_mcp_call") as mock_call,
         ):
             with pytest.raises(SystemExit):
-                proxy_mod._activate(http)
+                proxy_mod._activate(http, "sess-3")
 
-        http.post.assert_not_called()
+        mock_call.assert_not_called()
 
-    def test_scopes_default_to_empty_list_when_absent(self, tmp_path):
-        """_activate stores scopes=[] when the response omits the key."""
+    def test_status_error_calls_sys_exit(self, tmp_path):
+        """_activate calls sys.exit when the tool returns status != 'ok'."""
         http = MagicMock()
-        http.post.return_value = _make_response(
-            200,
-            {"refresh_token": "rt-yyy"},  # no 'scopes' key
-        )
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "dev4"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
-            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-test"),
+            patch.object(
+                proxy_mod,
+                "_mcp_call",
+                return_value=_tool_result(status="error", message="Código inválido"),
+            ),
         ):
-            proxy_mod._activate(http)
-
-        with patch.object(proxy_mod, "_TOKEN_DIR", tmp_path), patch.object(proxy_mod, "_DEVICE_ID", "dev4"):
-            cache = proxy_mod._load_cache()
-        assert cache["scopes"] == []
+            with pytest.raises(SystemExit):
+                proxy_mod._activate(http, "sess-4")
 
 
 # ---------------------------------------------------------------------------
@@ -179,105 +329,114 @@ class TestActivate:
 
 
 class TestGetAccessToken:
-    def test_uses_cached_refresh_token_on_200(self, tmp_path):
-        """Happy path: cached refresh_token → POST /auth/token/refresh → access_token."""
+    def test_uses_cached_refresh_token_on_success(self, tmp_path):
+        """Happy path: cached refresh_token → renovar_token MCP tool → access_token."""
         http = MagicMock()
-        http.post.return_value = _make_response(200, {"access_token": "at-abc", "expires_in": 3600})
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "devA"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(
+                proxy_mod,
+                "_mcp_call",
+                return_value=_tool_result(access_token="at-abc", expires_in=3600),
+            ) as mock_call,
         ):
-            # pre-populate cache
             proxy_mod._save_cache({"refresh_token": "rt-cached"})
 
             before = time.time()
-            token, expire_at = proxy_mod._get_access_token(http)
+            token, expire_at = proxy_mod._get_access_token(http, "sess-a")
             after = time.time()
 
         assert token == "at-abc"
         assert before + 3600 <= expire_at <= after + 3600
+        mock_call.assert_called_once()
+        assert mock_call.call_args[0][1] == "renovar_token"
+        assert mock_call.call_args[0][2] == {"refresh_token": "rt-cached"}
 
     def test_defaults_expires_in_to_28800_when_absent(self, tmp_path):
         """expires_in defaults to 28800 (8 h) when the server omits it."""
         http = MagicMock()
-        http.post.return_value = _make_response(
-            200,
-            {"access_token": "at-def"},  # no expires_in
-        )
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "devB"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            patch.object(proxy_mod, "_mcp_call", return_value=_tool_result(access_token="at-def")),
         ):
             proxy_mod._save_cache({"refresh_token": "rt-cached"})
             before = time.time()
-            _, expire_at = proxy_mod._get_access_token(http)
+            _, expire_at = proxy_mod._get_access_token(http, "sess-b")
             after = time.time()
 
         assert before + 28800 <= expire_at <= after + 28800
 
-    def test_falls_back_to_activate_on_non_200_refresh(self, tmp_path):
-        """Non-200 from /auth/token/refresh triggers _activate then retries refresh."""
-        activate_resp = _make_response(200, {"refresh_token": "rt-new", "scopes": []})
-        refresh_ok = _make_response(200, {"access_token": "at-new", "expires_in": 100})
-
+    def test_falls_back_to_activate_on_renewal_failure(self, tmp_path):
+        """Renewal failure with a cached refresh_token triggers _activate then retries renewal."""
         http = MagicMock()
-        # First call: refresh fails; second call: activate; third call: refresh ok
-        http.post.side_effect = [
-            _make_response(401, "Unauthorized"),  # first refresh fails
-            activate_resp,  # activate
-            refresh_ok,  # refresh after activate
-        ]
+        renovar_calls = {"n": 0}
+
+        def fake_mcp_call(http_client, tool_name, args, access_token=None, session_id=""):
+            if tool_name == "renovar_token":
+                renovar_calls["n"] += 1
+                if renovar_calls["n"] == 1:
+                    raise RuntimeError("refresh token expirado")
+                return _tool_result(access_token="at-new", expires_in=100)
+            if tool_name == "ativar_dispositivo":
+                return _tool_result(refresh_token="rt-new", device_id="devC", client_id="bruno")
+            raise AssertionError(f"unexpected tool: {tool_name}")
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "devC"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
-            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_mcp_call", side_effect=fake_mcp_call),
         ):
             proxy_mod._save_cache({"refresh_token": "rt-old"})
-            token, _ = proxy_mod._get_access_token(http)
+            token, _ = proxy_mod._get_access_token(http, "sess-c")
 
         assert token == "at-new"
-        assert http.post.call_count == 3
+        assert renovar_calls["n"] == 2
 
     def test_no_cache_calls_activate_directly(self, tmp_path):
-        """No cached refresh token → goes straight to _activate."""
-        activate_resp = _make_response(200, {"refresh_token": "rt-fresh", "scopes": []})
-        refresh_ok = _make_response(200, {"access_token": "at-fresh", "expires_in": 50})
-
+        """No cached refresh token → goes straight to _activate, then renews once."""
         http = MagicMock()
-        http.post.side_effect = [activate_resp, refresh_ok]
+
+        def fake_mcp_call(http_client, tool_name, args, access_token=None, session_id=""):
+            if tool_name == "ativar_dispositivo":
+                return _tool_result(refresh_token="rt-fresh", device_id="devD", client_id="bruno")
+            if tool_name == "renovar_token":
+                return _tool_result(access_token="at-fresh", expires_in=50)
+            raise AssertionError(f"unexpected tool: {tool_name}")
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "devD"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
-            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-new"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-new"),
+            patch.object(proxy_mod, "_mcp_call", side_effect=fake_mcp_call),
         ):
-            token, _ = proxy_mod._get_access_token(http)
+            token, _ = proxy_mod._get_access_token(http, "sess-d")
 
         assert token == "at-fresh"
 
-    def test_post_activate_refresh_non_200_calls_sys_exit(self, tmp_path):
-        """If post-activate refresh also fails, sys.exit is called."""
-        activate_resp = _make_response(200, {"refresh_token": "rt-x", "scopes": []})
-        fail_resp = _make_response(500, "Internal Server Error")
-
+    def test_post_activate_renewal_error_calls_sys_exit(self, tmp_path):
+        """If renewal after a fresh activation also fails, sys.exit is called."""
         http = MagicMock()
-        http.post.side_effect = [activate_resp, fail_resp]
+
+        def fake_mcp_call(http_client, tool_name, args, access_token=None, session_id=""):
+            if tool_name == "ativar_dispositivo":
+                return _tool_result(refresh_token="rt-x", device_id="devE", client_id="bruno")
+            if tool_name == "renovar_token":
+                return _tool_result(status="error", message="servidor indisponível")
+            raise AssertionError(f"unexpected tool: {tool_name}")
 
         with (
             patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
             patch.object(proxy_mod, "_DEVICE_ID", "devE"),
-            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
-            patch.object(proxy_mod, "_DEVICE_CODE", "RCODE-x"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-x"),
+            patch.object(proxy_mod, "_mcp_call", side_effect=fake_mcp_call),
         ):
             with pytest.raises(SystemExit):
-                proxy_mod._get_access_token(http)
+                proxy_mod._get_access_token(http, "sess-e")
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +455,7 @@ class TestRefreshLoop:
         iteration_count = {"n": 0}
         sleep_barrier = threading.Event()
 
-        def mock_get_access_token(http_client):
+        def mock_get_access_token(http_client, session_id):
             iteration_count["n"] += 1
             return "new-token", new_expire
 
@@ -327,7 +486,7 @@ class TestRefreshLoop:
 
         call_count = {"n": 0}
 
-        def mock_get_access_token(http_client):
+        def mock_get_access_token(http_client, session_id):
             raise RuntimeError("network error")
 
         def mock_sleep(duration):

@@ -6,11 +6,91 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from concilium.infrastructure.auth.permission_guard import AUTH_SELF, permission
+from concilium.infrastructure.auth.permission_guard import AUTH_PUBLIC, AUTH_SELF, permission
 
 
 def register(server: FastMCP) -> None:
     """Registra ferramentas de self-service de autenticação no servidor MCP."""
+
+    @server.tool()
+    @permission(AUTH_PUBLIC)
+    def ativar_dispositivo(client_code: str, device_name: str) -> dict[str, Any]:
+        """Ativa um dispositivo usando o código de cliente do usuário (bootstrap).
+
+        O client_code é único por usuário e nunca é consumido: pode ser reutilizado
+        em quantos dispositivos o usuário precisar, sem depender do admin/TI para
+        cadastrar cada um. Cada ativação gera um refresh_token próprio, identificado
+        por device_name.
+
+        Args:
+            client_code: Código de bootstrap do usuário (formato: RCODE-...)
+            device_name: Nome descritivo para identificar este dispositivo
+
+        Returns:
+            refresh_token: Token de longa duração para renovar access_tokens
+            expires_at: Data de expiração do refresh_token
+            device_id: ID gerado para este dispositivo (a partir de device_name)
+
+        Nota: Este tool é público (não requer autenticação) pois é usado no bootstrap.
+        """
+        from concilium.infrastructure.auth.auth_store import get_auth_store
+
+        store = get_auth_store()
+
+        rt_record = store.activate_device_code(client_code, device_name=device_name)
+
+        if rt_record is None:
+            return {
+                "status": "error",
+                "message": "Código de cliente inválido ou usuário inativo.",
+            }
+
+        return {
+            "status": "ok",
+            "refresh_token": rt_record.token_id,
+            "device_id": rt_record.device_id,
+            "device_name": rt_record.device_name,
+            "client_id": rt_record.client_id,
+            "expires_at": rt_record.expires_at,
+        }
+
+    @server.tool()
+    @permission(AUTH_PUBLIC)
+    def renovar_token(refresh_token: str) -> dict[str, Any]:
+        """Renova um access_token usando um refresh_token válido.
+
+        Use este tool para obter um novo access_token de curta duração (8h) a partir
+        de um refresh_token de longa duração.
+
+        Args:
+            refresh_token: Token RT-* obtido via ativar_dispositivo()
+
+        Returns:
+            access_token: Novo JWT para usar em chamadas autenticadas
+            expires_in: Tempo de vida do access_token em segundos
+            token_type: Sempre "Bearer"
+
+        Nota: Este tool é público (não requer autenticação) pois é usado para obter auth.
+        """
+        from concilium.infrastructure.auth.auth_store import get_auth_store
+        from concilium.infrastructure.auth.token_service import TTL_INTERACTIVE
+        from concilium.infrastructure.auth.token_service import issue_token as _issue
+
+        store = get_auth_store()
+        record = store.use_refresh_token(refresh_token)
+        if record is None:
+            return {
+                "status": "error",
+                "message": "Refresh token inválido, expirado ou revogado.",
+            }
+
+        jwt_token = _issue(subject=record.client_id, roles=record.roles, ttl=TTL_INTERACTIVE)
+        return {
+            "status": "ok",
+            "access_token": jwt_token,
+            "token_type": "Bearer",
+            "expires_in": int(TTL_INTERACTIVE.total_seconds()),
+        }
 
     @server.tool()
     @permission(AUTH_SELF)

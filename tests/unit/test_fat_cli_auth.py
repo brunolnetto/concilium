@@ -18,7 +18,6 @@ from concilium.presentation.cli.commands_auth import app
 runner = CliRunner()
 
 PATCH_GET_AUTH_STORE = "concilium.infrastructure.auth.auth_store.get_auth_store"
-PATCH_GET_STORAGE = "concilium.infrastructure.settings.get_storage"
 
 
 # ---------------------------------------------------------------------------
@@ -62,23 +61,6 @@ def _make_device_record(
     return rec
 
 
-def _make_device_code_record(
-    code="RCODE-ABCDEF1234567890",
-    client_id="alice",
-    device_id="macbook-alice",
-    roles=None,
-    expires_at="2026-01-01T01:00:00+00:00",
-):
-    rec = SimpleNamespace(
-        code=code,
-        client_id=client_id,
-        device_id=device_id,
-        roles=roles if roles is not None else ["operator"],
-        expires_at=expires_at,
-    )
-    return rec
-
-
 def _make_store(**kwargs) -> MagicMock:
     """Return a MagicMock AuthStore with sensible defaults."""
     store = MagicMock()
@@ -87,7 +69,7 @@ def _make_store(**kwargs) -> MagicMock:
     store.remove_client.return_value = kwargs.get("remove_client_return", True)
     store.list_devices.return_value = kwargs.get("list_devices_return", [])
     store.revoke_device.return_value = kwargs.get("revoke_device_return", 0)
-    store.create_device_code.return_value = kwargs.get("create_device_code_return", _make_device_code_record())
+    store.regenerate_client_code.return_value = kwargs.get("regenerate_client_code_return", "RCODE-DEFAULT")
     return store
 
 
@@ -111,7 +93,7 @@ class TestAddUser:
         assert "alice" in result.output
         # The "Secret gerado" block must NOT appear when secret is explicit
         assert "Secret gerado" not in result.output
-        assert "guarde agora" not in result.output
+        assert "mysecret123" not in result.output
 
     def test_add_user_auto_generated_secret_prints_secret_block(self):
         """(2) no --secret → secret is auto-generated and printed."""
@@ -289,106 +271,66 @@ class TestRemoveUser:
 # ===========================================================================
 
 
-class TestNewDevice:
-    def test_new_device_no_config_flag_no_json_block(self):
-        """(9) --no-config → no JSON block with CONCILIUM_DEVICE_CODE."""
-        code_rec = _make_device_code_record()
-        store = _make_store(create_device_code_return=code_rec)
+class TestRegenerateCode:
+    def test_no_config_flag_no_json_block(self):
+        """--no-config → no JSON block with CONCILIUM_CLIENT_CODE."""
+        store = _make_store()
+        store.regenerate_client_code.return_value = "RCODE-ABCDEF1234567890"
 
         with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
-                [
-                    "new-device",
-                    "--user",
-                    "alice",
-                    "--device",
-                    "macbook-alice",
-                    "--no-config",
-                ],
+                ["regenerate-code", "--user", "alice", "--no-config"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "CONCILIUM_DEVICE_CODE" not in result.output
+        assert "CONCILIUM_CLIENT_CODE" not in result.output
         # Code itself is displayed
-        assert code_rec.code in result.output
+        assert "RCODE-ABCDEF1234567890" in result.output
 
-    def test_new_device_with_config_default_shows_json_block(self):
-        """(10) --config (default) → JSON block contains CONCILIUM_DEVICE_CODE."""
-        code_rec = _make_device_code_record(code="RCODE-TESTCODE123")
-        store = _make_store(create_device_code_return=code_rec)
-        fake_storage = MagicMock()
+    def test_with_config_default_shows_json_block(self):
+        """--config (default) → JSON block contains CONCILIUM_CLIENT_CODE."""
+        store = _make_store()
+        store.regenerate_client_code.return_value = "RCODE-TESTCODE123"
 
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_STORAGE, return_value=fake_storage),
-        ):
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
-                [
-                    "new-device",
-                    "--user",
-                    "alice",
-                    "--device",
-                    "macbook-alice",
-                    "--config",
-                ],
+                ["regenerate-code", "--user", "alice", "--config"],
             )
 
         assert result.exit_code == 0, result.output
-        assert "CONCILIUM_DEVICE_CODE" in result.output
+        assert "CONCILIUM_CLIENT_CODE" in result.output
         assert "RCODE-TESTCODE123" in result.output
 
-    def test_new_device_default_shows_config(self):
+    def test_default_shows_config(self):
         """Default show_config=True → JSON block present without explicit flag."""
-        code_rec = _make_device_code_record(code="RCODE-DEFAULTCODE")
-        store = _make_store(create_device_code_return=code_rec)
-        fake_storage = MagicMock()
+        store = _make_store()
+        store.regenerate_client_code.return_value = "RCODE-DEFAULTCODE"
 
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_STORAGE, return_value=fake_storage),
-        ):
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
-                [
-                    "new-device",
-                    "--user",
-                    "alice",
-                    "--device",
-                    "macbook-alice",
-                    # no flag → default is --config (show_config=True)
-                ],
+                ["regenerate-code", "--user", "alice"],
+                # no flag → default is --config (show_config=True)
             )
 
         assert result.exit_code == 0, result.output
-        assert "CONCILIUM_DEVICE_CODE" in result.output
+        assert "CONCILIUM_CLIENT_CODE" in result.output
 
-    def test_new_device_device_id_in_json(self):
-        """CONCILIUM_DEVICE_ID in the JSON block matches --device value."""
-        code_rec = _make_device_code_record(device_id="laptop-x")
-        store = _make_store(create_device_code_return=code_rec)
-        fake_storage = MagicMock()
+    def test_unknown_user_exits_1(self):
+        """regenerate_client_code returning None (unknown user) exits with error."""
+        store = _make_store()
+        store.regenerate_client_code.return_value = None
 
-        with (
-            patch(PATCH_GET_AUTH_STORE, return_value=store),
-            patch(PATCH_GET_STORAGE, return_value=fake_storage),
-        ):
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
             result = runner.invoke(
                 app,
-                [
-                    "new-device",
-                    "--user",
-                    "alice",
-                    "--device",
-                    "laptop-x",
-                    "--config",
-                ],
+                ["regenerate-code", "--user", "ghost"],
             )
 
-        assert result.exit_code == 0, result.output
-        assert "CONCILIUM_DEVICE_ID" in result.output
-        assert "laptop-x" in result.output
+        assert result.exit_code == 1
+        assert "não encontrado" in result.output
 
 
 # ===========================================================================
