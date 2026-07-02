@@ -129,7 +129,7 @@ class TestSetupLoggingConsole:
         mock_processor = MagicMock()
         mock_provider = MagicMock()
         mock_exporter = MagicMock()
-        mock_handler = MagicMock()
+        MagicMock()
 
         with (
             patch(
@@ -143,7 +143,7 @@ class TestSetupLoggingConsole:
             patch("concilium.infrastructure.telemetry._otel_console", return_value=True),
         ):
             try:
-                from opentelemetry.instrumentation.logging.handler import LoggingHandler
+                from opentelemetry.instrumentation.logging.handler import LoggingHandler  # noqa: F401
             except ImportError:
                 pass
 

@@ -44,7 +44,8 @@ class TestCostDecompositionInvariant:
                 )
                 desvio = abs(soma - eq.custo_total)
                 assert desvio < 0.05, (
-                    f"Item {eq.item_id}: decomposição não fecha (soma={soma:,.2f}, total={eq.custo_total:,.2f}, desvio={desvio:,.2f})"
+                    f"Item {eq.item_id}: decomposição não fecha "
+                    f"(soma={soma:,.2f}, total={eq.custo_total:,.2f}, desvio={desvio:,.2f})"
                 )
 
         # Deve haver pelo menos alguns items com decomposição (estágio 4 com pool)

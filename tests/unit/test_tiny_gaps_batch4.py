@@ -63,14 +63,14 @@ class TestScopeGuard:
     def test_set_scopes_converts_to_roles(self):
         from concilium.presentation.mcp.guards.scope_guard import _current_roles, set_scopes
 
-        token = set_scopes(["mcp:read", "pipeline:run"])
+        set_scopes(["mcp:read", "pipeline:run"])
         roles = list(_current_roles.get())
         assert "auditor" in roles or "operator" in roles
 
     def test_set_scopes_unknown_defaults_to_operator(self):
         from concilium.presentation.mcp.guards.scope_guard import _current_roles, set_scopes
 
-        token = set_scopes(["unknown:scope"])
+        set_scopes(["unknown:scope"])
         roles = list(_current_roles.get())
         assert "operator" in roles
 

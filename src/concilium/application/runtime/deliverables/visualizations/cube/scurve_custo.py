@@ -172,7 +172,7 @@ def build(canonical, cubo) -> bytes | None:  # noqa: ARG001
         }
 
         resultado = getattr(canonical, "resultado", None)
-        preco_venda = float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) / scale
+        float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) / scale
         # Custo operacional real = direto + indireto, derivado do cubo (não de custo.total
         # que pode refletir custo de pool ≠ PU×Q quando n_frentes > 1).
         custo_op = (sum(direto_m.values()) + sum(indireto_m.values())) / scale
@@ -184,11 +184,11 @@ def build(canonical, cubo) -> bytes | None:  # noqa: ARG001
         # ── Painel 1: barras mensais empilhadas ────────────────────────────────
         ax_bar.bar(x, direto, color=_PALETTE[0], alpha=0.88, width=0.7, label="Direto")
         ax_bar.bar(x, indireto, bottom=direto, color=_PALETTE[1], alpha=0.88, width=0.7, label="Indireto")
-        bottoms = [d + i for d, i in zip(direto, indireto)]
+        bottoms = [d + i for d, i in zip(direto, indireto, strict=False)]
         for comp in _BDI_COMPS:
             vals = bdi_layers[comp]
             ax_bar.bar(x, vals, bottom=bottoms, color=_BDI_COLORS[comp], alpha=0.80, width=0.7, label=comp)
-            bottoms = [b + v for b, v in zip(bottoms, vals)]
+            bottoms = [b + v for b, v in zip(bottoms, vals, strict=False)]
         ax_bar.set_title("Custo por Mês (planejamento + indiretos)", fontsize=11, fontweight="bold")
         ax_bar.set_ylabel("R$ (Mi)", fontsize=9)
         ax_bar.legend(loc="upper right", fontsize=8)
@@ -204,11 +204,11 @@ def build(canonical, cubo) -> bytes | None:  # noqa: ARG001
             return out
 
         acc_d = _accum(direto)
-        acc_i = [d + i for d, i in zip(acc_d, _accum(indireto))]
+        acc_i = [d + i for d, i in zip(acc_d, _accum(indireto), strict=False)]
         acc_bdi: dict[str, list[float]] = {}
         prev = acc_i
         for comp in _BDI_COMPS:
-            nxt = [p + v for p, v in zip(prev, _accum(bdi_layers[comp]))]
+            nxt = [p + v for p, v in zip(prev, _accum(bdi_layers[comp]), strict=False)]
             acc_bdi[comp] = nxt
             prev = nxt
         acc_total_bdi = prev

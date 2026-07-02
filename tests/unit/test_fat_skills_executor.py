@@ -558,7 +558,8 @@ class TestRunPipeline:
             meta=meta,
         )
         providers_factory = MagicMock(return_value={})
-        resolve_state = lambda sid, res, state: state
+        def resolve_state(sid, res, state):
+            return state
 
         final_state, records = ex.run_pipeline(
             state_in="s",

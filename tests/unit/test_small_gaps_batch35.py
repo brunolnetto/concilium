@@ -61,7 +61,6 @@ class TestResolveProductivity:
 class TestValidatePreconditions:
     def test_no_projeto_appends_error_and_returns_false(self):
         """Line 957: canonical.projeto is None → append VAL-CRON-PRECONDICAO and return False."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         canonical = SimpleNamespace(projeto=None, eap=[])
         validacoes = []
@@ -115,7 +114,7 @@ class TestComputeProductiveWeeks:
     def test_zero_productivity_returns_none(self):
         """Line 671-672: _resolve_productivity returns 0 → return None."""
         eap_item = SimpleNamespace(item_id="ITEM-A", quantitativo=100.0, cpu_id="CPU-A")
-        canonical = self._make_canonical([eap_item])
+        self._make_canonical([eap_item])
         # CPU with no producao_id_ref → falls through to 1000.0 default (not 0)
         # Force P=0 by using a cpu_meta with producao_horaria=0 which doesn't early-return
         # Actually _resolve_productivity always returns 1000.0 as default when not found

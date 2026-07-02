@@ -39,7 +39,7 @@ class CpuMapper:
             self.catalogo = self.runtime.load_catalogo(ctx.catalogo_id)
             self.contexto = ctx
         except Exception as e:
-            raise RuntimeError(f"Failed to load catalog context {self.contexto_id}: {e}")
+            raise RuntimeError(f"Failed to load catalog context {self.contexto_id}: {e}") from e
 
     def search_cpus(self, query: str, limit: int = 5) -> list[dict[str, Any]]:
         """Search for CPUs matching a query.

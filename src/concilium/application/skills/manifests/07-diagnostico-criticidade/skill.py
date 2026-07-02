@@ -214,7 +214,8 @@ def run_diagnostico_criticidade(
             ValidacaoItem(
                 codigo="VAL-CC-01",
                 status="ERRO",
-                mensagem="Equipes diretas sem custo. Diagnóstico limitado ao cronograma. (Custos calculados por skill-06/08 via PUxQ)",
+                mensagem="Equipes diretas sem custo. Diagnóstico limitado ao cronograma. "
+                "(Custos calculados por skill-06/08 via PUxQ)",
             )
         )
         equipes_disponivel = False  # Degrade gracefully

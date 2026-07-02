@@ -135,7 +135,8 @@ def _save_relatorio_files(
                 or (rel_dict.get("resumo") or {}).get("projeto")
                 or "Relatório Financeiro"
             )
-            provider = lambda file_name: _load_output_image_bytes(project, v, file_name)
+            def provider(file_name):
+                return _load_output_image_bytes(project, v, file_name)
             pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
             if pdf_bytes:
                 project.save_output_file(pdf_bytes, v, "relatorio.pdf")  # type: ignore[union-attr]

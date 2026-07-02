@@ -298,7 +298,8 @@ class TestResolverComponentesBdi:
             PerfilTributarioProjeto,
         )
 
-        tributo_ativo = lambda aliq: CheckboxTributo(aplicavel=True, aliquota=aliq)
+        def tributo_ativo(aliq):
+            return CheckboxTributo(aplicavel=True, aliquota=aliq)
         tributo_zero = CheckboxTributo(aplicavel=False, aliquota=0.0)
 
         aplic = AplicacaoTributaria(

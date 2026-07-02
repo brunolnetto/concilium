@@ -10,7 +10,10 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from concilium.domain.models.campaign.campaign import TendenciaMarginal
 
 from concilium.domain.models.campaign.campaign import (
     CampaignBundleCube,
@@ -81,7 +84,7 @@ def gerar_grid(bundle: GoResearchCampaignBundle) -> list[tuple[dict, dict]]:
 
     results = []
     for combo in itertools.product(*value_lists):
-        variados = dict(zip(keys, combo))
+        variados = dict(zip(keys, combo, strict=False))
         spec_v = _apply_overrides(copy.deepcopy(bundle.base_spec), variados)
         results.append((spec_v, variados))
     return results
@@ -914,7 +917,7 @@ def _label_variados(variados: dict) -> str:
 def _tendencia(valores_ord: list, medias: list[float | None]) -> TendenciaMarginal:
     from concilium.domain.models.campaign.campaign import TendenciaMarginal  # noqa: F401
 
-    valid = [(v, m) for v, m in zip(valores_ord, medias) if m is not None]
+    valid = [(v, m) for v, m in zip(valores_ord, medias, strict=False) if m is not None]
     if len(valid) < 2:
         return "indeterminado"
     ms = [m for _, m in valid]
@@ -945,7 +948,7 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
 
     # Índice de cenários por variados-hash
     cenario_por_id = {c.cenario_id: c for c in output.cenarios}
-    grid, _ = zip(*gerar_grid(bundle)) if bundle.sweep else ([], [])
+    grid, _ = zip(*gerar_grid(bundle), strict=False) if bundle.sweep else ([], [])
     grid_list = list(gerar_grid(bundle))
 
     # --- 2. Células ---

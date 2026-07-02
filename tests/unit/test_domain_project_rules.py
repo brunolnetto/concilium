@@ -73,7 +73,6 @@ class TestResolveCompareVersion:
         # Requesting v3: v3 has no canonical → look for ≤v3 with canonical → v3 skipped
         # (first call returns None for v3), reversed([v1,v2,v3,v4]) → v4>3 skip,
         # v3≤3 check canonical → None, v2≤3 → None, v1≤3 → canonical found
-        canonical_map = {"v1": {"ok": True}, "v3": None}
         project = _make_project({"v1": {"ok": True}}, ["v1", "v2", "v3", "v4"])
         result = resolve_compare_version(project, "v3")
         assert result == "v1"
@@ -114,7 +113,7 @@ class TestResolveCompareVersion:
 
     def test_exact_match_on_numeric_boundary(self):
         # Candidate v3 == target v3 → should be included (≤ check)
-        project = _make_project({"v3": {"ok": True}}, ["v1", "v2", "v3"])
+        _make_project({"v3": {"ok": True}}, ["v1", "v2", "v3"])
         # load_canonical("v3") returns None on first call (no direct canonical),
         # so we need a project where v3 has no direct canonical but IS found in loop
         # Let's set up: first call (direct) returns None, loop call returns data

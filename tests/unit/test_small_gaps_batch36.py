@@ -2,12 +2,10 @@
 from __future__ import annotations
 
 import importlib.util
-import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
-
 
 # ---------------------------------------------------------------------------
 # Module loaders
@@ -251,7 +249,7 @@ class TestBuildDagFromPrecedencias:
         nos_set = set(nos)
         validacoes = []
 
-        result = MOD_01._build_dag_from_precedencias(
+        MOD_01._build_dag_from_precedencias(
             nos, nos_set, precedencias_raw=[], eap=[eap_a, eap_b], validacoes=validacoes
         )
 
@@ -317,7 +315,6 @@ class TestTopoSort:
     def test_diamond_graph_triggers_non_zero_in_degree_branch(self):
         """Branch 51→49: diamond (A→C, B→C) — when A processed, C in_degree=1≠0 (False branch)."""
         nos = {"A", "B", "C"}
-        succ = {"A": ["C"], "B": ["C"], "C": []}
         result = MOD_01._kahn(sorted(nos), [("A", "C"), ("B", "C")])
         assert set(result) == {"A", "B", "C"}
         assert result.index("C") > result.index("A")
@@ -341,7 +338,7 @@ class TestBuildDagBranchArcs:
         nos_set = set(nos)
         validacoes = []
 
-        result = MOD_01._build_dag_from_precedencias(nos, nos_set, precedencias_raw=[], eap=eap, validacoes=validacoes)
+        MOD_01._build_dag_from_precedencias(nos, nos_set, precedencias_raw=[], eap=eap, validacoes=validacoes)
         # Function emits VAL-DAG-01 with status="OK" when no errors — exactly one such entry
         dag_01 = [v for v in validacoes if v.codigo == "VAL-DAG-01"]
         assert all(v.status == "OK" for v in dag_01)
@@ -361,7 +358,7 @@ class TestBuildDagBranchArcs:
         precedencias_raw = [{"predecessora": "A-atv-1", "sucessora": "B-atv-1"}]
         validacoes = []
 
-        result = MOD_01._build_dag_from_precedencias(nos, nos_set, precedencias_raw, eap=[eap_a, eap_b], validacoes=validacoes)
+        MOD_01._build_dag_from_precedencias(nos, nos_set, precedencias_raw, eap=[eap_a, eap_b], validacoes=validacoes)
         # No ERRO VAL-DAG-01 (only OK); duplicate raw edge was skipped
         error_dag01 = [v for v in validacoes if v.codigo == "VAL-DAG-01" and v.status == "ERRO"]
         assert len(error_dag01) == 0

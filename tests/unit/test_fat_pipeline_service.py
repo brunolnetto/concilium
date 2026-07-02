@@ -155,8 +155,6 @@ class TestRunProject:
         execute_called = []
         get_run_called = []
 
-        original_execute = svc._execute_run
-        original_get_run = svc.get_run
 
         # We'll patch at instance level
         def fake_execute(proj, run_id):
@@ -232,7 +230,7 @@ class TestStartRunProject:
         svc, project, audit, runtime = _make_svc()
         project.read_json.return_value = []
 
-        result = svc.start_run_project(
+        svc.start_run_project(
             "proj-test",
             base_version="v1",
             fork_version=True,
@@ -331,7 +329,6 @@ class TestGetRun:
         project.read_lines.return_value = []
 
         progress_called = []
-        original_rp = svc._read_run_progress
 
         def fake_progress(proj, run):
             progress_called.append(run["run_id"])

@@ -318,7 +318,7 @@ def test_sharepoint_success_and_error_branches(tmp_path, monkeypatch):
 
     # Small write path and optimistic concurrency 412 branch
     httpx_put_412 = SimpleNamespace(put=MagicMock(return_value=_Resp(status_code=412)))
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         storage._gravar_pequeno(httpx_put_412, "x.bin", b"abc")
 
     # listar_blobs exception while online should raise wrapped FileNotFoundError

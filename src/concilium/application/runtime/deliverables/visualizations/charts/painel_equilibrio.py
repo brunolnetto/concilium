@@ -91,7 +91,7 @@ def build_painel_equilibrio(data: dict) -> bytes | None:
             linewidth=edge_widths,
         )
         max_val = max(abs(v) for v in values) if values else 1e-9
-        for bar, val, solo in zip(bars, values, solo_flags):
+        for bar, val, solo in zip(bars, values, solo_flags, strict=False):
             sign = "+" if val >= 0 else ""
             suffix = " ★" if solo else ""
             ax.text(

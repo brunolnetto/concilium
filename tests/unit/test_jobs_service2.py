@@ -675,7 +675,8 @@ class TestInitDependencyInjection:
         assert svc._config.job_ttl_hours == 48
 
     def test_runtime_factory_stored(self):
-        factory = lambda: None
+        def factory():
+            return None
         svc = JobService(
             repository=InMemoryJobRepository(),
             config=_make_config(),
@@ -684,7 +685,8 @@ class TestInitDependencyInjection:
         assert svc._runtime_factory is factory
 
     def test_project_factory_stored(self):
-        pf = lambda pid: None
+        def pf(pid):
+            return None
         svc = JobService(
             repository=InMemoryJobRepository(),
             config=_make_config(),

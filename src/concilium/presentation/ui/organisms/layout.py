@@ -709,7 +709,7 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
 
     if _active:
         _cols = st.columns([w for _, w, _ in _active])
-        for col, (dim, _, key_suffix) in zip(_cols, _active):
+        for col, (dim, _, _key_suffix) in zip(_cols, _active, strict=False):
             if dim == "categoria":
                 categoria = col.selectbox("Categoria", options=categoria_options, key=f"cube-cat-{project_id}")
             elif dim == "componente":
@@ -823,7 +823,8 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
             d4.metric(
                 "Tanque sugerido ×3",
                 f"{tanque_sugerido:,.0f} L",
-                help="Estimativa conservadora: pico × 1,5 (fator segurança) × 2 (ciclo de reabastecimento). Ajuste conforme frequência de entrega.",
+                help="Estimativa conservadora: pico × 1,5 (fator segurança) × 2 (ciclo de reabastecimento). "
+                "Ajuste conforme frequência de entrega.",
             )
         else:
             c1, c2, c3 = st.columns(3)

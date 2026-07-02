@@ -295,6 +295,7 @@ def _impl_catalog_cure_plausibility(
 
     Itens não-automatizáveis são reportados para revisão manual.
     """
+    from concilium.application.catalog.cure_plausibility import ROOT as CURE_ROOT
     from concilium.application.catalog.cure_plausibility import (
         CureReport,
         cure_duplicatas,
@@ -303,7 +304,6 @@ def _impl_catalog_cure_plausibility(
         cure_stale_rfi,
         report_manual,
     )
-    from concilium.application.catalog.cure_plausibility import ROOT as CURE_ROOT
 
     console = Console()
 

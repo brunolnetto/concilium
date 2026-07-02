@@ -14,34 +14,54 @@ import streamlit as st
 
 try:
     from ..atoms.form_contracts import CPU_EDITABLE_FIELDS, CPU_READONLY_FIELDS, render_typed_form
-    from ..config import DEFAULT_ACTOR, DEFAULT_BASE_URL
     from ..infra.api import api_call
-    from ..molecules.common import render_page_heading
-    from ..organisms.layout import (
-        render_artifacts_tab,
-        render_audit,
-        render_backtracking_pe,
-        render_bdi_tab,
-        render_compare,
-        render_cpu_composition_override,
-        render_cpu_productivity_override,
-        render_deliverables_config,
-        render_diagnostico_pe,
-        render_history,
-        render_indiretos_config,
-        render_ops_audit_tab,
-        render_overview_tab,
-        render_pipeline_monitor,
-        render_planning_tab,
-        render_run,
-        render_saved_override,
-        render_version_management,
-    )
+    from ..organisms.layout import render_saved_override
 except ImportError:
     src_root = Path(__file__).resolve().parents[4]
     if str(src_root) not in sys.path:
         sys.path.insert(0, str(src_root))
+    from concilium.presentation.ui.atoms.form_contracts import (
+        CPU_EDITABLE_FIELDS,
+        CPU_READONLY_FIELDS,
+        render_typed_form,
+    )
     from concilium.presentation.ui.infra.api import api_call
+    from concilium.presentation.ui.organisms.layout import render_saved_override
+
+
+
+def _render_project_cpu_editor(
+    base_url: str,
+    project_id: str,
+    actor: str,
+    cpu_id: str,
+    cpu_data: dict,
+    label: str = "Editar CPU",
+) -> None:
+    """Editor de override de CPU no projeto (restaurado do project_page.py original)."""
+    st.caption(f"**{label}:** `{cpu_id}` — {cpu_data.get('descricao', '')}")
+    edited = render_typed_form(
+        cpu_data, CPU_EDITABLE_FIELDS, CPU_READONLY_FIELDS, key=f"proj-cpu-form-{project_id}-{cpu_id}"
+    )
+    motivo = st.text_input("Motivo do override", key=f"proj-cpu-motivo-{project_id}-{cpu_id}")
+    if st.button(
+        "💾 Salvar override", type="primary", key=f"proj-cpu-save-{project_id}-{cpu_id}", disabled=not motivo.strip()
+    ):
+        payload = {**cpu_data, **edited}
+        try:
+            api_call(
+                "POST",
+                f"/api/projects/{project_id}/catalog/cpus/{cpu_id}",
+                payload=payload,
+                base_url=base_url,
+                actor=actor,
+                params={"motivo": motivo},
+            )
+            st.success(f"Override de `{cpu_id}` salvo!")
+            st.session_state.pop(f"proj-cat-cpus-{project_id}", None)
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Erro: {exc}")
 
 
 def _render_overrides_section(base_url: str, project_id: str, actor: str, overrides: dict) -> None:

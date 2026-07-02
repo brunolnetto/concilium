@@ -201,12 +201,12 @@ def test_gantt_block_skips_task_without_start():
     ]
     result = _gantt_block("G", tasks)
     assert result is not None
-    lines_with_tasks = [
-        l for l in result if "task" in l.lower() and "datef" not in l.lower() and "axisf" not in l.lower()
+    [
+        ln for ln in result if "task" in ln.lower() and "datef" not in ln.lower() and "axisf" not in ln.lower()
     ]
     # Only the second task should appear
-    assert any("OK Task" in l for l in result)
-    assert not any("No Start" in l for l in result)
+    assert any("OK Task" in ln for ln in result)
+    assert not any("No Start" in ln for ln in result)
 
 
 def test_gantt_block_skips_task_without_duration():
@@ -214,21 +214,21 @@ def test_gantt_block_skips_task_without_duration():
     result = _gantt_block("G", tasks)
     assert result is not None
     # No task entry lines besides header/footer
-    assert not any("No Duration" in l for l in result)
+    assert not any("No Duration" in ln for ln in result)
 
 
 def test_gantt_block_uses_item_id_when_no_name():
     tasks = [{"item_id": "IT-42", "start": "2024-01-01", "duration_days": 2}]
     result = _gantt_block("G", tasks)
     assert result is not None
-    assert any("IT-42" in l for l in result)
+    assert any("IT-42" in ln for ln in result)
 
 
 def test_gantt_block_fallback_name():
     tasks = [{"start": "2024-01-01", "duration_days": 2}]
     result = _gantt_block("G", tasks)
     assert result is not None
-    assert any("Atividade 1" in l for l in result)
+    assert any("Atividade 1" in ln for ln in result)
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +282,7 @@ def test_render_financial_markdown_with_saldo_receita():
         }
     }
     result = _render_financial_markdown(graficos)
-    assert any("Fluxo de Caixa" in l for l in result)
+    assert any("Fluxo de Caixa" in ln for ln in result)
     assert "```mermaid" in result
 
 
@@ -296,7 +296,7 @@ def test_render_financial_markdown_with_exposicao():
         }
     }
     result = _render_financial_markdown(graficos)
-    assert any("Exposicao" in l for l in result)
+    assert any("Exposicao" in ln for ln in result)
 
 
 def test_render_financial_markdown_both():
@@ -309,8 +309,8 @@ def test_render_financial_markdown_both():
         }
     }
     result = _render_financial_markdown(graficos)
-    assert any("Fluxo de Caixa" in l for l in result)
-    assert any("Exposicao" in l for l in result)
+    assert any("Fluxo de Caixa" in ln for ln in result)
+    assert any("Exposicao" in ln for ln in result)
 
 
 def test_render_financial_markdown_no_saldo_no_chart():
@@ -324,7 +324,7 @@ def test_render_financial_markdown_no_saldo_no_chart():
         }
     }
     result = _render_financial_markdown(graficos)
-    assert not any("Fluxo de Caixa" in l for l in result)
+    assert not any("Fluxo de Caixa" in ln for ln in result)
 
 
 # ---------------------------------------------------------------------------
@@ -359,7 +359,7 @@ def test_append_histogram_appends_correctly():
         "Histograma",
         "Unidades",
     )
-    assert any("Histograma" in l for l in lines)
+    assert any("Histograma" in ln for ln in lines)
     assert "```mermaid" in lines
 
 
@@ -383,7 +383,7 @@ def test_render_chart_markdown_sections_with_equipamentos():
         "equipamentos": {"labels": ["2024-W01"], "values": [5]},
     }
     result = render_chart_markdown_sections(graficos)
-    assert any("Equipamentos" in l for l in result)
+    assert any("Equipamentos" in ln for ln in result)
 
 
 def test_render_chart_markdown_sections_with_mao_obra():
@@ -391,13 +391,13 @@ def test_render_chart_markdown_sections_with_mao_obra():
         "mao_obra": {"labels": ["2024-W01"], "values": [3]},
     }
     result = render_chart_markdown_sections(graficos)
-    assert any("Mao de Obra" in l for l in result)
+    assert any("Mao de Obra" in ln for ln in result)
 
 
 def test_render_chart_markdown_sections_with_cronograma():
     graficos = {"cronograma": {"tasks": [{"name": "T1", "start": "2024-01-01", "duration_days": 7}]}}
     result = render_chart_markdown_sections(graficos)
-    assert any("Cronograma" in l for l in result)
+    assert any("Cronograma" in ln for ln in result)
 
 
 def test_render_chart_markdown_sections_cronograma_non_dict():
@@ -417,7 +417,7 @@ def test_render_chart_markdown_sections_with_financial():
         }
     }
     result = render_chart_markdown_sections(graficos)
-    assert any("Fluxo de Caixa" in l or "Exposicao" in l for l in result)
+    assert any("Fluxo de Caixa" in ln or "Exposicao" in ln for ln in result)
 
 
 # ---------------------------------------------------------------------------

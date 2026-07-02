@@ -53,8 +53,6 @@ from concilium.infrastructure.telemetry import patch_fastmcp_server, setup_telem
 from concilium.presentation.mcp._context import _config_root
 from concilium.presentation.mcp.audit import patch_fastmcp_server_with_audit
 from concilium.presentation.mcp.middleware import McpAuthMiddleware
-
-_APPS_DIR = Path(__file__).parent / "apps"
 from concilium.presentation.mcp.tools import (
     analise,
     artifacts,
@@ -72,6 +70,8 @@ from concilium.presentation.mcp.tools import (
     system,
     tributacao,
 )
+
+_APPS_DIR = Path(__file__).parent / "apps"
 
 
 def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:

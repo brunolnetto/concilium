@@ -302,7 +302,7 @@ def render_campaign_report_md(report: dict) -> str:
             header_cols = " | ".join(str(vx)[:10] for vx in valores_x)
             lines.append(f"| {dim_y} \\ {dim_x} | {header_cols} |")
             lines.append(f"|{'---|' * (len(valores_x) + 1)}")
-            for vy, row in zip(valores_y, grade):
+            for vy, row in zip(valores_y, grade, strict=False):
                 row_vals = " | ".join(_fmt_f2(v) for v in row)
                 lines.append(f"| {str(vy)[:12]} | {row_vals} |")
             lines.append("")
@@ -754,7 +754,7 @@ def render_campaign_report_pdf(report: dict, md_text: str) -> bytes | None:
                         )
                     ] + [Paragraph(_safe(str(vx))[:8], st_small_c) for vx in valores_x]
                     f_data = [f_header]
-                    for vy, row in zip(valores_y, grade):
+                    for vy, row in zip(valores_y, grade, strict=False):
                         f_row = [Paragraph(_safe(str(vy))[:10], st_small)] + [
                             Paragraph(_fmt_f2(v), st_small_c) for v in row
                         ]

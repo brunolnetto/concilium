@@ -271,18 +271,6 @@ class TestCircularDeps:
 
     def test_self_referencing_insumo_is_filtered_out(self):
         """Lines 46-48: cpu_dep == cpu['codigo'] is filtered so no self-loop is added."""
-        catalogo = {
-            "cpus": [
-                {
-                    "codigo": "CPU-SELF",
-                    "cpu_referencia_id": None,
-                    "composicao_itens": [
-                        # insumo maps back to CPU-SELF itself (self-loop via TERCEIRIZADO)
-                        {"insumo_id": "INS-SELF", "categoria_custo": "TERCEIRIZADO"}
-                    ],
-                },
-            ]
-        }
         # Manually seed: INS-SELF → CPU-SELF (via cpu_referencia_id on a different CPU)
         # Build insumo_para_cpu via a helper CPU that references CPU-SELF
         catalogo2 = {

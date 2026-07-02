@@ -50,9 +50,12 @@ class TestCatalogoPageNoRawJson:
         assert "st.json(cpu_data)" in source, "catalogo_page.py should have st.json(cpu_data) for read-only inspection"
 
     def test_uses_render_typed_form(self):
-        """catalogo_page.py must use render_typed_form for CPU editing."""
-        source = self.CATALOGO_PAGE.read_text(encoding="utf-8")
-        assert "render_typed_form" in source, "catalogo_page.py must call render_typed_form() (ADR-064)"
+        """Catalog page (or its extracted helpers) must use render_typed_form for CPU editing."""
+        helpers = self.CATALOGO_PAGE.parent / "_catalogo_helpers.py"
+        source = self.CATALOGO_PAGE.read_text(encoding="utf-8") + helpers.read_text(encoding="utf-8")
+        assert "render_typed_form" in source, (
+            "catalogo_page.py/_catalogo_helpers.py must call render_typed_form() (ADR-064)"
+        )
 
 
 # ─── F2: lint scanner detects antipattern ────────────────────────────────────

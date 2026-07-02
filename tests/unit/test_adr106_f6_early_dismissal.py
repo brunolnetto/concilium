@@ -96,7 +96,7 @@ class TestEarlyDismissalTriggered:
         trailing = 3
 
         # Sem early dismissal: EQ fica idle por 3 semanas + sem c_demob_eq
-        result_idle = engine.calcular(
+        engine.calcular(
             prod_weeks=10,
             idle_weeks=trailing,  # EQ ocioso por 3 semanas
             c_mo=2000.0,
@@ -109,7 +109,7 @@ class TestEarlyDismissalTriggered:
             trailing_weeks_eq=0,
         )
         # Com early dismissal: EQ devolvida, paga apenas c_demob_eq
-        result_early = engine.calcular(
+        engine.calcular(
             prod_weeks=10,
             idle_weeks=0,
             c_mo=2000.0,

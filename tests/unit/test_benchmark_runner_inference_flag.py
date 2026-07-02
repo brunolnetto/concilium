@@ -119,7 +119,6 @@ def test_prepare_inputs_is_stable_across_repeated_calls() -> None:
         slug="proj-teste",
         contexto_id="ctx",
         extra_inputs={
-            "06-resultado-financeiro": {"foo08": "bar"},
             "06-resultado-financeiro": {"foo06": "bar"},
         },
     )

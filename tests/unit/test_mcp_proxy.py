@@ -78,7 +78,7 @@ def _tool_result(status: str = "ok", **fields) -> dict:
 # Module-level patch context: redirect _TOKEN_DIR to tmp_path
 # ---------------------------------------------------------------------------
 
-import concilium.presentation.mcp.proxy as proxy_mod
+import concilium.presentation.mcp.proxy as proxy_mod  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # _load_cache / _save_cache
@@ -601,7 +601,7 @@ class TestBridge:
                 loop.run_in_executor = original_run_in_executor
 
         call_args = http.post.call_args
-        headers = call_args[1]["headers"] if "headers" in call_args[1] else call_args[0][1]
+        call_args[1]["headers"] if "headers" in call_args[1] else call_args[0][1]
         # headers may be positional or keyword
         all_kwargs = http.post.call_args.kwargs
         assert "Authorization" in all_kwargs.get("headers", {})
@@ -634,7 +634,7 @@ class TestBridge:
             finally:
                 loop.run_in_executor = original_run_in_executor
 
-        out_lines = [l for l in capsys.readouterr().out.strip().splitlines() if l]
+        out_lines = [ln for ln in capsys.readouterr().out.strip().splitlines() if ln]
         assert len(out_lines) == 2  # [DONE] is skipped
         assert json.loads(out_lines[0])["event"] == "a"
         assert json.loads(out_lines[1])["event"] == "b"

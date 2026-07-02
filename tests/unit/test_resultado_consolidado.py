@@ -29,7 +29,7 @@ class TestBreakdownEscopo:
         assert b.venda_com_bdi == 1_000_000.0
 
     def test_peso_relativo_bounds(self):
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             _make_breakdown().__class__(
                 escopo_id="x",
                 nome="x",

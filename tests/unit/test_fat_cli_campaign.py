@@ -533,7 +533,7 @@ class TestDefaultConfigRoot:
                 return MagicMock()
 
             root_parent.__truediv__ = root_truediv
-            config_result = MagicMock(spec=Path)
+            MagicMock(spec=Path)
             root_parent.__truediv__ = MagicMock(side_effect=root_truediv)
 
             mock_here.parents = [parent0, parent1, root_parent]
@@ -560,7 +560,7 @@ class TestDefaultConfigRoot:
             MockPath.return_value.resolve.return_value = fake_here
 
             # We need Path("config") to work
-            fake_config = MagicMock(spec=Path)
+            MagicMock(spec=Path)
             MockPath.side_effect = lambda x: (
                 fake_here
                 if False

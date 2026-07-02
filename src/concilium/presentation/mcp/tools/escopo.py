@@ -8,6 +8,7 @@ from mcp.server.fastmcp import FastMCP
 
 from concilium.infrastructure.auth.permission_guard import permission
 from concilium.presentation.mcp._context import _project, _wrap_response
+from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 
 def _resolve_escopo_id(store: Any, escopo_id: str | None = None) -> str:
@@ -66,6 +67,7 @@ def register(server: FastMCP) -> None:
 
     @server.tool()
     @permission("project:create")
+    @mcp_rate_limit()
     def gerir_escopo(
         project_id: str,
         entidade: str,

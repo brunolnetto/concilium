@@ -70,14 +70,17 @@ def render_equilibrium_section(
         "atividade e perfis de permanencia/ramp-up. "
         "**Fatores exogenos:** praticabilidade (clima/terreno) devem ficar explicitos no diagnostico.",
         "",
-        "| Item | Venda (R$) | Operacional (R$) | Margem Op. Direta | Margem Total Atribuida | Gap Produtivo (R$) | Gap Mob/Demob (R$) | Gap Ociosidade (R$) | Status |",
+        "| Item | Venda (R$) | Operacional (R$) | Margem Op. Direta | Margem Total Atribuida "
+        "| Gap Produtivo (R$) | Gap Mob/Demob (R$) | Gap Ociosidade (R$) | Status |",
         "|------|-----------:|-----------------:|-------------------:|------------------------:|-------------------:|--------------------:|---------------------:|--------|",
     ]
     for row in ponto_equilibrio:
         lines.append(
-            f"| {row.get('item_id', '-')} | {_money(row.get('custo_venda_cpu'))} | {_money(row.get('custo_operacional_real'))} "
+            f"| {row.get('item_id', '-')} | {_money(row.get('custo_venda_cpu'))} "
+            f"| {_money(row.get('custo_operacional_real'))} "
             f"| {_pct(row.get('margem_operacional_direta'))} | {_pct(row.get('margem_total_atribuida'))} "
-            f"| {_money(row.get('gap_produtivo'))} | {_money(row.get('gap_mob_demob'))} | {_money(row.get('gap_ociosidade'))} "
+            f"| {_money(row.get('gap_produtivo'))} | {_money(row.get('gap_mob_demob'))} "
+            f"| {_money(row.get('gap_ociosidade'))} "
             f"| {row.get('status_validacao', '-')} |"
         )
 
@@ -99,12 +102,17 @@ def render_equilibrium_section(
         "",
         "| Indicador | Soma Itens (R$) | Global (R$) | Delta (R$) |",
         "|-----------|----------------:|------------:|-----------:|",
-        f"| Receita | {_money(soma_venda_itens)} | {_money(receita_global)} | {_money(soma_venda_itens - receita_global)} |",
-        f"| Custo Operacional / Total | {_money(soma_op_itens)} | {_money(custo_total_global)} | {_money(soma_op_itens - custo_total_global)} |",
-        f"| Resultado | {_money(soma_resultado_atribuido)} | {_money(resultado_global)} | {_money(soma_resultado_atribuido - resultado_global)} |",
+        f"| Receita | {_money(soma_venda_itens)} | {_money(receita_global)} "
+        f"| {_money(soma_venda_itens - receita_global)} |",
+        f"| Custo Operacional / Total | {_money(soma_op_itens)} | {_money(custo_total_global)} "
+        f"| {_money(soma_op_itens - custo_total_global)} |",
+        f"| Resultado | {_money(soma_resultado_atribuido)} | {_money(resultado_global)} "
+        f"| {_money(soma_resultado_atribuido - resultado_global)} |",
         "",
-        "> Observacao: `Margem Total Atribuida` e reconciliada por rateio de receita e custos globais (direto + indireto) com base na participacao de venda de cada item.",
-        f"> Decomposicao do gap (itens deficitarios): produtivo={_money(soma_gap_produtivo)}, mob/demob={_money(soma_gap_mob_demob)}, ociosidade={_money(soma_gap_ociosidade)}.",
+        "> Observacao: `Margem Total Atribuida` e reconciliada por rateio de receita e custos globais "
+        "(direto + indireto) com base na participacao de venda de cada item.",
+        f"> Decomposicao do gap (itens deficitarios): produtivo={_money(soma_gap_produtivo)}, "
+        f"mob/demob={_money(soma_gap_mob_demob)}, ociosidade={_money(soma_gap_ociosidade)}.",
     ]
     lines += ["", "---", ""]
     return lines

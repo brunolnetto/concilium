@@ -346,7 +346,7 @@ def _face_custo_estado_componente(cubo, contratos, cadeias, **_):
 
 def _face_ciclo_vida(cubo, contratos, cadeias, *, top_n=300, **_):
     cv = cubo.ciclo_vida_instancias()
-    contrato_por_id = {c.contrato_id: c for c in contratos}
+    {c.contrato_id: c for c in contratos}
     rows = []
     for iid, d in sorted(cv.items()):
         rows.append(
@@ -382,7 +382,8 @@ def _face_ciclo_vida(cubo, contratos, cadeias, *, top_n=300, **_):
         off_txt = f", {r['off_w']} sem. off (liberada)" if r["off_w"] else ""
         idle_txt = f", {r['idle_w']} ociosas" if r["idle_w"] else ", 0 ociosas"
         narrativa.append(
-            f"{r['instancia_id']}: mobilizada na sem. {r['semana_mob']}, {r['prod_w']} sem. produtivas{idle_txt}{off_txt}. "
+            f"{r['instancia_id']}: mobilizada na sem. {r['semana_mob']}, "
+            f"{r['prod_w']} sem. produtivas{idle_txt}{off_txt}. "
             f"Custo {_fmt(r['custo_total'])} — MO {_fmt(r['custo_mo'])} (integral), EQ {_fmt(r['custo_eq'])}."
         )
     return columns, rows, narrativa, {"n_instancias": len(rows)}
@@ -534,12 +535,14 @@ def _face_economia_pool(
     ]
     if fallback_count:
         narrativa.append(
-            f"⚠ {fallback_count} atividade(s) usam fallback operacional por ausência de baseline de planejamento consolidado."
+            f"⚠ {fallback_count} atividade(s) usam fallback operacional "
+            "por ausência de baseline de planejamento consolidado."
         )
     if eco_total < 0:
         narrativa.append(
             "Economia negativa: o pool ficou acima da baseline homogênea. Em obras sequenciais sem compartilhamento "
-            "efetivo entre fases, isso tende a refletir burden contratual frente ao orçamento, não ganho operacional perdido."
+            "efetivo entre fases, isso tende a refletir burden contratual frente ao orçamento, "
+            "não ganho operacional perdido."
         )
     if sem_baseline:
         narrativa.append(f"⚠ {sem_baseline} atividade(s) sem baseline disponível (economia não calculável).")

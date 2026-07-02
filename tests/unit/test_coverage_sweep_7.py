@@ -351,8 +351,9 @@ class TestSkillHelpersExecutivo:
     def test_module_importable(self):
         import importlib.util
         import os
+        from pathlib import Path as _Path
 
-        base = "/home/pingu/github/agente-gerente-de-engenharia/src/concilium/application/skills/manifests"
+        base = str(_Path(__file__).resolve().parents[2] / "src/concilium/application/skills/manifests")
         target = os.path.join(base, "10-relatorio-e-artefatos", "_skill_helpers_executivo.py")
         if os.path.exists(target):
             spec = importlib.util.spec_from_file_location("_skill_helpers_executivo", target)

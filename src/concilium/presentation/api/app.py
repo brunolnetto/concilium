@@ -33,7 +33,8 @@ _TAGS_METADATA = [
     # ── Observability ──────────────────────────────────────────────────────────
     {
         "name": "observability",
-        "description": "Pipeline de observabilidade (ADR-112): Bronze/Silver/Gold paginados — SLIs, fallback rates, alertas, records raw.",
+        "description": "Pipeline de observabilidade (ADR-112): Bronze/Silver/Gold paginados — "
+        "SLIs, fallback rates, alertas, records raw.",
     },
     # ── System ─────────────────────────────────────────────────────────────────
     {"name": "system", "description": "Health check and API entry point."},

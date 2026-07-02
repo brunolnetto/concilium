@@ -30,7 +30,7 @@ import re
 import sys
 import unicodedata
 from collections import defaultdict
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -57,7 +57,7 @@ ALPHA_MAX  = 1.5   # se percentual_encargos_local > ALPHA_MAX → provavelmente 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return datetime.now(UTC).strftime("%Y-%m-%d")
 
 def _norm(text: str) -> str:
     t = unicodedata.normalize("NFD", str(text).lower())
@@ -365,7 +365,7 @@ def main() -> None:
         prefix = "  ✓" if args.apply else "  →"
         print(f"{prefix} {msg}")
     if report.manual:
-        print(f"\n  Intervenção manual necessária:")
+        print("\n  Intervenção manual necessária:")
         for msg in report.manual:
             print(f"  ⚠ {msg}")
     if report.skipped:
@@ -394,7 +394,7 @@ def main() -> None:
         else:
             print("  Status: ATENÇÃO — erros residuais precisam de revisão manual")
     else:
-        print(f"\n  Dry-run — use --apply para aplicar as correções")
+        print("\n  Dry-run — use --apply para aplicar as correções")
 
     if not args.apply:
         sys.exit(1 if report.manual else 0)

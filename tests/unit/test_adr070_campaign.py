@@ -398,7 +398,7 @@ def test_extrair_vetor_EF_bloqueado_gates():
 
 # ── Testes de _apply_scalar e _set_path ([*] wildcard + __scale__) ──────────
 
-from concilium.application.services.campaign.campaign_service import (
+from concilium.application.services.campaign.campaign_service import (  # noqa: E402
     _apply_post_load_overrides,
     _apply_scalar,
     _set_path,
@@ -495,7 +495,7 @@ class TestApplyPostLoadOverrides:
 
 # ── ADR-108: cubo_analitico e cronograma alimentam vetores ───────────────────
 
-from concilium.application.services.campaign.campaign_service import (
+from concilium.application.services.campaign.campaign_service import (  # noqa: E402
     _cronograma_utilizacao,
     _cubo_analitico_agregado,
 )
@@ -642,7 +642,7 @@ class TestCronogramaUtilizacao:
 # Feature 1 — per_item independent sweep
 # ---------------------------------------------------------------------------
 
-from concilium.application.services.campaign.campaign_service import _apply_per_item_post_load
+from concilium.application.services.campaign.campaign_service import _apply_per_item_post_load  # noqa: E402
 
 
 def _make_activities_spec_obj(activities: list[dict]) -> SimpleNamespace:
@@ -834,7 +834,7 @@ class TestPerItemSweep:
 # Feature 2 — cpu_alternativo sweep (Classe 4 — ADR-070 F4)
 # ---------------------------------------------------------------------------
 
-from concilium.application.services.campaign.campaign_service import _apply_cpu_alt_override
+from concilium.application.services.campaign.campaign_service import _apply_cpu_alt_override  # noqa: E402
 
 
 class TestCpuAlternativoSweep:

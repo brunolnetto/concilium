@@ -146,7 +146,8 @@ class SimulateRequest(BaseModel):
         default=6,
         ge=1,
         le=7,
-        description="Dias úteis por semana (default 6 = regime 6×1 MendesLobo). Use 5 para regime 5×2, 7 para contínuo.",
+        description="Dias úteis por semana (default 6 = regime 6×1 MendesLobo). "
+        "Use 5 para regime 5×2, 7 para contínuo.",
     )
     horas_dia: int = Field(
         default=8,

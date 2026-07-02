@@ -53,7 +53,7 @@ class TestJobsRepositoryUnsupportedBackend:
         with patch.dict("os.environ", {"CONCILIUM__JOBS_REPOSITORY": "redis"}):
             try:
                 _build_repository()
-                assert False, "Expected ValueError"
+                raise AssertionError("Expected ValueError")
             except ValueError as exc:
                 assert "redis" in str(exc)
 
@@ -72,7 +72,7 @@ class TestRepositorioProducaoObterOuErro:
         repo = RepositorioProducao(producoes_dir=tmp_path)
         try:
             repo.obter_ou_erro("NONEXISTENT-ID")
-            assert False, "Expected FileNotFoundError"
+            raise AssertionError("Expected FileNotFoundError")
         except FileNotFoundError as exc:
             assert "NONEXISTENT-ID" in str(exc)
 

@@ -176,7 +176,8 @@ class ValidadorCPUInsumo:
             return ValidacaoItem(
                 codigo="VAL-CPU-INS-05",
                 status="ERRO",
-                mensagem=f"Unidade '{unidade_insumo_raw}' (normalizada: '{unidade_insumo}') do insumo não é reconhecida no mapa de ranges",
+                mensagem=f"Unidade '{unidade_insumo_raw}' (normalizada: '{unidade_insumo}') "
+                f"do insumo não é reconhecida no mapa de ranges",
             )
 
         if coeficiente_val is None:

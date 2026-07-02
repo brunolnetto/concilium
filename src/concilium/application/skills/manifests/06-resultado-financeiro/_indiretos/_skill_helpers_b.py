@@ -22,8 +22,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
 from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # ADR-056 §T3
 from concilium.domain.models.canonical import (
@@ -59,6 +57,8 @@ except ImportError:
     _composicao_default_por_categoria = _mod_a._composicao_default_por_categoria
     _dimensionar_automatico = _mod_a._dimensionar_automatico
     _parse_component = _mod_a._parse_component
+
+logger = logging.getLogger(__name__)
 
 # Fator padrão: 1 mês = 4.33 semanas
 # _SEMANAS_POR_MES agora importada de domain/constants.py (era 4.33, corrigido para 4.3482)
@@ -112,7 +112,7 @@ def _build_semanal_breakdown(
             # Preserva a proporção entre componentes e garante soma semanal == custo total utilizado na categoria.
             frac_mo = mo_mensal / mensal_total
             frac_eq = eq_mensal / mensal_total
-            frac_vb = vb_mensal / mensal_total
+            vb_mensal / mensal_total
 
             custo_sem_base = round(float(custo_total_override) / n_semanas, 2)
             acumulado = 0.0

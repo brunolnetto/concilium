@@ -115,7 +115,6 @@ class TestCustoHoraEquipeNoIns:
 class TestEnrichProducaoCanonicoNoProd:
     def test_cpu_producao_id_ref_not_in_lookup_skips(self):
         """Line 215: prod not found → continue (no enrichment)."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         cpu = {"codigo": "CPU-X", "producao_id_ref": "PROD-MISSING", "precos_unitarios_sbdi": {"total": 100.0}}
         cpu_lookup = {"CPU-X": cpu}
@@ -129,7 +128,6 @@ class TestEnrichProducaoCanonicoNoProd:
 class TestEnrichProducaoCanonicoZeroCusto:
     def test_custo_hora_zero_skips(self):
         """Line 233: custo_hora <= 0 → continue (no enrichment)."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         cpu = {"codigo": "CPU-Y", "producao_id_ref": "P1", "precos_unitarios_sbdi": {"total": 100.0}}
         prod = {
@@ -150,7 +148,6 @@ class TestEnrichProducaoCanonicoZeroCusto:
 class TestBuildFatorCalendarioSemanalEventoNoId:
     def test_evento_without_id_field_not_added_to_eventos_aplicados(self):
         """Line 408->401: evento.get('id') is falsy → skip eventos_aplicados.add."""
-        from datetime import timedelta
 
         start = date(2025, 1, 6)
         semanas = ["2025-W02"]  # week starting Jan 6
@@ -178,7 +175,6 @@ class TestBuildFatorCalendarioSemanalEventoNoId:
 class TestExtractDagSSFFTipo:
     def test_ss_tipo_creates_extended_precedence(self):
         """Lines 510-517: SS tipo predecessor → extended list and thresholds sentinel."""
-        from concilium.application.scheduling.cpsat_scheduler import ExtendedPrecedence
 
         class FakePred:
             item_id = "IT-A"
@@ -328,7 +324,6 @@ class TestExtractActivitiesWithLookups:
 class TestResolveProductivityNoValue:
     def test_prod_item_has_neither_valor_horario_nor_producao_horaria(self):
         """Lines 1020->1031, 1031->1034: prod_item with no valid value → fallback."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         cpu = {"codigo": "CPU-X", "producao_id_ref": "P1"}
         prod_lookup = {
@@ -346,7 +341,6 @@ class TestResolveProductivityNoValue:
 
     def test_prod_item_has_producao_horaria_but_valor_horario_none(self):
         """Line 1020->1031 True path: producao_horaria exists → VAL-PROD-04-PROD-LEGACY."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         cpu = {"codigo": "CPU-X", "producao_id_ref": "P2"}
         prod_lookup = {
@@ -369,7 +363,6 @@ class TestResolveProductivityNoValue:
 class TestCheckWmpDesmobElse:
     def test_incompleta_with_no_plateau_emits_val_wmp_05(self):
         """Line 1689: curva.incompleta=True, semanas_plateau=None → else branch."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         curva = SimpleNamespace(incompleta=True)
         policy = SimpleNamespace(semanas_plateau=None, taxa_desmobilizacao=0.5)
@@ -401,7 +394,6 @@ class TestBuildCronogramaOutUnknownHeuristic:
             makespan=10,
             relaxed=False,
         )
-        from concilium.domain.models.canonical import ValidacaoItem
 
         result = _build_cronograma_out(
             mode="AUTO_SCHEDULE",
@@ -422,18 +414,16 @@ class TestBuildCronogramaOutUnknownHeuristic:
 class TestCpvProcessViolationsAvailableNone:
     def test_tipo_not_in_pool_available_none_continues(self):
         """Line 1594: available = pool.get(tipo_id) is None → continue."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         usage = {"2025-W01": {"TIPO-A": 5, "TIPO-UNKNOWN": 3}}
         pool = {"TIPO-A": 10}  # TIPO-UNKNOWN not in pool → available=None
         validacoes = []
-        violations = _cpv_process_violations(usage, pool, validacoes)
+        _cpv_process_violations(usage, pool, validacoes)
         # TIPO-UNKNOWN not in pool → no violation for it
         assert not any("TIPO-UNKNOWN" in v.mensagem for v in validacoes)
 
     def test_violation_when_exceeds_pool(self):
         """Line 1594: total_used > available → violation appended."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         usage = {"2025-W01": {"TRATOR": 5}}
         pool = {"TRATOR": 3}  # exceed
@@ -451,7 +441,6 @@ class TestCpvProcessViolationsAvailableNone:
 class TestDetermineModeNoMode:
     def test_no_mode_detected_returns_true_failed(self):
         """Lines 1905-1912: no rcpsp_spec, no num_equipes_por_item, _can_extract_dag=False."""
-        from concilium.domain.models.canonical import ValidacaoItem
 
         # A canonical that makes _can_extract_dag return False
         class FakeCanonical:
@@ -564,7 +553,6 @@ class TestProcessSingleWmpPolicyQZero:
 class TestBuildScheduledActivitiesNoneActivityId:
     def test_activity_id_none_skips_duration_lookup(self):
         """Line 1946->1943: activity_id=None → not in duration_lookup."""
-        from concilium.domain.models.canonical import DistribuicaoSemanal
 
         fake_sa = SimpleNamespace(
             activity_id=None,  # None → condition (activity_id and duration) is False

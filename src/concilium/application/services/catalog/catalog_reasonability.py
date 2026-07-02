@@ -195,7 +195,8 @@ def build_catalog_reasonability_artifact(
             v = r["producao_horaria"]
             if prod_bounds and v is not None and (v < prod_bounds[0] or v > prod_bounds[1]):
                 r["issues"].append(
-                    f"Produtividade fora da faixa IQR do grupo {key[0]}/{key[1]} ({prod_bounds[0]:.2f}..{prod_bounds[1]:.2f})"
+                    f"Produtividade fora da faixa IQR do grupo {key[0]}/{key[1]} "
+                    f"({prod_bounds[0]:.2f}..{prod_bounds[1]:.2f})"
                 )
                 if r["severity"] == "OK":
                     r["severity"] = "AVISO"

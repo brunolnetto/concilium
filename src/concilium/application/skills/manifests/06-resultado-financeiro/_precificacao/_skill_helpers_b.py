@@ -17,6 +17,19 @@ Mapeamento de categorias ADR-023 -> modelo flat Planejamento.bdi:
 
 from __future__ import annotations
 
+try:
+    from ._skill_helpers_a import _get_bdi_value
+except ImportError:
+    import importlib.util as _ilu
+    from pathlib import Path as _P
+
+    _spec = _ilu.spec_from_file_location(
+        "skill06_helpers_a_for_b", _P(__file__).resolve().parent / "_skill_helpers_a.py"
+    )
+    _mod = _ilu.module_from_spec(_spec)  # type: ignore[arg-type]
+    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    _get_bdi_value = _mod._get_bdi_value
+
 from concilium.domain.models.canonical import (
     ValidacaoItem,
 )

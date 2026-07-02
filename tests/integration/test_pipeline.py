@@ -14,8 +14,8 @@ import pytest
 
 pytestmark = pytest.mark.slow  # runs full pipeline / copytree fixtures
 
-from concilium.application.runtime import Runtime
-from concilium.infrastructure.storage.project import ProjectStore
+from concilium.application.runtime import Runtime  # noqa: E402
+from concilium.infrastructure.storage.project import ProjectStore  # noqa: E402
 
 # ── Fixtures para TestPipelineAnalitico ───────────────────────────────────────
 

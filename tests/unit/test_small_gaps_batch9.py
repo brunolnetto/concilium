@@ -1,4 +1,5 @@
-"""Coverage batch 9 — validador_cobertura_item, cubo_pool_builder, eficiencia_field_builder, s_curve_builder, catalog_governance."""
+"""Coverage batch 9 — validador_cobertura_item, cubo_pool_builder, eficiencia_field_builder,
+s_curve_builder, catalog_governance."""
 
 from __future__ import annotations
 

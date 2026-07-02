@@ -17,7 +17,8 @@ NOTAS_VIABILIDADE = {
 
 # Replanejamento
 PROXIMOS_PASSOS_REPLAN = [
-    "disparar_pipeline('{project_id}', skill_id='06-resultado-financeiro') para recomputar precificação+indiretos+consolidação",
+    "disparar_pipeline('{project_id}', skill_id='06-resultado-financeiro') "
+    "para recomputar precificação+indiretos+consolidação",
     "disparar_pipeline('{project_id}', skill_id='11-replanejamento-e-cenarios') para reanalisar sugestões e cenários",
     "disparar_pipeline('{project_id}', skill_id='10-relatorio-e-artefatos') para gerar relatório final",
 ]

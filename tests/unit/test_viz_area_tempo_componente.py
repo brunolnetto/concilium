@@ -202,7 +202,7 @@ class TestRenderRaises:
             patch(_BUILD_PAYLOAD_PATCH, return_value=_minimal_payload("currency_brl")),
             _make_init_mpl_mock(),
             patch(_RENDER_PATCH, side_effect=RuntimeError("render exploded")),
-            patch("matplotlib.pyplot.close") as mock_close,
+            patch("matplotlib.pyplot.close"),
         ):
             result = mod.build(MagicMock(), MagicMock())
         assert result is None
@@ -213,11 +213,9 @@ class TestRenderRaises:
         import matplotlib
 
         matplotlib.use("Agg")
-        import matplotlib.pyplot as real_plt
 
         closed = []
 
-        original_close = real_plt.close
 
         def tracking_close(arg=None):
             closed.append(arg)

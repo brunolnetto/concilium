@@ -126,7 +126,7 @@ class TestBenchmarkFacade:
 
         facade = BenchmarkFacade.from_root(tmp_path)
 
-        with patch.object(BenchmarkBatchRunner, "run_all", return_value=[{"slug": "bench-1"}]) as mock_run:
+        with patch.object(BenchmarkBatchRunner, "run_all", return_value=[{"slug": "bench-1"}]):
             result = facade.run_all(reset=False)
 
         assert result == [{"slug": "bench-1"}]
@@ -138,7 +138,7 @@ class TestBenchmarkFacade:
         facade = BenchmarkFacade.from_root(tmp_path)
         reports = [{"status_final": "VIAVEL"}]
 
-        with patch.object(BenchmarkBatchRunner, "build_summary", return_value=[{"slug": "s"}]) as m:
+        with patch.object(BenchmarkBatchRunner, "build_summary", return_value=[{"slug": "s"}]):
             result = facade.build_summary(reports)
 
         assert result == [{"slug": "s"}]

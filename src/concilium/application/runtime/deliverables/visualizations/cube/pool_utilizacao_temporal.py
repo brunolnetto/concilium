@@ -57,7 +57,7 @@ def build(canonical, cubo=None) -> bytes | None:
         fig, ax = plt.subplots(figsize=(13, 5))
 
         bottom_idle = prod
-        bottom_off = [p + i for p, i in zip(prod, idle)]
+        bottom_off = [p + i for p, i in zip(prod, idle, strict=False)]
 
         ax.bar(x, prod, color=_COLOR_PROD, alpha=0.85, label="Produtivo")
         ax.bar(x, idle, bottom=bottom_idle, color=_COLOR_IDLE, alpha=0.85, label="Ocioso (CLT+EQ)")

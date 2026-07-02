@@ -209,7 +209,7 @@ class TestImplTendenciaPrecosCatalogo:
                     "concilium.application.catalog.price_trend.calcular_tendencia",
                     return_value=fake_relatorio,
                 ) as mock_ct:
-                    result = _impl_tendencia_precos_catalogo("ctx", jurisdicao_id="BR-CE")
+                    _impl_tendencia_precos_catalogo("ctx", jurisdicao_id="BR-CE")
 
         mock_ct.assert_called_once_with([], jurisdicao_id="BR-CE", contexto_id="ctx")
 
@@ -627,7 +627,7 @@ class TestImplAvaliarPlausibilidadeCatalogo:
                     "concilium.application.catalog.plausibility_checker.verificar_plausibilidade",
                     return_value=fake_resultado,
                 ) as mock_vp:
-                    result = _impl_avaliar_plausibilidade_catalogo("ctx")
+                    _impl_avaliar_plausibilidade_catalogo("ctx")
 
         mock_vp.assert_called_once()
         # Verify it was called with the produtividades list
@@ -861,7 +861,7 @@ class TestImplVerificarIntegridadeCatalogo:
                     "concilium.application.catalog.pu_calculator.calcular_catalogo",
                     return_value=pu_result,
                 ) as mock_cc:
-                    result = _impl_verificar_integridade_catalogo("ctx")
+                    _impl_verificar_integridade_catalogo("ctx")
 
         # Verify calcular_catalogo received the produtividades list
         call_args = mock_cc.call_args

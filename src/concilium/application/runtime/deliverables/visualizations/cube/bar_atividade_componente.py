@@ -93,7 +93,7 @@ def _render(plt, rows: list):
     for comp in _COMPS:
         vals = [by_atv[a].get(comp, 0.0) / scale for a in atividades]
         ax.barh(y_pos, vals, left=lefts, color=_COLORS[comp], label=comp, height=0.65, alpha=0.88)
-        lefts = [l + v for l, v in zip(lefts, vals)]
+        lefts = [ln + v for ln, v in zip(lefts, vals, strict=False)]
 
     # ── Regiões ABC com linhas tracejadas e labels ────────────────────────────
     def _region_span(start_idx: int, end_idx: int, label: str, color: str, alpha: float) -> None:  # pragma: no cover

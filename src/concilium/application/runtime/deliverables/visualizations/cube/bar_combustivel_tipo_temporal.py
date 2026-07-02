@@ -129,7 +129,7 @@ def build(canonical, cubo=None) -> bytes | None:
                     width=0.72,
                     label=f"WOM #{wom_idx}",
                 )
-                baseline = [b + v for b, v in zip(baseline, values)]
+                baseline = [b + v for b, v in zip(baseline, values, strict=False)]
 
             total_fuel_kl = sum(sum(v.values()) for v in by_fuel_monthly_wom[fuel].values()) / 1000.0
             ax.set_title(f"{fuel} - {total_fuel_kl:.1f} kL", fontsize=10, loc="left", fontweight="bold")

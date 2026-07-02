@@ -1217,7 +1217,8 @@ def _execute_manual_mode(
                 ValidacaoItem(
                     codigo="VAL-EAP-01",
                     status="AVISO",
-                    mensagem=f"CPU {item.cpu_id} (item {item.item_id}) não encontrada no catálogo; usando CPU sintética.",
+                    mensagem=f"CPU {item.cpu_id} (item {item.item_id}) não encontrada no catálogo; "
+                    f"usando CPU sintética.",
                 )
             )
             # Create synthetic CPU with reasonable defaults for scheduling

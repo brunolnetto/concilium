@@ -85,7 +85,7 @@ def build(canonical, cubo=None) -> bytes | None:
             comp_label = _COMP_LABELS[comp_key]
             vals = [matrix[e].get(comp_key, 0.0) / 1e6 for e in estados]
             ax.bar(x, vals, bar_width, bottom=bottoms, color=COLORS[ci % len(COLORS)], alpha=0.85, label=comp_label)
-            bottoms = [b + v for b, v in zip(bottoms, vals)]
+            bottoms = [b + v for b, v in zip(bottoms, vals, strict=False)]
 
         ax.set_xticks(x)
         ax.set_xticklabels([_ESTADO_LABELS[e] for e in estados], fontsize=10)

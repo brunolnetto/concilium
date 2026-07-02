@@ -75,7 +75,7 @@ class TestBuildVisualizationPngFiles:
                 return_value={},
             ),
         ):
-            result = build_visualization_png_files("not a dict")
+            build_visualization_png_files("not a dict")
         # graficos is {} when relatorio is not a dict → build_chart_png_files NOT called (empty graficos skipped)
         mock_charts.assert_not_called()
 
@@ -92,7 +92,7 @@ class TestBuildVisualizationPngFiles:
                 return_value={},
             ),
         ):
-            result = build_visualization_png_files({"GRAFICOS": "invalid"})
+            build_visualization_png_files({"GRAFICOS": "invalid"})
         # "invalid" is not a dict → charts skipped
         mock_charts.assert_not_called()
 

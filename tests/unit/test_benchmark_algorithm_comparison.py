@@ -252,7 +252,7 @@ class TestSummaryTable:
         report = _make_report([e1, e2])
         table = report.summary_table()
         lines = table.split("\n")
-        best_lines = [l for l in lines if "◀ best" in l]
+        best_lines = [ln for ln in lines if "◀ best" in ln]
         assert len(best_lines) == 1
         assert "LNS" in best_lines[0]
 
@@ -753,7 +753,7 @@ class TestRunnerCompare:
                 mock_foc.return_value = mock_store
                 MockRuntime.return_value = MagicMock()
 
-                report = runner.compare(spec, algorithms=["CP-SAT"], save_json=save_path)
+                runner.compare(spec, algorithms=["CP-SAT"], save_json=save_path)
 
             assert save_path.exists()
             loaded = json.loads(save_path.read_text(encoding="utf-8"))
@@ -1119,7 +1119,7 @@ class TestFindOrCreate:
             mock_store = MagicMock()
             with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
                 MockStore.init.return_value = mock_store
-                result = runner._find_or_create(spec, reset=False)
+                runner._find_or_create(spec, reset=False)
 
             MockStore.init.assert_called_once_with(non_existent, "MyProject", "CTX-1")
 
@@ -1155,7 +1155,7 @@ class TestFindOrCreate:
             mock_store = MagicMock()
             with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
                 MockStore.init.return_value = mock_store
-                result = runner._find_or_create(spec, reset=True)
+                runner._find_or_create(spec, reset=True)
 
             # After reset, we call ProjectStore.init (not ProjectStore())
             MockStore.init.assert_called_once()

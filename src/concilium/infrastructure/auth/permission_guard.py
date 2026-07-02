@@ -22,6 +22,7 @@ Decorators disponíveis (funcionam em FastAPI routes e MCP tools):
 from __future__ import annotations
 
 import contextvars
+import logging as _logging
 from functools import wraps
 from typing import Any
 
@@ -324,8 +325,6 @@ def roles(*required_roles: str):
 
 
 # ── Enforcement centralizado para MCP tools ────────────────────────────────────
-
-import logging as _logging
 
 _guard_log = _logging.getLogger(__name__)
 

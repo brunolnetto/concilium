@@ -41,7 +41,7 @@ class TestFixReferenciaMappings:
 # 2. cpu_mapper
 # ---------------------------------------------------------------------------
 
-from concilium.infrastructure.catalog.mapping.cpu_mapper import (
+from concilium.infrastructure.catalog.mapping.cpu_mapper import (  # noqa: E402
     _clean_keyword_list,
     _load_mapping_keywords,
     apply_cpu_mappings,
@@ -237,7 +237,7 @@ class TestApplyCpuMappings:
 # 3. equipes_normalizer
 # ---------------------------------------------------------------------------
 
-from concilium.infrastructure.catalog.mapping.equipes_normalizer import (
+from concilium.infrastructure.catalog.mapping.equipes_normalizer import (  # noqa: E402
     AuditRow,
     _classify_cpu,
     _extract_prod_team,
@@ -475,7 +475,7 @@ class TestNormalizeEquipesFromProducoes:
 # 4. healer
 # ---------------------------------------------------------------------------
 
-from concilium.infrastructure.catalog.mapping.healer import heal_catalog
+from concilium.infrastructure.catalog.mapping.healer import heal_catalog  # noqa: E402
 
 
 def _setup_catalog(tmp_path: Path) -> Path:
@@ -591,8 +591,8 @@ class TestHealCatalog:
 # 5. updater.CatalogUpdater
 # ---------------------------------------------------------------------------
 
-from concilium.domain.models.project.observacao import PropostaAtualizacao
-from concilium.infrastructure.catalog.updater import CatalogUpdater
+from concilium.domain.models.project.observacao import PropostaAtualizacao  # noqa: E402
+from concilium.infrastructure.catalog.updater import CatalogUpdater  # noqa: E402
 
 _UPDATER_MODULE = "concilium.infrastructure.catalog.updater"
 

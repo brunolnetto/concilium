@@ -109,7 +109,7 @@ class TestWeekOfMonthIndex:
     def test_first_week_of_month(self):
         # March 2026: first Saturday (first_week_end) is March 7 (Monday=Mar2, Sat=Mar7)
         # day <= first_week_end → index 1
-        first_day = date(2026, 3, 1)  # Sunday, weekday=6
+        date(2026, 3, 1)  # Sunday, weekday=6
         # first_week_end = first_day + timedelta(days=(5-6)%7) = +6 days = Mar 7
         assert _week_of_month_index(date(2026, 3, 1)) == 1
         assert _week_of_month_index(date(2026, 3, 7)) == 1

@@ -125,7 +125,7 @@ class SerialScheduler:
         from collections import defaultdict as _ddict
 
         in_degree: dict[str, int] = _ddict(int)
-        for p, s in dag.precedence:
+        for _p, s in dag.precedence:
             in_degree[s] += 1
         ready: list[str] = [aid for aid in topo_order if in_degree[aid] == 0]
 

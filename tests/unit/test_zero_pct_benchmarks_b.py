@@ -43,13 +43,13 @@ def _write_json(path: Path, data: Any) -> None:
 # 1. catalog_confronto.py
 # ===========================================================================
 
-from concilium.application.benchmarks.comparison.catalog_confronto import (
+from concilium.application.benchmarks.comparison.catalog_confronto import (  # noqa: E402
     _acc_process_cpu_refs,
     _acc_process_equipes,
     analyze_catalog_confronto,
     consolidate_all,
 )
-from concilium.application.benchmarks.comparison.catalog_confronto import (
+from concilium.application.benchmarks.comparison.catalog_confronto import (  # noqa: E402
     _load_json as cc_load_json,
 )
 
@@ -286,7 +286,7 @@ class TestConsolidateAll:
 
     def test_bench_root_nonexistent_raises(self, tmp_path):
         # bench_root does not exist at all — iterdir() will raise
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             consolidate_all(root=tmp_path)
 
 
@@ -294,7 +294,7 @@ class TestConsolidateAll:
 # 2. equipes_detail.py
 # ===========================================================================
 
-from concilium.application.benchmarks.comparison.equipes_detail import (
+from concilium.application.benchmarks.comparison.equipes_detail import (  # noqa: E402
     _bed_has_discrepancy,
     build_equipes_detail,
 )
@@ -438,7 +438,7 @@ class TestBuildEquipesDetail:
 # 3. granular.py
 # ===========================================================================
 
-from concilium.application.benchmarks.comparison.granular import (
+from concilium.application.benchmarks.comparison.granular import (  # noqa: E402
     _bgc_build_catalogo_entry,
     _bgc_load_extracao_maps,
     build_granular_comparison,
@@ -609,7 +609,7 @@ class TestBuildGranularComparison:
 # 4. output_packager.py
 # ===========================================================================
 
-from concilium.application.benchmarks.charts.output_packager import (
+from concilium.application.benchmarks.charts.output_packager import (  # noqa: E402
     _cf_collect_audit,
     _cf_collect_cenarios,
     _cf_collect_graficos,
@@ -904,7 +904,7 @@ class TestTentarGerarGraficos:
 # 5a. cpu_mapper.py — CpuMapper
 # ===========================================================================
 
-from concilium.application.benchmarks.validation.cpu_mapper import CpuMapper
+from concilium.application.benchmarks.validation.cpu_mapper import CpuMapper  # noqa: E402
 
 
 def _make_mapper() -> CpuMapper:
@@ -1032,7 +1032,7 @@ class TestCpuMapperGetMappingStats:
 # 5b. cpu_validator.py — CpuValidator
 # ===========================================================================
 
-from concilium.application.benchmarks.validation.cpu_validator import CpuValidator
+from concilium.application.benchmarks.validation.cpu_validator import CpuValidator  # noqa: E402
 
 _FULL_CATALOGO = {
     "cpus": [

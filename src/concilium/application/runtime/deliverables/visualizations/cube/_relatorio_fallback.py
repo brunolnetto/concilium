@@ -56,7 +56,7 @@ def build_relatorio_fallback(relatorio: dict) -> dict[str, bytes]:
                 squeeze=False,
             )
             flat_axes = [axes[r][c] for r in range(n_rows) for c in range(n_cols)]
-            for axis, tipo in zip(flat_axes, tipos):
+            for axis, tipo in zip(flat_axes, tipos, strict=False):
                 rows_t = sorted(by_tipo[tipo], key=lambda item: int(item.get("numero", 0) or 0))
                 xv = list(range(len(rows_t)))
                 ativas = [int(item.get("semanas_ativas", 0) or 0) for item in rows_t]
@@ -90,8 +90,8 @@ def build_relatorio_fallback(relatorio: dict) -> dict[str, bytes]:
             y = list(range(len(items)))
             fig, ax = plt.subplots(figsize=(12, max(4, len(items) * 0.65 + 2)))
             left_eq = mo
-            left_diesel = [m + e for m, e in zip(mo, eq)]
-            left_material = [m + e + d for m, e, d in zip(mo, eq, diesel)]
+            left_diesel = [m + e for m, e in zip(mo, eq, strict=False)]
+            left_material = [m + e + d for m, e, d in zip(mo, eq, diesel, strict=False)]
             ax.barh(y, mo, color="#1a3a5c", alpha=0.9, label="MO")
             ax.barh(y, eq, left=left_eq, color="#2e6da4", alpha=0.85, label="EQ")
             ax.barh(y, diesel, left=left_diesel, color="#e8a030", alpha=0.85, label="Diesel")

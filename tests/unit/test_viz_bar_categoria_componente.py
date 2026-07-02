@@ -153,7 +153,7 @@ class TestHappyPathCurrencyBrl:
         with (
             patch(_BUILD_PAYLOAD_PATCH, return_value=payload),
             patch(_INIT_MPL_PATCH, return_value=(mock_plt, _fig_to_bytes_stub)),
-            patch(_RENDER_PATCH, return_value=mock_fig) as mock_render,
+            patch(_RENDER_PATCH, return_value=mock_fig),
         ):
             result = mod.build(MagicMock(), MagicMock())
 

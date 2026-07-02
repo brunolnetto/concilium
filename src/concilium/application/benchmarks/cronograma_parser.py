@@ -14,10 +14,10 @@ from __future__ import annotations
 import csv
 import logging
 from dataclasses import dataclass
-
-logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -62,7 +62,7 @@ def _load_produtividade_map(produtividade_path: Path) -> dict[str, float]:
         with open(produtividade_path, encoding="utf-8") as f:
             lines = f.readlines()
 
-        for line_no, line in enumerate(lines[4:], start=4):  # Skip header
+        for _line_no, line in enumerate(lines[4:], start=4):  # Skip header
             line = line.strip()
             if not line:
                 continue
@@ -234,7 +234,7 @@ class CronogramaParser:
         secao_map: dict[str, str] = {}  # section_id → description
 
         # Skip header rows (line 0 is header, lines 1-3 are sub-headers)
-        for line_no, line in enumerate(lines[4:], start=4):
+        for _line_no, line in enumerate(lines[4:], start=4):
             if not line.strip():
                 continue
 

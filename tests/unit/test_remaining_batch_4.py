@@ -563,7 +563,7 @@ class TestAzureBlobStorage:
         from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
 
         with patch.dict("os.environ", {}, clear=True):
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017
                 AzureBlobStorage.from_env()
 
 

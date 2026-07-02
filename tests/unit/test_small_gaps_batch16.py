@@ -44,7 +44,7 @@ class TestCatalogGovernanceProducaoNotFound:
             assert result == target
 
 
-import pytest
+import pytest  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # logging_config.py lines 45-46: _get_auth_context except branch when import fails

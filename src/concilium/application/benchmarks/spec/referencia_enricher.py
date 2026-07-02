@@ -8,16 +8,15 @@ Uses semantic CPU mapping to match cronograma items to actual catalog CPUs.
 
 from __future__ import annotations
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from ..cronograma_parser import CronogramaParser
 from ..validation.cpu_mapper import CpuMapper
+
+logger = logging.getLogger(__name__)
 
 
 def _infer_cpu_from_section(section_id: str, item_num: int) -> str:
@@ -215,7 +214,7 @@ def _extract_eap_from_cpus_txt(cpus_path: Path) -> list[dict[str, Any]]:
             lines = f.readlines()
 
         seen_ids: set[str] = set()
-        for line_no, line in enumerate(lines):
+        for _line_no, line in enumerate(lines):
             line = line.strip()
 
             # Look for item_id pattern: single or double digit followed by optional decimal

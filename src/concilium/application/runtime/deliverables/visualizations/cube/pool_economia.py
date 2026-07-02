@@ -73,7 +73,7 @@ def build(canonical, cubo=None) -> bytes | None:
         ax_eco.set_xlabel("Atividade", fontsize=9)
 
         # Anotação de pct no gráfico de barras
-        for xi, (a, ins, e) in enumerate(zip(aut, inst, eco)):
+        for xi, (a, ins, e) in enumerate(zip(aut, inst, eco, strict=False)):
             pct = (e / a * 100) if a > 0 else 0
             col = _COLOR_POS if pct >= 0 else _COLOR_NEG
             ax_bars.text(xi, max(a, ins) * 1.02, f"{pct:+.1f}%", ha="center", fontsize=7, color=col, fontweight="bold")
@@ -102,7 +102,8 @@ def build(canonical, cubo=None) -> bytes | None:
         fig.text(
             0.01,
             0.022,
-            f"Instancial produtivo: R$ {tot_inst_prod / 1e6:.2f}M  |  Burden pool (ocioso+mob/demob): R$ {tot_burden / 1e6:.2f}M  |  "
+            f"Instancial produtivo: R$ {tot_inst_prod / 1e6:.2f}M  |  "
+            f"Burden pool (ocioso+mob/demob): R$ {tot_burden / 1e6:.2f}M  |  "
             f"Economia produtiva: R$ {tot_eco_prod / 1e6:.2f}M",
             fontsize=7.7,
             color="#555",

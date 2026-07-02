@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
-
 # ---------------------------------------------------------------------------
 # Module loader for skills with dashes in path
 # ---------------------------------------------------------------------------
@@ -110,7 +109,11 @@ class TestEstimateRoiHeuristic:
 
         from concilium.application.skills import run_avaliacao_intervencoes
         from concilium.domain.models.canonical import (
-            CanonicalModel, Coordenadas, Meta, Projeto, RegimeTrabalho,
+            CanonicalModel,
+            Coordenadas,
+            Meta,
+            Projeto,
+            RegimeTrabalho,
         )
 
         meta = Meta(gerado_em=datetime.now(UTC), contexto_id="ctx-b37-empty")
@@ -134,7 +137,11 @@ class TestEstimateRoiHeuristic:
 
         from concilium.application.skills import run_avaliacao_intervencoes
         from concilium.domain.models.canonical import (
-            CanonicalModel, Coordenadas, Meta, Projeto, RegimeTrabalho,
+            CanonicalModel,
+            Coordenadas,
+            Meta,
+            Projeto,
+            RegimeTrabalho,
         )
 
         meta = Meta(gerado_em=datetime.now(UTC), contexto_id="ctx-b37-perfil")
@@ -229,7 +236,10 @@ class TestRcpspBackward:
         """Line 138: activity B not in sa_map (not scheduled) → continue; only A in result."""
         from concilium.application.scheduling.compression_analysis import _rcpsp_backward
         from concilium.application.scheduling.models import (
-            Activity, ActivityDAG, ScheduledActivity, ScheduleOutput,
+            Activity,
+            ActivityDAG,
+            ScheduledActivity,
+            ScheduleOutput,
         )
 
         acts = [Activity("A", "A", 2, {}), Activity("B", "B", 3, {})]
@@ -272,7 +282,8 @@ class TestFormatCompressionTable:
     def test_best_k_none_uses_dash_placeholders(self):
         """Lines 340-344: r.best_k is None → '—' placeholders rendered."""
         from concilium.application.scheduling.compression_analysis import (
-            CompressionResult, format_compression_table,
+            CompressionResult,
+            format_compression_table,
         )
 
         r = CompressionResult(
@@ -288,7 +299,9 @@ class TestFormatCompressionTable:
     def test_best_k_present_renders_values(self):
         """Else branch: r.best_k not None → real k/makespan values rendered."""
         from concilium.application.scheduling.compression_analysis import (
-            CompressionResult, KScaleResult, format_compression_table,
+            CompressionResult,
+            KScaleResult,
+            format_compression_table,
         )
 
         kr = KScaleResult(k=2, duration_new=2, makespan_new=8, delta_makespan=2,
@@ -337,7 +350,10 @@ class TestCompressionAnalysisHelpers:
         """Line 144: A→B both scheduled → B has successor in sa_map, ls computed from B."""
         from concilium.application.scheduling.compression_analysis import _rcpsp_backward
         from concilium.application.scheduling.models import (
-            Activity, ActivityDAG, ScheduledActivity, ScheduleOutput,
+            Activity,
+            ActivityDAG,
+            ScheduledActivity,
+            ScheduleOutput,
         )
 
         acts = [Activity("A", "A", 2, {}), Activity("B", "B", 2, {})]
@@ -358,7 +374,11 @@ class TestCompressionAnalysisHelpers:
         """Line 293: cost_extra > 0 AND delta_ms > 0 → roi = poupanca / cost_extra."""
         from concilium.application.scheduling.compression_analysis import compute_compression_sensitivities
         from concilium.application.scheduling.models import (
-            Activity, ActivityDAG, ResourcePool, ScheduledActivity, ScheduleOutput,
+            Activity,
+            ActivityDAG,
+            ResourcePool,
+            ScheduledActivity,
+            ScheduleOutput,
         )
 
         acts = [Activity("A", "A", 4, {"ESCAV": 1})]
@@ -385,7 +405,11 @@ class TestComputeCompressionSensitivitiesGuards:
         """Line 249: act with no required_resources → continue; B not in results."""
         from concilium.application.scheduling.compression_analysis import compute_compression_sensitivities
         from concilium.application.scheduling.models import (
-            Activity, ActivityDAG, ResourcePool, ScheduledActivity, ScheduleOutput,
+            Activity,
+            ActivityDAG,
+            ResourcePool,
+            ScheduledActivity,
+            ScheduleOutput,
         )
 
         acts = [
@@ -412,7 +436,11 @@ class TestComputeCompressionSensitivitiesGuards:
         """Line 267: duration=1 with k=2 → ceil(1/2)=1 → delta_d=0 → continue; by_k stays empty."""
         from concilium.application.scheduling.compression_analysis import compute_compression_sensitivities
         from concilium.application.scheduling.models import (
-            Activity, ActivityDAG, ResourcePool, ScheduledActivity, ScheduleOutput,
+            Activity,
+            ActivityDAG,
+            ResourcePool,
+            ScheduledActivity,
+            ScheduleOutput,
         )
 
         acts = [Activity("X", "X", 1, {"T": 1})]
@@ -435,7 +463,11 @@ class TestComputeCompressionSensitivitiesGuards:
 
         from concilium.application.scheduling.compression_analysis import compute_compression_sensitivities
         from concilium.application.scheduling.models import (
-            Activity, ActivityDAG, ResourcePool, ScheduledActivity, ScheduleOutput,
+            Activity,
+            ActivityDAG,
+            ResourcePool,
+            ScheduledActivity,
+            ScheduleOutput,
         )
 
         # Activity with duration=2, k=2 → d_new=1, delta_d=1 > 0

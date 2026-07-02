@@ -294,7 +294,6 @@ class TestFeNecEhInversoEtaP:
         Q = 10_000.0
         custo_hora = 180.0
         P_can = custo_hora / pu
-        n_equipes = 1
         permanencia_semanas = Q / (P_can * 8 * 5)  # h/dia × dias/sem
         custo_op = custo_hora * permanencia_semanas * 8 * 5  # simplified
         # custo_op = custo_hora × Q / P_can = pu × Q

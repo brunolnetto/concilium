@@ -122,7 +122,7 @@ class TestFileSystemArtifactStoreInit:
     def test_creates_root_directory(self, tmp_path: Path):
         root = tmp_path / "new_dir" / "nested"
         assert not root.exists()
-        store = FileSystemArtifactStore(root)
+        FileSystemArtifactStore(root)
         assert root.exists()
         assert root.is_dir()
 
@@ -173,7 +173,7 @@ class TestFileSystemArtifactStoreSave:
 
         index_path = tmp_path / ".artifact_index.jsonl"
         assert index_path.exists()
-        lines = [l for l in index_path.read_text().splitlines() if l.strip()]
+        lines = [ln for ln in index_path.read_text().splitlines() if ln.strip()]
         assert len(lines) == 1
         entry = json.loads(lines[0])
         assert entry["artifact_id"] == "art-003"
@@ -187,7 +187,7 @@ class TestFileSystemArtifactStoreSave:
             store.save(envelope)
 
         index_path = tmp_path / ".artifact_index.jsonl"
-        lines = [l for l in index_path.read_text().splitlines() if l.strip()]
+        lines = [ln for ln in index_path.read_text().splitlines() if ln.strip()]
         assert len(lines) == 3
 
     def test_save_pydantic_payload_uses_model_dump_json(self, tmp_path: Path):
@@ -209,7 +209,7 @@ class TestFileSystemArtifactStoreSave:
         store.save(envelope)
 
         index_path = tmp_path / ".artifact_index.jsonl"
-        lines = [l for l in index_path.read_text().splitlines() if l.strip()]
+        lines = [ln for ln in index_path.read_text().splitlines() if ln.strip()]
         entry = json.loads(lines[0])
         assert "ref" in entry
         ref = entry["ref"]
@@ -257,7 +257,7 @@ class TestSaveMetaSidecar:
 
         index_path = tmp_path / ".artifact_index.jsonl"
         assert index_path.exists()
-        lines = [l for l in index_path.read_text().splitlines() if l.strip()]
+        lines = [ln for ln in index_path.read_text().splitlines() if ln.strip()]
         assert len(lines) == 1
 
 

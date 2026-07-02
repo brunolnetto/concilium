@@ -268,7 +268,7 @@ class CpSatScheduler:
 
         # Leveling score: 1 - variance_ratio
         usages_per_res: dict[str, list[int]] = {}
-        for res, cap in pool.resources.items():
+        for res, _cap in pool.resources.items():
             usages_per_res[res] = [weekly.get(t, {}).get(res, 0) for t in range(makespan)]
         leveling_scores = []
         for res, vals in usages_per_res.items():

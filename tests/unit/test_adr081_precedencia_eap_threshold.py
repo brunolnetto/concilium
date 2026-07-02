@@ -38,11 +38,11 @@ class TestPrecedenciaItemThreshold:
         assert p.completion_threshold_pct == pytest.approx(0.0)
 
     def test_threshold_invalido_rejeita_acima_de_um(self):
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             PrecedenciaItem(item_id="x", completion_threshold_pct=1.5)
 
     def test_threshold_invalido_rejeita_negativo(self):
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             PrecedenciaItem(item_id="x", completion_threshold_pct=-0.1)
 
 

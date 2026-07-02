@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import patch
 
 from openpyxl import Workbook
-
 
 # ---------------------------------------------------------------------------
 # _precificacao/skill.py line 71: _extract_overrides returns dict when dict

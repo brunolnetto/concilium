@@ -145,7 +145,7 @@ class TestLnsSchedulerMobCost:
         """mob_cost_actual is recorded in ScheduleOutput metadata."""
         dag, acts = _dag_chain(3, dur=4)
         scheduler = LnsScheduler(oracle=_oracle(), k_max=3)
-        result = scheduler.schedule(dag, _pool(10), ramp_profiles=_ramps(acts))
+        scheduler.schedule(dag, _pool(10), ramp_profiles=_ramps(acts))
         # mob_cost_actual accessible via scheduler attribute
         assert scheduler.best_mob_cost >= 0.0
 

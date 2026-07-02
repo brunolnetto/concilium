@@ -272,7 +272,7 @@ class TestPermissionGuard:
     def test_set_roles_contextvar(self):
         from concilium.infrastructure.auth.permission_guard import _get_roles_from_context, set_roles
 
-        token = set_roles(["engineer"])
+        set_roles(["engineer"])
         result = _get_roles_from_context({})
         assert "engineer" in result
 
@@ -421,7 +421,7 @@ class TestJWTAuthMiddleware:
         req = self._make_request(path="/health")
         call_next = AsyncMock(return_value=MagicMock())
         with patch("concilium.presentation.api.middleware.jwt_auth._auth_enabled", return_value=True):
-            result = await mw.dispatch(req, call_next)
+            await mw.dispatch(req, call_next)
         call_next.assert_called_once_with(req)
 
     @pytest.mark.asyncio

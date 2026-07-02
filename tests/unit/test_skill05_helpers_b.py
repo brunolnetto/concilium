@@ -26,14 +26,20 @@ import importlib.util
 import uuid
 from collections import defaultdict
 from datetime import UTC, date, datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-_HELPERS_PATH = (
-    "/home/pingu/github/agente-gerente-de-engenharia"
-    "/src/concilium/application/skills/manifests"
-    "/05-equipes-e-alocacao/_skill_helpers_b.py"
+_HELPERS_PATH = str(
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "concilium"
+    / "application"
+    / "skills"
+    / "manifests"
+    / "05-equipes-e-alocacao"
+    / "_skill_helpers_b.py"
 )
 
 
@@ -59,7 +65,7 @@ _processar_funcoes_requisitos = _mod._processar_funcoes_requisitos
 _processar_equipamentos_requisitos = _mod._processar_equipamentos_requisitos
 
 # ── Domain model imports ─────────────────────────────────────────────────────
-from concilium.domain.models.canonical import (
+from concilium.domain.models.canonical import (  # noqa: E402
     Atividade,
     CanonicalModel,
     Coordenadas,
@@ -608,7 +614,6 @@ class TestBuildRequisitosETipos:
 
     def test_existing_tipos_recurso_preserved(self):
         """Tipos already in canonical_in are included in returned tipos dict."""
-        item_id = "item-C"
         existing = TipoRecurso(id="EXISTING-001", nome="Existente", categoria="EQUIPE", custo_unitario_dia=100.0)
         canonical = _make_canonical(atividades=[], tipos_recurso=[existing])
         validacoes = []

@@ -62,7 +62,7 @@ def render_stacked_bar(
         values = [value_maps[series_name].get(lbl, 0.0) / scale for lbl in labels]
         lbl_display = SERIE_LABEL_MAP.get(series_name, series_name.replace("_", " "))
         ax.bar(x, values, bottom=baseline, alpha=0.85, label=lbl_display, color=COLORS[idx % len(COLORS)], width=0.7)
-        baseline = [base + value for base, value in zip(baseline, values)]
+        baseline = [base + value for base, value in zip(baseline, values, strict=False)]
     ax.set_title(title, fontsize=13, fontweight="bold")
     ax.set_ylabel("R$ (Mi)" if use_millions else "Valor", fontsize=9)
     ax.legend(fontsize=8)
@@ -84,7 +84,7 @@ def render_stacked_bar(
                 for i, lbl in enumerate(labels)
             ]
             ax_norm.bar(x, values_pct, bottom=baseline_pct, alpha=0.85, color=COLORS[idx % len(COLORS)], width=0.7)
-            baseline_pct = [b + v for b, v in zip(baseline_pct, values_pct)]
+            baseline_pct = [b + v for b, v in zip(baseline_pct, values_pct, strict=False)]
         ax_norm.set_ylim(0, 105)
         ax_norm.set_ylabel("Participacao (%)", fontsize=9)
         ax_norm.set_xlabel(xlabel or "Item", fontsize=9)
@@ -140,7 +140,7 @@ def render_stacked_area(
     stack = [0.0] * len(labels)
     for idx, series_name in enumerate(all_series):
         values = [value_map[series_name].get(lbl, 0.0) / scale for lbl in labels]
-        top = [base + v for base, v in zip(stack, values)]
+        top = [base + v for base, v in zip(stack, values, strict=False)]
         col = COLORS[idx % len(COLORS)]
         lbl_display = SERIE_LABEL_MAP.get(series_name, series_name.replace("_", " "))
         ax.fill_between(x, top, stack, alpha=0.72, label=lbl_display, color=col)
@@ -158,7 +158,7 @@ def render_stacked_area(
             (value_map[series_name].get(lbl, 0.0) / totals[i] * 100.0) if totals[i] else 0.0
             for i, lbl in enumerate(labels)
         ]
-        top_pct = [base + v for base, v in zip(stack_pct, values_pct)]
+        top_pct = [base + v for base, v in zip(stack_pct, values_pct, strict=False)]
         col = COLORS[idx % len(COLORS)]
         ax_norm.fill_between(x, top_pct, stack_pct, alpha=0.72, color=col)
         ax_norm.plot(x, top_pct, color=col, linewidth=0.9, alpha=0.5)
@@ -204,7 +204,7 @@ def render_stacked_area_100pct(
             (value_map[series_name].get(lbl, 0.0) / totals[i] * 100.0) if totals[i] else 0.0
             for i, lbl in enumerate(labels)
         ]
-        top = [base + v for base, v in zip(stack, values)]
+        top = [base + v for base, v in zip(stack, values, strict=False)]
         col = COLORS[idx % len(COLORS)]
         lbl_display = SERIE_LABEL_MAP.get(series_name, series_name.replace("_", " "))
         ax.fill_between(x, top, stack, alpha=0.72, label=lbl_display, color=col)

@@ -15,9 +15,11 @@ def _make_proj():
     return proj
 
 
-_MODULE_PATH = (
-    "/home/pingu/github/agente-gerente-de-engenharia/src/concilium"
-    "/application/skills/manifests/10-relatorio-e-artefatos/_skill_helpers_executivo.py"
+from pathlib import Path as _Path  # noqa: E402
+
+_MODULE_PATH = str(
+    _Path(__file__).resolve().parents[2]
+    / "src/concilium/application/skills/manifests/10-relatorio-e-artefatos/_skill_helpers_executivo.py"
 )
 
 

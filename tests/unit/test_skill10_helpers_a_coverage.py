@@ -966,7 +966,7 @@ class TestRraBuildDecomposicaoPool:
                 from concilium.application.services.analytics import cubo_pool_projection as mod_pool
 
                 with patch.object(mod_pool, "resolve_cubo_pool_projection", mock_fn):
-                    result = _rra_build_decomposicao_pool(canonical)
+                    _rra_build_decomposicao_pool(canonical)
             except ImportError:
                 pass  # module not available; skip assertions
 

@@ -5,7 +5,6 @@ import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 
-
 # ---------------------------------------------------------------------------
 # Module loaders (dashes in path require importlib)
 # ---------------------------------------------------------------------------
@@ -446,7 +445,6 @@ class TestComputePrecoFromProduction:
         from unittest.mock import patch
 
         validacoes = []
-        from unittest.mock import MagicMock
         fake_sbdi = {"total": 100.0, "mo": 40.0, "diesel": 20.0, "equipamentos": 30.0, "material": 10.0}
         with patch("concilium.application.catalog.pu_calculator.derivar_precos_unitarios_sbdi", return_value=fake_sbdi):
             result = PREC._compute_preco_cat_from_production(

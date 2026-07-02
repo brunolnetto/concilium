@@ -159,7 +159,7 @@ def test_processar_catalogo_happy_path():
     with (
         patch("concilium.infrastructure.catalog.excel_ingestion.ValidadorCPUInsumo") as mock_validator_cls,
         patch("concilium.infrastructure.catalog.excel_ingestion.validar_sem_ciclos") as mock_ciclos,
-        patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo") as mock_repo_cls,
+        patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo"),
     ):
         mock_validator_instance = MagicMock()
         mock_validator_instance.validar_cpu_completa.return_value = []

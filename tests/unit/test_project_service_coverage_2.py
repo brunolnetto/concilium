@@ -2,11 +2,11 @@ from __future__ import annotations
 
 """Coverage tests for ProjectService – missing lines batch 2."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch  # noqa: E402
 
-import pytest
+import pytest  # noqa: E402
 
-from concilium.application.services.project.project_service import ProjectService
+from concilium.application.services.project.project_service import ProjectService  # noqa: E402
 
 _normalize_eap_item = ProjectService._normalize_eap_item
 
@@ -391,7 +391,7 @@ class TestJurisdicaoMethods:
             patch.object(svc, "_get_jurisdiction_svc", return_value=mock_svc),
             patch.object(svc, "_validate_jurisdicao_fields"),
         ):
-            result = svc.create_jurisdicao_version("j1", {}, "motivo", "actor")
+            svc.create_jurisdicao_version("j1", {}, "motivo", "actor")
         mock_svc.create_version.assert_called_once()
 
     def test_compare_jurisdicao_versions_svc_none_returns_error(self):
@@ -568,7 +568,7 @@ class TestGetBenchmarkReference:
         payload = {"cpus": {"itens_eap": [{"item_id": "A1", "cpu_id": "CPU-1"}]}}
         skill_inputs_data = {"01-escopo-e-eap": {"some_key": "val"}}
 
-        proj = self._setup_proj(svc, payload=payload, skill_inputs=skill_inputs_data)
+        self._setup_proj(svc, payload=payload, skill_inputs=skill_inputs_data)
 
         p1, p2, p3 = self._patch_enrichers()
         with p1, p2, p3:
@@ -584,7 +584,7 @@ class TestGetBenchmarkReference:
             "eap": [{"item_id": "A1", "cpu_id": "CPU-1", "descricao": "Atividade A"}],
             "skill_inputs": {"key": "val"},
         }
-        proj = self._setup_proj(svc, payload=payload)
+        self._setup_proj(svc, payload=payload)
 
         p1, p2, p3 = self._patch_enrichers()
         with p1, p2, p3:
@@ -619,7 +619,7 @@ class TestGetBenchmarkReference:
         eap_items = [
             {"item_id": "E1", "cpu_id": "CPU-E1", "descricao": "EAP item", "unidade": "un", "quantitativo": 2.0}
         ]
-        proj = self._setup_proj(svc, payload=payload, eap_items=eap_items)
+        self._setup_proj(svc, payload=payload, eap_items=eap_items)
 
         p1, p2, p3 = self._patch_enrichers()
         with p1, p2, p3:
@@ -640,7 +640,7 @@ class TestGetBenchmarkReference:
         """Line 900: _debug block is returned."""
         svc = _make_svc()
         payload = {"cpus": {"itens_eap": [{"item_id": "A1", "cpu_id": "CPU-1"}]}, "skill_inputs": {}}
-        proj = self._setup_proj(svc, payload=payload)
+        self._setup_proj(svc, payload=payload)
 
         p1, p2, p3 = self._patch_enrichers()
         with p1, p2, p3:

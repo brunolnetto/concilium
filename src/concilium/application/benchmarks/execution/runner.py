@@ -6,9 +6,7 @@ import logging
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-
-logger = logging.getLogger(__name__)
+from typing import TYPE_CHECKING, Any
 
 from concilium.application.runtime import Runtime
 
@@ -16,6 +14,11 @@ from ..inference import BenchmarkInferenceService  # noqa: F401 — needed for m
 from ..report.report_builder import BenchmarkReportBuilder
 from ..report.report_printer import BenchmarkReportPrinter
 from ..spec.spec_loader import ProjectSpec
+
+logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from concilium.application.skills.phase_classifier import PipelineMode
 
 
 def _emit_business_telemetry(spec: Any, report: dict, mode: Any) -> None:

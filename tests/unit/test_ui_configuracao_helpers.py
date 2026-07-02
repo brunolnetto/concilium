@@ -6,9 +6,9 @@ import pytest
 
 streamlit = pytest.importorskip("streamlit", reason="streamlit nao instalado - pule este modulo de teste")
 
-from concilium.presentation.ui.templates import _perfis_helpers_a as h_a
-from concilium.presentation.ui.templates import _perfis_helpers_b as h_b
-from concilium.presentation.ui.templates import _perfis_helpers_c as h_c
+from concilium.presentation.ui.templates import _perfis_helpers_a as h_a  # noqa: E402
+from concilium.presentation.ui.templates import _perfis_helpers_b as h_b  # noqa: E402
+from concilium.presentation.ui.templates import _perfis_helpers_c as h_c  # noqa: E402
 
 
 class _FakeTab:

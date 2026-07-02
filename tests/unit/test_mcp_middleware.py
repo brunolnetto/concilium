@@ -291,12 +291,12 @@ class TestMcpAuthMiddlewareHttpAuthEnabled:
                 with patch(
                     "concilium.infrastructure.auth.permission_guard.roles_from_token",
                     return_value=["operator"],
-                ) as mock_roles_from:
+                ):
                     with patch(
                         "concilium.infrastructure.auth.permission_guard.set_roles",
                         return_value=fake_token_var,
-                    ) as mock_set_roles:
-                        with patch("concilium.infrastructure.auth.permission_guard._current_roles") as mock_var:
+                    ):
+                        with patch("concilium.infrastructure.auth.permission_guard._current_roles"):
                             await mw(scope, receive, send)
 
         inner.assert_awaited_once()

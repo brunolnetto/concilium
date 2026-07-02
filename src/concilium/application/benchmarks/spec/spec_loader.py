@@ -7,8 +7,6 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from concilium.infrastructure.catalog.catalog_loader import CatalogLoader
 
 from ..input_derivation import BenchmarkInputDeriver
@@ -31,6 +29,8 @@ from ._spec_loader_helpers_b import (
     _eei_find_best_match,
     _lfd_parse_raw_row,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

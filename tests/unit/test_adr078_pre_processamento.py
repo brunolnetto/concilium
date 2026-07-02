@@ -146,7 +146,7 @@ class TestEtaPerpetuacao:
     def test_decrescente_com_gap(self, helpers):
         """η deve diminuir à medida que o gap aumenta."""
         etas = [helpers._eta_perpetuacao(g, C_MOB, C_DEMOB, C_IDLE, "dia_cal") for g in range(0, 10)]
-        for a, b in zip(etas, etas[1:]):
+        for a, b in zip(etas, etas[1:], strict=False):
             assert a >= b
 
     def test_clamped_a_zero_quando_gap_supera_gap_max(self, helpers):
@@ -429,7 +429,7 @@ class TestBuildPreProcessamento:
         relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
         if relatorio and len(relatorio.oportunidades) > 1:
             deltas = [o.delta_c_pot for o in relatorio.oportunidades]
-            assert all(a >= b for a, b in zip(deltas, deltas[1:]))
+            assert all(a >= b for a, b in zip(deltas, deltas[1:], strict=False))
 
     def test_total_economia_pot_soma_viaveis(self, helpers):
         """total_economia_pot = Σ delta_c_pot (apenas viáveis)."""

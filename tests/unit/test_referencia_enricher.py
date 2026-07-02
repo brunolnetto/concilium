@@ -37,7 +37,7 @@ def _minimal_referencia() -> dict:
 # _infer_cpu_from_section
 # ---------------------------------------------------------------------------
 
-from concilium.application.benchmarks.spec.referencia_enricher import _infer_cpu_from_section
+from concilium.application.benchmarks.spec.referencia_enricher import _infer_cpu_from_section  # noqa: E402
 
 
 class TestInferCpuFromSection:
@@ -74,7 +74,7 @@ class TestInferCpuFromSection:
 # _enrich_eap_with_produtividade
 # ---------------------------------------------------------------------------
 
-from concilium.application.benchmarks.spec.referencia_enricher import _enrich_eap_with_produtividade
+from concilium.application.benchmarks.spec.referencia_enricher import _enrich_eap_with_produtividade  # noqa: E402
 
 
 class TestEnrichEapWithProdutividade:
@@ -166,7 +166,7 @@ class TestEnrichEapWithProdutividade:
 # enrich_referencia_with_eap
 # ---------------------------------------------------------------------------
 
-from concilium.application.benchmarks.spec.referencia_enricher import enrich_referencia_with_eap
+from concilium.application.benchmarks.spec.referencia_enricher import enrich_referencia_with_eap  # noqa: E402
 
 
 class TestEnrichReferenciaWithEap:
@@ -484,7 +484,7 @@ class TestEnrichReferenciaWithEap:
 # _extract_eap_from_cpus_txt
 # ---------------------------------------------------------------------------
 
-from concilium.application.benchmarks.spec.referencia_enricher import _extract_eap_from_cpus_txt
+from concilium.application.benchmarks.spec.referencia_enricher import _extract_eap_from_cpus_txt  # noqa: E402
 
 
 class TestExtractEapFromCpusTxt:
@@ -614,7 +614,7 @@ class TestExtractEapFromCpusTxt:
 # enrich_benchmark_referencia
 # ---------------------------------------------------------------------------
 
-from concilium.application.benchmarks.spec.referencia_enricher import enrich_benchmark_referencia
+from concilium.application.benchmarks.spec.referencia_enricher import enrich_benchmark_referencia  # noqa: E402
 
 
 class TestEnrichBenchmarkReferencia:

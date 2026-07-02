@@ -25,7 +25,7 @@ run_assessor_replanejamento = load_skill_stage(
     "11-replanejamento-e-cenarios", "_assessor", "run_assessor_replanejamento"
 )
 
-from concilium.domain.models.canonical import (
+from concilium.domain.models.canonical import (  # noqa: E402
     CanonicalModel,
     ConflitoPico,
     CostCriticalityResult,

@@ -661,7 +661,7 @@ class TestSaveRelatorioFiles:
             patch(
                 "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
                 return_value="# MD",
-            ) as mock_render,
+            ),
             patch(
                 "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
                 return_value=[],

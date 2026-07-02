@@ -91,7 +91,7 @@ class TestRenderExecutiveSummary:
         resultado = {}
         lines = render_executive_summary(resumo, resultado)
         assert "## Sumário Executivo" in lines
-        assert any("TestProj" in l for l in lines)
+        assert any("TestProj" in ln for ln in lines)
 
     def test_with_preco_venda_status_verde(self):
         """Caminho com preco_venda > 0 e status VERDE."""
@@ -115,8 +115,8 @@ class TestRenderExecutiveSummary:
             "razao_indireto_direto": 0.286,
         }
         lines = render_executive_summary(resumo, resultado)
-        assert any("dentro da faixa objetivo" in l for l in lines)
-        assert any("razão" in l for l in lines)
+        assert any("dentro da faixa objetivo" in ln for ln in lines)
+        assert any("razão" in ln for ln in lines)
 
     def test_with_preco_venda_status_amarelo(self):
         from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_executive_summary
@@ -133,7 +133,7 @@ class TestRenderExecutiveSummary:
             "razao_indireto_direto": 0.0,
         }
         lines = render_executive_summary(resumo, resultado)
-        assert any("próxima ao limite mínimo" in l for l in lines)
+        assert any("próxima ao limite mínimo" in ln for ln in lines)
 
     def test_with_preco_venda_status_vermelho(self):
         from concilium.application.runtime.deliverables.reports.report_markdown_sections import render_executive_summary
@@ -150,7 +150,7 @@ class TestRenderExecutiveSummary:
             "razao_indireto_direto": 0.0,
         }
         lines = render_executive_summary(resumo, resultado)
-        assert any("abaixo do mínimo" in l for l in lines)
+        assert any("abaixo do mínimo" in ln for ln in lines)
 
     def test_without_status_margem(self):
         """status_margem vazio: margem_label vazio, sem texto adicional."""
@@ -169,7 +169,7 @@ class TestRenderExecutiveSummary:
         }
         lines = render_executive_summary(resumo, resultado)
         # Deve ter linhas, mas sem label de margem
-        assert any("R$" in l for l in lines)
+        assert any("R$" in ln for ln in lines)
 
     def test_razao_ind_zero_not_appended(self):
         """razao_ind == 0: não adiciona texto de razão."""
@@ -187,7 +187,7 @@ class TestRenderExecutiveSummary:
             "razao_indireto_direto": 0.0,
         }
         lines = render_executive_summary(resumo, resultado)
-        assert not any("razão" in l for l in lines)
+        assert not any("razão" in ln for ln in lines)
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +239,7 @@ class TestRenderCompressaoCronograma:
             "custo_semana": 10_000,
         }
         lines = render_compressao_cronograma(comp)
-        assert any("Nenhuma atividade" in l for l in lines)
+        assert any("Nenhuma atividade" in ln for ln in lines)
 
     def test_delta_max_positive_with_viable_item(self):
         """delta_max > 0 com k_otimo: frase de potencial + detalhamento."""
@@ -271,9 +271,9 @@ class TestRenderCompressaoCronograma:
             "custo_semana": 10_000,
         }
         lines = render_compressao_cronograma(comp)
-        assert any("Potencial identificado" in l for l in lines)
-        assert any("Detalhamento" in l for l in lines)
-        assert any("k=2" in l for l in lines)
+        assert any("Potencial identificado" in ln for ln in lines)
+        assert any("Detalhamento" in ln for ln in lines)
+        assert any("k=2" in ln for ln in lines)
 
     def test_table_row_with_no_k_otimo(self):
         """Linha de tabela com k_otimo=None → k_str='—'."""
@@ -303,9 +303,9 @@ class TestRenderCompressaoCronograma:
             "custo_semana": 5_000,
         }
         lines = render_compressao_cronograma(comp)
-        assert any("eap-2" in l for l in lines)
+        assert any("eap-2" in ln for ln in lines)
         # k_str = '—' deve aparecer
-        assert any("—" in l for l in lines)
+        assert any("—" in ln for ln in lines)
 
     def test_cls_icon_mapping(self):
         """Classe 'GW' é mapeada para 'Gateway' na tabela."""
@@ -335,7 +335,7 @@ class TestRenderCompressaoCronograma:
             "custo_semana": 8_000,
         }
         lines = render_compressao_cronograma(comp)
-        assert any("Gateway" in l for l in lines)
+        assert any("Gateway" in ln for ln in lines)
 
     def test_roi_inf_when_k_otimo_no_roi(self):
         """k_otimo set mas roi=None → roi_str='inf'."""
@@ -367,7 +367,7 @@ class TestRenderCompressaoCronograma:
             "custo_semana": 5_000,
         }
         lines = render_compressao_cronograma(comp)
-        assert any("inf" in l for l in lines)
+        assert any("inf" in ln for ln in lines)
 
 
 # ---------------------------------------------------------------------------
@@ -424,10 +424,10 @@ class TestRenderOportunidades:
             ],
         }
         lines = render_oportunidades(relatorio)
-        assert any("Oportunidades de Compartilhamento de Recursos" in l for l in lines)
-        assert any("eap-1" in l for l in lines)
-        assert any("✅" in l for l in lines)
-        assert any("❌" in l for l in lines)
+        assert any("Oportunidades de Compartilhamento de Recursos" in ln for ln in lines)
+        assert any("eap-1" in ln for ln in lines)
+        assert any("✅" in ln for ln in lines)
+        assert any("❌" in ln for ln in lines)
 
     def test_gap_max_dict_table(self):
         """gap_max_por_tipo com ∞ (9999) renderiza corretamente."""
@@ -442,8 +442,8 @@ class TestRenderOportunidades:
             "oportunidades": [],
         }
         lines = render_oportunidades(relatorio)
-        assert any("∞" in l for l in lines)
-        assert any("sem custo idle" in l for l in lines)
+        assert any("∞" in ln for ln in lines)
+        assert any("sem custo idle" in ln for ln in lines)
 
     def test_pydantic_like_object_accepted(self):
         """Aceita objetos com getattr (Pydantic-like) além de dicts."""
@@ -458,7 +458,7 @@ class TestRenderOportunidades:
             oportunidades=[],
         )
         lines = render_oportunidades(rel)
-        assert any("Oportunidades de Compartilhamento de Recursos" in l for l in lines)
+        assert any("Oportunidades de Compartilhamento de Recursos" in ln for ln in lines)
 
 
 # ---------------------------------------------------------------------------
@@ -541,11 +541,11 @@ class TestRenderPoolEconomiaOrigem:
         ):
             lines = render_pool_economia_origem(MagicMock())
 
-        assert any("Economia por Compartilhamento de Frente" in l for l in lines)
-        assert any("Principais Economias de Pool" in l for l in lines)  # ADR terminology update
-        assert any("Sobrecusto" in l or "sobrecusto" in l for l in lines)
-        assert any("eap-1" in l for l in lines)
-        assert any("eap-2" in l for l in lines)
+        assert any("Economia por Compartilhamento de Frente" in ln for ln in lines)
+        assert any("Principais Economias de Pool" in ln for ln in lines)  # ADR terminology update
+        assert any("Sobrecusto" in ln or "sobrecusto" in ln for ln in lines)
+        assert any("eap-1" in ln for ln in lines)
+        assert any("eap-2" in ln for ln in lines)
 
     def test_top_neg_mob_dominates(self):
         """mob_demob > ocioso_imputado → motivo 'mobilização/desmobilização'."""
@@ -577,4 +577,4 @@ class TestRenderPoolEconomiaOrigem:
         ):
             lines = render_pool_economia_origem(MagicMock())
 
-        assert any("mobilização/desmobilização" in l for l in lines)
+        assert any("mobilização/desmobilização" in ln for ln in lines)

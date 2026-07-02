@@ -398,7 +398,6 @@ class TestImplAtualizarPrecoInsumo:
         self._setup(monkeypatch, rt, tmp_path, projects_dir)
 
         # patch write_text to raise
-        original_setup = mod.validate_and_resolve_insumo_file
         with patch.object(Path, "write_text", side_effect=OSError("disk full")):
             result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 5.0, projeto_id="PROJ-001")
         assert "erro" in result
@@ -552,7 +551,7 @@ class TestImplConsultarPrecoInsumoTemporal:
         mock_repo = MagicMock()
         mock_repo.resolver_preco.return_value = (5.0, "MASTER_BASE")
         with patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo", return_value=mock_repo):
-            result = _impl_consultar_preco_insumo_temporal("ctx1", "INS-001", "2025-01-01", projeto_id="PROJ-001")
+            _impl_consultar_preco_insumo_temporal("ctx1", "INS-001", "2025-01-01", projeto_id="PROJ-001")
         # overrides=None was passed
         call_kwargs = mock_repo.resolver_preco.call_args
         assert call_kwargs.kwargs.get("overrides") is None

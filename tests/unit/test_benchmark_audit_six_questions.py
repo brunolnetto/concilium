@@ -1021,7 +1021,6 @@ class TestRunAudit:
             ),
         ):
             # Make referencia.json exist but extracao_intermediarios.json not exist
-            original_exists = Path.exists
 
             def mock_exists(self):
                 if "extracao_intermediarios" in str(self):

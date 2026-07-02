@@ -71,7 +71,7 @@ def test_runtime_factory_invokes_runtime():
     def capture_pipeline_service(*args, **kwargs):
         factory = kwargs.get("runtime_factory")
         if factory is None:
-            for a in args:
+            for _a in args:
                 pass
         captured_factory["fn"] = factory
         return MagicMock()
@@ -93,7 +93,7 @@ def test_runtime_factory_invokes_runtime():
     ):
         ServiceContainer()
         if captured_factory.get("fn"):
-            result = captured_factory["fn"]()
+            captured_factory["fn"]()
             mocks["Runtime"].assert_called_with(cfg_root)
 
 

@@ -146,7 +146,7 @@ def _projects_app():
     except TypeError:
         pytest.skip("FastAPI incompatível")
     app = create_app()
-    with TestClient(app, raise_server_exceptions=False) as c:
+    with TestClient(app, raise_server_exceptions=False):
         yield app  # yield the app, not the client — svc varies per test
 
 

@@ -357,7 +357,6 @@ class TestGenerateDiffsForSlug:
 
     def test_happy_path_bench_uses_slug_as_projeto_when_missing(self, tmp_path):
         slug = "fallbkproj"
-        canonical_data = {"equipes_diretas": []}
         bench_data = {}  # no "projeto" key
         extracted_data = {"equipes": {"equipes": []}}
         _setup_full_fixture(tmp_path, slug, bench_data, extracted_data, canonical_data=None)

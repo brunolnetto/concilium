@@ -89,7 +89,7 @@ def _cab_collect_celulas_semana(
     eficiencia = float(getattr(dist, "eficiencia", 1.0) or 1.0)
     fator_semanal = n_equipes / SEMANAS_POR_MES
     result = []
-    for campo, cat_insumo, propriedade, cat_bdi, unidade in _PROP_BDI_MAP:
+    for campo, cat_insumo, propriedade, _cat_bdi, unidade in _PROP_BDI_MAP:
         custo_mensal = float(getattr(equipe, campo, 0.0) or 0.0)
         if custo_mensal <= 0:
             continue

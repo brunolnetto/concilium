@@ -21,9 +21,9 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_ROOT / "src"))
 
-import pytest
+import pytest  # noqa: E402
 
-from concilium.domain.models.canonical import (
+from concilium.domain.models.canonical import (  # noqa: E402
     CanonicalModel,
     ComposicaoEquipeAtividade,
     InstanciaRecurso,
@@ -579,7 +579,7 @@ class TestValidatorStandbyAlto:
         # Pool=1, atividade usa 0 (apenas standby) ou 1 semana
         total_weeks = 10
         active_weeks = round(total_weeks * (1 - standby_pct / 100))
-        standby_weeks = total_weeks - active_weeks
+        total_weeks - active_weeks
 
         contrato = RecursoContrato(
             contrato_id="contrato-t1",
@@ -639,7 +639,7 @@ class TestCanonicalModelCampos:
     def test_canonical_aceita_instancias_recurso(self, tmp_path):
         """CanonicalModel deve ter o campo instancias_recurso."""
 
-        inst = _make_instancia(numero=1, semanas_ativas=10)
+        _make_instancia(numero=1, semanas_ativas=10)
         # Verifica que o campo existe sem precisar criar um canonical completo
         assert hasattr(CanonicalModel, "model_fields")
         fields = CanonicalModel.model_fields

@@ -1725,7 +1725,7 @@ class TestPsCreateProjectCatalogoBaseFallback:
         from unittest.mock import patch
 
         with patch.object(svc, "list_contexto_versions", side_effect=Exception("boom")):
-            result = _ps_create_project(
+            _ps_create_project(
                 svc=svc,
                 req=req,
                 inputs_escopo={"snapshot_catalogo_id": "cat-from-escopo"},

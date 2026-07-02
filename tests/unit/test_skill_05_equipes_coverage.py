@@ -13,8 +13,8 @@ from concilium.application.skills import run_equipes_e_alocacao
 
 _MOD_NAME = "_concilium_skillpkg_05_equipes_e_alocacao.skill"
 
-from concilium.application.skills.base import SkillResult
-from concilium.domain.models.canonical import RecursoContrato
+from concilium.application.skills.base import SkillResult  # noqa: E402
+from concilium.domain.models.canonical import RecursoContrato  # noqa: E402
 
 
 def _eq(item_id, custo_total=1000.0, custo_inst_mo=None):
@@ -223,7 +223,7 @@ class TestPoolContractPath:
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
-            r = run_equipes_e_alocacao(can, {"benchmark_mode": True}, {"cpus": [], "insumos": []})
+            run_equipes_e_alocacao(can, {"benchmark_mode": True}, {"cpus": [], "insumos": []})
         assert eq.custo_total == 300.0
 
     def test_atribuicao_update_sets_fields(self):
@@ -239,7 +239,7 @@ class TestPoolContractPath:
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
-            r = run_equipes_e_alocacao(can, {}, {"cpus": [], "insumos": []})
+            run_equipes_e_alocacao(can, {}, {"cpus": [], "insumos": []})
         assert eq.custo_total == 2000.0
         assert eq.contrato_tipo_id == "R1"
         assert eq.fracao_atribuicao == 0.5
@@ -323,7 +323,7 @@ class TestPoolContractPath:
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
-            r = run_equipes_e_alocacao(can, {}, {"cpus": [], "insumos": []})
+            run_equipes_e_alocacao(can, {}, {"cpus": [], "insumos": []})
         mock_enrich_particao.assert_called_once()
 
     def test_benchmark_instancias_planejamento_caps_custo(self):
@@ -351,7 +351,7 @@ class TestPoolContractPath:
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
-            r = run_equipes_e_alocacao(can, {"benchmark_mode": True}, {"cpus": [], "insumos": []})
+            run_equipes_e_alocacao(can, {"benchmark_mode": True}, {"cpus": [], "insumos": []})
         # eq.custo_total should be capped to 500.0 (planejamento value)
         assert eq.custo_total == 500.0
 
@@ -380,13 +380,14 @@ class TestPoolContractPath:
             patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
         ):
-            r = run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
+            run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
         assert eq.custo_total == 600.0
 
 
 class TestAdr078PreProcessamento:
     def test_resource_costs_triggers_pre_processamento(self):
-        """Lines 428-429, 432-433: rcpsp_spec.get('resource_costs') truthy → _build_pre_processamento_compartilhamento."""
+        """Lines 428-429, 432-433: rcpsp_spec.get('resource_costs') truthy
+        → _build_pre_processamento_compartilhamento."""
         eq = _eq("E1")
         can = _canonical()
         ct = _contrato("R1", ["E1"])
@@ -426,7 +427,7 @@ class TestAdr078PreProcessamento:
             patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
             patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
         ):
-            r = run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
+            run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         mock_build_pre.assert_not_called()
 
 

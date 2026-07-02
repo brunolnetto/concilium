@@ -11,7 +11,7 @@ run_precificacao_unitaria = load_skill_stage("06-resultado-financeiro", "_precif
 run_consolidacao_financeira = load_skill_stage(
     "06-resultado-financeiro", "_consolidacao", "run_consolidacao_financeira"
 )
-from concilium.domain.models.canonical import (
+from concilium.domain.models.canonical import (  # noqa: E402
     BdiCategorias,
     CanonicalModel,
     Coordenadas,

@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 # ── Disponibilidade do DuckDB (opcional — sem ele usa JSON puro) ───────────────
 
 try:
-    import duckdb as _duckdb
+    import duckdb as _duckdb  # noqa: F401 — availability probe
 
     _AVAILABLE = True
 except ImportError:  # pragma: no cover
@@ -680,7 +680,7 @@ class CatalogSession:
         ]
         result = []
         for r in rows:
-            rec = dict(zip(cols, r))
+            rec = dict(zip(cols, r, strict=False))
             if rec["raw_json"]:
                 rec.update(json.loads(rec.pop("raw_json")))
             result.append(rec)
@@ -730,7 +730,7 @@ class CatalogSession:
         def _parse(rows, cols):
             result = []
             for r in rows:
-                rec = dict(zip(cols, r))
+                rec = dict(zip(cols, r, strict=False))
                 if rec.get("raw_json"):
                     rec.update(json.loads(rec.pop("raw_json")))
                 result.append(rec)
@@ -781,7 +781,7 @@ class CatalogSession:
             params,
         ).fetchall()
         cols = ["tipo", "n", "media", "desvio", "minimo", "maximo", "mediana"]
-        return [dict(zip(cols, r)) for r in rows]
+        return [dict(zip(cols, r, strict=False)) for r in rows]
 
     def query(self, sql: str, params: list | None = None) -> list[tuple]:
         """Acesso direto para queries ad-hoc (skills avançadas, analytics)."""

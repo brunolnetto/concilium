@@ -182,7 +182,8 @@ class TestValidateToolCoverage:
         tools = {}
         for name, perm in tools_spec.items():
             t = MagicMock()
-            fn = lambda: None
+            def fn():
+                return None
             fn.__name__ = name
             if perm is not None:
                 fn._required_permission = perm
@@ -216,7 +217,8 @@ class TestPatchMcpAuthPermissions:
     def _make_server_with_tool(self, tool_name: str, tool_fn=None, perm: str | None = None):
         server = MagicMock()
         if tool_fn is None:
-            tool_fn = lambda: "ok"
+            def tool_fn():
+                return "ok"
             tool_fn.__name__ = tool_name
         if perm is not None:
             tool_fn._required_permission = perm  # ADR-117: tag posta por @permission

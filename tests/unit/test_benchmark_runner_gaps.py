@@ -326,7 +326,7 @@ class TestRunOltpWithProfileDeliverables:
             patch("concilium.domain.models.procurement.validate_procurement_baseline"),
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
-            result = runner.run(spec, procurement_intent="rfi")
+            runner.run(spec, procurement_intent="rfi")
 
         artifacts_dir = runner._artifact_output_dir(spec)
         audit_dir = artifacts_dir.parent / "audit"
@@ -449,7 +449,7 @@ class TestRunOlapArtifacts:
             patch("concilium.application.skills.phase_classifier.get_skills_for_mode", return_value=[]),
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
-            result = runner.run(spec, mode=PipelineMode.OLAP)
+            runner.run(spec, mode=PipelineMode.OLAP)
 
         artifacts_dir = runner._artifact_output_dir(spec)
         assert not (artifacts_dir / "visualizations" / "chart.png").exists()
@@ -480,7 +480,7 @@ class TestRunOlapArtifacts:
             patch("pathlib.Path.write_bytes", side_effect=PermissionError("locked")),
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
-            result = runner.run(spec, mode=PipelineMode.OLAP)
+            runner.run(spec, mode=PipelineMode.OLAP)
 
         captured = capsys.readouterr()
         assert "[WARN]" in captured.out
@@ -527,7 +527,7 @@ class TestRunOltpProfilePermissionError:
             patch("pathlib.Path.write_bytes", side_effect=PermissionError("arquivo em uso")),
         ):
             MockRuntime.return_value.run_pipeline.return_value = []
-            result = runner.run(spec, procurement_intent="rfi")
+            runner.run(spec, procurement_intent="rfi")
 
         captured = capsys.readouterr()
         # The audit_dir write_text succeeds (write_text != write_bytes);
@@ -560,7 +560,7 @@ class TestFindOrCreateResetWarning:
             patch("shutil.rmtree", side_effect=_fake_rmtree),
             patch("concilium.infrastructure.storage.project.ProjectStore.init", return_value=store_mock),
         ):
-            result = runner._find_or_create("Stubborn", "stubborn-slug", "ctx", reset=True)
+            runner._find_or_create("Stubborn", "stubborn-slug", "ctx", reset=True)
 
         captured = capsys.readouterr()
         assert "[AVISO]" in captured.out or "AVISO" in captured.out

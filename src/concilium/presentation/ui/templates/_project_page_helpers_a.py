@@ -11,30 +11,7 @@ from pathlib import Path
 import streamlit as st
 
 try:
-    from ..atoms.form_contracts import CPU_EDITABLE_FIELDS, CPU_READONLY_FIELDS, render_typed_form
-    from ..config import DEFAULT_ACTOR, DEFAULT_BASE_URL
     from ..infra.api import api_call
-    from ..molecules.common import render_page_heading
-    from ..organisms.layout import (
-        render_artifacts_tab,
-        render_audit,
-        render_backtracking_pe,
-        render_bdi_tab,
-        render_compare,
-        render_cpu_composition_override,
-        render_cpu_productivity_override,
-        render_deliverables_config,
-        render_diagnostico_pe,
-        render_history,
-        render_indiretos_config,
-        render_ops_audit_tab,
-        render_overview_tab,
-        render_pipeline_monitor,
-        render_planning_tab,
-        render_run,
-        render_saved_override,
-        render_version_management,
-    )
 except ImportError:
     src_root = Path(__file__).resolve().parents[4]
     if str(src_root) not in sys.path:

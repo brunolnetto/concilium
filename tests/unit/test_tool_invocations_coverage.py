@@ -2,7 +2,8 @@
 
 Covers missing lines:
 - src/concilium/infrastructure/storage/tool_invocation_store.py: 62-63, 67-68, 72-73, 77, 88-100
-- src/concilium/application/tool_invocations/repository.py: 59-60, 63-64, 67-69, 72-74, 77-79, 82-83, 87-88, 98-102, 112-114
+- src/concilium/application/tool_invocations/repository.py:
+  59-60, 63-64, 67-69, 72-74, 77-79, 82-83, 87-88, 98-102, 112-114
 """
 
 from __future__ import annotations

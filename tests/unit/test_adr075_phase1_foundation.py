@@ -104,7 +104,7 @@ class TestRampProfileValidation:
 
     def test_rejects_K_max_less_than_n_0(self):
         """K_max < n_0: impossible ramp-up → ValueError."""
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             RampProfile.build("A", K_max=2, r=1, d=0, n_i=3, resources_per_team={}, n_0=5)
 
     def test_accepts_r_plus_d_equals_n_i(self):
@@ -138,7 +138,7 @@ class TestRampProfileValidation:
     def test_frozen_rejects_direct_assignment(self):
         """frozen=True: field re-assignment raises TypeError/ValidationError."""
         rp = RampProfile.build("A", K_max=4, r=0, d=0, n_i=3, resources_per_team={})
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             rp.K_max = 99  # type: ignore[misc]
 
 

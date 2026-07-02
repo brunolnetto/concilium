@@ -17,6 +17,7 @@ from concilium.presentation.mcp._context import (
     _runtime,
     _wrap_response,
 )
+from concilium.presentation.mcp.rate_limit import mcp_rate_limit
 
 
 def register(server: FastMCP) -> None:
@@ -56,6 +57,7 @@ def register(server: FastMCP) -> None:
     # ── 3. Iniciar orçamento ─────────────────────────────────────────────
     @server.tool()
     @permission("project:create")
+    @mcp_rate_limit()
     def iniciar_orcamento(
         nome: str,
         contexto_id: str,
@@ -282,6 +284,7 @@ def register(server: FastMCP) -> None:
     # ── 7. Aprovar plano (ADR-031) ────────────────────────────────────────────
     @server.tool()
     @permission("project:approve")
+    @mcp_rate_limit()
     def aprovar_versao(project_id: str, escopo_id: str | None = None, plano_id: str | None = None) -> dict[str, Any]:
         """Aprova o plano ativo do projeto (operação irreversível — confirmar com o usuário).
 
@@ -333,6 +336,7 @@ def register(server: FastMCP) -> None:
     # ── Nova iteração de planejamento (ADR-031) ───────────────────────────────
     @server.tool()
     @permission("project:create")
+    @mcp_rate_limit()
     def nova_versao(project_id: str, escopo_id: str | None = None, nome: str | None = None) -> dict[str, Any]:
         """Cria novo plano para uma nova iteração de orçamento no mesmo escopo.
 

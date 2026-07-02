@@ -111,7 +111,7 @@ def test_happy_path_currency_brl_returns_bytes():
     fig_to_bytes = _make_fig_to_bytes(b"PNG_DATA")
 
     with (
-        patch(f"{MODULE}.build_payload", return_value=payload) as mock_bp,
+        patch(f"{MODULE}.build_payload", return_value=payload),
         patch(f"{MODULE}.init_mpl", return_value=(mock_plt, fig_to_bytes)),
         patch(f"{MODULE}.render_stacked_bar", return_value=fig) as mock_rsb,
     ):

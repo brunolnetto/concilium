@@ -106,13 +106,13 @@ def render_formulario_qqp_page() -> None:
     with st.expander("1️⃣  Identificação do Projeto", expanded=True):
         col1, col2 = st.columns(2)
         with col1:
-            nome = st.text_input("Nome do projeto *", key="qqp_nome", placeholder="Ex: Lote 09/10 CE")
+            st.text_input("Nome do projeto *", key="qqp_nome", placeholder="Ex: Lote 09/10 CE")
             tipo_obra = st.selectbox(
                 "Tipo de obra *",
                 ["terraplenagem", "pavimentacao", "saneamento"],
                 key="qqp_tipo_obra",
             )
-            localizacao = st.text_input("Localização *", key="qqp_localizacao", placeholder="Cidade, UF")
+            st.text_input("Localização *", key="qqp_localizacao", placeholder="Cidade, UF")
         with col2:
             contextos = _load_contextos()
             contexto_id = st.selectbox(

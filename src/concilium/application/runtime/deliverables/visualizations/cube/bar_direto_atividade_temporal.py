@@ -62,7 +62,7 @@ def build(canonical, cubo) -> bytes | None:
                 width=0.72,
                 label=atividade_id,
             )
-            baseline = [b + v for b, v in zip(baseline, vals)]
+            baseline = [b + v for b, v in zip(baseline, vals, strict=False)]
 
         ax.set_xticks(x)
         ax.set_xticklabels(periodos, rotation=45, ha="right", fontsize=8)

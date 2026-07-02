@@ -27,7 +27,7 @@ def test_init_imports():
 # catalog_refs
 # ---------------------------------------------------------------------------
 
-from concilium.infrastructure.catalog.extraction.catalog_refs import (
+from concilium.infrastructure.catalog.extraction.catalog_refs import (  # noqa: E402
     _load_json,
     _safe_float,
     extract_cpu_references,
@@ -151,7 +151,7 @@ class TestExtractCpuReferences:
 # consolidation
 # ---------------------------------------------------------------------------
 
-from concilium.infrastructure.catalog.extraction.consolidation import (
+from concilium.infrastructure.catalog.extraction.consolidation import (  # noqa: E402
     consolidate_reference,
 )
 
@@ -294,7 +294,7 @@ class TestConsolidateReference:
 # engine_refs
 # ---------------------------------------------------------------------------
 
-from concilium.infrastructure.catalog.extraction.engine_refs import (
+from concilium.infrastructure.catalog.extraction.engine_refs import (  # noqa: E402
     _check_project_dir,
     _normalize_project_token,
     extract_engine_iteration_references,
@@ -449,9 +449,9 @@ class TestExtractEngineIterationReferences:
 # excel
 # ---------------------------------------------------------------------------
 
-from openpyxl import Workbook
+from openpyxl import Workbook  # noqa: E402
 
-from concilium.infrastructure.catalog.extraction.excel import (
+from concilium.infrastructure.catalog.extraction.excel import (  # noqa: E402
     _extract_bdi,
     _extract_eap_col_map,
     _extract_indiretos,

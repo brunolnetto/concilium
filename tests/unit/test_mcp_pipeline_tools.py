@@ -92,7 +92,7 @@ class TestListarJobsPipeline:
         svc_mock.listar_jobs.return_value = list_dto
 
         with patch("concilium.application.jobs.get_job_service", return_value=svc_mock):
-            result = tools["listar_jobs_pipeline"](project_id="proj-1")
+            tools["listar_jobs_pipeline"](project_id="proj-1")
         svc_mock.listar_jobs.assert_called_once_with("proj-1")
 
 
@@ -190,7 +190,7 @@ class TestPipelineHelpers:
         from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
 
         # All skills already executed
-        all_done = set(CANONICAL_SKILL_ORDER)
+        set(CANONICAL_SKILL_ORDER)
         ps = MagicMock()
         ps.read_invocations.return_value = [{"skill": sid, "status": "OK"} for sid in CANONICAL_SKILL_ORDER]
         ps.plano_id = "plano-1"

@@ -215,7 +215,6 @@ def run_explorador_cenarios(
     validacoes: list[ValidacaoItem] = []
 
     resultado = canonical_in.resultado
-    recon = canonical_in.resultado_reconciliado
 
     if resultado is None:
         validacoes.append(

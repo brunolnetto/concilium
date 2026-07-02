@@ -174,7 +174,7 @@ class TestEscopoStoreFull:
     def test_plano_store_active_plan_activation(self, tmp_path):
         store = self._make_project_store(tmp_path)
         es = self._create_escopo(store)
-        ps = es.create_plan(nome="Ativo")
+        es.create_plan(nome="Ativo")
         # After create_plan, it may or may not be active depending on implementation
         plans = es.list_plans()
         assert len(plans) >= 1

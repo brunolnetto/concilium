@@ -32,7 +32,7 @@ import re
 import sys
 import unicodedata
 import warnings
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from statistics import median
 
@@ -85,7 +85,7 @@ def _validate_all(entities: list[dict], validator: Draft202012Validator, label: 
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _normalize_code(code: str) -> str:
@@ -298,7 +298,9 @@ def cure_producao(prod: dict, report: CurationReport, apply: bool) -> dict:
                     if not fixed_item.get("tipo"):
                         fixed_item["tipo"] = "migracao"
                     new_obs.append(fixed_item)
-                report.add_fixed(f"PRODUCAO {pid}: historico_observacoes[{i}] completado com campos ausentes: {missing}")
+                report.add_fixed(
+                    f"PRODUCAO {pid}: historico_observacoes[{i}] completado com campos ausentes: {missing}"
+                )
             else:
                 new_obs.append(item)
         if apply:
@@ -334,7 +336,9 @@ def cure_cpu(cpu: dict, report: CurationReport, apply: bool) -> dict:
     changed = dict(cpu)
 
     # Move dmt_referencia_m do root para atributos_categoria (campo mal posicionado)
-    dmt_root_fields = {k: v for k, v in changed.items() if k in ("dmt_referencia_m", "dmt_min_metros", "dmt_max_metros")}
+    dmt_root_fields = {
+        k: v for k, v in changed.items() if k in ("dmt_referencia_m", "dmt_min_metros", "dmt_max_metros")
+    }
     if dmt_root_fields:
         if apply:
             attrs_cat = dict(changed.get("atributos_categoria") or {})
@@ -472,7 +476,9 @@ def _apply_insumo_code_remap(cpus: list[dict], prods: list[dict], remap: dict[st
                             e["equip_id"] = _map_code(e.get("equip_id"))
 
 
-def cure_contextual(cpus: list[dict], prods: list[dict], insumos: list[dict], report: CurationReport, apply: bool) -> None:
+def cure_contextual(
+    cpus: list[dict], prods: list[dict], insumos: list[dict], report: CurationReport, apply: bool
+) -> None:
     # 0) Corrigir equipes vazias em produções CAP por mapeamento explícito de template
     prod_by_id = {p.get("id"): p for p in prods if isinstance(p, dict) and isinstance(p.get("id"), str)}
     cap_team_template_map = {
@@ -797,8 +803,12 @@ def run(contexto_id: str, apply: bool = False) -> None:
 
     if apply:
         n_cpus = _persist_entity_files([(p, obj) for (p, _), obj in zip(cpu_entries, cured_cpus, strict=False)], True)
-        n_prods = _persist_entity_files([(p, obj) for (p, _), obj in zip(prod_entries, cured_prods, strict=False)], True)
-        n_ins = _persist_entity_files([(p, obj) for (p, _), obj in zip(insumo_entries, cured_insumos, strict=False)], True)
+        n_prods = _persist_entity_files(
+            [(p, obj) for (p, _), obj in zip(prod_entries, cured_prods, strict=False)], True
+        )
+        n_ins = _persist_entity_files(
+            [(p, obj) for (p, _), obj in zip(insumo_entries, cured_insumos, strict=False)], True
+        )
         print(f"  Arquivos atualizados: CPUs={n_cpus}, PRODUCOES={n_prods}, INSUMOS={n_ins}")
         if bundle_path.exists():
             bundle_path.unlink()

@@ -563,7 +563,8 @@ def _process_eap_item(
                 ValidacaoItem(
                     codigo="VAL-PLAN-SBDI",
                     status="INFO",
-                    mensagem=f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi disponível (informativo; cálculo usa composicao_itens).",
+                    mensagem=f"CPU '{cpu.get('codigo')}': precos_unitarios_sbdi disponível "
+                    f"(informativo; cálculo usa composicao_itens).",
                 )
             )
         else:
@@ -580,7 +581,7 @@ def _process_eap_item(
 
     if preco_cat is None:
         return
-    eq_real = equipe_lookup.get(item.item_id)
+    equipe_lookup.get(item.item_id)
     _validate_encargos_separacao(cpu.get("codigo", item.cpu_id), cpu, insumo_lookup, validacoes)
     equip_sem_decomp.update(equip_sem_decomp_item)
     item_override = (

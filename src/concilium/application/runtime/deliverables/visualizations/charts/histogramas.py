@@ -43,7 +43,7 @@ def _build_hist(
                     label=display_label,
                     color=HIST_COLORS[sidx % len(HIST_COLORS)],
                 )
-                baseline = [b + v for b, v in zip(baseline, svals)]
+                baseline = [b + v for b, v in zip(baseline, svals, strict=False)]
             ax.legend(fontsize=7, loc="upper right")
         else:
             ax.bar(x, values, color=base_color, alpha=0.85, width=0.8)

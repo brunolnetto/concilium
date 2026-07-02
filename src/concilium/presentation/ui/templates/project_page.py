@@ -16,7 +16,6 @@ from ._project_page_helpers_b import (
 )
 
 try:
-    from ..atoms.form_contracts import CPU_EDITABLE_FIELDS, CPU_READONLY_FIELDS, render_typed_form
     from ..config import DEFAULT_ACTOR, DEFAULT_BASE_URL
     from ..infra.api import api_call
     from ..molecules.common import render_page_heading

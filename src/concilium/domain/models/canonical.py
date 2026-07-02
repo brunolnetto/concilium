@@ -56,7 +56,7 @@ def transition_status_projeto(status_atual: StatusProjeto, status_destino: Statu
         "CONCLUIDO": ("concluir",),
     }
 
-    eventos_disponiveis = {evento.name for evento in machine.allowed_events}
+    eventos_disponiveis = {evento.id for evento in machine.allowed_events}
     for nome_evento in eventos_por_destino[status_destino]:
         if nome_evento in eventos_disponiveis:
             getattr(machine, nome_evento)()
@@ -437,7 +437,8 @@ class EquipeDireta(BaseModel):
 
     # ADR-104: Decomposição Instancial de Custos (Estágio 4 — preenchido após ADR-085)
     # Invariante: se custo_inst_mo is not None, então
-    #   abs(custo_inst_mo + custo_inst_eq + custo_inst_comb + custo_inst_mat + custo_inst_mob_demob - custo_total) < 0.05
+    #   abs(custo_inst_mo + custo_inst_eq + custo_inst_comb + custo_inst_mat
+    #       + custo_inst_mob_demob - custo_total) < 0.05
     custo_inst_mo: float | None = None  # Mão de obra instancial (Estágio 4). None = Estágio 1/3
     custo_inst_eq: float | None = None  # Equipamentos instancial (Estágio 4). None = Estágio 1/3
     custo_inst_comb: float | None = None  # Combustível/diesel instancial (Estágio 4). None = Estágio 1/3

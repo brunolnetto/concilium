@@ -40,13 +40,13 @@ class TestLoadJson:
         assert result == {"a": 1}
 
     def test_raises_on_missing_file(self, tmp_path: Path) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             _load_json(tmp_path / "nonexistent.json")
 
     def test_raises_on_invalid_json(self, tmp_path: Path) -> None:
         f = tmp_path / "bad.json"
         f.write_text("not json", encoding="utf-8")
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             _load_json(f)
 
 

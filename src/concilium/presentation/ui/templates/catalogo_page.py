@@ -8,13 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 try:
-    from ..atoms.form_contracts import (
-        CPU_EDITABLE_FIELDS,
-        CPU_READONLY_FIELDS,
-        render_typed_form,
-    )
     from ..config import DEFAULT_ACTOR, DEFAULT_BASE_URL
-    from ..infra.api import api_call
     from ..molecules.common import render_page_heading
 except ImportError:
     src_root = Path(__file__).resolve().parents[4]
@@ -24,6 +18,7 @@ except ImportError:
     from concilium.presentation.ui.molecules.common import render_page_heading
 
 from ._catalogo_helpers import *  # noqa: F401,F403
+from ._catalogo_helpers import _render_catalogo_tab0, _render_catalogo_tab1
 
 
 def render_catalogo_page_template(project: dict) -> None:

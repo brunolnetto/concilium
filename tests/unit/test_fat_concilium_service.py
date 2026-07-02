@@ -826,13 +826,13 @@ class TestVersioningDelegation:
     def test_compare_versions(self):
         svc, deps = _make_svc()
         deps.project_service.compare_versions.return_value = {"diff": {}}
-        result = svc.compare_versions("p1", "v1", "v2")
+        svc.compare_versions("p1", "v1", "v2")
         deps.project_service.compare_versions.assert_called_once_with("p1", "v1", "v2")
 
     def test_fork_version(self):
         svc, deps = _make_svc()
         deps.project_service.fork_version.return_value = {"version": "v2"}
-        result = svc.fork_version("p1", "v1", actor="u2")
+        svc.fork_version("p1", "v1", actor="u2")
         deps.project_service.fork_version.assert_called_once_with("p1", "v1", actor="u2")
 
 
@@ -857,13 +857,13 @@ class TestAuditAndOverrides:
     def test_upsert_override_delegates(self):
         svc, deps = _make_svc()
         deps.override_service.upsert_override.return_value = {"ok": True}
-        result = svc.upsert_override("p1", "skill-01", {"k": "v"}, actor="u1")
+        svc.upsert_override("p1", "skill-01", {"k": "v"}, actor="u1")
         deps.override_service.upsert_override.assert_called_once_with("p1", "skill-01", {"k": "v"}, actor="u1")
 
     def test_delete_override_delegates(self):
         svc, deps = _make_svc()
         deps.override_service.delete_override.return_value = {"deleted": True}
-        result = svc.delete_override("p1", "skill-01", actor="u1")
+        svc.delete_override("p1", "skill-01", actor="u1")
         deps.override_service.delete_override.assert_called_once_with("p1", "skill-01", actor="u1")
 
 
@@ -946,7 +946,7 @@ class TestTemas:
     def test_create_tema_version(self):
         svc, deps = _make_svc()
         deps.project_service.create_tema_version.return_value = {"version": "2"}
-        result = svc.create_tema_version("tema-1", {"k": "v"}, "motivo", "author1", make_current=None)
+        svc.create_tema_version("tema-1", {"k": "v"}, "motivo", "author1", make_current=None)
         deps.project_service.create_tema_version.assert_called_once_with(
             "tema-1", {"k": "v"}, "motivo", "author1", make_current=None
         )
@@ -994,7 +994,7 @@ class TestArtifacts:
     def test_list_artifacts_delegates(self):
         svc, deps = _make_svc()
         deps.project_service.list_artifacts.return_value = {"artifacts": []}
-        result = svc.list_artifacts("p1", "v1")
+        svc.list_artifacts("p1", "v1")
         deps.project_service.list_artifacts.assert_called_once_with("p1", "v1")
 
     def test_get_artifact_bytes_delegates(self):
@@ -1055,7 +1055,7 @@ class TestMobilizacaoDelegation:
     def test_get_mobilizacao_policies_delegates(self):
         svc, deps = _make_svc()
         deps.override_service.get_mobilizacao_policies.return_value = {"items": []}
-        result = svc.get_mobilizacao_policies("p1")
+        svc.get_mobilizacao_policies("p1")
         deps.override_service.get_mobilizacao_policies.assert_called_once_with("p1")
 
     def test_upsert_mobilizacao_policy_delegates(self):
@@ -1078,13 +1078,13 @@ class TestDeliverables:
     def test_get_deliverables_config_delegates(self):
         svc, deps = _make_svc()
         deps.override_service.get_deliverables_config.return_value = {"items": []}
-        result = svc.get_deliverables_config("p1")
+        svc.get_deliverables_config("p1")
         deps.override_service.get_deliverables_config.assert_called_once_with("p1")
 
     def test_put_deliverables_config_delegates(self):
         svc, deps = _make_svc()
         deps.override_service.put_deliverables_config.return_value = {"ok": True}
-        result = svc.put_deliverables_config("p1", {"items": []}, actor="u1")
+        svc.put_deliverables_config("p1", {"items": []}, actor="u1")
         deps.override_service.put_deliverables_config.assert_called_once_with("p1", {"items": []}, actor="u1")
 
 

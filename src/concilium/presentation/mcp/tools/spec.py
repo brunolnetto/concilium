@@ -9,6 +9,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from concilium.domain.constants import ISS_PADRAO
+from concilium.infrastructure.auth.permission_guard import permission
 from concilium.infrastructure.storage.project import ProjectStore
 from concilium.presentation.mcp._context import (
     _lifecycle_coordinator,
@@ -55,8 +56,6 @@ def _resolve_tributario(meta: dict, rt: Any) -> dict:
 
     return tributario
 
-
-from concilium.infrastructure.auth.permission_guard import permission
 
 
 def register(server: FastMCP) -> None:

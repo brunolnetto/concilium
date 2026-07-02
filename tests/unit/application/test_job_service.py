@@ -107,9 +107,9 @@ class TestJobServiceBasics:
 
     def test_listar_jobs_com_filtro_project_id(self, job_service):
         """Listar jobs deve filtrar por project_id."""
-        job1 = job_service.disparar_pipeline(project_id="proj-A")
-        job2 = job_service.disparar_pipeline(project_id="proj-B")
-        job3 = job_service.disparar_pipeline(project_id="proj-A")
+        job_service.disparar_pipeline(project_id="proj-A")
+        job_service.disparar_pipeline(project_id="proj-B")
+        job_service.disparar_pipeline(project_id="proj-A")
 
         result = job_service.listar_jobs(project_id="proj-A")
 

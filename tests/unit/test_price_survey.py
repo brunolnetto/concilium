@@ -99,7 +99,6 @@ class TestExportSheetRouting:
             # Capture what DataFrames get written to which sheet
             sheets_written = {}
 
-            original_to_excel = pd.DataFrame.to_excel
 
             def capture_to_excel(self_df, writer_arg, index=False, sheet_name=None):
                 sheets_written[sheet_name] = list(self_df["ID"])

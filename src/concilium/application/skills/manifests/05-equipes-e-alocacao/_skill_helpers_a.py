@@ -54,6 +54,17 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 
+
+class _RepoCtx:
+    """Contexto para lookups rápidos durante dimensionamento."""
+
+    def __init__(self, repo, jurisdicao_id, overrides, data_base):
+        self.repo = repo
+        self.jurisdicao_id = jurisdicao_id
+        self.overrides = overrides or {}
+        self.data_base = data_base
+
+
 def _getfloat_d(d: dict, key: str) -> float:
     return float(d.get(key) or 0.0)
 
@@ -487,7 +498,8 @@ def _build_comb_validacao(equip_id: str, val_comb_code: str) -> ValidacaoItem:
         return ValidacaoItem(
             codigo=val_comb_code,
             status="AVISO",
-            mensagem=f"Equipamento '{equip_id}': consumo_litros_hora não encontrado em nenhuma fonte; custo_combustivel_mensal=0",
+            mensagem=f"Equipamento '{equip_id}': consumo_litros_hora não encontrado em nenhuma fonte; "
+            f"custo_combustivel_mensal=0",
         )
     if val_comb_code == "VAL-EQUIP-COMB-04":
         return ValidacaoItem(
@@ -898,7 +910,8 @@ def _build_dimensionamento(
         )
         # ADR-091: Dividir permanência pelo número de equipes paralelas alocadas para evitar duplicação de custos
         # assigned_resources é propagado por skill-04 em modo AUTO; em MANUAL_ALLOCATION fica vazio.
-        # Para ambos os casos, inferimos o número de equipes paralelas do cronograma: max(num_equipes) na distribuição semanal
+        # Para ambos os casos, inferimos o número de equipes paralelas do cronograma:
+        # max(num_equipes) na distribuição semanal
         assigned_resources = getattr(cron, "assigned_resources", None) or {}
         num_equipes_paralelas = sum(assigned_resources.values()) if assigned_resources else 1
 
@@ -2339,7 +2352,8 @@ def _init_instance_slots(n: int) -> tuple:
 
 
 def _assign_instances(items_data: list, n: int, semanas_contrato: int) -> tuple:
-    """Runs greedy instance assignment. Returns (instance_active, instance_standby, instance_activities, instance_last_active_week, instance_week_map, all_weeks_sorted)."""
+    """Runs greedy instance assignment. Returns (instance_active, instance_standby, instance_activities,
+    instance_last_active_week, instance_week_map, all_weeks_sorted)."""
     week_demand, week_activity_demand = _build_week_demand_maps(items_data)
     all_weeks_sorted = sorted(week_demand.keys(), key=_week_idx)
     span_by_item = {it["item_id"]: it["end_idx"] - it["start_idx"] for it in items_data}
@@ -2771,7 +2785,8 @@ def _reescalar_particao(contrato, novo_total: float, insts_contrato: list, eq_by
             ValidacaoItem(
                 codigo="VAL-INST-CAT-SOMA",
                 status="ERRO",
-                mensagem=f"ADR-085: Contrato {contrato.tipo_id} — decomposição categorial não fecha (desvio máx R$ {_max_dev:.2f} > 0.05).",
+                mensagem=f"ADR-085: Contrato {contrato.tipo_id} — decomposição categorial não fecha "
+                f"(desvio máx R$ {_max_dev:.2f} > 0.05).",
             )
         )
 

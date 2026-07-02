@@ -1066,7 +1066,8 @@ def env_summary() -> str:
         f"  mcp.rate_limit      : {mcp.rate_limit_calls}/{mcp.rate_limit_period_s}s",
         f"  pdf_renderer        : {rt.pdf_renderer}",
         f"  artifact_transport  : {rt.artifact_transport}",
-        f"  campaign.threshold  : {get_campaign().cardinality_threshold:,}  workers={get_campaign().max_workers}  s/cen={get_campaign().seconds_per_scenario}",
+        f"  campaign.threshold  : {get_campaign().cardinality_threshold:,}  "
+        f"workers={get_campaign().max_workers}  s/cen={get_campaign().seconds_per_scenario}",
         "────────────────────────────────────────────────────",
     ]
     return "\n".join(lines)

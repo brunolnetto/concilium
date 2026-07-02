@@ -827,7 +827,7 @@ class TestCuboAnaliticoUncoveredProjections:
             assert isinstance(key, tuple)
             assert len(key) == 2
         # All values should be dicts of componente_bdi → float
-        for key, val in hier.items():
+        for _key, val in hier.items():
             assert isinstance(val, dict)
 
     def test_custo_direto_por_atividade_semana_structure(self):

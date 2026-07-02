@@ -135,7 +135,7 @@ class TestOverrideService:
         mock_proj = MagicMock()
         mock_proj.read_json.return_value = {"skill-01": {"existing": True}}
         repo.get_project.return_value = mock_proj
-        result = svc.upsert_override("proj-1", "skill-01", {"new_key": "val"}, actor="eng")
+        svc.upsert_override("proj-1", "skill-01", {"new_key": "val"}, actor="eng")
         mock_proj.write_json.assert_called_once()
         audit.log.assert_called_once()
 

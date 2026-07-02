@@ -159,19 +159,6 @@ class TestCommandsBasic:
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
 
-    def test_ps_help(self):
-        from typer.testing import CliRunner
-
-        from concilium.presentation.cli.commands_basic import app
-
-        runner = CliRunner()
-        result = runner.invoke(app, ["--help"])
-        assert result.exit_code == 0
-
-
-# ─── runtime helpers pipeline ─────────────────────────────────────────────────
-
-
 class TestRuntimeHelpersPipeline:
     def test_parse_executed_skills_returns_set(self, tmp_path):
         from concilium.application.runtime.helpers.pipeline import _parse_executed_skills
@@ -185,7 +172,7 @@ class TestRuntimeHelpersPipeline:
         mock_fn = MagicMock()
         mock_fn.return_value = MagicMock(has_errors=False, validacoes=[])
         mock_store = MagicMock()
-        result = _execute_skill(mock_fn, {"k": "v"}, "skill-01", "exec-1", "ts", mock_store)
+        _execute_skill(mock_fn, {"k": "v"}, "skill-01", "exec-1", "ts", mock_store)
         mock_fn.assert_called_once()
 
     def test_resolve_state_ok_result(self):

@@ -160,7 +160,7 @@ def _build_dag_from_precedencias(
     2. inputs["precedencias"] (formato legado {predecessora, sucessora}) — compat.
     """
     # Mapa atividade → item_id para lookup rápido
-    atv_para_item: dict[str, str] = {a.atividade_id: a.item_id for item_eap in eap for a in []}
+    {a.atividade_id: a.item_id for item_eap in eap for a in []}
     # Na prática, nos são activity_ids derivados de item_ids. Usamos nome direto.
     arestas_validas: list[tuple[str, str, str, int]] = []
 
@@ -175,7 +175,7 @@ def _build_dag_from_precedencias(
         if item_id not in item_to_first_activity:
             item_to_first_activity[item_id] = activity_id
 
-    eap_by_id = {item.item_id: item for item in eap}
+    {item.item_id: item for item in eap}
     for item in eap:
         item_id = item.item_id
         if item_id not in item_to_first_activity:
@@ -262,7 +262,7 @@ def _build_activity_dag(
     longest_path_to, start_offset_min = _compute_longest_paths(nos, succ_map, pred_map_typed, ordem_topologica)
     return ActivityDag(
         nos=nos,
-        arestas=[ArestaActivityDag(de=d, para=p, tipo=t, lag=l) for d, p, t, l in arestas_validas],
+        arestas=[ArestaActivityDag(de=d, para=p, tipo=t, lag=ln) for d, p, t, ln in arestas_validas],
         ordem_topologica=ordem_topologica,
         critical_path=max(longest_path_to.values(), key=len) if longest_path_to else [],
         start_offset_min=start_offset_min,

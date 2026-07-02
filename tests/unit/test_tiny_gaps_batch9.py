@@ -159,7 +159,7 @@ class TestPuCalculatorHelpers:
         assert "total_producoes" in result
         assert result["total_producoes"] == 1
 
-    def test_converter_rental_unit_mensal(self):
+    def test_converter_rental_unit_mensal_horas(self):
         from concilium.application.catalog.pu_calculator import _converter_rental_unit
 
         # R$/mes → R$/hora: price / horas_mes

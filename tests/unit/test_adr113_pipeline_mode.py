@@ -11,7 +11,7 @@ class TestPipelineMode:
 
         skills = get_skills_for_mode(PipelineMode.OLTP)
         assert len(skills) == 6
-        for i, prefix in enumerate(["01", "02", "03", "04", "05", "06"], start=1):
+        for _i, prefix in enumerate(["01", "02", "03", "04", "05", "06"], start=1):
             assert any(s.startswith(prefix) for s in skills), f"Skill {prefix}-* ausente no OLTP"
 
     def test_olap_includes_all_skills(self):

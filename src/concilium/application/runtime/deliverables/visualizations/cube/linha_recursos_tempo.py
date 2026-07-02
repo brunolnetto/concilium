@@ -30,7 +30,7 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
         mo_data = (graficos_dict or {}).get("mao_obra", {}) if graficos_dict else {}
         mo_labels = mo_data.get("labels", []) if isinstance(mo_data, dict) else []
         mo_values = mo_data.get("values", []) if isinstance(mo_data, dict) else []
-        mo_map = {str(lbl): float(v) for lbl, v in zip(mo_labels, mo_values)} if mo_labels else {}
+        mo_map = {str(lbl): float(v) for lbl, v in zip(mo_labels, mo_values, strict=False)} if mo_labels else {}
         mo_aligned = [mo_map.get(p, 0.0) for p in periods]
         mo_by_funcao = mo_data.get("by_funcao", {}) if isinstance(mo_data, dict) else {}
         funcoes_unicas = (
@@ -101,7 +101,7 @@ def build(canonical, cubo, graficos_dict: dict | None = None) -> bytes | None:
             bottoms = [0.0] * len(x_axis)
             for idx, atv in enumerate(atv_ids_ordered):
                 vals = equipes_by_atv[atv]
-                tops = [b + v for b, v in zip(bottoms, vals)]
+                tops = [b + v for b, v in zip(bottoms, vals, strict=False)]
                 ax_team.fill_between(
                     x_axis, bottoms, tops, alpha=0.6, color=colors_atv[idx], label=atv.replace("eap-1_", "#")
                 )

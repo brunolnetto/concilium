@@ -14,8 +14,6 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal
 
-logger = logging.getLogger(__name__)
-
 from concilium.domain.models.canonical import (
     AtividadeCustoCompleto,
     CanonicalModel,
@@ -40,6 +38,8 @@ except ImportError:
     _spec_b.loader.exec_module(_mod_b)  # type: ignore[union-attr]
     _classificar_margem = _mod_b._classificar_margem
     _resolve_bdi_full = _mod_b._resolve_bdi_full
+
+logger = logging.getLogger(__name__)
 
 
 def _build_custo_categorial_bottom_up(canonical_in: CanonicalModel) -> dict[str, float]:

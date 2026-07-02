@@ -119,7 +119,7 @@ class TestExportEmptyProducoes:
         with patch("concilium.infrastructure.exporters.productivity_survey.pd.ExcelWriter", return_value=cm):
             with patch.object(pd.DataFrame, "to_excel", capture_to_excel):
                 with patch.object(exp, "_aplicar_estilo_survey_prod"):
-                    result = exp.export("/tmp/dummy.xlsx")
+                    exp.export("/tmp/dummy.xlsx")
 
         df = captured_dfs.get("Pesquisa_Produtividade")
         assert df is not None
@@ -534,7 +534,6 @@ class TestAplicarEstiloSurveyProd:
         def intercepting_cell(row, column):
             c = original_cell_fn(row=row, column=column)
             # Wrap __setattr__ to capture fill assignments
-            original_setattr = c.__class__.__setattr__
 
             def mock_setattr(self_c, name, value):
                 if name == "fill" and isinstance(value, PatternFill):

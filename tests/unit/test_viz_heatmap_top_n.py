@@ -90,7 +90,7 @@ class TestPlotHeatmapTopN:
         with patch("matplotlib.pyplot.subplots", return_value=(mock_fig, mock_ax)):
             with patch("matplotlib.pyplot.colorbar"):
                 with patch("matplotlib.colors.Normalize"):
-                    result = _plot(campo, title="Custom Title")
+                    _plot(campo, title="Custom Title")
         mock_ax.set_title.assert_called_once()
         call_args = mock_ax.set_title.call_args[0][0]
         assert "Custom Title" in call_args

@@ -355,7 +355,7 @@ class TestCatalogSessionWithDuckDB:
         with CatalogSession.from_resolved(minimal_catalogo) as session:
             assert session._loaded is True
         # Após __exit__, close() foi chamado — nova query levanta exceção
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             session.query("SELECT 1")
 
     def test_insumos_as_flat_list(self):

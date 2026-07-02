@@ -124,7 +124,7 @@ def build(canonical, cubo) -> bytes | None:
                 label=label,
                 width=0.7,
             )
-            for bar, val in zip(bars, values):
+            for bar, val in zip(bars, values, strict=False):
                 if val > 0:
                     mid_y = bar.get_y() + bar.get_height() / 2
                     ax.text(
@@ -137,7 +137,7 @@ def build(canonical, cubo) -> bytes | None:
                         color="white",
                         fontweight="bold",
                     )
-            baseline = [b + v for b, v in zip(baseline, values)]
+            baseline = [b + v for b, v in zip(baseline, values, strict=False)]
 
         ax.set_title("Consumo de Combustível no Tempo (por Semana do Mês)", fontsize=13, fontweight="bold")
         ax.set_ylabel("Consumo (kL)", fontsize=9)

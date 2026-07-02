@@ -98,6 +98,21 @@ from concilium.infrastructure.clients.openmeteo import DadosClimaticosMensais, O
 from concilium.infrastructure.storage.project import ProjectStore
 
 
+@pytest.fixture(autouse=True)
+def _reset_mcp_rate_limit_counters():
+    """Limpa os contadores in-memory de rate limit MCP (ADR-098) entre testes.
+
+    Sem isso, tools decoradas com @mcp_rate_limit acumulam chamadas de testes
+    anteriores na mesma janela e disparam 'Rate limit atingido' de forma
+    dependente da ordem de execução da suíte.
+    """
+    from concilium.presentation.mcp import rate_limit as _rate_limit_mod
+
+    _rate_limit_mod._counters.clear()
+    yield
+    _rate_limit_mod._counters.clear()
+
+
 @pytest.fixture(scope="session")
 def config_root() -> Path:
     """Path do diretório de configuração com dados seed."""

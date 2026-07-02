@@ -11,6 +11,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from ._chart_colors import _CORES, BG
+from ._chart_shared import (
+    _ATIVIDADES_GANTT,
+    _CENARIO_POOL_DEF,
+    _CENARIO_SLUGS,
+    _CORES_REC,
+    _load_json,
+)
 
 
 def _build_cenario_record(slug: str, meta: dict, inter_dir: Path) -> dict:

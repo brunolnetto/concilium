@@ -195,7 +195,7 @@ class TestApplyDv:
             "concilium.domain.models.project.decision_variables.DecisionVariables.model_validate",
             return_value=dv_validated,
         ) as mock_validate:
-            result = _apply_dv(canonical, {"some": "dict"})
+            _apply_dv(canonical, {"some": "dict"})
             mock_validate.assert_called_once_with({"some": "dict"})
 
     def test_already_typed_object_skips_validation(self):
@@ -235,7 +235,7 @@ class TestApplyDv:
             "concilium.domain.models.project.decision_variables.DecisionVariables.model_validate",
             return_value=sentinel,
         ):
-            result = _apply_dv(canonical, {"x": 1})
+            _apply_dv(canonical, {"x": 1})
         # no update needed since dv didn't change
         canonical.model_copy.assert_not_called()
 
@@ -262,7 +262,7 @@ class TestResolveState:
         canonical.model_copy.return_value = tainted
 
         result = self._make_result(has_errors=True, canonical=canonical)
-        new_state = _resolve_state(gate_skill, result, {})
+        _resolve_state(gate_skill, result, {})
         canonical.model_copy.assert_called_once()
         call_kwargs = canonical.model_copy.call_args[1]["update"]
         assert gate_skill in call_kwargs["pipeline_blocked_from"]
@@ -278,7 +278,7 @@ class TestResolveState:
         canonical.model_copy.return_value = cleared
 
         result = self._make_result(has_errors=False, canonical=canonical)
-        new_state = _resolve_state(gate_skill, result, {})
+        _resolve_state(gate_skill, result, {})
         canonical.model_copy.assert_called_once()
         call_kwargs = canonical.model_copy.call_args[1]["update"]
         assert gate_skill not in call_kwargs["pipeline_blocked_from"]
@@ -306,7 +306,7 @@ class TestResolveState:
             "concilium.application.runtime.helpers.pipeline._GATE_SKILLS",
             frozenset(),
         ):
-            new_state = _resolve_state("99-nongate", result, {})
+            _resolve_state("99-nongate", result, {})
         # no model_copy for taint
         canonical.model_copy.assert_not_called()
 

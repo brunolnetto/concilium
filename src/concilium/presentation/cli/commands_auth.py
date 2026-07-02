@@ -158,6 +158,7 @@ def remove_user(
         typer.confirm(f"Remover usuário '{client_id}' e revogar todos os seus dispositivos?", abort=True)
 
     store = get_auth_store()
+    store.revoke_device(client_id)  # revoga por client_id via list_devices
     # Revoke all devices for this client
     devices = store.list_devices(client_id=client_id)
     for d in devices:
@@ -196,10 +197,6 @@ def regenerate_code(
         rprint(f"[red]Erro:[/red] usuário '{user}' não encontrado.")
         raise typer.Exit(1)
 
-    rprint(f"\n[green]✓ Client code regenerado para '{user}'[/green]")
-    rprint(f"  Código  : [bold]{client_code}[/bold]")
-    rprint("  [dim]Reutilizável em quantos dispositivos o usuário precisar.[/dim]")
-
     if show_config:
         config_block = {
             "mcpServers": {
@@ -217,6 +214,8 @@ def regenerate_code(
         rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
         rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]\n")
         typer.echo(_json.dumps(config_block, indent=2, ensure_ascii=False))
+    else:
+        typer.echo(client_code)
 
 
 @app.command("list-devices")

@@ -630,36 +630,32 @@ class TestPrintCatalogValidationResults:
 
 
 class TestImplCatalogCureSchema:
-    """_impl_catalog_cure_schema delega para cure_schema.run() (execução in-process,
-    não mais um script externo) — mocka run() diretamente."""
+    """A impl atual chama cure_schema.run() diretamente (não mais scripts/cure_catalog.py)."""
 
-    def test_context_not_found_exits_1(self):
-        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
-
+    def test_exits_1_when_context_missing(self, monkeypatch):
         import typer
 
-        with patch(
-            "concilium.application.catalog.cure_schema.run",
-            side_effect=FileNotFoundError("Contexto não encontrado: ctx1"),
-        ):
-            with pytest.raises(typer.Exit) as exc_info:
-                _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
-        assert exc_info.value.exit_code == 1
-
-    def test_residual_errors_exit_1(self):
         from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
 
+        with pytest.raises((SystemExit, typer.Exit)) as exc_info:
+            _impl_catalog_cure_schema(contexto_id="ctx-inexistente", apply=True)
+        exc = exc_info.value
+        code = getattr(exc, "code", None) if isinstance(exc, SystemExit) else getattr(exc, "exit_code", None)
+        assert code == 1
+
+    def test_exits_1_on_runtime_error(self):
         import typer
 
-        with patch(
-            "concilium.application.catalog.cure_schema.run",
-            side_effect=RuntimeError("erros residuais na curação"),
-        ):
-            with pytest.raises(typer.Exit) as exc_info:
-                _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
-        assert exc_info.value.exit_code == 1
+        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
 
-    def test_success_does_not_raise_and_forwards_apply_flag(self):
+        with patch("concilium.application.catalog.cure_schema.run", side_effect=RuntimeError("erros residuais")):
+            with pytest.raises((SystemExit, typer.Exit)) as exc_info:
+                _impl_catalog_cure_schema(contexto_id="ctx1", apply=True)
+        exc = exc_info.value
+        code = getattr(exc, "code", None) if isinstance(exc, SystemExit) else getattr(exc, "exit_code", None)
+        assert code == 1
+
+    def test_success_does_not_raise_and_forwards_flags(self):
         from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_cure_schema
 
         with patch("concilium.application.catalog.cure_schema.run") as mock_run:
@@ -1133,7 +1129,7 @@ class TestPerfilNewVersion:
             return_value=mock_svc,
         ):
             with patch("concilium.presentation.cli.commands_config_version._config_root", return_value=Path("/fake")):
-                result = runner.invoke(
+                runner.invoke(
                     app, ["new-version", "perfil1", "--motivo", "jurisdição nova", "--jurisdicao-id", "BR-SP"]
                 )
 

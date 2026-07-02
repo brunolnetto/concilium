@@ -382,7 +382,7 @@ class TestShowCrossDomain:
             patch(
                 "concilium.infrastructure.observability.cross_domain.default_canonical_provider",
                 return_value=canonical_provider_mock,
-            ) as mock_dcp,
+            ),
         ):
             result = runner.invoke(observability_app, ["cross-domain"])
         assert result.exit_code == 0

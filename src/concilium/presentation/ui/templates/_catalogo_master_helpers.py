@@ -10,7 +10,7 @@ import streamlit as st
 
 try:
     from ..atoms.form_contracts import CPU_EDITABLE_FIELDS, CPU_READONLY_FIELDS, render_typed_form
-    from ..config import DEFAULT_ACTOR, DEFAULT_BASE_URL
+    from ..config import DEFAULT_ACTOR
     from ..infra.api import api_call
 except ImportError:
     src_root = Path(__file__).resolve().parents[4]

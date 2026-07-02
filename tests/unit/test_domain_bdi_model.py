@@ -49,7 +49,7 @@ def _make_comp(
     df=0.015,
     r=0.01,
     cr=0.0,
-    l=0.09,
+    l=0.09,  # noqa: E741
     cofins=0.0,
     iss=BDI_ISS,
     pis=0.0,
@@ -1013,7 +1013,7 @@ def test_perfil_bdi_projeto_all_lucro_categories():
 
 
 def test_componentes_bdi_rejects_ac_gt_1():
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         ComponentesBdi(
             ac=1.5,
             df=0.0,
@@ -1029,7 +1029,7 @@ def test_componentes_bdi_rejects_ac_gt_1():
 
 
 def test_componentes_bdi_rejects_negative_field():
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017
         ComponentesBdi(
             ac=-0.01,
             df=0.0,

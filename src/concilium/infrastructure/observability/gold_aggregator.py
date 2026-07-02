@@ -98,7 +98,7 @@ class GoldAggregator:
         """)
         con.executemany(
             "INSERT INTO logs VALUES (?, ?, ?, ?)",
-            [(l.get("event_id", ""), l.get("skill_id"), l.get("fallback_type"), l.get("ts", "")) for l in logs],
+            [(ln.get("event_id", ""), ln.get("skill_id"), ln.get("fallback_type"), ln.get("ts", "")) for ln in logs],
         )
         rows = con.execute("""
             SELECT

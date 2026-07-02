@@ -280,7 +280,7 @@ class LnsScheduler:
     ) -> dict[str, float]:
         """Sum λ penalties per activity (activity j as follower in concurrent pair)."""
         penalties: dict[str, float] = {aid: 0.0 for aid in topo}
-        for (aid_i, aid_j, _res), lam in lambdas.items():
+        for (_aid_i, aid_j, _res), lam in lambdas.items():
             penalties[aid_j] = penalties.get(aid_j, 0.0) + lam
         return penalties
 

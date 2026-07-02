@@ -69,7 +69,7 @@ class TestApplyBodyRow:
 
         # fill attribute should not have been set
         assert cell.fill != MagicMock()  # it remains the default mock attribute
-        cell.fill  # just ensure no AttributeError
+        assert cell.fill is not None  # just ensure no AttributeError
 
     def test_border_always_applied(self):
         from concilium.infrastructure.exporters.catalog_excel import _apply_body_row
@@ -277,7 +277,7 @@ class TestCexBuildInsumosDfs:
 class TestCexBuildCpuRow:
     def _exporter_with_mock_sim(self, catalogo=None):
         cat = catalogo or _minimal_catalogo()
-        with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia") as MockSim:
+        with patch("concilium.infrastructure.exporters.catalog_excel.SimuladorEngenharia"):
             from concilium.infrastructure.exporters.catalog_excel import CatalogExporterExcel
 
             exp = CatalogExporterExcel(cat)
@@ -400,7 +400,7 @@ class TestCexBuildCpuRow:
         }
         exp._cex_build_cpu_row(cpu)
         calls = mock_sim.simular_cpu.call_args_list
-        regimes = [c[0][3] for c in calls]  # 4th positional arg is the regime string... actually check kwargs
+        [c[0][3] for c in calls]  # 4th positional arg is the regime string... actually check kwargs
         # simular_cpu(cpu_id, qty, jornada, frentes, regime)
         call_args = [c.args for c in calls]
         assert any("clt" in str(args) for args in call_args)
@@ -680,7 +680,6 @@ class TestAplicarEstilo:
         writer = self._make_mock_writer(["TestSheet"])
         exp._aplicar_estilo(writer)
         ws = writer.sheets["TestSheet"]
-        ws.auto_filter.__setattr__  # accessed
         assert ws.auto_filter.ref == "A1:Z100"
 
     def test_aplicar_estilo_sets_column_width(self):
@@ -689,7 +688,7 @@ class TestAplicarEstilo:
         exp._aplicar_estilo(writer)
         ws = writer.sheets["ColSheet"]
         # width should have been set on the column dimension
-        ws.column_dimensions["A"].width  # attribute accessed
+        assert ws.column_dimensions["A"].width is not None  # attribute accessed
 
     def test_aplicar_estilo_uses_idv_tokens(self):
         """Custom identidade_visual tokens are consumed without error."""

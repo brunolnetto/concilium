@@ -34,6 +34,7 @@ try:
         _derive_rcpsp_from_canonical,
         _enrich_equipes_com_decomposicao_instancial,
         _enrich_particao_overhead,
+        _RepoCtx,
         particionar_contrato,
     )
     from ._skill_helpers_b import (
@@ -58,6 +59,7 @@ except ImportError:
     _mod_pre = importlib.util.module_from_spec(_spec_pre)  # type: ignore[arg-type]
     _spec_pre.loader.exec_module(_mod_pre)  # type: ignore[union-attr]
 
+    _RepoCtx = _mod_a._RepoCtx
     _build_dimensionamento = _mod_a._build_dimensionamento
     _build_contratos_recurso = _mod_a._build_contratos_recurso
     _build_instancias_recurso = _mod_a._build_instancias_recurso
@@ -472,11 +474,3 @@ def run_equipes_e_alocacao(
     return SkillResult(novo, validacoes)
 
 
-class _RepoCtx:
-    """Contexto para lookups rápidos durante dimensionamento."""
-
-    def __init__(self, repo, jurisdicao_id, overrides, data_base):
-        self.repo = repo
-        self.jurisdicao_id = jurisdicao_id
-        self.overrides = overrides or {}
-        self.data_base = data_base

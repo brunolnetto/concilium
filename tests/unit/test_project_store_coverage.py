@@ -258,7 +258,7 @@ class TestNewVersion:
         # Write canonical to v1
         canonical_content = '{"meta": {"versao_schema": "1.0.0"}, "eap": []}'
         (store.root / "v1" / ProjectStore.CANONICAL_FILE).write_text(canonical_content, encoding="utf-8")
-        v2 = store.new_version()  # should copy v1 canonical
+        store.new_version()  # should copy v1 canonical
         assert (store.root / "v2" / ProjectStore.CANONICAL_FILE).exists()
 
     def test_copy_from_explicit_base(self, tmp_path):
@@ -267,7 +267,7 @@ class TestNewVersion:
         store.new_version()  # v2
         canonical_content = '{"meta": {"versao_schema": "1.0.0"}, "eap": []}'
         (store.root / "v1" / ProjectStore.CANONICAL_FILE).write_text(canonical_content, encoding="utf-8")
-        v3 = store.new_version(base="v1")
+        store.new_version(base="v1")
         assert (store.root / "v3" / ProjectStore.CANONICAL_FILE).exists()
 
     def test_current_version_updated(self, tmp_path):
@@ -501,7 +501,7 @@ class TestLogInvocation:
         log_path = store.root / v / ProjectStore.INVOCATIONS_LOG
         lines = log_path.read_text(encoding="utf-8").splitlines()
         # new_version creates an empty invocations.log, log_invocation appends
-        non_empty = [l for l in lines if l.strip()]
+        non_empty = [ln for ln in lines if ln.strip()]
         assert len(non_empty) == 1
         entry = json.loads(non_empty[0])
         assert entry["skill"] == "04"
@@ -569,7 +569,7 @@ class TestProjectStoreInit:
         overlay_file.write_text('{"CPU-EXISTING": {"x": 1}}', encoding="utf-8")
 
         # Re-init same slug
-        store2 = ProjectStore.init(tmp_path, "Bench", "ctx", derivado_de_benchmark="BENCH-PRESERVED")
+        ProjectStore.init(tmp_path, "Bench", "ctx", derivado_de_benchmark="BENCH-PRESERVED")
         data = json.loads(overlay_file.read_text(encoding="utf-8"))
         assert "CPU-EXISTING" in data
 
@@ -717,7 +717,7 @@ class TestSaveCanonicalSidecarFailure:
 # ── resolve_cpu paths ─────────────────────────────────────────────────────────
 
 
-class TestResolveCpu:
+class TestResolveCpuFallbacks:
     def test_returns_none_when_no_override_no_catalogo_no_snapshots(self, tmp_path):
         store = _make_store(tmp_path)
         result = store.resolve_cpu("CPU-NONEXISTENT")
@@ -725,7 +725,7 @@ class TestResolveCpu:
 
     def test_override_json_returned_first(self, tmp_path):
         store = _make_store(tmp_path)
-        v = store.new_version()
+        store.new_version()
         override_dir = store.root / "overrides"
         override_dir.mkdir(exist_ok=True)
         import json as _json

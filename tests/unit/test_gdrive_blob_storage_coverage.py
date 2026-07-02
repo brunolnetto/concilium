@@ -107,7 +107,7 @@ def test_resolve_folder_child_not_found_create_true_creates_folder(gdrive):
     assert gdrive._folder_cache["newdir"] == new_fid
     mock_files.create.assert_called_once()
     call_kwargs = mock_files.create.call_args
-    body = call_kwargs.kwargs.get("body") or call_kwargs[1].get("body") or call_kwargs[0][0]
+    call_kwargs.kwargs.get("body") or call_kwargs[1].get("body") or call_kwargs[0][0]
     # Verify create was called with the segment name
     assert "newdir" in str(call_kwargs)
 
@@ -127,8 +127,6 @@ def test_resolve_folder_child_found_uses_existing_fid(gdrive):
 def test_resolve_folder_multi_segment_creates_nested(gdrive):
     """Lines 104-116: multiple missing segments with create=True → creates each, caches all."""
     gdrive._folder_cache = {}
-    fids = {"a": "fid-a", "b": "fid-b"}
-    call_count = [0]
 
     def make_create(seg_fid):
         m = MagicMock()

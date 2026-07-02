@@ -9,14 +9,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from concilium.application.skills import MANIFEST_META
 
 # ── Tiers de execução (ADR-113) ───────────────────────────────────────────────
 
 
-class PipelineMode(str, Enum):
+class PipelineMode(StrEnum):
     """Modo de execução do pipeline de skills.
 
     OLTP  — skills 01-06: resultado de planejamento em tempo real (< 30s)
@@ -29,7 +29,7 @@ class PipelineMode(str, Enum):
     OLAP = "olap"  # completo: 01-11
 
 
-class ProcurementIntent(str, Enum):
+class ProcurementIntent(StrEnum):
     """Intenção de procurement no fluxo RFX."""
 
     RFI = "rfi"

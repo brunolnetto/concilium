@@ -17,7 +17,6 @@ try:
     )
     from ..config import DEFAULT_ACTOR, DEFAULT_BASE_URL
     from ..infra.api import api_call
-    from ..molecules.common import render_page_heading
 except ImportError:
     src_root = Path(__file__).resolve().parents[4]
     if str(src_root) not in sys.path:

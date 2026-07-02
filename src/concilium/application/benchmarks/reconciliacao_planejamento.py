@@ -280,11 +280,13 @@ def gerar_relatorio_reconciliacao(analise: DisparityAnalysis) -> str:
         f"  Planejamento Direto (s/ BDI):     R$ {analise.total_planej_direto_sem_bdi:,.2f}",
         f"  Planejamento Direto (c/ BDI):     R$ {analise.total_planej_direto_com_bdi:,.2f}",
         f"  Canonical Direto:                 R$ {analise.total_canonical_direto:,.2f}",
-        f"  Delta Direto (c/ BDI):            R$ {analise.total_canonical_direto - analise.total_planej_direto_com_bdi:,.2f}",
+        f"  Delta Direto (c/ BDI):            R$ "
+        f"{analise.total_canonical_direto - analise.total_planej_direto_com_bdi:,.2f}",
         "",
         f"  Planejamento Indireto:            R$ {analise.total_planej_indireto:,.2f}",
         f"  Canonical Indireto:               R$ {analise.total_canonical_indireto:,.2f}",
-        f"  Delta Indireto:                   R$ {analise.total_canonical_indireto - analise.total_planej_indireto:,.2f}",
+        f"  Delta Indireto:                   R$ "
+        f"{analise.total_canonical_indireto - analise.total_planej_indireto:,.2f}",
         "",
         "[DISPARIDADES CRÍTICAS]",
     ]

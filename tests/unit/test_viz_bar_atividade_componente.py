@@ -353,7 +353,7 @@ class TestRenderDirect:
         mod = _import_module()
         rows = _minimal_rows()
         # Should not emit any UserWarning to the test
-        with warnings.catch_warnings(record=True) as caught:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             fig = mod._render(self.plt, rows)
         assert fig is not None

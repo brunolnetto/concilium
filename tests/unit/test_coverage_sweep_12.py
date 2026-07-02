@@ -74,7 +74,7 @@ class TestBrBuildVendaCustoFallback:
             item_id="EAP-01",
             custo_total=custo_total,
         )
-        plan_item = SimpleNamespace(
+        SimpleNamespace(
             subtotal=SimpleNamespace(
                 sem_bdi=SimpleNamespace(total=0.0, material=0.0),
                 com_bdi=SimpleNamespace(total=0.0),

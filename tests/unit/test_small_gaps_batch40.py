@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-
 # ─── inference.py lines 155-157 (canonical path + direto_itemizado) ──────────
 
 

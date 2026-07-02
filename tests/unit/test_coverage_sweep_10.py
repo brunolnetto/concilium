@@ -9,7 +9,9 @@ from unittest.mock import MagicMock
 
 def _load_skill_module(skill_dir: str, module_name: str):
     """Load a skill module from a directory with dashes in name."""
-    base = "/home/pingu/github/agente-gerente-de-engenharia/src/concilium/application/skills/manifests"
+    from pathlib import Path as _Path
+
+    base = str(_Path(__file__).resolve().parents[2] / "src/concilium/application/skills/manifests")
     target = os.path.join(base, skill_dir, f"{module_name}.py")
     if not os.path.exists(target):
         return None

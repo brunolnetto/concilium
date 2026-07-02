@@ -13,6 +13,18 @@ import os
 from pathlib import Path
 
 from ._chart_colors import _CORES, BG
+from ._chart_shared import (
+    _CRIT_COR,
+    _EAP_DATA,
+    _INDIR_COR_DATA,
+    _INDIR_DATA,
+    _TIMES_DATA,
+    _ps_draw_deadline_makespan,
+    _ps_draw_delta_cd,
+    _ps_draw_insight,
+    _ps_draw_pool_bars,
+    _ps_draw_viabilidade,
+)
 
 
 def _chart_plan_space(plt, out_dir: Path, slug: str, cenarios: list, np) -> Path:

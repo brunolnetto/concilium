@@ -7,6 +7,10 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from concilium.infrastructure.auth.permission_guard import permission
+from concilium.presentation.mcp._context import _wrap_response
+from concilium.presentation.mcp.rate_limit import mcp_rate_limit
+
 from ._catalogo_tools_helpers_a import (
     _impl_adicionar_variante_producao,
     _impl_atualizar_preco_insumo,
@@ -28,8 +32,6 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
 
 
-from concilium.infrastructure.auth.permission_guard import permission
-
 
 def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de catálogo."""
@@ -37,14 +39,16 @@ def register(server: FastMCP) -> None:
     # ── Lookup / pesquisa ────────────────────────────────────────────────────
 
     @server.tool(
-        description="Lista os contextos de catálogo disponíveis (ex: mendeslobo, test). Ponto de entrada para descobrir contexto_id."
+        description="Lista os contextos de catálogo disponíveis (ex: mendeslobo, test). "
+        "Ponto de entrada para descobrir contexto_id."
     )
     @permission("catalog:read")
     def listar_contextos() -> dict[str, Any]:
         return _impl_listar_contextos()
 
     @server.tool(
-        description="Busca CPUs por código ou descrição (ex: query='escavação 1ª cat'). Use para encontrar cpu_id antes de criar projeto."
+        description="Busca CPUs por código ou descrição (ex: query='escavação 1ª cat'). "
+        "Use para encontrar cpu_id antes de criar projeto."
     )
     @permission("catalog:read")
     def pesquisar_catalogo(
@@ -104,9 +108,11 @@ def register(server: FastMCP) -> None:
     # ── Mutação / atualização ────────────────────────────────────────────────
 
     @server.tool(
-        description="Atualiza o preço de um insumo (ex: novo preço de diesel após cotação). Use projeto_id para override de projeto em vez de alterar o master."
+        description="Atualiza o preço de um insumo (ex: novo preço de diesel após cotação). "
+        "Use projeto_id para override de projeto em vez de alterar o master."
     )
     @permission("catalog:write")
+    @mcp_rate_limit()
     def atualizar_preco_insumo(
         contexto_id: str,
         insumo_id: str,
@@ -118,9 +124,11 @@ def register(server: FastMCP) -> None:
         return _impl_atualizar_preco_insumo(contexto_id, insumo_id, novo_preco, projeto_id, jurisdicao_id, nota)
 
     @server.tool(
-        description="Adiciona uma variante de produtividade a uma producao existente (ex: equipe alternativa com custo/hora diferente)."
+        description="Adiciona uma variante de produtividade a uma producao existente "
+        "(ex: equipe alternativa com custo/hora diferente)."
     )
     @permission("catalog:write")
+    @mcp_rate_limit()
     def adicionar_variante_producao(
         contexto_id: str,
         producao_id: str,
@@ -139,7 +147,8 @@ def register(server: FastMCP) -> None:
     @server.tool(
         description=(
             "Consulta histórico de preços do catálogo em dois modos: "
-            "'pontual' — preço de um insumo específico em uma data (para verificar preço vigente na época do contrato); "
+            "'pontual' — preço de um insumo específico em uma data "
+            "(para verificar preço vigente na época do contrato); "
             "'tendencia' — evolução histórica de todos os insumos (para detectar inflação/deflação sistêmica)."
         )
     )
@@ -174,7 +183,8 @@ def register(server: FastMCP) -> None:
             return _wrap_response({"erro": f"modo '{modo}' inválido. Use: pontual | tendencia"})
 
     @server.tool(
-        description="Compara dados de RFI (Request for Information) com o catálogo master e lista divergências. dry_run=True (padrão) apenas mostra — use dry_run=False para aplicar as diferenças."
+        description="Compara dados de RFI (Request for Information) com o catálogo master e lista divergências. "
+        "dry_run=True (padrão) apenas mostra — use dry_run=False para aplicar as diferenças."
     )
     @permission("financials:read")
     def comparar_rfi_catalogo(
@@ -184,7 +194,8 @@ def register(server: FastMCP) -> None:
         return _impl_comparar_rfi_catalogo(contexto_id, dry_run)
 
     @server.tool(
-        description="Recalcula o preço unitário de uma produção específica dado alpha_clt, alpha_pj e preço do diesel. Use para simular impacto de mudança de encargos ou combustível em uma CPU."
+        description="Recalcula o preço unitário de uma produção específica dado alpha_clt, alpha_pj e preço do diesel. "
+        "Use para simular impacto de mudança de encargos ou combustível em uma CPU."
     )
     @permission("catalog:read")
     def calcular_pu_producao(
@@ -259,6 +270,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:write")
+    @mcp_rate_limit()
     def criar_rascunho_catalogo(
         contexto_id: str,
         descricao: str,
@@ -279,10 +291,10 @@ def register(server: FastMCP) -> None:
         config_root = get_storage().config_root
         svc = ContextoVersionService(config_root)
         actor = get_current_user_id() or "system"
-        roles = list(_current_roles.get())
+        list(_current_roles.get())
         try:
             current_v = svc.current_version(contexto_id)
-            current_data = svc.resolve(contexto_id) or {}
+            svc.resolve(contexto_id) or {}
             new_v = svc.create_version(
                 contexto_id,
                 fields={"_rascunho": True, "_rascunho_descricao": descricao},
@@ -394,6 +406,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:merge")
+    @mcp_rate_limit()
     def aprovar_merge_catalogo(
         contexto_id: str,
         rascunho_id: str,
@@ -457,6 +470,7 @@ def register(server: FastMCP) -> None:
         )
     )
     @permission("catalog:merge")
+    @mcp_rate_limit()
     def rejeitar_rascunho_catalogo(
         contexto_id: str,
         rascunho_id: str,
@@ -596,6 +610,7 @@ def register(server: FastMCP) -> None:
                 "tamanho_mb": size_mb,
                 "conteudo_base64": conteudo_b64,
                 "encoding": "base64",
-                "instrucao": "Decodifique base64 e salve como .xlsx. Campos destacados em amarelo são para preenchimento do fornecedor.",
+                "instrucao": "Decodifique base64 e salve como .xlsx. "
+                "Campos destacados em amarelo são para preenchimento do fornecedor.",
             }
         )

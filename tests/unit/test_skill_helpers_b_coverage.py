@@ -387,7 +387,7 @@ class TestRbfTryTaxScenario:
 
         # Build a minimal scenario that from_dict can parse
         try:
-            scenario = TaxSimulationScenario.from_dict({"regime_version": "pre_reforma"})
+            TaxSimulationScenario.from_dict({"regime_version": "pre_reforma"})
         except Exception:
             pytest.skip("Cannot build minimal TaxSimulationScenario for this test")
 

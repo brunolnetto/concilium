@@ -538,7 +538,7 @@ def render_memorial_catalogo(wb, canonical) -> None:
             "0.00",
         ]
 
-        for col, (v, fmt) in enumerate(zip(vals, fmts), 1):
+        for col, (v, fmt) in enumerate(zip(vals, fmts, strict=False), 1):
             cell = ws.cell(row=row, column=col, value=v)
             cell.fill = fill
             cell.border = _border()
@@ -597,7 +597,7 @@ def render_memorial_catalogo(wb, canonical) -> None:
                 cat,
             ]
             fmts = [None, None, None, None, "0", "#,##0.00", "#,##0.00", "#,##0.00", None]
-            for col, (v, fmt) in enumerate(zip(vals, fmts), 1):
+            for col, (v, fmt) in enumerate(zip(vals, fmts, strict=False), 1):
                 cell = ws.cell(row=row, column=col, value=v)
                 cell.fill = fill
                 cell.border = _border()
@@ -657,7 +657,7 @@ def render_memorial_catalogo(wb, canonical) -> None:
                 round(total, 2),
             ]
             fmts = [None, None, None, None, "0", "#,##0.00", "#,##0.00", "#,##0.00", "#,##0.00"]
-            for col, (v, fmt) in enumerate(zip(vals, fmts), 1):
+            for col, (v, fmt) in enumerate(zip(vals, fmts, strict=False), 1):
                 cell = ws.cell(row=row, column=col, value=v)
                 cell.fill = fill
                 cell.border = _border()

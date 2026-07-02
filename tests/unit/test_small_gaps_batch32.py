@@ -98,7 +98,7 @@ class TestCpSatSchedulerUnknownPrecedenceType:
 
         # ExtendedPrecedence normally requires Literal['FS', 'SS', 'FF'],
         # but we can bypass with object() trick or by creating an instance manually
-        ep = ExtendedPrecedence(pred="A", succ="B", tipo="FS", lag=0)
+        ExtendedPrecedence(pred="A", succ="B", tipo="FS", lag=0)
         # Manually set tipo to unknown value using object.__setattr__
 
         # Simpler: create via __new__ and set fields directly

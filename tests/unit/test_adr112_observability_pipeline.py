@@ -816,7 +816,7 @@ class TestObservabilityCLI:
         monkeypatch.setattr(pipeline_mod.ObservabilityWorker, "run", fake_run)
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path))
         runner = CliRunner()
-        result = runner.invoke(observability_app, ["run"])
+        runner.invoke(observability_app, ["run"])
         assert called.get("signal_type") is not None
 
     def test_cli_run_full_reload_flag(self, monkeypatch, tmp_path):
@@ -1007,7 +1007,7 @@ class TestSchedulerGoldException:
             side_effect=RuntimeError("gold failed"),
         ):
             with caplog.at_level(logging.WARNING):
-                result = scheduler.run_cycle(now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC))
+                scheduler.run_cycle(now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC))
 
         assert any("Gold" in r.message for r in caplog.records)
 

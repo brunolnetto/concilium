@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-logger = logging.getLogger(__name__)
-
 from concilium.application.benchmarks.execution.batch import discover_benchmark_slugs
 from concilium.application.runtime import Runtime
 from concilium.application.services.pipeline_service import PipelineService
@@ -24,6 +22,8 @@ from ._concilium_service_helpers import (
     _enrich_cpus_with_producao,
 )
 from .catalog.catalog_reasonability import build_catalog_reasonability_artifact
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)

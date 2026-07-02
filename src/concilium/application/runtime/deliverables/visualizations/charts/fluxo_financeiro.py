@@ -32,14 +32,14 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
             despesa_per = [receita[i] - saldo[i] for i in range(n)]
             receita_acum, despesa_acum = [], []
             r_cum, d_cum = 0.0, 0.0
-            for r, d in zip(receita[:n], despesa_per):
+            for r, d in zip(receita[:n], despesa_per, strict=False):
                 r_cum += r
                 d_cum += d
                 receita_acum.append(r_cum)
                 despesa_acum.append(d_cum)
             x2 = list(range(n))
             # ── Subplot 2: saldo acumulado (receita - despesa) ──────────────────
-            saldo_acum = [r - d for r, d in zip(receita_acum, despesa_acum)]
+            saldo_acum = [r - d for r, d in zip(receita_acum, despesa_acum, strict=False)]
             bar_colors_saldo = ["#27ae60" if v >= 0 else "#c05c18" for v in saldo_acum]
             ax_saldo.bar(x2, saldo_acum, color=bar_colors_saldo, alpha=0.8)
             ax_saldo.axhline(0, color="black", linewidth=0.8, linestyle="--", alpha=0.5)
@@ -60,7 +60,7 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
             ax_saldo.grid(axis="y", alpha=0.3)
             # ── Subplot 3: break-even receita vs despesa ────────────────────────
             be_idx = next(
-                (i for i, (r, d) in enumerate(zip(receita_acum, despesa_acum)) if r >= d),
+                (i for i, (r, d) in enumerate(zip(receita_acum, despesa_acum, strict=False)) if r >= d),
                 None,
             )
             ax2.plot(x2, receita_acum, color="#1a3a5c", linewidth=2, marker="o", markersize=3, label="Receita Acum.")
@@ -69,7 +69,7 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
                 x2,
                 receita_acum,
                 despesa_acum,
-                where=[r < d for r, d in zip(receita_acum, despesa_acum)],
+                where=[r < d for r, d in zip(receita_acum, despesa_acum, strict=False)],
                 color="#c05c18",
                 alpha=0.12,
                 label="Exposicao",
@@ -78,7 +78,7 @@ def build_fluxo_financeiro(financeiro: dict) -> bytes | None:
                 x2,
                 receita_acum,
                 despesa_acum,
-                where=[r >= d for r, d in zip(receita_acum, despesa_acum)],
+                where=[r >= d for r, d in zip(receita_acum, despesa_acum, strict=False)],
                 color="#1a3a5c",
                 alpha=0.12,
                 label="Superavit Acum.",
