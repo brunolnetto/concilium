@@ -1,7 +1,7 @@
 # ADRs — Architecture Decision Records
 
 **Projeto:** Concilium — MendesLobo Construtora  
-**Convenção de nome:** `adr-{NNN}-{slug}.md` (kebab-case, lowercase)
+**Convenção de nome:** `adr-{NNN}-{slug}.md` (kebab-case, lowercase) para ADRs novas; vários arquivos legados anteriores a esta convenção mantêm o prefixo `ADR-` (uppercase, ex.: `ADR-100-catalog-query-engine-duckdb.md`) e não são renomeados retroativamente
 
 ---
 
@@ -237,6 +237,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [125](adr-125-separacao-custo-produtivo-pool-mob-demob-indireto.md) | Hierarquia de Custo: C_prod / C_pool / Contrato; Mob/Demob como Custo Indireto | 💡 Proposta 2026-06-28 | ADR-085, ADR-106, ADR-124, NEP-028 |
 | [126](adr-126-project-ownership.md) | Project Ownership: `owner_id` em `ProjectMeta`, distinto de autoria por versão (ADR-119); autorização combinada (role + ownership) para ações destrutivas; handover híbrido; propagação de remove-user | 💡 Proposta 2026-07-02 | ADR-099, ADR-117, ADR-118, ADR-119, ADR-094 |
 | [127](adr-127-regime-contrato-vs-precificacao-horaria.md) | Regime de Contrato (Contínuo/Mensal) vs. Precificação Horária: consolida `rental_unit`/`unidade_faturamento`/custo idle já implementados (só documentação, sem código novo); multa de rescisão avaliada e descartada de escopo | ✅ Implementado 2026-07-02 | ADR-080, ADR-108, ADR-125 |
+| [128](adr-128-disponibilidade-recursos-consumiveis.md) | Disponibilidade de Recursos Consumíveis: `DisponibilidadeConsumivel` (estoque/capacidade/reabastecimento) e `ReplenishableResource` no motor RCPSP para diesel/material; reaproveita `prazo_entrega` hoje não utilizado | 💡 Proposta 2026-07-02 | ADR-107, ADR-090, ADR-046 |
 
 **Legenda:** ✅ Implementado/Decidido · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 
@@ -285,7 +286,7 @@ graph TD
         A043[ADR-043\nBenchmark App Layer]
         A044[ADR-044\nPlanilha-First PU]
         A045[ADR-045\nPipeline SINAPI/SICRO]
-        A046[ADR-046\nRCSP Completo]
+        A046[ADR-046\nRCPSP Completo]
         A047[ADR-047\nSharePoint BlobStorage]
         A048[ADR-048\nAPI + UI Iteracao Rapida]
         A049[ADR-049\nValidacao PU Convergente]
