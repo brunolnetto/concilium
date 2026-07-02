@@ -238,6 +238,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [126](adr-126-project-ownership.md) | Project Ownership: `owner_id` em `ProjectMeta`, distinto de autoria por versão (ADR-119); autorização combinada (role + ownership) para ações destrutivas; handover híbrido; propagação de remove-user | 💡 Proposta 2026-07-02 | ADR-099, ADR-117, ADR-118, ADR-119, ADR-094 |
 | [127](adr-127-regime-contrato-vs-precificacao-horaria.md) | Regime de Contrato (Contínuo/Mensal) vs. Precificação Horária: consolida `rental_unit`/`unidade_faturamento`/custo idle já implementados (só documentação, sem código novo); multa de rescisão avaliada e descartada de escopo | ✅ Implementado 2026-07-02 | ADR-080, ADR-108, ADR-125 |
 | [128](adr-128-disponibilidade-recursos-consumiveis.md) | Disponibilidade de Recursos Consumíveis: `DisponibilidadeConsumivel` (estoque/capacidade/reabastecimento) e `ReplenishableResource` no motor RCPSP para diesel/material; reaproveita `prazo_entrega` hoje não utilizado | 💡 Proposta 2026-07-02 | ADR-107, ADR-090, ADR-046 |
+| [129](adr-129-cotacao-por-proximidade-geografica.md) | Cotação por Proximidade Geográfica: `MunicipioReferenceClient` (IBGE), reconexão do `FuelPriceClient` hoje desconectado, resolução por município mais próximo às coordenadas do `Escopo`, desempate por população | 💡 Proposta 2026-07-02 | ADR-032, ADR-066, ADR-107 |
 
 **Legenda:** ✅ Implementado/Decidido · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 
