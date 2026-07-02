@@ -12,7 +12,7 @@
 ```markdown
 # ADR-{NNN} — {Título Descritivo}
 
-**Status:** {Implementado | Aceito | Proposta | Parcialmente Implementado | Supersedido}
+**Status:** {Implementado | Decidido | Aceito | Proposta | Parcialmente Implementado | Supersedido}
 **Data:** AAAA-MM-DD
 **Contexto:** MendesLobo Construtora — Concilium
 
@@ -44,6 +44,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 - **Implementado:** Código em produção, DoD completo
 - **Parcialmente Implementado:** Algumas fases concluídas
 - **Aceito:** Decisão tomada, implementação pendente
+- **Decidido:** Sinônimo de "Aceito" usado em algumas ADRs (ex.: ADR-122, ADR-123) — decisão tomada, implementação pendente ou já concluída na mesma entrada
 - **Proposta:** Em discussão
 - **Supersedido:** Substituído por ADR posterior
 
@@ -229,8 +230,13 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [118](adr-118-tool-invocation-audit.md) | Auditoria de Invocações MCP — `ToolInvocation` frozen dataclass; `_current_user_id`/`_current_tenant_id` contextvars; `McpAuthMiddleware` propaga sub+tid; `patch_fastmcp_server_with_audit`; `BlobToolInvocationRepository` NDJSON append-only via BlobStoragePort | ✅ Implementado 2026-06-22 _(F1-F7 · model+repo+patcher+blob+55 testes)_ | ADR-014, ADR-095, ADR-099, ADR-117, ADR-103 |
 | [119](adr-119-multi-actor-project-management.md) | Gestão Multi-Ator de Projetos — `ROLE_ALLOWED_INTENTS` (operator→RFI, engineer→RFI+RFP), `version_history` com autoria, fork rastreado, `/versions?tree=true`, `/compare` cross-ator, `VersionAction` audit | ✅ Implementado 2026-06-22 _(F1-F6 · 22 testes)_ | ADR-031, ADR-099, ADR-115, ADR-117, ADR-118 |
 | [120](adr-120-catalog-rbac-lifecycle.md) | RBAC para Ciclo de Vida do Catálogo — `catalog:validate`/`catalog:merge`, role `catalog-manager`, `auditar_catalogo`→validate, 5 novas tools (rascunho→merge), fluxo 4-olhos, `CatalogAction`; ceiling 40→45 | ✅ Implementado 2026-06-22 _(F1-F5 · 34 testes)_ | ADR-040, ADR-099, ADR-117, ADR-119 |
+| [121](adr-121-otel-instrumentation-maturation.md) | Maturação da Instrumentação OpenTelemetry: Logs, Propagação e Baggage | ✅ Implementado 2026-06-23 | ADR-095, ADR-111, ADR-112, ADR-099 |
+| [122](adr-122-aci-para-azure-container-apps.md) | Migração de ACI para Azure Container Apps (ACA) | ✅ Decidido 2026-06-23 | ADR-096, ADR-099 |
+| [123](adr-123-notificacao-email-e-gestao-dispositivos.md) | Serviço de Notificação por Email e Gestão de Dispositivos | ✅ Decidido 2026-06-23 | ADR-094, ADR-099, ADR-116 |
+| [124](adr-124-reformulacao-modelo-eficiencia-planejamento-vs-controle.md) | Reformulação do Modelo de Eficiência: Separação entre Fase de Planejamento e Controle | 💡 Proposta 2026-06-28 | NEP-035, NEP-036, ADR-068, ADR-046 |
+| [125](adr-125-separacao-custo-produtivo-pool-mob-demob-indireto.md) | Hierarquia de Custo: C_prod / C_pool / Contrato; Mob/Demob como Custo Indireto | 💡 Proposta 2026-06-28 | ADR-085, ADR-106, ADR-124, NEP-028 |
 
-**Legenda:** ✅ Implementado · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
+**Legenda:** ✅ Implementado/Decidido · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 
 ---
 
