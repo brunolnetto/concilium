@@ -128,7 +128,6 @@ def _rcpsp_backward(
     dag: ActivityDAG,
 ) -> dict[str, float]:
     """Float na solução RCPSP via backward pass a partir do makespan real."""
-    {a.activity_id: a for a in dag.activities}
     sa_map = {sa.activity_id: sa for sa in sched_output.scheduled_activities}
     c_max = sched_output.makespan
 

@@ -107,7 +107,6 @@ def test_resolve_folder_child_not_found_create_true_creates_folder(gdrive):
     assert gdrive._folder_cache["newdir"] == new_fid
     mock_files.create.assert_called_once()
     call_kwargs = mock_files.create.call_args
-    call_kwargs.kwargs.get("body") or call_kwargs[1].get("body") or call_kwargs[0][0]
     # Verify create was called with the segment name
     assert "newdir" in str(call_kwargs)
 

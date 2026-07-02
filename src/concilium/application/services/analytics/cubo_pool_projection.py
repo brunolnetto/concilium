@@ -346,7 +346,6 @@ def _face_custo_estado_componente(cubo, contratos, cadeias, **_):
 
 def _face_ciclo_vida(cubo, contratos, cadeias, *, top_n=300, **_):
     cv = cubo.ciclo_vida_instancias()
-    {c.contrato_id: c for c in contratos}
     rows = []
     for iid, d in sorted(cv.items()):
         rows.append(

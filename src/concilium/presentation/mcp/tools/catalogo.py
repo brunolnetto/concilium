@@ -283,7 +283,6 @@ def register(server: FastMCP) -> None:
         """
         from concilium.application.services.catalog.contexto_version_service import ContextoVersionService
         from concilium.infrastructure.auth.permission_guard import (
-            _current_roles,
             get_current_user_id,
         )
         from concilium.infrastructure.settings import get_storage
@@ -291,10 +290,8 @@ def register(server: FastMCP) -> None:
         config_root = get_storage().config_root
         svc = ContextoVersionService(config_root)
         actor = get_current_user_id() or "system"
-        list(_current_roles.get())
         try:
             current_v = svc.current_version(contexto_id)
-            svc.resolve(contexto_id) or {}
             new_v = svc.create_version(
                 contexto_id,
                 fields={"_rascunho": True, "_rascunho_descricao": descricao},

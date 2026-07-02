@@ -112,7 +112,6 @@ def _build_semanal_breakdown(
             # Preserva a proporção entre componentes e garante soma semanal == custo total utilizado na categoria.
             frac_mo = mo_mensal / mensal_total
             frac_eq = eq_mensal / mensal_total
-            vb_mensal / mensal_total
 
             custo_sem_base = round(float(custo_total_override) / n_semanas, 2)
             acumulado = 0.0

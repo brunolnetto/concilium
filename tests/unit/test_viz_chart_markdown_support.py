@@ -201,9 +201,6 @@ def test_gantt_block_skips_task_without_start():
     ]
     result = _gantt_block("G", tasks)
     assert result is not None
-    [
-        ln for ln in result if "task" in ln.lower() and "datef" not in ln.lower() and "axisf" not in ln.lower()
-    ]
     # Only the second task should appear
     assert any("OK Task" in ln for ln in result)
     assert not any("No Start" in ln for ln in result)

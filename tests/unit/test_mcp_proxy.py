@@ -600,8 +600,6 @@ class TestBridge:
             finally:
                 loop.run_in_executor = original_run_in_executor
 
-        call_args = http.post.call_args
-        call_args[1]["headers"] if "headers" in call_args[1] else call_args[0][1]
         # headers may be positional or keyword
         all_kwargs = http.post.call_args.kwargs
         assert "Authorization" in all_kwargs.get("headers", {})

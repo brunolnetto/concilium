@@ -581,7 +581,6 @@ def _process_eap_item(
 
     if preco_cat is None:
         return
-    equipe_lookup.get(item.item_id)
     _validate_encargos_separacao(cpu.get("codigo", item.cpu_id), cpu, insumo_lookup, validacoes)
     equip_sem_decomp.update(equip_sem_decomp_item)
     item_override = (

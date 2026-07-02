@@ -400,7 +400,6 @@ class TestCexBuildCpuRow:
         }
         exp._cex_build_cpu_row(cpu)
         calls = mock_sim.simular_cpu.call_args_list
-        [c[0][3] for c in calls]  # 4th positional arg is the regime string... actually check kwargs
         # simular_cpu(cpu_id, qty, jornada, frentes, regime)
         call_args = [c.args for c in calls]
         assert any("clt" in str(args) for args in call_args)

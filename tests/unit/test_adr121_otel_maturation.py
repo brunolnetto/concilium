@@ -59,9 +59,6 @@ class TestLoggingHandlerLevel:
         tree = ast.parse(src)
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
-                (
-                    getattr(node.func, "id", None) or getattr(getattr(node.func, "attr", None), "__str__", lambda: "")()
-                )
                 if "LoggingHandler" not in str(getattr(node.func, "id", "")) and "LoggingHandler" not in str(
                     getattr(node.func, "attr", "")
                 ):

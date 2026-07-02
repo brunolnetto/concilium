@@ -171,8 +171,6 @@ def build(canonical, cubo) -> bytes | None:  # noqa: ARG001
             comp: [bdi_by_period.get(p, {}).get(comp, 0.0) / scale for p in periodos] for comp in _BDI_COMPS
         }
 
-        resultado = getattr(canonical, "resultado", None)
-        float(getattr(getattr(resultado, "venda", None), "total_com_bdi", 0.0) or 0.0) / scale
         # Custo operacional real = direto + indireto, derivado do cubo (não de custo.total
         # que pode refletir custo de pool ≠ PU×Q quando n_frentes > 1).
         custo_op = (sum(direto_m.values()) + sum(indireto_m.values())) / scale

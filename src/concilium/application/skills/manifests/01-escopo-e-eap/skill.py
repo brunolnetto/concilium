@@ -159,8 +159,6 @@ def _build_dag_from_precedencias(
     1. EapItem.predecessores (PrecedenciaItem ou str legado) — principal
     2. inputs["precedencias"] (formato legado {predecessora, sucessora}) — compat.
     """
-    # Mapa atividade → item_id para lookup rápido
-    {a.atividade_id: a.item_id for item_eap in eap for a in []}
     # Na prática, nos são activity_ids derivados de item_ids. Usamos nome direto.
     arestas_validas: list[tuple[str, str, str, int]] = []
 
@@ -175,7 +173,6 @@ def _build_dag_from_precedencias(
         if item_id not in item_to_first_activity:
             item_to_first_activity[item_id] = activity_id
 
-    {item.item_id: item for item in eap}
     for item in eap:
         item_id = item.item_id
         if item_id not in item_to_first_activity:
