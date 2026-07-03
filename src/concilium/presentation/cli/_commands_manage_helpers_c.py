@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Protocol
 
 import typer
 from rich import print as rprint
@@ -15,10 +16,22 @@ from rich.table import Table
 from concilium.presentation.cli.shared import resolve_project
 
 
-def _cmr_load_bundle(contexto_id: str, mod: object) -> tuple[dict, object, list, list]:
+class _MergeReport(Protocol):
+    """Formato de retorno de mod._merge_entities() — mod é carregado via importlib
+    de um script externo (merge_rfi.py), então seu tipo real não é conhecido
+    estaticamente. Este Protocol descreve a forma esperada para dar checagem de
+    tipo real nas funções que consomem o relatório, sem depender do módulo dinâmico."""
+
+    inner_high: list[dict]
+    inner_low: list[dict]
+    right_only: list[dict]
+    left_only: list[dict]
+
+
+def _cmr_load_bundle(contexto_id: str, mod: object) -> tuple[dict, Path, list, list]:
     """Loads catalog bundle. Returns (bundle, bundle_path, cat_insumos, cat_producoes)."""
 
-    bundle_path = mod.ROOT / f"config/catalogos/{contexto_id}/.catalog_bundle.json"
+    bundle_path = mod.ROOT / f"config/catalogos/{contexto_id}/.catalog_bundle.json"  # ty: ignore[unresolved-attribute]
     if not bundle_path.exists():
         rprint(f"[red]Bundle não encontrado:[/red] {bundle_path}")
         raise typer.Exit(1)
@@ -28,7 +41,7 @@ def _cmr_load_bundle(contexto_id: str, mod: object) -> tuple[dict, object, list,
     return bundle, bundle_path, cat_insumos, cat_producoes
 
 
-def _cmr_print_inner_low(all_low: list, console: object) -> None:
+def _cmr_print_inner_low(all_low: list, console: Console) -> None:
     if not all_low:
         return
     console.print(f"\n[yellow]INNER_LOW — {len(all_low)} colisões (importados como RFI-*):[/yellow]")
@@ -47,18 +60,18 @@ def _cmr_print_inner_low(all_low: list, console: object) -> None:
 def _cmr_apply_changes(
     mod: object,
     bundle: dict,
-    bundle_path: object,
+    bundle_path: Path,
     cat_insumos: list,
     cat_producoes: list,
     rfi_insumos: list,
     rfi_producoes: list,
-    report_ins: object,
-    report_prod: object,
+    report_ins: _MergeReport,
+    report_prod: _MergeReport,
     verify_pu: bool,
-    console: object,
+    console: Console,
 ) -> None:
-    new_ins = mod._apply_merge(cat_insumos, rfi_insumos, report_ins)
-    new_prod = mod._apply_merge(cat_producoes, rfi_producoes, report_prod, id_key="id")
+    new_ins = mod._apply_merge(cat_insumos, rfi_insumos, report_ins)  # ty: ignore[unresolved-attribute]
+    new_prod = mod._apply_merge(cat_producoes, rfi_producoes, report_prod, id_key="id")  # ty: ignore[unresolved-attribute]
     if "producoes" in bundle:
         bundle["producoes"] = new_prod
     else:
@@ -86,11 +99,11 @@ def _cmr_apply_changes(
 
 def _cmr_write_report(
     report_json: str,
-    report_ins: object,
-    report_prod: object,
+    report_ins: _MergeReport,
+    report_prod: _MergeReport,
     mode: str,
     contexto_id: str,
-    console: object,
+    console: Console,
 ) -> None:
     from pathlib import Path
 
@@ -133,7 +146,7 @@ def _cmr_write_report(
     console.print(f"\n[dim]Relatório JSON salvo em: {report_json}[/dim]")
 
 
-def _cmr_add_table_row(table, label: str, rep) -> None:
+def _cmr_add_table_row(table, label: str, rep: _MergeReport) -> None:
     n_delta = 0
     for i in rep.inner_high:
         if i["delta"]:
@@ -148,7 +161,7 @@ def _cmr_add_table_row(table, label: str, rep) -> None:
     )
 
 
-def _cmr_build_all_low(report_ins, report_prod) -> list:
+def _cmr_build_all_low(report_ins: _MergeReport, report_prod: _MergeReport) -> list:
     result = []
     for i in report_ins.inner_low:
         result.append((i, "INSUMO"))
@@ -211,14 +224,14 @@ def _impl_catalog_merge_rfi(
     console.print(f"  Catálogo: {len(cat_insumos)} insumos, {len(cat_producoes)} producoes")
 
     wb = openpyxl.load_workbook(xlsm, data_only=True, keep_vba=False)
-    rfi = mod.extract_rfi(wb)
+    rfi = mod.extract_rfi(wb)  # ty: ignore[unresolved-attribute] — mod é carregado via importlib, ver _MergeReport
     wb.close()
     rfi_insumos = rfi["insumos"]
     rfi_producoes = rfi["producoes"]
     console.print(f"  Planilha: {len(rfi_insumos)} insumos, {len(rfi_producoes)} producoes")
 
-    report_ins, _ = mod._merge_entities(cat_insumos, rfi_insumos)
-    report_prod, _ = mod._merge_entities(cat_producoes, rfi_producoes, id_key="id")
+    report_ins, _ = mod._merge_entities(cat_insumos, rfi_insumos)  # ty: ignore[unresolved-attribute]
+    report_prod, _ = mod._merge_entities(cat_producoes, rfi_producoes, id_key="id")  # ty: ignore[unresolved-attribute]
 
     table = Table(title="Merge Report", show_header=True, header_style="bold cyan")
     table.add_column("Entidade")

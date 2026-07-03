@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 if TYPE_CHECKING:
-    from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPERelatorio
+    from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio
     from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio
+    from concilium.domain.models.financial.bdi import ComponentesBdi, TabelaBdi, TaxSimulationScenario
 
 from ..helpers.helpers import (
     build_team_adjustment_rows,
@@ -201,27 +202,27 @@ def render_diagnostico_pe(
             _render_diagnostico_item(item)
 
 
-def _render_diagnostico_item(item: object) -> None:
+def _render_diagnostico_item(item: DiagnosticoPEItem) -> None:
     """Renders one deficit item in the diagnostico expander."""
     with st.expander(
-        f"{_emoji_status(item.gap_rs)} {item.descricao[:60]} — custo extra: R$ {abs(item.gap_rs):,.0f}",  # type: ignore[union-attr]
+        f"{_emoji_status(item.gap_rs)} {item.descricao[:60]} — custo extra: R$ {abs(item.gap_rs):,.0f}",
         expanded=False,
     ):
         col1, col2, col3 = st.columns(3)
         col1.metric(
             "Aproveitamento de campo",
-            f"{item.aproveitamento_pct:.0f}%",  # type: ignore[union-attr]
+            f"{item.aproveitamento_pct:.0f}%",
             help="Das horas em que a equipe esteve no canteiro, esta fração foi produtiva.",
         )
-        col2.metric("Margem atual", f"{item.l_aplicado * 100:.1f}%")  # type: ignore[union-attr]
+        col2.metric("Margem atual", f"{item.l_aplicado * 100:.1f}%")
         col3.metric(
             "Margem mínima necessária",
-            f"{item.l_requerido * 100:.1f}%",  # type: ignore[union-attr]
+            f"{item.l_requerido * 100:.1f}%",
             delta=f"+{item.delta_l * 100:.1f}pp necessário",
             delta_color="inverse",
-        )  # type: ignore[union-attr]
+        )
         st.caption("Causas identificadas:")
-        for f in item.fatores:  # type: ignore[union-attr]
+        for f in item.fatores:
             evit = "✂️ evitável" if f.evitavel else "🔩 estrutural"
             st.markdown(f"- **{f.label}** — R$ {f.gap_rs:,.0f} ({f.pct_gap * 100:.0f}%) · {evit}")
             st.caption(f"  {f.descricao}")
@@ -2150,7 +2151,7 @@ def _compute_bdi_from_tabela(tabela_bdi: dict, bdi_base: dict) -> None:
 
 
 def _render_tcu_cat_expander(
-    cat: str, cat_label: str, dom_comp: object, saved_comp: dict, project_id: str, tcu_edited: dict
+    cat: str, cat_label: str, dom_comp: ComponentesBdi, saved_comp: dict, project_id: str, tcu_edited: dict
 ) -> None:
     """Renders the TCU decomposition expander for one BDI category."""
     with st.expander(cat_label, expanded=False):
@@ -2272,7 +2273,7 @@ def _render_tcu_cat_expander(
 
 
 def _resolve_bdi_pre_reforma_defaults(
-    reference: dict, current: dict, skill06_current: dict, DEFAULT_BDI_TABELA: object
+    reference: dict, current: dict, skill06_current: dict, DEFAULT_BDI_TABELA: TabelaBdi
 ) -> tuple[dict, list[str]]:
     """Resolves bdi_defaults and bdi_keys for pre-reforma editor."""
     skill06_base = extract_skill_base_inputs(reference, "06-resultado-financeiro")
@@ -2288,11 +2289,11 @@ def _resolve_bdi_pre_reforma_defaults(
     bdi_cur = extract_bdi_dict(skill06_current) or extract_bdi_dict(skill08_current)
     bdi_keys_l = ["mao_obra", "equipamentos", "material", "diesel", "indireto"]
     _dft = {
-        "mao_obra": float(DEFAULT_BDI_TABELA.mao_obra.bdi_total),  # type: ignore[union-attr]
-        "equipamentos": float(DEFAULT_BDI_TABELA.servicos.bdi_total),  # type: ignore[union-attr]
-        "material": float(DEFAULT_BDI_TABELA.material.bdi_total),  # type: ignore[union-attr]
-        "diesel": float(DEFAULT_BDI_TABELA.diesel.bdi_total),  # type: ignore[union-attr]
-        "indireto": float(DEFAULT_BDI_TABELA.indireto.bdi_total),  # type: ignore[union-attr]
+        "mao_obra": float(DEFAULT_BDI_TABELA.mao_obra.bdi_total),
+        "equipamentos": float(DEFAULT_BDI_TABELA.servicos.bdi_total),
+        "material": float(DEFAULT_BDI_TABELA.material.bdi_total),
+        "diesel": float(DEFAULT_BDI_TABELA.diesel.bdi_total),
+        "indireto": float(DEFAULT_BDI_TABELA.indireto.bdi_total),
     }
     bdi_defaults = {k: float(bdi_cur.get(k, bdi_base.get(k, _dft.get(k, 0.0)))) for k in bdi_keys_l}
     return bdi_defaults, bdi_keys_l
@@ -2359,7 +2360,7 @@ def _render_bdi_pre_reforma(
     skill06_current: dict,
     base_url: str,
     actor: str,
-    DEFAULT_BDI_TABELA: object,
+    DEFAULT_BDI_TABELA: TabelaBdi,
 ) -> None:
     """Renders the pre-reforma BDI editor section."""
     st.caption("Modo legado — edite os fatores BDI diretamente. Ex.: 0.35 = 35%.")
@@ -2419,10 +2420,10 @@ def _render_bdi_pre_reforma(
     }
     _dom_map = {
         "mao_obra": DEFAULT_BDI_TABELA.mao_obra,
-        "equipamentos": DEFAULT_BDI_TABELA.servicos,  # type: ignore[union-attr]
+        "equipamentos": DEFAULT_BDI_TABELA.servicos,
         "material": DEFAULT_BDI_TABELA.material,
         "diesel": DEFAULT_BDI_TABELA.diesel,
-        "indireto": DEFAULT_BDI_TABELA.indireto,  # type: ignore[union-attr]
+        "indireto": DEFAULT_BDI_TABELA.indireto,
     }
     _render_tcu_expander_section(project_id, skill06_current, _tcu_cats, _tcu_labels, _dom_map, base_url, actor)
 
@@ -2432,7 +2433,7 @@ def _render_bdi_cbs_ibs(
     saved_tax_scenario: dict,
     selected_regime: object,
     selected_regime_key: str,
-    cenario_base: object,
+    cenario_base: TaxSimulationScenario,
     default_bdi_tabela: object,
     resolver_bdi_cbs_ibs_fn: object,
     tax_sim_scenario_cls: type,
@@ -2445,7 +2446,7 @@ def _render_bdi_cbs_ibs(
         "Modo CBS/IBS — defina as premissas de crédito por categoria. "
         "O BDI é derivado automaticamente pela fórmula TCU com T_efetivo = CBS_IBS×(1−ratio)+CSSL+IR."
     )
-    if cenario_base.split_payment:  # type: ignore[union-attr]
+    if cenario_base.split_payment:
         st.info(
             "ℹ️ **Split payment** ativo neste regime — o tomador retém o imposto na fonte. "
             "Não altera o BDI, mas impacta o fluxo de caixa.",
@@ -2465,7 +2466,7 @@ def _render_bdi_cbs_ibs(
             "CBS+IBS combinado (%)",
             min_value=0.0,
             max_value=35.0,
-            value=round(_f("cbs_ibs_combined_rate", cenario_base.cbs_ibs_combined_rate) * 100, 1),  # type: ignore[union-attr]
+            value=round(_f("cbs_ibs_combined_rate", cenario_base.cbs_ibs_combined_rate) * 100, 1),
             step=0.1,
             key=f"bdi-cbs-rate-{project_id}",
         )
@@ -2483,7 +2484,7 @@ def _render_bdi_cbs_ibs(
             key=f"bdi-cr-mo-{project_id}",
         )
         / 100.0
-    )  # type: ignore[union-attr]
+    )
     cr_mat = (
         cr_col2.number_input(
             "Material (%)",
@@ -2494,7 +2495,7 @@ def _render_bdi_cbs_ibs(
             key=f"bdi-cr-mat-{project_id}",
         )
         / 100.0
-    )  # type: ignore[union-attr]
+    )
     cr_srv = (
         cr_col3.number_input(
             "Serviços (%)",
@@ -2505,7 +2506,7 @@ def _render_bdi_cbs_ibs(
             key=f"bdi-cr-srv-{project_id}",
         )
         / 100.0
-    )  # type: ignore[union-attr]
+    )
     cr_dsl = (
         cr_col4.number_input(
             "Diesel (%)",
@@ -2516,7 +2517,7 @@ def _render_bdi_cbs_ibs(
             key=f"bdi-cr-dsl-{project_id}",
         )
         / 100.0
-    )  # type: ignore[union-attr]
+    )
     with st.expander("⚙️ Parâmetros avançados (lag e taxa financeira)", expanded=False):
         lag_col, taxa_col, sp_col = st.columns(3)
         lag = int(
@@ -2528,7 +2529,7 @@ def _render_bdi_cbs_ibs(
                 step=1,
                 key=f"bdi-lag-{project_id}",
             )
-        )  # type: ignore[union-attr]
+        )
         taxa = (
             taxa_col.number_input(
                 "Taxa financ. anual (%)",
@@ -2539,14 +2540,14 @@ def _render_bdi_cbs_ibs(
                 key=f"bdi-taxa-{project_id}",
             )
             / 100.0
-        )  # type: ignore[union-attr]
+        )
         sp = sp_col.checkbox(
             "Split payment",
             value=bool(saved_tax_scenario.get("split_payment", cenario_base.split_payment)),
             key=f"bdi-sp-{project_id}",
-        )  # type: ignore[union-attr]
-        cssl = float(saved_tax_scenario.get("cssl_rate", cenario_base.cssl_rate))  # type: ignore[union-attr]
-        ir = float(saved_tax_scenario.get("ir_rate", cenario_base.ir_rate))  # type: ignore[union-attr]
+        )
+        cssl = float(saved_tax_scenario.get("cssl_rate", cenario_base.cssl_rate))
+        ir = float(saved_tax_scenario.get("ir_rate", cenario_base.ir_rate))
     scenario_preview = tax_sim_scenario_cls(  # type: ignore[operator]
         regime_version=selected_regime,
         cbs_ibs_combined_rate=cbs_ibs_rate,
