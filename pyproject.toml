@@ -83,7 +83,7 @@ dev = [
     "ruff>=0.14.2",
     "pytest-json-report>=1.5.0",
     "import-linter>=2.11",
-    "mypy>=2.1.0",
+    "ty>=0.0.1a22",
 ]
 
 [tool.pytest.ini_options]
@@ -99,10 +99,6 @@ markers = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.mypy]
-ignore_missing_imports = true
-disable_error_code = ["import-untyped"]
 
 [tool.ruff]
 line-length = 120

@@ -32,7 +32,7 @@ O framework **Concilium** utiliza uma arquitetura de pipeline orientada a skills
 - **Streamlit** (UI)
 - **Pydantic v2** (modelos e validação)
 - **FastMCP** (MCP server)
-- **Pytest + Ruff + Mypy** (qualidade e testes)
+- **Pytest + Ruff + ty** (qualidade e testes)
 
 ### Skills Disponíveis
 

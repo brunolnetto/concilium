@@ -32,7 +32,7 @@ make lint   (ou ruff check src/ tests/)
 
 **Tipos**
 ```
-make type-check   (ou mypy src/)
+make type-check   (ou ty check src/)
 ```
 - ✅ Sem erros
 - ❌ Erros — liste arquivo:linha:mensagem

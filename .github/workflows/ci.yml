@@ -72,7 +72,7 @@ jobs:
           pip install -e .
           pip install \
             ruff \
-            mypy \
+            ty \
             pytest \
             pytest-json-report \
             pytest-asyncio \
@@ -82,13 +82,14 @@ jobs:
             jmespath \
             import-linter
 
-      # Dívida técnica: ~670 erros de mypy pré-existentes (nunca esteve verde).
-      # Não-bloqueante até a dívida ser zerada por módulo; acompanhar via
+      # Dívida técnica: ~342 diagnósticos pré-existentes (nunca esteve verde,
+      # herdado do mypy — ver #37 para o plano de zerar por módulo).
+      # Não-bloqueante até a dívida ser zerada; acompanhar via
       # `make check OPT=type` localmente. Remover continue-on-error ao zerar.
-      - name: Mypy
+      - name: ty
         continue-on-error: true
         run: |
-          python -m mypy src/concilium --ignore-missing-imports --no-error-summary --exclude 'src/concilium/application/skills/manifests'
+          ty check src/concilium --exclude 'src/concilium/application/skills/manifests'
 
   test:
     name: Tests

@@ -12,7 +12,7 @@ COV_DIR     := .coverage-reports
 TEST_REPORT  := $(COV_DIR)/test-report.json
 OPT          ?= lint,type,fmt,fsizes
 # Exclude skill manifests (dirs with dashes are not valid Python package names)
-MYPY_EXCLUDE := --exclude 'src/concilium/application/skills/manifests'
+TY_EXCLUDE := --exclude 'src/concilium/application/skills/manifests'
 COMMA := ,
 SKIP  ?=
 _SKIP_EXPR := $(subst $(COMMA), and not ,$(SKIP))
@@ -88,7 +88,7 @@ print(f'\n  {total} violações ({ftotal} auto-corrigíveis com make check OPT=f
 print('  Top 5:', ', '.join(f\"{c}×{n}\" for c,n in codes.most_common(5))) if d else None" || true
 
 _check_type:
-	$(PYTHON) -m mypy $(SRC) --ignore-missing-imports --no-error-summary $(MYPY_EXCLUDE)
+	ty check $(SRC) $(TY_EXCLUDE)
 
 _check_fmt:
 	$(PYTHON) -m ruff format $(SRC) tests/

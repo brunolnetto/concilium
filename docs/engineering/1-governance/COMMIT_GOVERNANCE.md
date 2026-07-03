@@ -180,7 +180,7 @@ Baseado em [Conventional Commits](https://www.conventionalcommits.org/):
 
 Executam em pull requests e merges:
 - ✅ Testes unitários (pytest)
-- ✅ Checagem de tipos (mypy)
+- ✅ Checagem de tipos (ty)
 - ✅ Lint (ruff check)
 - ✅ Cobertura mínima (80%)
 
