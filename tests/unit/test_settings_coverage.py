@@ -12,6 +12,7 @@ from concilium.infrastructure.settings import (
     CampaignSettings,
     ConfigurationError,
     GDriveSettings,
+    McpProxySettings,
     S3Settings,
     SharePointSettings,
     StorageSettings,
@@ -466,3 +467,26 @@ def test_check_storage_gdrive_no_errors():
     st = _make_storage(backend="gdrive", gdrive_root_folder_id="folder123")
     errors = _check_storage(st)
     assert errors == []
+
+
+def test_mcp_proxy_settings_uses_client_code(monkeypatch):
+    monkeypatch.delenv("CONCILIUM_DEVICE_CODE", raising=False)
+    monkeypatch.setenv("CONCILIUM_CLIENT_CODE", "RCODE-NEW")
+    settings = McpProxySettings.from_env()
+    assert settings.client_code == "RCODE-NEW"
+
+
+def test_mcp_proxy_settings_falls_back_to_legacy_device_code(monkeypatch):
+    """Configs sincronizadas externamente (ex.: Claude Desktop) podem reverter para o
+    nome pré-#17 — o proxy deve continuar funcionando sem exigir reconfiguração."""
+    monkeypatch.delenv("CONCILIUM_CLIENT_CODE", raising=False)
+    monkeypatch.setenv("CONCILIUM_DEVICE_CODE", "RCODE-LEGACY")
+    settings = McpProxySettings.from_env()
+    assert settings.client_code == "RCODE-LEGACY"
+
+
+def test_mcp_proxy_settings_prefers_new_name_over_legacy(monkeypatch):
+    monkeypatch.setenv("CONCILIUM_CLIENT_CODE", "RCODE-NEW")
+    monkeypatch.setenv("CONCILIUM_DEVICE_CODE", "RCODE-LEGACY")
+    settings = McpProxySettings.from_env()
+    assert settings.client_code == "RCODE-NEW"

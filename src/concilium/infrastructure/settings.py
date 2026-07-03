@@ -66,6 +66,7 @@ CONCILIUM__MCP_RATE_LIMIT_PERIOD_S    [opt]   60               McpSettings.rate_
 ── MCP Proxy (concilium-mcp-proxy) ──────────────────────────────────────────
 CONCILIUM_SERVER_URL                  [opt]   https://mcp...   McpProxySettings.server_url
 CONCILIUM_CLIENT_CODE                 [req]   —                McpProxySettings.client_code
+CONCILIUM_DEVICE_CODE                 [opt]   —                fallback legado (pré-#17) de client_code
                                                                 (device_id é auto-detectado, sem env var)
 ── UI Streamlit (UiSettings) ────────────────────────────────────────────────
 CONCILIUM__UI_HOST                    [opt]   127.0.0.1        UiSettings.host
@@ -353,8 +354,11 @@ class McpProxySettings:
         import socket
 
         server_url = _str("CONCILIUM_SERVER_URL", "https://mcp.mendesloboconstrucao.com.br").rstrip("/")
-        client_code = _str("CONCILIUM_CLIENT_CODE", "")
-        
+        # CONCILIUM_DEVICE_CODE é o nome legado (pré-#17) — mantido como fallback pois
+        # configs sincronizadas externamente (ex.: perfil de conta do Claude Desktop)
+        # podem reverter para o nome antigo fora do nosso controle.
+        client_code = _str("CONCILIUM_CLIENT_CODE", "") or _str("CONCILIUM_DEVICE_CODE", "")
+
         # Auto-detecta device_id: hostname ou username@hostname
         try:
             hostname = socket.gethostname()
