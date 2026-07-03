@@ -213,6 +213,7 @@ def _load_auth() -> None:
         add_user,
         list_devices,
         list_users,
+        migrate_legacy_codes,
         regenerate_code,
         remove_user,
         revoke_device,
@@ -222,6 +223,7 @@ def _load_auth() -> None:
     auth_app.command("list-users")(list_users)
     auth_app.command("remove-user")(remove_user)
     auth_app.command("regenerate-code")(regenerate_code)
+    auth_app.command("migrate-legacy-codes")(migrate_legacy_codes)
     auth_app.command("list-devices")(list_devices)
     auth_app.command("revoke-device")(revoke_device)
 

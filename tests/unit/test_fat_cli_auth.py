@@ -512,3 +512,30 @@ class TestRevokeDevice:
 
         assert result.exit_code == 0, result.output
         store.revoke_device.assert_called_once_with("my-device")
+
+
+# ===========================================================================
+# Governança: todo comando de commands_auth.app precisa estar registrado no
+# CLI real (main.py::_load_auth). Sem isso, o comando existe no módulo mas
+# 'concilium ops auth <comando>' retorna "No such command" em produção — foi
+# exatamente o que aconteceu com migrate-legacy-codes (esquecido em main.py
+# apesar de coberto por testes que só exercitam este `app` órfão).
+# ===========================================================================
+
+
+class TestAuthCliWiredIntoMain:
+    def test_every_commands_auth_command_is_registered_in_main_cli(self):
+        from concilium.presentation.main import app as main_app
+        from concilium.presentation.main import auth_app
+
+        main_app_runner = CliRunner()
+        # Força o carregamento lazy dos grupos de comando (_load_all()).
+        main_app_runner.invoke(main_app, ["ops", "auth", "--help"])
+
+        expected = {c.name for c in app.registered_commands}
+        actual = {c.name for c in auth_app.registered_commands}
+        missing = expected - actual
+        assert not missing, (
+            f"Comando(s) definidos em commands_auth.py mas não registrados em "
+            f"main.py::_load_auth(): {sorted(missing)}"
+        )
