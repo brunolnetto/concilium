@@ -819,3 +819,31 @@ class TestPrefixedStorage:
         ps = self._get_prefixed(storage)
         ps.gravar_blob("/proj-xyz/meta.json", b"data")
         assert storage.blob_existe("projetos/proj-xyz/meta.json")
+
+
+class TestStorageProjectHandleSatisfiesProjectHandleProtocol:
+    """Governança: StorageProjectHandle precisa ter todo método/propriedade que
+    ProjectHandle (Protocol) declara. ProjectHandle não é @runtime_checkable, então
+    isinstance() não pega o gap — só um type checker estrutural (ty/mypy) ou este
+    teste. Já pegamos um caso real: tipo_projeto e status_eap estavam faltando e
+    quebravam get_pipeline_strategy() com AttributeError para qualquer projeto no
+    backend SharePoint/S3/Azure (o único usado em produção)."""
+
+    def test_all_protocol_members_present(self) -> None:
+        from typing import Generic, Protocol
+
+        from concilium.application.services.project.project_repository import ProjectHandle
+        from concilium.infrastructure.storage.storage_project_repository import StorageProjectHandle
+
+        # dir(ProjectHandle) inclui maquinário de Protocol/ABCMeta (ex.: "register"
+        # se o protocolo virar @runtime_checkable) que não faz parte do contrato
+        # real — usamos apenas o que está declarado no corpo do Protocol.
+        protocol_members: set[str] = set()
+        for klass in ProjectHandle.__mro__:
+            if klass in (Protocol, Generic, object):
+                continue
+            protocol_members.update(name for name in klass.__dict__ if not name.startswith("_"))
+
+        handle_members = {name for name in dir(StorageProjectHandle) if not name.startswith("_")}
+        missing = protocol_members - handle_members
+        assert not missing, f"StorageProjectHandle não implementa: {sorted(missing)}"

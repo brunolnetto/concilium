@@ -564,6 +564,90 @@ class TestStorageProjectHandle:
             result = h.read_json("nonexistent.json", {"default": True})
             assert result == {"default": True}
 
+    def test_tipo_projeto_reads_from_meta(self):
+        """StorageProjectHandle deve satisfazer o protocolo ProjectHandle (tipo_projeto),
+        assim como FileProjectHandle — sem isso, get_pipeline_strategy() quebra com
+        AttributeError para qualquer projeto no backend SharePoint/S3/Azure."""
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.write_json("meta.json", {"tipo_projeto": "project"})
+            assert h.tipo_projeto == "project"
+
+    def test_tipo_projeto_defaults_to_hot_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            assert h.tipo_projeto == "hot_project"
+
+    def test_status_eap_reads_from_meta(self):
+        """Idem para status_eap — usado por ProjectStrategy.validate_preconditions()."""
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.write_json("meta.json", {"status_eap": "RASCUNHO_PRONTO"})
+            assert h.status_eap == "RASCUNHO_PRONTO"
+
+    def test_status_eap_defaults_to_ativo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            assert h.status_eap == "ATIVO"
+
+    def test_save_and_load_intermediate_file_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.save_intermediate_file("data.bin", b"\x00\x01\x02", "v1")
+            assert h.load_intermediate_file("data.bin", "v1") == b"\x00\x01\x02"
+
+    def test_save_intermediate_file_accepts_str(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.save_intermediate_file("data.txt", "conteúdo", "v1")
+            assert h.load_intermediate_file("data.txt", "v1") == "conteúdo".encode()
+
+    def test_load_intermediate_file_uses_current_version_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.write_json("meta.json", {"current_version": "v2"})
+            h.save_intermediate_file("data.bin", b"x", "v2")
+            assert h.load_intermediate_file("data.bin") == b"x"
+
+    def test_load_intermediate_file_missing_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            assert h.load_intermediate_file("missing.bin", "v1") is None
+
+    def test_load_intermediate_file_no_current_version_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            assert h.load_intermediate_file("data.bin") is None
+
+    def test_set_overlay_persists_and_audits(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.set_overlay("cpu", "CPU-01", {"custo": 100}, actor="tester", motivo="ajuste")
+            overlay = h.read_json("overrides/cpus_overlay.json", {})
+            assert overlay["CPU-01"] == {"custo": 100}
+            audit_lines = h.read_lines("overrides/overlay_audit.jsonl")
+            assert len(audit_lines) == 1
+            entry = json.loads(audit_lines[0])
+            assert entry["event"] == "set_overlay"
+            assert entry["item_id"] == "CPU-01"
+            assert entry["actor"] == "tester"
+
+    def test_load_resolved_catalog_returns_persisted_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.write_json("v1/resolved_catalog.json", {"cpus": ["CPU-01"]})
+            assert h.load_resolved_catalog("v1") == {"cpus": ["CPU-01"]}
+
+    def test_load_resolved_catalog_missing_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            assert h.load_resolved_catalog("v1") is None
+
+    def test_load_resolved_catalog_no_version_returns_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            assert h.load_resolved_catalog() is None
+
     def test_append_jsonl_and_read_lines(self):
         with tempfile.TemporaryDirectory() as tmp:
             h = self._make_handle(tmp)

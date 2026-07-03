@@ -40,7 +40,13 @@ def _build_sharepoint_repository() -> ProjectRepository:
     cache_dir_raw = get_storage().sharepoint.cache_dir.strip()
     cache_dir = Path(cache_dir_raw).expanduser() if cache_dir_raw else None
     storage = SharePointBlobStorage.from_env(cache_dir=cache_dir)
-    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
+    # StorageProjectRepository satisfaz ProjectRepository estruturalmente (mesmos
+    # métodos), mas seus retornos são list[StorageProjectHandle]/StorageProjectHandle
+    # em vez de list[ProjectHandle]/ProjectHandle — list é invariante em Python, então
+    # isso nunca casa com a Protocol mesmo com StorageProjectHandle conformante.
+    # Estreitar a assinatura pra ProjectHandle quebraria chamadas a métodos extras
+    # (escopo, approve, log_invocation...) que não fazem parte do protocolo.
+    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())  # ty: ignore[invalid-return-type]
 
 
 def _build_s3_repository() -> ProjectRepository:
@@ -49,7 +55,7 @@ def _build_s3_repository() -> ProjectRepository:
     from .storage_project_repository import StorageProjectRepository
 
     storage = S3BlobStorage.from_env()
-    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
+    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())  # ty: ignore[invalid-return-type] — ver comentário em _build_sharepoint_repository
 
 
 def _build_azure_repository() -> ProjectRepository:
@@ -58,7 +64,7 @@ def _build_azure_repository() -> ProjectRepository:
     from .storage_project_repository import StorageProjectRepository
 
     storage = AzureBlobStorage.from_env()
-    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
+    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())  # ty: ignore[invalid-return-type] — ver comentário em _build_sharepoint_repository
 
 
 def _build_gdrive_repository() -> ProjectRepository:
@@ -67,7 +73,7 @@ def _build_gdrive_repository() -> ProjectRepository:
     from .storage_project_repository import StorageProjectRepository
 
     storage = GoogleDriveBlobStorage.from_env()
-    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())
+    return StorageProjectRepository(storage=storage, projects_prefix=_projects_prefix())  # ty: ignore[invalid-return-type] — ver comentário em _build_sharepoint_repository
 
 
 def resolve_store_backend() -> str:

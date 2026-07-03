@@ -48,6 +48,15 @@ class StorageProjectHandle:
     def meta(self) -> dict[str, Any]:
         return self.read_json(self._META_FILE, {})
 
+    @property
+    def tipo_projeto(self) -> str:
+        return self.meta.get("tipo_projeto", "hot_project")
+
+    @property
+    def status_eap(self) -> str:
+        # ADR-063 §D3: status_eap tracks EAP composition readiness for "project" type
+        return self.meta.get("status_eap", "ATIVO")
+
     def update_meta(self, **changes: Any) -> None:
         m = self.meta
         m.update(changes)
@@ -148,6 +157,60 @@ class StorageProjectHandle:
 
     def exists(self, relative_path: str) -> bool:
         return self._storage.blob_existe(self._path(relative_path))
+
+    def save_intermediate_file(self, filename: str, data: bytes | str, version: str) -> Path:
+        """Salva arquivo em {version}/intermediate/{filename}. Aceita bytes ou str.
+
+        O Path retornado é lógico (não um path de filesystem real) — nenhum
+        chamador atual usa o valor de retorno, mantido só por conformidade com
+        ProjectHandle (equivalente ao retorno real do FileProjectHandle).
+        """
+        relative = f"{version}/intermediate/{filename}"
+        content = data.encode("utf-8") if isinstance(data, str) else data
+        self._storage.gravar_blob(self._path(relative), content)
+        return Path(self._path(relative))
+
+    def load_intermediate_file(self, filename: str, version: str | None = None) -> bytes | None:
+        """Carrega arquivo de {version}/intermediate/{filename}. None se não existir."""
+        v = version or self.current_version()
+        if v is None:
+            return None
+        return self.read_bytes(f"{v}/intermediate/{filename}")
+
+    def set_overlay(
+        self,
+        item_type: str,
+        item_id: str,
+        overlay_data: dict[str, Any],
+        actor: str = "system",
+        motivo: str = "",
+    ) -> None:
+        """ADR-066: persist item overlay (delta) + audit entry."""
+        overlay_file = f"overrides/{item_type}s_overlay.json"
+        overlay = self.read_json(overlay_file, {})
+        if not isinstance(overlay, dict):
+            overlay = {}
+        overlay[item_id] = overlay_data
+        self.write_json(overlay_file, overlay)
+        self.append_jsonl(
+            "overrides/overlay_audit.jsonl",
+            {
+                "event": "set_overlay",
+                "item_type": item_type,
+                "item_id": item_id,
+                "actor": actor,
+                "motivo": motivo,
+                "fields": list(overlay_data.keys()),
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        )
+
+    def load_resolved_catalog(self, version: str | None = None) -> dict[str, Any] | None:
+        """ADR-066: load the compact resolved catalog persisted for a run."""
+        v = version or self.current_version()
+        if v is None:
+            return None
+        return self.read_json(f"{v}/resolved_catalog.json", None)
 
     def list_file_names(self, relative_dir: str) -> list[str]:
         prefix = self._path(relative_dir)
