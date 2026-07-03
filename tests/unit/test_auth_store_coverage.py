@@ -73,6 +73,56 @@ class TestAuthStore:
         store = self._make_store(tmp_path)
         assert store.regenerate_client_code("ghost") is None
 
+    def test_migrate_legacy_client_codes_generates_for_missing(self, tmp_path):
+        store = self._make_store(tmp_path)
+        # Cliente "legado" — criado sem client_code (como antes do bootstrap por código existir).
+        store.add_client("legacy1", "s", ["operator"], email="legacy1@example.com")
+        migrated = store.migrate_legacy_client_codes()
+        assert len(migrated) == 1
+        client_id, code, email = migrated[0]
+        assert client_id == "legacy1"
+        assert code.startswith("RCODE-")
+        assert email == "legacy1@example.com"
+        # O código gerado deve efetivamente ativar um dispositivo agora.
+        token = store.activate_device_code(code, device_name="dev-legacy1")
+        assert token.client_id == "legacy1"
+
+    def test_migrate_legacy_client_codes_skips_clients_with_code(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("modern1", "s", ["operator"], client_code="RCODE-already-set")
+        migrated = store.migrate_legacy_client_codes()
+        assert migrated == []
+
+    def test_migrate_legacy_client_codes_no_pending_returns_empty(self, tmp_path):
+        store = self._make_store(tmp_path)
+        assert store.migrate_legacy_client_codes() == []
+
+    def test_migrate_legacy_client_codes_skips_inactive(self, tmp_path):
+        from dataclasses import asdict
+
+        from concilium.infrastructure.auth.auth_store import ClientRecord
+
+        store = self._make_store(tmp_path)
+        inactive = ClientRecord(
+            client_id="inactive1",
+            secret_hash="sha256:x",
+            roles=["operator"],
+            created_at="2026-01-01T00:00:00+00:00",
+            active=False,
+        )
+        store._write("clients.json", [asdict(inactive)])
+        store._invalidate_clients_cache()
+        assert store.migrate_legacy_client_codes() == []
+
+    def test_migrate_legacy_client_codes_batch(self, tmp_path):
+        store = self._make_store(tmp_path)
+        store.add_client("legacy_a", "s", ["operator"])
+        store.add_client("legacy_b", "s", ["operator"], email="b@example.com")
+        store.add_client("modern_c", "s", ["operator"], client_code="RCODE-modern")
+        migrated = store.migrate_legacy_client_codes()
+        migrated_ids = {c for c, _, _ in migrated}
+        assert migrated_ids == {"legacy_a", "legacy_b"}
+
     def test_activate_device_code(self, tmp_path):
         store = self._make_store(tmp_path)
         store.add_client("act", "s", ["operator"], client_code="RCODE-act")

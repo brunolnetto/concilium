@@ -282,6 +282,33 @@ class AuthStore:
                     return code
         return None
 
+    def migrate_legacy_client_codes(self) -> list[tuple[str, str, str]]:
+        """Gera client_code para todo client ativo criado antes do bootstrap por código (ADR-099 F...).
+
+        Clients registrados antes da introdução de client_code_hash não conseguem ativar
+        nenhum dispositivo novo (activate_device_code() sempre rejeita — não há hash para
+        comparar). Roda uma vez para migrar todos de uma vez em lote, em vez de descobrir
+        e corrigir usuário por usuário conforme cada um reporta o problema.
+
+        Returns:
+            Lista de (client_id, client_code, email) para cada client migrado — o código é
+            mostrado apenas aqui (não fica recuperável depois). Lista vazia se não há
+            clients pendentes.
+        """
+        migrated: list[tuple[str, str, str]] = []
+        with self._lock:
+            raw = self._read_clients()
+            records = [ClientRecord(**r) for r in raw]
+            for r in records:
+                if r.active and not r.client_code_hash:
+                    code = "RCODE-" + secrets.token_hex(16).upper()
+                    r.client_code_hash = _hash(code)
+                    migrated.append((r.client_id, code, r.email))
+            if migrated:
+                self._write("clients.json", [asdict(x) for x in records])
+                self._invalidate_clients_cache()
+        return migrated
+
     def activate_device_code(self, client_code: str, device_name: str = "") -> RefreshTokenRecord | None:
         """Exchange a per-user client_code for a new refresh token bound to device_name.
 

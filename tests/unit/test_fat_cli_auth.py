@@ -70,6 +70,7 @@ def _make_store(**kwargs) -> MagicMock:
     store.list_devices.return_value = kwargs.get("list_devices_return", [])
     store.revoke_device.return_value = kwargs.get("revoke_device_return", 0)
     store.regenerate_client_code.return_value = kwargs.get("regenerate_client_code_return", "RCODE-DEFAULT")
+    store.migrate_legacy_client_codes.return_value = kwargs.get("migrate_legacy_client_codes_return", [])
     return store
 
 
@@ -331,6 +332,60 @@ class TestRegenerateCode:
 
         assert result.exit_code == 1
         assert "não encontrado" in result.output
+
+
+# ===========================================================================
+# migrate-legacy-codes
+# ===========================================================================
+
+PATCH_GET_NOTIFICATION_SERVICE = "concilium.infrastructure.services.notification_service.get_notification_service"
+
+
+class TestMigrateLegacyCodes:
+    def test_no_pending_prints_nothing_to_migrate(self):
+        store = _make_store()
+        store.migrate_legacy_client_codes.return_value = []
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["migrate-legacy-codes"])
+
+        assert result.exit_code == 0, result.output
+        assert "já têm client_code" in result.output
+
+    def test_migrates_and_emails_users_with_email(self):
+        store = _make_store()
+        store.migrate_legacy_client_codes.return_value = [
+            ("legacy1", "RCODE-AAA", "legacy1@example.com"),
+        ]
+        notif = MagicMock()
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store), patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif):
+            result = runner.invoke(app, ["migrate-legacy-codes"])
+
+        assert result.exit_code == 0, result.output
+        assert "legacy1" in result.output
+        assert "email enviado" in result.output
+        notif.notify_client_code_migrated.assert_called_once()
+        args = notif.notify_client_code_migrated.call_args[0]
+        assert args[0] == "legacy1"
+        assert args[1] == "legacy1@example.com"
+        assert "RCODE-AAA" in args[2]
+
+    def test_migrates_without_email_lists_for_manual_delivery(self):
+        store = _make_store()
+        store.migrate_legacy_client_codes.return_value = [
+            ("legacy_no_email", "RCODE-BBB", ""),
+        ]
+        notif = MagicMock()
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store), patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif):
+            result = runner.invoke(app, ["migrate-legacy-codes"])
+
+        assert result.exit_code == 0, result.output
+        assert "sem email cadastrado" in result.output
+        assert "entrega manual" in result.output
+        assert "RCODE-BBB" in result.output
+        notif.notify_client_code_migrated.assert_not_called()
 
 
 # ===========================================================================

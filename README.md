@@ -151,6 +151,27 @@ Para conectar ao servidor MCP em produção via proxy, configure:
 - `device_id`: Auto-detectado (hostname ou username@hostname) - não precisa configurar
 - Tokens são armazenados localmente em `~/.concilium/tokens/` (chmod 600)
 
+**Verificando a primeira ativação:**
+
+Depois de configurar, abra o Claude Desktop e confira o log do MCP server ("View Logs" no app, ou o
+arquivo em `%APPDATA%\Claude\logs\` / `~/Library/Logs/Claude/`) por uma linha `Autenticado com sucesso.`
+Isso confirma que o `refresh_token` foi salvo em `~/.concilium/tokens/<device_id>.json` — a partir daí,
+o proxy não depende mais do `CONCILIUM_CLIENT_CODE` no dia a dia (só reativa com ele se o token expirar
+ou for revogado; validade padrão: 90 dias).
+
+**Problema conhecido — `claude_desktop_config.json` "voltando sozinho":** em algumas instalações, o
+Claude Desktop reescreve esse arquivo com um valor antigo/de outra sessão ao reiniciar (ex.: sincronização
+de configuração de MCP servers atrelada à conta), revertendo edições manuais no bloco `env`. Se isso
+acontecer e a ativação continuar falhando mesmo com o código correto, ative uma vez manualmente pelo
+terminal para gravar o token em cache diretamente (sem depender do arquivo persistir):
+
+```bash
+CONCILIUM_CLIENT_CODE="RCODE-..." CONCILIUM_SERVER_URL="https://mcp.mendesloboconstrucao.com.br" concilium-mcp-proxy
+# aguarde a linha "Autenticado com sucesso." e encerre com Ctrl+C
+```
+
+Isso é um comportamento do cliente (Claude Desktop), fora do controle deste projeto.
+
 ### 3. Interface de Usuário (UI)
 
 Interface visual baseada em Streamlit.

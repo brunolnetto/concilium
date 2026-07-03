@@ -160,6 +160,28 @@ class TestNotifyUserCreated:
         assert any("notify_user_created" in r.message for r in caplog.records)
 
 
+class TestNotifyClientCodeMigrated:
+    def test_happy_path_fallback(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        # Should not raise
+        svc.notify_client_code_migrated("legacy1", "legacy1@test.com", '{"mcpServers":{}}')
+
+    def test_exception_captured_as_error(self, caplog):
+        import logging
+
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send", side_effect=RuntimeError("smtp down")):
+            with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
+                svc.notify_client_code_migrated("c1", "c1@x.com", "{}")
+        assert any("notify_client_code_migrated" in r.message for r in caplog.records)
+
+
 class TestNotifyUserRemoved:
     def test_happy_path_fallback(self):
         from concilium.infrastructure.services.notification_service import NotificationService

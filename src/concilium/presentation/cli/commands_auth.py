@@ -12,6 +12,9 @@ Uso típico:
   # Regenerar o client_code do usuário (ex: vazamento do código original)
   concilium auth regenerate-code --user bruno
 
+  # Migrar em lote usuários cadastrados antes do client_code existir
+  concilium auth migrate-legacy-codes
+
   # Listar dispositivos ativos
   concilium auth list-devices
 
@@ -216,6 +219,63 @@ def regenerate_code(
         typer.echo(_json.dumps(config_block, indent=2, ensure_ascii=False))
     else:
         typer.echo(client_code)
+
+
+@app.command("migrate-legacy-codes")
+def migrate_legacy_codes() -> None:
+    """Gera client_code para todo usuário ativo que não tem um (migração em lote).
+
+    Usuários cadastrados antes do bootstrap por client_code (ADR-099) nunca
+    conseguem ativar um dispositivo novo — activate_device_code() sempre rejeita,
+    pois não há hash pra comparar. Rode este comando UMA VEZ após atualizar o
+    servidor para corrigir todos de uma vez, em vez de esperar cada usuário
+    reportar o problema e rodar 'regenerate-code' individualmente.
+
+    Usuários com email cadastrado recebem o novo config por email automaticamente
+    (ADR-123). Usuários sem email ficam listados no terminal para envio manual.
+    """
+    import json as _json
+
+    from concilium.infrastructure.auth.auth_store import get_auth_store
+    from concilium.infrastructure.services.notification_service import get_notification_service
+
+    store = get_auth_store()
+    migrated = store.migrate_legacy_client_codes()
+
+    if not migrated:
+        rprint("[green]Nenhum usuário pendente — todos já têm client_code.[/green]")
+        return
+
+    rprint(f"[green]✓ {len(migrated)} usuário(s) migrado(s):[/green]\n")
+
+    manual: list[tuple[str, str]] = []
+    for client_id, client_code, email in migrated:
+        config_json = _json.dumps(
+            {
+                "mcpServers": {
+                    "concilium": {
+                        "command": "concilium-mcp-proxy",
+                        "env": {
+                            "CONCILIUM_CLIENT_CODE": client_code,
+                            "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
+                        },
+                    }
+                }
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        if email:
+            get_notification_service().notify_client_code_migrated(client_id, email, config_json)
+            rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
+        else:
+            manual.append((client_id, client_code))
+            rprint(f"  [yellow]{client_id}[/yellow] — sem email cadastrado, entregar manualmente")
+
+    if manual:
+        rprint("\n[bold]Códigos para entrega manual (sem email cadastrado):[/bold]")
+        for client_id, client_code in manual:
+            rprint(f"  {client_id}: [bold]{client_code}[/bold]")
 
 
 @app.command("list-devices")

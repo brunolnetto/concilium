@@ -77,6 +77,44 @@ class NotificationService:
                 exc_info=True,
             )
 
+    def notify_client_code_migrated(
+        self,
+        client_id: str,
+        email: str,
+        config_json: str,
+    ) -> None:
+        """Notifica um client migrado (client_code gerado retroativamente) com o novo config."""
+        try:
+            subject = f"[Concilium] Novo código de ativação para '{client_id}'"
+            body = (
+                f"Olá!\n\n"
+                f"Sua conta no Concilium recebeu um código de ativação de dispositivo novo\n"
+                f"(atualização do sistema de autenticação — nenhuma ação sua causou isso).\n\n"
+                f"Para ativar o Claude Desktop (ou reativar um dispositivo já configurado),\n"
+                f"substitua o bloco 'concilium' em claude_desktop_config.json pelo conteúdo\n"
+                f"em anexo:\n\n"
+                f"  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n"
+                f"  Win  : %APPDATA%\\Claude\\claude_desktop_config.json\n\n"
+                f"Se não conseguir abrir o anexo, o conteúdo é:\n\n"
+                f"{config_json}\n\n"
+                f"Atenciosamente,\nEquipe Concilium"
+            )
+            self._send(
+                to=email,
+                subject=subject,
+                body=body,
+                attachment_name="claude_desktop_config.json",
+                attachment_content=config_json,
+            )
+        except Exception as exc:
+            logger.error(
+                "notify_client_code_migrated: falha ao notificar '%s' <%s>: %s",
+                client_id,
+                email,
+                exc,
+                exc_info=True,
+            )
+
     def notify_user_removed(self, client_id: str, email: str) -> None:
         """Envia email informando a remoção do usuário."""
         try:
