@@ -121,6 +121,43 @@ class StorageProjectHandle:
             raise RuntimeError("Nenhuma versão ativa — chame new_version() primeiro.")
         payload = model.model_dump_json(indent=2)
         self._storage.gravar_blob(self._path(f"{v}/{self._CANONICAL_FILE}"), payload.encode("utf-8"))
+        self._write_canonical_meta_sidecar(
+            v, payload, trace_id=trace_id, created_by=created_by, parent_refs=parent_refs
+        )
+
+    def _write_canonical_meta_sidecar(
+        self,
+        version: str,
+        payload_json: str,
+        *,
+        trace_id: str | None,
+        created_by: str,
+        parent_refs: list | None,
+    ) -> None:
+        """ADR-018 §D2: sidecar de proveniência (paridade com FileProjectHandle/project.py).
+
+        Best-effort — nunca deve falhar o save do canônico por causa disso.
+        """
+        try:
+            from hashlib import sha256
+
+            from concilium.domain.models.artifact import ArtifactKind, ArtifactMeta
+
+            meta = ArtifactMeta(
+                kind=ArtifactKind.CANONICAL,
+                schema_name="CanonicalModel",
+                schema_version="2026-05-03",
+                created_by=created_by,
+                trace_id=trace_id,
+                parent_refs=parent_refs or [],
+                content_hash=sha256(payload_json.encode()).hexdigest(),
+                version=version,
+            )
+            self.write_json(f"{version}/canonical.meta.json", meta.model_dump(mode="json"))
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning("Sidecar write falhou (best-effort, canonical preservado): %s", exc)
 
     def read_json(self, relative_path: str, default: Any) -> Any:
         try:

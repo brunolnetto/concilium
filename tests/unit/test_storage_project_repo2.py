@@ -301,6 +301,47 @@ class TestLoadSaveCanonical:
             with pytest.raises(RuntimeError, match="Nenhuma versão ativa"):
                 handle.save_canonical(mock_model)
 
+    def test_save_canonical_writes_artifact_meta_sidecar(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        """ADR-018 §D2: paridade com FileProjectHandle — sidecar de proveniência
+        deve ser escrito também no backend de storage (issue #47)."""
+        from concilium.domain.models.canonical import CanonicalModel
+
+        handle.new_version()
+        handle.update_meta(current_version="v1")
+        model = CanonicalModel.model_validate(_minimal_canonical_dict())
+
+        handle.save_canonical(model, trace_id="trace-abc", created_by="skill-04")
+
+        sidecar = handle.read_json("v1/canonical.meta.json", None)
+        assert sidecar is not None
+        assert sidecar["created_by"] == "skill-04"
+        assert sidecar["trace_id"] == "trace-abc"
+        assert sidecar["kind"] == "canonical"
+        assert sidecar["content_hash"]
+
+    def test_save_canonical_sidecar_write_json_failure_is_swallowed(
+        self, handle: StorageProjectHandle, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from concilium.domain.models.canonical import CanonicalModel
+
+        handle.new_version()
+        handle.update_meta(current_version="v1")
+        model = CanonicalModel.model_validate(_minimal_canonical_dict())
+
+        original_write_json = handle.write_json
+
+        def _flaky_write_json(relative_path, payload):
+            if relative_path.endswith("canonical.meta.json"):
+                raise RuntimeError("storage unavailable")
+            return original_write_json(relative_path, payload)
+
+        monkeypatch.setattr(handle, "write_json", _flaky_write_json)
+        # Não deve levantar — falha no sidecar é best-effort.
+        handle.save_canonical(model)
+        assert handle.load_canonical() is not None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  StorageProjectHandle — append_jsonl
