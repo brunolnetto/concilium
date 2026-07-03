@@ -36,6 +36,50 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+_MCP_SERVER_URL = "https://mcp.mendesloboconstrucao.com.br"
+
+
+def _build_mcp_config_block(client_code: str, platform: str) -> dict:
+    """Monta o bloco claude_desktop_config.json — "command" varia por plataforma.
+
+    No Windows, apps GUI (como o Claude Desktop) podem herdar um PATH desatualizado
+    ou sem o diretório Scripts do Python (comum com instalações via pip --user ou
+    Microsoft Store), fazendo "concilium-mcp-proxy" sozinho falhar mesmo estando
+    instalado corretamente. "cmd /c" força uma releitura do PATH do registro no
+    lançamento, contornando isso sem exigir path absoluto hardcoded por usuário.
+    """
+    entry: dict = {}
+    if platform == "windows":
+        entry["command"] = "cmd"
+        entry["args"] = ["/c", "concilium-mcp-proxy"]
+    else:
+        entry["command"] = "concilium-mcp-proxy"
+    entry["env"] = {
+        "CONCILIUM_CLIENT_CODE": client_code,
+        "CONCILIUM_SERVER_URL": _MCP_SERVER_URL,
+    }
+    return {"mcpServers": {"concilium": entry}}
+
+
+def _build_mcp_config_jsons(client_code: str) -> tuple[str, str]:
+    """Retorna (config_json_unix, config_json_windows) — o admin nunca escolhe
+
+    plataforma na hora do cadastro (não sabe o SO do dispositivo final com
+    certeza), então sempre geramos os dois e deixamos o usuário decidir qual usar.
+    """
+    import json as _json
+
+    unix_json = _json.dumps(_build_mcp_config_block(client_code, "unix"), indent=2, ensure_ascii=False)
+    windows_json = _json.dumps(_build_mcp_config_block(client_code, "windows"), indent=2, ensure_ascii=False)
+    return unix_json, windows_json
+
+
+def _print_both_configs(config_json_unix: str, config_json_windows: str) -> None:
+    rprint("\n[bold]macOS/Linux:[/bold]")
+    typer.echo(config_json_unix)
+    rprint("\n[bold]Windows:[/bold]")
+    typer.echo(config_json_windows)
+
 
 # ── Usuários ──────────────────────────────────────────────────────────────────
 
@@ -66,8 +110,6 @@ def add_user(
     Se --email for fornecido, o claude_desktop_config.json pronto é enviado por
     email automaticamente (ADR-123 F2).
     """
-    import json as _json
-
     from concilium.infrastructure.auth.auth_store import get_auth_store
     from concilium.infrastructure.services.notification_service import get_notification_service
 
@@ -91,32 +133,22 @@ def add_user(
     rprint("\n[yellow]Client code gerado (guarde agora — não será exibido de novo):[/yellow]")
     rprint(f"  [bold]{client_code}[/bold]")
 
-    config_block = {
-        "mcpServers": {
-            "concilium": {
-                "command": "concilium-mcp-proxy",
-                "env": {
-                    "CONCILIUM_CLIENT_CODE": client_code,
-                    "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
-                },
-            }
-        }
-    }
-    config_json = _json.dumps(config_block, indent=2, ensure_ascii=False)
+    config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
 
     if email:
         get_notification_service().notify_user_created(
             client_id=client_id,
             role=role,
             email=email,
-            config_json=config_json,
+            config_json_unix=config_json_unix,
+            config_json_windows=config_json_windows,
         )
         rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
     else:
-        rprint("\n[bold]Cole em claude_desktop_config.json:[/bold]")
+        rprint("\n[bold]Cole em claude_desktop_config.json (use o bloco do seu sistema):[/bold]")
         rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
-        rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]\n")
-        typer.echo(config_json)
+        rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]")
+        _print_both_configs(config_json_unix, config_json_windows)
 
 
 @app.command("list-users")
@@ -190,8 +222,6 @@ def regenerate_code(
     não é necessário gerar um código por dispositivo. Use este comando apenas
     se o usuário perdeu o código original ou se ele vazou e precisa ser trocado.
     """
-    import json as _json
-
     from concilium.infrastructure.auth.auth_store import get_auth_store
 
     store = get_auth_store()
@@ -201,22 +231,12 @@ def regenerate_code(
         raise typer.Exit(1)
 
     if show_config:
-        config_block = {
-            "mcpServers": {
-                "concilium": {
-                    "command": "concilium-mcp-proxy",
-                    "env": {
-                        "CONCILIUM_CLIENT_CODE": client_code,
-                        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
-                    },
-                }
-            }
-        }
+        config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
 
-        rprint("\n[bold]Envie ao usuário — colar em claude_desktop_config.json:[/bold]")
+        rprint("\n[bold]Envie ao usuário — colar em claude_desktop_config.json (use o bloco do seu sistema):[/bold]")
         rprint("[dim]macOS: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
-        rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]\n")
-        typer.echo(_json.dumps(config_block, indent=2, ensure_ascii=False))
+        rprint("[dim]Win:   %APPDATA%\\Claude\\claude_desktop_config.json[/dim]")
+        _print_both_configs(config_json_unix, config_json_windows)
     else:
         typer.echo(client_code)
 
@@ -231,11 +251,11 @@ def migrate_legacy_codes() -> None:
     servidor para corrigir todos de uma vez, em vez de esperar cada usuário
     reportar o problema e rodar 'regenerate-code' individualmente.
 
-    Usuários com email cadastrado recebem o novo config por email automaticamente
-    (ADR-123). Usuários sem email ficam listados no terminal para envio manual.
+    Usuários com email cadastrado recebem os dois configs (macOS/Linux e Windows)
+    por email automaticamente (ADR-123) — o próprio usuário escolhe o certo.
+    Usuários sem email ficam listados no terminal (também os dois formatos) para
+    envio manual.
     """
-    import json as _json
-
     from concilium.infrastructure.auth.auth_store import get_auth_store
     from concilium.infrastructure.services.notification_service import get_notification_service
 
@@ -250,32 +270,22 @@ def migrate_legacy_codes() -> None:
 
     manual: list[tuple[str, str]] = []
     for client_id, client_code, email in migrated:
-        config_json = _json.dumps(
-            {
-                "mcpServers": {
-                    "concilium": {
-                        "command": "concilium-mcp-proxy",
-                        "env": {
-                            "CONCILIUM_CLIENT_CODE": client_code,
-                            "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
-                        },
-                    }
-                }
-            },
-            indent=2,
-            ensure_ascii=False,
-        )
+        config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
         if email:
-            get_notification_service().notify_client_code_migrated(client_id, email, config_json)
+            get_notification_service().notify_client_code_migrated(
+                client_id, email, config_json_unix, config_json_windows
+            )
             rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
         else:
             manual.append((client_id, client_code))
             rprint(f"  [yellow]{client_id}[/yellow] — sem email cadastrado, entregar manualmente")
 
     if manual:
-        rprint("\n[bold]Códigos para entrega manual (sem email cadastrado):[/bold]")
+        rprint("\n[bold]Entrega manual (sem email cadastrado):[/bold]")
         for client_id, client_code in manual:
-            rprint(f"  {client_id}: [bold]{client_code}[/bold]")
+            config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
+            rprint(f"\n  [cyan]{client_id}[/cyan]:")
+            _print_both_configs(config_json_unix, config_json_windows)
 
 
 @app.command("list-devices")

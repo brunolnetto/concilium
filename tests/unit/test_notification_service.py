@@ -124,6 +124,26 @@ class TestSendSmtp:
         args = mock_server.sendmail.call_args[0]
         assert "conf.json" in args[2]  # the message string contains the filename
 
+    def test_send_with_multiple_attachments(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=True, host="smtp.test.com")
+        svc = NotificationService(settings=cfg)
+        mock_smtp_cls, mock_server = self._make_smtp_mock()
+        with patch("smtplib.SMTP", mock_smtp_cls):
+            svc._send(
+                "dest@x.com",
+                "Hello",
+                "Body",
+                attachments=[
+                    ("unix.json", '{"unix":true}'),
+                    ("windows.json", '{"windows":true}'),
+                ],
+            )
+        args = mock_server.sendmail.call_args[0]
+        assert "unix.json" in args[2]
+        assert "windows.json" in args[2]
+
     def test_send_logs_success(self, caplog):
         import logging
 
@@ -145,7 +165,7 @@ class TestNotifyUserCreated:
         cfg = _make_smtp_settings(enabled=False)
         svc = NotificationService(settings=cfg)
         # Should not raise
-        svc.notify_user_created("client1", "operator", "client1@test.com", '{"mcpServers":{}}')
+        svc.notify_user_created("client1", "operator", "client1@test.com", '{"unix":true}', '{"windows":true}')
 
     def test_exception_captured_as_error(self, caplog):
         import logging
@@ -156,7 +176,7 @@ class TestNotifyUserCreated:
         svc = NotificationService(settings=cfg)
         with patch.object(svc, "_send", side_effect=RuntimeError("smtp down")):
             with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                svc.notify_user_created("c1", "op", "c1@x.com", "{}")
+                svc.notify_user_created("c1", "op", "c1@x.com", "{}", "{}")
         assert any("notify_user_created" in r.message for r in caplog.records)
 
 
@@ -167,7 +187,7 @@ class TestNotifyClientCodeMigrated:
         cfg = _make_smtp_settings(enabled=False)
         svc = NotificationService(settings=cfg)
         # Should not raise
-        svc.notify_client_code_migrated("legacy1", "legacy1@test.com", '{"mcpServers":{}}')
+        svc.notify_client_code_migrated("legacy1", "legacy1@test.com", '{"unix":true}', '{"windows":true}')
 
     def test_exception_captured_as_error(self, caplog):
         import logging
@@ -178,7 +198,7 @@ class TestNotifyClientCodeMigrated:
         svc = NotificationService(settings=cfg)
         with patch.object(svc, "_send", side_effect=RuntimeError("smtp down")):
             with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
-                svc.notify_client_code_migrated("c1", "c1@x.com", "{}")
+                svc.notify_client_code_migrated("c1", "c1@x.com", "{}", "{}")
         assert any("notify_client_code_migrated" in r.message for r in caplog.records)
 
 

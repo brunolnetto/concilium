@@ -130,7 +130,7 @@ concilium-api
 
 ### MCP Proxy Remoto
 
-Para conectar ao servidor MCP em produção via proxy, configure:
+Para conectar ao servidor MCP em produção via proxy, configure (macOS/Linux):
 
 ```json
 {
@@ -145,6 +145,35 @@ Para conectar ao servidor MCP em produção via proxy, configure:
   }
 }
 ```
+
+**Windows:** use `cmd /c` em vez do comando puro:
+
+```json
+{
+  "mcpServers": {
+    "concilium": {
+      "command": "cmd",
+      "args": ["/c", "concilium-mcp-proxy"],
+      "env": {
+        "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
+        "CONCILIUM_CLIENT_CODE": "RCODE-..."
+      }
+    }
+  }
+}
+```
+
+Por quê: no Windows, apps GUI como o Claude Desktop podem herdar um `PATH` desatualizado ou sem o
+diretório `Scripts` do Python (comum em instalações via `pip install --user` ou Microsoft Store) —
+`"command": "concilium-mcp-proxy"` sozinho falha mesmo com o pacote instalado corretamente. `cmd /c`
+força uma releitura do `PATH` do registro no lançamento, resolvendo isso **sem** precisar de um path
+absoluto hardcoded por usuário/máquina (o que não escala — cada instalação tem um path diferente,
+embutindo usuário e versão do Python).
+
+`concilium auth add-user`, `regenerate-code` e `migrate-legacy-codes` não pedem pra escolher a
+plataforma — o admin não sabe necessariamente o SO do dispositivo final no momento do cadastro.
+Os dois blocos (macOS/Linux e Windows) são sempre gerados/enviados juntos (por email, em anexos
+separados; no console, um após o outro), e o próprio usuário usa o que corresponde ao seu sistema.
 
 **Notas:**
 - `CONCILIUM_CLIENT_CODE`: Código fornecido pelo administrador para ativar o dispositivo

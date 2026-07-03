@@ -43,9 +43,15 @@ class NotificationService:
         client_id: str,
         role: str,
         email: str,
-        config_json: str,
+        config_json_unix: str,
+        config_json_windows: str,
     ) -> None:
-        """Envia email de boas-vindas com claude_desktop_config.json como anexo."""
+        """Envia email de boas-vindas com os dois configs (macOS/Linux e Windows) em anexo.
+
+        O admin não sabe necessariamente o SO do dispositivo do usuário no momento do
+        cadastro — manda os dois e deixa o próprio usuário escolher o que corresponde
+        ao seu sistema, em vez de arriscar mandar o formato errado.
+        """
         try:
             subject = f"[Concilium] Bem-vindo, {client_id}! Sua conta foi criada."
             body = (
@@ -53,20 +59,26 @@ class NotificationService:
                 f"Sua conta no Concilium foi criada com sucesso.\n\n"
                 f"  Usuário : {client_id}\n"
                 f"  Perfil  : {role}\n\n"
-                f"Para configurar o Claude Desktop, adicione o conteúdo do arquivo\n"
-                f"claude_desktop_config.json (em anexo) ao seu arquivo de configuração:\n\n"
+                f"Em anexo, dois arquivos claude_desktop_config.json — use o que corresponde\n"
+                f"ao seu sistema operacional:\n\n"
+                f"  claude_desktop_config-macos-linux.json → macOS/Linux\n"
+                f"  claude_desktop_config-windows.json     → Windows\n\n"
+                f"Adicione o conteúdo do arquivo escolhido ao seu arquivo de configuração:\n\n"
                 f"  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n"
                 f"  Win  : %APPDATA%\\Claude\\claude_desktop_config.json\n\n"
-                f"Se não conseguir abrir o anexo, o conteúdo é:\n\n"
-                f"{config_json}\n\n"
+                f"Se não conseguir abrir os anexos, o conteúdo é:\n\n"
+                f"[macOS/Linux]\n{config_json_unix}\n\n"
+                f"[Windows]\n{config_json_windows}\n\n"
                 f"Atenciosamente,\nEquipe Concilium"
             )
             self._send(
                 to=email,
                 subject=subject,
                 body=body,
-                attachment_name="claude_desktop_config.json",
-                attachment_content=config_json,
+                attachments=[
+                    ("claude_desktop_config-macos-linux.json", config_json_unix),
+                    ("claude_desktop_config-windows.json", config_json_windows),
+                ],
             )
         except Exception as exc:
             logger.error(
@@ -81,9 +93,10 @@ class NotificationService:
         self,
         client_id: str,
         email: str,
-        config_json: str,
+        config_json_unix: str,
+        config_json_windows: str,
     ) -> None:
-        """Notifica um client migrado (client_code gerado retroativamente) com o novo config."""
+        """Notifica um client migrado (client_code gerado retroativamente) com os dois configs."""
         try:
             subject = f"[Concilium] Novo código de ativação para '{client_id}'"
             body = (
@@ -92,19 +105,24 @@ class NotificationService:
                 f"(atualização do sistema de autenticação — nenhuma ação sua causou isso).\n\n"
                 f"Para ativar o Claude Desktop (ou reativar um dispositivo já configurado),\n"
                 f"substitua o bloco 'concilium' em claude_desktop_config.json pelo conteúdo\n"
-                f"em anexo:\n\n"
+                f"de um dos anexos — use o que corresponde ao seu sistema operacional:\n\n"
+                f"  claude_desktop_config-macos-linux.json → macOS/Linux\n"
+                f"  claude_desktop_config-windows.json     → Windows\n\n"
                 f"  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n"
                 f"  Win  : %APPDATA%\\Claude\\claude_desktop_config.json\n\n"
-                f"Se não conseguir abrir o anexo, o conteúdo é:\n\n"
-                f"{config_json}\n\n"
+                f"Se não conseguir abrir os anexos, o conteúdo é:\n\n"
+                f"[macOS/Linux]\n{config_json_unix}\n\n"
+                f"[Windows]\n{config_json_windows}\n\n"
                 f"Atenciosamente,\nEquipe Concilium"
             )
             self._send(
                 to=email,
                 subject=subject,
                 body=body,
-                attachment_name="claude_desktop_config.json",
-                attachment_content=config_json,
+                attachments=[
+                    ("claude_desktop_config-macos-linux.json", config_json_unix),
+                    ("claude_desktop_config-windows.json", config_json_windows),
+                ],
             )
         except Exception as exc:
             logger.error(
@@ -219,9 +237,18 @@ class NotificationService:
         body: str,
         attachment_name: str | None = None,
         attachment_content: str | None = None,
+        attachments: list[tuple[str, str]] | None = None,
     ) -> None:
-        """Envia email ou faz log fallback quando SMTP não está configurado."""
+        """Envia email ou faz log fallback quando SMTP não está configurado.
+
+        Aceita um único anexo (attachment_name/attachment_content, legado) ou uma
+        lista de anexos (attachments — [(filename, content), ...], ex.: configs
+        macOS/Linux e Windows lado a lado no mesmo email).
+        """
         cfg = self._settings
+        all_attachments = list(attachments or [])
+        if attachment_name and attachment_content:
+            all_attachments.append((attachment_name, attachment_content))
 
         if not cfg.enabled or not cfg.host:
             # Fallback dev/CI: log sem enviar
@@ -230,19 +257,20 @@ class NotificationService:
                 to,
                 subject,
                 body,
-                f" | Attachment={attachment_name}" if attachment_name else "",
+                f" | Attachments={[name for name, _ in all_attachments]}" if all_attachments else "",
             )
             return
 
-        if attachment_name and attachment_content:
+        if all_attachments:
             msg: MIMEMultipart | MIMEText = MIMEMultipart()
             assert isinstance(msg, MIMEMultipart)
             msg.attach(MIMEText(body, "plain", "utf-8"))
-            part = MIMEBase("application", "json")
-            part.set_payload(attachment_content.encode("utf-8"))
-            encoders.encode_base64(part)
-            part.add_header("Content-Disposition", f'attachment; filename="{attachment_name}"')
-            msg.attach(part)
+            for name, content in all_attachments:
+                part = MIMEBase("application", "json")
+                part.set_payload(content.encode("utf-8"))
+                encoders.encode_base64(part)
+                part.add_header("Content-Disposition", f'attachment; filename="{name}"')
+                msg.attach(part)
         else:
             msg = MIMEText(body, "plain", "utf-8")
 

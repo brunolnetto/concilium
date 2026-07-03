@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 import typer
 from typer.testing import CliRunner
 
-from concilium.presentation.cli.commands_auth import app
+from concilium.presentation.cli.commands_auth import _build_mcp_config_block, app
 
 runner = CliRunner()
 
@@ -72,6 +72,29 @@ def _make_store(**kwargs) -> MagicMock:
     store.regenerate_client_code.return_value = kwargs.get("regenerate_client_code_return", "RCODE-DEFAULT")
     store.migrate_legacy_client_codes.return_value = kwargs.get("migrate_legacy_client_codes_return", [])
     return store
+
+
+# ===========================================================================
+# _build_mcp_config_block — "command" varia por plataforma, sem path hardcoded
+# ===========================================================================
+
+
+class TestBuildMcpConfigBlock:
+    def test_unix_uses_bare_command(self):
+        block = _build_mcp_config_block("RCODE-X", "unix")
+        entry = block["mcpServers"]["concilium"]
+        assert entry["command"] == "concilium-mcp-proxy"
+        assert "args" not in entry
+        assert entry["env"]["CONCILIUM_CLIENT_CODE"] == "RCODE-X"
+
+    def test_windows_uses_cmd_wrapper_no_hardcoded_path(self):
+        """cmd /c força releitura do PATH — evita path absoluto por usuário/máquina."""
+        block = _build_mcp_config_block("RCODE-X", "windows")
+        entry = block["mcpServers"]["concilium"]
+        assert entry["command"] == "cmd"
+        assert entry["args"] == ["/c", "concilium-mcp-proxy"]
+        assert "AppData" not in str(block)
+        assert "Users" not in str(block)
 
 
 # ===========================================================================
@@ -266,6 +289,38 @@ class TestRemoveUser:
         # revoke_device was called at least for each device
         assert store.revoke_device.call_count >= 2
 
+    def test_add_user_no_email_prints_both_platform_configs(self):
+        """Sem --email, o console mostra os dois blocos (macOS/Linux e Windows) —
+        não há --platform: o admin não escolhe, o usuário final decide."""
+        store = _make_store(add_client_return=_make_client_record())
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(
+                app,
+                ["add-user", "--id", "alice", "--secret", "s"],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert '"command": "concilium-mcp-proxy"' in result.output
+        assert '"command": "cmd"' in result.output
+        assert '"/c"' in result.output
+
+    def test_add_user_with_email_sends_both_platform_configs(self):
+        store = _make_store(add_client_return=_make_client_record())
+        notif = MagicMock()
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store), patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif):
+            result = runner.invoke(
+                app,
+                ["add-user", "--id", "alice", "--secret", "s", "--email", "alice@example.com"],
+            )
+
+        assert result.exit_code == 0, result.output
+        notif.notify_user_created.assert_called_once()
+        kwargs = notif.notify_user_created.call_args.kwargs
+        assert '"command": "concilium-mcp-proxy"' in kwargs["config_json_unix"]
+        assert '"command": "cmd"' in kwargs["config_json_windows"]
+
 
 # ===========================================================================
 # new-device
@@ -333,6 +388,22 @@ class TestRegenerateCode:
         assert result.exit_code == 1
         assert "não encontrado" in result.output
 
+    def test_config_shows_both_platform_blocks(self):
+        """Sem --platform: --config mostra os dois blocos (macOS/Linux e Windows)."""
+        store = _make_store()
+        store.regenerate_client_code.return_value = "RCODE-WIN"
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(
+                app,
+                ["regenerate-code", "--user", "alice"],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert '"command": "concilium-mcp-proxy"' in result.output
+        assert '"command": "cmd"' in result.output
+        assert '"/c"' in result.output
+
 
 # ===========================================================================
 # migrate-legacy-codes
@@ -369,7 +440,8 @@ class TestMigrateLegacyCodes:
         args = notif.notify_client_code_migrated.call_args[0]
         assert args[0] == "legacy1"
         assert args[1] == "legacy1@example.com"
-        assert "RCODE-AAA" in args[2]
+        assert "RCODE-AAA" in args[2]  # config_json_unix
+        assert "RCODE-AAA" in args[3]  # config_json_windows
 
     def test_migrates_without_email_lists_for_manual_delivery(self):
         store = _make_store()
@@ -383,9 +455,41 @@ class TestMigrateLegacyCodes:
 
         assert result.exit_code == 0, result.output
         assert "sem email cadastrado" in result.output
-        assert "entrega manual" in result.output
+        assert "Entrega manual" in result.output
         assert "RCODE-BBB" in result.output
         notif.notify_client_code_migrated.assert_not_called()
+
+    def test_email_path_sends_both_platforms(self):
+        store = _make_store()
+        store.migrate_legacy_client_codes.return_value = [
+            ("legacy1", "RCODE-AAA", "legacy1@example.com"),
+        ]
+        notif = MagicMock()
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store), patch(PATCH_GET_NOTIFICATION_SERVICE, return_value=notif):
+            result = runner.invoke(app, ["migrate-legacy-codes"])
+
+        assert result.exit_code == 0, result.output
+        args = notif.notify_client_code_migrated.call_args[0]
+        config_json_unix, config_json_windows = args[2], args[3]
+        assert '"command": "concilium-mcp-proxy"' in config_json_unix
+        assert '"command": "cmd"' in config_json_windows
+        assert '"/c"' in config_json_windows
+
+    def test_manual_delivery_shows_both_platforms(self):
+        """Sem email: os dois formatos são impressos pro admin entregar — sem escolha prévia."""
+        store = _make_store()
+        store.migrate_legacy_client_codes.return_value = [
+            ("legacy_no_email", "RCODE-BBB", ""),
+        ]
+
+        with patch(PATCH_GET_AUTH_STORE, return_value=store):
+            result = runner.invoke(app, ["migrate-legacy-codes"])
+
+        assert result.exit_code == 0, result.output
+        assert '"command": "concilium-mcp-proxy"' in result.output
+        assert '"command": "cmd"' in result.output
+        assert '"/c"' in result.output
 
 
 # ===========================================================================
