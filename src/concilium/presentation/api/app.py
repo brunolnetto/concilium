@@ -91,6 +91,16 @@ def create_app() -> FastAPI:
     async def _permission_error_handler(_req: _Request, exc: PermissionError) -> _JSONResponse:
         return _JSONResponse(status_code=403, content={"detail": str(exc)})
 
+    # ADR-047 §D7: falha persistente do backend de storage → 503 em vez de 500
+    # genérico. Padroniza o tratamento para todas as rotas de leitura sem exigir
+    # try/except individual em cada uma. O header Retry-After já é injetado pelo
+    # SlowAPIMiddleware (ADR-098, headers_enabled=True) em toda resposta.
+    from concilium.domain.repositories.blob_storage_port import StorageUnavailableError
+
+    @app.exception_handler(StorageUnavailableError)
+    async def _storage_unavailable_handler(_req: _Request, exc: StorageUnavailableError) -> _JSONResponse:
+        return _JSONResponse(status_code=503, content={"detail": str(exc)})
+
     # ADR-098: Rate limiting — ordem de middleware: SlowAPI (outer) → JWT (inner)
     from slowapi.errors import RateLimitExceeded
     from slowapi.middleware import SlowAPIMiddleware

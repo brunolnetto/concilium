@@ -846,6 +846,47 @@ class TestSharePointLerBlobEdgeCases:
         with pytest.raises(FileNotFoundError, match="Erro ao acessar SharePoint"):
             storage._ler_blob_direct("file.json", mock_httpx)
 
+    def test_ler_blob_direct_retries_on_transient_429_then_succeeds(self):
+        """429 (throttling) seguido de 200 é absorvido pelo retry — sem propagar erro."""
+        storage = _make_storage_no_cache()
+        mock_httpx = MagicMock()
+        mock_httpx.get.side_effect = [
+            self._mock_resp(429),
+            self._mock_resp(200, content=b"ok_after_retry"),
+        ]
+        with patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep"):
+            result = storage._ler_blob_direct("file.json", mock_httpx)
+        assert result == b"ok_after_retry"
+        assert mock_httpx.get.call_count == 2
+
+    def test_ler_blob_direct_gives_up_after_persistent_5xx(self):
+        """503 persistente esgota as tentativas e vira StorageUnavailableError (503 + Retry-After na API)."""
+        from concilium.domain.repositories.blob_storage_port import StorageUnavailableError
+
+        storage = _make_storage_no_cache()
+        persistent_503 = self._mock_resp(503)
+        persistent_503.raise_for_status.side_effect = RuntimeError("503 Service Unavailable")
+        mock_httpx = MagicMock()
+        mock_httpx.get.return_value = persistent_503
+        with (
+            patch("concilium.infrastructure.adapters.blob_storage.sharepoint.time.sleep"),
+            pytest.raises(StorageUnavailableError, match="503"),
+        ):
+            storage._ler_blob_direct("file.json", mock_httpx)
+        assert mock_httpx.get.call_count == 4  # tentativa inicial + 3 retries
+
+    def test_listar_blobs_persistent_error_raises_storage_unavailable(self):
+        """listar_blobs com erro persistente (não-404) também vira StorageUnavailableError."""
+        from concilium.domain.repositories.blob_storage_port import StorageUnavailableError
+
+        storage = _make_storage_no_cache()
+        forbidden = self._mock_resp(403)
+        forbidden.raise_for_status.side_effect = RuntimeError("403 Forbidden")
+        mock_httpx = MagicMock()
+        mock_httpx.get.return_value = forbidden
+        with patch.dict("sys.modules", {"httpx": mock_httpx}), pytest.raises(StorageUnavailableError, match="403"):
+            storage.listar_blobs("projetos")
+
 
 class TestSharePointGravarBlobEdgeCases:
     def test_gravar_blob_without_cache(self):

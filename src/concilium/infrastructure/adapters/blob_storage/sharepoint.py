@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import UTC
 from pathlib import Path
 from typing import Any
 
-from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+from concilium.domain.repositories.blob_storage_port import BlobStoragePort, StorageUnavailableError
 from concilium.infrastructure.settings import get_storage
 
 from ._sharepoint_auth import SharePointCredential, _BlobCache  # noqa: F401
@@ -16,6 +17,11 @@ logger = logging.getLogger(__name__)
 
 _GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _LARGE_FILE_THRESHOLD = 4 * 1024 * 1024  # 4 MB
+
+# Erros transitórios do Graph API — comuns logo após um blue-green swap, quando o
+# token MSAL da revisão nova ainda está "frio" ou o Graph está sob throttling.
+_TRANSIENT_STATUS_CODES = frozenset({429, 502, 503, 504})
+_TRANSIENT_RETRY_DELAYS_S = (0.5, 1.0, 2.0)
 
 
 class SharePointBlobStorage(BlobStoragePort):
@@ -92,6 +98,36 @@ class SharePointBlobStorage(BlobStoragePort):
     def _item_content_url(self, path: str) -> str:
         return f"{self._item_url(path)}:/content"
 
+    def _get_with_retry(self, httpx: Any, url: str, headers: dict[str, str]) -> Any:
+        """GET com retry/backoff em erros transitórios do Graph (429/502/503/504)."""
+        last_response = None
+        for attempt, delay in enumerate((*_TRANSIENT_RETRY_DELAYS_S, None)):
+            r = httpx.get(url, headers=headers, follow_redirects=True)
+            if r.status_code not in _TRANSIENT_STATUS_CODES:
+                return r
+            last_response = r
+            if delay is not None:
+                logger.warning(
+                    "SharePoint: status %s transitório (tentativa %d/%d) — retry em %.1fs",
+                    r.status_code,
+                    attempt + 1,
+                    len(_TRANSIENT_RETRY_DELAYS_S) + 1,
+                    delay,
+                )
+                time.sleep(delay)
+        return last_response
+
+    def _raise_for_read_status(self, r: Any, path: str) -> None:
+        """Como r.raise_for_status(), mas erros de leitura persistentes (não 404) viram
+        StorageUnavailableError — a rota HTTP não precisa de try/except; o handler
+        global em app.py converte para 503 com Retry-After (ver ADR-047 §D7)."""
+        try:
+            r.raise_for_status()
+        except Exception as exc:
+            raise StorageUnavailableError(
+                f"SharePoint indisponível ao ler '{path}' (status={r.status_code}): {exc}"
+            ) from exc
+
     # ── BlobStoragePort ────────────────────────────────────────────────────
 
     def ler_blob(self, path: str) -> bytes:
@@ -143,16 +179,12 @@ class SharePointBlobStorage(BlobStoragePort):
                     return stale[0]
             raise FileNotFoundError(f"Modo offline: blob não encontrado no cache: {path}")
         try:
-            r = httpx.get(
-                self._item_content_url(path),
-                headers=self._headers(),
-                follow_redirects=True,
-            )
+            r = self._get_with_retry(httpx, self._item_content_url(path), self._headers())
         except Exception as exc:
             raise FileNotFoundError(f"Erro ao acessar SharePoint para {path}: {exc}") from exc
         if r.status_code == 404:
             raise FileNotFoundError(f"Blob não encontrado no SharePoint: {path}")
-        r.raise_for_status()
+        self._raise_for_read_status(r, path)
         content = r.content
         if self._cache:
             etag = r.headers.get("ETag", "")
@@ -242,7 +274,7 @@ class SharePointBlobStorage(BlobStoragePort):
 
             if r.status_code == 404:
                 return []
-            r.raise_for_status()
+            self._raise_for_read_status(r, prefix)
             data = r.json()
 
             for item in data.get("value", []):

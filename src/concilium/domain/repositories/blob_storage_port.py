@@ -4,6 +4,17 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 
+class StorageUnavailableError(Exception):
+    """Backend de storage indisponível de forma persistente (não é 'blob não existe').
+
+    Levantada por implementações concretas quando uma falha de infraestrutura
+    (auth, throttling esgotado, timeout, 5xx) impede a operação — distinta de
+    FileNotFoundError, que sinaliza ausência legítima do blob. Rotas de leitura
+    não precisam de try/except: o handler global em app.py converte para 503
+    com Retry-After.
+    """
+
+
 class BlobStoragePort(ABC):
     """Interface abstrata para armazenamento de blobs (arquivos brutos).
 

@@ -70,6 +70,13 @@ class _ErrorService(_FakeService):
         raise ValueError("invalid eap")
 
 
+class _StorageUnavailableService(_FakeService):
+    def list_projects(self):
+        from concilium.domain.repositories.blob_storage_port import StorageUnavailableError
+
+        raise StorageUnavailableError("SharePoint indisponível ao ler 'projetos/index.json' (status=503): ...")
+
+
 def _client(svc=None):
     app = create_app()
     app.dependency_overrides[get_concilium_service] = lambda: svc or _FakeService()
@@ -116,6 +123,13 @@ class TestProjectsRoutes:
     def test_delete_project_not_found(self, _error_client):
         resp = _error_client.delete("/api/projects/proj-missing")
         assert resp.status_code == 404
+
+    def test_list_projects_storage_unavailable_returns_503_with_retry_after(self):
+        resp = _client(_StorageUnavailableService()).get("/api/projects/")
+        assert resp.status_code == 503
+        # Retry-After é injetado globalmente pelo SlowAPIMiddleware (ADR-098).
+        assert "Retry-After" in resp.headers
+        assert "SharePoint indisponível" in resp.json()["detail"]
 
     def test_list_versions_happy(self, _fake_client):
         resp = _fake_client.get("/api/projects/proj-1/versions")

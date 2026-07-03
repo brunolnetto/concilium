@@ -297,6 +297,19 @@ cmd_smoke() {
         else warn "FALHOU: $name"; (( ++FAIL )) || true; fi
     }
 
+    # Como _check, mas tenta ate 3x com backoff — usado nos primeiros checks
+    # autenticados que tocam o backend de storage (SharePoint), que pode estar
+    # "frio" (token MSAL, throttling do Graph) logo apos um swap blue-green.
+    _check_retry() {
+        local name="$1"; shift
+        local attempt delay
+        for attempt in 1 2 3; do
+            "$@" &>/dev/null 2>&1 && { ok "$name"; (( ++PASS )) || true; return 0; }
+            [[ "$attempt" -lt 3 ]] && { delay=$((attempt * 3)); sleep "$delay"; }
+        done
+        warn "FALHOU: $name (apos 3 tentativas)"; (( ++FAIL )) || true
+    }
+
     step "Smoke Tests Exaustivos -> $TARGET_URL"
     [[ -n "$TARGET_REVISION" ]]     && log "Revision API: $TARGET_REVISION"
     [[ -n "$TARGET_MCP_REVISION" ]] && log "Revision MCP: $TARGET_MCP_REVISION"
@@ -339,7 +352,7 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
         _check "JWT contem claim 'roles'" bash -c "echo '$PAYLOAD' | jq -e '.roles' > /dev/null"
         _check "JWT contem claim 'sub'"   bash -c "echo '$PAYLOAD' | jq -e '.sub'   > /dev/null"
 
-        _check "GET /api/projects/ com token valido" bash -c \
+        _check_retry "GET /api/projects/ com token valido" bash -c \
             "S=\$(curl -so /dev/null -w '%{http_code}' --max-time 15 \
                 -H 'Authorization: Bearer ${TOKEN}' '${TARGET_URL}/api/projects/')
              [[ \"\$S\" == '200' ]]"
@@ -366,7 +379,7 @@ print(json.dumps(json.loads(base64.b64decode(d))))" 2>/dev/null || echo "{}")
     fi
 
     if [[ -n "$TOKEN" ]]; then
-        _check "GET /api/catalogs (catalog:read)" bash -c \
+        _check_retry "GET /api/catalogs (catalog:read)" bash -c \
             "S=\$(curl -sLo /dev/null -w '%{http_code}' --max-time 15 \
                 -H 'Authorization: Bearer ${TOKEN}' '${TARGET_URL}/api/catalogs/')
              [[ \"\$S\" == '200' ]]"
