@@ -125,7 +125,7 @@ cov:
 		--json-report --json-report-file=$(TEST_REPORT) \
 		--cov-report=term-missing:skip-covered \
 		--no-header \
-		--durations=50 -rA
+		--durations=50 -rfsx
 	@echo "  Cobertura → $(COV_DIR)/{coverage.json,test-report.json}"´
 	$(MAKE) cov-stats
 
