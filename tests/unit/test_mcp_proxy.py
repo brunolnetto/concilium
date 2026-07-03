@@ -526,12 +526,18 @@ class TestWriteError:
         assert data["error"]["code"] == -32000
         assert "Something went wrong" in data["error"]["message"]
 
-    def test_writes_null_id_when_msg_has_no_id(self, capsys):
-        """_write_error uses null id when msg lacks 'id'."""
+    def test_no_response_for_notification_without_id(self, capsys):
+        """JSON-RPC notifications (sem 'id') não recebem resposta — ecoar id:null
+        é inválido pelo protocolo e alguns clientes (Claude Desktop) rejeitam a
+        mensagem inteira por causa disso."""
+        proxy_mod._write_error({"method": "notifications/cancelled"}, "boom")
+        out = capsys.readouterr().out
+        assert out == ""
+
+    def test_no_response_for_completely_empty_msg(self, capsys):
         proxy_mod._write_error({}, "boom")
         out = capsys.readouterr().out
-        data = json.loads(out.strip())
-        assert data["id"] is None
+        assert out == ""
 
     def test_output_ends_with_newline(self, capsys):
         """_write_error output is terminated with newline."""

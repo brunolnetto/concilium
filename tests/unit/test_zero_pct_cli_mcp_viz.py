@@ -140,12 +140,11 @@ class TestProxyWriteError:
         assert parsed["error"]["code"] == -32000
         assert "something went wrong" in parsed["error"]["message"]
 
-    def test_write_error_null_id(self, proxy_module, capsys):
-        """_write_error propagates None id when message has no id field."""
+    def test_write_error_no_output_when_message_has_no_id(self, proxy_module, capsys):
+        """Notifications (sem 'id') não recebem resposta — id:null é inválido por protocolo."""
         proxy_module._write_error({}, "oops")
         captured = capsys.readouterr()
-        parsed = json.loads(captured.out.strip())
-        assert parsed["id"] is None
+        assert captured.out == ""
 
 
 class TestProxyLog:

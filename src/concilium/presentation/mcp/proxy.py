@@ -466,9 +466,16 @@ async def _bridge(state: _State, http_client) -> None:
 
 
 def _write_error(msg: dict, error: str) -> None:
+    """Escreve uma resposta JSON-RPC de erro no stdout — mas só se `msg` for uma
+    requisição (tem 'id'). Notifications (sem 'id') nunca recebem resposta pelo
+    protocolo JSON-RPC; ecoar 'id: null' de volta é inválido e alguns clientes
+    (ex.: Claude Desktop) rejeitam a mensagem inteira por causa disso."""
+    if "id" not in msg:
+        _log(f"Notification '{msg.get('method', '?')}' falhou (sem resposta, por protocolo): {error}")
+        return
     err = {
         "jsonrpc": "2.0",
-        "id": msg.get("id"),
+        "id": msg["id"],
         "error": {"code": -32000, "message": error},
     }
     sys.stdout.write(json.dumps(err) + "\n")
