@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +54,21 @@ def _resolve_project_type(meta: dict[str, Any]) -> str:
     if raw in {"hot_project", "project"}:
         return raw
     return "hot_project" if meta.get("benchmark_slug") else "project"
+
+
+def _ps_build_list_item(project: Any) -> dict[str, Any]:
+    """Monta o item de list_projects() para um único ProjectHandle (1 unidade de trabalho paralela)."""
+    meta = project.meta
+    return {
+        "project_id": meta.get("id", ""),
+        "nome": meta.get("nome", ""),
+        "contexto_id": meta.get("contexto_id", ""),
+        "tipo_projeto": _resolve_project_type(meta),
+        "status_eap": meta.get("status_eap", "ATIVO"),
+        "current_version": meta.get("current_version"),
+        "versions": project.list_versions(),
+        "benchmark_slug": meta.get("benchmark_slug"),
+    }
 
 
 def _canonical_eap_to_rows(canonical: Any) -> list[dict[str, Any]]:
@@ -158,23 +174,14 @@ class ProjectService:
         self._files = files
 
     def list_projects(self) -> list[dict[str, Any]]:
-        items: list[dict[str, Any]] = []
-        for project in self._repository.list_projects():
-            meta = project.meta
-            tipo = _resolve_project_type(meta)
-            items.append(
-                {
-                    "project_id": meta.get("id", ""),
-                    "nome": meta.get("nome", ""),
-                    "contexto_id": meta.get("contexto_id", ""),
-                    "tipo_projeto": tipo,
-                    "status_eap": meta.get("status_eap", "ATIVO"),
-                    "current_version": meta.get("current_version"),
-                    "versions": project.list_versions(),
-                    "benchmark_slug": meta.get("benchmark_slug"),
-                }
-            )
-        return items
+        projects = self._repository.list_projects()
+        if not projects:
+            return []
+        # Backends remotos (SharePoint/S3/Azure) pagam 1 round-trip por meta.json +
+        # 1 listagem (recursiva) por projeto para 'versions' — sequencial isso escala
+        # O(N) em latência de rede. Paraleliza para manter o tempo de resposta ~constante.
+        with ThreadPoolExecutor(max_workers=min(16, len(projects))) as executor:
+            return list(executor.map(_ps_build_list_item, projects))
 
     def create_project(
         self,
