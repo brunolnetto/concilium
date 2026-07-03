@@ -3,6 +3,8 @@ name: Build -> ACA Revisions Deploy
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
   workflow_dispatch:
     inputs:
       image_tag:

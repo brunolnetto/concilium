@@ -124,11 +124,9 @@ class TestProjectsRoutes:
         resp = _error_client.delete("/api/projects/proj-missing")
         assert resp.status_code == 404
 
-    def test_list_projects_storage_unavailable_returns_503_with_retry_after(self):
+    def test_list_projects_storage_unavailable_returns_503(self):
         resp = _client(_StorageUnavailableService()).get("/api/projects/")
         assert resp.status_code == 503
-        # Retry-After é injetado globalmente pelo SlowAPIMiddleware (ADR-098).
-        assert "Retry-After" in resp.headers
         assert "SharePoint indisponível" in resp.json()["detail"]
 
     def test_list_versions_happy(self, _fake_client):

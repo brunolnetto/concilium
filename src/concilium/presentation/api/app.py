@@ -93,8 +93,10 @@ def create_app() -> FastAPI:
 
     # ADR-047 §D7: falha persistente do backend de storage → 503 em vez de 500
     # genérico. Padroniza o tratamento para todas as rotas de leitura sem exigir
-    # try/except individual em cada uma. O header Retry-After já é injetado pelo
-    # SlowAPIMiddleware (ADR-098, headers_enabled=True) em toda resposta.
+    # try/except individual em cada uma. Não setamos Retry-After aqui: o
+    # SlowAPIMiddleware (ADR-098, headers_enabled=True) já injeta esse header
+    # quando aplicável, mas sua presença depende do estado do rate limiter —
+    # não é garantida por resposta (ver discussão em #29).
     from concilium.domain.repositories.blob_storage_port import StorageUnavailableError
 
     @app.exception_handler(StorageUnavailableError)
