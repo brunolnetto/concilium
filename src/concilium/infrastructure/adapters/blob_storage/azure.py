@@ -59,7 +59,7 @@ class AzureBlobStorage(BlobStoragePort):
         if self._service is not None:
             return self._service
         try:
-            from azure.storage.blob import BlobServiceClient
+            from azure.storage.blob import BlobServiceClient  # ty: ignore[unresolved-import]
         except ImportError as exc:
             raise ImportError(
                 "O pacote 'azure-storage-blob' é necessário para o backend Azure Blob. "
@@ -74,7 +74,7 @@ class AzureBlobStorage(BlobStoragePort):
                 credential=self._account_key,
             )
         elif self._account:
-            from azure.identity import DefaultAzureCredential  # Managed Identity
+            from azure.identity import DefaultAzureCredential  # Managed Identity  # ty: ignore[unresolved-import]
 
             self._service = BlobServiceClient(
                 account_url=f"https://{self._account}.blob.core.windows.net",
@@ -97,7 +97,13 @@ class AzureBlobStorage(BlobStoragePort):
     # ── BlobStoragePort ────────────────────────────────────────────────────
 
     def ler_blob(self, path: str) -> bytes:
-        from azure.core.exceptions import ResourceNotFoundError
+        try:
+            from azure.core.exceptions import ResourceNotFoundError  # ty: ignore[unresolved-import]
+        except ImportError as exc:
+            raise ImportError(
+                "O pacote 'azure-storage-blob' é necessário para o backend Azure Blob. "
+                "Instale com: pip install 'concilium[azure]'"
+            ) from exc
 
         try:
             return self._blob_client(path).download_blob().readall()
@@ -124,7 +130,7 @@ class AzureBlobStorage(BlobStoragePort):
     def gerar_url_temporaria(self, path: str, ttl_segundos: int = 900) -> str | None:
         """SAS URL de leitura com expiração (ADR-093 D4)."""
         try:
-            from azure.storage.blob import BlobSasPermissions, generate_blob_sas
+            from azure.storage.blob import BlobSasPermissions, generate_blob_sas  # ty: ignore[unresolved-import]
         except ImportError:
             return None
 

@@ -918,8 +918,8 @@ def _read_smtp_password_from_kv() -> str | None:
     if not kv_url:
         return None
     try:
-        from azure.identity import DefaultAzureCredential
-        from azure.keyvault.secrets import SecretClient
+        from azure.identity import DefaultAzureCredential  # ty: ignore[unresolved-import]
+        from azure.keyvault.secrets import SecretClient  # ty: ignore[unresolved-import]
 
         client = SecretClient(vault_url=kv_url, credential=DefaultAzureCredential())
         value = client.get_secret("smtp-password").value or ""

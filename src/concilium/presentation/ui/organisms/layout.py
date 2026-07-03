@@ -203,8 +203,6 @@ def render_diagnostico_pe(
 
 def _render_diagnostico_item(item: object) -> None:
     """Renders one deficit item in the diagnostico expander."""
-    from concilium.presentation.ui.atoms.misc import _emoji_status  # noqa: PLC0415 - local import for performance
-
     with st.expander(
         f"{_emoji_status(item.gap_rs)} {item.descricao[:60]} — custo extra: R$ {abs(item.gap_rs):,.0f}",  # type: ignore[union-attr]
         expanded=False,

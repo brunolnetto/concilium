@@ -281,6 +281,16 @@ class TestLerBlob:
             with pytest.raises(FileNotFoundError, match="data/missing.json"):
                 s.ler_blob("data/missing.json")
 
+    def test_missing_azure_core_raises_import_error_not_module_not_found(self):
+        # ler_blob importa azure.core.exceptions antes de qualquer chamada que
+        # passe por _client() — sem o guard, isso vazaria ModuleNotFoundError cru.
+        with patch.dict(sys.modules, {"azure.core.exceptions": None}):
+            from concilium.infrastructure.adapters.blob_storage.azure import AzureBlobStorage
+
+            s = AzureBlobStorage(container="c", connection_string="x")
+            with pytest.raises(ImportError, match="azure-storage-blob"):
+                s.ler_blob("data/file.json")
+
 
 # ===========================================================================
 # gravar_blob

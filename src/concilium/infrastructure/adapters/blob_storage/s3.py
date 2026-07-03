@@ -64,7 +64,7 @@ class S3BlobStorage(BlobStoragePort):
     @staticmethod
     def _build_session() -> Any:
         try:
-            import aioboto3
+            import aioboto3  # ty: ignore[unresolved-import]
         except ImportError as exc:
             raise ImportError(
                 "O pacote 'aioboto3' é necessário para o backend S3. Instale com: pip install 'concilium[s3]'"
@@ -81,7 +81,12 @@ class S3BlobStorage(BlobStoragePort):
         aws_secret_access_key: str | None,
         aws_session_token: str | None,
     ) -> Any:
-        from botocore.config import Config as BotoConfig
+        try:
+            from botocore.config import Config as BotoConfig  # ty: ignore[unresolved-import]
+        except ImportError as exc:
+            raise ImportError(
+                "O pacote 'aioboto3' é necessário para o backend S3. Instale com: pip install 'concilium[s3]'"
+            ) from exc
 
         config = None
         if addressing_style:

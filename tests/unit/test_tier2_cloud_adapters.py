@@ -317,6 +317,32 @@ class TestGoogleDriveBlobStorage:
 
     # -- ler_blob -----------------------------------------------------------
 
+    def test_ler_blob_raises_import_error_when_googleapiclient_missing(self):
+        gdrive = self._make()
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name.startswith("googleapiclient"):
+                raise ImportError("No module named 'googleapiclient'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            with pytest.raises(ImportError, match="google-api-python-client"):
+                gdrive.ler_blob("folder/file.bin")
+
+    def test_gravar_blob_raises_import_error_when_googleapiclient_missing(self):
+        gdrive = self._make()
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name.startswith("googleapiclient"):
+                raise ImportError("No module named 'googleapiclient'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            with pytest.raises(ImportError, match="google-api-python-client"):
+                gdrive.gravar_blob("folder/file.bin", b"data")
+
     def test_ler_blob_file_not_found(self):
         gdrive = self._make()
         gdrive._file_id = MagicMock(return_value=None)
@@ -545,6 +571,29 @@ class TestS3BlobStorage:
 
             with pytest.raises(ImportError, match="aioboto3"):
                 S3BlobStorage._build_session()
+
+    def test_build_client_kwargs_raises_import_error_when_botocore_missing(self):
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "botocore.config" or name.startswith("botocore"):
+                raise ImportError("No module named 'botocore'")
+            return real_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=fake_import):
+            if "concilium.infrastructure.adapters.blob_storage.s3" in sys.modules:
+                del sys.modules["concilium.infrastructure.adapters.blob_storage.s3"]
+            from concilium.infrastructure.adapters.blob_storage.s3 import S3BlobStorage
+
+            with pytest.raises(ImportError, match="aioboto3"):
+                S3BlobStorage._build_client_kwargs(
+                    region=None,
+                    endpoint_url=None,
+                    addressing_style=None,
+                    aws_access_key_id=None,
+                    aws_secret_access_key=None,
+                    aws_session_token=None,
+                )
 
     # -- _build_client_kwargs -----------------------------------------------
 

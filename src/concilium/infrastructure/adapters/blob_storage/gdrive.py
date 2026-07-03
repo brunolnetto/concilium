@@ -55,8 +55,8 @@ class GoogleDriveBlobStorage(BlobStoragePort):
         if self._svc is not None:
             return self._svc
         try:
-            from google.oauth2 import service_account
-            from googleapiclient.discovery import build
+            from google.oauth2 import service_account  # ty: ignore[unresolved-import]
+            from googleapiclient.discovery import build  # ty: ignore[unresolved-import]
         except ImportError as exc:
             raise ImportError(
                 "Os pacotes 'google-api-python-client' e 'google-auth' são necessários para o "
@@ -67,7 +67,7 @@ class GoogleDriveBlobStorage(BlobStoragePort):
         if self._sa_json:
             creds = service_account.Credentials.from_service_account_file(self._sa_json, scopes=scopes)
         else:
-            from google.auth import default as google_default
+            from google.auth import default as google_default  # ty: ignore[unresolved-import]
 
             creds, _ = google_default(scopes=scopes)
         self._svc = build("drive", "v3", credentials=creds, cache_discovery=False)
@@ -136,7 +136,13 @@ class GoogleDriveBlobStorage(BlobStoragePort):
     # ── BlobStoragePort ────────────────────────────────────────────────────
 
     def ler_blob(self, path: str) -> bytes:
-        from googleapiclient.http import MediaIoBaseDownload
+        try:
+            from googleapiclient.http import MediaIoBaseDownload  # ty: ignore[unresolved-import]
+        except ImportError as exc:
+            raise ImportError(
+                "Os pacotes 'google-api-python-client' e 'google-auth' são necessários para o "
+                "backend Google Drive. Instale com: pip install 'concilium[gdrive]'"
+            ) from exc
 
         fid = self._file_id(path)
         if fid is None:
@@ -150,7 +156,13 @@ class GoogleDriveBlobStorage(BlobStoragePort):
         return buf.getvalue()
 
     def gravar_blob(self, path: str, content: bytes) -> None:
-        from googleapiclient.http import MediaIoBaseUpload
+        try:
+            from googleapiclient.http import MediaIoBaseUpload  # ty: ignore[unresolved-import]
+        except ImportError as exc:
+            raise ImportError(
+                "Os pacotes 'google-api-python-client' e 'google-auth' são necessários para o "
+                "backend Google Drive. Instale com: pip install 'concilium[gdrive]'"
+            ) from exc
 
         segments, name = self._split(path)
         folder_id = self._resolve_folder(segments, create=True)
