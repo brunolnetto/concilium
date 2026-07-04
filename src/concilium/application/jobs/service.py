@@ -192,6 +192,7 @@ class JobService:
         inputs: dict[str, Any] | None = None,
         escopo_id: str | None = None,
         plano_id: str | None = None,
+        procurement_intent: str | None = None,
     ) -> JobDTO:
         """Dispara execução de pipeline em background.
 
@@ -201,6 +202,7 @@ class JobService:
             inputs: Inputs da skill
             escopo_id: ID do escopo (auto-inferido se único)
             plano_id: ID do plano (auto-inferido se único)
+            procurement_intent: ADR-119 D1 — intent já validado pelo caller (auditoria)
 
         Returns:
             JobDTO com job_id e status inicial
@@ -215,6 +217,7 @@ class JobService:
             "project_id": project_id,
             "skill_id": skill_id,
             "inputs": inputs or {},
+            "procurement_intent": procurement_intent,
             "escopo_id": escopo_id,
             "plano_id": plano_id,
             "disparado_em": datetime.now(UTC).isoformat(),

@@ -173,6 +173,14 @@ class TestDispararPipeline:
             dto = svc.disparar_pipeline(project_id="proj-pos")
         assert dto.progresso == "Aguardando worker..."
 
+    def test_accepts_procurement_intent_without_raising(self, svc, repo):
+        """ADR-119 D1: MCP tool passa procurement_intent — regressão para o
+        TypeError que ocorria quando o parâmetro não era aceito aqui."""
+        with patch.object(svc, "_executar_pipeline_async"):
+            dto = svc.disparar_pipeline(project_id="proj-intent", procurement_intent="rfi")
+        stored = repo.get(dto.job_id)
+        assert stored["procurement_intent"] == "rfi"
+
     def test_fila_posicao_nonzero(self, svc, repo):
         """Second job should show queue position."""
         # Manually seed a job with same-or-earlier timestamp

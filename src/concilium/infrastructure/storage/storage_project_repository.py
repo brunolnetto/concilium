@@ -75,7 +75,16 @@ class StorageProjectHandle:
     def current_version(self) -> str | None:
         return self.meta.get("current_version")
 
-    def new_version(self, base: str | None = None) -> str:
+    def new_version(
+        self,
+        base: str | None = None,
+        *,
+        criado_por: str | None = None,
+        role_criador: str | None = None,
+        procurement_intent: str | None = None,
+        forked_from: str | None = None,
+        motivo: str | None = None,
+    ) -> str:
         existing = self.list_versions()
         next_num = (max((int(v[1:]) for v in existing), default=0)) + 1
         new_name = f"v{next_num}"
@@ -92,8 +101,29 @@ class StorageProjectHandle:
             except FileNotFoundError:
                 pass
 
-        self.update_meta(current_version=new_name)
+        # ADR-119 D2: grava metadados de autoria por versão
+        m = self.meta
+        raw_history = m.get("version_history")
+        version_history: dict = raw_history if isinstance(raw_history, dict) else {}
+        version_history[new_name] = {
+            "criado_em": datetime.now(UTC).isoformat(),
+            "criado_por": criado_por,
+            "role_criador": role_criador,
+            "procurement_intent": procurement_intent,
+            "forked_from": forked_from or source,
+            "motivo": motivo,
+        }
+        m["version_history"] = version_history
+        m["current_version"] = new_name
+        self.write_json(self._META_FILE, m)
         return new_name
+
+    def get_version_meta(self, version: str) -> dict[str, Any]:
+        """ADR-119 D2: retorna metadados de autoria de uma versão específica."""
+        version_history = self.meta.get("version_history")
+        if not isinstance(version_history, dict):
+            return {}
+        return version_history.get(version) or {}
 
     def version_path(self, version: str) -> Path:
         return Path(self._project_id) / version

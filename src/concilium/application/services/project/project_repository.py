@@ -23,7 +23,18 @@ class ProjectHandle(Protocol):
 
     def current_version(self) -> str | None: ...
 
-    def new_version(self, base: str | None = None) -> str: ...
+    def new_version(
+        self,
+        base: str | None = None,
+        *,
+        criado_por: str | None = None,
+        role_criador: str | None = None,
+        procurement_intent: str | None = None,
+        forked_from: str | None = None,
+        motivo: str | None = None,
+    ) -> str: ...
+
+    def get_version_meta(self, version: str) -> dict[str, Any]: ...
 
     def version_path(self, version: str) -> Path: ...
 

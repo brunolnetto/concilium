@@ -225,6 +225,64 @@ class TestNewVersion:
         handle.new_version()
         assert storage.blob_existe(f"{project_id}/v1/invocations.log")
 
+    def test_accepts_adr119_audit_kwargs_without_raising(self, handle: StorageProjectHandle) -> None:
+        # ADR-119 D2: pipeline_service.py chama new_version com estes kwargs em
+        # projetos backed por storage (SharePoint/S3/Azure/GDrive) — regressão
+        # para o TypeError que ocorria quando a assinatura não os aceitava.
+        v = handle.new_version(
+            criado_por="user-1",
+            role_criador="engenheiro_senior",
+            procurement_intent="rfi",
+            forked_from="v0",
+            motivo="teste",
+        )
+        assert v == "v1"
+
+    def test_audit_kwargs_persisted_in_version_history(self, handle: StorageProjectHandle) -> None:
+        handle.new_version(
+            criado_por="user-1",
+            role_criador="engenheiro_senior",
+            procurement_intent="rfp",
+            motivo="revisão",
+        )
+        entry = handle.meta["version_history"]["v1"]
+        assert entry["criado_por"] == "user-1"
+        assert entry["role_criador"] == "engenheiro_senior"
+        assert entry["procurement_intent"] == "rfp"
+        assert entry["motivo"] == "revisão"
+
+    def test_forked_from_defaults_to_source_when_omitted(
+        self, handle: StorageProjectHandle, storage: MemoryBlobStorage, project_id: str
+    ) -> None:
+        handle.new_version()  # v1
+        handle.update_meta(current_version="v1")
+        handle.new_version()  # v2, source=v1
+        entry = handle.meta["version_history"]["v2"]
+        assert entry["forked_from"] == "v1"
+
+    def test_recovers_when_version_history_is_corrupted(self, handle: StorageProjectHandle) -> None:
+        # meta.json corrompido/fora do schema (ex.: migração antiga) não deve
+        # quebrar new_version com TypeError.
+        handle.update_meta(version_history="not-a-dict")
+        v = handle.new_version(criado_por="user-1")
+        assert v == "v1"
+        assert handle.meta["version_history"]["v1"]["criado_por"] == "user-1"
+
+
+class TestGetVersionMeta:
+    def test_returns_empty_dict_for_unknown_version(self, handle: StorageProjectHandle) -> None:
+        assert handle.get_version_meta("v99") == {}
+
+    def test_returns_audit_metadata_for_known_version(self, handle: StorageProjectHandle) -> None:
+        handle.new_version(criado_por="user-2", procurement_intent="rfi")
+        meta = handle.get_version_meta("v1")
+        assert meta["criado_por"] == "user-2"
+        assert meta["procurement_intent"] == "rfi"
+
+    def test_returns_empty_dict_when_version_history_is_corrupted(self, handle: StorageProjectHandle) -> None:
+        handle.update_meta(version_history=["not", "a", "dict"])
+        assert handle.get_version_meta("v1") == {}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  StorageProjectHandle — version_path
