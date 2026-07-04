@@ -135,8 +135,10 @@ def _save_relatorio_files(
                 or (rel_dict.get("resumo") or {}).get("projeto")
                 or "Relatório Financeiro"
             )
+
             def provider(file_name):
                 return _load_output_image_bytes(project, v, file_name)
+
             pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
             if pdf_bytes:
                 project.save_output_file(pdf_bytes, v, "relatorio.pdf")  # type: ignore[union-attr]
@@ -194,22 +196,30 @@ def _handle_skill_04_side_effects(result: object, project: object, v: str) -> No
 
 
 def _persist_typed_artifacts(result: object, project: object, v: str) -> None:
+    """Persiste ArtifactEnvelope(s) produzidos por uma skill (ADR-018 §D2).
+
+    Usa project.write_json() em vez de pathlib.Path direto — funciona tanto
+    no backend local quanto no de storage (SharePoint/S3/Azure/GDrive), onde
+    project.version_path() não é um diretório real gravável.
+    """
     artifacts = getattr(result, "artifacts", None)
     if not artifacts:
         return
 
-    try:
-        from concilium.infrastructure.storage.artifact_store import FileSystemArtifactStore
+    import logging
 
-        store = FileSystemArtifactStore(project.version_path(v) / "artifacts")  # type: ignore[union-attr]
-        for artifact in artifacts:
+    _log = logging.getLogger(__name__)
+
+    for artifact in artifacts:
+        meta = getattr(artifact, "meta", None)
+        artifact_id = getattr(meta, "artifact_id", None)
+        if not artifact_id:
+            _log.warning("Artefato tipado sem meta/artifact_id válido — pulando: %r", artifact)
+            continue
+        try:
             payload = getattr(artifact, "payload", None)
-            payload_path = store.root / f"{artifact.meta.artifact_id}.json"
-            if hasattr(payload, "model_dump_json"):
-                payload_json = payload.model_dump_json(indent=2)
-            else:
-                payload_json = json.dumps(payload, indent=2, ensure_ascii=False, default=str)
-            payload_path.write_text(payload_json, encoding="utf-8")
-            store.save_meta_sidecar(payload_path, artifact.meta)
-    except Exception:
-        pass
+            payload_data = payload.model_dump(mode="json") if hasattr(payload, "model_dump") else payload
+            project.write_json(f"{v}/artifacts/{artifact_id}.json", payload_data)  # type: ignore[union-attr]
+            project.write_json(f"{v}/artifacts/{artifact_id}.meta.json", meta.model_dump(mode="json"))  # type: ignore[union-attr]
+        except Exception:
+            _log.warning("Falha ao persistir artefato tipado '%s'", artifact_id, exc_info=True)

@@ -510,78 +510,95 @@ class TestHandleSkill04SideEffects:
 
 
 class TestPersistTypedArtifacts:
+    """project.write_json() é usado em vez de pathlib.Path direto — funciona
+    tanto no backend local quanto no de storage (issue #48), onde
+    project.version_path() não é um diretório real gravável."""
+
     def test_no_op_when_artifacts_none(self):
         result = SimpleNamespace(artifacts=None)
         project = MagicMock()
         _persist_typed_artifacts(result, project, "v1")
-        project.version_path.assert_not_called()
+        project.write_json.assert_not_called()
 
     def test_no_op_when_artifacts_empty_list(self):
         result = SimpleNamespace(artifacts=[])
         project = MagicMock()
         _persist_typed_artifacts(result, project, "v1")
-        project.version_path.assert_not_called()
+        project.write_json.assert_not_called()
 
-    def test_saves_artifact_with_model_dump_json(self, tmp_path):
+    def test_saves_artifact_with_pydantic_payload(self):
         payload = MagicMock()
-        payload.model_dump_json.return_value = '{"key": "value"}'
-        meta = SimpleNamespace(artifact_id="art-001")
+        payload.model_dump.return_value = {"key": "value"}
+        meta = MagicMock()
+        meta.model_dump.return_value = {"artifact_id": "art-001", "kind": "canonical"}
+        meta.artifact_id = "art-001"
         artifact = SimpleNamespace(payload=payload, meta=meta)
         result = SimpleNamespace(artifacts=[artifact])
 
         project = MagicMock()
-        artifacts_dir = tmp_path / "artifacts"
-        artifacts_dir.mkdir()
-        project.version_path.return_value = tmp_path
-
-        mock_store = MagicMock()
-        mock_store.root = artifacts_dir
-        mock_store_cls = MagicMock(return_value=mock_store)
-
-        with patch.dict(
-            "sys.modules",
-            {"concilium.infrastructure.storage.artifact_store": MagicMock(FileSystemArtifactStore=mock_store_cls)},
-        ):
-            # We need the actual write_text to work, so set up real path
-            mock_store.root = artifacts_dir
-            _persist_typed_artifacts(result, project, "v1")
-
-        project.version_path.assert_called_once_with("v1")
-
-    def test_saves_artifact_with_plain_payload(self, tmp_path):
-        payload = {"plain": "dict"}
-        meta = SimpleNamespace(artifact_id="art-002")
-        artifact = SimpleNamespace(payload=payload, meta=meta)
-        result = SimpleNamespace(artifacts=[artifact])
-
-        project = MagicMock()
-        artifacts_dir = tmp_path / "artifacts"
-        artifacts_dir.mkdir()
-        project.version_path.return_value = tmp_path
-
-        mock_store = MagicMock()
-        mock_store.root = artifacts_dir
-
-        mock_store_cls = MagicMock(return_value=mock_store)
-
-        with patch.dict(
-            "sys.modules",
-            {"concilium.infrastructure.storage.artifact_store": MagicMock(FileSystemArtifactStore=mock_store_cls)},
-        ):
-            mock_store.root = artifacts_dir
-            _persist_typed_artifacts(result, project, "v1")
-
-        project.version_path.assert_called_once_with("v1")
-
-    def test_exception_swallowed(self):
-        """Even if FileSystemArtifactStore raises, no exception propagates."""
-        meta = SimpleNamespace(artifact_id="art-003")
-        artifact = SimpleNamespace(payload=None, meta=meta)
-        result = SimpleNamespace(artifacts=[artifact])
-        project = MagicMock()
-        project.version_path.side_effect = RuntimeError("storage unavailable")
-        # Should not raise
         _persist_typed_artifacts(result, project, "v1")
+
+        project.write_json.assert_any_call("v1/artifacts/art-001.json", {"key": "value"})
+        project.write_json.assert_any_call(
+            "v1/artifacts/art-001.meta.json", {"artifact_id": "art-001", "kind": "canonical"}
+        )
+
+    def test_saves_artifact_with_plain_dict_payload(self):
+        payload = {"plain": "dict"}
+        meta = MagicMock()
+        meta.model_dump.return_value = {"artifact_id": "art-002"}
+        meta.artifact_id = "art-002"
+        artifact = SimpleNamespace(payload=payload, meta=meta)
+        result = SimpleNamespace(artifacts=[artifact])
+
+        project = MagicMock()
+        _persist_typed_artifacts(result, project, "v1")
+
+        project.write_json.assert_any_call("v1/artifacts/art-002.json", payload)
+
+    def test_exception_swallowed_per_artifact(self, caplog):
+        """Falha ao persistir um artefato não propaga nem impede os demais."""
+        import logging
+
+        meta_bad = MagicMock()
+        meta_bad.artifact_id = "art-bad"
+        artifact_bad = SimpleNamespace(payload=None, meta=meta_bad)
+
+        meta_ok = MagicMock()
+        meta_ok.artifact_id = "art-ok"
+        meta_ok.model_dump.return_value = {"artifact_id": "art-ok"}
+        artifact_ok = SimpleNamespace(payload={"ok": True}, meta=meta_ok)
+
+        result = SimpleNamespace(artifacts=[artifact_bad, artifact_ok])
+        project = MagicMock()
+        project.write_json.side_effect = [RuntimeError("storage unavailable"), None, None]
+
+        with caplog.at_level(logging.WARNING):
+            # Should not raise
+            _persist_typed_artifacts(result, project, "v1")
+
+        assert "art-bad" in caplog.text
+
+        # segundo artefato ainda foi tentado apesar da falha no primeiro
+        project.write_json.assert_any_call("v1/artifacts/art-ok.json", {"ok": True})
+
+    def test_skips_artifact_with_missing_artifact_id(self, caplog):
+        """Sem meta/artifact_id válido, não deve tentar escrever nenhum arquivo."""
+        import logging
+
+        artifact_no_meta = SimpleNamespace(payload={"x": 1}, meta=None)
+        meta_empty_id = MagicMock()
+        meta_empty_id.artifact_id = ""
+        artifact_empty_id = SimpleNamespace(payload={"y": 2}, meta=meta_empty_id)
+
+        result = SimpleNamespace(artifacts=[artifact_no_meta, artifact_empty_id])
+        project = MagicMock()
+
+        with caplog.at_level(logging.WARNING):
+            _persist_typed_artifacts(result, project, "v1")
+
+        project.write_json.assert_not_called()
+        assert "artifact_id" in caplog.text
 
 
 # ---------------------------------------------------------------------------
