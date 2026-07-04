@@ -5,10 +5,11 @@ import re as _re
 from typing import Any
 
 from openpyxl import Workbook
+from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
 
-from concilium.domain.models.canonical import CanonicalModel
+from concilium.domain.models.canonical import CanonicalModel, SubtotalCategorias
 
 from ..cash_flow import _cash_flow
 from ..helpers import _fmt_mes, _project_months
@@ -491,7 +492,7 @@ def render_bdi(wb: Workbook, canonical: CanonicalModel) -> None:
     row += 1
 
 
-def _xl_dr_sem_vals(sem: object) -> tuple:
+def _xl_dr_sem_vals(sem: SubtotalCategorias | None) -> tuple:
     return (
         sem.mao_obra if sem else 0.0,
         sem.equipamentos if sem else 0.0,
@@ -501,7 +502,7 @@ def _xl_dr_sem_vals(sem: object) -> tuple:
     )
 
 
-def _xl_dr_com_vals(com: object) -> tuple:
+def _xl_dr_com_vals(com: SubtotalCategorias | None) -> tuple:
     return (
         com.mao_obra if com else 0.0,
         com.equipamentos if com else 0.0,
@@ -525,7 +526,7 @@ def _xl_dr_write_cell(ws: object, row: int, col: int, v: object, fill: object) -
         cell.alignment = _align("left")
 
 
-def _xl_dr_totals_row(ws: object, row: int, data_start: int, NCOLS: int, fill_tot: object) -> None:
+def _xl_dr_totals_row(ws: object, row: int, data_start: int, NCOLS: int, fill_tot: PatternFill | None) -> None:
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)  # type: ignore[union-attr]
     cell = ws.cell(row=row, column=1, value="TOTAL DIRETO")  # type: ignore[union-attr]
     cell.fill = fill_tot
@@ -540,7 +541,13 @@ def _xl_dr_totals_row(ws: object, row: int, data_start: int, NCOLS: int, fill_to
 
 
 def _xl_dr_write_data_row(
-    ws: object, row: int, p: object, eap_item: object, sem: object, com: object, fill: object
+    ws: object,
+    row: int,
+    p: object,
+    eap_item: object,
+    sem: SubtotalCategorias | None,
+    com: SubtotalCategorias | None,
+    fill: object,
 ) -> None:
     vals: list = [
         p.item_id,  # type: ignore[union-attr]

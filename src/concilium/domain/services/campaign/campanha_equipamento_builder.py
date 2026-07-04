@@ -20,6 +20,7 @@ from concilium.domain.models.campaign.campanha_equipamento import (
     InstanciaEquipamento,
     RegimePermanencia,
 )
+from concilium.domain.models.canonical import CanonicalModel
 
 
 def _ceb_start_week_key(u: dict) -> int:
@@ -27,7 +28,7 @@ def _ceb_start_week_key(u: dict) -> int:
     return u["start_week"]
 
 
-def _ceb_collect_uso_por_tipo(canonical_in: object, sched_lookup: dict) -> dict:
+def _ceb_collect_uso_por_tipo(canonical_in: CanonicalModel, sched_lookup: dict) -> dict:
     """Collects equipment usage records keyed by equip_id."""
     uso_por_tipo: dict = defaultdict(list)
     for equipe in canonical_in.equipes_diretas or []:
@@ -49,7 +50,7 @@ def _ceb_collect_uso_por_tipo(canonical_in: object, sched_lookup: dict) -> dict:
     return uso_por_tipo
 
 
-def _ceb_group_sorted_usos(sorted_usos: list, gap_limit: int, regime: object, tipo_id: str) -> tuple:
+def _ceb_group_sorted_usos(sorted_usos: list, gap_limit: int, regime: RegimePermanencia, tipo_id: str) -> tuple:
     """Groups sorted equipment usages into campaigns. Returns (groups, alertas)."""
     groups = []
     alertas = []
@@ -79,7 +80,9 @@ def _ceb_group_sorted_usos(sorted_usos: list, gap_limit: int, regime: object, ti
     return groups, alertas
 
 
-def _ceb_build_campanha(group: list, tipo_id: str, instancia_num: int, regime: object, inst_id: str) -> tuple:
+def _ceb_build_campanha(
+    group: list, tipo_id: str, instancia_num: int, regime: RegimePermanencia, inst_id: str
+) -> tuple:
     """Builds (InstanciaEquipamento, CampanhaEquipamento) from a usage group."""
     from concilium.domain.models.campaign.campanha_equipamento import CampanhaEquipamento, InstanciaEquipamento
 

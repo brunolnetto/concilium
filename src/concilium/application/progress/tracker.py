@@ -35,7 +35,7 @@ def _planned_qty_up_to_week(
     return total
 
 
-def _ru_validate_dup(existing: list, update: object) -> object | None:
+def _ru_validate_dup(existing: list[ProgressUpdate], update: ProgressUpdate) -> ValidacaoItem | None:
     """VAL-PROG-04: checks for duplicate week entry."""
     from concilium.domain.models.canonical import ValidacaoItem
 
@@ -48,7 +48,7 @@ def _ru_validate_dup(existing: list, update: object) -> object | None:
     return None
 
 
-def _ru_validate_over_report(total_after: float, qtd_planejada_total: float, activity_id: str) -> object | None:
+def _ru_validate_over_report(total_after: float, qtd_planejada_total: float, activity_id: str) -> ValidacaoItem | None:
     """VAL-PROG-03: checks if total realizado exceeds planejado."""
     from concilium.domain.models.canonical import ValidacaoItem
 
@@ -63,7 +63,7 @@ def _ru_validate_over_report(total_after: float, qtd_planejada_total: float, act
     return None
 
 
-def _ru_validate_weekly(canonical: object, update: object) -> object | None:
+def _ru_validate_weekly(canonical: CanonicalModel, update: ProgressUpdate) -> ValidacaoItem | None:
     """VAL-PROG-01: checks for over-reporting in a single week vs planned qty."""
     from concilium.domain.models.canonical import ValidacaoItem
 
@@ -85,7 +85,9 @@ def _ru_validate_weekly(canonical: object, update: object) -> object | None:
     return None
 
 
-def _ru_validate_efficiency(existing: list, update: object, activity_id: str) -> object | None:
+def _ru_validate_efficiency(
+    existing: list[ProgressUpdate], update: ProgressUpdate, activity_id: str
+) -> ValidacaoItem | None:
     """VAL-PROG-02: checks sustained low efficiency over 2+ weeks."""
     from concilium.domain.models.canonical import ValidacaoItem
 
@@ -99,7 +101,9 @@ def _ru_validate_efficiency(existing: list, update: object, activity_id: str) ->
     return None
 
 
-def _ru_run_validations(canonical: object, update: object, existing: list, qtd_planejada_total: float) -> list:
+def _ru_run_validations(
+    canonical: CanonicalModel, update: ProgressUpdate, existing: list[ProgressUpdate], qtd_planejada_total: float
+) -> list[ValidacaoItem]:
     """Runs all VAL-PROG-XX validation checks and returns list of ValidacaoItem."""
     validacoes = []
     total_before = sum(u.quantidade_realizada for u in existing)

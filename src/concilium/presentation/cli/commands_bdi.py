@@ -18,7 +18,7 @@ from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
-from concilium.domain.models.financial.bdi import BdiPerfilDiff
+from concilium.domain.models.financial.bdi import BdiPerfilDiff, PerfilBdiProjeto, PerfilTributarioProjeto
 from concilium.presentation.cli.shared import resolve_project
 
 app = typer.Typer(
@@ -87,11 +87,11 @@ def bdi_show(
 
 
 def _bu_show_bdi_diff(
-    console: object,
-    perfil_anterior: object,
-    novo_perfil: object,
+    console: Console,
+    perfil_anterior: PerfilBdiProjeto | None,
+    novo_perfil: PerfilBdiProjeto,
     versao: int,
-    trib_model: object,
+    trib_model: PerfilTributarioProjeto,
 ) -> None:
     """Displays BDI profile diff or new-profile summary to console."""
     from rich import print as rprint
@@ -123,9 +123,9 @@ def _bu_show_bdi_diff(
 
 
 def _bu_persist_bdi_diff(
-    perfil_dir: object,
-    perfil_anterior: object,
-    novo_perfil: object,
+    perfil_dir: Path,
+    perfil_anterior: PerfilBdiProjeto | None,
+    novo_perfil: PerfilBdiProjeto,
     versao: int,
     motivo: str | None,
 ) -> None:
