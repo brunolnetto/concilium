@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -144,6 +145,42 @@ class TestBuildBlobStorageFilesystem:
 
         storage = build_blob_storage()
         assert isinstance(storage, LocalBlobStorage)
+
+
+class TestEnsureStorageRoot:
+    def test_noop_for_non_sharepoint_backend(self, monkeypatch):
+        import concilium.infrastructure.storage.store_factory as _sf
+
+        monkeypatch.setattr(_sf, "resolve_store_backend", lambda: "filesystem")
+        called = []
+        monkeypatch.setattr(_sf, "build_blob_storage", lambda: called.append(True))
+
+        _sf.ensure_storage_root()
+        assert called == []
+
+    def test_calls_ensure_root_path_for_sharepoint_backend(self, monkeypatch):
+        import concilium.infrastructure.storage.store_factory as _sf
+        from concilium.infrastructure.adapters.blob_storage.sharepoint import SharePointBlobStorage
+
+        mock_storage = MagicMock(spec=SharePointBlobStorage)
+        monkeypatch.setattr(_sf, "resolve_store_backend", lambda: "sharepoint")
+        monkeypatch.setattr(_sf, "build_blob_storage", lambda: mock_storage)
+
+        _sf.ensure_storage_root()
+        mock_storage.ensure_root_path.assert_called_once()
+
+    def test_noop_when_sharepoint_backend_but_storage_is_not_sharepoint_instance(self, monkeypatch):
+        """Guarda defensiva: resolve_store_backend() diz sharepoint mas build_blob_storage()
+        retorna outro tipo (config inconsistente) — não deve chamar ensure_root_path."""
+        import concilium.infrastructure.storage.store_factory as _sf
+
+        other_storage = MagicMock(spec=LocalBlobStorage)
+        monkeypatch.setattr(_sf, "resolve_store_backend", lambda: "sharepoint")
+        monkeypatch.setattr(_sf, "build_blob_storage", lambda: other_storage)
+
+        # Não deve levantar AttributeError nem tentar chamar ensure_root_path,
+        # que nem existe em LocalBlobStorage.
+        _sf.ensure_storage_root()
 
 
 class TestStoreFactoryGetCampaignStore:

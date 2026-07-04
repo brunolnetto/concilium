@@ -434,6 +434,39 @@ class TestComputeCompressionSensitivities:
         rois = [r.best_roi for r in results]
         assert rois == sorted(rois, reverse=True)
 
+    def test_scheduler_exception_skips_k_without_crashing(self, monkeypatch, caplog):
+        """Falha inesperada do CP-SAT para um k não derruba o cálculo — só descarta
+        esse candidato e loga (issue #20: except Exception genérico não devia
+        mascarar bug real do scheduler)."""
+        import logging
+
+        from concilium.application.scheduling.cpsat_scheduler import CpSatScheduler
+
+        acts = [Activity("A", "A", duration_weeks=10, required_resources={"R": 1})]
+        dag = ActivityDAG(activities=acts, precedence=[], thresholds={})
+        pool = ResourcePool(resources={"R": 1})
+        sched = _make_sched_out([("A", 0, 10, {"R": 1})], makespan=10)
+        ct = _contratos_dummy("R")
+
+        def _raise(self, dag, pool):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(CpSatScheduler, "schedule", _raise)
+
+        with caplog.at_level(logging.WARNING):
+            results = compute_compression_sensitivities(
+                sched_output=sched,
+                dag=dag,
+                pool=pool,
+                contratos=ct,
+                custo_semana=1_000_000.0,
+                k_values=(2,),
+            )
+
+        assert len(results) == 1
+        assert results[0].by_k == {}
+        assert "boom" in caplog.text or "Falha ao agendar" in caplog.text
+
 
 class TestFormatCompressionTable:
     """Smoke test para format_compression_table."""

@@ -1,4 +1,5 @@
 """Coverage batch 36 — 01-escopo-e-eap, 02-produtividade-climatica, 07-diagnostico-criticidade."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -20,15 +21,9 @@ def _load_skill(rel_path: str, name: str):
     return mod
 
 
-MOD_01 = _load_skill(
-    "src/concilium/application/skills/manifests/01-escopo-e-eap/skill.py", "skill01_b36"
-)
-MOD_02 = _load_skill(
-    "src/concilium/application/skills/manifests/02-produtividade-climatica/skill.py", "skill02_b36"
-)
-MOD_07 = _load_skill(
-    "src/concilium/application/skills/manifests/07-diagnostico-criticidade/skill.py", "skill07_b36"
-)
+MOD_01 = _load_skill("src/concilium/application/skills/manifests/01-escopo-e-eap/skill.py", "skill01_b36")
+MOD_02 = _load_skill("src/concilium/application/skills/manifests/02-produtividade-climatica/skill.py", "skill02_b36")
+MOD_07 = _load_skill("src/concilium/application/skills/manifests/07-diagnostico-criticidade/skill.py", "skill07_b36")
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +210,51 @@ class TestBuildAtividadesForItem:
         assert len(result) == 1
         assert result[0].atividade_id == "EAP-001-atv-1"
 
+    def test_invalid_frac_raises_val_atv_03(self):
+        """fracao_quantitativo fora de (0, 1] dispara VAL-ATV-03 mas ainda constrói a atividade."""
+        from concilium.domain.models.canonical import EapItem
+
+        eap_item = EapItem(
+            item_id="EAP-002",
+            ordem=1,
+            cpu_id="CPU-A",
+            descricao="Test",
+            unidade="m3",
+            quantitativo=100.0,
+        )
+        raw_ativs = [{"fracao_quantitativo": 1.5, "atividade_id": "EAP-002-atv-1"}]
+        validacoes = []
+
+        result = MOD_01._build_atividades_for_item(eap_item, raw_ativs, validacoes)
+        assert len(result) == 1
+        # frac=1.5 dispara VAL-ATV-03 (fração inválida) e, como soma_fracoes usa o
+        # valor bruto (1.5 != 1.0), também VAL-ATV-02 (soma de frações).
+        codigos = {v.codigo for v in validacoes}
+        assert codigos == {"VAL-ATV-03", "VAL-ATV-02"}
+        assert all(v.status == "ERRO" for v in validacoes)
+        # Regressão: Atividade.fracao_quantitativo exige (0, 1] — sem o clamp para
+        # 1.0, a construção do modelo levantaria pydantic.ValidationError aqui.
+        assert result[0].fracao_quantitativo == 1.0
+
+    def test_zero_frac_raises_val_atv_03(self):
+        from concilium.domain.models.canonical import EapItem
+
+        eap_item = EapItem(
+            item_id="EAP-003",
+            ordem=1,
+            cpu_id="CPU-A",
+            descricao="Test",
+            unidade="m3",
+            quantitativo=100.0,
+        )
+        raw_ativs = [{"fracao_quantitativo": 0.0, "atividade_id": "EAP-003-atv-1"}]
+        validacoes = []
+
+        result = MOD_01._build_atividades_for_item(eap_item, raw_ativs, validacoes)
+        codigos = {v.codigo for v in validacoes}
+        assert "VAL-ATV-03" in codigos
+        assert result[0].fracao_quantitativo == 1.0
+
 
 # ---------------------------------------------------------------------------
 # 01-escopo-e-eap line 191: _build_dag_from_precedencias with missing pred
@@ -349,7 +389,12 @@ class TestBuildDagBranchArcs:
 
         eap_a = EapItem(item_id="A", ordem=1, cpu_id="CPU-A", descricao="A", unidade="m3", quantitativo=10.0)
         eap_b = EapItem(
-            item_id="B", ordem=2, cpu_id="CPU-B", descricao="B", unidade="m3", quantitativo=10.0,
+            item_id="B",
+            ordem=2,
+            cpu_id="CPU-B",
+            descricao="B",
+            unidade="m3",
+            quantitativo=10.0,
             predecessores=["A"],  # typed: A→B
         )
         nos = ["A-atv-1", "B-atv-1"]

@@ -380,6 +380,14 @@ class ProjectStore:
                         files.append(f.name)
         return sorted(files)
 
+    def _concilium_root(self) -> Path:
+        """Raiz do repo, usado para resolver catálogos Master (ADR-024).
+
+        Método próprio (em vez de inline) para permitir monkeypatch em testes —
+        project.py está em src/concilium/infrastructure/storage/.
+        """
+        return Path(__file__).parents[4]
+
     def resolve_cpu(self, cpu_id: str) -> dict | None:
         """Resolve CPU pelo id: override → catálogo base (individual + agregado) → snapshot."""
         # 1. Override local do projeto — via read_json para consistência com o store
@@ -388,20 +396,18 @@ class ProjectStore:
             return override[cpu_id]
 
         catalogo_base = self.meta.get("catalogo_base")
-        # concilium_root: project.py está em src/concilium/infrastructure/storage/
-
-        concilium_root = Path(__file__).parents[4]
+        concilium_root = self._concilium_root()
 
         if catalogo_base:
             individual = concilium_root / "config" / "catalogos" / catalogo_base / "cpus" / f"{cpu_id}.json"
-            if individual.exists():  # pragma: no cover
+            if individual.exists():
                 try:
                     return json.loads(individual.read_text(encoding="utf-8"))
                 except Exception:
                     pass
 
             aggregate = concilium_root / "config" / "catalogos" / catalogo_base / "cpus.json"
-            if aggregate.exists():  # pragma: no cover
+            if aggregate.exists():
                 try:
                     data = json.loads(aggregate.read_text(encoding="utf-8"))
                     cpus = data.get("cpus", data) if isinstance(data, dict) else data

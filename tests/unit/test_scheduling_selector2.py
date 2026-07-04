@@ -97,6 +97,24 @@ class TestExploreSchedules:
                 activities=[], dag=dag, pool=pool, deadline_weeks=10, strategy=self._make_strategy("CP-SAT")
             )
 
+    def test_cpsat_unexpected_exception_wrapped_in_schedule_error(self):
+        """Erro inesperado (não infeasible) do CP-SAT vira ScheduleError com a causa original."""
+        from concilium.application.scheduling.selector import ScheduleError, explore_schedules
+
+        dag = self._make_dag()
+        pool = self._make_pool()
+
+        cpsat_mock = MagicMock()
+        cpsat_mock.schedule.side_effect = RuntimeError("solver crashed")
+
+        with (
+            patch("concilium.application.scheduling.cpsat_scheduler.CpSatScheduler", return_value=cpsat_mock),
+            pytest.raises(ScheduleError, match="solver crashed"),
+        ):
+            explore_schedules(
+                activities=[], dag=dag, pool=pool, deadline_weeks=10, strategy=self._make_strategy("CP-SAT")
+            )
+
     def test_serial_scheduler_heuristic(self):
         from concilium.application.scheduling.selector import explore_schedules
 
@@ -254,3 +272,28 @@ class TestExploreLnsPaths:
             results = compare_all_algorithms([], dag, pool, deadline_weeks=10, algorithms=["CP-SAT"])
         assert len(results) == 1
         assert results[0].error == "infeasible"
+
+    def test_compare_cpsat_unexpected_exception_appends_error_result(self):
+        """Erro inesperado (não infeasible) do CP-SAT não derruba compare_all_algorithms."""
+        from concilium.application.scheduling.selector import compare_all_algorithms
+
+        dag, pool = self._make_dag_pool()
+        cpsat_mock = MagicMock(schedule=MagicMock(side_effect=RuntimeError("solver crashed")))
+        with patch("concilium.application.scheduling.cpsat_scheduler.CpSatScheduler", return_value=cpsat_mock):
+            results = compare_all_algorithms([], dag, pool, deadline_weeks=10, algorithms=["CP-SAT"])
+        assert len(results) == 1
+        assert "solver crashed" in results[0].error
+
+    def test_compare_lns_unexpected_exception_appends_error_result(self):
+        """Erro inesperado (não infeasible) do LNS não derruba compare_all_algorithms."""
+        from concilium.application.scheduling.selector import compare_all_algorithms
+
+        dag, pool = self._make_dag_pool()
+        lns_mock = MagicMock(schedule=MagicMock(side_effect=RuntimeError("lns crashed")))
+        with (
+            patch("concilium.application.scheduling.lns_scheduler.LnsScheduler", return_value=lns_mock),
+            patch("concilium.domain.services.planning.matching_oracle.MatchingOracle", return_value=MagicMock()),
+        ):
+            results = compare_all_algorithms([], dag, pool, deadline_weeks=10, algorithms=["LNS"])
+        assert len(results) == 1
+        assert "lns crashed" in results[0].error

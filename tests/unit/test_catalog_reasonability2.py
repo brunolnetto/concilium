@@ -231,3 +231,28 @@ class TestBuildCatalogReasonabilityArtifact:
         assert "narrative" in result
         assert "findings" in result
         assert "rows" in result
+
+
+class TestClassifyDirectSeverity:
+    def test_no_issues_is_ok(self):
+        from concilium.application.services.catalog.catalog_reasonability import _classify_direct_severity
+
+        assert _classify_direct_severity([]) == "OK"
+
+    def test_missing_data_issue_is_erro(self):
+        from concilium.application.services.catalog.catalog_reasonability import _classify_direct_severity
+
+        assert _classify_direct_severity(["CPU sem producao_id_ref"]) == "ERRO"
+        assert _classify_direct_severity(["Produtividade horária ausente ou não positiva"]) == "ERRO"
+
+    def test_non_missing_issue_is_aviso(self):
+        """Inconsistência que não indica dado ausente/faltante é AVISO, não ERRO."""
+        from concilium.application.services.catalog.catalog_reasonability import _classify_direct_severity
+
+        assert _classify_direct_severity(["Descrição muito curta"]) == "AVISO"
+
+    def test_mixed_issues_erro_wins(self):
+        from concilium.application.services.catalog.catalog_reasonability import _classify_direct_severity
+
+        result = _classify_direct_severity(["Descrição muito curta", "CPU sem producao_id_ref"])
+        assert result == "ERRO"

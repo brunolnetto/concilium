@@ -182,7 +182,8 @@ def explore_schedules(
             )
         except ScheduleError:
             raise
-        except Exception as exc:  # pragma: no cover
+        except Exception as exc:
+            _log.warning("CP-SAT solver falhou com erro inesperado", exc_info=True)
             raise ScheduleError(f"CP-SAT solver falhou com erro inesperado: {exc}") from exc
 
     # ── LNS Lagrangian + SSGS (ADR-075 Mode B) ───────────────────────────────
@@ -308,7 +309,8 @@ def compare_all_algorithms(
                     results.append(ExploreResult("CP-SAT", sched, score))
                 else:
                     results.append(ExploreResult("CP-SAT", sched, 0.0, error="infeasible"))
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:
+                _log.warning("CP-SAT falhou em compare_all_algorithms", exc_info=True)
                 results.append(ExploreResult("CP-SAT", _empty_output("CP-SAT"), 0.0, error=str(exc)))
 
         elif algorithm == "LNS":
@@ -325,7 +327,8 @@ def compare_all_algorithms(
                     results.append(ExploreResult("LNS", sched, score))
                 else:
                     results.append(ExploreResult("LNS", sched, 0.0, error="infeasible"))
-            except Exception as exc:  # pragma: no cover
+            except Exception as exc:
+                _log.warning("LNS falhou em compare_all_algorithms", exc_info=True)
                 results.append(ExploreResult("LNS", _empty_output("LNS"), 0.0, error=str(exc)))
 
         else:

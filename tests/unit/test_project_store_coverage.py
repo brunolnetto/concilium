@@ -178,21 +178,81 @@ class TestResolveCpu:
         # reverse sort: catalogo-v2 comes before catalogo-v1
         assert result["descricao"] == "New"
 
-    def test_resolve_from_aggregate_cpus_json_list(self, tmp_path):
-        """resolve_cpu reads cpus.json aggregate file."""
-
+    def test_resolve_from_aggregate_cpus_json_list(self, tmp_path, monkeypatch):
+        """resolve_cpu lê o arquivo agregado cpus.json do catálogo base."""
         store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="test-cat")
-        # The aggregate file path is: concilium_root/config/catalogos/{cat}/cpus.json
-        # concilium_root = Path(__file__).parents[4] from project.py
-        # We can't easily override the filesystem search, so test via snapshot fallback
-        # when aggregate doesn't exist — still tests the resolve path
+        fake_root = tmp_path / "fake_concilium_root"
+        catalogo_dir = fake_root / "config" / "catalogos" / "test-cat"
+        catalogo_dir.mkdir(parents=True)
+        (catalogo_dir / "cpus.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-AGG", "descricao": "Aggregate"}]}), encoding="utf-8"
+        )
+        monkeypatch.setattr(store, "_concilium_root", lambda: fake_root)
+
+        result = store.resolve_cpu("CPU-AGG")
+        assert result is not None
+        assert result["descricao"] == "Aggregate"
+
+    def test_resolve_from_individual_cpu_file(self, tmp_path, monkeypatch):
+        """resolve_cpu lê o arquivo individual cpus/{cpu_id}.json antes do agregado."""
+        store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="test-cat")
+        fake_root = tmp_path / "fake_concilium_root"
+        cpus_dir = fake_root / "config" / "catalogos" / "test-cat" / "cpus"
+        cpus_dir.mkdir(parents=True)
+        (cpus_dir / "CPU-IND.json").write_text(
+            json.dumps({"codigo": "CPU-IND", "descricao": "Individual"}), encoding="utf-8"
+        )
+        monkeypatch.setattr(store, "_concilium_root", lambda: fake_root)
+
+        result = store.resolve_cpu("CPU-IND")
+        assert result is not None
+        assert result["descricao"] == "Individual"
+
+    def test_individual_takes_precedence_over_aggregate(self, tmp_path, monkeypatch):
+        store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="test-cat")
+        fake_root = tmp_path / "fake_concilium_root"
+        catalogo_dir = fake_root / "config" / "catalogos" / "test-cat"
+        (catalogo_dir / "cpus").mkdir(parents=True)
+        (catalogo_dir / "cpus" / "CPU-BOTH2.json").write_text(
+            json.dumps({"codigo": "CPU-BOTH2", "descricao": "From individual"}), encoding="utf-8"
+        )
+        (catalogo_dir / "cpus.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-BOTH2", "descricao": "From aggregate"}]}), encoding="utf-8"
+        )
+        monkeypatch.setattr(store, "_concilium_root", lambda: fake_root)
+
+        result = store.resolve_cpu("CPU-BOTH2")
+        assert result["descricao"] == "From individual"
+
+    def test_individual_file_corrupt_falls_back_to_aggregate(self, tmp_path, monkeypatch):
+        store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="test-cat")
+        fake_root = tmp_path / "fake_concilium_root"
+        catalogo_dir = fake_root / "config" / "catalogos" / "test-cat"
+        (catalogo_dir / "cpus").mkdir(parents=True)
+        (catalogo_dir / "cpus" / "CPU-BAD.json").write_text("NOT JSON", encoding="utf-8")
+        (catalogo_dir / "cpus.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-BAD", "descricao": "From aggregate"}]}), encoding="utf-8"
+        )
+        monkeypatch.setattr(store, "_concilium_root", lambda: fake_root)
+
+        result = store.resolve_cpu("CPU-BAD")
+        assert result["descricao"] == "From aggregate"
+
+    def test_aggregate_file_corrupt_falls_back_to_snapshot(self, tmp_path, monkeypatch):
+        store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="test-cat")
+        fake_root = tmp_path / "fake_concilium_root"
+        catalogo_dir = fake_root / "config" / "catalogos" / "test-cat"
+        catalogo_dir.mkdir(parents=True)
+        (catalogo_dir / "cpus.json").write_text("NOT JSON", encoding="utf-8")
+        monkeypatch.setattr(store, "_concilium_root", lambda: fake_root)
+
         snaps_dir = store.root / "snapshots"
         snaps_dir.mkdir(exist_ok=True)
         (snaps_dir / "catalogo-v1.json").write_text(
-            '{"cpus": [{"codigo": "CPU-AGG", "descricao": "Aggregate"}]}', encoding="utf-8"
+            json.dumps({"cpus": [{"codigo": "CPU-FALLBACK", "descricao": "Snapshot"}]}), encoding="utf-8"
         )
-        result = store.resolve_cpu("CPU-AGG")
-        assert result is not None
+        result = store.resolve_cpu("CPU-FALLBACK")
+        assert result["descricao"] == "Snapshot"
 
     def test_resolve_skips_bad_snapshot(self, tmp_path):
         """Corrupt snapshot file is skipped; next one is tried."""

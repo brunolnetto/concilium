@@ -18,10 +18,13 @@ Três categorias de criticidade:
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass, field
 
 from .models import Activity, ActivityDAG, ResourcePool, ScheduleOutput
+
+_log = logging.getLogger(__name__)
 
 # ── Dataclasses de resultado ──────────────────────────────────────────────────
 
@@ -276,10 +279,19 @@ def compute_compression_sensitivities(
             try:
                 out_k = scheduler.schedule(dag=dag_k, pool=pool_k)
                 mksp_new = out_k.makespan if out_k.feasible else None
-            except Exception:  # pragma: no cover
+            except Exception:
+                # Infeasibility (out_k.feasible=False) já é tratada acima sem exceção —
+                # chegar aqui é uma falha inesperada do scheduler para este k, não um
+                # candidato simplesmente ruim. Loga pra não mascarar bug real no solver.
+                _log.warning(
+                    "Falha ao agendar k=%d para atividade '%s' — candidato descartado",
+                    k,
+                    act.activity_id,
+                    exc_info=True,
+                )
                 mksp_new = None
 
-            if mksp_new is None:  # pragma: no cover
+            if mksp_new is None:
                 continue
 
             delta_ms = makespan_base - mksp_new

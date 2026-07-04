@@ -212,6 +212,27 @@ class TestCatalogLoaderLsp:
         result = _lsp_load_produtividades(storage, "base")
         assert len(result) == 1
 
+    def test_lsp_load_produtividades_falls_back_to_single_file(self):
+        """Sem blobs individuais em produtividades/, lê produtividades.json agregado."""
+        from concilium.infrastructure.catalog.catalog_loader import _lsp_load_produtividades
+
+        storage = MagicMock()
+        storage.listar_blobs.return_value = []
+        storage.ler_blob.return_value = json.dumps({"produtividades": [{"id": "PROD-AGG"}]}).encode()
+        result = _lsp_load_produtividades(storage, "base")
+        assert result == [{"id": "PROD-AGG"}]
+        storage.ler_blob.assert_called_once_with("base/produtividades.json")
+
+    def test_lsp_load_produtividades_returns_empty_when_no_source_exists(self):
+        """Nem blobs individuais nem o agregado existem — retorna lista vazia sem crashar."""
+        from concilium.infrastructure.catalog.catalog_loader import _lsp_load_produtividades
+
+        storage = MagicMock()
+        storage.listar_blobs.return_value = []
+        storage.ler_blob.side_effect = FileNotFoundError("base/produtividades.json")
+        result = _lsp_load_produtividades(storage, "base")
+        assert result == []
+
     def test_lsp_load_funcoes(self):
         from concilium.infrastructure.catalog.catalog_loader import _lsp_load_funcoes
 

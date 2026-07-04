@@ -111,7 +111,8 @@ def _build_atividades_for_item(eap_item: EapItem, raw_ativs: list | None, valida
     soma_fracoes = 0.0
     for i, raw in enumerate(raw_ativs):
         frac = raw.get("fracao_quantitativo", 0.0)
-        if not (0 < frac <= 1):  # pragma: no cover
+        frac_valido = 0 < frac <= 1
+        if not frac_valido:
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-ATV-03",
@@ -120,13 +121,16 @@ def _build_atividades_for_item(eap_item: EapItem, raw_ativs: list | None, valida
                 )
             )
         soma_fracoes += frac
+        # Atividade.fracao_quantitativo exige (0, 1] — usa 1.0 quando inválido pra não
+        # quebrar a construção do modelo; o erro já foi registrado em validacoes acima.
+        frac_modelo = frac if frac_valido else 1.0
         atividades.append(
             Atividade(
                 atividade_id=raw.get("atividade_id", f"{eap_item.item_id}-atv-{i + 1}"),
                 eap_item_id=eap_item.item_id,
                 descricao=raw.get("descricao", f"Atividade {i + 1}"),
-                fracao_quantitativo=frac,
-                quantitativo_atividade=round(frac * eap_item.quantitativo, 6),
+                fracao_quantitativo=frac_modelo,
+                quantitativo_atividade=round(frac_modelo * eap_item.quantitativo, 6),
                 cpu_id=eap_item.cpu_id,
             )
         )

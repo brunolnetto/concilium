@@ -40,7 +40,15 @@ try:
         _process_eap_item,
         _validate_coverage,
     )
-except ImportError:  # pragma: no cover
+except ImportError:
+    # Sempre o caminho tomado em produção: o loader do skill pai (06-resultado-
+    # financeiro/skill.py::_load_estagio, e também load_skill_stage() do
+    # otimizador) carrega este módulo via spec_from_file_location com um nome
+    # sintético sem pacote pai registrado — __package__ fica "" e o import
+    # relativo acima sempre falha. Mantido como try/except (em vez de ir direto
+    # pro importlib) só como defesa caso o loader um dia passe a registrar o
+    # pacote pai corretamente (mesmo padrão em _consolidacao/skill.py e
+    # _indiretos/skill.py, que não têm pragma por serem igualmente cobertos).
     import importlib.util
     from pathlib import Path
 

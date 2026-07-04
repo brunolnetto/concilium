@@ -860,3 +860,23 @@ class TestCatalogUpdaterFindInsumo:
 
         assert item is None
         assert path is None
+
+    def test_corrupt_file_skipped_match_found_in_another(self, tmp_path: Path) -> None:
+        """Arquivo JSON corrompido não interrompe a busca — os demais ainda são varridos."""
+        insumos_dir = tmp_path / "insumos"
+        insumos_dir.mkdir()
+        prods_dir = tmp_path / "producoes"
+        prods_dir.mkdir()
+
+        (insumos_dir / "aaa_corrupto.json").write_text("NOT JSON!!!", encoding="utf-8")
+        insumo = {"codigo": "MO-003", "descricao": "Servente"}
+        insumo_file = insumos_dir / "zzz_valido.json"
+        insumo_file.write_text(json.dumps([insumo]), encoding="utf-8")
+
+        with patch(f"{_UPDATER_MODULE}.RepositorioProducao"):
+            updater = CatalogUpdater(prods_dir, insumos_dir)
+            item, path = updater._find_insumo("MO-003")
+
+        assert item is not None
+        assert item["codigo"] == "MO-003"
+        assert path == insumo_file

@@ -222,7 +222,7 @@ def _lsp_load_produtividades(storage, base: str) -> list:
         try:
             raw = json.loads(storage.ler_blob(f"{base}/produtividades.json").decode("utf-8"))
             produtividades = raw.get("produtividades", raw) if isinstance(raw, dict) else raw
-        except FileNotFoundError:  # pragma: no cover
+        except FileNotFoundError:
             pass
     return produtividades
 

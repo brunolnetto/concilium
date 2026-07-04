@@ -60,6 +60,19 @@ def _robust_bounds(values: list[float], *, non_negative: bool = False) -> tuple[
     return low, high
 
 
+def _classify_direct_severity(issues: list[str]) -> str:
+    """Classifica a severidade das inconsistências diretas de uma linha de CPU.
+
+    ERRO para dado ausente/faltante ("sem"/"ausente" na mensagem); AVISO para
+    outros tipos de inconsistência direta que não indiquem dado faltante.
+    """
+    if not issues:
+        return "OK"
+    if any("ausente" in msg or "sem" in msg for msg in issues):
+        return "ERRO"
+    return "AVISO"
+
+
 def _safe_float(value: Any) -> float | None:
     try:
         num = float(value)
@@ -174,10 +187,7 @@ def build_catalog_reasonability_artifact(
         if row["team_people"] <= 0:
             issues.append("Equipe sem mão de obra definida")
 
-        if any("ausente" in msg or "sem" in msg for msg in issues):
-            row["severity"] = "ERRO"
-        elif issues:  # pragma: no cover
-            row["severity"] = "AVISO"
+        row["severity"] = _classify_direct_severity(issues)
 
     # Regras estatísticas por categoria+unidade
     grouped = _build_groups(rows)

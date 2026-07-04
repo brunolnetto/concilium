@@ -75,7 +75,7 @@ def _rc_try_snapshots(snaps_dir: object, cpu_id: str, json_mod) -> dict | None:
                 for cpu in cpus:
                     if isinstance(cpu, dict) and cpu.get("codigo") == cpu_id:
                         return cpu
-        except Exception:  # pragma: no cover
+        except Exception:
             continue
     return None
 

@@ -14,11 +14,14 @@ Objetivo: Auditoria e validação de precisão do motor financeiro.
 from __future__ import annotations
 
 import csv
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from concilium.domain.models.canonical import CanonicalModel
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -131,13 +134,23 @@ class PlanejamentoParser:
                             # Esta é uma heurística que pode precisar ajuste
                             custo.total_com_bdi = _parse_valor(row[-2])
                             custo.total_sem_bdi = _parse_valor(row[-3]) if len(row) > 3 else custo.total_com_bdi
-                        except (ValueError, IndexError):  # pragma: no cover
+                        except (ValueError, IndexError):
+                            # Inalcançável hoje (_parse_valor nunca levanta; len(row)>=10
+                            # garante os índices), mas fica como rede de segurança caso
+                            # a heurística acima mude — loga em vez de dropar silencioso.
+                            _log.warning(
+                                "Falha ao extrair totais da linha '%s' — mantendo sem custo", item_id, exc_info=True
+                            )
                             continue
 
                     if custo.total_com_bdi > 0 or custo.total_sem_bdi > 0:
                         dados[item_id] = custo
 
-                except (IndexError, ValueError):  # pragma: no cover
+                except (IndexError, ValueError):
+                    # Também inalcançável hoje — todos os acessos acima já são guardados
+                    # por len(row) e o parse de quantidade tem seu próprio try/except.
+                    # Rede de segurança contra mudanças futuras no layout/heurística.
+                    _log.warning("Falha ao processar linha de planejamento — pulando", exc_info=True)
                     continue
 
         return dados
