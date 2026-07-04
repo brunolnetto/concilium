@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._common import build_payload, init_mpl
+from ._common import build_payload, init_mpl, safe_close_mpl
 from ._renderers import render_stacked_bar
 
 
@@ -35,10 +35,5 @@ def build(canonical, cubo) -> bytes | None:
         )
         return fig_to_bytes(fig) if fig is not None else None
     except Exception:
-        try:
-            import matplotlib.pyplot as _plt
-
-            _plt.close("all")
-        except Exception:  # pragma: no cover
-            pass
+        safe_close_mpl()
         return None

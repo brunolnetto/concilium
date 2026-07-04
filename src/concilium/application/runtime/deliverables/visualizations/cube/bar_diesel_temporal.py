@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, timedelta
 
-from ._common import COLORS, init_mpl
+from ._common import COLORS, init_mpl, safe_close_mpl
 
 
 def _fallback_liters_from_canonical(canonical) -> dict[str, float]:
@@ -149,10 +149,5 @@ def build(canonical, cubo) -> bytes | None:
         fig.tight_layout()
         return fig_to_bytes(fig)
     except Exception:
-        try:
-            import matplotlib.pyplot as _plt
-
-            _plt.close("all")
-        except Exception:  # pragma: no cover
-            pass
+        safe_close_mpl()
         return None

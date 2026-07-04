@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from concilium.application.services.analytics.cube_projection_views import _iter_scaled_cubo_cells
 
-from ._common import COLORS, init_mpl
+from ._common import COLORS, init_mpl, safe_close_mpl
 
 
 def _bucket_from_week_iso(week_iso: str) -> str:
@@ -87,10 +87,5 @@ def build(canonical, cubo) -> bytes | None:
         fig.tight_layout(rect=(0, 0.06, 0.84, 1))
         return fig_to_bytes(fig)
     except Exception:
-        try:
-            import matplotlib.pyplot as _plt
-
-            _plt.close("all")
-        except Exception:  # pragma: no cover
-            pass
+        safe_close_mpl()
         return None

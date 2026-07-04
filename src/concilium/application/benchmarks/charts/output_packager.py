@@ -11,10 +11,13 @@ Cria um arquivo compactado com:
 from __future__ import annotations
 
 import json
+import logging
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+_log = logging.getLogger(__name__)
 
 
 def _tools_root_from_config(config_root: Path) -> Path:
@@ -217,5 +220,5 @@ def _tentar_gerar_graficos(bench_dir: Path, slug: str) -> None:
         gerar_graficos_benchmark(bench_dir=bench_dir, slug=slug)
     except ImportError:
         pass  # matplotlib não disponível — segue sem gráficos
-    except Exception:  # pragma: no cover
-        pass  # Falha silenciosa — não bloqueia o empacotamento
+    except Exception:
+        _log.warning("Falha ao gerar gráficos do benchmark %s — empacotamento segue sem PNGs", slug, exc_info=True)

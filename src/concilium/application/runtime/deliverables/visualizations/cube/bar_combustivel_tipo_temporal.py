@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, timedelta
 
-from ._common import COLORS, init_mpl
+from ._common import COLORS, init_mpl, safe_close_mpl
 
 
 def _normalize_fuel_label(raw: object) -> str:
@@ -159,10 +159,5 @@ def build(canonical, cubo=None) -> bytes | None:
         fig.tight_layout(rect=(0, 0.03, 1, 0.98))
         return fig_to_bytes(fig)
     except Exception:
-        try:
-            import matplotlib.pyplot as _plt
-
-            _plt.close("all")
-        except Exception:
-            pass
+        safe_close_mpl()
         return None

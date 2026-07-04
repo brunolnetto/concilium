@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from ._common import build_payload, init_mpl
+from ._common import build_payload, init_mpl, safe_close_mpl
 
 # Ordem e cores dos componentes (base → topo)
 _COMPS = ["Custo operacional", "Overhead BDI", "Lucro (L)", "Tributos"]
@@ -38,12 +38,7 @@ def build(canonical, cubo) -> bytes | None:
         fig = _render(plt, rows)
         return fig_to_bytes(fig) if fig is not None else None
     except Exception:
-        try:
-            import matplotlib.pyplot as _plt
-
-            _plt.close("all")
-        except Exception:  # pragma: no cover
-            pass
+        safe_close_mpl()
         return None
 
 
@@ -96,26 +91,6 @@ def _render(plt, rows: list):
         lefts = [ln + v for ln, v in zip(lefts, vals, strict=False)]
 
     # ── Regiões ABC com linhas tracejadas e labels ────────────────────────────
-    def _region_span(start_idx: int, end_idx: int, label: str, color: str, alpha: float) -> None:  # pragma: no cover
-        if start_idx >= end_idx:
-            return
-        y_lo = start_idx - 0.5
-        y_hi = end_idx - 0.5
-        ax.axhspan(y_lo, y_hi, color=color, alpha=alpha, zorder=0)
-        mid_y = (y_lo + y_hi) / 2
-        ax.text(
-            ax.get_xlim()[1] * 0.98 if ax.get_xlim()[1] > 0 else lefts[-1] + 0.5,
-            mid_y,
-            label,
-            ha="right",
-            va="center",
-            fontsize=11,
-            fontweight="bold",
-            color=color,
-            alpha=0.6,
-            zorder=5,
-        )
-
     # Desenhar as barras primeiro, depois ajustar xlim para labels
     max_val = max(max(lefts), 1e-9) if lefts else 1.0
     ax.set_xlim(0, max_val * 1.12)

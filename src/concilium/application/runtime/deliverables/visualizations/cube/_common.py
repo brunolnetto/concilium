@@ -118,6 +118,16 @@ def init_mpl():
     return plt, fig_to_bytes
 
 
+def safe_close_mpl() -> None:
+    """Fecha todas as figuras matplotlib abertas, ignorando falhas (ex.: backend ausente)."""
+    try:
+        import matplotlib.pyplot as _plt
+
+        _plt.close("all")
+    except Exception:  # pragma: no cover
+        pass
+
+
 def build_payload(face: str, granularidade: str, top_n: int, canonical, cubo) -> dict:
     """Convenience wrapper around build_cube_projection_payload."""
     from concilium.application.services.analytics.cube_projection_views import build_cube_projection_payload
