@@ -301,4 +301,5 @@ def get_notification_service() -> NotificationService:
         with _ns_lock:
             if _notification_service is None:  # pragma: no cover
                 _notification_service = NotificationService()
+    assert _notification_service is not None  # double-checked locking sempre atribui antes daqui
     return _notification_service

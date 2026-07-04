@@ -65,6 +65,20 @@ class ClientRecord:
     client_code_hash: str = ""  # "sha256:<hex>" — código reutilizável de bootstrap (1 por usuário, N dispositivos)
 
 
+def _client_record(raw: dict) -> ClientRecord:
+    """Constrói ClientRecord a partir de um dict cru do JSON store.
+
+    Backward-compat: arquivos gravados antes do campo 'email' existir (ADR-123)
+    não o têm — default "". Usa dict.setdefault em vez de merge por ** (`{**{...},
+    **raw}`) porque o merge de um dict literal com um dict `Unknown` faz o type
+    checker inferir um tipo de valor unificado (`str | Unknown`) para o resultado,
+    o que quebra a checagem por-campo do ** unpacking no construtor.
+    """
+    raw = dict(raw)
+    raw.setdefault("email", "")
+    return ClientRecord(**raw)
+
+
 @dataclass
 class RevokePendingRecord:
     """Solicitação de revogação de dispositivo aguardando confirmação (ADR-123 F3)."""
@@ -223,13 +237,13 @@ class AuthStore:
         with self._lock:
             records = self._read_clients()
             # Backward-compat: JSON files sem campo 'email' recebem default ""
-            return [ClientRecord(**{**{"email": ""}, **r}) for r in records]
+            return [_client_record(r) for r in records]
 
     def remove_client(self, client_id: str) -> bool:
         """Deactivates a client. Returns True if found."""
         with self._lock:
             raw = self._read_clients()
-            records = [ClientRecord(**{**{"email": ""}, **r}) for r in raw]
+            records = [_client_record(r) for r in raw]
             before = len(records)
             records = [r for r in records if r.client_id != client_id]
             if len(records) == before:
@@ -246,7 +260,7 @@ class AuthStore:
         """
         with self._lock:
             raw = self._read_clients()
-            records = [ClientRecord(**{**{"email": ""}, **r}) for r in raw]
+            records = [_client_record(r) for r in raw]
         for r in records:
             if r.client_id == client_id and r.active and _verify(secret, r.secret_hash):
                 return r.roles
@@ -466,4 +480,5 @@ def get_auth_store() -> AuthStore:
                     _store = AuthStore()  # usa data_dir local (CONCILIUM__AUTH_DATA_PATH)
                 else:
                     _store = AuthStore(storage=build_blob_storage(), prefix="auth")
+    assert _store is not None  # double-checked locking sempre atribui antes daqui
     return _store

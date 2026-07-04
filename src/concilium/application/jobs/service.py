@@ -435,6 +435,7 @@ def get_job_service() -> JobService:
             if _service is None:  # pragma: no cover
                 _service = JobService()
 
+    assert _service is not None  # double-checked locking sempre atribui antes daqui
     return _service
 
 

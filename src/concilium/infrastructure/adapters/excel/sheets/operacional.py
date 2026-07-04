@@ -30,7 +30,9 @@ from ..styles import (
 )
 
 
-def _xl_diretos_labor(ws: object, row: int, eq: object, fill_base: object, PAPEL_COLOR: dict) -> int:
+def _xl_diretos_labor(
+    ws: object, row: int, eq: object, fill_base: PatternFill | None, PAPEL_COLOR: dict
+) -> int:
     for func in eq.funcoes:  # type: ignore[union-attr]
         custo_unit = func.custo_mensal_unitario if func.custo_mensal_unitario else 0.0
         papel = getattr(func, "papel", "direto") or "direto"
@@ -48,7 +50,7 @@ def _xl_diretos_labor(ws: object, row: int, eq: object, fill_base: object, PAPEL
     return row
 
 
-def _xl_diretos_equip(ws: object, row: int, eq: object, fill_base: object) -> int:
+def _xl_diretos_equip(ws: object, row: int, eq: object, fill_base: PatternFill | None) -> int:
     for equip in eq.equipamentos:  # type: ignore[union-attr]
         n_un = getattr(equip, "num_unidades", 1) or 1
         custo_equip_u = getattr(equip, "custo_mensal", 0.0) or 0.0
@@ -78,7 +80,7 @@ def _xl_diretos_equip(ws: object, row: int, eq: object, fill_base: object) -> in
     return row
 
 
-def _xl_diretos_material(ws: object, row: int, eq: object, fill_base: object) -> int:
+def _xl_diretos_material(ws: object, row: int, eq: object, fill_base: PatternFill | None) -> int:
     custo_mat = getattr(eq, "custo_material_mensal", 0.0) or 0.0
     if custo_mat > 0:
         _label(ws, row, 1, "MATERIAL", fill_base, bold=False, color=_C["nav_md"])
@@ -95,7 +97,7 @@ def _xl_diretos_material(ws: object, row: int, eq: object, fill_base: object) ->
 
 
 def _xl_diretos_subtotal(
-    ws: object, row: int, eq: object, fill_sub: object, start_row: int, subtotal_rows: list
+    ws: object, row: int, eq: object, fill_sub: PatternFill, start_row: int, subtotal_rows: list
 ) -> None:
     _label(ws, row, 1, f"Subtotal {eq.item_id}", fill_sub, bold=True)  # type: ignore[union-attr]
     for c in range(2, 9):

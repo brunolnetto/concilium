@@ -169,6 +169,7 @@ def get_job_repository() -> JobRepository:
             if _repository is None:
                 _repository = _build_repository()
 
+    assert _repository is not None  # double-checked locking sempre atribui antes daqui
     return _repository
 
 

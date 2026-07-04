@@ -111,6 +111,7 @@ def get_tool_invocation_repository() -> ToolInvocationRepository:
         with _repository_lock:
             if _repository is None:
                 _repository = InMemoryToolInvocationRepository(max_size=_max_size())
+    assert _repository is not None  # double-checked locking sempre atribui antes daqui
     return _repository
 
 
