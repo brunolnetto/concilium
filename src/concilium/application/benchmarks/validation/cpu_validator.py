@@ -83,20 +83,21 @@ class CpuValidator:
             - has_composicao: bool
             - errors: list of error messages
         """
-        result = {
+        errors: list[str] = []
+        result: dict[str, Any] = {
             "cpu_exists": False,
             "cpu": None,
             "has_producao_ref": False,
             "producao_exists": False,
             "producao": None,
             "has_composicao": False,
-            "errors": [],
+            "errors": errors,
         }
 
         # Step 1: Validate CPU exists
         cpu = self.get_cpu(cpu_id)
         if not cpu:
-            result["errors"].append(f"CPU '{cpu_id}' não encontrado no catálogo")
+            errors.append(f"CPU '{cpu_id}' não encontrado no catálogo")
             return result
 
         result["cpu_exists"] = True
@@ -105,7 +106,7 @@ class CpuValidator:
         # Step 2: Check producao_id_ref
         prod_ref = cpu.get("producao_id_ref")
         if not prod_ref:
-            result["errors"].append(f"CPU '{cpu_id}' não tem producao_id_ref definido")
+            errors.append(f"CPU '{cpu_id}' não tem producao_id_ref definido")
             return result
 
         result["has_producao_ref"] = True
@@ -113,7 +114,7 @@ class CpuValidator:
         # Step 3: Validate production exists
         prod = self.get_production(prod_ref)
         if not prod:
-            result["errors"].append(f"Produção '{prod_ref}' referenciada por CPU '{cpu_id}' não encontrada")
+            errors.append(f"Produção '{prod_ref}' referenciada por CPU '{cpu_id}' não encontrada")
             return result
 
         result["producao_exists"] = True
@@ -122,16 +123,14 @@ class CpuValidator:
         # Step 4: Check composicao_padrao_equipe
         comp = prod.get("composicao_padrao_equipe") or {}
         if not comp:
-            result["errors"].append(f"Produção '{prod_ref}' não tem composicao_padrao_equipe definida")
+            errors.append(f"Produção '{prod_ref}' não tem composicao_padrao_equipe definida")
             return result
 
         funcoes = comp.get("funcoes", [])
         equipamentos = comp.get("equipamentos", [])
 
         if not funcoes and not equipamentos:
-            result["errors"].append(
-                f"Produção '{prod_ref}' tem composicao_padrao_equipe vazia (sem funcoes ou equipamentos)"
-            )
+            errors.append(f"Produção '{prod_ref}' tem composicao_padrao_equipe vazia (sem funcoes ou equipamentos)")
             return result
 
         result["has_composicao"] = True
@@ -150,29 +149,31 @@ class CpuValidator:
             - invalid: number of invalid items
             - items: dict mapping item_id → validation result
         """
-        result = {
-            "total": len(eap_items),
-            "valid": 0,
-            "invalid": 0,
-            "items": {},
-        }
+        valid = 0
+        invalid = 0
+        items: dict[str, dict[str, Any]] = {}
 
         for item in eap_items:
             item_id = item.get("item_id", "?")
             cpu_id = item.get("cpu_id", "?")
 
             validation = self.validate_cpu_mapping(cpu_id)
-            result["items"][item_id] = {
+            items[item_id] = {
                 "cpu_id": cpu_id,
                 "validation": validation,
             }
 
             if validation["errors"]:
-                result["invalid"] += 1
+                invalid += 1
             else:
-                result["valid"] += 1
+                valid += 1
 
-        return result
+        return {
+            "total": len(eap_items),
+            "valid": valid,
+            "invalid": invalid,
+            "items": items,
+        }
 
     def print_validation_report(self, validation: dict[str, Any]) -> None:
         """Print human-readable validation report.

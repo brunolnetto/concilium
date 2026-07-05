@@ -7,8 +7,9 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.worksheet import Worksheet
 
-from concilium.domain.models.canonical import CanonicalModel
+from concilium.domain.models.canonical import CanonicalModel, EquipeDireta
 
 from ..cash_flow import _monthly_indirect_costs
 from ..helpers import _find_eap_item, _fmt_mes, _project_months
@@ -31,9 +32,9 @@ from ..styles import (
 
 
 def _xl_diretos_labor(
-    ws: object, row: int, eq: object, fill_base: PatternFill | None, PAPEL_COLOR: dict
+    ws: Worksheet, row: int, eq: EquipeDireta, fill_base: PatternFill | None, PAPEL_COLOR: dict
 ) -> int:
-    for func in eq.funcoes:  # type: ignore[union-attr]
+    for func in eq.funcoes:
         custo_unit = func.custo_mensal_unitario if func.custo_mensal_unitario else 0.0
         papel = getattr(func, "papel", "direto") or "direto"
         papel_color = PAPEL_COLOR.get(papel, _C["preto"])
@@ -44,14 +45,14 @@ def _xl_diretos_labor(
         _label(ws, row, 5, func.num_pessoas, fill_base, align="right")
         _money(ws, row, 6, custo_unit, fill_base)
         _money(ws, row, 7, f"=E{row}*F{row}", fill_base)
-        _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")  # type: ignore[union-attr]
+        _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")
         _money(ws, row, 9, f"=G{row}*H{row}", fill_base)
         row += 1
     return row
 
 
-def _xl_diretos_equip(ws: object, row: int, eq: object, fill_base: PatternFill | None) -> int:
-    for equip in eq.equipamentos:  # type: ignore[union-attr]
+def _xl_diretos_equip(ws: Worksheet, row: int, eq: EquipeDireta, fill_base: PatternFill | None) -> int:
+    for equip in eq.equipamentos:
         n_un = getattr(equip, "num_unidades", 1) or 1
         custo_equip_u = getattr(equip, "custo_mensal", 0.0) or 0.0
         _label(ws, row, 1, "EQUIPAMENTO", fill_base)
@@ -61,7 +62,7 @@ def _xl_diretos_equip(ws: object, row: int, eq: object, fill_base: PatternFill |
         _label(ws, row, 5, n_un, fill_base, align="right")
         _money(ws, row, 6, custo_equip_u, fill_base)
         _money(ws, row, 7, f"=E{row}*F{row}", fill_base)
-        _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")  # type: ignore[union-attr]
+        _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")
         _money(ws, row, 9, f"=G{row}*H{row}", fill_base)
         row += 1
         custo_comb_u = getattr(equip, "custo_combustivel_mensal", 0.0) or 0.0
@@ -74,37 +75,37 @@ def _xl_diretos_equip(ws: object, row: int, eq: object, fill_base: PatternFill |
             _label(ws, row, 5, n_un, fill_base, align="right")
             _money(ws, row, 6, custo_comb_u, fill_base)
             _money(ws, row, 7, f"=E{row}*F{row}", fill_base)
-            _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")  # type: ignore[union-attr]
+            _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")
             _money(ws, row, 9, f"=G{row}*H{row}", fill_base)
             row += 1
     return row
 
 
-def _xl_diretos_material(ws: object, row: int, eq: object, fill_base: PatternFill | None) -> int:
+def _xl_diretos_material(ws: Worksheet, row: int, eq: EquipeDireta, fill_base: PatternFill | None) -> int:
     custo_mat = getattr(eq, "custo_material_mensal", 0.0) or 0.0
     if custo_mat > 0:
         _label(ws, row, 1, "MATERIAL", fill_base, bold=False, color=_C["nav_md"])
-        _label(ws, row, 2, eq.item_id, fill_base)  # type: ignore[union-attr]
+        _label(ws, row, 2, eq.item_id, fill_base)
         _label(ws, row, 3, "Materiais diretos", fill_base)
         _label(ws, row, 4, "—", fill_base, align="center")
         _label(ws, row, 5, 1, fill_base, align="right")
         _money(ws, row, 6, custo_mat, fill_base)
         _money(ws, row, 7, f"=E{row}*F{row}", fill_base)
-        _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")  # type: ignore[union-attr]
+        _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_base, align="right")
         _money(ws, row, 9, f"=G{row}*H{row}", fill_base)
         row += 1
     return row
 
 
 def _xl_diretos_subtotal(
-    ws: object, row: int, eq: object, fill_sub: PatternFill, start_row: int, subtotal_rows: list
+    ws: Worksheet, row: int, eq: EquipeDireta, fill_sub: PatternFill, start_row: int, subtotal_rows: list
 ) -> None:
-    _label(ws, row, 1, f"Subtotal {eq.item_id}", fill_sub, bold=True)  # type: ignore[union-attr]
+    _label(ws, row, 1, f"Subtotal {eq.item_id}", fill_sub, bold=True)
     for c in range(2, 9):
-        ws.cell(row=row, column=c).fill = fill_sub  # type: ignore[union-attr]
-        ws.cell(row=row, column=c).border = _border()  # type: ignore[union-attr]
+        ws.cell(row=row, column=c).fill = fill_sub
+        ws.cell(row=row, column=c).border = _border()
     _money(ws, row, 7, f"=SUM(G{start_row}:G{row - 1})", fill_sub, bold=True, color=_C["orange"])
-    _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_sub, bold=True, align="right")  # type: ignore[union-attr]
+    _label(ws, row, 8, round(eq.permanencia_meses, 2), fill_sub, bold=True, align="right")
     _money(ws, row, 9, f"=SUM(I{start_row}:I{row - 1})", fill_sub, bold=True, color=_C["orange"])
     subtotal_rows.append(row)
 
@@ -182,7 +183,7 @@ def _xl_indirect_fallback_totals(resultado: Any) -> dict:
     }
 
 
-def _xl_indirect_funcoes_rows(ws: Any, row: int, ind: Any, cat: str, perm: int, fill_base: Any) -> int:
+def _xl_indirect_funcoes_rows(ws: Any, row: int, ind: Any, cat: str, perm: float, fill_base: Any) -> int:
     """Write mao-de-obra rows for indirect category; returns updated row."""
     for func in ind.funcoes if ind is not None else []:
         qtd = func.get("quantidade", 1)
@@ -200,7 +201,7 @@ def _xl_indirect_funcoes_rows(ws: Any, row: int, ind: Any, cat: str, perm: int, 
     return row
 
 
-def _xl_indirect_verbas_mensais_rows(ws: Any, row: int, ind: Any, cat: str, perm: int, fill_base: Any) -> int:
+def _xl_indirect_verbas_mensais_rows(ws: Any, row: int, ind: Any, cat: str, perm: float, fill_base: Any) -> int:
     """Write monthly-allowance rows; returns updated row."""
     for verba in ind.verbas_mensais if ind is not None else []:
         custo_mes = verba.get("valor_mensal", 0.0)
@@ -217,7 +218,7 @@ def _xl_indirect_verbas_mensais_rows(ws: Any, row: int, ind: Any, cat: str, perm
     return row
 
 
-def _xl_indirect_verbas_fixas_rows(ws: Any, row: int, ind: Any, cat: str, perm: int, fill_base: Any) -> int:
+def _xl_indirect_verbas_fixas_rows(ws: Any, row: int, ind: Any, cat: str, perm: float, fill_base: Any) -> int:
     """Write fixed-allowance rows; returns updated row."""
     for verba in ind.verbas_fixas if ind is not None else []:
         custo_tot = verba.get("valor_total", verba.get("valor_mensal", 0.0))
@@ -251,7 +252,7 @@ def _xl_indirect_mob_rows(ws: Any, row: int, ind: Any, cat: str, fill_base: Any)
 
 
 def _xl_indirect_fallback_row(
-    ws: Any, row: int, start_row: int, cat: str, cat_desc: str, cat_total: float, perm: int, fill_base: Any
+    ws: Any, row: int, start_row: int, cat: str, cat_desc: str, cat_total: float, perm: float, fill_base: Any
 ) -> int:
     """Write summary fallback row when no detail lines were written."""
     if row == start_row:
@@ -524,7 +525,7 @@ def render_planejamento_ml(wb: Workbook, canonical: CanonicalModel) -> int | Non
     )
 
     NCOLS = 15 if has_crit else 14
-    _set_col_widths(ws, [12, 42, 6, 13, 15, 15, 13, 13, 17, 15, 15, 13, 13, 17, 12][:NCOLS])  # type: ignore[arg-type]
+    _set_col_widths(ws, [12, 42, 6, 13, 15, 15, 13, 13, 17, 15, 15, 13, 13, 17, 12][:NCOLS])
     _freeze(ws, "C3")
 
     row = 1
@@ -748,7 +749,7 @@ def render_cronograma(wb: Workbook, canonical: CanonicalModel) -> None:
 
     NCOLS_FIXED = 5  # Item ID | Descrição | Un. | Quantitativo | Métrica
     NCOLS = NCOLS_FIXED + n_weeks
-    _set_col_widths(ws, [10, 30, 6, 12, 22] + [13] * n_weeks)  # type: ignore[arg-type]
+    _set_col_widths(ws, [10, 30, 6, 12, 22] + [13] * n_weeks)
 
     row = 1
     _title_row(ws, row, "CRONOGRAMA SEMANAL — ACOMPANHAMENTO FÍSICO DE PRODUÇÃO", NCOLS)

@@ -23,6 +23,7 @@ Ações automáticas:
 Validação final:
     Ao terminar, roda os 4 schemas JSON contra todos os dados e reporta erros residuais.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -35,6 +36,7 @@ import warnings
 from datetime import UTC, datetime
 from pathlib import Path
 from statistics import median
+from typing import Any
 
 # RefResolver emite deprecation warning no import em jsonschema>=4.18.
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*RefResolver is deprecated.*")
@@ -50,11 +52,13 @@ SCHEMA_ROOT = ROOT / "config" / "schemas" / "catalog"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _load_schema(name: str) -> dict:
     return json.loads((SCHEMA_ROOT / name).read_text(encoding="utf-8"))
 
 
 _SCHEMA_STORE: dict[str, dict] | None = None
+
 
 def _schema_store() -> dict[str, dict]:
     global _SCHEMA_STORE
@@ -66,7 +70,10 @@ def _schema_store() -> dict[str, dict]:
                 _SCHEMA_STORE[s["$id"]] = s
     return _SCHEMA_STORE
 
-def _make_validator(schema: dict) -> Draft202012Validator:
+
+def _make_validator(schema: dict) -> Any:
+    # jsonschema não é um pacote PEP 561 tipado — Draft202012Validator é criado
+    # dinamicamente via factory em tempo de execução, sem forma estática real.
     base_uri = SCHEMA_ROOT.as_uri() + "/"
     return Draft202012Validator(
         schema,
@@ -74,7 +81,7 @@ def _make_validator(schema: dict) -> Draft202012Validator:
     )
 
 
-def _validate_all(entities: list[dict], validator: Draft202012Validator, label: str) -> list[str]:
+def _validate_all(entities: list[dict], validator: Any, label: str) -> list[str]:
     erros = []
     for ent in entities:
         eid = ent.get("codigo") or ent.get("id") or "<sem-id>"
@@ -117,8 +124,10 @@ def _categoria_custo_from_tipo(tipo: str | None) -> str:
 def _team_is_empty(equipe: dict | None) -> bool:
     if not isinstance(equipe, dict):
         return True
-    funcoes = equipe.get("funcoes") if isinstance(equipe.get("funcoes"), list) else []
-    equipamentos = equipe.get("equipamentos") if isinstance(equipe.get("equipamentos"), list) else []
+    raw_funcoes = equipe.get("funcoes")
+    raw_equipamentos = equipe.get("equipamentos")
+    funcoes = raw_funcoes if isinstance(raw_funcoes, list) else []
+    equipamentos = raw_equipamentos if isinstance(raw_equipamentos, list) else []
     return len(funcoes) == 0 and len(equipamentos) == 0
 
 
@@ -180,6 +189,7 @@ def _robust_bounds(values: list[float], *, non_negative: bool = False) -> tuple[
 
 # ── Ações de curação ─────────────────────────────────────────────────────────
 
+
 class CurationReport:
     def __init__(self) -> None:
         self.fixed: list[str] = []
@@ -206,7 +216,7 @@ def _dedupe_team_items(items: list[dict], id_key: str, qty_key: str) -> list[dic
             continue
         qty = raw.get(qty_key)
         try:
-            qty_i = int(qty)
+            qty_i = int(qty) if qty is not None else 0
         except Exception:
             qty_i = 0
         if qty_i <= 0:
@@ -222,8 +232,10 @@ def _dedupe_team_items(items: list[dict], id_key: str, qty_key: str) -> list[dic
 
 def _normalize_team(equipe: dict) -> dict:
     normalized = dict(equipe)
-    funcoes = equipe.get("funcoes") if isinstance(equipe.get("funcoes"), list) else []
-    equipamentos = equipe.get("equipamentos") if isinstance(equipe.get("equipamentos"), list) else []
+    raw_funcoes = equipe.get("funcoes")
+    raw_equipamentos = equipe.get("equipamentos")
+    funcoes = raw_funcoes if isinstance(raw_funcoes, list) else []
+    equipamentos = raw_equipamentos if isinstance(raw_equipamentos, list) else []
     normalized["funcoes"] = _dedupe_team_items(funcoes, "funcao_id", "num_pessoas")
     normalized["equipamentos"] = _dedupe_team_items(equipamentos, "equip_id", "num_unidades")
     return normalized
@@ -359,8 +371,14 @@ def cure_cpu(cpu: dict, report: CurationReport, apply: bool) -> dict:
     return changed if apply else cpu
 
 
-_CPU_ONLY_FIELDS = {"atributos_categoria", "cpu_referencia_id", "producao_id_ref", "composicao_itens",
-                    "custo_direto_unitario_planilha", "precos_unitarios_sbdi"}
+_CPU_ONLY_FIELDS = {
+    "atributos_categoria",
+    "cpu_referencia_id",
+    "producao_id_ref",
+    "composicao_itens",
+    "custo_direto_unitario_planilha",
+    "precos_unitarios_sbdi",
+}
 
 
 def cure_insumo(ins: dict, report: CurationReport, apply: bool) -> dict:
@@ -654,8 +672,11 @@ def cure_contextual(
         prod = prod_by_id.get(prod_ref)
         if not isinstance(prod, dict):
             continue
+        raw_valor_horario = prod.get("valor_horario")
+        if raw_valor_horario is None:
+            continue
         try:
-            valor_horario = float(prod.get("valor_horario"))
+            valor_horario = float(raw_valor_horario)
         except (TypeError, ValueError):
             continue
         if valor_horario <= 0:
@@ -717,6 +738,7 @@ def cure_contextual(
 
 # ── Carregamento e persistência ───────────────────────────────────────────────
 
+
 def _context_base(contexto_id: str) -> Path:
     base = ROOT / "config" / "catalogos" / contexto_id
     if not base.exists():
@@ -761,12 +783,13 @@ def _persist_entity_files(entries: list[tuple[Path, dict]], apply: bool) -> int:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+
 def run(contexto_id: str, apply: bool = False) -> None:
     """Executa a curação do catálogo. Levanta RuntimeError em caso de erros residuais."""
     mode = "APPLY" if apply else "DRY-RUN"
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  Curação do catálogo [{mode}] — contexto: {contexto_id}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     base = _context_base(contexto_id)
     bundle_path = base / ".catalog_bundle.json"
@@ -814,9 +837,9 @@ def run(contexto_id: str, apply: bool = False) -> None:
             bundle_path.unlink()
             print(f"  Bundle invalidado: {bundle_path}")
 
-    print(f"\n{'─'*60}")
+    print(f"\n{'─' * 60}")
     print("  Validação residual contra schemas normalizados")
-    print(f"{'─'*60}")
+    print(f"{'─' * 60}")
 
     cpu_v = _make_validator(_load_schema("cpu.schema.json"))
     prod_v = _make_validator(_load_schema("producao.schema.json"))
@@ -844,6 +867,7 @@ def run(contexto_id: str, apply: bool = False) -> None:
 
 
 # ── CLI entry point ────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Curação do catálogo Concilium")

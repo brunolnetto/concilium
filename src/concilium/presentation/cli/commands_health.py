@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import typer
 from rich.console import Console
 from rich.table import Table
 
+if TYPE_CHECKING:
+    from concilium.application.runtime import Runtime
+
 console = Console()
 
 
-def _hc_check_catalogo_health(rt: object, ctx_id: str) -> tuple:
+def _hc_check_catalogo_health(rt: Runtime, ctx_id: str) -> tuple:
     """Returns (name, ok, detail) for a single catalogue health check."""
     from concilium.application.orchestrators.catalog_governance import (
         collect_catalog_critical_errors,
@@ -29,7 +35,7 @@ def _hc_check_catalogo_health(rt: object, ctx_id: str) -> tuple:
         return (f"Cat\u00e1logo [{ctx_id}]", False, str(exc))
 
 
-def _hc_check_catalogs(rows: list, contexto_ids: list, config_dir: object) -> None:
+def _hc_check_catalogs(rows: list, contexto_ids: list, config_dir: Path) -> None:
     """Appends catalogue health rows; no-op if no contexts or config dir missing."""
     if not contexto_ids or not config_dir.exists():
         return

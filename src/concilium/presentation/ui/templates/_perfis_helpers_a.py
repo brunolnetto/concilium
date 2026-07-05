@@ -311,14 +311,14 @@ def _render_version_compare(
     versions: list[dict],
     key_prefix: str,
 ) -> None:
-    v_ids = [v.get("version") for v in versions if v.get("version")]
+    v_ids: list[str] = [str(v.get("version")) for v in versions if v.get("version")]
     if len(v_ids) < 2:
         st.info("São necessárias ao menos duas versões para comparar.")
         return
     c1, c2 = st.columns(2)
     vA = c1.selectbox("Versão A (base)", options=v_ids, index=0, key=f"{key_prefix}-cmp-va")
     vB = c2.selectbox("Versão B (nova)", options=v_ids, index=len(v_ids) - 1, key=f"{key_prefix}-cmp-vb")
-    if st.button("Comparar", key=f"{key_prefix}-btn-compare", type="secondary"):
+    if st.button("Comparar", key=f"{key_prefix}-btn-compare", type="secondary") and vA is not None and vB is not None:
         _fetch_and_display_diff(base_url, actor, compare_path, entity_id, vA, vB)
 
 

@@ -101,6 +101,8 @@ def _cmb_regime_label(insumo: dict) -> str:
 
 
 def _cmb_format_money(value: object) -> str:
+    if not isinstance(value, (int, float, str)):
+        return "—"
     try:
         return f"R$ {float(value):,.2f}"
     except Exception:
@@ -452,7 +454,7 @@ def _rcd_do_save(base_url: str, actor: str, catalog_id: str, codigo: str, cpu: d
             f"Bundle invalidado: {result.get('bundle_invalidated', True)}"
         )
         for k in list(st.session_state.keys()):
-            if k.startswith("master-cpus-all-"):
+            if isinstance(k, str) and k.startswith("master-cpus-all-"):
                 del st.session_state[k]
         st.session_state.pop(f"comp-dialog-cpu-{catalog_id}", None)
         st.rerun()

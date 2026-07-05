@@ -8,10 +8,13 @@ Comandos:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich import print as rprint
+
+if TYPE_CHECKING:
+    from concilium.domain.repositories.blob_storage_port import BlobStoragePort
 
 blob_app = typer.Typer(
     name="blob",
@@ -22,7 +25,7 @@ blob_app = typer.Typer(
 _BACKEND_HELP = "Backend: filesystem | azure_blob | sharepoint | s3 | gdrive. Padrão: CONCILIUM__STORE_BACKEND."
 
 
-def _make_storage(backend: str, root: str = "") -> BlobStoragePort:  # type: ignore[name-defined]  # noqa: F821
+def _make_storage(backend: str, root: str = "") -> BlobStoragePort:
     """Instancia um BlobStoragePort a partir do tipo de backend explícito.
 
     Se *backend* for vazio, cai no comportamento padrão (CONCILIUM__STORE_BACKEND).
@@ -108,7 +111,6 @@ def migrate(
         rprint("[bold yellow]▶ Modo dry-run — nenhum blob será copiado[/bold yellow]")
 
     rprint(f"[bold cyan]▶ Iniciando migração (prefix='{prefix or '*'}')[/bold cyan]")
-
 
     def on_progress(path: str, n: int, total: int) -> None:
         if n % 10 == 0 or n == total:

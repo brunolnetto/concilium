@@ -16,7 +16,10 @@ import math
 
 from concilium.domain.models.canonical import CanonicalModel
 
-from ._skill_helpers_a import _fmt_mes, _week_to_month
+from ._skill_helpers_a import (  # ty: ignore[unresolved-import]  # runtime-only: sibling loaded via importlib in skill.py
+    _fmt_mes,
+    _week_to_month,
+)
 
 
 def _getstr(obj, attr: str, default: str = "") -> str:

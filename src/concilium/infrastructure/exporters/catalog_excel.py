@@ -17,7 +17,7 @@ def _apply_body_row(row, fill, standard_border, font_name_body: str, size_body: 
 
 
 class CatalogExporterExcel:
-    def __init__(self, catalogo: dict[str, Any], jurisdicao_id: str = None):  # type: ignore[assignment]
+    def __init__(self, catalogo: dict[str, Any], jurisdicao_id: str | None = None):
         self.catalogo = catalogo
         self.jurisdicao_id = jurisdicao_id
         self.simulador = SimuladorEngenharia(catalogo)
@@ -25,13 +25,13 @@ class CatalogExporterExcel:
     def _get_preco_regional(self, insumo: dict) -> float:
         """Resolve o preço considerando a regionalização da jurisdição."""
         if not self.jurisdicao_id:
-            return insumo.get("preco_unitario")  # type: ignore[return-value]
+            return insumo.get("preco_unitario", 0.0)
 
         regional = insumo.get("regionalizacao", {})
         if self.jurisdicao_id in regional:
-            return regional[self.jurisdicao_id].get("preco")
+            return regional[self.jurisdicao_id].get("preco", 0.0)
 
-        return insumo.get("preco_unitario")  # type: ignore[return-value]
+        return insumo.get("preco_unitario", 0.0)
 
     def _cex_build_insumos_dfs(self, insumos_raw):
         data_map = {"MATERIAL": [], "MAO_OBRA": [], "EQUIPAMENTO": []}

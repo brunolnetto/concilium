@@ -20,7 +20,7 @@ from __future__ import annotations
 import math
 from datetime import date, timedelta
 from hashlib import sha1
-from typing import Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from concilium.application.scheduling import (
     Activity,
@@ -37,10 +37,15 @@ from concilium.domain.models.canonical import (
     CanonicalModel,
     Cronograma,
     DistribuicaoSemanal,
+    RegimeTrabalho,
     ScheduleCandidateCanonical,
     ScheduledActivityCanonical,
     ValidacaoItem,
 )
+
+if TYPE_CHECKING:
+    from concilium.domain.models.planning.mobilizacao import CurvaForca, MobilizacaoPolicy
+    from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
 # ════════════════════════════════════════════════════════════════════════════════
 # SECTION 1: HELPERS FROM SKILL 02 (Manual Mode — Weekly Calculation)
@@ -512,9 +517,12 @@ def _extract_dag(
                 lag = int(getattr(pred, "lag", 0) or 0)
                 if tipo == "FS":
                     edge_thresholds[key] = float(pred.completion_threshold_pct)
-                elif tipo in ("SS", "FF"):
+                elif tipo == "SS":
                     edge_thresholds[key] = 1.0  # sentinela topológico
-                    extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo=tipo, lag=lag))
+                    extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo="SS", lag=lag))
+                elif tipo == "FF":
+                    edge_thresholds[key] = 1.0  # sentinela topológico
+                    extended.append(_EP(pred=pred.item_id, succ=item.item_id, tipo="FF", lag=lag))
 
     # Se não há predecessores na EAP, inferir sequência linear
     if not edge_thresholds:
@@ -1639,7 +1647,7 @@ def _check_pool_violations(
 def _check_wmp_pool(
     item_id: str,
     cpu: dict,
-    policy: object,
+    policy: MobilizacaoPolicy,
     pool: dict,
     validacoes: list,
 ) -> None:
@@ -1650,14 +1658,14 @@ def _check_wmp_pool(
         if not eid or eid not in pool:
             continue
         units = int(e.get("num_unidades", 1))
-        peak_demand = policy.n_maximo * units  # type: ignore[union-attr]
+        peak_demand = policy.n_maximo * units
         if peak_demand > pool[eid]:
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-WMP-POOL",
                     status="AVISO",
                     mensagem=(
-                        f"WMP '{item_id}': n_maximo={policy.n_maximo} x "  # type: ignore[union-attr]
+                        f"WMP '{item_id}': n_maximo={policy.n_maximo} x "
                         f"{eid}({units}/equipe) -> demanda_pico={peak_demand} "
                         f"excede pool={pool[eid]}. Reduza n_maximo ou amplie o pool."
                     ),
@@ -1667,15 +1675,15 @@ def _check_wmp_pool(
 
 def _check_wmp_desmob(
     item_id: str,
-    curva: object,
-    policy: object,
+    curva: CurvaForca,
+    policy: MobilizacaoPolicy,
     Q: float,
     P: float,
     validacoes: list,
 ) -> None:
-    if not curva.incompleta:  # type: ignore[union-attr]
+    if not curva.incompleta:
         return
-    if policy.semanas_plateau is not None and policy.taxa_desmobilizacao > 0:  # type: ignore[union-attr]
+    if policy.semanas_plateau is not None and policy.taxa_desmobilizacao > 0:
         validacoes.append(
             ValidacaoItem(
                 codigo="VAL-WMP-DESMOB",
@@ -1685,7 +1693,7 @@ def _check_wmp_desmob(
                     f" antes de entregar Q={Q:.0f}. Aumente n_maximo ou semanas_plateau."
                 ),
             )
-        )  # type: ignore[union-attr]
+        )
     else:
         validacoes.append(
             ValidacaoItem(
@@ -1699,7 +1707,7 @@ def _check_wmp_desmob(
         )
 
 
-def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> object | None:
+def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> MobilizacaoPolicy | None:
     from concilium.domain.models.planning.mobilizacao import MobilizacaoPolicy
 
     try:
@@ -1712,24 +1720,24 @@ def _build_wmp_policy(item_id: str, policy_dict: dict, validacoes: list) -> obje
 
 
 def _run_wmp_simulation(
-    sim: object,
-    policy: object,
+    sim: WorkforcePolicySimulator,
+    policy: MobilizacaoPolicy,
     item_id: str,
     Q: float,
     P: float,
-    regime: object,
+    regime: RegimeTrabalho,
     prat_semanal: dict,
     semanas_obra: list,
     guard: int,
-) -> object:
+) -> CurvaForca:
     semanas_iso = {t: semanas_obra[t] for t in range(min(guard, len(semanas_obra)))}
-    return sim.simulate(  # type: ignore[union-attr]
+    return sim.simulate(
         policy=policy,
         atividade_id=item_id,
         quantitativo=Q,
         producao_horaria=P,
-        dias_semana=regime.dias_semana,  # type: ignore[union-attr]
-        horas_dia=regime.horas_dia,  # type: ignore[union-attr]
+        dias_semana=regime.dias_semana,
+        horas_dia=regime.horas_dia,
         prat_semanal=prat_semanal or None,
         semanas_iso_por_offset=semanas_iso,
     )
@@ -1742,8 +1750,8 @@ def _process_single_wmp_policy(
     cpu_lookup: dict,
     producao_lookup: dict,
     pool: dict,
-    sim: object,
-    regime: object,
+    sim: WorkforcePolicySimulator,
+    regime: RegimeTrabalho,
     prat_semanal: dict,
     semanas_obra: list,
     semanas_set: set,
@@ -1791,7 +1799,7 @@ def _process_single_wmp_policy(
         )
         return
 
-    prod_base = P * regime.dias_semana * regime.horas_dia * policy.n_maximo  # type: ignore[union-attr]
+    prod_base = P * regime.dias_semana * regime.horas_dia * policy.n_maximo
     nominal = math.ceil(Q / prod_base) if prod_base > 0 else 1
     from concilium.domain.services.planning.mobilizacao_simulator import WorkforcePolicySimulator
 
@@ -1815,7 +1823,7 @@ def _process_single_wmp_policy(
     )
 
 
-def _extract_praticabilidade(canonical_in: object) -> tuple[dict, dict]:
+def _extract_praticabilidade(canonical_in: CanonicalModel) -> tuple[dict, dict]:
     p = getattr(canonical_in, "praticabilidade", None)
     prat_semanal = (p.percentual_produtivo_semanal if p else {}) or {}
     prat_mensal = (p.percentual_produtivo_mensal if p else {}) or {}
@@ -1823,19 +1831,19 @@ def _extract_praticabilidade(canonical_in: object) -> tuple[dict, dict]:
 
 
 def _determine_mode_and_distribuicao(
-    canonical_in: object,
+    canonical_in: CanonicalModel,
     inputs: dict,
-    num_equipes_por_item: object,
+    num_equipes_por_item: dict[str, dict[str, int]] | None,
     semanas_obra: list,
     cpu_lookup: dict,
     producao_lookup: dict,
-    regime: object,
+    regime: RegimeTrabalho,
     prat_semanal: dict,
     prat_mensal: dict,
     fator_calendario_semanal: dict[str, float],
     catalogo: dict,
     validacoes: list,
-) -> tuple[str | None, dict, list, object, bool]:
+) -> tuple[str | None, dict, list, ScheduleCandidateCanonical | None, bool]:
     """Returns (mode, distribuicao_por_item, schedule_candidates, schedule_selected, failed)."""
     rcpsp_spec = inputs.get("rcpsp_spec")
     if rcpsp_spec and isinstance(rcpsp_spec, dict):
@@ -1914,10 +1922,10 @@ def _determine_mode_and_distribuicao(
 
 
 def _build_scheduled_activities(
-    canonical_in: object,
+    canonical_in: CanonicalModel,
     distribuicao_por_item: dict,
     semanas_obra: list,
-    schedule_selected: object | None = None,
+    schedule_selected: ScheduleCandidateCanonical | None = None,
 ) -> list:
     from datetime import timedelta
 
@@ -1952,14 +1960,14 @@ def _build_scheduled_activities(
                 duration_lookup[item_id] = duration
                 ramp_lookup[item_id] = getattr(sa, "ramp_profile", None)
 
-    for item in canonical_in.eap:  # type: ignore[union-attr]
+    for item in canonical_in.eap:
         distribuicao_semanal = distribuicao_por_item.get(item.item_id, {})
         semanas_com_producao = [s for s, d in distribuicao_semanal.items() if d.qtd_executada > 0]
-        _di = canonical_in.projeto.data_inicio  # type: ignore[union-attr]
+        _di = canonical_in.projeto.data_inicio
         start_week = _week_offset(semanas_com_producao[0], semanas_obra, _di) if semanas_com_producao else 0
         end_week = _week_offset(semanas_com_producao[-1], semanas_obra, _di) if semanas_com_producao else 0
-        data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)  # type: ignore[union-attr]
-        data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)  # type: ignore[union-attr]
+        data_inicio = canonical_in.projeto.data_inicio + timedelta(weeks=start_week)
+        data_fim = canonical_in.projeto.data_inicio + timedelta(weeks=end_week + 1)
 
         # ADR-072: Use original duration from scheduler if available
         duration_from_scheduler = duration_lookup.get(item.item_id, None)
@@ -1987,26 +1995,39 @@ def _build_scheduled_activities(
 
 def _build_cronograma_out(
     mode: str | None,
-    schedule_selected: object,
+    schedule_selected: ScheduleCandidateCanonical | None,
     scheduled_activities_out: list,
     semanas_obra: list,
     distribuicao_mensal: dict,
     validacoes: list,
-) -> object:
-    AVAILABLE_SCHEDULE_ALGORITHMS = ("MINSLK", "LPT", "MAXRES", "ES", "GR", "CP-SAT", "LNS")
+) -> Cronograma:
+    _algo: Literal["manual_allocation", "MINSLK", "LPT", "MAXRES", "ES", "GR", "MILP", "CP-SAT", "LNS"]
+    heuristic = schedule_selected.heuristic if schedule_selected is not None else None
     if mode == "MANUAL_ALLOCATION":
         _algo = "manual_allocation"
-    elif schedule_selected and schedule_selected.heuristic in AVAILABLE_SCHEDULE_ALGORITHMS:  # type: ignore[union-attr]
-        _algo = schedule_selected.heuristic  # type: ignore[union-attr]
+    elif heuristic == "MINSLK":
+        _algo = "MINSLK"
+    elif heuristic == "LPT":
+        _algo = "LPT"
+    elif heuristic == "MAXRES":
+        _algo = "MAXRES"
+    elif heuristic == "ES":
+        _algo = "ES"
+    elif heuristic == "GR":
+        _algo = "GR"
+    elif heuristic == "CP-SAT":
+        _algo = "CP-SAT"
+    elif heuristic == "LNS":
+        _algo = "LNS"
     else:
         _algo = "MINSLK"
 
     return Cronograma(
         algorithm=_algo,
-        quality_score=schedule_selected.quality_score if schedule_selected else 0.0,  # type: ignore[union-attr]
-        makespan_weeks=schedule_selected.makespan if schedule_selected else len(semanas_obra),  # type: ignore[union-attr]
+        quality_score=schedule_selected.quality_score if schedule_selected is not None else 0.0,
+        makespan_weeks=schedule_selected.makespan if schedule_selected is not None else len(semanas_obra),
         is_feasible=not any(v.status == "ERRO" for v in validacoes),
-        was_relaxed=schedule_selected.relaxed if schedule_selected else False,  # type: ignore[union-attr]
+        was_relaxed=schedule_selected.relaxed if schedule_selected is not None else False,
         scheduled_activities=scheduled_activities_out,
         distribuicao_mensal=distribuicao_mensal,
         pct_completude=1.0,
@@ -2014,8 +2035,8 @@ def _build_cronograma_out(
 
 
 def _build_intervalos_and_campanhas(
-    canonical_in: object,
-    cronograma_out: object,
+    canonical_in: CanonicalModel,
+    cronograma_out: Cronograma,
     scheduled_activities_out: list,
     validacoes: list,
 ) -> tuple[list, object]:
@@ -2027,7 +2048,7 @@ def _build_intervalos_and_campanhas(
     try:
         from concilium.domain.services.campaign.campanha_equipamento_builder import CampanhaEquipamentoBuilder
 
-        _temp = canonical_in.model_copy(update={"cronograma": cronograma_out})  # type: ignore[union-attr]
+        _temp = canonical_in.model_copy(update={"cronograma": cronograma_out})
         analise_campanhas = CampanhaEquipamentoBuilder().build(_temp)
         if analise_campanhas.alertas_custo_duplicado:
             for alert in analise_campanhas.alertas_custo_duplicado:
@@ -2202,7 +2223,7 @@ def run_cronograma(
         eap_list = [
             {
                 "item_id": item.item_id,
-                "predecessores": [{"item_id": p.item_id} for p in item.predecessores] if item.predecessores else [],
+                "predecessores": [{"item_id": p.item_id} for p in item.predecessores_tipados()],
             }
             for item in canonical_in.eap
         ]

@@ -10,7 +10,7 @@ Objetivo: Fornecer um diagnóstico de saúde 360° (Prazo, Custo, Recurso, Sensi
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, Literal
 
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
@@ -18,6 +18,7 @@ from concilium.domain.models.canonical import (
     CostCriticalityResult,
     CriticidadeProfile,
     DimensaoCriticidade,
+    EquipeDireta,
     ValidacaoItem,
 )
 
@@ -46,7 +47,7 @@ def _rank_descending(values):
     return ranks
 
 
-def _classify(rank: int, n: int, on_frontier: bool) -> str:
+def _classify(rank: int, n: int, on_frontier: bool) -> Literal["A+", "A", "B", "C"]:
     """Classifica atividade por rank lexicográfico em A+/A/B/C."""
     top_20 = math.ceil(n * 0.2)
     top_40 = math.ceil(n * 0.4)
@@ -90,11 +91,13 @@ def _build_atvs_crit_recurso(alocacoes: list) -> set:
     return {a.atividade_id for a in alocacoes if a.criticidade_recurso == "CONSTRANGIDO"}
 
 
-def _build_raw_item(eq: object, timings: dict, proj_dur: int, custo_total_obra: float, atvs_crit_recurso: set) -> dict:
-    aid = eq.item_id  # type: ignore[attr-defined]
+def _build_raw_item(
+    eq: EquipeDireta, timings: dict, proj_dur: int, custo_total_obra: float, atvs_crit_recurso: set
+) -> dict:
+    aid = eq.item_id
     t = timings.get(aid, {"duration": 0, "start_m": 0, "end_m": 0})
     dur_share = t["duration"] / proj_dur if proj_dur > 0 else 0
-    cost_share = eq.custo_total / custo_total_obra if custo_total_obra > 0 else 0  # type: ignore[attr-defined]
+    cost_share = eq.custo_total / custo_total_obra if custo_total_obra > 0 else 0
     return {
         "atividade_id": aid,
         "cost_share": cost_share,
@@ -102,7 +105,7 @@ def _build_raw_item(eq: object, timings: dict, proj_dur: int, custo_total_obra: 
         "is_time_critical": aid in atvs_crit_recurso,
         "recurso_critico": aid in atvs_crit_recurso,
         "recurso_float": 1.0 if aid in atvs_crit_recurso else 0.0,
-        "margin_sensitivity": eq.custo_mao_obra_mensal * eq.permanencia_meses / (eq.custo_total or 1),  # type: ignore[attr-defined]
+        "margin_sensitivity": eq.custo_mao_obra_mensal * eq.permanencia_meses / (eq.custo_total or 1),
     }
 
 

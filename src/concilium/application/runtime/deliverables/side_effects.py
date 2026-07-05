@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .helpers.insumos import dedup_insumos, ingest_insumos, load_insumos_subdir
 from .helpers.serialization import json_default
@@ -13,6 +14,10 @@ from .reports.financial_report_pdf import render_financial_report_pdf
 from .reports.memorial_bdi_markdown import render_memorial_bdi_markdown
 from .reports.pdf_renderer import render_markdown_pdf
 from .visualizations.png_bundle import build_visualization_png_files
+
+if TYPE_CHECKING:
+    from concilium.application.services.project.project_repository import ProjectHandle
+    from concilium.application.skills.base import SkillResult
 
 
 def _json_default(obj: object) -> object:
@@ -31,17 +36,19 @@ def _dedup_insumos(insumos: list) -> list:
     return dedup_insumos(insumos)
 
 
-def _save_memorial_bdi_files(result: object, project: object, v: str, gerar_md: bool, gerar_pdf: bool) -> None:
+def _save_memorial_bdi_files(
+    result: SkillResult, project: ProjectHandle, v: str, gerar_md: bool, gerar_pdf: bool
+) -> None:
     memorial_bdi_json = getattr(result, "memorial_bdi_json", None)
     if not memorial_bdi_json:
         return
     try:
-        project.save_intermediate_file("memorial_bdi.json", memorial_bdi_json, v)  # type: ignore[union-attr]
+        project.save_intermediate_file("memorial_bdi.json", memorial_bdi_json, v)
         if gerar_md or gerar_pdf:
             memorial_dict = json.loads(memorial_bdi_json.decode("utf-8"))
             md_memorial = render_memorial_bdi_markdown(memorial_dict)
             if gerar_md:
-                project.save_output_file(md_memorial.encode("utf-8"), v, "memorial_bdi.md")  # type: ignore[union-attr]
+                project.save_output_file(md_memorial.encode("utf-8"), v, "memorial_bdi.md")
             if gerar_pdf:
                 proj_nome = (memorial_dict.get("meta") or {}).get("projeto", "")
                 pdf_bytes = render_markdown_pdf(
@@ -50,7 +57,7 @@ def _save_memorial_bdi_files(result: object, project: object, v: str, gerar_md: 
                     image_provider=lambda file_name: _load_output_image_bytes(project, v, file_name),
                 )
                 if pdf_bytes:
-                    project.save_output_file(pdf_bytes, v, "memorial_bdi.pdf")  # type: ignore[union-attr]
+                    project.save_output_file(pdf_bytes, v, "memorial_bdi.pdf")
     except Exception:
         pass
 
@@ -58,7 +65,7 @@ def _save_memorial_bdi_files(result: object, project: object, v: str, gerar_md: 
 def _save_relatorio_graficos_files(
     rel_dict: dict,
     canonical: object | None,
-    project: object,
+    project: ProjectHandle,
     v: str,
     gerar_md: bool,
     gerar_pdf: bool,
@@ -76,7 +83,7 @@ def _save_relatorio_graficos_files(
         return []
     if png_docs:
         for fname, png_bytes in png_docs.items():
-            project.save_output_file(png_bytes, v, fname)  # type: ignore[union-attr]
+            project.save_output_file(png_bytes, v, fname)
         return sorted(png_docs.keys())
 
     # Não gerar mais fallback grafico_*.md/.pdf: o contrato de saída é PNG.
@@ -94,15 +101,15 @@ def _append_png_gallery(md_content: str, png_files: list[str]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _load_output_image_bytes(project: object, v: str, file_name: str) -> bytes | None:
+def _load_output_image_bytes(project: ProjectHandle, v: str, file_name: str) -> bytes | None:
     try:
-        return project.load_output_file(v, file_name)  # type: ignore[union-attr]
+        return project.load_output_file(v, file_name)
     except Exception:
         return None
 
 
 def _save_relatorio_files(
-    result: object, project: object, v: str, gerar_md: bool, gerar_pdf: bool, gerar_pngs: bool = True
+    result: SkillResult, project: ProjectHandle, v: str, gerar_md: bool, gerar_pdf: bool, gerar_pngs: bool = True
 ) -> None:
     relatorio = getattr(result, "relatorio", None)
     if not relatorio or not (gerar_md or gerar_pdf):
@@ -112,7 +119,7 @@ def _save_relatorio_files(
         canonical = getattr(result, "canonical", None)
         if canonical is None:
             try:
-                canonical = project.load_canonical(v)  # type: ignore[union-attr]
+                canonical = project.load_canonical(v)
             except Exception:
                 canonical = None
         md_content = render_financial_report_markdown(rel_dict, canonical=canonical)
@@ -121,11 +128,11 @@ def _save_relatorio_files(
         )
         md_content = _append_png_gallery(md_content, png_files)
         if gerar_md:
-            project.save_output_file(md_content.encode("utf-8"), v, "relatorio.md")  # type: ignore[union-attr]
+            project.save_output_file(md_content.encode("utf-8"), v, "relatorio.md")
             # ADR-093 D5: resumo executivo de 1 página para decisores
             try:
                 resumo_md = render_resumo_executivo(rel_dict, canonical=canonical)
-                project.save_output_file(resumo_md.encode("utf-8"), v, "resumo_executivo.md")  # type: ignore[union-attr]
+                project.save_output_file(resumo_md.encode("utf-8"), v, "resumo_executivo.md")
             except Exception:  # pragma: no cover
                 pass
         if gerar_pdf:
@@ -141,12 +148,12 @@ def _save_relatorio_files(
 
             pdf_bytes = render_financial_report_pdf(rel_dict, proj_nome, image_provider=provider)
             if pdf_bytes:
-                project.save_output_file(pdf_bytes, v, "relatorio.pdf")  # type: ignore[union-attr]
+                project.save_output_file(pdf_bytes, v, "relatorio.pdf")
     except Exception:  # pragma: no cover
         pass
 
 
-def _handle_skill_09_side_effects(result: object, project: object, v: str, outputs_cfg: dict) -> None:
+def _handle_skill_09_side_effects(result: SkillResult, project: ProjectHandle, v: str, outputs_cfg: dict) -> None:
     # Entrega oficial: somente PDFs para memorial e relatório final.
     gerar_md = False
     gerar_rpdf = True
@@ -156,20 +163,20 @@ def _handle_skill_09_side_effects(result: object, project: object, v: str, outpu
     gerar_pngs = outputs_cfg.get("graficos_png", True)  # False desabilita PNGs pesados (analytic cube)
     relatorio = getattr(result, "relatorio", None)
     if relatorio:
-        project.save_intermediate_file(  # type: ignore[union-attr]
+        project.save_intermediate_file(
             "relatorio.json", json.dumps(relatorio, indent=2, ensure_ascii=False, default=_json_default), v
         )
 
     excel_bytes = getattr(result, "excel_bytes", None)
     if excel_bytes and gerar_xlsx:
-        project.save_output_file(excel_bytes, v, "resultado_planejamento.xlsx")  # type: ignore[union-attr]
+        project.save_output_file(excel_bytes, v, "resultado_planejamento.xlsx")
 
     _save_memorial_bdi_files(result, project, v, gerar_mem_md, gerar_mem_pdf)
     _save_relatorio_files(result, project, v, gerar_md, gerar_rpdf, gerar_pngs=gerar_pngs)
 
 
-def _handle_skill_04_side_effects(result: object, project: object, v: str) -> None:
-    cronograma = getattr(result.canonical, "cronograma", None)  # type: ignore[union-attr]
+def _handle_skill_04_side_effects(result: SkillResult, project: ProjectHandle, v: str) -> None:
+    cronograma = getattr(result.canonical, "cronograma", None)
     if not cronograma or cronograma.algorithm == "manual_allocation":
         return
     schedules_data = {
@@ -190,12 +197,12 @@ def _handle_skill_04_side_effects(result: object, project: object, v: str) -> No
             for sa in cronograma.scheduled_activities
         ],
     }
-    project.save_intermediate_file(  # type: ignore[union-attr]
+    project.save_intermediate_file(
         "schedules_weekly.json", json.dumps(schedules_data, indent=2, ensure_ascii=False, default=_json_default), v
     )
 
 
-def _persist_typed_artifacts(result: object, project: object, v: str) -> None:
+def _persist_typed_artifacts(result: SkillResult, project: ProjectHandle, v: str) -> None:
     """Persiste ArtifactEnvelope(s) produzidos por uma skill (ADR-018 §D2).
 
     Usa project.write_json() em vez de pathlib.Path direto — funciona tanto
@@ -213,13 +220,13 @@ def _persist_typed_artifacts(result: object, project: object, v: str) -> None:
     for artifact in artifacts:
         meta = getattr(artifact, "meta", None)
         artifact_id = getattr(meta, "artifact_id", None)
-        if not artifact_id:
+        if meta is None or not artifact_id:
             _log.warning("Artefato tipado sem meta/artifact_id válido — pulando: %r", artifact)
             continue
         try:
             payload = getattr(artifact, "payload", None)
             payload_data = payload.model_dump(mode="json") if hasattr(payload, "model_dump") else payload
-            project.write_json(f"{v}/artifacts/{artifact_id}.json", payload_data)  # type: ignore[union-attr]
-            project.write_json(f"{v}/artifacts/{artifact_id}.meta.json", meta.model_dump(mode="json"))  # type: ignore[union-attr]
+            project.write_json(f"{v}/artifacts/{artifact_id}.json", payload_data)
+            project.write_json(f"{v}/artifacts/{artifact_id}.meta.json", meta.model_dump(mode="json"))
         except Exception:
             _log.warning("Falha ao persistir artefato tipado '%s'", artifact_id, exc_info=True)

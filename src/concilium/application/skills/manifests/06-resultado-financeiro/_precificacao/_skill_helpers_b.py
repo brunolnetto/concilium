@@ -18,16 +18,20 @@ Mapeamento de categorias ADR-023 -> modelo flat Planejamento.bdi:
 from __future__ import annotations
 
 try:
-    from ._skill_helpers_a import _get_bdi_value
+    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
+    # (see concilium/application/skills/__init__.py); ty cannot resolve this
+    # statically.
+    from ._skill_helpers_a import _get_bdi_value  # ty: ignore[unresolved-import]
 except ImportError:
     import importlib.util as _ilu
     from pathlib import Path as _P
 
-    _spec = _ilu.spec_from_file_location(
-        "skill06_helpers_a_for_b", _P(__file__).resolve().parent / "_skill_helpers_a.py"
-    )
-    _mod = _ilu.module_from_spec(_spec)  # type: ignore[arg-type]
-    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    _path = _P(__file__).resolve().parent / "_skill_helpers_a.py"
+    _spec = _ilu.spec_from_file_location("skill06_helpers_a_for_b", _path)
+    if _spec is None or _spec.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para: {_path}") from None
+    _mod = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
     _get_bdi_value = _mod._get_bdi_value
 
 from concilium.domain.models.canonical import (

@@ -13,7 +13,7 @@ def _rp_check_override(
     codigo: str,
     overrides: dict | None,
     jurisdicao_id: str | None,
-) -> tuple[float, str] | None:
+) -> tuple[float, FontePreco] | None:
     """Layer 1: PROJECT_OVERRIDE — checks direct and composite-key overrides."""
     if not overrides:
         return None
@@ -32,7 +32,7 @@ def _rp_check_override(
 def _rp_sicro_regional(
     insumo: dict,
     jurisdicao_id: str | None,
-) -> tuple[float, str] | None:
+) -> tuple[float, FontePreco] | None:
     """Layer 2: SICRO_REGIONAL — checks regionalizacao block."""
     if not (jurisdicao_id and "regionalizacao" in insumo):
         return None
@@ -51,7 +51,7 @@ def _rp_sicro_regional(
 def _rp_historico_scd2(
     insumo: dict,
     data_referencia: object | None,
-) -> tuple[float, str] | None:
+) -> tuple[float, FontePreco] | None:
     """Layer 3a: HISTORICO_SCD2 — SCD Type-2 date-ranged lookup."""
     from datetime import date as _date
 

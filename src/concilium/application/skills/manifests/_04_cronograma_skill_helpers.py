@@ -50,11 +50,14 @@ def extract_dag_from_spec_or_eap(
                 if tipo == "FS":
                     # FS com completion_threshold_pct — usa caminho existente
                     edge_thresholds[key] = float(pred.completion_threshold_pct)
-                elif tipo in ("SS", "FF"):
+                elif tipo == "SS":
                     # SS/FF: coloca em extended_precedences (NEP-031 L4)
                     # Também registra em precedence para topological_order funcionar
                     edge_thresholds[key] = 1.0  # sentinela: aresta existe no grafo
-                    extended.append(ExtendedPrecedence(pred=pred.item_id, succ=item.item_id, tipo=tipo, lag=lag))
+                    extended.append(ExtendedPrecedence(pred=pred.item_id, succ=item.item_id, tipo="SS", lag=lag))
+                elif tipo == "FF":
+                    edge_thresholds[key] = 1.0  # sentinela: aresta existe no grafo
+                    extended.append(ExtendedPrecedence(pred=pred.item_id, succ=item.item_id, tipo="FF", lag=lag))
 
     # ── Passo 2: aplicar overrides de rcpsp_spec.precedence (apenas FS legado) ──
     for p in spec.get("precedence", []):

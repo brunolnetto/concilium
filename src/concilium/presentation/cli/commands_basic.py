@@ -85,7 +85,7 @@ def _print_skills_table(console) -> None:
     table.add_column("ID", style="cyan")
     table.add_column("Descrição")
     for sid, meta in registry.get_all_skills().items():
-        table.add_row(sid, meta.description)  # type: ignore[attr-defined]
+        table.add_row(sid, meta.descricao)
     console.print(table)
 
 

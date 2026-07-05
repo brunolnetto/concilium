@@ -800,7 +800,8 @@ class ProjectService:
         """
         source = self._resolve_eap_source(payload)
         if source is None:
-            cpus_block = payload.get("cpus") if isinstance(payload.get("cpus"), dict) else {}
+            raw_cpus_block = payload.get("cpus")
+            cpus_block = raw_cpus_block if isinstance(raw_cpus_block, dict) else {}
             cpus_block.setdefault("itens_eap", [])
             payload["cpus"] = cpus_block
             return
@@ -814,7 +815,8 @@ class ProjectService:
                 "VAL-CONTRACT-EAP-HISTORICO-BLOQUEADO: use somente 'cpus.itens_eap' no benchmark_reference."
             )
 
-        cpus_block = payload.get("cpus") if isinstance(payload.get("cpus"), dict) else {}
+        raw_cpus_block = payload.get("cpus")
+        cpus_block = raw_cpus_block if isinstance(raw_cpus_block, dict) else {}
         raw_items = [row for row in cpus_block.get("itens_eap", []) if isinstance(row, dict)]
         canonical_items: list[dict[str, Any]] = []
         seen_item_ids: set[str] = set()
@@ -846,12 +848,11 @@ class ProjectService:
 
         if not _is_valid_canonical_eap(payload):
             eap_items = project.read_json(self._files.eap_items, [])
-            if isinstance(eap_items, list) and eap_items:
+            eap_rows = [row for row in eap_items if isinstance(row, dict)] if isinstance(eap_items, list) else []
+            if eap_rows:
                 canonical_items: list[dict[str, Any]] = []
                 seen_item_ids: set[str] = set()
-                for idx, row in enumerate(eap_items, start=1):
-                    if not isinstance(row, dict):
-                        continue
+                for idx, row in enumerate(eap_rows, start=1):
                     normalized = self._normalize_eap_item(row, ordem_padrao=idx)
                     if normalized is None:
                         continue

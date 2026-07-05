@@ -6,6 +6,7 @@ import json
 import math
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import streamlit as st
 
@@ -160,8 +161,12 @@ def _build_catalog_rows(cpu_files: list) -> tuple[dict, list]:
 
 def _get_source_rows(page_rows: list, cached_rows: object) -> list:
     page_codes = {str(r.get("codigo")) for r in page_rows}
-    if isinstance(cached_rows, list) and {str(r.get("codigo")) for r in cached_rows} == page_codes:
-        return cached_rows  # type: ignore[return-value]
+    if isinstance(cached_rows, list):
+        # cast: isinstance(x, list) sobre object não parametriza os elementos no ty
+        cached_list = cast("list[dict[str, Any]]", cached_rows)
+        cached_codes = {str(r.get("codigo")) for r in cached_list}
+        if cached_codes == page_codes:
+            return cached_list
     return [dict(row, __status="Base") for row in page_rows]
 
 
@@ -192,7 +197,7 @@ def _save_catalogo_rows(
     changed_count = 0
     for row in changed_rows:
         codigo = str(row.get("codigo") or "").strip()
-        payload = dict(payload_by_codigo.get(codigo) or {"codigo": codigo})
+        payload: dict[str, Any] = dict(payload_by_codigo.get(codigo) or {"codigo": codigo})
         payload["descricao"] = row.get("descricao", payload.get("descricao", ""))
         payload["categoria"] = row.get("categoria", payload.get("categoria", ""))
         payload["unidade"] = row.get("unidade", payload.get("unidade", ""))
@@ -216,9 +221,11 @@ def _save_catalogo_rows(
 
 
 def _df_to_records(edited: object) -> list:
-    if hasattr(edited, "to_dict"):
-        return edited.to_dict("records")  # type: ignore[union-attr]
-    return list(edited or [])  # type: ignore[call-overload]
+    to_dict = getattr(edited, "to_dict", None)
+    if callable(to_dict):
+        records = to_dict("records")
+        return records if isinstance(records, list) else []
+    return list(edited) if isinstance(edited, list) else []
 
 
 def _render_catalogo_tab0(project: dict, project_id: str, base_url: str, actor: str) -> None:

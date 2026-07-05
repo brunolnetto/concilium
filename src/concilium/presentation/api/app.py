@@ -104,11 +104,22 @@ def create_app() -> FastAPI:
         return _JSONResponse(status_code=503, content={"detail": str(exc)})
 
     # ADR-098: Rate limiting — ordem de middleware: SlowAPI (outer) → JWT (inner)
+    from fastapi import Response as _Response
     from slowapi.errors import RateLimitExceeded
     from slowapi.middleware import SlowAPIMiddleware
 
+    async def _rate_limit_handler(request: _Request, exc: Exception) -> _Response:
+        # Adapta a assinatura genérica `(Request, Exception) -> Response` exigida por
+        # `Starlette.add_exception_handler` à assinatura específica de
+        # `rate_limit_exceeded_handler(Request, RateLimitExceeded)` — o Starlette só
+        # invoca este handler para `RateLimitExceeded` (é a chave de registro abaixo),
+        # então o isinstance nunca falha em runtime.
+        if not isinstance(exc, RateLimitExceeded):
+            raise exc
+        return rate_limit_exceeded_handler(request, exc)
+
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
     app.add_middleware(JWTAuthMiddleware)
     app.add_middleware(AuthContextMiddleware)  # antes do JWT — request_id sempre presente
     app.add_middleware(SlowAPIMiddleware)

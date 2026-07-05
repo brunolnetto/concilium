@@ -61,7 +61,7 @@ class SharePointCredential:
         """Retorna Bearer token válido. Renova automaticamente via cache MSAL."""
         if self._app is None:
             try:
-                import msal
+                import msal  # ty: ignore[unresolved-import]
             except ImportError as exc:
                 raise ImportError(
                     "O pacote 'msal' é necessário para autenticação SharePoint. "

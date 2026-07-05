@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich import print as rprint
@@ -13,6 +14,9 @@ from rich.console import Console
 from rich.table import Table
 
 from concilium.presentation.cli.shared import resolve_project
+
+if TYPE_CHECKING:
+    from concilium.domain.validations.cpu_insumo import ValidadorCPUInsumo
 
 
 def _load_json(path: Path, default: dict) -> dict:
@@ -36,12 +40,12 @@ def _append_jsonl(path: Path, payload: dict) -> None:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
-def _cq_validate_cpus(cpus: list, validador: object) -> tuple[list, list, list]:
+def _cq_validate_cpus(cpus: list, validador: ValidadorCPUInsumo) -> tuple[list, list, list]:
     erros: list = []
     avisos: list = []
     cpus_bloqueadas: list = []
     for cpu in cpus:
-        for r in validador.validar_cpu_completa(cpu):  # type: ignore[union-attr]
+        for r in validador.validar_cpu_completa(cpu):
             if r.status == "ERRO":
                 erros.append((cpu["codigo"], r))
                 if r.codigo in ["VAL-CPU-STR-02", "VAL-CPU-STR-03"]:
@@ -51,21 +55,21 @@ def _cq_validate_cpus(cpus: list, validador: object) -> tuple[list, list, list]:
     return erros, avisos, cpus_bloqueadas
 
 
-def _cq_validate_insumos(insumos: list, validador: object) -> tuple[list, list]:
+def _cq_validate_insumos(insumos: list, validador: ValidadorCPUInsumo) -> tuple[list, list]:
     avisos: list = []
     insumos_obsoletos: list = []
     for insumo in insumos:
-        res_v = validador.validar_vigencia(insumo)  # type: ignore[union-attr]
+        res_v = validador.validar_vigencia(insumo)
         if res_v.status == "AVISO":
             insumos_obsoletos.append(insumo["codigo"])
             avisos.append((insumo["codigo"], res_v))
-        res_e = validador.validar_encoding(insumo)  # type: ignore[union-attr]
+        res_e = validador.validar_encoding(insumo)
         if res_e.status == "AVISO":
             avisos.append((insumo["codigo"], res_e))
     return avisos, insumos_obsoletos
 
 
-def _cq_print_blocked_cpus(cpus_bloqueadas: list, erros: list, console: object) -> None:
+def _cq_print_blocked_cpus(cpus_bloqueadas: list, erros: list, console: Console) -> None:
     if not cpus_bloqueadas:
         return
     table_err = Table(title="CPUs com Risco de Inviabilidade (Cronograma)", header_style="bold red")
@@ -74,10 +78,10 @@ def _cq_print_blocked_cpus(cpus_bloqueadas: list, erros: list, console: object) 
     for codigo, err in erros:
         if codigo in cpus_bloqueadas:
             table_err.add_row(codigo, err.mensagem)
-    console.print(table_err)  # type: ignore[union-attr]
+    console.print(table_err)
 
 
-def _cq_print_encoding_alerts(avisos: list, console: object) -> None:
+def _cq_print_encoding_alerts(avisos: list, console: Console) -> None:
     alertas_encoding = [a for a in avisos if a[1].codigo == "VAL-CAT-ENC-01"]
     if not alertas_encoding:
         return
@@ -88,7 +92,7 @@ def _cq_print_encoding_alerts(avisos: list, console: object) -> None:
         table_enc.add_row(item, alert.mensagem)
     if len(alertas_encoding) > 10:
         table_enc.add_row("...", f"Mais {len(alertas_encoding) - 10} alertas omitidos")
-    console.print(table_enc)  # type: ignore[union-attr]
+    console.print(table_enc)
 
 
 def _cq_fmt_pct(part_len: int, total_len: int) -> str:

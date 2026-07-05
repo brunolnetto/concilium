@@ -108,12 +108,12 @@ class FuelPriceClient:
 
         return data
 
-    def _load(self):
+    def _load(self) -> dict[str, dict[str, float]]:
         now = datetime.now()
 
         if self._cache and self._loaded_at:
             if now - self._loaded_at < self.TTL:
-                return
+                return self._cache
 
         data = self._fetch()
 
@@ -134,6 +134,7 @@ class FuelPriceClient:
         self._validate(self._cache)
 
         self._loaded_at = now
+        return self._cache
 
     def _validate(self, cache: dict[str, dict[str, float]]):
         for fuel, states in cache.items():
@@ -146,16 +147,17 @@ class FuelPriceClient:
     # =========================
 
     def get_price(self, state: State, fuel: FuelType) -> float:
-        self._load()
-        return self._cache[fuel.value][state.value]  # type: ignore[index]
+        cache = self._load()
+        return cache[fuel.value][state.value]
 
     def get_all(self, fuel: FuelType) -> dict[str, float]:
-        self._load()
-        return self._cache[fuel.value]  # type: ignore[index]
+        cache = self._load()
+        return cache[fuel.value]
 
     def get_metadata(self) -> dict:
         self._load()
-        return self._metadata  # type: ignore[return-value]
+        assert self._metadata is not None
+        return self._metadata
 
     # =========================
     # Convenience (string input)

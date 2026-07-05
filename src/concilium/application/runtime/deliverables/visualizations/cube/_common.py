@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import io
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from concilium.application.services.analytics.cube_projection_views import FaceGranularity
 
 COLORS = ["#1a3a5c", "#c05c18", "#5aabdc", "#e8a030", "#5adc8e", "#a07ad8", "#dc5a8e"]
 
@@ -128,7 +132,7 @@ def safe_close_mpl() -> None:
         pass
 
 
-def build_payload(face: str, granularidade: str, top_n: int, canonical, cubo) -> dict:
+def build_payload(face: str, granularidade: FaceGranularity, top_n: int, canonical, cubo) -> dict:
     """Convenience wrapper around build_cube_projection_payload."""
     from concilium.application.services.analytics.cube_projection_views import build_cube_projection_payload
 

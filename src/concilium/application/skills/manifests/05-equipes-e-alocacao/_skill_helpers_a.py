@@ -14,6 +14,7 @@ from __future__ import annotations
 import math
 import unicodedata
 from hashlib import sha1
+from typing import Any
 
 from concilium.application.skills.manifests._05_equipes_custo_helpers import (
     calcular_custo_instancia_composicional,
@@ -52,7 +53,6 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Micro-helpers
 # ---------------------------------------------------------------------------
-
 
 
 class _RepoCtx:
@@ -97,7 +97,7 @@ def _fallback_cpu_comp(comp: dict, cpu: dict, prod_id_ref, validacoes: list) -> 
     """Aplica fallback legado ADR-053: lê composição direto do CPU se produtividade vazia."""
     if not isinstance(comp, dict) or _comp_is_empty(comp):
         cpu_comp = cpu.get("composicao_padrao_equipe")
-        if _cpu_comp_is_valid(cpu_comp):
+        if _cpu_comp_is_valid(cpu_comp) and isinstance(cpu_comp, dict):
             validacoes.append(
                 ValidacaoItem(
                     codigo="VAL-EQUIP-LEGADO-053",
@@ -448,10 +448,10 @@ def _processar_funcoes_item(
         enc_override = func_custom.get("percentual_encargos")
         sal_override = func_custom.get("salario_base")
         unit_override = func_custom.get("custo_mensal_unitario")
-        insumo_f = {
-            **insumo,
-            "preco_unitario": _resolve_preco(ctx, f["funcao_id"], float(insumo.get("preco_unitario", 0.0) or 0.0)),
-        }
+        insumo_f: dict[str, Any] = dict(insumo)
+        insumo_f["preco_unitario"] = _resolve_preco(
+            ctx, f["funcao_id"], float(insumo.get("preco_unitario", 0.0) or 0.0)
+        )
         sal, he, unit = _calcular_custo_funcao(
             insumo_f,
             f["num_pessoas"],
@@ -1405,7 +1405,7 @@ def _build_item_tipo_map(activities: list) -> dict:
     return item_tipo_map
 
 
-def _derive_rcpsp_from_canonical(canonical_in: object, catalogo: dict) -> dict | None:
+def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -> dict | None:
     """Deriva rcpsp_spec a partir do canônico quando não fornecido nos inputs.
 
     Convenção de tipo_id: família fungível da equipe, derivada da assinatura da
@@ -1420,11 +1420,11 @@ def _derive_rcpsp_from_canonical(canonical_in: object, catalogo: dict) -> dict |
 
     Retorna None quando não há cronograma ou EAP suficientes para derivar o spec.
     """
-    sched_acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []  # type: ignore[union-attr]
+    sched_acts = canonical_in.cronograma.scheduled_activities if canonical_in.cronograma else []
     if not sched_acts:
         return None
 
-    eap_items = canonical_in.eap  # type: ignore[union-attr]
+    eap_items = canonical_in.eap
     if not eap_items:
         return None
 
@@ -1440,7 +1440,7 @@ def _derive_rcpsp_from_canonical(canonical_in: object, catalogo: dict) -> dict |
     item_tipo_ids: dict[str, tuple[str, int]] = {}
     pool_caps: dict[str, int] = {}
 
-    def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, object]) -> str:
+    def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
         equip = composicao.get("equipamentos") or []
         funcs = composicao.get("funcoes") or []
         if equip or funcs:
@@ -1802,8 +1802,8 @@ def _impute_mob_demob(cadeias, items_com_janela, phi: dict, c_mob: float, c_demo
 
 def _impute_gaps(
     diagram, items_com_janela, phi: dict, c_unit_semana: float, qt: int, T_contrato_start: float, T_contrato_end: float
-) -> tuple:
-    """Pass 3: gap imputation to critical successor. Returns (custo_ocioso, uniao_produtiva)."""
+) -> dict:
+    """Pass 3: gap imputation to critical successor. Returns custo_ocioso (dict keyed by item_id)."""
     all_ivs = [iv for _, region in diagram.items() for iv in region]
     uniao_produtiva = IntervalSet(all_ivs) if all_ivs else IntervalSet([])
     janela = IntervalSet([Interval(T_contrato_start, T_contrato_end)])
@@ -1902,7 +1902,10 @@ def particionar_contrato(
             c_demob=c_demob,
         )
 
-    diagram = _euler(sets)
+    # eule's public `euler()` stub types `SetsType` as `list|dict[..., list|set]`, but its
+    # `adapt_sets()` registry (eule/adaptation.py) explicitly documents and supports custom
+    # SetLike types like IntervalSet passed directly — the stub just doesn't reflect that.
+    diagram = _euler(sets)  # ty: ignore[invalid-argument-type]
 
     phi, custo_excl, custo_comp, overlap_sem = _impute_euler_regions(diagram, items_com_janela, c_unit_semana, qt)
     mob_imputado, demob_imputado = _impute_mob_demob(cadeias, items_com_janela, phi, c_mob, c_demob, qt)

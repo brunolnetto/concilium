@@ -52,7 +52,9 @@ def _contrato(tipo_id, items, custo=5000.0, n_cadeias=0):
     c.items_cobertos = set(items)
     c.custo_total_contrato = custo
     c.n_cadeias = n_cadeias
-    c.quantidade_total = 1
+    # ADR-071: quantidade_contratada é o campo real em RecursoContrato (pool_size do
+    # contrato); quantidade_total pertence a RecursoPool, não a RecursoContrato.
+    c.quantidade_contratada = 1
     return c
 
 

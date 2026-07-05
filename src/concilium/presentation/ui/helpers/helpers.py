@@ -5,6 +5,22 @@ from __future__ import annotations
 from typing import Any
 
 
+def dataframe_selected_rows(result: object) -> list[int]:
+    """Extract selection.rows from a st.dataframe(on_select=...) result.
+
+    The result is a DeltaGenerator (no selection support) or a DataframeState
+    TypedDict — a dict at runtime, accessed here via .get() rather than
+    attribute access since TypedDict has no attribute-access at the type level.
+    """
+    if not isinstance(result, dict):
+        return []
+    selection = result.get("selection")
+    if not isinstance(selection, dict):
+        return []
+    rows = selection.get("rows")
+    return [r for r in rows if isinstance(r, int)] if isinstance(rows, list) else []
+
+
 def safe_count_eap(reference: dict) -> int:
     """Count EAP items using canonical benchmark reference contract."""
     if not isinstance(reference, dict):
@@ -62,9 +78,13 @@ def build_team_adjustment_rows(reference: dict) -> list[dict[str, object]]:
 
 
 def _bneo_get_rows(edited_rows: object) -> list[dict]:
-    if hasattr(edited_rows, "to_dict") and hasattr(edited_rows, "columns"):
-        return edited_rows.to_dict("records")  # type: ignore[union-attr]
-    return list(edited_rows or [])  # type: ignore[call-overload]
+    if isinstance(edited_rows, list):
+        return [row for row in edited_rows if isinstance(row, dict)]
+    to_dict = getattr(edited_rows, "to_dict", None)
+    if callable(to_dict) and hasattr(edited_rows, "columns"):
+        records = to_dict("records")
+        return [row for row in records if isinstance(row, dict)] if isinstance(records, list) else []
+    return []
 
 
 def _bneo_build_week_map(semanas: dict, target: int) -> dict[str, int]:
@@ -109,7 +129,8 @@ def apply_global_team_adjustment(rows: list[dict[str, object]], pct: float) -> l
     adjusted: list[dict[str, object]] = []
     for row in rows:
         new_row = dict(row)
-        base_value = float(new_row.get("num_equipes_base") or 0.0)  # type: ignore[arg-type]
+        raw_base = new_row.get("num_equipes_base")
+        base_value = float(raw_base) if isinstance(raw_base, (int, float)) else 0.0
         new_row["num_equipes_maximo"] = round(max(0.0, base_value * fator), 2)
         adjusted.append(new_row)
     return adjusted

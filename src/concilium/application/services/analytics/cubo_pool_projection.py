@@ -13,9 +13,14 @@ Cada face inclui ``narrativa``: frases descritivas geradas dos próprios dados, 
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Iterator, Sequence
+from typing import Any, TypedDict
 
-from concilium.application.services.analytics.cube_projection_views import bucket_from_week_iso
+from concilium.application.services.analytics.cube_projection_views import (
+    FaceGranularity,
+    bucket_from_week_iso,
+)
+from concilium.domain.models.canonical import CustoParticionadoItem, RecursoContrato
 from concilium.domain.services.analytics.cubo_pool_builder import (
     CuboPoolInstancialBuilder,
     validar_invariantes_cubo_pool,
@@ -72,6 +77,18 @@ _FACES: dict[str, dict] = {
 
 _GRANULARIDADES = ["semana", "mes", "trimestre", "ano"]
 
+# Granularidades válidas declaradas em FaceGranularity — usado para validar o
+# valor textual recebido de chamadores externos (ex.: ferramenta MCP) antes de
+# repassá-lo a funções que exigem o Literal.
+_GRANULARIDADES_VALIDAS: dict[str, FaceGranularity] = {
+    "semana": "semana",
+    "mes": "mes",
+    "bimestre": "bimestre",
+    "trimestre": "trimestre",
+    "semestre": "semestre",
+    "ano": "ano",
+}
+
 
 def _planejamento_sem_bdi_total(plan: Any) -> float:
     subtotal = getattr(plan, "subtotal", None)
@@ -120,7 +137,7 @@ def _baseline_homogenea_por_item(canonical_in: Any) -> tuple[dict[str, float], d
     return baseline, source
 
 
-def _count_mob_demob_por_periodo(cubo: Any, granularidade: str) -> dict[str, dict[str, int]]:
+def _count_mob_demob_por_periodo(cubo: Any, granularidade: FaceGranularity) -> dict[str, dict[str, int]]:
     """Conta eventos de mobilização e desmobilização por bucket temporal."""
     counts: dict[str, dict[str, int]] = {}
 
@@ -182,6 +199,7 @@ def resolve_cubo_pool_projection(
     if face not in _FACES:
         face = "instancia_ciclo_vida"
     meta = _FACES[face]
+    granularidade_valida = _GRANULARIDADES_VALIDAS.get(granularidade, "mes")
 
     cubo = CuboPoolInstancialBuilder().build(canonical_in, gerado_em=gerado_em)
     contratos = list(getattr(canonical_in, "contratos_recurso", None) or [])
@@ -216,7 +234,7 @@ def resolve_cubo_pool_projection(
         cubo,
         contratos,
         cadeias,
-        granularidade=granularidade,
+        granularidade=granularidade_valida,
         atividade_id=atividade_id,
         top_n=top_n,
         baseline_por_item=baseline_por_item,
@@ -236,7 +254,7 @@ def resolve_cubo_pool_projection(
         "version": "adr086-v1",
         "face": face,
         "natureza": meta["natureza"],
-        "granularidade": granularidade,
+        "granularidade": granularidade_valida,
         "unit_type": meta["unit_type"],
         "chart_hint": meta["chart_hint"],
         "columns": columns,
@@ -423,14 +441,27 @@ def _face_atividade_instancia(cubo, contratos, cadeias, *, atividade_id=None, **
 # ── Faces causais / estruturais ────────────────────────────────────────────────
 
 
-def _iter_particoes(contratos):
+def _iter_particoes(
+    contratos: Sequence[RecursoContrato],
+) -> Iterator[tuple[RecursoContrato, CustoParticionadoItem]]:
     for c in contratos:
-        for p in getattr(c, "particao_por_item", None) or []:
+        for p in c.particao_por_item:
             yield c, p
 
 
+class _CausaCustoRow(TypedDict):
+    atividade_id: str
+    produtivo_exclusivo: float
+    produtivo_compartilhado: float
+    ocioso_imputado: float
+    mob_demob_imputado: float
+    total_imputado: float
+    predecessor_critico: str
+    overlap_semanas: float
+
+
 def _face_causa_custo(cubo, contratos, cadeias, *, top_n=300, **_):
-    rows = []
+    rows: list[_CausaCustoRow] = []
     for _c, p in _iter_particoes(contratos):
         rows.append(
             {

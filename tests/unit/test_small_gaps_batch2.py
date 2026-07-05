@@ -510,12 +510,12 @@ class TestCubeInit:
         """Lines 75-76: _build_faces catches module.build() exceptions silently."""
         from concilium.application.runtime.deliverables.visualizations.cube import _build_faces
 
-        bad_module = MagicMock()
-        bad_module.build.side_effect = RuntimeError("chart failed")
+        def bad_build(*args, **kwargs):
+            raise RuntimeError("chart failed")
 
         with patch(
-            "concilium.application.runtime.deliverables.visualizations.cube._FACE_MODULES",
-            [(bad_module, "face.png")],
+            "concilium.application.runtime.deliverables.visualizations.cube._FACE_BUILDERS",
+            [(bad_build, "face.png", False)],
         ):
             result = _build_faces(MagicMock(), MagicMock(), {})
         assert result == {}

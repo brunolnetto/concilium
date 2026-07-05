@@ -12,7 +12,7 @@ e separando os desvios estruturais (escala + clima) do delta real de gestão.
 from __future__ import annotations
 
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from concilium.domain.models.canonical import (
     AtividadeCustoCompleto,
@@ -26,16 +26,25 @@ from concilium.domain.models.canonical import (
     Venda,
 )
 
+if TYPE_CHECKING:
+    from concilium.domain.models.financial.bdi import TabelaBdi
+
 try:
-    from ._skill_helpers_b import _classificar_margem, _resolve_bdi_full
+    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
+    # (see concilium/application/skills/__init__.py); ty cannot resolve this
+    # statically.
+    from ._skill_helpers_b import _classificar_margem, _resolve_bdi_full  # ty: ignore[unresolved-import]
 except ImportError:
     import importlib.util
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
-    _spec_b = importlib.util.spec_from_file_location("skill08_helpers_b_for_a", _here / "_skill_helpers_b.py")
-    _mod_b = importlib.util.module_from_spec(_spec_b)  # type: ignore[arg-type]
-    _spec_b.loader.exec_module(_mod_b)  # type: ignore[union-attr]
+    _path_b = _here / "_skill_helpers_b.py"
+    _spec_b = importlib.util.spec_from_file_location("skill08_helpers_b_for_a", _path_b)
+    if _spec_b is None or _spec_b.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para: {_path_b}") from None
+    _mod_b = importlib.util.module_from_spec(_spec_b)
+    _spec_b.loader.exec_module(_mod_b)
     _classificar_margem = _mod_b._classificar_margem
     _resolve_bdi_full = _mod_b._resolve_bdi_full
 
@@ -259,14 +268,14 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
     Usar sempre o pool como base do custo operacional — o trunfo do pool é exatamente
     executar abaixo do PU×Q de catálogo, e isso deve aparecer no resultado financeiro.
     """
-    venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento)
-    venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento)
+    venda_sem_bdi = sum(p.subtotal.sem_bdi.total for p in canonical_in.planejamento if p.subtotal is not None)
+    venda_com_bdi = sum(p.subtotal.com_bdi.total for p in canonical_in.planejamento if p.subtotal is not None)
 
     # ADR-091: custo_total já armazena o custo total de todas as frentes (normalizado
     # em skill-05 por divisão por num_equipes_paralelas antes de armazenar).
     # Não multiplicar por num_equipes_base — evitar dupla contagem.
     custo_direto_equipe = sum(float(e.custo_total or 0.0) for e in canonical_in.equipes_diretas)
-    custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento)
+    custo_materiais = sum(p.subtotal.sem_bdi.material for p in canonical_in.planejamento if p.subtotal is not None)
 
     # Fallback: se planejamento vazio, venda_sem_bdi = custo_direto_equipe
     if not venda_sem_bdi and custo_direto_equipe > 0:
@@ -281,11 +290,27 @@ def _br_build_venda_custo(canonical_in: CanonicalModel) -> tuple[float, float, f
 
 def _build_resultado(
     canonical_in: CanonicalModel, inputs: dict, validacoes: list, perfil: dict
-) -> tuple[Resultado, dict, str, str, bool, float, float, float]:
+) -> tuple[
+    Resultado,
+    dict[str, float],
+    TabelaBdi,
+    str,
+    str,
+    bool,
+    float,
+    float,
+    float,
+    float,
+    str,
+    float,
+    float,
+    float,
+]:
     """Computa resultado financeiro e retorna.
 
-    Returns: (res, bdi_rates, bdi_fonte, bdi_regime, bdi_override,
-    venda_sem_bdi, venda_catalogo_plus, margem).
+    Returns: (res, bdi_rates, bdi_tabela, bdi_fonte, bdi_regime, bdi_override,
+    venda_sem_bdi, venda_catalogo_plus, margem, custo_direto_equipe, status_margem,
+    venda_plus, custo_operacional_real, custo_total_catalogo).
     """
     venda_sem_bdi, venda_com_bdi, custo_direto_equipe, _custo_mat, custo_direto = _br_build_venda_custo(canonical_in)
     bdi_rates, _bdi_tabela, _bdi_fonte, _bdi_regime, _bdi_override = _resolve_bdi_full(inputs, validacoes)

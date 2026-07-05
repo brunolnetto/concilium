@@ -84,12 +84,14 @@ def _norm_ref_atividades_to_eap(out: dict[str, Any]) -> None:
 
 
 def _norm_ref_metas_confronto(out: dict[str, Any]) -> None:
-    metas = out.get("metas_confronto") if isinstance(out.get("metas_confronto"), dict) else {}
+    raw_metas = out.get("metas_confronto")
+    metas = raw_metas if isinstance(raw_metas, dict) else {}
     if not metas:
         return
-    resultado = out.get("resultado") if isinstance(out.get("resultado"), dict) else {}
-    if "benchmark_confronto_referencia" not in resultado:  # type: ignore[operator]
-        resultado["benchmark_confronto_referencia"] = {  # type: ignore[index]
+    raw_resultado = out.get("resultado")
+    resultado: dict[str, Any] = raw_resultado if isinstance(raw_resultado, dict) else {}
+    if "benchmark_confronto_referencia" not in resultado:
+        resultado["benchmark_confronto_referencia"] = {
             "custo_direto": metas.get("custo_direto"),
             "custo_indireto": metas.get("custo_indireto"),
             "custo_total": metas.get("custo_total"),
@@ -107,11 +109,13 @@ def _norm_ref_parse_atividade_duration(atividade: dict[str, Any], weeks: list[st
 
 
 def _norm_ref_build_rcpsp_activities(out: dict[str, Any], weeks: list[str]) -> list[dict[str, Any]]:
-    atividades = out.get("atividades") if isinstance(out.get("atividades"), list) else []
+    raw_atividades = out.get("atividades")
+    atividades = raw_atividades if isinstance(raw_atividades, list) else []
 
     # If no atividades but EAP exists, build from EAP using spec.cronograma when available
     if not atividades:
-        eap = out.get("eap") if isinstance(out.get("eap"), list) else []
+        raw_eap = out.get("eap")
+        eap = raw_eap if isinstance(raw_eap, list) else []
 
         # Índice spec.cronograma compacto → {item_id: {equipes}}
         # duration_weeks é derivado de Q/P em skill-04 (_enrich_spec_resources_from_catalog)
@@ -186,16 +190,17 @@ def _norm_ref_build_default_rcpsp_spec(out: dict[str, Any], rcpsp_block: dict[st
     data_fim = out.get("data_termino", "2025-06-30")
     weeks = iso_weeks(data_ini, data_fim)
     activities = _norm_ref_build_rcpsp_activities(out, weeks)
-    resource_pool: dict[str, Any] = out.get("resource_pool") if isinstance(out.get("resource_pool"), dict) else {}  # type: ignore[assignment]
+    raw_resource_pool = out.get("resource_pool")
+    resource_pool: dict[str, Any] = raw_resource_pool if isinstance(raw_resource_pool, dict) else {}
     if not resource_pool:
         restr = out.get("restricao_equipes")
         if isinstance(restr, dict):
             resource_pool = restr
     spec_out: dict[str, Any] = {
-        "deadline_weeks": int(rcpsp_block.get("deadline_weeks") or len(weeks) or 1),  # type: ignore[union-attr]
+        "deadline_weeks": int(rcpsp_block.get("deadline_weeks") or len(weeks) or 1),
         "activities": activities,
         "resource_pool": resource_pool,
-        "precedence": rcpsp_block.get("precedence") or [],  # type: ignore[union-attr]
+        "precedence": rcpsp_block.get("precedence") or [],
     }
     # ADR-091 Fase 4: objetivo de pool (pool_config) opcional na referência. Quando
     # presente sem resource_pool explícito, dirige a inferência do pool mínimo.
@@ -208,14 +213,15 @@ def _norm_ref_build_default_rcpsp_spec(out: dict[str, Any], rcpsp_block: dict[st
 def _norm_ref_ensure_rcpsp_spec(out: dict[str, Any]) -> None:
     if out.get("rcpsp_spec"):
         return
-    rcpsp_block = out.get("rcpsp") if isinstance(out.get("rcpsp"), dict) else {}
-    params_block = out.get("parametros_simulacao") if isinstance(out.get("parametros_simulacao"), dict) else {}
-    rcpsp_from_params = (
-        params_block.get("rcpsp_spec") if isinstance(params_block.get("rcpsp_spec"), dict) else {}  # type: ignore[union-attr]
-    )
-    rcpsp_spec = dict(rcpsp_block or rcpsp_from_params)  # type: ignore[arg-type]
+    raw_rcpsp = out.get("rcpsp")
+    rcpsp_block: dict[str, Any] = raw_rcpsp if isinstance(raw_rcpsp, dict) else {}
+    raw_params = out.get("parametros_simulacao")
+    params_block: dict[str, Any] = raw_params if isinstance(raw_params, dict) else {}
+    raw_rcpsp_from_params = params_block.get("rcpsp_spec")
+    rcpsp_from_params: dict[str, Any] = raw_rcpsp_from_params if isinstance(raw_rcpsp_from_params, dict) else {}
+    rcpsp_spec = dict(rcpsp_block or rcpsp_from_params)
     if not rcpsp_spec:
-        rcpsp_spec = _norm_ref_build_default_rcpsp_spec(out, rcpsp_block)  # type: ignore[arg-type]
+        rcpsp_spec = _norm_ref_build_default_rcpsp_spec(out, rcpsp_block)
     out["rcpsp_spec"] = rcpsp_spec
 
 

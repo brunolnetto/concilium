@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from types import ModuleType
 
 from .models import (
     Activity,
@@ -24,11 +25,12 @@ _log = logging.getLogger(__name__)
 
 # ADR-121 D5: OTel span events — lazy import para não bloquear ambientes sem SDK
 try:
-    from opentelemetry import trace
+    from opentelemetry import trace as _otel_trace
 
+    trace: ModuleType | None = _otel_trace
     _OTEL_AVAILABLE = True
 except ImportError:  # pragma: no cover
-    trace = None  # type: ignore[assignment]
+    trace = None
     _OTEL_AVAILABLE = False
 
 

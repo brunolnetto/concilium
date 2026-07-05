@@ -499,3 +499,51 @@ class TestCriarProjeto:
                     servicos=_mapped_servicos(),
                     projetos_root=None,
                 )
+
+    def test_runtime_constructed_with_config_root_real_constructor(self, tmp_path):
+        """Regressão: rt = Runtime() sem config_root quebrava com TypeError em toda
+        chamada real (os testes anteriores mockavam Runtime exatamente nesse seam).
+        Aqui o construtor real de Runtime é exercitado — o teste falha se a chamada
+        voltar a omitir config_root."""
+        store, es, ps = _make_mock_store()
+
+        # Contexto real mínimo pro Runtime.load_contexto (sem mock de Runtime)
+        contextos_dir = tmp_path / "config" / "contextos"
+        contextos_dir.mkdir(parents=True)
+        (contextos_dir / "ctx-1.json").write_text(
+            json.dumps(
+                {
+                    "id": "ctx-1",
+                    "perfil_id": "perfil-1",
+                    "jurisdicao_id": "BR-SP",
+                    "referencia_id": "ref-2024",
+                    "catalogo_id": "cat-1",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        sentinel = RuntimeError("coordinator-reached")
+        with (
+            patch("concilium.infrastructure.storage.project.ProjectStore") as MockPS,
+            patch(
+                "concilium.application.orchestrators.lifecycle_coordinator.LifecycleCoordinator",
+                side_effect=sentinel,
+            ),
+        ):
+            MockPS.init.return_value = store
+            result = criar_projeto(
+                nome="Proj",
+                contexto_id="ctx-1",
+                tipo_obra="predial",
+                localizacao="SP",
+                data_inicio="2026-01-01",
+                servicos=_mapped_servicos(),
+                projetos_root=tmp_path / "projetos",
+                config_root=tmp_path / "config",
+            )
+        # Se Runtime() tivesse quebrado (TypeError antes do try), a exceção teria
+        # propagado. Chegar ao coordinator (sentinel capturado no try) prova que a
+        # construção do Runtime passou.
+        assert result["status"] == "erro"
+        assert "coordinator-reached" in result["erro"]

@@ -107,7 +107,7 @@ def _preco_sicro_regional(insumo: dict, jurisdicao_id: str) -> float | None:
     return float(preco) if preco is not None else None
 
 
-def _ct_make_tendencia(ins: dict, jurisdicao_id: object) -> object | None:
+def _ct_make_tendencia(ins: dict, jurisdicao_id: str | None) -> TendenciaInsumo | None:
     """Builds TendenciaInsumo for a single insumo, or None if no valid price."""
     cod = ins.get("codigo", "?")
     desc = ins.get("descricao", "")
@@ -146,7 +146,7 @@ def _ct_make_tendencia(ins: dict, jurisdicao_id: object) -> object | None:
     )
 
 
-def _ct_build_indice(tipo: str, lista: list) -> object:
+def _ct_build_indice(tipo: str, lista: list[TendenciaInsumo]) -> IndiceCategoria:
     """Builds IndiceCategoria from a list of TendenciaInsumo for a given tipo."""
     variacoes = [t.variacao_pct for t in lista if t.variacao_pct is not None]
     com_historico = sum(1 for t in lista if t.n_registros_historico > 0)
@@ -162,7 +162,7 @@ def _ct_build_indice(tipo: str, lista: list) -> object:
     )
 
 
-def _ct_build_resumo(insumos: list, indices: list, jurisdicao_id: object) -> dict:
+def _ct_build_resumo(insumos: list, indices: list, jurisdicao_id: str | None) -> dict:
     """Builds the resumo summary dict from computed indices."""
     return {
         "total_insumos": len(insumos),

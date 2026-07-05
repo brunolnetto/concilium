@@ -18,7 +18,7 @@ Mapeamento lever_id → Lever.tipo:
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
+from typing import Any, Literal
 
 from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import (
@@ -32,19 +32,21 @@ from concilium.domain.models.canonical import (
     ValidacaoItem,
 )
 
-_LEVER_ID_TO_TIPO: dict[str, str] = {
+_LeverTipoPse = Literal["SERIALIZAR_CRONOGRAMA", "MELHORAR_PRATICABILIDADE", "OTIMIZAR_POOL", "RECALIBRAR_PU"]
+
+_LEVER_ID_TO_TIPO: dict[str, _LeverTipoPse] = {
     "fechar_gap_escala": "SERIALIZAR_CRONOGRAMA",
     "fechar_gap_praticabilidade": "MELHORAR_PRATICABILIDADE",
     "fechar_gap_pool": "OTIMIZAR_POOL",
     "revisao_bdi_minima": "RECALIBRAR_PU",
 }
-_LEVER_CHECKPOINT: dict[str, str] = {
+_LEVER_CHECKPOINT: dict[_LeverTipoPse, str] = {
     "SERIALIZAR_CRONOGRAMA": "04-cronograma",
     "MELHORAR_PRATICABILIDADE": "04-cronograma",
     "OTIMIZAR_POOL": "05-equipes-e-alocacao",
     "RECALIBRAR_PU": "06-precificacao-unitaria",
 }
-_LEVER_CONFIANCA: dict[str, str] = {
+_LEVER_CONFIANCA: dict[_LeverTipoPse, Literal["ALTA", "MEDIA", "BAIXA"]] = {
     "SERIALIZAR_CRONOGRAMA": "ALTA",
     "MELHORAR_PRATICABILIDADE": "MEDIA",
     "OTIMIZAR_POOL": "ALTA",
@@ -77,7 +79,9 @@ def _build_levers(
         return []
 
     # Agrega por tipo PSE: soma delta_margin_pct de todos os itens
-    agg: dict[str, dict] = defaultdict(lambda: {"delta_rs": 0.0, "delta_pct": 0.0, "itens": [], "restricoes": []})
+    agg: dict[_LeverTipoPse, dict] = defaultdict(
+        lambda: {"delta_rs": 0.0, "delta_pct": 0.0, "itens": [], "restricoes": []}
+    )
 
     for pe in canonical_in.ponto_equilibrio or []:
         for lv in pe.levers_equilibrio or []:
@@ -183,7 +187,7 @@ def _repair_path(
     )
 
 
-def _risco_lever(lever: Lever) -> str:
+def _risco_lever(lever: Lever) -> Literal["BAIXO", "MEDIO", "ALTO"]:
     if lever.confianca == "ALTA":
         return "BAIXO"
     if lever.confianca == "BAIXA":

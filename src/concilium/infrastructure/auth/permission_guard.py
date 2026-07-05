@@ -205,9 +205,13 @@ _current_roles: contextvars.ContextVar[frozenset[str]] = contextvars.ContextVar(
     "_rbac_current_roles", default=frozenset()
 )
 
-_current_user_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("_auth_current_user_id", default=None)
+_current_user_id: contextvars.ContextVar[str | None] = contextvars.ContextVar[str | None](
+    "_auth_current_user_id", default=None
+)
 
-_current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("_auth_current_tenant_id", default=None)
+_current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar[str | None](
+    "_auth_current_tenant_id", default=None
+)
 
 
 def set_roles(token_roles: list[str]) -> contextvars.Token:
@@ -291,7 +295,11 @@ def permission(perm: str):
 
         # ADR-117: tag introspectável — fonte única da permissão da tool,
         # lida por patch_mcp_auth_permissions e pelo teste de governança.
-        wrapper._required_permission = perm  # type: ignore[attr-defined]
+        # setattr (não atributo direto): `wrapper` é uma função decorada com @wraps,
+        # cujo tipo estático não declara `_required_permission` — a tag é inerentemente
+        # dinâmica (lida via getattr em _tool_required_permission). noqa: B010 evita
+        # que o ruff reescreva isto de volta para atribuição direta (que o ty rejeita).
+        setattr(wrapper, "_required_permission", perm)  # noqa: B010
         return wrapper
 
     return decorator
@@ -417,7 +425,8 @@ def patch_mcp_auth_permissions(server: Any) -> None:
                         )
                 return fn(*args, **kwargs)
 
-            _auth_wrapper._required_permission = perm  # type: ignore[attr-defined]  # propaga a tag
+            # setattr (não atributo direto): mesma justificativa do @permission acima.
+            setattr(_auth_wrapper, "_required_permission", perm)  # noqa: B010  # propaga a tag
             return _auth_wrapper
 
         tool.fn = _make_wrapper(original_fn, required_perm)

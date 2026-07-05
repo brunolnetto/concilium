@@ -25,6 +25,17 @@ from concilium.application.semantic.intent import (
 )
 from concilium.application.semantic.normalizer import VocabularyLoader
 
+# Domínios válidos declarados em DomainType — usado para validar valores
+# carregados dinamicamente do vocabulário YAML (activities.yaml) antes de
+# atribuí-los a uma variável tipada como DomainType.
+_KNOWN_DOMAINS: dict[str, DomainType] = {
+    "earthwork": "earthwork",
+    "pavement": "pavement",
+    "drainage": "drainage",
+    "structure": "structure",
+    "other": "other",
+}
+
 # ─────────────────────────── Regexes ────────────────────────────────────────
 
 # Número seguido de unidade: "12.5cm", "300 mm", "2.000m", "10m3"
@@ -252,7 +263,10 @@ class SemanticExtractor:
         # Busca por alias (mais longo vence — precisão)
         for alias, (dom, act) in self._activity_aliases.items():
             if alias in text_lower and len(alias) > best_match_len:
-                domain = dom  # type: ignore[assignment]
+                mapped_domain = _KNOWN_DOMAINS.get(dom)
+                if mapped_domain is None:  # pragma: no cover — vocabulário mal configurado
+                    continue
+                domain = mapped_domain
                 activity_type = act
                 best_match_len = len(alias)
 

@@ -567,7 +567,7 @@ class TestSystemRoutes:
         mock_runtime = MagicMock()
         mock_runtime._config_cache = {"catalogo:x": 1, "other": 2}
         mock_container = MagicMock()
-        mock_container.concilium_service.deps.pipeline_service._runtime_factory.return_value = mock_runtime
+        mock_container.concilium_service._dependencies.pipeline_service._runtime_factory.return_value = mock_runtime
         mock_cfg_path = MagicMock()
         mock_cfg_path.rglob.return_value = []
         with (
@@ -578,3 +578,24 @@ class TestSystemRoutes:
             result = reload_catalog()
         assert result["status"] == "ok"
         assert result["catalog_cache_keys_cleared"] == 1
+
+
+class TestReloadCatalogAttributeChain:
+    def test_dependencies_attribute_chain_exists_on_real_classes(self):
+        """Regressão: o endpoint usava container.concilium_service.deps (atributo
+        inexistente — o real é _dependencies), então /catalog/reload sempre caía
+        no except e devolvia status=error. O mock de MagicMock engolia o erro."""
+        import inspect
+
+        from concilium.application.services.concilium_service import ConciliumDependencies, ConciliumService
+        from concilium.presentation.api.routes.system import reload_catalog
+
+        source = inspect.getsource(reload_catalog)
+        assert ".deps." not in source, "endpoint referencia .deps, que não existe em ConciliumService"
+        assert "_dependencies" in source
+
+        # O atributo real existe na classe e o campo pipeline_service existe no container de deps
+        assert "pipeline_service" in {f.name for f in ConciliumDependencies.__dataclass_fields__.values()} or hasattr(
+            ConciliumDependencies, "pipeline_service"
+        )
+        assert not hasattr(ConciliumService, "deps")

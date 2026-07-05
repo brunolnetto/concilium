@@ -355,9 +355,12 @@ def _pc_check_prod_zscore(producoes: list[dict]) -> list[Anomalia]:
     if len(vhs) < 3:
         return result
     vals = [v for _, v in vhs]
-    mu, sd = statistics.mean(vals), statistics.stdev(vals) if len(vals) >= 2 else (0, 1)
+    if len(vals) >= 2:
+        mu, sd = statistics.mean(vals), statistics.stdev(vals)
+    else:
+        mu, sd = statistics.mean(vals), 0.0
     for pid, vh_f in vhs:
-        z = (vh_f - mu) / sd if sd > 0 else 0  # type: ignore[operator]
+        z = (vh_f - mu) / sd if sd > 0 else 0
         if z > ZSCORE_EXTREMO * 2:
             result.append(
                 Anomalia(

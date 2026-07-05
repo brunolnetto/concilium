@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from concilium.application.scenarios.config import ScenarioConfig
 
@@ -34,7 +34,7 @@ class DVResult:
 def generate_dv_variations(
     base_decisions: DecisionVariables | None,
     dv2_options: list[dict[str, dict[str, int]]] | None = None,
-    dv4_options: list[str] | None = None,
+    dv4_options: list[Literal["lean", "standard", "robust"]] | None = None,
 ) -> list[ScenarioConfig]:
     """Gera cenários variando APENAS no espaço DV1-DV4 (DEC-29).
 
@@ -85,7 +85,7 @@ def generate_dv_variations(
             dv1_crew_template=base.dv1_crew_template,
             dv2_num_equipes=base.dv2_num_equipes,
             dv3_start_offset=base.dv3_start_offset,
-            dv4_indirect_policy=policy,  # type: ignore[arg-type]
+            dv4_indirect_policy=policy,
         )
         configs.append(
             ScenarioConfig(

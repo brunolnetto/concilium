@@ -140,7 +140,10 @@ class SharePointBlobStorage(BlobStoragePort):
         return self._ler_blob_direct(path, httpx)
 
     def _ler_blob_cached(self, path: str, httpx) -> bytes | None:
-        cached = self._cache.get(path) if self._cache else None
+        cache = self._cache
+        if cache is None:
+            return None
+        cached = cache.get(path)
         if cached:
             content, meta = cached
             try:
@@ -160,11 +163,11 @@ class SharePointBlobStorage(BlobStoragePort):
                         follow_redirects=True,
                     )
                     if content_r.status_code == 200:
-                        self._cache.put(path, content_r.content, etag, lm)
+                        cache.put(path, content_r.content, etag, lm)
                         return content_r.content
             except Exception:
                 if self._offline:
-                    stale = self._cache.get_stale(path) if self._cache else None
+                    stale = cache.get_stale(path)
                     if stale:
                         logger.warning(f"SharePoint offline — usando cache expirado: {path}")
                         return stale[0]

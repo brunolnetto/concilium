@@ -4,6 +4,7 @@ import math
 from pathlib import Path
 from typing import Any
 
+from concilium.domain.models.catalog.snapshot import CatalogSnapshot
 from concilium.infrastructure.catalog.catalog_loader import CatalogLoader
 
 
@@ -41,15 +42,15 @@ def _catalog_based_sizing(
     items_sem_ref: list,
     weeks: list,
     horas_semana: float,
-    snapshot: object,
+    snapshot: CatalogSnapshot,
     num_equipes_por_item: dict,
 ) -> None:
     cpu_lookup: dict = {}
-    for cpu in snapshot.cpus:  # type: ignore[union-attr]
+    for cpu in snapshot.cpus:
         if "codigo" in cpu:
             cpu_lookup[cpu["codigo"]] = cpu
     prod_lookup: dict = {}
-    for prod in snapshot.produtividades:  # type: ignore[union-attr]
+    for prod in snapshot.produtividades:
         pk = prod.get("id") or prod.get("codigo")
         if pk:
             prod_lookup[pk] = prod
@@ -59,7 +60,7 @@ def _catalog_based_sizing(
         cpu_data = cpu_lookup.get(cpu_id)
         if not cpu_data or qty <= 0:
             continue
-        prod = BenchmarkInputDeriver._resolve_productivity(cpu_data, prod_lookup)  # type: ignore[arg-type]
+        prod = BenchmarkInputDeriver._resolve_productivity(cpu_data, prod_lookup)
         needed = math.ceil(qty / (prod * horas_semana * len(weeks)) * 1.25)
         num_equipes_por_item[item["item_id"]] = {week: min(1000, max(1, needed)) for week in weeks}
 

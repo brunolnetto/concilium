@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from concilium.domain.models.canonical import EapItem, PrecoUnitarioCategoria, SubtotalSemBdiComBdi
 from concilium.domain.models.financial.bdi import (
     DEFAULT_BDI_TABELA,
     ComponentesBdi,
@@ -30,7 +31,7 @@ _FONTE_ENCARGOS = "domain/constants.py + domain/models/bdi.py DEFAULT_ENCARGOS (
 _CATEGORIAS = ["mao_obra", "material", "servicos", "indireto", "diesel"]
 
 
-def _ba_get_eap_fields(eap: object, item_id: str) -> tuple:
+def _ba_get_eap_fields(eap: EapItem | None, item_id: str) -> tuple[str | None, str, str | None]:
     """Returns (descricao, cpu_id, unidade) from EAP entry or defaults."""
     descricao = eap.descricao if eap and hasattr(eap, "descricao") else item_id
     cpu_id = eap.cpu_id if eap else ""
@@ -38,7 +39,9 @@ def _ba_get_eap_fields(eap: object, item_id: str) -> tuple:
     return descricao, cpu_id, unidade
 
 
-def _ba_get_pu_values(pu: object, pu_bdi: object) -> tuple:
+def _ba_get_pu_values(
+    pu: PrecoUnitarioCategoria | None, pu_bdi: PrecoUnitarioCategoria | None
+) -> tuple[float, float, float]:
     """Returns (pu_sem, pu_com, bdi_ef) from price unit objects."""
     pu_sem = float(pu.total) if pu and hasattr(pu, "total") else 0.0
     pu_com = float(pu_bdi.total) if pu_bdi and hasattr(pu_bdi, "total") else 0.0
@@ -46,14 +49,14 @@ def _ba_get_pu_values(pu: object, pu_bdi: object) -> tuple:
     return pu_sem, pu_com, bdi_ef
 
 
-def _ba_get_sub_floats(sub: object) -> tuple:
+def _ba_get_sub_floats(sub: SubtotalSemBdiComBdi | None) -> tuple[float, float]:
     """Returns (subtotal_sem_bdi, subtotal_com_bdi) rounded to 2 decimals."""
     sem = float(sub.sem_bdi.total) if sub and sub.sem_bdi else 0.0
     com = float(sub.com_bdi.total) if sub and sub.com_bdi else 0.0
     return round(sem, 2), round(com, 2)
 
 
-def _ba_get_pu_components(pu: object) -> tuple:
+def _ba_get_pu_components(pu: PrecoUnitarioCategoria | None) -> tuple[float, float, float, float]:
     """Returns (mo, equip, mat, diesel) cost components from a PU object."""
     mo = float(pu.mao_obra) if pu and hasattr(pu, "mao_obra") else 0.0
     equip = float(pu.equipamentos) if pu and hasattr(pu, "equipamentos") else 0.0

@@ -19,6 +19,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich import print as rprint
@@ -28,6 +29,9 @@ from concilium.application.benchmarks.charts.output_packager import empacotar_ou
 from concilium.application.benchmarks.spec.spec_loader import load_spec_from_dict
 from concilium.presentation.cli.shared import config_root as get_config_root
 
+if TYPE_CHECKING:
+    from concilium.application.benchmarks.spec.spec_loader import ProjectSpec
+
 app = typer.Typer(
     name="benchmark",
     help="Operações de benchmark: run, audit, analyze, extract e correção de discrepâncias.",
@@ -35,21 +39,23 @@ app = typer.Typer(
 )
 
 
-def _mc_merge_alternativas(ref: dict, bench_dir: object, changed: bool) -> tuple:
+def _mc_merge_alternativas(ref: dict, bench_dir: Path | str, changed: bool) -> tuple:
     """Embeds alternativas.json into ref['cenarios']. Returns (alt_path, changed)."""
     bench_dir = Path(bench_dir)
     alt_path = bench_dir / "alternativas.json"
     if alt_path.exists():
         alt_data = json.loads(alt_path.read_text(encoding="utf-8"))
         # v2: cenarios fica em spec; v1: fica no topo
-        container = ref.get("spec") if "spec" in ref else ref
-        if container.get("cenarios") != alt_data:  # type: ignore[union-attr]
-            container["cenarios"] = alt_data  # type: ignore[index]
+        container = ref.get("spec")
+        if not isinstance(container, dict):
+            container = ref
+        if container.get("cenarios") != alt_data:
+            container["cenarios"] = alt_data
             changed = True
     return alt_path, changed
 
 
-def _mc_merge_equipes(ref: dict, bench_dir: object, changed: bool) -> tuple:
+def _mc_merge_equipes(ref: dict, bench_dir: Path | str, changed: bool) -> tuple:
     """Embeds equipes.json into ref['equipes']. Returns (eq_path, changed)."""
     bench_dir = Path(bench_dir)
     eq_path = bench_dir / "equipes.json"
@@ -61,7 +67,7 @@ def _mc_merge_equipes(ref: dict, bench_dir: object, changed: bool) -> tuple:
     return eq_path, changed
 
 
-def _mc_remove_historical(keep: bool, alt_path: object, eq_path: object) -> None:
+def _mc_remove_historical(keep: bool, alt_path: Path | str, eq_path: Path | str) -> None:
     """Removes historical alternativas.json and equipes.json if keep is False."""
     if keep:
         return
@@ -119,11 +125,11 @@ def _make_silent_printer():
 def _run_one_plan_space(
     alt_id: str,
     modo: str,
-    spec: object,
+    spec: ProjectSpec,
     reset: bool,
-    cfg_root: object,
-    proj_root: object,
-    out_dir: object,
+    cfg_root: Path,
+    proj_root: Path,
+    out_dir: Path,
 ) -> dict:
     from concilium.application.benchmarks import BenchmarkRunner
     from concilium.application.benchmarks.report.report_builder import BenchmarkReportBuilder
@@ -134,8 +140,8 @@ def _run_one_plan_space(
         report_builder=BenchmarkReportBuilder(),
         report_printer=_make_silent_printer(),
     )
-    report = runner.run(spec, reset=reset)  # type: ignore[arg-type]
-    report_file = out_dir / f"{alt_id}.benchmark_report.json"  # type: ignore[operator]
+    report = runner.run(spec, reset=reset)
+    report_file = out_dir / f"{alt_id}.benchmark_report.json"
     report_file.write_text(json.dumps(report, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
 
     deltas = (report.get("confronto") or {}).get("deltas") or {}
@@ -158,11 +164,13 @@ def _validate_and_apply_modo(alt_id: str, modo: str, variant_ref: dict) -> None:
     from rich import print as rprint
 
     # v2: rcpsp_spec fica em spec; v1: fica no topo
-    _spec_container = variant_ref.get("spec") if "spec" in variant_ref else variant_ref
+    _spec_container = variant_ref.get("spec")
+    if not isinstance(_spec_container, dict):
+        _spec_container = variant_ref
     if modo == "MANUAL":
-        _spec_container.pop("rcpsp_spec", None)  # type: ignore[union-attr]
+        _spec_container.pop("rcpsp_spec", None)
     elif modo == "AUTO":
-        if not _spec_container.get("rcpsp_spec"):  # type: ignore[union-attr]
+        if not _spec_container.get("rcpsp_spec"):
             rprint(f"[red]Alternativa {alt_id}: modo AUTO exige rcpsp_spec.[/red]")
             raise typer.Exit(1) from None
     else:
@@ -193,7 +201,7 @@ def _prepare_one_task(alt: dict, base_ref: dict, ref_path, load_spec_from_dict):
     return (alt_id, modo, spec)
 
 
-def _prepare_plan_space_tasks(base_ref: dict, ref_path: object, alternativas: list) -> list:
+def _prepare_plan_space_tasks(base_ref: dict, ref_path: Path | str, alternativas: list) -> list:
 
     tasks: list = []
     for alt in alternativas:
@@ -206,9 +214,9 @@ def _execute_plan_space_tasks(
     tasks: list,
     num_workers: int,
     reset: bool,
-    cfg_root: object,
-    proj_root: object,
-    out_dir: object,
+    cfg_root: Path,
+    proj_root: Path,
+    out_dir: Path,
 ) -> tuple[list, list]:
     import concurrent.futures
     from threading import Lock
@@ -237,7 +245,7 @@ def _execute_plan_space_tasks(
 
 
 def _save_plan_space_results(
-    rows_sorted: list, slug_upper: str, root: object, outputs_dir: object, bench_dir: object
+    rows_sorted: list, slug_upper: str, root: Path, outputs_dir: Path, bench_dir: Path
 ) -> None:
     table = Table(title=f"Plan Space — {slug_upper}")
     table.add_column("Alternativa", style="cyan")
@@ -257,7 +265,7 @@ def _save_plan_space_results(
     rprint(table)
 
 
-def _save_plan_space_markdown(rows_sorted: list, slug_upper: str, outputs_dir: object) -> None:
+def _save_plan_space_markdown(rows_sorted: list, slug_upper: str, outputs_dir: Path) -> None:
     md_lines = [
         f"# Plan Space — {slug_upper}",
         "",
@@ -275,6 +283,6 @@ def _save_plan_space_markdown(rows_sorted: list, slug_upper: str, outputs_dir: o
         fl_str = str(fl) if fl is not None else "-"
         status_badge = f"**{row['status']}**" if row["status"] == "INVIAVEL" else row["status"]
         md_lines.append(f"| {row['alternativa']} | {row['modo']} | {status_badge} | {dt_str} | {mk_str} | {fl_str} |")
-    summary_md = outputs_dir / "plan_space_report.md"  # type: ignore[operator]
+    summary_md = outputs_dir / "plan_space_report.md"
     summary_md.write_text("\n".join(md_lines) + "\n", encoding="utf-8")
     rprint(f"[green]Relatório salvo em:[/green] {summary_md}")

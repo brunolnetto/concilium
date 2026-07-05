@@ -19,7 +19,7 @@ def collect_catalog_critical_errors(catalogo: dict[str, Any]) -> list[dict[str, 
         codigo = str(cpu.get("codigo", "?"))
         for res in validador.validar_cpu_completa(cpu):
             if res.status == "ERRO":
-                erros.append({"cpu": codigo, "erro": res.mensagem})  # type: ignore[dict-item]
+                erros.append({"cpu": codigo, "erro": res.mensagem or ""})
     return erros
 
 

@@ -14,6 +14,7 @@ import streamlit as st
 
 try:
     from ..atoms.form_contracts import CPU_EDITABLE_FIELDS, CPU_READONLY_FIELDS, render_typed_form
+    from ..helpers.helpers import dataframe_selected_rows
     from ..infra.api import api_call
     from ..organisms.layout import render_saved_override
 except ImportError:
@@ -27,7 +28,6 @@ except ImportError:
     )
     from concilium.presentation.ui.infra.api import api_call
     from concilium.presentation.ui.organisms.layout import render_saved_override
-
 
 
 def _render_project_cpu_editor(
@@ -85,7 +85,7 @@ def _render_overrides_section(base_url: str, project_id: str, actor: str, overri
             selection_mode="single-row",
             key=f"proj-ov-table-{project_id}",
         )
-        ov_sel_rows = (ov_sel.selection.rows or []) if hasattr(ov_sel, "selection") else []
+        ov_sel_rows = dataframe_selected_rows(ov_sel)
         if ov_sel_rows:
             sel_code = ov_rows[ov_sel_rows[0]]["Código"]
             sel_data = overrides.get(sel_code, {})
@@ -233,7 +233,8 @@ def _pcat_is_price_reference_stale(ref: str, max_age_months: int = 6) -> bool:
 def _pcat_cpu_parts(cpu: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     equipe = cpu.get("equipe")
     if not isinstance(equipe, dict):
-        equipe = cpu.get("composicao_padrao_equipe") if isinstance(cpu.get("composicao_padrao_equipe"), dict) else {}
+        raw_equipe = cpu.get("composicao_padrao_equipe")
+        equipe = raw_equipe if isinstance(raw_equipe, dict) else {}
     funcoes = [f for f in (equipe.get("funcoes") or []) if isinstance(f, dict)]
     equips = [e for e in (equipe.get("equipamentos") or []) if isinstance(e, dict)]
     comp = [c for c in (cpu.get("composicao_itens") or cpu.get("composicao_completa") or []) if isinstance(c, dict)]
@@ -552,7 +553,7 @@ def _pcat_select_rows_table(project_id: str, filtered_rows: list[dict[str, Any]]
         selection_mode="multi-row",
         key=f"pcat-table-{project_id}",
     )
-    indices = (sel.selection.rows or []) if hasattr(sel, "selection") else []
+    indices = dataframe_selected_rows(sel)
     return [filtered_rows[i]["cpu_id"] for i in indices if i < len(filtered_rows)]
 
 

@@ -102,9 +102,6 @@ def _rg_cash_flow_rows(canonical) -> list:
 
 
 def _rg_write_two_col_block(ws, start_col: int, title: str, labels: list, values: list) -> int:
-    get_column_letter = __import__("openpyxl.utils", fromlist=["get_column_letter"]).get_column_letter
-    get_column_letter(start_col)
-    get_column_letter(start_col + 1)
     ws.cell(row=1, column=start_col, value=title)
     ws.cell(row=2, column=start_col, value="Categoria")
     ws.cell(row=2, column=start_col + 1, value="Valor")
@@ -168,7 +165,8 @@ def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
         chart.type = "col"
         chart.style = 10
         chart.title = "Histograma de Equipamentos"
-        chart.y_axis.title = "Unidades"
+        # openpyxl: TitleDescriptor.__set__ aceita str e converte pra Title em runtime
+        chart.y_axis.title = "Unidades"  # ty: ignore[invalid-assignment]
         data = Reference(ws, min_col=2, min_row=2, max_row=1 + len(eq_labels) + 1)
         cats = Reference(ws, min_col=1, min_row=3, max_row=2 + len(eq_labels))
         chart.add_data(data, titles_from_data=True)
@@ -180,7 +178,7 @@ def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
         chart.type = "col"
         chart.style = 10
         chart.title = "Histograma de Mao de Obra"
-        chart.y_axis.title = "Pessoas"
+        chart.y_axis.title = "Pessoas"  # ty: ignore[invalid-assignment]
         data = Reference(ws, min_col=5, min_row=2, max_row=1 + len(mo_labels) + 1)
         cats = Reference(ws, min_col=4, min_row=3, max_row=2 + len(mo_labels))
         chart.add_data(data, titles_from_data=True)
@@ -194,8 +192,8 @@ def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
         chart.grouping = "stacked"
         chart.overlap = 100
         chart.title = "Cronograma Gantt"
-        chart.x_axis.title = "Dias"
-        chart.y_axis.title = "Atividades"
+        chart.x_axis.title = "Dias"  # ty: ignore[invalid-assignment]
+        chart.y_axis.title = "Atividades"  # ty: ignore[invalid-assignment]
         data = Reference(ws, min_col=gantt_col + 1, min_row=2, max_col=gantt_col + 2, max_row=2 + len(gantt_map))
         cats = Reference(ws, min_col=gantt_col, min_row=3, max_row=2 + len(gantt_map))
         chart.add_data(data, titles_from_data=True)
@@ -221,7 +219,7 @@ def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
             chart.type = "col"
             chart.style = 10
             chart.title = title
-            chart.y_axis.title = "R$"
+            chart.y_axis.title = "R$"  # ty: ignore[invalid-assignment]
             data = Reference(ws, min_col=col_idx, min_row=finance_row + 1, max_row=finance_end)
             cats = Reference(ws, min_col=finance_col, min_row=finance_row + 2, max_row=finance_end)
             chart.add_data(data, titles_from_data=True)

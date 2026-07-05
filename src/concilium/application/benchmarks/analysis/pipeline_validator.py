@@ -91,8 +91,8 @@ def _bet_build_indiretos(indiretos: list) -> tuple[float, dict]:
     return total_indireto, por_categoria
 
 
-def _bet_extract_resultado(resultado: dict) -> tuple[dict, object]:
-    """Formata consolidacao (06) e extrai direto PUxQ."""
+def _bet_extract_resultado(resultado: dict) -> dict:
+    """Formata consolidacao (06) a partir do resultado do canonical."""
     venda = resultado.get("venda") or {}
     custo = resultado.get("custo") or {}
     consolidacao = {

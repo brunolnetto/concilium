@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
@@ -74,8 +75,12 @@ class AuditService:
         """ADR-119 D5: registra VersionAction diretamente no audit trail."""
         self.log(project, action=va.action, actor=va.actor_id, version_action=va)
 
-    def list(self, project: ProjectHandle, limit: int = 200) -> list[dict[str, Any]]:
-        rows: list[dict[str, Any]] = []
+    def list(self, project: ProjectHandle, limit: int = 200) -> builtins.list[dict[str, Any]]:
+        # NOTE: usa `builtins.list` explicitamente na anotação de retorno porque este
+        # método se chama `list`, o que shadowa o builtin `list` na resolução de nomes
+        # da própria assinatura (annotations com `from __future__ import annotations`
+        # são resolvidas lazily e encontram este método antes do builtin).
+        rows: builtins.list[dict[str, Any]] = []
         for line in project.read_lines(self._files.audit_log):
             try:
                 rows.append(json.loads(line))

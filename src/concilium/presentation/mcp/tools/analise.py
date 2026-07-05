@@ -27,7 +27,13 @@ def register(server: FastMCP) -> None:
         try:
             eid = _resolve_escopo_id(store, escopo_id)
             es = store.escopo(eid)
-            pid = plano_id or es.active_plan().plano_id  # type: ignore[union-attr]
+            active = es.active_plan()
+            if plano_id is not None:
+                pid = plano_id
+            elif active is not None:
+                pid = active.plano_id
+            else:
+                return {"erro": "Escopo sem plano ativo. Execute disparar_pipeline primeiro."}
             ps = es.plan(pid)
             canonical = ps.load_canonical()
         except Exception as e:
@@ -53,7 +59,7 @@ def register(server: FastMCP) -> None:
                     "status_margem": res.status_margem if res else "VERMELHO",
                 },
                 "gargalos": [
-                    {"recurso": g.recurso_id, "semana": g.semana, "excesso": g.quantidade_excedente}  # type: ignore[attr-defined]
+                    {"recurso": g.recurso_id, "periodo": g.periodo_inicio.isoformat(), "excesso": g.excedente}
                     for g in canonical.conflitos_pico[:5]
                 ],
             }
@@ -111,7 +117,13 @@ def register(server: FastMCP) -> None:
         try:
             eid = _resolve_escopo_id(store, escopo_id)
             es = store.escopo(eid)
-            pid = plano_id or es.active_plan().plano_id  # type: ignore[union-attr]
+            active = es.active_plan()
+            if plano_id is not None:
+                pid = plano_id
+            elif active is not None:
+                pid = active.plano_id
+            else:
+                return {"erro": "Escopo sem plano ativo. Execute disparar_pipeline primeiro."}
             canonical = es.plan(pid).load_canonical()
         except Exception as e:
             return {"erro": str(e)}

@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.models.artifact import ArtifactEnvelope, ArtifactKind
-from concilium.domain.models.canonical import ValidacaoItem
+from concilium.domain.models.canonical import Resultado, StatusMargem, ValidacaoItem
 from concilium.domain.models.reports import (
     EixoIntervencao,
     ItemCriticidadeRelatorio,
@@ -24,10 +24,15 @@ from concilium.domain.models.reports import (
 _CREATED_BY = "10-relatorio-e-artefatos"
 
 
-def _rre_get_margin_status(resultado) -> tuple[str, float]:
+_STATUS_MARGEM_VALIDOS: tuple[StatusMargem, ...] = ("VERDE", "AMARELO", "VERMELHO")
+
+
+def _rre_get_margin_status(resultado: Resultado | None) -> tuple[StatusMargem, float]:
     """Returns (status_margem, margem_entrada) from resultado, defaulting safely."""
-    status_margem = getattr(resultado, "status_margem", "VERDE") if resultado else "VERDE"
-    margem_entrada = getattr(resultado, "margem", 0.0) if resultado else 0.0
+    raw_status = resultado.status_margem if resultado else "VERDE"
+    status_margem: StatusMargem = raw_status if raw_status in _STATUS_MARGEM_VALIDOS else "VERDE"
+    # NEP-041: Resultado não possui atributo `margem` — o campo correto é `margem_pct`.
+    margem_entrada = resultado.margem_pct if resultado else 0.0
     return status_margem, margem_entrada
 
 
@@ -71,7 +76,7 @@ def _rre_build_criticidade(ccr, proj, now) -> tuple:
     return relatorio, artifact, validacao
 
 
-def _rre_build_sensibilidade(rp, proj, now, status_margem: str, margem_entrada: float) -> tuple:
+def _rre_build_sensibilidade(rp, proj, now, status_margem: StatusMargem, margem_entrada: float) -> tuple:
     """Builds RelatorioSensibilidade, its artifact and validation."""
     if rp:
         passos = []
@@ -146,7 +151,7 @@ def _rre_oport_eixo(oport) -> EixoIntervencao:
     )
 
 
-def _rre_build_intervencao(psr, proj, now, status_margem: str) -> tuple:
+def _rre_build_intervencao(psr, proj, now, status_margem: StatusMargem) -> tuple:
     """Builds RelatorioIntervencao, its artifact and validation."""
     if psr:
         eixos = []

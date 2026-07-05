@@ -7,6 +7,7 @@ and proposes resolutions from authoritative sources.
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from concilium.domain.models.catalog.health import (
     CatalogGap,
@@ -15,6 +16,26 @@ from concilium.domain.models.catalog.health import (
     FonteAutoritativa,
     ResolutionProposal,
 )
+
+_CatalogHealthStatus = Literal["COMPLETO", "ADEQUADO", "PARCIAL", "INSUFICIENTE"]
+
+
+def _as_health_status(value: str) -> _CatalogHealthStatus:
+    """Narrows o `str` retornado por `CatalogHealthReport.compute_status` para o Literal do model.
+
+    `compute_status` só pode retornar um destes 4 valores (ver sua implementação),
+    mas sua assinatura é `-> str`; narrowing explícito aqui evita espalhar `str`
+    solto no campo `Literal` do model.
+    """
+    if value == "COMPLETO":
+        return "COMPLETO"
+    if value == "ADEQUADO":
+        return "ADEQUADO"
+    if value == "PARCIAL":
+        return "PARCIAL"
+    if value == "INSUFICIENTE":
+        return "INSUFICIENTE"
+    raise ValueError(f"Status de saúde do catálogo inesperado: {value!r}")
 
 
 def _count_status(gaps, status: str) -> int:
@@ -139,7 +160,7 @@ class CatalogGapDetector:
         prods_reais, prods_tabela, prods_baixa_conf, confianca_media = _analyze_producoes_quality(producoes)
         prods_baixa = prods_baixa_conf
 
-        status = CatalogHealthReport.compute_status(cobertura_pct, confianca_media)
+        status = _as_health_status(CatalogHealthReport.compute_status(cobertura_pct, confianca_media))
 
         return CatalogHealthReport(
             dominio=dominio,
@@ -156,7 +177,7 @@ class CatalogGapDetector:
             gaps_ausente=gaps_ausente,
             gaps_sem_produtividade=gaps_sem_prod,
             gaps_baixa_confianca=gaps_baixa,
-            status=status,  # type: ignore[arg-type]
+            status=status,
             gaps=gaps,
         )
 

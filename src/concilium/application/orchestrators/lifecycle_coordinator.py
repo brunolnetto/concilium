@@ -4,9 +4,9 @@ import json
 from typing import Any
 
 from concilium.application.runtime import Runtime
+from concilium.application.services.project.project_repository import ProjectHandle
 from concilium.application.skills.base import SkillResult
 from concilium.infrastructure.services.catalog_audit import load_and_audit_catalog
-from concilium.infrastructure.storage.project import ProjectStore
 
 
 class LifecycleCoordinator:
@@ -22,7 +22,7 @@ class LifecycleCoordinator:
     def avancar_plano(
         self,
         skill_id: str,
-        project: ProjectStore,
+        project: ProjectHandle,
         plano_store: Any,
         inputs: dict[str, Any] | None = None,
         force_data_gate: bool = True,
@@ -41,7 +41,7 @@ class LifecycleCoordinator:
 
     def _inject_project_catalog_layers(
         self,
-        project: ProjectStore,
+        project: ProjectHandle,
         inputs: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """Injeta camadas de catálogo do projeto para resolução em cascata (ADR-040/041)."""
@@ -68,7 +68,7 @@ class LifecycleCoordinator:
 
         return enriched
 
-    def _audit_data_governance(self, project: ProjectStore, plano_store: Any):
+    def _audit_data_governance(self, project: ProjectHandle, plano_store: Any):
         """Executa Quality Gates sobre os dados de gestão que alimentam o plano."""
         escopo_meta = plano_store.escopo_store.meta
         snapshot_catalogo_id = escopo_meta.get("snapshot_catalogo_id")

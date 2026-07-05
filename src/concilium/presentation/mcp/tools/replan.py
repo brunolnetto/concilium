@@ -37,7 +37,9 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
     pes = list(getattr(canonical, "ponto_equilibrio", []) or [])
     resultado = getattr(canonical, "resultado", None)
 
-    itens_sim = []
+    itens_sim: list[dict[str, Any]] = []
+    fe_atuais: list[float] = []
+    fe_novos: list[float] = []
     total_custo_atual = 0.0
     total_custo_novo = 0.0
 
@@ -48,6 +50,8 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
         c_novo = c_atual * prod_factor
         total_custo_atual += c_atual
         total_custo_novo += c_novo
+        fe_atuais.append(round(fe_atual, 3))
+        fe_novos.append(round(fe_novo, 3))
         status_novo = "OK" if fe_novo <= 1.25 else ("AVISO" if fe_novo <= 1.5 else "CRITICO")
         itens_sim.append(
             {
@@ -60,10 +64,10 @@ def _simular_lever_adjust(canonical: Any, parametros: dict) -> dict:
             }
         )
 
-    n_crit_atual = sum(1 for it in itens_sim if it["fe_nec_atual"] > 1.25)
-    n_crit_novo = sum(1 for it in itens_sim if it["fe_nec_estimado"] > 1.25)
-    fe_med_atual = (sum(it["fe_nec_atual"] for it in itens_sim) / len(itens_sim)) if itens_sim else 0
-    fe_med_novo = (sum(it["fe_nec_estimado"] for it in itens_sim) / len(itens_sim)) if itens_sim else 0
+    n_crit_atual = sum(1 for fe in fe_atuais if fe > 1.25)
+    n_crit_novo = sum(1 for fe in fe_novos if fe > 1.25)
+    fe_med_atual = (sum(fe_atuais) / len(fe_atuais)) if fe_atuais else 0
+    fe_med_novo = (sum(fe_novos) / len(fe_novos)) if fe_novos else 0
 
     custo_indireto = 0.0
     if resultado and resultado.custo:
@@ -122,10 +126,25 @@ def register(server: FastMCP) -> None:
         Para replanejamento definitivo, use ``disparar_pipeline`` após confirmar os parâmetros.
         """
         try:
-            from concilium.application.services.project.project_service import ProjectService
+            # ProjectService() sem dependências quebrava com TypeError (e o método
+            # load_canonical_latest nunca existiu) — o except genérico abaixo mascarava
+            # a tool inteira como "Erro ao simular cenário". Usa o mesmo padrão de
+            # resolução escopo→plano das tools irmãs (analise.py), com fallback flat.
+            from concilium.presentation.mcp._context import _project
+            from concilium.presentation.mcp.tools.escopo import _resolve_escopo_id
 
-            svc = ProjectService()
-            canonical = svc.load_canonical_latest(project_id)
+            store = _project(project_id)
+            canonical = None
+            try:
+                eid = _resolve_escopo_id(store, None)
+                es = store.escopo(eid)
+                active = es.active_plan()
+                if active is not None:
+                    canonical = es.plan(active.plano_id).load_canonical()
+            except Exception:
+                canonical = None
+            if canonical is None:
+                canonical = store.load_canonical()
             if canonical is None:
                 return {"erro": f"Canonical não encontrado para projeto '{project_id}'."}
 

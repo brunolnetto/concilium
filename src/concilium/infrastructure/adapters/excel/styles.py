@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from functools import cache
 from typing import Any
 
@@ -145,7 +146,7 @@ def _section_row(ws: Any, row: int, title: str, n_cols: int) -> None:
     cell.border = _border()
 
 
-def _set_col_widths(ws: Any, widths: list[int | float]) -> None:
+def _set_col_widths(ws: Any, widths: Sequence[int | float]) -> None:
     for i, w in enumerate(widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
 

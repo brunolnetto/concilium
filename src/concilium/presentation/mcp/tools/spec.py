@@ -57,7 +57,6 @@ def _resolve_tributario(meta: dict, rt: Any) -> dict:
     return tributario
 
 
-
 def register(server: FastMCP) -> None:
     """Registra criar_projeto_spec no servidor MCP."""
 

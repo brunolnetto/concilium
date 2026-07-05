@@ -39,7 +39,7 @@ def reload_catalog() -> dict[str, object]:
     """
     try:
         container = ServiceContainer.instance()
-        runtime = container.concilium_service.deps.pipeline_service._runtime_factory()
+        runtime = container.concilium_service._dependencies.pipeline_service._runtime_factory()
         # Limpa apenas as entradas de catálogo do cache (preserva outros dados)
         catalogo_keys = [k for k in runtime._config_cache if k.startswith("catalogo:")]
         for k in catalogo_keys:

@@ -139,9 +139,12 @@ class ConciliumService:
 
         rt = Runtime(self.config_root)
         cat = rt.load_catalogo(catalog_id)
-        cpus = cat.get("cpus") if isinstance(cat.get("cpus"), list) else []
-        produtividades = cat.get("produtividades") if isinstance(cat.get("produtividades"), list) else []
-        producoes_legado = cat.get("producoes") if isinstance(cat.get("producoes"), list) else []
+        raw_cpus = cat.get("cpus")
+        cpus = raw_cpus if isinstance(raw_cpus, list) else []
+        raw_produtividades = cat.get("produtividades")
+        raw_producoes = cat.get("producoes")
+        produtividades = raw_produtividades if isinstance(raw_produtividades, list) else []
+        producoes_legado = raw_producoes if isinstance(raw_producoes, list) else []
         producoes = produtividades + producoes_legado
         return build_catalog_reasonability_artifact(catalog_id, cpus, producoes)
 

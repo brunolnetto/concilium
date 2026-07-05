@@ -3,13 +3,14 @@
 Constrói CuboAnalitico a partir do canonical seguindo a hierarquia dimensional:
   {natureza}.{atividade}.{categoria_insumo}.{propriedade}
 
-Mapeamento (ADR-087 D2 + ADR-089 D1):
+Mapeamento (ADR-087 D2 + ADR-089 D1 + ADR-090):
   custo_mao_obra_mensal          → (mao_obra,    salario_encargos) → BDI mao_obra
   custo_equipamentos_mensal      → (equipamento, aluguel)          → BDI servicos
-  custo_combustivel_total_mensal → (equipamento, combustivel)      → BDI diesel  ← 4%
+  custo_combustivel_total_mensal → (material,    combustivel)      → BDI material ← 4%
   custo_material_mensal          → (material,    consumivel)       → BDI material
 
-Diesel como propriedade de equipamento preserva:
+Diesel como propriedade de material (ADR-090: mesma natureza econômica de
+areia/brita — insumo físico consumido, não serviço) preserva:
   - BDI = 4% (ADR-089: fornecimento de mercadoria, sem tributos de serviço)
   - Grandeza física (L/semana) via valor_fisico + unidade_fisica="L"
 
@@ -21,17 +22,20 @@ Seleção de caminho (pool vs. autônomo — ADR-086):
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from concilium.domain.constants import SEMANAS_POR_MES
 from concilium.domain.models.analytics.cubo_analitico import CelulaAnalitica, CuboAnalitico
+from concilium.domain.models.canonical import DistribuicaoSemanal, EquipeDireta
 from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
+
+_CategoriaInsumo = Literal["mao_obra", "equipamento", "material", "verba"]
 
 # ADR-087/089: mapeamento (campo_equipe, categoria_insumo, propriedade, cat_bdi, unidade_fisica)
 # A coluna cat_bdi referencia o campo na TabelaBdi para obter BDI e decomposição.
 # ADR-090: combustivel → (material, combustivel) com BDI_material (4%).
 # Diesel = insumo físico consumido = mesma natureza econômica de areia/brita.
-_PROP_BDI_MAP: list[tuple[str, str, str, str, str]] = [
+_PROP_BDI_MAP: list[tuple[str, _CategoriaInsumo, str, str, str]] = [
     # campo_equipe_direta           cat_insumo      propriedade          cat_bdi    unidade
     ("custo_mao_obra_mensal", "mao_obra", "salario_encargos", "mao_obra", ""),
     ("custo_equipamentos_mensal", "equipamento", "aluguel", "servicos", ""),
@@ -40,7 +44,7 @@ _PROP_BDI_MAP: list[tuple[str, str, str, str, str]] = [
 ]
 
 # Mapeamento pool → hierarquia dimensional (ADR-090)
-_POOL_TO_PROP: dict[str, tuple[str, str, str]] = {
+_POOL_TO_PROP: dict[str, tuple[_CategoriaInsumo, str, str]] = {
     "mo": ("mao_obra", "salario_encargos", ""),
     "eq": ("equipamento", "aluguel", ""),
     "comb": ("material", "combustivel", "L"),  # ADR-090: combustivel = material
@@ -48,7 +52,7 @@ _POOL_TO_PROP: dict[str, tuple[str, str, str]] = {
 }
 
 
-def _cab_compute_diesel_consumo(equipe: object, horas_semana: float) -> float:
+def _cab_compute_diesel_consumo(equipe: EquipeDireta, horas_semana: float) -> float:
     """L/semana a 100% eficiência — grandeza física do ativo (não custo)."""
     consumo_L_hora_base = sum(
         (eq.consumo_litros_hora or 0.0) * eq.num_unidades for eq in equipe.equipamentos if eq.consumo_litros_hora
@@ -73,10 +77,10 @@ def _cab_campo_custo(
 
 
 def _cab_collect_celulas_semana(
-    equipe: object,
+    equipe: EquipeDireta,
     atividade_id: str,
     semana_iso: str,
-    dist: object,
+    dist: DistribuicaoSemanal,
     consumo_L_semana_100pct: float,
     bdi: dict[tuple[str, str], float],
     decomp: dict[tuple[str, str], dict[str, float]],

@@ -96,4 +96,5 @@ def build(canonical, cubo=None) -> bytes | None:
     mpl = _try_init_mpl()
     if mpl is None:
         return None
-    return _render_chart(*mpl, rows)
+    plt, fig_to_bytes = mpl
+    return _render_chart(plt, fig_to_bytes, rows)

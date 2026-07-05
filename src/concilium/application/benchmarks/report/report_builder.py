@@ -323,23 +323,24 @@ class BenchmarkReportBuilder:
         inference_pack: Any | None = None,
     ) -> dict[str, Any]:
         projection = BenchmarkProjection.from_canonical(canonical)
+        confronto: dict[str, Any] = {}
         report: dict[str, Any] = {
             "projeto": spec.nome,
             "slug": spec.slug,
             "versao": version,
             "skills_log": results_log,
             "referencia_disponivel": ref is not None,
-            "confronto": {},
+            "confronto": confronto,
         }
         if ref:
             ref_confronto = getattr(inference_pack, "reference_projection", None)
             if ref_confronto is None:
                 ref_confronto = self._extract_referencia_confronto(ref)
             if ref_confronto is not None:
-                report["confronto"]["referencia"] = ref_confronto
-        _add_ferramenta_data(report["confronto"], projection)
-        self._finalize_confronto(report["confronto"], ref)
-        report["quality_gates"] = self._build_quality_gates(report["confronto"])
+                confronto["referencia"] = ref_confronto
+        _add_ferramenta_data(confronto, projection)
+        self._finalize_confronto(confronto, ref)
+        report["quality_gates"] = self._build_quality_gates(confronto)
         report["action_report"] = report["quality_gates"]["items"]
         report["status_final"] = report["quality_gates"]["decision"]
         if canonical is not None:

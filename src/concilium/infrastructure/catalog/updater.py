@@ -152,16 +152,23 @@ class CatalogUpdater:
             insumo_data[proposta.campo] = proposta.valor_proposto
 
         # Persiste arquivo
-        todos = json.loads(arquivo_path.read_text(encoding="utf-8"))  # type: ignore[union-attr]
+        if arquivo_path is None:
+            return CatalogUpdateResult(
+                sucesso=False,
+                novo_artefato_id=None,
+                versao_anterior=None,
+                nota=f"Insumo '{insumo_id}' não encontrado em {self._insumos_dir}",
+            )
+        todos = json.loads(arquivo_path.read_text(encoding="utf-8"))
         todos_list = todos if isinstance(todos, list) else todos.get("insumos", [])
         for i, item in enumerate(todos_list):
             if item.get("codigo") == insumo_id:
                 todos_list[i] = insumo_data
                 break
         if isinstance(todos, list):
-            arquivo_path.write_text(json.dumps(todos_list, ensure_ascii=False, indent=2), encoding="utf-8")  # type: ignore[union-attr]
+            arquivo_path.write_text(json.dumps(todos_list, ensure_ascii=False, indent=2), encoding="utf-8")
         else:
-            arquivo_path.write_text(json.dumps(todos, ensure_ascii=False, indent=2), encoding="utf-8")  # type: ignore[union-attr]
+            arquivo_path.write_text(json.dumps(todos, ensure_ascii=False, indent=2), encoding="utf-8")
 
         return CatalogUpdateResult(
             sucesso=True,

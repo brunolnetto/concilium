@@ -111,5 +111,5 @@ def run_registro_decisoes(
     )
 
     result = SkillResult(canonical_in, validacoes)
-    result.decision_log = entry  # type: ignore[attr-defined]
+    result.decision_log = entry
     return result

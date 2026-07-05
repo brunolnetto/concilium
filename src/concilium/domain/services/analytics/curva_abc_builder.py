@@ -13,13 +13,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 from concilium.domain.models.analytics.analitica import CurvaABCInsumo, InsumoDetalheAtividade, ItemCurvaABC
+from concilium.domain.models.canonical import EquipeDireta
 from concilium.domain.models.catalog.catalogo import _infer_tipo_combustivel
 
 
-def _accumulate_funcoes_de_equipe(custo_acum: dict, equipe: object) -> None:
-    item_id = equipe.item_id  # type: ignore[attr-defined]
-    perm = equipe.permanencia_meses or 0.0  # type: ignore[attr-defined]
-    for funcao in equipe.funcoes:  # type: ignore[attr-defined]
+def _accumulate_funcoes_de_equipe(custo_acum: dict, equipe: EquipeDireta) -> None:
+    item_id = equipe.item_id
+    perm = equipe.permanencia_meses or 0.0
+    for funcao in equipe.funcoes:
         fid = funcao.funcao_id or funcao.descricao or "MO-?"
         custo = funcao.custo_mensal_unitario * funcao.num_pessoas * perm
         custo_acum[fid]["descricao"] = funcao.descricao or fid
@@ -28,10 +29,10 @@ def _accumulate_funcoes_de_equipe(custo_acum: dict, equipe: object) -> None:
         custo_acum[fid]["atividades"].add(item_id)
 
 
-def _accumulate_equipamentos_de_equipe(custo_acum: dict, equipe: object) -> None:
-    item_id = equipe.item_id  # type: ignore[attr-defined]
-    perm = equipe.permanencia_meses or 0.0  # type: ignore[attr-defined]
-    for equip in equipe.equipamentos:  # type: ignore[attr-defined]
+def _accumulate_equipamentos_de_equipe(custo_acum: dict, equipe: EquipeDireta) -> None:
+    item_id = equipe.item_id
+    perm = equipe.permanencia_meses or 0.0
+    for equip in equipe.equipamentos:
         eid = equip.equip_id or equip.descricao or "EQ-?"
         custo_eq = equip.custo_mensal * perm
         custo_comb = equip.custo_combustivel_mensal * perm

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from openpyxl import Workbook
+from openpyxl.styles import PatternFill
+from openpyxl.worksheet.worksheet import Worksheet
 
-from concilium.domain.models.canonical import CanonicalModel
+from concilium.domain.models.canonical import CanonicalModel, EquipeDireta, ScheduledActivityCanonical
 
 from ..styles import (
     _C,
@@ -19,40 +21,49 @@ from ..styles import (
 from .operacional import _wk_label
 
 
-def _compute_equip_min_units(eq: object) -> int:
+def _compute_equip_min_units(eq: EquipeDireta) -> int:
     """Normalize by minimum equipment unit count to recover composite-front count."""
-    if not eq.equipamentos:  # type: ignore[union-attr]
+    if not eq.equipamentos:
         return 1
     return min(
-        (e.num_unidades for e in eq.equipamentos if (e.num_unidades or 0) > 0),  # type: ignore[union-attr]
+        (e.num_unidades for e in eq.equipamentos if (e.num_unidades or 0) > 0),
         default=1,
     )
 
 
-def _aggregate_equip_demand(act: object, eq: object, all_weeks: list, equip_data: dict) -> None:
+def _aggregate_equip_demand(
+    act: ScheduledActivityCanonical, eq: EquipeDireta, all_weeks: list, equip_data: dict
+) -> None:
     """Accumulate equipment demand from one scheduled activity into equip_data."""
     _min_units = _compute_equip_min_units(eq)
-    for equip in eq.equipamentos:  # type: ignore[union-attr]
+    for equip in eq.equipamentos:
         if equip.equip_id not in equip_data:
             equip_data[equip.equip_id] = {
                 "descricao": getattr(equip, "descricao", equip.equip_id) or equip.equip_id,
                 "per_week": {wk: 0 for wk in all_weeks},
             }
-        for wk, dist in act.distribuicao_semanal.items():  # type: ignore[union-attr]
+        for wk, dist in act.distribuicao_semanal.items():
             n = getattr(dist, "num_equipes", 0)
             if n > 0 and wk in equip_data[equip.equip_id]["per_week"]:
                 equip_data[equip.equip_id]["per_week"][wk] += round((n / _min_units) * equip.num_unidades)
 
 
 def _write_hist_data_row(
-    ws: object, row: int, id_key: str, data: dict, unit_label: str, all_weeks: list, fill: object, week_totals: dict
+    ws: Worksheet,
+    row: int,
+    id_key: str,
+    data: dict,
+    unit_label: str,
+    all_weeks: list,
+    fill: PatternFill,
+    week_totals: dict,
 ) -> None:
     _label(ws, row, 1, id_key, fill)
     _label(ws, row, 2, data["descricao"], fill)
     _label(ws, row, 3, unit_label, fill, align="center")
     for j, wk in enumerate(all_weeks):
         v = data["per_week"].get(wk, 0)
-        cell = ws.cell(row=row, column=4 + j, value=v if v > 0 else None)  # type: ignore[union-attr]
+        cell = ws.cell(row=row, column=4 + j, value=v if v > 0 else None)
         cell.fill = fill
         cell.border = _border()
         if v > 0:
@@ -61,16 +72,16 @@ def _write_hist_data_row(
         week_totals[wk] += v
 
 
-def _write_hist_totals_row(ws: object, row: int, all_weeks: list, fill_tot: object, week_totals: dict) -> None:
-    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=3)  # type: ignore[union-attr]
-    cell = ws.cell(row=row, column=1, value="TOTAL SEMANAL")  # type: ignore[union-attr]
+def _write_hist_totals_row(ws: Worksheet, row: int, all_weeks: list, fill_tot: PatternFill, week_totals: dict) -> None:
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=3)
+    cell = ws.cell(row=row, column=1, value="TOTAL SEMANAL")
     cell.fill = fill_tot
     cell.font = _font(bold=True, color=_C["white"])
     cell.alignment = _align("right")
     cell.border = _border()
     for j, wk in enumerate(all_weeks):
         v = week_totals[wk]
-        cell = ws.cell(row=row, column=4 + j, value=v if v > 0 else None)  # type: ignore[union-attr]
+        cell = ws.cell(row=row, column=4 + j, value=v if v > 0 else None)
         cell.fill = fill_tot
         cell.border = _border()
         if v > 0:
@@ -95,7 +106,7 @@ def render_histograma_eq(wb: Workbook, canonical: CanonicalModel) -> None:
             continue
         _aggregate_equip_demand(act, eq, all_weeks, equip_data)
     NCOLS = 3 + len(all_weeks)
-    _set_col_widths(ws, [14, 32, 6] + [10] * len(all_weeks))  # type: ignore[arg-type]
+    _set_col_widths(ws, [14, 32, 6] + [10] * len(all_weeks))
     _freeze(ws, "D3")
     row = 1
     _title_row(ws, row, "HISTOGRAMA DE EQUIPAMENTOS — DEMANDA SEMANAL (UN.)", NCOLS)
@@ -113,16 +124,18 @@ def render_histograma_eq(wb: Workbook, canonical: CanonicalModel) -> None:
     _write_hist_totals_row(ws, row, all_weeks, _fill(_C["nav_dk"]), week_totals)
 
 
-def _aggregate_labor_demand(act: object, eq: object, all_weeks: list, func_data: dict) -> None:
+def _aggregate_labor_demand(
+    act: ScheduledActivityCanonical, eq: EquipeDireta, all_weeks: list, func_data: dict
+) -> None:
     """Accumulate labor demand from one scheduled activity into func_data."""
     _min_units = _compute_equip_min_units(eq)
-    for func in eq.funcoes:  # type: ignore[union-attr]
+    for func in eq.funcoes:
         if func.funcao_id not in func_data:
             func_data[func.funcao_id] = {
                 "descricao": func.descricao or func.funcao_id,
                 "per_week": {wk: 0 for wk in all_weeks},
             }
-        for wk, dist in act.distribuicao_semanal.items():  # type: ignore[union-attr]
+        for wk, dist in act.distribuicao_semanal.items():
             n = getattr(dist, "num_equipes", 0)
             if n > 0 and wk in func_data[func.funcao_id]["per_week"]:
                 func_data[func.funcao_id]["per_week"][wk] += round((n / _min_units) * func.num_pessoas)
@@ -144,7 +157,7 @@ def render_histograma_mo(wb: Workbook, canonical: CanonicalModel) -> None:
             continue
         _aggregate_labor_demand(act, eq, all_weeks, func_data)
     NCOLS = 3 + len(all_weeks)
-    _set_col_widths(ws, [20, 32, 6] + [10] * len(all_weeks))  # type: ignore[arg-type]
+    _set_col_widths(ws, [20, 32, 6] + [10] * len(all_weeks))
     _freeze(ws, "D3")
     row = 1
     _title_row(ws, row, "HISTOGRAMA DE MÃO DE OBRA — DEMANDA SEMANAL (PESSOAS)", NCOLS)

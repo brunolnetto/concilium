@@ -8,9 +8,22 @@ from typing import TYPE_CHECKING
 import streamlit as st
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from streamlit.delta_generator import DeltaGenerator
+
     from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, DiagnosticoPERelatorio
-    from concilium.domain.models.financial.backtracking_pe import BacktrackingPERelatorio
-    from concilium.domain.models.financial.bdi import ComponentesBdi, TabelaBdi, TaxSimulationScenario
+    from concilium.domain.models.financial.backtracking_pe import (
+        BacktrackingPEItem,
+        BacktrackingPERelatorio,
+        SolucaoInversa,
+    )
+    from concilium.domain.models.financial.bdi import (
+        ComponentesBdi,
+        TabelaBdi,
+        TaxRegimeVersion,
+        TaxSimulationScenario,
+    )
 
 from ..helpers.helpers import (
     build_team_adjustment_rows,
@@ -234,38 +247,38 @@ def _render_diagnostico_item(item: DiagnosticoPEItem) -> None:
             )
 
 
-def _render_sol_row(i: int, sol: object, cols: list) -> None:
+def _render_sol_row(i: int, sol: SolucaoInversa, cols: list) -> None:
     """Renders one solution row in a backtracking expander."""
-    cols[0].markdown(f"**{chr(65 + i)}** — {sol.label}")  # type: ignore[union-attr]
-    cols[0].caption(sol.descricao_delta)  # type: ignore[union-attr]
-    repasse = f"+{sol.impacto_preco_pct:.1f}%" if sol.impacto_preco_pct > 0.1 else "Nenhum"  # type: ignore[union-attr]
+    cols[0].markdown(f"**{chr(65 + i)}** — {sol.label}")
+    cols[0].caption(sol.descricao_delta)
+    repasse = f"+{sol.impacto_preco_pct:.1f}%" if sol.impacto_preco_pct > 0.1 else "Nenhum"
     cols[1].metric("Repasse ao cliente", repasse)
-    esforco = f"+{sol.impacto_produtividade_pct:.0f}%" if sol.impacto_produtividade_pct > 0.5 else "—"  # type: ignore[union-attr]
+    esforco = f"+{sol.impacto_produtividade_pct:.0f}%" if sol.impacto_produtividade_pct > 0.5 else "—"
     cols[2].metric("Esforço operacional", esforco)
-    if sol.impacto_prazo_semanas != 0:  # type: ignore[union-attr]
-        direction = "−" if sol.impacto_prazo_semanas < 0 else "+"  # type: ignore[union-attr]
-        cols[3].metric("Prazo", f"{direction}{abs(sol.impacto_prazo_semanas):.0f} sem.")  # type: ignore[union-attr]
+    if sol.impacto_prazo_semanas != 0:
+        direction = "−" if sol.impacto_prazo_semanas < 0 else "+"
+        cols[3].metric("Prazo", f"{direction}{abs(sol.impacto_prazo_semanas):.0f} sem.")
 
 
-def _render_backtrack_item_body(item: object) -> None:
+def _render_backtrack_item_body(item: BacktrackingPEItem) -> None:
     """Renders the body of one backtracking item expander."""
-    validas = [s for s in item.solucoes if s.roundtrip_valido]  # type: ignore[union-attr]
+    validas = [s for s in item.solucoes if s.roundtrip_valido]
     if not validas:
         st.info("Nenhuma solução foi confirmada automaticamente para esta atividade.")
         return
-    st.caption(f"Gap atual: R$ {abs(item.pe_gap_atual):,.0f} | Alvo: equilíbrio (R$ 0)")  # type: ignore[union-attr]
+    st.caption(f"Gap atual: R$ {abs(item.pe_gap_atual):,.0f} | Alvo: equilíbrio (R$ 0)")
     for i, sol in enumerate(validas):
         cols = st.columns([5, 2, 2, 2])
         _render_sol_row(i, sol, cols)
-    if item.solucao_recomendada:  # type: ignore[union-attr]
-        rec = item.solucao_recomendada  # type: ignore[union-attr]
+    if item.solucao_recomendada:
+        rec = item.solucao_recomendada
         idx = validas.index(rec) if rec in validas else 0
         st.success(f"✨ Opção recomendada: **{chr(65 + idx)} — {rec.label}** ({rec.impacto_cliente_descricao})")
 
 
 def render_backtracking_pe(
-    backtracking: BacktrackingPERelatorio | None = None,  # type: ignore[name-defined]
-    on_create_version: callable | None = None,  # type: ignore[valid-type]
+    backtracking: BacktrackingPERelatorio | None = None,
+    on_create_version: Callable[..., object] | None = None,
 ) -> None:
     """Painel de soluções para fechar o gap de PE (ADR-061)."""
     if backtracking is None or not backtracking.itens:
@@ -280,14 +293,14 @@ def render_backtracking_pe(
             _render_backtrack_item_body(item)
 
 
-def _wizard_opcao_L(diagnostico: object, opcoes: list) -> None:
+def _wizard_opcao_L(diagnostico: DiagnosticoPERelatorio | None, opcoes: list) -> None:
     """Appends the L (BDI margin) option if diagnostico is valid."""
     if diagnostico is None:
         return
-    delta = diagnostico.l_medio_requerido - (  # type: ignore[union-attr]
-        diagnostico.itens_deficit[0].l_aplicado if diagnostico.itens_deficit else 0.09  # type: ignore[union-attr]
+    delta = diagnostico.l_medio_requerido - (
+        diagnostico.itens_deficit[0].l_aplicado if diagnostico.itens_deficit else 0.09
     )
-    gap_pct = 100 if diagnostico.gap_total_rs else 0  # type: ignore[union-attr]
+    gap_pct = 100 if diagnostico.gap_total_rs else 0
     opcoes.append(
         (
             "L",
@@ -297,7 +310,9 @@ def _wizard_opcao_L(diagnostico: object, opcoes: list) -> None:
     )
 
 
-def _build_wizard_deficit_opcoes(diagnostico: object, backtracking: object) -> list[tuple[str, str, str]]:
+def _build_wizard_deficit_opcoes(
+    diagnostico: DiagnosticoPERelatorio | None, backtracking: BacktrackingPERelatorio | None
+) -> list[tuple[str, str, str]]:
     """Builds the wizard option tuples from backtracking data."""
     opcoes: list[tuple[str, str, str]] = []
     params_disponiveis: dict[str, list[str]] = {}
@@ -308,7 +323,7 @@ def _build_wizard_deficit_opcoes(diagnostico: object, backtracking: object) -> l
         if isinstance(raw_janelas, list):
             janelas_prioritarias = [j for j in raw_janelas if isinstance(j, dict)]
 
-    for bt_item in backtracking.itens:  # type: ignore[union-attr]
+    for bt_item in backtracking.itens if backtracking else ():
         for sol in bt_item.solucoes:
             if sol.roundtrip_valido:
                 params_disponiveis.setdefault(sol.parametro, []).append(bt_item.descricao[:40])
@@ -342,8 +357,8 @@ def render_version_wizard(
     base_url: str,
     project: dict,
     actor: str,
-    diagnostico: DiagnosticoPERelatorio | None = None,  # type: ignore[name-defined]
-    backtracking: BacktrackingPERelatorio | None = None,  # type: ignore[name-defined]
+    diagnostico: DiagnosticoPERelatorio | None = None,
+    backtracking: BacktrackingPERelatorio | None = None,
 ) -> str | None:
     """Wizard de criação de versão com foco no diagnóstico (ADR-060/061 UI).
 
@@ -377,8 +392,10 @@ def _collect_last_run(base_url: str, project_id: str, actor: str) -> tuple[dict,
         )
     except Exception:
         runs = []
-    last_run = runs[0] if runs else {}
-    summary = last_run.get("summary") if isinstance(last_run.get("summary"), dict) else {}
+    raw_last = runs[0] if runs else {}
+    last_run = raw_last if isinstance(raw_last, dict) else {}
+    raw_summary = last_run.get("summary")
+    summary = raw_summary if isinstance(raw_summary, dict) else {}
     return last_run, summary
 
 
@@ -721,9 +738,12 @@ def render_cube_analytics_by_version(base_url: str, project: dict, actor: str) -
                     key=f"cube-act-{project_id}",
                 ).strip()
 
-    current_face_spec = contract_faces.get(face) if isinstance(contract_faces.get(face), dict) else {}
-    face_measure_options = current_face_spec.get("measure_profiles") if isinstance(current_face_spec, dict) else None
-    face_agg_options = current_face_spec.get("aggregation_modes") if isinstance(current_face_spec, dict) else None
+    raw_face_spec = contract_faces.get(face)
+    current_face_spec = raw_face_spec if isinstance(raw_face_spec, dict) else {}
+    raw_measure_options = current_face_spec.get("measure_profiles")
+    raw_agg_options = current_face_spec.get("aggregation_modes")
+    face_measure_options = raw_measure_options if isinstance(raw_measure_options, list) else None
+    face_agg_options = raw_agg_options if isinstance(raw_agg_options, list) else None
 
     with st.expander("Opcional", expanded=False):
         f3_col1, f3_col2, f3_col3 = st.columns([2, 2, 2])
@@ -1018,11 +1038,16 @@ def _indir_equips_list(raw: object) -> list[dict]:
     if isinstance(raw, list):
         return [e for e in raw if isinstance(e, dict)]
     if isinstance(raw, dict):
-        return [
-            {"tipo": k, **v} if isinstance(v, dict) else {"tipo": k, "aluguel_mensal": float(v or 0)}
-            for k, v in raw.items()
-            if not str(k).startswith("_")
-        ]
+        result: list[dict] = []
+        for k, v in raw.items():
+            if str(k).startswith("_"):
+                continue
+            if isinstance(v, dict):
+                result.append({"tipo": k, **v})
+            else:
+                valor = v if isinstance(v, (int, float)) else 0
+                result.append({"tipo": k, "aluguel_mensal": float(valor)})
+        return result
     return []
 
 
@@ -1246,16 +1271,16 @@ def _render_indir_mob_section(equipes: dict, ind_det: dict, project_id: str) -> 
     return {"categoria": "MOB", "driver": "one_time", "custo_fixo_total": total_mob}
 
 
-def _fill_indir_totals_placeholder(placeholder: object, totals_by_cat: dict) -> None:
+def _fill_indir_totals_placeholder(placeholder: DeltaGenerator, totals_by_cat: dict) -> None:
     """Fills the totals bar at top of equipe tab."""
     if totals_by_cat:
-        with placeholder.container():  # type: ignore[union-attr]
+        with placeholder.container():
             cols_t = st.columns(len(totals_by_cat))
             for col_t, (cat_id_t, total_t) in zip(cols_t, totals_by_cat.items(), strict=False):
                 col_t.metric(f"Total {cat_id_t}/mês", f"R$ {total_t:,.0f}")
             st.divider()
     else:
-        placeholder.empty()  # type: ignore[union-attr]
+        placeholder.empty()
 
 
 def render_indiretos_config(base_url: str, project_id: str, actor: str) -> None:
@@ -1863,7 +1888,7 @@ def _process_mob_save_rows(
 
 
 def _handle_mob_save(
-    edited: object,
+    edited_list: list[dict],
     rows: list[dict],
     ramp_up_enabled: bool,
     ramp_down_enabled: bool,
@@ -1872,7 +1897,6 @@ def _handle_mob_save(
     actor: str,
 ) -> None:
     """Handles the save policies button logic."""
-    edited_list = edited.to_dict("records") if hasattr(edited, "to_dict") else list(edited or [])  # type: ignore[union-attr]
     count, errors = _process_mob_save_rows(
         edited_list, rows, ramp_up_enabled, ramp_down_enabled, base_url, project_id, actor
     )
@@ -1966,7 +1990,10 @@ def render_mobilizacao_policy_editor(
     if col_validate.button("🔍 Validar políticas", key=f"validate-policies-{project_id}"):
         _handle_mob_validate(base_url, project_id, actor)
     if col_save.button("💾 Salvar políticas", key=f"save-policies-{project_id}"):
-        _handle_mob_save(edited, rows, ramp_up_enabled, ramp_down_enabled, base_url, project_id, actor)
+        edited_list = (
+            edited if isinstance(edited, list) else (edited.to_dict("records") if hasattr(edited, "to_dict") else [])
+        )  # noqa: E501
+        _handle_mob_save(edited_list, rows, ramp_up_enabled, ramp_down_enabled, base_url, project_id, actor)
     col_replan.write("")
     if col_replan.button("🚀 Replanejar", key=f"replan-wmp-{project_id}"):
         result = api_call(
@@ -2431,12 +2458,12 @@ def _render_bdi_pre_reforma(
 def _render_bdi_cbs_ibs(
     project_id: str,
     saved_tax_scenario: dict,
-    selected_regime: object,
+    selected_regime: TaxRegimeVersion,
     selected_regime_key: str,
     cenario_base: TaxSimulationScenario,
-    default_bdi_tabela: object,
-    resolver_bdi_cbs_ibs_fn: object,
-    tax_sim_scenario_cls: type,
+    default_bdi_tabela: TabelaBdi,
+    resolver_bdi_cbs_ibs_fn: Callable[[TabelaBdi, TaxSimulationScenario], TabelaBdi],
+    tax_sim_scenario_cls: type[TaxSimulationScenario],
     regime_labels: dict,
     base_url: str,
     actor: str,
@@ -2548,7 +2575,7 @@ def _render_bdi_cbs_ibs(
         )
         cssl = float(saved_tax_scenario.get("cssl_rate", cenario_base.cssl_rate))
         ir = float(saved_tax_scenario.get("ir_rate", cenario_base.ir_rate))
-    scenario_preview = tax_sim_scenario_cls(  # type: ignore[operator]
+    scenario_preview = tax_sim_scenario_cls(
         regime_version=selected_regime,
         cbs_ibs_combined_rate=cbs_ibs_rate,
         credit_ratio_mao_obra=cr_mo,
@@ -2561,7 +2588,7 @@ def _render_bdi_cbs_ibs(
         cssl_rate=cssl,
         ir_rate=ir,
     )
-    tabela_preview = resolver_bdi_cbs_ibs_fn(default_bdi_tabela, scenario_preview)  # type: ignore[operator]
+    tabela_preview = resolver_bdi_cbs_ibs_fn(default_bdi_tabela, scenario_preview)
     t_ef = scenario_preview.tributos_efetivos_por_categoria()
     preview_rows = [
         {
@@ -2720,9 +2747,8 @@ def _find_changed_cpus(edited_rows: list) -> list[dict]:
     ]
 
 
-def _save_cpu_productivity(edited: object, base_url: str, project_id: str, actor: str) -> None:
+def _save_cpu_productivity(edited_rows: list[dict], base_url: str, project_id: str, actor: str) -> None:
     """Handles saving changed CPU productivity values."""
-    edited_rows = edited.to_dict("records") if hasattr(edited, "to_dict") else list(edited or [])  # type: ignore[union-attr]
     changed = _find_changed_cpus(edited_rows)
     if not changed:
         st.info("Nenhuma alteração detectada.")
@@ -2833,7 +2859,10 @@ def render_cpu_productivity_override(base_url: str, project_id: str, actor: str)
         key=f"cpu-prod-editor-{project_id}",
     )
     if st.button("Salvar produtividade das CPUs", key=f"save-cpu-prod-{project_id}", type="primary"):
-        _save_cpu_productivity(edited, base_url, project_id, actor)
+        edited_rows = (
+            edited if isinstance(edited, list) else (edited.to_dict("records") if hasattr(edited, "to_dict") else [])
+        )  # noqa: E501
+        _save_cpu_productivity(edited_rows, base_url, project_id, actor)
 
 
 def _cpu_insumo_info(insumo_id: str, insumos_cat: dict) -> tuple[str, float]:
@@ -2968,7 +2997,7 @@ def _build_cpu_comp_rows(cpu: dict, insumos_cat: dict) -> list[dict]:
 
 
 def _save_cpu_comp(
-    edited: object,
+    edited_rows: list[dict],
     cpu: dict,
     project_id: str,
     cpu_id: str,
@@ -2976,7 +3005,6 @@ def _save_cpu_comp(
     actor: str,
 ) -> None:
     """Handles saving the edited CPU composition."""
-    edited_rows = edited.to_dict("records") if hasattr(edited, "to_dict") else list(edited or [])  # type: ignore[union-attr]
     funcoes, equipamentos, composicao_itens = _cpu_equipe_parts(cpu)
     orig_funcoes = {f.get("funcao_id"): f for f in funcoes}
     orig_equips = {e.get("equip_id"): e for e in equipamentos}
@@ -3052,7 +3080,12 @@ def _render_cpu_comp_expander(
             key=f"cpu-comp-editor-{project_id}-{cpu_id}",
         )
         if st.button(f"Salvar composição — {cpu_id}", key=f"save-comp-{project_id}-{cpu_id}", type="primary"):
-            _save_cpu_comp(edited, cpu, project_id, cpu_id, base_url, actor)
+            edited_rows = (
+                edited
+                if isinstance(edited, list)
+                else (edited.to_dict("records") if hasattr(edited, "to_dict") else [])
+            )  # noqa: E501
+            _save_cpu_comp(edited_rows, cpu, project_id, cpu_id, base_url, actor)
 
 
 def render_cpu_composition_override(base_url: str, project_id: str, actor: str) -> None:

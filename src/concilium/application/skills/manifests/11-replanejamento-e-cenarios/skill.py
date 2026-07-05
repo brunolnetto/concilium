@@ -19,8 +19,10 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel
 
 try:
-    from ._assessor import run_assessor_replanejamento
-    from ._explorador import run_explorador_cenarios
+    # Hyphenated manifest dir: ty cannot resolve these relative imports statically
+    # (only work at runtime via the synthetic package set up in skills/__init__.py).
+    from ._assessor import run_assessor_replanejamento  # ty: ignore[unresolved-import]
+    from ._explorador import run_explorador_cenarios  # ty: ignore[unresolved-import]
 except ImportError:
     import importlib.util
     from pathlib import Path
@@ -29,8 +31,10 @@ except ImportError:
 
     def _load_local(mod_name: str, attr: str):
         spec = importlib.util.spec_from_file_location(mod_name, _here / f"{mod_name}.py")
-        mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Não foi possível carregar spec para {mod_name}.py em {_here}")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
         return getattr(mod, attr)
 
     run_assessor_replanejamento = _load_local("_assessor", "run_assessor_replanejamento")

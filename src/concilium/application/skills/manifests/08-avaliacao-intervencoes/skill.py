@@ -54,8 +54,13 @@ def _classify_roi(roi_pp: float) -> str:
     return "LOW"
 
 
-def _estimate_roi_heuristic(variavel: str, tipo: str, custo_criticality: dict | None) -> tuple[float, int]:
-    """Estimativa heurística de ROI e delta_prazo quando simulações não estão disponíveis."""
+def _estimate_roi_heuristic(variavel: str, tipo: str, custo_criticality: object | None) -> tuple[float, int]:
+    """Estimativa heurística de ROI e delta_prazo quando simulações não estão disponíveis.
+
+    ``custo_criticality`` aceita tanto o tipo estruturado real (`CostCriticalityResult`,
+    ADR-020) quanto um dict legado ou um objeto duck-typed equivalente (ex.: em testes) —
+    daí o tipo largo `object | None` em vez do tipo estruturado específico.
+    """
     # Heurística simples baseada no tipo de perturbação
     perturbacao_map = {
         "+10%": (1.5, -15),
@@ -69,12 +74,19 @@ def _estimate_roi_heuristic(variavel: str, tipo: str, custo_criticality: dict | 
 
     # Amplifica ROI para atividades A+ no cost_criticality (ADR-020: tipo estruturado)
     if custo_criticality:
-        atividades = getattr(custo_criticality, "atividades", None)
-        if atividades is None:
+        if isinstance(custo_criticality, dict):
             atividades = custo_criticality.get("atividades", [])
+        else:
+            atividades = getattr(custo_criticality, "atividades", [])
+        if not isinstance(atividades, list):
+            atividades = []
         for atv in atividades:
-            atv_id = getattr(atv, "atividade_id", None) or atv.get("atividade_id", "")
-            atv_cls = getattr(atv, "classe", None) or atv.get("class", "")
+            if isinstance(atv, dict):
+                atv_id = str(atv.get("atividade_id", ""))
+                atv_cls = atv.get("class", "")
+            else:
+                atv_id = str(getattr(atv, "atividade_id", ""))
+                atv_cls = getattr(atv, "classe", "")
             if variavel in atv_id and atv_cls == "A+":
                 roi_pp *= 1.3
                 break

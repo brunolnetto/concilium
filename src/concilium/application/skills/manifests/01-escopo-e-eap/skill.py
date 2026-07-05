@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from concilium.application.skills.base import SkillResult
@@ -156,7 +156,7 @@ def _build_all_atividades(eap: list, decomposicao_raw: list, validacoes: list) -
 
 def _build_dag_from_precedencias(
     nos: list, nos_set: set, precedencias_raw: list, eap: list[EapItem], validacoes: list
-) -> list[tuple[str, str, str, int]]:
+) -> list[tuple[str, str, Literal["FS", "SS", "FF"], int]]:
     """NEP-031 L4: retorna lista de (predecessora, sucessora, tipo, lag).
 
     Fontes de precedência:
@@ -164,7 +164,7 @@ def _build_dag_from_precedencias(
     2. inputs["precedencias"] (formato legado {predecessora, sucessora}) — compat.
     """
     # Na prática, nos são activity_ids derivados de item_ids. Usamos nome direto.
-    arestas_validas: list[tuple[str, str, str, int]] = []
+    arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]] = []
 
     # Fonte 1: EapItem.predecessores tipados
     # Build map from item_id to first activity_id (assume one activity per EAP item for scheduling)
@@ -253,7 +253,7 @@ def _compute_longest_paths(
 
 
 def _build_activity_dag(
-    nos: list, arestas_validas: list[tuple[str, str, str, int]], ordem_topologica: list
+    nos: list, arestas_validas: list[tuple[str, str, Literal["FS", "SS", "FF"], int]], ordem_topologica: list
 ) -> ActivityDag:
     succ_map: dict = defaultdict(list)
     pred_map_typed: dict = defaultdict(list)  # {n: [(pred, tipo, lag), ...]}

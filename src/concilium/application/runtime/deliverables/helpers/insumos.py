@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 
 def ingest_insumos(data: object, insumos: list) -> None:
     if isinstance(data, list):
         insumos.extend(data)
-    elif isinstance(data, dict) and "insumos" in data:
-        insumos.extend(data["insumos"])
     elif isinstance(data, dict):
-        insumos.append(data)
+        data_dict = cast("dict[str, Any]", data)
+        nested = data_dict.get("insumos")
+        if nested is not None:
+            insumos.extend(nested)
+        else:
+            insumos.append(data_dict)
 
 
 def load_insumos_subdir(sub: Path, insumos: list) -> None:

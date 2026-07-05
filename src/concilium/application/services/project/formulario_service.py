@@ -240,7 +240,9 @@ def criar_projeto(
 
     eap_clean = [{k: val for k, val in it.items() if not k.startswith("_")} for it in mapeados]
 
-    rt = Runtime()
+    # Runtime exige config_root; sem o fallback isso quebrava com TypeError em
+    # toda chamada real (os testes mockavam Runtime exatamente neste seam).
+    rt = Runtime(config_root if config_root is not None else get_storage().config_root)
     inputs_escopo: dict[str, Any] = {
         "nome": nome,
         "tipo_obra": tipo_obra,
@@ -256,9 +258,10 @@ def criar_projeto(
 
     try:
         from concilium.application.orchestrators.lifecycle_coordinator import LifecycleCoordinator
+        from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
 
         coord = LifecycleCoordinator(rt)
-        r = coord.avancar_plano("01-escopo-e-eap", store, ps, inputs=inputs_escopo)
+        r = coord.avancar_plano("01-escopo-e-eap", FileProjectHandle(store), ps, inputs=inputs_escopo)
     except Exception as exc:
         return {"status": "erro", "project_id": store.root.name, "escopo_id": escopo_id, "erro": str(exc)}
 

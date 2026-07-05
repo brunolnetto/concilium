@@ -258,7 +258,7 @@ def _load_google_sheets(
     catalog_name: str,
     spreadsheet_id: str,
     credentials_path: str,
-) -> tuple[list[dict], dict[str, list[dict]], list[dict]]:  # pragma: no cover
+) -> tuple[list[dict], dict[str, list[dict]], list[dict], list[dict]]:  # pragma: no cover
     """Carrega catálogo de uma planilha Google Sheets (ADR-024 §D1).
 
     Requer:
@@ -384,12 +384,13 @@ class CatalogLoader:
                 f"Modo offline: cache ausente para catálogo '{catalog_name}'. "
                 f"Execute sem --offline para popular o cache."
             )
-        if needs_fetch:
+        # "or cached is None" é redundante em runtime (needs_fetch já cobre), mas
+        # torna a implicação visível pro type checker sem precisar de ignore.
+        if needs_fetch or cached is None:
             snapshot = self._fetch_fresh(catalog_name, project_id)
             _write_cache(self.project_root, catalog_name, snapshot)
             return snapshot
-        snapshot = cached  # type: ignore[assignment]
-        return _add_project_id(snapshot, project_id)
+        return _add_project_id(cached, project_id)
 
     def _fetch_fresh(self, catalog_name: str, project_id: str | None) -> CatalogSnapshot:
         """Busca dados frescos do backend configurado."""
@@ -408,8 +409,7 @@ class CatalogLoader:
 
             creds_path = get_storage().gdrive.google_credentials_path
             spreadsheet_id = ""  # lido do config yaml
-            cpus, insumos, produtividades, _ = _load_google_sheets(catalog_name, spreadsheet_id, creds_path)  # type: ignore[misc]
-            funcoes = []
+            cpus, insumos, produtividades, funcoes = _load_google_sheets(catalog_name, spreadsheet_id, creds_path)
         else:
             raise ValueError(f"Backend desconhecido: {self.backend}")
 

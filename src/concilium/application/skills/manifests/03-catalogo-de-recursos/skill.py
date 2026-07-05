@@ -11,6 +11,7 @@ Inputs:
 """
 
 import uuid
+from datetime import date
 from typing import Any
 
 from concilium.application.skills.base import SkillResult
@@ -25,18 +26,18 @@ from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 def _resolve_custo_unit_from_repo(
     tipo_id: str,
-    repo: object,
+    repo: RepositorioInsumo | None,
     jurisdicao_id: str | None,
     overrides: dict | None,
-    data_base: str | None,
+    data_base: "date | None",
 ) -> float:
     """Resolve custo_unitario_dia via repositório; retorna 0.0 se indisponível."""
     if not repo:
         return 0.0
-    insumo = repo.obter_insumo(tipo_id)  # type: ignore[attr-defined]
+    insumo = repo.obter_insumo(tipo_id)
     if not insumo:
         return 0.0
-    preco_resolvido, _fonte = repo.resolver_preco(  # type: ignore[attr-defined]
+    preco_resolvido, _fonte = repo.resolver_preco(
         tipo_id,
         jurisdicao_id=jurisdicao_id,
         overrides=overrides,
@@ -52,7 +53,12 @@ def _resolve_custo_unit_from_repo(
 
 
 def _make_tipo_recurso(
-    spec: dict, tipo_id: str, repo: object, jurisdicao_id: str | None, overrides: dict | None, data_base: str | None
+    spec: dict,
+    tipo_id: str,
+    repo: "RepositorioInsumo | None",
+    jurisdicao_id: str | None,
+    overrides: dict | None,
+    data_base: "date | None",
 ) -> "TipoRecurso":
     custo_unit = float(spec.get("custo_unitario_dia", 0))
     if custo_unit == 0:
@@ -69,10 +75,10 @@ def _make_tipo_recurso(
 def _process_tipos_in(
     tipos_in: list,
     tipos: dict,
-    repo: object,
+    repo: "RepositorioInsumo | None",
     jurisdicao_id: str | None,
     overrides: dict | None,
-    data_base: str | None,
+    data_base: "date | None",
     validacoes: list,
 ) -> None:
     for spec in tipos_in:
@@ -92,10 +98,10 @@ def _process_tipos_in(
 def _process_templates(
     templates: dict,
     tipos: dict,
-    repo: object,
+    repo: "RepositorioInsumo | None",
     jurisdicao_id: str | None,
     overrides: dict | None,
-    data_base: str | None,
+    data_base: "date | None",
 ) -> None:
     for template_list in templates.values():
         for spec in template_list:

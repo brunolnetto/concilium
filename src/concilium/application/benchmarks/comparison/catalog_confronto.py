@@ -51,19 +51,20 @@ def analyze_catalog_confronto(slug: str, root: Path | None = None) -> dict[str, 
         return {}
 
     func_vaz, equip_vaz, zeradas = _acc_process_equipes(confronto)
+    planejamento_zerados: list[Any] = []
     issues: dict[str, Any] = {
         "slug": slug,
         "cpus_nao_encontradas": _acc_process_cpu_refs(confronto),
         "equipes_com_funcoes_vazias": func_vaz,
         "equipes_com_equipamentos_vazios": equip_vaz,
         "equipes_zeradas": zeradas,
-        "planejamento_zerados": [],
+        "planejamento_zerados": planejamento_zerados,
         "bdi_mismatch": False,
     }
 
     for item in confronto.get("planejamento_confronto", {}).get("confronto") or []:
         if item.get("engine_zerado"):
-            issues["planejamento_zerados"].append(item.get("item_id"))
+            planejamento_zerados.append(item.get("item_id"))
 
     return issues
 

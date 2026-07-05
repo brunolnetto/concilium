@@ -20,7 +20,7 @@ Inputs (no dict 'inputs'):
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from concilium.application.scheduling.mob_scheduling import calcular_custo_indireto_mob
 from concilium.domain.constants import SEMANAS_POR_MES as _SEMANAS_POR_MES  # ADR-056 §T3
@@ -39,7 +39,10 @@ from concilium.domain.models.project.decision_variables import DecisionVariables
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 try:
-    from ._skill_helpers_a import (
+    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
+    # (see concilium/application/skills/__init__.py); ty cannot resolve this
+    # statically.
+    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]
         _bcfd_enrich_mo_itens,
         _composicao_default_por_categoria,
         _dimensionar_automatico,
@@ -50,9 +53,12 @@ except ImportError:
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
-    _spec_a = importlib.util.spec_from_file_location("skill07_helpers_a_for_b", _here / "_skill_helpers_a.py")
-    _mod_a = importlib.util.module_from_spec(_spec_a)  # type: ignore[arg-type]
-    _spec_a.loader.exec_module(_mod_a)  # type: ignore[union-attr]
+    _path_a = _here / "_skill_helpers_a.py"
+    _spec_a = importlib.util.spec_from_file_location("skill07_helpers_a_for_b", _path_a)
+    if _spec_a is None or _spec_a.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para: {_path_a}") from None
+    _mod_a = importlib.util.module_from_spec(_spec_a)
+    _spec_a.loader.exec_module(_mod_a)
     _bcfd_enrich_mo_itens = _mod_a._bcfd_enrich_mo_itens
     _composicao_default_por_categoria = _mod_a._composicao_default_por_categoria
     _dimensionar_automatico = _mod_a._dimensionar_automatico
@@ -62,6 +68,32 @@ logger = logging.getLogger(__name__)
 
 # Fator padrão: 1 mês = 4.33 semanas
 # _SEMANAS_POR_MES agora importada de domain/constants.py (era 4.33, corrigido para 4.3482)
+
+# Categorias de indireto suportadas (mesmo conjunto de Indireto.categoria e
+# IndirectoCategoria.categoria em domain/models/canonical.py — ordens de
+# declaração diferem entre os dois modelos, mas o Literal resultante é
+# equivalente).
+
+
+def _as_categoria_indireto(codigo: str) -> Literal["ADM", "TOP", "LAB", "QSMS", "MOB"]:
+    """Valida e estreita ``codigo`` (str vindo de config/perfil) para o Literal do domínio.
+
+    ``codigo`` chega como ``str`` porque é lido de dicts de configuração
+    (``perfil["categorias_indireto"]``, ``categorias_config``) sem tipagem estática.
+    Falha explicitamente para categorias desconhecidas em vez de deixar o
+    pydantic rejeitar silenciosamente mais adiante na construção do modelo.
+    """
+    if codigo == "ADM":
+        return "ADM"
+    if codigo == "TOP":
+        return "TOP"
+    if codigo == "LAB":
+        return "LAB"
+    if codigo == "QSMS":
+        return "QSMS"
+    if codigo == "MOB":
+        return "MOB"
+    raise ValueError(f"Categoria de indireto desconhecida: {codigo!r}")
 
 
 def _build_categoria_from_dict(
@@ -85,7 +117,7 @@ def _build_categoria_from_dict(
     )
     custo_total = round(custo_mensal * (n_semanas / _SEMANAS_POR_MES), 2)
     return IndirectoCategoria(
-        categoria=codigo,  # type: ignore[arg-type]
+        categoria=_as_categoria_indireto(codigo),
         driver="permanencia",
         mao_de_obra=mo,
         equipamentos=eq,
@@ -425,7 +457,7 @@ def _build_indireto_from_cat_obj(
     permanencia_meses = float(prazo_meses) if prazo_meses is not None else round(n_semanas / _SEMANAS_POR_MES, 2)
     subs = _sub_custos_indireto(cat_obj, custo)
     return Indireto(
-        categoria=codigo,  # type: ignore[arg-type]
+        categoria=_as_categoria_indireto(codigo),
         descricao=descricao,
         funcoes=[item for item in (cat_obj.mao_de_obra.itens if cat_obj.mao_de_obra else [])],
         equipamentos=[item for item in (cat_obj.equipamentos.itens if cat_obj.equipamentos else [])],

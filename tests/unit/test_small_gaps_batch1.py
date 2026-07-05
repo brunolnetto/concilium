@@ -496,19 +496,23 @@ class TestReplanMcpTool:
             tools[t.name] = fn
         return tools
 
+    def _make_flat_store(self, canonical):
+        store = MagicMock()
+        store.escopo.side_effect = RuntimeError("sem escopos")
+        store.load_canonical.return_value = canonical
+        return store
+
     def test_simular_cenario_no_canonical(self, monkeypatch, tmp_path):
         tools = self._register_tools(monkeypatch, tmp_path)
-        svc_mock = MagicMock()
-        svc_mock.load_canonical_latest.return_value = None
-        with patch("concilium.application.services.project.project_service.ProjectService", return_value=svc_mock):
+        store = self._make_flat_store(None)
+        with patch("concilium.presentation.mcp._context._project", return_value=store):
             result = tools["simular_cenario_replan"](project_id="proj-1", tipo="lever_adjust", parametros={})
         assert "erro" in result
 
     def test_simular_cenario_unsupported_type(self, monkeypatch, tmp_path):
         tools = self._register_tools(monkeypatch, tmp_path)
-        svc_mock = MagicMock()
-        svc_mock.load_canonical_latest.return_value = {"data": "canonical"}
-        with patch("concilium.application.services.project.project_service.ProjectService", return_value=svc_mock):
+        store = self._make_flat_store(MagicMock())
+        with patch("concilium.presentation.mcp._context._project", return_value=store):
             result = tools["simular_cenario_replan"](project_id="proj-1", tipo="unsupported_type", parametros={})
         assert "erro" in result
         assert "tipos_suportados" in result
@@ -516,7 +520,7 @@ class TestReplanMcpTool:
     def test_simular_cenario_exception(self, monkeypatch, tmp_path):
         tools = self._register_tools(monkeypatch, tmp_path)
         with patch(
-            "concilium.application.services.project.project_service.ProjectService",
+            "concilium.presentation.mcp._context._project",
             side_effect=RuntimeError("boom"),
         ):
             result = tools["simular_cenario_replan"](project_id="proj-1", tipo="lever_adjust", parametros={})

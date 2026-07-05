@@ -156,7 +156,8 @@ class ValidadorCPUInsumo:
         unidade_insumo = self.UNIDADES_NORM_MAP.get(unidade_insumo_raw, unidade_insumo_raw.lower())
         unidade_composicao = self.UNIDADES_NORM_MAP.get(unidade_composicao_raw, unidade_composicao_raw.lower())
 
-        coeficiente = composicao_item.get("coeficiente")
+        coeficiente_raw = composicao_item.get("coeficiente")
+        coeficiente: int | float | None = coeficiente_raw if isinstance(coeficiente_raw, int | float) else None
 
         if unidade_composicao != unidade_insumo:
             if not ConversorUnidades.sao_compativeis(unidade_composicao, unidade_insumo):
@@ -165,12 +166,15 @@ class ValidadorCPUInsumo:
                     status="ERRO",
                     mensagem=f"Incompatibilidade dimensional: não é possível converter '{unidade_composicao}' para '{unidade_insumo}'",  # noqa: E501
                 )
-            try:
-                coeficiente_val = ConversorUnidades.converter(coeficiente, unidade_composicao, unidade_insumo)  # type: ignore[arg-type]
-            except Exception:
-                coeficiente_val = coeficiente  # type: ignore[assignment]
+            if coeficiente is None:
+                coeficiente_val = None
+            else:
+                try:
+                    coeficiente_val = ConversorUnidades.converter(coeficiente, unidade_composicao, unidade_insumo)
+                except Exception:
+                    coeficiente_val = coeficiente
         else:
-            coeficiente_val = coeficiente  # type: ignore[assignment]
+            coeficiente_val = coeficiente
 
         if unidade_insumo not in RANGE_OBRIGATORIO_POR_UNIDADE:
             return ValidacaoItem(

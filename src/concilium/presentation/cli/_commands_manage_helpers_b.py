@@ -12,6 +12,7 @@ from rich import print as rprint
 from rich.console import Console
 from rich.table import Table
 
+from concilium.application.services.project.project_repository import ProjectHandle
 from concilium.presentation.cli.shared import resolve_project
 
 from ._commands_manage_helpers_a import _append_jsonl, _load_json, _write_json
@@ -59,7 +60,7 @@ def _impl_catalog_survey(
     contexto_id: str = typer.Option("mendeslobo", "--contexto", "-c", help="ID do contexto"),
     jurisdicao_id: str = typer.Option(None, "--jurisdicao", "-j", help="ID da jurisdição para benchmark regional"),
     survey_type: str = typer.Option("price", "--type", "-t", help="Tipo de pesquisa: 'price' ou 'productivity'"),
-    output: str = typer.Option(
+    output: str | None = typer.Option(
         None, "--output", "-o", help="Caminho do arquivo de saída (.xlsx) ou camada project/master"
     ),
     target: str = typer.Option(None, "--target", help="Camada de persistência: project|master (ADR-040)."),
@@ -124,7 +125,7 @@ def _impl_catalog_survey(
             raise typer.Exit(1) from None
 
 
-def _cp_validate_override(overrides: dict, insumo_id: str) -> tuple[dict, object]:
+def _cp_validate_override(overrides: dict, insumo_id: str) -> tuple[dict, int | float | str]:
     """Valida e extrai override_item e novo_preco. Levanta typer.Exit se inválido."""
     import typer
 
@@ -154,7 +155,7 @@ def _cp_update_price_history(
     historico: list,
     preco_float: float,
     dt_iso: str,
-    project_store: object,
+    project_store: ProjectHandle,
     justificativa: str,
 ) -> None:
     open_entry = None

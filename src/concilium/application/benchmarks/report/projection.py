@@ -126,7 +126,9 @@ def _build_breakdown_direto_pu_q(cat_totals: dict[str, float], custo_direto: Any
         "mao_obra_total": round(cat_totals["mao_obra"], 2),
         "equipamentos_total": round(cat_totals["equipamentos"], 2),
         "combustivel_total": comb_total,
-        "combustivel_por_tipo": cat_totals.get("combustivel_por_tipo", {}),
+        # ADR-107 D5: breakdown por tipo de combustível só existe no path via equipes_diretas;
+        # _accumulate_planejamento (fonte de cat_totals) não rastreia por tipo.
+        "combustivel_por_tipo": {},
         "diesel_total": comb_total,  # ADR-107 D5: alias backward compat
         "materiais_total": round(cat_totals["materiais"], 2),
         "direto_total": round(computed_catalog_total, 2),
@@ -135,18 +137,34 @@ def _build_breakdown_direto_pu_q(cat_totals: dict[str, float], custo_direto: Any
     }
 
 
-def _build_breakdown_direto_equipes(eq_totals: dict[str, float]) -> dict[str, Any]:
-    comb_total = round(eq_totals["diesel"], 2)
+@dataclass
+class TotaisDiretosEquipes:
+    """Acumulador de custos diretos por categoria a partir de equipes_diretas.
+
+    combustivel_por_tipo fica à parte dos demais campos (float) por ter forma
+    própria — ADR-107 D5.
+    """
+
+    mao_obra: float = 0.0
+    equipamentos: float = 0.0
+    diesel: float = 0.0
+    materiais: float = 0.0
+    total: float = 0.0
+    combustivel_por_tipo: dict[str, float] = field(default_factory=dict)
+
+
+def _build_breakdown_direto_equipes(eq_totals: TotaisDiretosEquipes) -> dict[str, Any]:
+    comb_total = round(eq_totals.diesel, 2)
     return {
         "base": "equipes",
-        "mao_obra_total": round(eq_totals["mao_obra"], 2),
-        "equipamentos_total": round(eq_totals["equipamentos"], 2),
+        "mao_obra_total": round(eq_totals.mao_obra, 2),
+        "equipamentos_total": round(eq_totals.equipamentos, 2),
         "combustivel_total": comb_total,
-        "combustivel_por_tipo": eq_totals.get("combustivel_por_tipo", {}),
+        "combustivel_por_tipo": eq_totals.combustivel_por_tipo,
         "diesel_total": comb_total,  # ADR-107 D5: alias backward compat
-        "materiais_total": round(eq_totals["materiais"], 2),
-        "direto_total": round(eq_totals["total"], 2),
-        "direto_total_equipes": round(eq_totals["total"], 2),
+        "materiais_total": round(eq_totals.materiais, 2),
+        "direto_total": round(eq_totals.total, 2),
+        "direto_total_equipes": round(eq_totals.total, 2),
     }
 
 
@@ -167,42 +185,35 @@ def _accumulate_planejamento(planejamento: list) -> tuple[bool, dict[str, float]
     return has_catalog, totals
 
 
-def _accumulate_equipes(equipes_diretas: list) -> dict[str, float | dict]:
+def _accumulate_equipes(equipes_diretas: list) -> TotaisDiretosEquipes:
     """Acumula custos por categoria a partir de custo_inst_* quando disponível.
 
     Dois paths:
     1. Estágio 4 (com pool contracts): usa custo_inst_* (decomposição oficial — ADR-104)
     2. Estágio 1/3 (sem pool): fallback heurístico — menos preciso mas funciona
 
-    ADR-107 D5: popula também "combustivel_por_tipo" com breakdown por TipoCombustivel.
+    ADR-107 D5: popula também combustivel_por_tipo com breakdown por TipoCombustivel.
     """
     from concilium.domain.models.catalog.catalogo import _infer_tipo_combustivel
 
-    totals: dict[str, float | dict] = {
-        "mao_obra": 0.0,
-        "equipamentos": 0.0,
-        "diesel": 0.0,
-        "materiais": 0.0,
-        "total": 0.0,
-        "combustivel_por_tipo": {},  # ADR-107 D5
-    }
+    totals = TotaisDiretosEquipes()
 
     for equipe in equipes_diretas:
         # PATH 1: Se tem decomposição instancial (Estágio 4), usar dados oficiais (ADR-104)
         if equipe.custo_inst_mo is not None:
-            totals["mao_obra"] += equipe.custo_inst_mo
-            totals["equipamentos"] += equipe.custo_inst_eq
-            totals["diesel"] += equipe.custo_inst_comb
-            totals["materiais"] += equipe.custo_inst_mat
+            totals.mao_obra += equipe.custo_inst_mo
+            totals.equipamentos += equipe.custo_inst_eq
+            totals.diesel += equipe.custo_inst_comb
+            totals.materiais += equipe.custo_inst_mat
             # custo_inst_mob_demob já está em custo_total, não somar separado
         # PATH 2: Sem decomposição, fallback (Estágio 1/3, sem pool contracts)
         else:
             if equipe.custo_fixo_mensal > 0:
                 fator = equipe.custo_total / equipe.custo_fixo_mensal
-                totals["mao_obra"] += equipe.custo_mao_obra_mensal * fator
-                totals["equipamentos"] += equipe.custo_equipamentos_mensal * fator
-                totals["diesel"] += equipe.custo_combustivel_total_mensal * fator
-                totals["materiais"] += getattr(equipe, "custo_material_mensal", 0.0) * fator
+                totals.mao_obra += equipe.custo_mao_obra_mensal * fator
+                totals.equipamentos += equipe.custo_equipamentos_mensal * fator
+                totals.diesel += equipe.custo_combustivel_total_mensal * fator
+                totals.materiais += getattr(equipe, "custo_material_mensal", 0.0) * fator
 
         # ADR-107 D5: breakdown por tipo de combustível via equipamentos da equipe
         for equip in getattr(equipe, "equipamentos", []) or []:
@@ -214,7 +225,7 @@ def _accumulate_equipes(equipes_diretas: list) -> dict[str, float | dict]:
                 getattr(equip, "equip_id", "") or ""
             )
             tc_key = str(tc)
-            cpt = totals["combustivel_por_tipo"]
+            cpt = totals.combustivel_por_tipo
             cpt[tc_key] = round(cpt.get(tc_key, 0.0) + comb_val * perm, 2)
 
     # NEP-043 original: "custo_total = custo de 1 frente → multiplicar por num_equipes_base".
@@ -224,7 +235,7 @@ def _accumulate_equipes(equipes_diretas: list) -> dict[str, float | dict]:
     # gera dupla contagem quando num_equipes_base > 1.
     # Quando custo_inst_* está disponível (PATH 1), o total já está correto via inst fields;
     # quando não está (PATH 2), custo_total é o valor correto diretamente.
-    totals["total"] = sum(equipe.custo_total for equipe in equipes_diretas)
+    totals.total = sum(equipe.custo_total for equipe in equipes_diretas)
     return totals
 
 
@@ -301,8 +312,8 @@ class BenchmarkProjection:
         equipes_diretas = getattr(canonical, "equipes_diretas", None) or []
         planejamento = getattr(canonical, "planejamento", None) or []
         has_catalog, cat_totals = _accumulate_planejamento(planejamento)
-        eq_totals = _accumulate_equipes(equipes_diretas) if equipes_diretas else {}
-        eq_total = eq_totals.get("total", 0.0)
+        eq_totals = _accumulate_equipes(equipes_diretas) if equipes_diretas else TotaisDiretosEquipes()
+        eq_total = eq_totals.total
         if has_catalog:
             self.ferramenta_breakdown_direto = _build_breakdown_direto_pu_q(cat_totals, custo_direto, eq_total)
         elif equipes_diretas:

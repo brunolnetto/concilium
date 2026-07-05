@@ -112,11 +112,14 @@ def list_versions(
         children: dict[str, list[str]] = {}
         roots: list[str] = []
         for item in items:
+            item_version = item["version"]
+            assert isinstance(item_version, str)
             parent = item.get("forked_from")
             if parent and parent in [i["version"] for i in items]:
-                children.setdefault(parent, []).append(item["version"])
+                assert isinstance(parent, str)
+                children.setdefault(parent, []).append(item_version)
             else:
-                roots.append(item["version"])
+                roots.append(item_version)
         return {"items": items, "roots": roots, "children": children}
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

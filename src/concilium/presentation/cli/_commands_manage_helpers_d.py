@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich import print as rprint
@@ -46,7 +47,9 @@ def _build_schema_validators(schema_root: Path) -> tuple:
     return cpu_v, prod_v, ins_v
 
 
-def _run_schema_validation(validator: object, items: list, entity_prefix: str, id_field: str, erros: list) -> None:
+def _run_schema_validation(validator: Any, items: list, entity_prefix: str, id_field: str, erros: list) -> None:
+    # jsonschema não é PEP 561 — Draft202012Validator é criado via factory dinâmica,
+    # sem forma estática real (mesmo padrão de cure_schema.py).
     for item in items:
         item_id = item.get(id_field, f"<sem-{id_field}>")
         for err in validator.iter_errors(item):
@@ -117,8 +120,10 @@ def _impl_catalog_validate_schema(
 
     cpus = catalogo.get("cpus", [])
     insumos = catalogo.get("insumos", [])
-    produtividades = catalogo.get("produtividades") if isinstance(catalogo.get("produtividades"), list) else []
-    producoes_legado = catalogo.get("producoes") if isinstance(catalogo.get("producoes"), list) else []
+    raw_produtividades = catalogo.get("produtividades")
+    raw_producoes = catalogo.get("producoes")
+    produtividades = raw_produtividades if isinstance(raw_produtividades, list) else []
+    producoes_legado = raw_producoes if isinstance(raw_producoes, list) else []
     prods = produtividades + producoes_legado
 
     erros: list[str] = []
@@ -227,9 +232,12 @@ def _impl_catalog_audit_reasonability(
     rt = _runtime()
     ctx = rt.load_contexto(contexto_id)
     catalogo = rt.load_catalogo(ctx.catalogo_id)
-    cpus = catalogo.get("cpus") if isinstance(catalogo.get("cpus"), list) else []
-    produtividades = catalogo.get("produtividades") if isinstance(catalogo.get("produtividades"), list) else []
-    producoes_legado = catalogo.get("producoes") if isinstance(catalogo.get("producoes"), list) else []
+    raw_cpus = catalogo.get("cpus")
+    cpus = raw_cpus if isinstance(raw_cpus, list) else []
+    raw_produtividades = catalogo.get("produtividades")
+    raw_producoes = catalogo.get("producoes")
+    produtividades = raw_produtividades if isinstance(raw_produtividades, list) else []
+    producoes_legado = raw_producoes if isinstance(raw_producoes, list) else []
     artifact = build_catalog_reasonability_artifact(ctx.catalogo_id, cpus, produtividades + producoes_legado)
 
     destination = (

@@ -774,7 +774,7 @@ dev = [
     { name = "pytest-json-report", specifier = ">=1.5.0" },
     { name = "requests", specifier = ">=2.33.1" },
     { name = "ruff", specifier = ">=0.14.2" },
-    { name = "ty", specifier = ">=0.0.1a22" },
+    { name = "ty", specifier = "==0.0.56" },
 ]
 
 [[package]]

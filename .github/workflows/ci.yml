@@ -72,7 +72,7 @@ jobs:
           pip install -e .
           pip install \
             ruff \
-            ty \
+            'ty==0.0.56' \
             pytest \
             pytest-json-report \
             pytest-asyncio \
@@ -82,14 +82,12 @@ jobs:
             jmespath \
             import-linter
 
-      # Dívida técnica: ~342 diagnósticos pré-existentes (nunca esteve verde,
-      # herdado do mypy — ver #37 para o plano de zerar por módulo).
-      # Não-bloqueante até a dívida ser zerada; acompanhar via
-      # `make check OPT=type` localmente. Remover continue-on-error ao zerar.
+      # Dívida #37 zerada — type check agora é bloqueante, cobrindo toda a
+      # árvore src/ (inclusive skills/manifests/, Fase 2). Versão pinada no
+      # pyproject (dev deps) garante mesmo resultado local e no CI.
       - name: ty
-        continue-on-error: true
         run: |
-          ty check src/concilium --exclude 'src/concilium/application/skills/manifests'
+          ty check src
 
   test:
     name: Tests

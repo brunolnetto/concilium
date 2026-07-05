@@ -211,7 +211,8 @@ class JobService:
 
         # Cria job
         job_id = f"job-{uuid.uuid4().hex[:12]}"
-        job_data = {
+        disparado_em = datetime.now(UTC).isoformat()
+        job_data: dict[str, Any] = {
             "job_id": job_id,
             "status": "AGUARDANDO_FILA",
             "project_id": project_id,
@@ -220,7 +221,7 @@ class JobService:
             "procurement_intent": procurement_intent,
             "escopo_id": escopo_id,
             "plano_id": plano_id,
-            "disparado_em": datetime.now(UTC).isoformat(),
+            "disparado_em": disparado_em,
             "iniciado_em": None,
             "finalizado_em": None,
             "resultado": None,
@@ -238,9 +239,7 @@ class JobService:
 
         # Calcula posição na fila
         jobs = self._repo.list_all()
-        posicao_fila = sum(
-            1 for j in jobs if j["status"] == "AGUARDANDO_FILA" and j["disparado_em"] < job_data["disparado_em"]
-        )
+        posicao_fila = sum(1 for j in jobs if j["status"] == "AGUARDANDO_FILA" and j["disparado_em"] < disparado_em)
 
         response = JobDTO(
             job_id=job_id,
@@ -250,7 +249,7 @@ class JobService:
             escopo_id=escopo_id,
             plano_id=plano_id,
             inputs=inputs or {},
-            disparado_em=job_data["disparado_em"],
+            disparado_em=disparado_em,
             iniciado_em=None,
             finalizado_em=None,
             resultado=None,
@@ -335,25 +334,27 @@ class JobService:
                 stats.cancelado += 1
 
         # Converte para DTOs
-        job_dtos = [
-            JobDTO(
-                job_id=j["job_id"],
-                status=j.get("state_machine").status_str if j.get("state_machine") else j["status"],
-                project_id=j["project_id"],
-                skill_id=j["skill_id"],
-                escopo_id=j["escopo_id"],
-                plano_id=j["plano_id"],
-                inputs=j["inputs"],
-                disparado_em=j["disparado_em"],
-                iniciado_em=j["iniciado_em"],
-                finalizado_em=j["finalizado_em"],
-                resultado=j["resultado"],
-                erro=j["erro"],
-                progresso=j.get("progresso"),
-                progresso_percentual=j.get("progresso_percentual"),
+        job_dtos = []
+        for j in jobs:
+            j_sm: PipelineJobStateMachine | None = j.get("state_machine")
+            job_dtos.append(
+                JobDTO(
+                    job_id=j["job_id"],
+                    status=j_sm.status_str if j_sm else j["status"],
+                    project_id=j["project_id"],
+                    skill_id=j["skill_id"],
+                    escopo_id=j["escopo_id"],
+                    plano_id=j["plano_id"],
+                    inputs=j["inputs"],
+                    disparado_em=j["disparado_em"],
+                    iniciado_em=j["iniciado_em"],
+                    finalizado_em=j["finalizado_em"],
+                    resultado=j["resultado"],
+                    erro=j["erro"],
+                    progresso=j.get("progresso"),
+                    progresso_percentual=j.get("progresso_percentual"),
+                )
             )
-            for j in jobs
-        ]
 
         return JobListDTO(
             jobs=job_dtos,

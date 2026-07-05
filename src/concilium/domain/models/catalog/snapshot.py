@@ -151,7 +151,7 @@ def _cs_index(items: list, *keys: str) -> dict:
     return {}
 
 
-def _cs_index_insumos(snapshot: object) -> dict:
+def _cs_index_insumos(snapshot: CatalogSnapshot) -> dict:
     """Returns flat index of all insumos across categories, keyed by codigo/id."""
     return {item.get("codigo", item.get("id", "")): item for lst in snapshot.insumos.values() for item in lst}
 

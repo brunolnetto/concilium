@@ -58,7 +58,10 @@ import inspect
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from graphlib import TopologicalSorter
 
 # ── Execution record ──────────────────────────────────────────────────────────
 
@@ -229,15 +232,15 @@ class SkillExecutor:
 
     # ── Private helpers ───────────────────────────────────────────────────────
 
-    def _build_topology(self) -> object:
+    def _build_topology(self) -> TopologicalSorter[str]:
         """Builds and prepares a TopologicalSorter from manifest meta."""
         from graphlib import TopologicalSorter
 
-        ts: object = TopologicalSorter()
+        ts: TopologicalSorter[str] = TopologicalSorter()
         for sid, m in self._meta.items():
             deps = m.get("depends_on", {}).get("skills", [])
-            ts.add(sid, *deps)  # type: ignore[attr-defined]
-        ts.prepare()  # type: ignore[attr-defined]
+            ts.add(sid, *deps)
+        ts.prepare()
         return ts
 
     @staticmethod
@@ -252,8 +255,8 @@ class SkillExecutor:
         node: str,
         state: object,
         skill_inputs: dict,
-        providers_factory: object,
-        resolve_state_fn: object,
+        providers_factory: Callable[[str, Any, dict[str, Any]], dict[str, Any]],
+        resolve_state_fn: Callable[..., Any],
     ) -> tuple[ExecutionRecord, object, bool]:
         """Executes a single skill node; returns (record, new_state, gate_failed)."""
         if self._on_before_skill:
@@ -306,7 +309,7 @@ class SkillExecutor:
         state_in: Any,
         providers_factory: Callable[[str, Any, dict[str, Any]], dict[str, Any]],
         skill_inputs: dict[str, dict[str, Any]] | None = None,
-        resolve_state: Callable[[str, Any, Any], Any] | None = None,
+        resolve_state: Callable[..., Any] | None = None,
     ) -> tuple[Any, list[ExecutionRecord]]:
         """Run all registered skills in dependency order.
 

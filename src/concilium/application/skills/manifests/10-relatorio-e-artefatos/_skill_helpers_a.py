@@ -15,7 +15,7 @@ Estrutura Excel gerada:
 from datetime import UTC, date, datetime
 from typing import Any
 
-from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
+from concilium.domain.models.canonical import CanonicalModel, SubtotalSemBdiComBdi, ValidacaoItem
 from concilium.infrastructure.adapters.excel_adapter import ExcelRenderer
 
 _MESES_PT = {
@@ -71,18 +71,19 @@ def _build_planejamento_rows(
     for p in canonical_in.planejamento:
         eap_item = eap_by_item_id.get(p.item_id)
         pe = pe_by_item.get(p.item_id)
+        subtotal = p.subtotal if p.subtotal is not None else SubtotalSemBdiComBdi()
         row = {
             "item_id": p.item_id,
             "cpu_id": p.cpu_id,
             "descricao": (eap_item.descricao if eap_item else ""),
             "unidade": (eap_item.unidade if eap_item else ""),
             "quantitativo": p.quantitativo,
-            "subtotal_sem_bdi_mo": p.subtotal.sem_bdi.mao_obra,
-            "subtotal_sem_bdi_eq": p.subtotal.sem_bdi.equipamentos,
-            "subtotal_sem_bdi_diesel": p.subtotal.sem_bdi.diesel,
-            "subtotal_sem_bdi_mat": p.subtotal.sem_bdi.material,
-            "subtotal_sem_bdi": p.subtotal.sem_bdi.total,
-            "subtotal_com_bdi": p.subtotal.com_bdi.total,
+            "subtotal_sem_bdi_mo": subtotal.sem_bdi.mao_obra,
+            "subtotal_sem_bdi_eq": subtotal.sem_bdi.equipamentos,
+            "subtotal_sem_bdi_diesel": subtotal.sem_bdi.diesel,
+            "subtotal_sem_bdi_mat": subtotal.sem_bdi.material,
+            "subtotal_sem_bdi": subtotal.sem_bdi.total,
+            "subtotal_com_bdi": subtotal.com_bdi.total,
             # Camada 1 — catálogo
             "pu_total_sem_bdi": p.preco_unitario.total,
             "pu_total_com_bdi": p.preco_unitario_com_bdi.total,
@@ -378,7 +379,9 @@ def _bgs_add_financeiro(graficos: dict, canonical_in, project_months: list) -> N
     não a distribuição uniforme (_cash_flow_rows local).
     """
     try:
-        from ._skill_helpers_b import _cash_flow_rows as _cash_flow_rows_proportional
+        from ._skill_helpers_b import (  # ty: ignore[unresolved-import]  # runtime-only: sibling loaded via importlib in skill.py
+            _cash_flow_rows as _cash_flow_rows_proportional,
+        )
 
         cash_flow_rows = _cash_flow_rows_proportional(canonical_in, project_months)
     except Exception:
@@ -1014,7 +1017,9 @@ def _rra_build_compressao_cronograma(canonical_in: CanonicalModel) -> dict | Non
 
     # ── Serializa para o dict do relatório ───────────────────────────────────
     viáveis = [r for r in results if r.best_k is not None]
-    makespan_otimo = min(r.by_k[r.best_k].makespan_new for r in viáveis) if viáveis else makespan
+    makespan_otimo = (
+        min(r.by_k[bk].makespan_new for r in viáveis if (bk := r.best_k) is not None) if viáveis else makespan
+    )
 
     itens = []
     for r in results:

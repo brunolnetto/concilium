@@ -256,3 +256,58 @@ class TestArtefatosApp:
 
     def test_auto_open_gantt_quando_sem_artefatos(self):
         assert "openGantt()" in self._html()
+
+
+class TestSimularCenarioReplanToolWrapper:
+    """Regressão: a tool inteira quebrava com TypeError (ProjectService() sem
+    dependências + load_canonical_latest inexistente), mascarado pelo except
+    genérico como 'Erro ao simular cenário'. Estes testes exercitam o wrapper
+    registrado no FastMCP, não só a função pura _simular_lever_adjust."""
+
+    def _register(self):
+        from unittest.mock import patch
+
+        from mcp.server.fastmcp import FastMCP
+
+        from concilium.presentation.mcp.tools import replan as replan_mod
+
+        server = FastMCP("test-replan")
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=False):
+            replan_mod.register(server)
+        tools = {}
+        for t in server._tool_manager.list_tools():
+            tools[t.name] = getattr(t, "fn", None) or getattr(t, "func", None)
+        return tools
+
+    def test_lever_adjust_via_tool_wrapper_flat_fallback(self):
+        """Escopo sem plano ativo → fallback pro canonical flat do store."""
+        from unittest.mock import MagicMock, patch
+
+        tools = self._register()
+        canonical = _make_canonical()
+        store = MagicMock()
+        store.escopo.side_effect = RuntimeError("sem escopos")
+        store.load_canonical.return_value = canonical
+
+        with patch("concilium.presentation.mcp._context._project", return_value=store):
+            result = tools["simular_cenario_replan"](
+                project_id="proj-1",
+                tipo="lever_adjust",
+                parametros={"fator_equipes": 1.2},
+            )
+
+        assert "erro" not in result, f"tool devolveu erro: {result.get('erro')}"
+        assert result["tipo"] == "lever_adjust"
+
+    def test_canonical_ausente_retorna_erro_claro(self):
+        from unittest.mock import MagicMock, patch
+
+        tools = self._register()
+        store = MagicMock()
+        store.escopo.side_effect = RuntimeError("sem escopos")
+        store.load_canonical.return_value = None
+
+        with patch("concilium.presentation.mcp._context._project", return_value=store):
+            result = tools["simular_cenario_replan"](project_id="proj-x", tipo="lever_adjust", parametros={})
+
+        assert "não encontrado" in result["erro"]

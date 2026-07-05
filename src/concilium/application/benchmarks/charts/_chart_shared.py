@@ -9,8 +9,34 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TypedDict
 
 from ._chart_colors import _CORES
+
+
+class _AtividadeGantt(TypedDict):
+    nome: str
+    inicio: int
+    fim: int
+    recurso: str
+    frentes: int
+
+
+class _EapDataItem(TypedDict):
+    nome: str
+    crit: str
+    custo: int
+    pe_op: int
+
+
+class _TimeDataItem(TypedDict):
+    nome: str
+    pessoas: int
+    custo_mo: int
+    custo_eq: int
+    verbas: int
+    perm: float
+    sazonal: bool
 
 
 def _load_json(path: Path) -> dict:
@@ -47,7 +73,7 @@ _CENARIO_POOL_DEF = {
     "A9_ESC3_10_ATERRO_6": {"ESC3": 10, "ATERRO": 6, "ESC2": 4, "ESC1": 2, "deadline": 56, "manual": False},
     "A11_FULL_RELAX": {"ESC3": 20, "ATERRO": 10, "ESC2": 8, "ESC1": 4, "deadline": 56, "manual": False},
 }
-_ATIVIDADES_GANTT = [
+_ATIVIDADES_GANTT: list[_AtividadeGantt] = [
     {"nome": "Desmatamento", "inicio": 1, "fim": 25, "recurso": "DESMAT", "frentes": 5},
     {"nome": "Esc 1aCat ≤2km", "inicio": 1, "fim": 10, "recurso": "ESC-1CAT", "frentes": 1},
     {"nome": "Esc 1aCat 2-3km", "inicio": 1, "fim": 32, "recurso": "ESC-1CAT", "frentes": 1},
@@ -67,7 +93,7 @@ _CORES_REC = {
     "ESC-3CAT": "#EA580C",
     "ATERRO": "#16A34A",
 }
-_EAP_DATA = [
+_EAP_DATA: list[_EapDataItem] = [
     {"nome": "Desmatamento", "crit": "B", "custo": 2529041, "pe_op": 14192824},
     {"nome": "Esc 1aCat ≤2km", "crit": "C", "custo": 935298, "pe_op": 1056039},
     {"nome": "Esc 1aCat 2-3km", "crit": "C", "custo": 3242006, "pe_op": 1056039},
@@ -89,7 +115,7 @@ _INDIR_COR_DATA = {
     "QSMS": _CORES["laranja"],
     "MOB": _CORES["cinza"],
 }
-_TIMES_DATA = [
+_TIMES_DATA: list[_TimeDataItem] = [
     {
         "nome": "ADM",
         "pessoas": 45,

@@ -42,10 +42,10 @@ def _jaccard(a: set[str], b: set[str]) -> float:
     return len(a & b) / len(union)
 
 
-def _am_collect_unique_attrs(required: object, optional: object) -> list:
+def _am_collect_unique_attrs(required: list[str], optional: list[str]) -> list[str]:
     """Returns deduplicated list of required+optional attribute names."""
-    seen: set = set()
-    result: list = []
+    seen: set[str] = set()
+    result: list[str] = []
     for a in list(required) + list(optional):
         if a not in seen:
             seen.add(a)
@@ -53,9 +53,9 @@ def _am_collect_unique_attrs(required: object, optional: object) -> list:
     return result
 
 
-def _am_build_intent_dims(intent: object) -> dict:
+def _am_build_intent_dims(intent: SemanticIntent) -> dict[str, float | str | bool]:
     """Builds flat {attr_name: value} dict from intent dimensions + context."""
-    dims = {d.name: d.value for d in intent.dimensions}
+    dims: dict[str, float | str | bool] = {d.name: d.value for d in intent.dimensions}
     dims.update({k: v for k, v in intent.context.items() if isinstance(v, (int, float, str))})
     return dims
 

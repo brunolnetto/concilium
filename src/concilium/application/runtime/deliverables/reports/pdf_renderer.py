@@ -11,6 +11,10 @@ import os
 import re
 import tempfile
 from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fpdf import FPDF
 
 # Feature flag — ativa o backend ReportLab sem afetar producao
 _USE_REPORTLAB = os.getenv("CONCILIUM__PDF_RENDERER", "reportlab") != "fpdf2"
@@ -31,7 +35,7 @@ def _is_table_sep(line: str) -> bool:
     return bool(_MD_TABLE_SEP_RE.match(line.strip()))
 
 
-def _render_table_row(pdf: object, line: str, col_w: float, row_h: float = 4.5) -> None:
+def _render_table_row(pdf: FPDF, line: str, col_w: float, row_h: float = 4.5) -> None:
     """Renderiza uma linha de tabela Markdown como celulas fpdf2."""
     raw_cells = [_strip_inline(c.strip()) for c in line.strip().strip("|").split("|")]
     n = len(raw_cells)
@@ -41,7 +45,7 @@ def _render_table_row(pdf: object, line: str, col_w: float, row_h: float = 4.5) 
         text = cell[:35]  # trunca para caber na celula
         is_last = i == n - 1
         try:
-            pdf.cell(  # type: ignore[attr-defined]
+            pdf.cell(
                 col_w,
                 row_h,
                 text,

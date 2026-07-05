@@ -2,18 +2,28 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ._host_protocol import RuntimeHost
+
+    _Base = RuntimeHost
+else:
+    _Base = object
 
 
-class InputsMixin:
-    """Mixin com _apply_runtime_defaults e _build_skill_kwargs."""
+class InputsMixin(_Base):
+    """Mixin com _apply_runtime_defaults e _build_skill_kwargs.
+
+    Herda de RuntimeHost só em TYPE_CHECKING (ver ExecutionMixin para o mesmo padrão).
+    """
 
     def _apply_runtime_defaults(
         self, skill_id: str, project: Any, contexto: Any, inputs: dict[str, Any]
     ) -> dict[str, Any]:
         normalized = dict(inputs)
         if skill_id == "01-escopo-e-eap":
-            snap_ids = self.create_snapshots(project)  # type: ignore[attr-defined]
+            snap_ids = self.create_snapshots(project)
             normalized.setdefault("snapshot_catalogo_id", snap_ids["catalogo"])
             normalized.setdefault("snapshot_perfil_id", snap_ids["perfil"])
             normalized.setdefault("contexto_id", contexto.id)
@@ -41,7 +51,7 @@ class InputsMixin:
                 }
 
         if skill_id in ("03-equipes-diretas", "05-equipes-e-alocacao") and "percentual_encargos" not in normalized:
-            jurisd = self.load_jurisdicao(contexto.jurisdicao_id)  # type: ignore[attr-defined]
+            jurisd = self.load_jurisdicao(contexto.jurisdicao_id)
             motor = jurisd.get("motor_encargos_sociais", {})
             # Preferência: campos específicos (ADR-097 F4) > percentual_total (retrocompat)
             horista = motor.get("percentual_horista") or motor.get("percentual_total")
@@ -55,7 +65,7 @@ class InputsMixin:
 
         if skill_id == "04-cronograma" and "calendario_operacional" not in normalized:
             proj_id = str(getattr(project, "id", "") or "")
-            normalized["calendario_operacional"] = self.load_calendario_operacional(  # type: ignore[attr-defined]
+            normalized["calendario_operacional"] = self.load_calendario_operacional(
                 contexto.jurisdicao_id,
                 proj_id or None,
             )

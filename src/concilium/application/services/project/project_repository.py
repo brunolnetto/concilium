@@ -79,6 +79,51 @@ class ProjectHandle(Protocol):
 
     def exists(self, relative_path: str) -> bool: ...
 
+    # ── Contrato de fato usado pelos callers (CLI/runtime/skills) ─────────────
+    # Presentes em FileProjectHandle E StorageProjectHandle; declarados aqui para
+    # o contrato refletir o uso real (mesma classe de gap do issue #41).
+
+    @property
+    def snapshots(self) -> Any: ...
+
+    def save_canonical(
+        self,
+        model: Any,
+        version: str | None = None,
+        trace_id: str | None = None,
+        created_by: str = "runtime",
+        parent_refs: list | None = None,
+    ) -> None: ...
+
+    def write_canonical_raw(self, content: dict[str, Any], version: str | None = None) -> None: ...
+
+    def save_output_file(self, data: bytes, version: str | None = None, filename: str = "resultado.xlsx") -> Path: ...
+
+    def log_invocation(self, version: str, entry: dict[str, Any]) -> None: ...
+
+    def approve(self, version: str) -> None: ...
+
+    def list_escopos(self) -> list[str]: ...
+
+    def escopo(self, escopo_id: str = "default") -> Any: ...
+
+    def create_escopo(
+        self,
+        escopo_id: str,
+        nome: str,
+        tipo_obra: str,
+        localizacao: str,
+        coordenadas_lat: float,
+        coordenadas_lng: float,
+        data_inicio: str,
+        data_termino: str,
+        dias_semana: int = 6,
+        horas_dia: int = 8,
+        snapshot_catalogo_id: str = "",
+        snapshot_perfil_id: str = "",
+        bdi_perfil_id: str | None = None,
+    ) -> Any: ...
+
 
 class ProjectRepository(Protocol):
     def list_projects(self) -> list[ProjectHandle]: ...

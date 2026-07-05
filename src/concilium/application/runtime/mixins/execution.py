@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
+from concilium.application.services.project.project_repository import ProjectHandle
 from concilium.application.skills import SKILLS
 from concilium.application.skills.base import SkillResult
-from concilium.infrastructure.storage.project import ProjectStore
 
 from ..deliverables.side_effects import (
     _handle_skill_04_side_effects,
@@ -21,9 +21,21 @@ from ..exceptions import RuntimeDomainError
 from ..gates import _GATE_SKILLS
 from ..helpers.pipeline import _execute_skill
 
+if TYPE_CHECKING:
+    from ._host_protocol import RuntimeHost
 
-class ExecutionMixin:
-    """Mixin com métodos de execução de skill e processamento de taint/side-effects."""
+    _Base = RuntimeHost
+else:
+    _Base = object
+
+
+class ExecutionMixin(_Base):
+    """Mixin com métodos de execução de skill e processamento de taint/side-effects.
+
+    Herda de RuntimeHost só em TYPE_CHECKING: os métodos usados via `self.*` abaixo
+    (get_skill_contract, check_manifest_deps, etc.) são fornecidos por outros mixins
+    ou pelo próprio Runtime na composição final (ver runtime/__init__.py).
+    """
 
     def _resolve_missing_deps(
         self,
@@ -35,7 +47,7 @@ class ExecutionMixin:
     ) -> list[str]:
         if _executed_ok is not None:
             return [d for d in contract.depends_on_skills if d not in _executed_ok]
-        return self.check_manifest_deps(skill_id, project, v)  # type: ignore[attr-defined]
+        return self.check_manifest_deps(skill_id, project, v)
 
     def _build_log_entry(
         self,
@@ -70,7 +82,7 @@ class ExecutionMixin:
     def run_skill(
         self,
         skill_id: str,
-        project: ProjectStore,
+        project: ProjectHandle,
         version: str | None = None,
         inputs: dict[str, Any] | None = None,
         trace_id: str | None = None,
@@ -83,7 +95,7 @@ class ExecutionMixin:
         if v is None:
             raise RuntimeDomainError("Nenhuma versão ativa. Execute 'concilium version new' primeiro.")
 
-        contract = self.get_skill_contract(skill_id)  # type: ignore[attr-defined]
+        contract = self.get_skill_contract(skill_id)
         missing_deps = self._resolve_missing_deps(contract, skill_id, project, v, _executed_ok)
         if missing_deps:
             raise RuntimeDomainError(f"Skill '{skill_id}' requer execução prévia bem-sucedida de: {missing_deps}")
@@ -93,12 +105,12 @@ class ExecutionMixin:
     def run_skill_on_plano(
         self,
         skill_id: str,
-        project: ProjectStore,
+        project: ProjectHandle,
         plano_store: Any,
         inputs: dict[str, Any] | None = None,
         trace_id: str | None = None,
     ) -> SkillResult:
-        contract = self.get_skill_contract(skill_id)  # type: ignore[attr-defined]
+        contract = self.get_skill_contract(skill_id)
         skill_fn = SKILLS[skill_id]
 
         canonical_in = plano_store.load_canonical()
@@ -112,7 +124,7 @@ class ExecutionMixin:
 
         base_inputs = dict(escopo_meta)
         base_inputs.update(inputs or {})
-        normalized_inputs = self._apply_runtime_defaults(skill_id, project, contexto, base_inputs)  # type: ignore[attr-defined]
+        normalized_inputs = self._apply_runtime_defaults(skill_id, project, contexto, base_inputs)
         normalized_inputs.setdefault("escopo_id", escopo_meta["escopo_id"])
         normalized_inputs.setdefault("plano_id", plano_store.plano_id)
 
@@ -121,7 +133,7 @@ class ExecutionMixin:
         correlation_id = (
             normalized_inputs.get("correlation_id") or f"{project.meta.get('id', '')}:{plano_store.plano_id}"
         )
-        kwargs = self._build_skill_kwargs(  # type: ignore[attr-defined]
+        kwargs = self._build_skill_kwargs(
             contract,
             canonical_in=canonical_in,
             inputs=normalized_inputs,
@@ -153,11 +165,11 @@ class ExecutionMixin:
         return result
 
     def _load_context(self, escopo_meta: dict, project: Any) -> tuple:
-        contexto = self.load_contexto(escopo_meta.get("contexto_id") or project.meta["contexto_id"])  # type: ignore[attr-defined]
-        perfil = self.load_perfil(escopo_meta.get("snapshot_perfil_id") or contexto.perfil_id)  # type: ignore[attr-defined]
+        contexto = self.load_contexto(escopo_meta.get("contexto_id") or project.meta["contexto_id"])
+        perfil = self.load_perfil(escopo_meta.get("snapshot_perfil_id") or contexto.perfil_id)
         catalogo_id = escopo_meta.get("snapshot_catalogo_id") or contexto.catalogo_id
-        catalogo = self._load_resolved_catalogo(catalogo_id, contexto.jurisdicao_id, project)  # type: ignore[attr-defined]
-        catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()  # type: ignore[attr-defined]
+        catalogo = self._load_resolved_catalogo(catalogo_id, contexto.jurisdicao_id, project)
+        catalogo["identidade_visual"] = self.load_tema(contexto.tema_id).to_catalogo_dict()
         return contexto, perfil, catalogo
 
     def _process_taint(self, skill_id: str, result: SkillResult, should_save: bool) -> tuple[SkillResult, bool]:
@@ -207,7 +219,7 @@ class ExecutionMixin:
                 pass
         return result, should_save
 
-    def _process_side_effects(self, skill_id: str, result: SkillResult, project: ProjectStore, v: str) -> None:
+    def _process_side_effects(self, skill_id: str, result: SkillResult, project: ProjectHandle, v: str) -> None:
         _persist_typed_artifacts(result, project, v)
 
         if skill_id == "10-relatorio-e-artefatos":

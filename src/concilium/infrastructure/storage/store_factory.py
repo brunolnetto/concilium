@@ -10,6 +10,8 @@ from .file_project_repository import FileProjectRepository
 
 if TYPE_CHECKING:
     from concilium.domain.repositories.blob_storage_port import BlobStoragePort
+    from concilium.infrastructure.storage.campaign_store import CampaignRunStore
+    from concilium.infrastructure.storage.tool_invocation_store import BlobToolInvocationRepository
 
 DEFAULT_STORE_BACKEND = "filesystem"
 _BACKEND_ALIASES: dict[str, str] = {
@@ -119,7 +121,7 @@ def build_blob_storage(root_override: Path | None = None) -> BlobStoragePort:
     raise ValueError(f"Backend não suportado: {backend}")
 
 
-def get_tool_invocation_store() -> BlobToolInvocationRepository:  # type: ignore[name-defined]  # noqa: F821
+def get_tool_invocation_store() -> BlobToolInvocationRepository:
     """Retorna BlobToolInvocationRepository usando o backend configurado (ADR-118 F7)."""
     from concilium.infrastructure.storage.tool_invocation_store import BlobToolInvocationRepository
 
@@ -127,7 +129,7 @@ def get_tool_invocation_store() -> BlobToolInvocationRepository:  # type: ignore
     return BlobToolInvocationRepository(storage=storage)
 
 
-def get_campaign_store(project_slug: str) -> CampaignRunStore:  # type: ignore[name-defined]  # noqa: F821
+def get_campaign_store(project_slug: str) -> CampaignRunStore:
     """Retorna CampaignRunStore para um projeto usando o backend configurado."""
     from concilium.infrastructure.storage.campaign_store import CampaignRunStore
 

@@ -135,7 +135,8 @@ def calcular_custo_indireto_mob(
             "custo_mob_total": float
         }
     """
-    resultado = {"mob": {}, "custo_mob_total": 0.0}
+    mob: dict[str, dict[str, Any]] = {}
+    resultado: dict[str, Any] = {"mob": mob, "custo_mob_total": 0.0}
 
     for indireto in indiretos:
         if indireto.get("tipo") != "MOB":
@@ -151,7 +152,7 @@ def calcular_custo_indireto_mob(
         if driver == "projeto":
             # Custo incorre na primeira semana da fase
             custo_total = indireto.get("custo_fixo_total", 0.0)
-            resultado["mob"][fase] = {
+            mob[fase] = {
                 "custo_total": custo_total,
                 "semana_inicio": _iso_week_key(window["inicio"]),
             }
@@ -164,7 +165,7 @@ def calcular_custo_indireto_mob(
             duracao_meses = duracao_dias / 30.5  # Média mensal
             total = custo_mensal * duracao_meses
 
-            resultado["mob"][fase] = {
+            mob[fase] = {
                 "custo_mensal": custo_mensal,
                 "duracao_meses": duracao_meses,
                 "duracao_dias": duracao_dias,

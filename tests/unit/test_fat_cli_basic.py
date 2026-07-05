@@ -352,11 +352,11 @@ class TestPrintSkillsTable:
 
         from concilium.presentation.cli.commands_basic import _print_skills_table
 
-        skill_meta = SimpleNamespace(description="Escopo e EAP")
+        skill_meta = SimpleNamespace(descricao="Escopo e EAP")
         registry_mock = MagicMock()
         registry_mock.get_all_skills.return_value = {
             "01-escopo-e-eap": skill_meta,
-            "02-produtividade": SimpleNamespace(description="Produtividade"),
+            "02-produtividade": SimpleNamespace(descricao="Produtividade"),
         }
 
         console = Console()
@@ -394,7 +394,7 @@ class TestStatus:
         assert "0.6.2" in result.output or "Concilium" in result.output
 
     def test_skills_flag_invokes_print_skills_table(self, tmp_path):
-        skill_meta = SimpleNamespace(description="Desc X")
+        skill_meta = SimpleNamespace(descricao="Desc X")
         registry_mock = MagicMock()
         registry_mock.get_all_skills.return_value = {"sk-01": skill_meta}
 

@@ -3,10 +3,34 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 from concilium.presentation.mcp._context import _config_root, _wrap_response
+
+
+class _MergeReport(Protocol):
+    """Formato de retorno de mod._merge_entities() — mod é carregado via importlib
+    de um script externo (merge_rfi.py), então seu tipo real não é conhecido
+    estaticamente. Descreve a forma esperada pro consumo tipado do relatório."""
+
+    inner_high: list[dict[str, Any]]
+    inner_low: list[dict[str, Any]]
+    right_only: list[dict[str, Any]]
+    left_only: list[dict[str, Any]]
+
+
+class _MergeRfiModule(Protocol):
+    """Superfície esperada de tools/merge_rfi.py — script externo carregado via
+    importlib (não importável estaticamente). O cast único no ponto de load dá
+    checagem real a todos os acessos, no lugar de N supressões."""
+
+    XLSM: Path
+    ROOT: Path
+    extract_rfi: Callable[[Any], dict[str, Any]]
+    _merge_entities: Callable[..., tuple[_MergeReport, Any]]
+    _apply_merge: Callable[..., list[Any]]
 
 
 def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
@@ -84,8 +108,9 @@ def _impl_comparar_rfi_catalogo(
 
     spec = importlib.util.spec_from_file_location("merge_rfi", merge_path)
     assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    raw_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(raw_mod)
+    mod = cast("_MergeRfiModule", raw_mod)
 
     bundle_path = config_dir / "catalogos" / contexto_id / ".catalog_bundle.json"
     if not bundle_path.exists():
@@ -105,7 +130,7 @@ def _impl_comparar_rfi_catalogo(
     rep_ins, _ = mod._merge_entities(cat_insumos, rfi["insumos"])
     rep_prod, _ = mod._merge_entities(cat_producoes, rfi["producoes"], id_key="id")
 
-    def _summarize(rep: Any) -> dict:
+    def _summarize(rep: _MergeReport) -> dict:
         return {
             "inner_high": len(rep.inner_high),
             "inner_high_com_delta": sum(1 for i in rep.inner_high if i["delta"]),

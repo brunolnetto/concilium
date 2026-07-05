@@ -72,9 +72,8 @@ class CampaignRunStore:
             CampaignRunStore(project_root=Path("/..."))       # legado keyword
         """
         # Resolve storage from positional or keyword arg
-        _storage = storage or (
-            storage_or_project_root if isinstance(storage_or_project_root, BlobStoragePort) else None
-        )
+        _positional_storage = storage_or_project_root if isinstance(storage_or_project_root, BlobStoragePort) else None
+        _storage = storage or _positional_storage
 
         if _storage is not None:
             # New API: storage + prefix
@@ -84,10 +83,11 @@ class CampaignRunStore:
             self.root = None  # type: ignore[assignment]
         else:
             # Legacy path-based API
-            _path = project_root or storage_or_project_root
-            if _path is None:
+            _positional_path = storage_or_project_root if isinstance(storage_or_project_root, Path) else None
+            _path_or_none = project_root or _positional_path
+            if _path_or_none is None:
                 raise ValueError("Forneça storage+prefix ou project_root como Path.")
-            _path = Path(_path)
+            _path = Path(_path_or_none)
             from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
 
             # _path is the "project root" (e.g. projetos/AGIS).

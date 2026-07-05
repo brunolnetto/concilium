@@ -32,7 +32,6 @@ def _catalog_root(config_dir: Path, catalogo_id: str) -> Path:
     return config_dir / "catalogos" / catalogo_id
 
 
-
 def register(server: FastMCP) -> None:
     """Registra as ferramentas consolidadas de catálogo."""
 

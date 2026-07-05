@@ -176,7 +176,7 @@ def _rbf_try_tax_scenario(
 
 def _rbf_try_manual_bdi(
     inputs: dict[str, Any], validacoes: list[ValidacaoItem]
-) -> tuple[dict[str, float], None, str, str, bool] | None:
+) -> tuple[dict[str, float], TabelaBdi, str, str, bool] | None:
     """Attempt BDI resolution via manual bdi_aplicado dict. Returns None if not present."""
     manual = inputs.get("bdi_aplicado")
     if not isinstance(manual, dict):
@@ -200,7 +200,10 @@ def _rbf_try_manual_bdi(
     )
     return (
         {"mao_obra": mo, "equipamentos": eq, "material": mat, "diesel": diesel, "indireto": indireto},
-        None,
+        # Bug fix: retornar DEFAULT_BDI_TABELA em vez de None — consumidores a jusante
+        # (CuboAnaliticoBuilder, MemorialBDIBuilder) esperam uma TabelaBdi real; None
+        # produzia cubo/memorial vazios quando o modo manual (bdi_aplicado) era usado.
+        DEFAULT_BDI_TABELA,
         "inputs.bdi_aplicado",
         "pre_reforma",
         True,

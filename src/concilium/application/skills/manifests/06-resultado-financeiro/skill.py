@@ -29,9 +29,12 @@ _HERE = Path(__file__).resolve().parent
 
 def _load_estagio(subdir: str, func_name: str):
     """Carrega a run function de um sub-pacote de estágio via importlib."""
-    spec = importlib.util.spec_from_file_location(f"resultado_financeiro_{subdir}", _HERE / subdir / "skill.py")
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    path = _HERE / subdir / "skill.py"
+    spec = importlib.util.spec_from_file_location(f"resultado_financeiro_{subdir}", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para estágio: {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
     return getattr(mod, func_name)
 
 

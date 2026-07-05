@@ -19,9 +19,15 @@ streamable_http_app() e sse_app() com este middleware.
 from __future__ import annotations
 
 import json
-from typing import Any
+from types import ModuleType
+from typing import TYPE_CHECKING, Any
 
 from concilium.infrastructure.settings import get_auth
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from opentelemetry.context import Context
 
 # Tools que não requerem autenticação (bootstrap)
 _PUBLIC_TOOLS: frozenset[str] = frozenset({"ativar_dispositivo", "renovar_token"})
@@ -32,19 +38,33 @@ _PUBLIC_TOOLS: frozenset[str] = frozenset({"ativar_dispositivo", "renovar_token"
 _PUBLIC_METHODS: frozenset[str] = frozenset({"initialize", "ping", "notifications/initialized"})
 
 # ADR-121 D4/D6: OTel propagation + baggage — importações lazy-safe
-try:
-    from opentelemetry import propagate
-    from opentelemetry.baggage import set_baggage
+if TYPE_CHECKING:
+    _SetBaggageFn = Callable[[str, object, "Context | None"], "Context"]
+
+
+def _load_otel() -> tuple[ModuleType | None, _SetBaggageFn | None, bool]:
+    try:
+        from opentelemetry import propagate as _propagate
+        from opentelemetry.baggage import set_baggage as _set_baggage
+
+        return _propagate, _set_baggage, True
+    except ImportError:  # pragma: no cover
+        return None, None, False
+
+
+propagate, set_baggage, _OTEL_AVAILABLE = _load_otel()
+
+if _OTEL_AVAILABLE:
     from opentelemetry.context import attach as context_attach
     from opentelemetry.context import detach as context_detach
+else:  # pragma: no cover
 
-    _OTEL_AVAILABLE = True
-except ImportError:  # pragma: no cover
-    _OTEL_AVAILABLE = False
-    propagate = None  # type: ignore[assignment]
-    set_baggage = None  # type: ignore[assignment]
-    context_attach = lambda ctx: None  # noqa: E731
-    context_detach = lambda tok: None  # noqa: E731
+    def context_attach(context: Any) -> Any:  # noqa: ARG001
+        """Fallback no-op quando opentelemetry não está instalado."""
+        return None
+
+    def context_detach(token: Any) -> None:  # noqa: ARG001
+        """Fallback no-op quando opentelemetry não está instalado."""
 
 
 class McpAuthMiddleware:

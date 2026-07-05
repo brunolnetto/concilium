@@ -130,9 +130,10 @@ class PipelineService:
 
     def list_runs(self, project_id: str) -> list[dict[str, Any]]:
         project = self._repository.get_project(project_id)
-        runs = project.read_json(self._files.runs, [])
-        if not isinstance(runs, list):
+        raw_runs = project.read_json(self._files.runs, [])
+        if not isinstance(raw_runs, list):
             return []
+        runs: list[dict[str, Any]] = [r for r in raw_runs if isinstance(r, dict)]
         return sorted(runs, key=lambda item: item.get("requested_at", ""), reverse=True)
 
     def get_run(self, project_id: str, run_id: str) -> dict[str, Any]:
@@ -454,7 +455,11 @@ class PipelineService:
             except Exception:
                 # Fallback: use project-local catalog (e.g. test environments without
                 # runtime catalog support, or contexts where contexto is unavailable)
-                catalog = _project_catalog if _has_project_catalog else {"cpus": [], "insumos": [], "producoes": []}
+                catalog = (
+                    _project_catalog
+                    if isinstance(_project_catalog, dict) and _project_catalog
+                    else {"cpus": [], "insumos": [], "producoes": []}
+                )
                 payload = {
                     "run_id": run_id,
                     "version": version,

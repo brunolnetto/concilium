@@ -9,6 +9,7 @@ import streamlit as st
 
 try:
     from ..config import DEFAULT_ACTOR, DEFAULT_BASE_URL
+    from ..helpers.helpers import dataframe_selected_rows
     from ..infra.api import api_call
     from ..molecules.common import render_page_heading
 except ImportError:
@@ -16,6 +17,7 @@ except ImportError:
     if str(src_root) not in sys.path:
         sys.path.insert(0, str(src_root))
     from concilium.presentation.ui.config import DEFAULT_ACTOR, DEFAULT_BASE_URL
+    from concilium.presentation.ui.helpers.helpers import dataframe_selected_rows
     from concilium.presentation.ui.infra.api import api_call
     from concilium.presentation.ui.molecules.common import render_page_heading
 
@@ -133,7 +135,7 @@ def _render_cpu_browser(base_url: str, actor: str, catalog_id: str) -> None:
         key=f"master-cpu-table-{catalog_id}-p{page}",
     )
 
-    sel = (selected_rows.selection.rows or []) if hasattr(selected_rows, "selection") else []
+    sel = dataframe_selected_rows(selected_rows)
     _cmb_handle_cpu_selection(sel, page_cpus, base_url, actor, catalog_id)
 
 

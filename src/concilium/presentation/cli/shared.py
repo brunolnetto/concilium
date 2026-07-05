@@ -6,6 +6,7 @@ from pathlib import Path
 import typer
 from rich import print as rprint
 
+from concilium.application.services.project.project_repository import ProjectHandle, ProjectRepository
 from concilium.infrastructure.settings import get_storage
 from concilium.infrastructure.storage.store_factory import build_project_repository
 
@@ -84,7 +85,7 @@ def benchmark_projects_root() -> Path:
     return root
 
 
-def project_repository(*, benchmark: bool = False):
+def project_repository(*, benchmark: bool = False) -> ProjectRepository:
     """Build project repository using StoreFactory backend selection."""
     root = benchmark_projects_root() if benchmark else projetos_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -106,7 +107,7 @@ def _find_projects_by_name(base, name_or_id: str) -> list:
     return matches
 
 
-def resolve_project(name_or_id: str):
+def resolve_project(name_or_id: str) -> ProjectHandle:
     """Resolve nome ou UUID para um ProjectStore."""
     base = _projetos_root()
     if not base.exists():

@@ -443,7 +443,10 @@ class TestRbfTryManualBdi:
         assert len(result) == 5
         rates, tabela, fonte, regime, override = result
         assert fonte == "inputs.bdi_aplicado"
-        assert tabela is None
+        # Bug fix: modo manual (bdi_aplicado) deve retornar DEFAULT_BDI_TABELA em vez de
+        # None — consumidores a jusante (CuboAnaliticoBuilder, MemorialBDIBuilder) esperam
+        # uma TabelaBdi real; None produzia cubo/memorial vazios nesse modo.
+        assert tabela is DEFAULT_BDI_TABELA
         assert override is True
         assert rates["mao_obra"] == pytest.approx(0.15)
         assert rates["material"] == pytest.approx(0.10)

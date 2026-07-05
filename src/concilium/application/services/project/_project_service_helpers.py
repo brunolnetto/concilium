@@ -2,10 +2,34 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
+
+from .project_files import ProjectFiles
+from .project_repository import ProjectHandle
 
 if TYPE_CHECKING:
     from concilium.application.services.project.project_service import ProjectService
+
+
+class _CreateProjectRequestLike(Protocol):
+    """Forma mínima esperada de req em _ps_create_project.
+
+    Evita importar CreateProjectRequest (presentation/api/schemas.py) na camada
+    de application — só descreve os campos/método realmente acessados aqui.
+    """
+
+    nome: str | None
+    contexto_id: str
+    tipo_obra: str
+    localizacao: str
+    data_inicio: str
+    data_termino: str
+    coordenadas_lat: float
+    coordenadas_lng: float
+    dias_semana: int
+    horas_dia: int
+
+    def model_dump(self) -> dict[str, Any]: ...
 
 
 def _try_enrich_cpu_with_prod(cpu: dict[str, Any], prod_lkp: dict[str, Any]) -> dict[str, Any]:
@@ -127,7 +151,7 @@ def _enrich_payload_bdi(payload: dict[str, Any]) -> None:
         pass
 
 
-def _cp_build_meta_kwargs(inputs_escopo: dict, req: object) -> dict:
+def _cp_build_meta_kwargs(inputs_escopo: dict[str, Any], req: _CreateProjectRequestLike) -> dict[str, Any]:
     """Extracts nested coordenadas/regime_trabalho kwargs with or-fallback."""
     return {
         "coordenadas_lat": (inputs_escopo.get("coordenadas") or {}).get("lat", req.coordenadas_lat),
@@ -137,7 +161,9 @@ def _cp_build_meta_kwargs(inputs_escopo: dict, req: object) -> dict:
     }
 
 
-def _cp_embed_catalog_if_needed(project: object, benchmark_reference: object, files: object) -> None:
+def _cp_embed_catalog_if_needed(
+    project: ProjectHandle, benchmark_reference: dict[str, Any] | None, files: ProjectFiles
+) -> None:
     """Embeds catalog snapshot into ref_to_save if not already present, then saves."""
     if benchmark_reference is None:
         return
@@ -175,7 +201,7 @@ def _resolve_catalogo_base_from_context(svc: ProjectService, contexto_id: str) -
 
 
 def _cp_save_perfil_context(
-    project: object,
+    project: ProjectHandle,
     contexto_version: str | None,
     perfil_id: str | None,
     perfil_version: str | None,
@@ -214,7 +240,7 @@ def _count_orphaned_runs(runs: list, version: str) -> int:
 
 def _ps_create_project(
     svc: ProjectService,
-    req: Any,
+    req: _CreateProjectRequestLike,
     inputs_escopo: dict[str, Any],
     skill_inputs: dict[str, dict[str, Any]],
     benchmark_slug: str | None,

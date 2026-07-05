@@ -95,6 +95,7 @@ def extract_engine_iteration_references(
     canonical = _load_json(canonical_path) if canonical_path.exists() else {}
 
     # Extrai estrutura por etapa do canonical
+    indiretos_por_cat: dict[str, dict[str, Any]] = {cat: {} for cat in ("ADM", "TOP", "LAB", "QSMS", "MOB")}
     result: dict[str, Any] = {
         "slug": slug,
         "projeto": projeto_nome,
@@ -104,7 +105,7 @@ def extract_engine_iteration_references(
         "planejamento": {
             "itens_com_precos": canonical.get("planejamento", []),
         },
-        "indiretos": {cat: {} for cat in ("ADM", "TOP", "LAB", "QSMS", "MOB")},
+        "indiretos": indiretos_por_cat,
         "resultado": canonical.get("resultado", {}),
     }
 
@@ -112,7 +113,7 @@ def extract_engine_iteration_references(
     for ind in canonical.get("indiretos") or []:
         cat = ind.get("categoria")
         if cat:
-            result["indiretos"][cat] = ind
+            indiretos_por_cat[cat] = ind
 
     out_file = out / f"iteracao_referencias_{slug.lower()}.json"
     out_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

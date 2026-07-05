@@ -273,7 +273,7 @@ class TestProjectionD5:
         equipe.custo_combustivel_total_mensal = 700.0
 
         totals = _accumulate_equipes([equipe])
-        cpt = totals["combustivel_por_tipo"]
+        cpt = totals.combustivel_por_tipo
 
         assert "diesel_s10" in cpt
         assert "cng" in cpt

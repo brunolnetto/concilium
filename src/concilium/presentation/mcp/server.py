@@ -42,8 +42,12 @@ Estrutura de mÃ³dulos:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import FastMCP
+
+if TYPE_CHECKING:
+    from starlette.applications import Starlette
 
 from concilium.application.tool_invocations.repository import reset_tool_invocation_repository
 from concilium.infrastructure.auth.permission_guard import patch_mcp_auth_permissions, validate_tool_coverage
@@ -74,12 +78,34 @@ from concilium.presentation.mcp.tools import (
 _APPS_DIR = Path(__file__).parent / "apps"
 
 
+class _AuthenticatedFastMCP(FastMCP):
+    """FastMCP cujos apps ASGI HTTP/SSE são envolvidos por McpAuthMiddleware (ADR-099).
+
+    Sobrescreve os métodos em vez de fazer monkey-patch dos atributos de
+    instância `streamable_http_app`/`sse_app` (o que conflitava com a
+    assinatura de método herdada e gerava `invalid-assignment` no ty).
+
+    O tipo de retorno declarado permanece `Starlette` — é o tipo público da
+    classe-base — mas em runtime devolvemos `McpAuthMiddleware`, um wrapper
+    ASGI compatível (implementa `__call__(scope, receive, send)`) que não é
+    uma subclasse de `Starlette`. Não há alternativa tipada limpa para expor
+    isso sem alterar a assinatura pública do FastMCP upstream, daí o
+    `ty: ignore` documentado abaixo.
+    """
+
+    def streamable_http_app(self) -> Starlette:
+        return McpAuthMiddleware(super().streamable_http_app())  # ty: ignore[invalid-return-type]
+
+    def sse_app(self, mount_path: str | None = None) -> Starlette:
+        return McpAuthMiddleware(super().sse_app(mount_path))  # ty: ignore[invalid-return-type]
+
+
 def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     """Monta o servidor MCP registrando todas as ferramentas dos sub-módulos."""
     setup_telemetry()
     configure_logging(json_format=True)
     reset_tool_invocation_repository(get_tool_invocation_store())  # ADR-118: blob-backed audit
-    server = FastMCP("concilium", host=host, port=port)
+    server = _AuthenticatedFastMCP("concilium", host=host, port=port)
     system.register(server)  # ping / health — sempre primeiro
     auth_self.register(server)  # ADR-123 F5: self-service de dispositivos
     catalogo.register(server)
@@ -103,7 +129,6 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> FastMCP:
     patch_mcp_auth_permissions(server)  # ADR-099: RBAC enforcement via TOOL_PERMISSIONS
     patch_fastmcp_server_with_audit(server)  # ADR-118: audit log de invocações
     validate_tool_coverage(server)  # Loga warnings para tools sem mapeamento
-    _patch_mcp_with_auth(server)  # ADR-099: JWT middleware para transport HTTP
     return server
 
 
@@ -138,25 +163,6 @@ def _register_ui_resources(server: FastMCP) -> None:
         _make_handler(html_content, uri)
 
 
-def _patch_mcp_with_auth(server: FastMCP) -> None:
-    """Envolve os apps ASGI do FastMCP (HTTP + SSE) com McpAuthMiddleware.
-
-    No-op se AUTH_ENABLED=0 (stdio/dev) — o middleware trata isso internamente,
-    mas embrulhar os apps não faz mal em nenhum modo.
-    """
-    _original_http = server.streamable_http_app
-    _original_sse = server.sse_app
-
-    def _http_with_auth(*args, **kwargs):
-        return McpAuthMiddleware(_original_http(*args, **kwargs))
-
-    def _sse_with_auth(*args, **kwargs):
-        return McpAuthMiddleware(_original_sse(*args, **kwargs))
-
-    server.streamable_http_app = _http_with_auth  # type: ignore[method-assign]
-    server.sse_app = _sse_with_auth  # type: ignore[method-assign]
-
-
 def main() -> None:
     """Entry point para `python -m concilium.presentation.mcp`.
 
@@ -167,6 +173,7 @@ def main() -> None:
     """
     import sys
     from datetime import datetime
+    from typing import Literal
 
     config_root = _config_root()
     if not config_root.exists():
@@ -180,7 +187,18 @@ def main() -> None:
     startup_check()
     ensure_storage_root()
     mcp = get_mcp()
-    transport = mcp.transport
+    transport_raw = mcp.transport
+    transport: Literal["stdio", "sse", "streamable-http"]
+    if transport_raw == "stdio":
+        transport = "stdio"
+    elif transport_raw == "sse":
+        transport = "sse"
+    elif transport_raw == "streamable-http":
+        transport = "streamable-http"
+    else:
+        raise RuntimeError(
+            f"CONCILIUM__MCP_TRANSPORT inválido: '{transport_raw}'. Valores válidos: stdio, sse, streamable-http."
+        )
     if transport != "stdio":
         mcp_host, mcp_port = mcp.host, mcp.port
     else:
@@ -209,7 +227,7 @@ def main() -> None:
     )
     print(banner, file=sys.stderr, flush=True)
 
-    server.run(transport=transport)  # type: ignore[arg-type]
+    server.run(transport=transport)
 
 
 if __name__ == "__main__":

@@ -8,8 +8,9 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.worksheet import Worksheet
 
-from concilium.domain.models.canonical import CanonicalModel, SubtotalCategorias
+from concilium.domain.models.canonical import CanonicalModel, EapItem, Planejamento, SubtotalCategorias
 
 from ..cash_flow import _cash_flow
 from ..helpers import _fmt_mes, _project_months
@@ -44,12 +45,12 @@ def _xl_cashflow_row_styling(rec: dict) -> tuple:
     return fill_saldo, color_saldo, fill_sa, color_sa, fill_exp, color_exp
 
 
-def _xl_cashflow_metrics_block(ws: object, row: int, metricas: list, NCOLS: int) -> int:
+def _xl_cashflow_metrics_block(ws: Worksheet, row: int, metricas: list, NCOLS: int) -> int:
     for label, valor in metricas:
         fill_m = _fill(_C["cinza_lt"])
         _label(ws, row, 1, label, fill_m, bold=True)
-        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)  # type: ignore[union-attr]
-        cell_v = ws.cell(row=row, column=3, value=valor)  # type: ignore[union-attr]
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
+        cell_v = ws.cell(row=row, column=3, value=valor)
         cell_v.border = _border()
         cell_v.alignment = _align("right")
         if isinstance(valor, float):
@@ -60,12 +61,12 @@ def _xl_cashflow_metrics_block(ws: object, row: int, metricas: list, NCOLS: int)
         else:
             cell_v.font = _font(bold=True)
             cell_v.fill = fill_m
-        ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=NCOLS)  # type: ignore[union-attr]
+        ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=NCOLS)
         row += 1
     return row
 
 
-def _xl_cashflow_render_row(ws: object, row: int, rec: dict, i: int) -> None:
+def _xl_cashflow_render_row(ws: Worksheet, row: int, rec: dict, i: int) -> None:
     fill_base = _fill(_C["white"]) if i % 2 == 0 else _fill(_C["row_alt"])
     fill_saldo, color_saldo, fill_sa, color_sa, fill_exp, color_exp = _xl_cashflow_row_styling(rec)
     _label(ws, row, 1, rec["mes_label"], fill_base, bold=False, align="center")
@@ -512,8 +513,8 @@ def _xl_dr_com_vals(com: SubtotalCategorias | None) -> tuple:
     )
 
 
-def _xl_dr_write_cell(ws: object, row: int, col: int, v: object, fill: object) -> None:
-    cell = ws.cell(row=row, column=col, value=v)  # type: ignore[union-attr]
+def _xl_dr_write_cell(ws: Worksheet, row: int, col: int, v: object, fill: PatternFill | None) -> None:
+    cell = ws.cell(row=row, column=col, value=v)
     cell.fill = fill
     cell.border = _border()
     if col >= 5 and isinstance(v, float):
@@ -526,9 +527,9 @@ def _xl_dr_write_cell(ws: object, row: int, col: int, v: object, fill: object) -
         cell.alignment = _align("left")
 
 
-def _xl_dr_totals_row(ws: object, row: int, data_start: int, NCOLS: int, fill_tot: PatternFill | None) -> None:
-    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)  # type: ignore[union-attr]
-    cell = ws.cell(row=row, column=1, value="TOTAL DIRETO")  # type: ignore[union-attr]
+def _xl_dr_totals_row(ws: Worksheet, row: int, data_start: int, NCOLS: int, fill_tot: PatternFill | None) -> None:
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
+    cell = ws.cell(row=row, column=1, value="TOTAL DIRETO")
     cell.fill = fill_tot
     cell.font = _font(bold=True, color=_C["white"], size=11)
     cell.alignment = _align("right")
@@ -541,19 +542,19 @@ def _xl_dr_totals_row(ws: object, row: int, data_start: int, NCOLS: int, fill_to
 
 
 def _xl_dr_write_data_row(
-    ws: object,
+    ws: Worksheet,
     row: int,
-    p: object,
-    eap_item: object,
+    p: Planejamento,
+    eap_item: EapItem | None,
     sem: SubtotalCategorias | None,
     com: SubtotalCategorias | None,
-    fill: object,
+    fill: PatternFill | None,
 ) -> None:
     vals: list = [
-        p.item_id,  # type: ignore[union-attr]
-        eap_item.descricao if eap_item else p.item_id,  # type: ignore[union-attr]
-        eap_item.unidade if eap_item else "un",  # type: ignore[union-attr]
-        p.quantitativo,  # type: ignore[union-attr]
+        p.item_id,
+        eap_item.descricao if eap_item else p.item_id,
+        eap_item.unidade if eap_item else "un",
+        p.quantitativo,
         *_xl_dr_sem_vals(sem),
         *_xl_dr_com_vals(com),
     ]
@@ -776,7 +777,7 @@ def render_cronograma_res(wb: Workbook, canonical: CanonicalModel) -> None:
         return
     qty_by_item = _rcr_build_qty_by_item(canonical, project_months)
     NCOLS = 4 + len(project_months)
-    _set_col_widths(ws, [10, 30, 6, 12] + [12] * len(project_months))  # type: ignore[arg-type]
+    _set_col_widths(ws, [10, 30, 6, 12] + [12] * len(project_months))
     _freeze(ws, "E3")
     row = 1
     _title_row(ws, row, "CRONOGRAMA RESUMIDO — PRODUÇÃO MENSAL POR EAP", NCOLS)

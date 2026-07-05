@@ -250,7 +250,7 @@ def compute_compression_sensitivities(
         if sa is None or not act.required_resources:
             continue
 
-        tipo_bot = max(act.required_resources, key=act.required_resources.get)
+        tipo_bot = max(act.required_resources, key=lambda t: act.required_resources[t])
         n_base = act.required_resources[tipo_bot]
         ct = contratos.get(tipo_bot, {})
         mob = float(ct.get("custo_mob_unit", 0))

@@ -40,7 +40,8 @@ class TestRreHelpers:
 
     def test_rre_get_margin_status_with_resultado(self):
         mod = self._load()
-        resultado = MagicMock(status_margem="VERMELHO", margem=0.02)
+        # NEP-041: Resultado.margem_pct é o campo real (margem não existe em Resultado).
+        resultado = MagicMock(status_margem="VERMELHO", margem_pct=0.02)
         status, margem = mod._rre_get_margin_status(resultado)
         assert status == "VERMELHO"
         assert margem == 0.02

@@ -65,7 +65,7 @@ def plot_heatmap_top_n(
     matrix = [[(field.get(iid) or {}).get(sem, float("nan")) for sem in semanas_ativas] for iid in top_ids]
 
     fig, ax = plt.subplots(figsize=(max(6, len(semanas_ativas) * 0.25), max(3, len(top_ids) * 0.45)))
-    cmap = plt.cm.RdYlGn  # vermelho (ineficiente) → verde (eficiente)
+    cmap = plt.get_cmap("RdYlGn")  # vermelho (ineficiente) → verde (eficiente)
     norm = mcolors.Normalize(vmin=0, vmax=1)
     im = ax.imshow(matrix, cmap=cmap, norm=norm, aspect="auto")
     ax.set_yticks(range(len(top_ids)))

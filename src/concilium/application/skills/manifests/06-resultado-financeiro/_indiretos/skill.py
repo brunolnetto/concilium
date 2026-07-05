@@ -31,12 +31,15 @@ from concilium.domain.models.canonical import (
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 try:
-    from ._skill_helpers_a import (
+    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
+    # (see concilium/application/skills/__init__.py); ty cannot resolve this
+    # statically.
+    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]
         _composicao_default_por_categoria,
         _meses_entre,
         _semanas_projeto,
     )
-    from ._skill_helpers_b import (
+    from ._skill_helpers_b import (  # ty: ignore[unresolved-import]
         _apply_bdi_to_indiretos,
         _apply_dv4_scale_to_categoria,
         _build_indireto_from_cat_obj,
@@ -55,13 +58,19 @@ except ImportError:
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
-    _spec_a = importlib.util.spec_from_file_location("skill07_helpers_a", _here / "_skill_helpers_a.py")
-    _mod_a = importlib.util.module_from_spec(_spec_a)  # type: ignore[arg-type]
-    _spec_a.loader.exec_module(_mod_a)  # type: ignore[union-attr]
+    _path_a = _here / "_skill_helpers_a.py"
+    _spec_a = importlib.util.spec_from_file_location("skill07_helpers_a", _path_a)
+    if _spec_a is None or _spec_a.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para: {_path_a}") from None
+    _mod_a = importlib.util.module_from_spec(_spec_a)
+    _spec_a.loader.exec_module(_mod_a)
 
-    _spec_b = importlib.util.spec_from_file_location("skill07_helpers_b", _here / "_skill_helpers_b.py")
-    _mod_b = importlib.util.module_from_spec(_spec_b)  # type: ignore[arg-type]
-    _spec_b.loader.exec_module(_mod_b)  # type: ignore[union-attr]
+    _path_b = _here / "_skill_helpers_b.py"
+    _spec_b = importlib.util.spec_from_file_location("skill07_helpers_b", _path_b)
+    if _spec_b is None or _spec_b.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para: {_path_b}") from None
+    _mod_b = importlib.util.module_from_spec(_spec_b)
+    _spec_b.loader.exec_module(_mod_b)
 
     _composicao_default_por_categoria = _mod_a._composicao_default_por_categoria
     _meses_entre = _mod_a._meses_entre

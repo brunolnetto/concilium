@@ -25,16 +25,18 @@ from concilium.domain.models.canonical import (
     Planejamento,
     ValidacaoItem,
 )
+
+# bdi é módulo interno do domínio (sem dependências externas opcionais) — import
+# direto em vez de try/except defensivo. TabelaBdi não é usado neste módulo além
+# de type hints; mantido apenas o valor efetivamente usado (DEFAULT_BDI_TABELA).
+from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA
 from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 
 try:
-    from concilium.domain.models.financial.bdi import DEFAULT_BDI_TABELA, TabelaBdi
-except Exception:  # pragma: no cover
-    DEFAULT_BDI_TABELA = None  # type: ignore[assignment]
-    TabelaBdi = None  # type: ignore[assignment,misc]
-
-try:
-    from ._skill_helpers_a import (
+    # Hyphenated manifest dir: only loaded at runtime via a synthetic package
+    # (see concilium/application/skills/__init__.py); ty cannot resolve this
+    # statically.
+    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]
         _build_equipe_lookup,
         _build_lookups,
         _process_eap_item,
@@ -53,9 +55,12 @@ except ImportError:
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
-    _spec = importlib.util.spec_from_file_location("skill06_helpers_a", _here / "_skill_helpers_a.py")
-    _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
-    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    _path = _here / "_skill_helpers_a.py"
+    _spec = importlib.util.spec_from_file_location("skill06_helpers_a", _path)
+    if _spec is None or _spec.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para: {_path}") from None
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
     _build_equipe_lookup = _mod._build_equipe_lookup
     _build_lookups = _mod._build_lookups
     _process_eap_item = _mod._process_eap_item

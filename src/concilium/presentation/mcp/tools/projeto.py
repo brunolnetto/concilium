@@ -297,7 +297,8 @@ def register(server: FastMCP) -> None:
         try:
             eid = _resolve_escopo_id(store, escopo_id)
             es = store.escopo(eid)
-            pid = plano_id or (es.active_plan().plano_id if es.active_plan() else None)
+            active = es.active_plan()
+            pid = plano_id or (active.plano_id if active else None)
             if not pid:
                 return {"erro": f"Nenhum plano ativo no escopo '{eid}'. Informe plano_id."}
             arquivados = es.approve_plan(pid)
@@ -328,7 +329,9 @@ def register(server: FastMCP) -> None:
                 actor_role=roles[0] if roles else None,
                 detalhes={"escopo_id": eid, "planos_arquivados": arquivados},
             )
-            AuditService().log_version_action(store, va)
+            from concilium.infrastructure.storage.file_project_repository import FileProjectHandle
+
+            AuditService().log_version_action(FileProjectHandle(store), va)
         except Exception:
             pass  # auditoria é best-effort
         return result

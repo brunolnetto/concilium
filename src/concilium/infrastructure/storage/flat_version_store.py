@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from concilium.domain.models.canonical import CanonicalModel
 
 if TYPE_CHECKING:
-    from concilium.infrastructure.storage.project import ProjectStore
+    from concilium.application.services.project.project_repository import ProjectHandle
 
 
 class _EscopoStoreProxy:
@@ -47,7 +47,7 @@ class FlatVersionStore:
     CANONICAL_FILE = "canonical.json"
     INVOCATIONS_LOG = "invocations.log"
 
-    def __init__(self, project: ProjectStore, version: str) -> None:
+    def __init__(self, project: ProjectHandle, version: str) -> None:
         self._project = project
         self._version = version
         self.root = project.version_path(version)

@@ -3,11 +3,17 @@
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 from rich import print as rprint
 
 from concilium.presentation.cli.shared import config_root, parse_project_version, resolve_project
+
+if TYPE_CHECKING:
+    from concilium.application.services.project.project_repository import ProjectHandle
+    from concilium.application.skills.base import SkillResult
+    from concilium.infrastructure.storage.escopo_store import EscopoStore
 
 # Runtime Ã© importado dentro de cada funÃ§Ã£o para evitar cascade Pydantic no startup.
 
@@ -26,8 +32,8 @@ def _run_parse_inputs(inputs_json: str | None) -> dict:
     return json.loads(inputs_json)
 
 
-def _run_resolve_escopo(project: object, escopo_id: str | None) -> str:
-    escopos = project.list_escopos()  # type: ignore[union-attr]
+def _run_resolve_escopo(project: "ProjectHandle", escopo_id: str | None) -> str:
+    escopos = project.list_escopos()
     if not escopos:
         rprint("[red]Nenhum escopo encontrado no projeto. Use 'escopo criar' primeiro.[/red]")
         raise typer.Exit(1)
@@ -41,29 +47,29 @@ def _run_resolve_escopo(project: object, escopo_id: str | None) -> str:
     raise typer.Exit(1)
 
 
-def _run_resolve_plano(es: object, plano_id: str | None, resolved_escopo: str) -> str:
+def _run_resolve_plano(es: "EscopoStore", plano_id: str | None, resolved_escopo: str) -> str:
     if plano_id is not None:
         return plano_id
-    active = es.active_plan()  # type: ignore[union-attr]
+    active = es.active_plan()
     if active is None:
         rprint(f"[red]Nenhum plano ativo no escopo '{resolved_escopo}'. Use 'plano criar' primeiro.[/red]")
         raise typer.Exit(1)
     return active.plano_id
 
 
-def _run_report_result(result: object, skill: str) -> None:
-    if result.has_errors:  # type: ignore[union-attr]
+def _run_report_result(result: "SkillResult", skill: str) -> None:
+    if result.has_errors:
         rprint(f"[red][X][/red] Skill {skill} falhou:")
     else:
         rprint(f"[green][OK][/green] Skill {skill} executada com sucesso.")
-    for v in result.validacoes:  # type: ignore[union-attr]
+    for v in result.validacoes:
         cor = {"OK": "green", "AVISO": "yellow", "ERRO": "red"}[v.status]
         msg = f": {v.mensagem}" if v.mensagem else ""
         rprint(f"  [{cor}]{v.status:5s}[/{cor}] {v.codigo}{msg}")
 
 
-def _approve_load_pending_overrides(project: object) -> list[str]:
-    overrides_path = project.root / "overrides" / "insumos_override.json"  # type: ignore[union-attr]
+def _approve_load_pending_overrides(project: "ProjectHandle") -> list[str]:
+    overrides_path = project.root / "overrides" / "insumos_override.json"
     if not overrides_path.exists():
         return []
     try:

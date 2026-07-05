@@ -383,17 +383,18 @@ def generate_diffs_for_benchmark(slug: str, root: Path | None = None) -> dict[st
 
     canonical = _gdfb_load_canonical(bench, r)
 
+    por_etapa: dict[str, Any] = {}
     diffs_result: dict[str, Any] = {
         "slug": slug,
         "gerado_em": datetime.now().isoformat(),
-        "por_etapa": {},
+        "por_etapa": por_etapa,
     }
 
     d03 = compare_equipes_skill05(
         canonical.get("equipes_diretas", []),
         _normalize_ref_equipes(extracted.get("equipes", {})),
     )
-    diffs_result["por_etapa"]["05-equipes-e-alocacao"] = {
+    por_etapa["05-equipes-e-alocacao"] = {
         "total_discrepancias": len(d03),
         "discrepancias": d03,
         "resumo": _summarize(d03),
@@ -403,7 +404,7 @@ def generate_diffs_for_benchmark(slug: str, root: Path | None = None) -> dict[st
         canonical.get("planejamento", []),
         _normalize_ref_planejamento(extracted.get("planejamento", {})),
     )
-    diffs_result["por_etapa"]["04-planejamento-e-insumos"] = {
+    por_etapa["04-planejamento-e-insumos"] = {
         "total_discrepancias": len(d04),
         "discrepancias": d04,
         "resumo": _summarize(d04),
@@ -413,7 +414,7 @@ def generate_diffs_for_benchmark(slug: str, root: Path | None = None) -> dict[st
         canonical.get("indiretos", []),
         _normalize_ref_indiretos(extracted.get("indiretos", {})),
     )
-    diffs_result["por_etapa"]["indiretos-e-contingencia"] = {  # NEP-041 F4: etapa, não skill
+    por_etapa["indiretos-e-contingencia"] = {  # NEP-041 F4: etapa, não skill
         "total_discrepancias": len(d05),
         "discrepancias": d05,
         "resumo": _summarize(d05),
@@ -423,7 +424,7 @@ def generate_diffs_for_benchmark(slug: str, root: Path | None = None) -> dict[st
         canonical.get("resultado") or {},
         extracted.get("resultado") or {},
     )
-    diffs_result["por_etapa"]["06-consolidacao-resultado"] = {
+    por_etapa["06-consolidacao-resultado"] = {
         "total_discrepancias": len(d06),
         "discrepancias": d06,
         "resumo": _summarize(d06),

@@ -115,7 +115,7 @@ def add_user(
 
     store = get_auth_store()
     generated = secret is None
-    if generated:
+    if secret is None:
         secret = secrets.token_urlsafe(32)
     client_code = "RCODE-" + secrets.token_hex(16).upper()
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 
 def _brl(value: Any) -> str:
@@ -270,7 +270,9 @@ def render_compressao_cronograma(compressao: dict | None) -> list[str]:
 def _opp_get(obj: object, key: str, default: Any = None) -> Any:
     """Acesso uniforme a campo de oportunidade (aceita dict ou objeto Pydantic)."""
     if isinstance(obj, dict):
-        return obj.get(key, default)
+        # cast: isinstance(x, dict) sobre object vira dict[Unknown, Unknown] no ty,
+        # que não unifica a chave str com _KT — limitação conhecida do checker.
+        return cast("dict[str, Any]", obj).get(key, default)
     return getattr(obj, key, default)
 
 

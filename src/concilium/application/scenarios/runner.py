@@ -21,12 +21,12 @@ import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from concilium.application.runtime import Runtime
+from concilium.application.services.project.project_repository import ProjectHandle
 from concilium.domain.models.canonical import CanonicalModel
 from concilium.domain.models.project.decision_variables import DecisionVariables
-from concilium.infrastructure.storage.project import ProjectStore
 
 from .config import ScenarioConfig
 from .runner_dv import generate_dv_variations, run_dv_scenario
@@ -121,7 +121,7 @@ def _build_compare_summary(results: list, ok_results: list) -> dict:
 class ScenarioRunner:
     """Executa múltiplos cenários de variação e coleta métricas."""
 
-    def __init__(self, runtime: Runtime, project: ProjectStore) -> None:
+    def __init__(self, runtime: Runtime, project: ProjectHandle) -> None:
         self.runtime = runtime
         self.project = project
 
@@ -257,7 +257,7 @@ class ScenarioRunner:
         canonical_in: CanonicalModel,
         base_decisions: DecisionVariables | None = None,
         dv2_options: list[dict[str, dict[str, int]]] | None = None,
-        dv4_options: list[str] | None = None,
+        dv4_options: list[Literal["lean", "standard", "robust"]] | None = None,
         catalogo: dict[str, Any] | None = None,
         perfil: dict[str, Any] | None = None,
     ) -> list[ScenarioResult]:
@@ -280,7 +280,7 @@ class ScenarioRunner:
         self,
         base_decisions: DecisionVariables | None = None,
         dv2_options: list[dict[str, dict[str, int]]] | None = None,
-        dv4_options: list[str] | None = None,
+        dv4_options: list[Literal["lean", "standard", "robust"]] | None = None,
     ) -> list[ScenarioConfig]:
         """Wrapper para generate_dv_variations from runner_dv module."""
         return generate_dv_variations(base_decisions, dv2_options, dv4_options)

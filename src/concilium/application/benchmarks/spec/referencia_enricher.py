@@ -260,6 +260,7 @@ def _extract_eap_from_cpus_txt(cpus_path: Path) -> list[dict[str, Any]]:
                     descricao = f"Item {item_id}"
 
                 # Create basic EAP item with reasonable defaults
+                predecessores: list[dict[str, Any]] = []
                 eap_item = {
                     "item_id": item_id,
                     "ordem": ordem,
@@ -267,7 +268,7 @@ def _extract_eap_from_cpus_txt(cpus_path: Path) -> list[dict[str, Any]]:
                     "descricao": descricao,
                     "unidade": "un",  # Generic default
                     "quantitativo": 1.0,  # Minimal default
-                    "predecessores": [],
+                    "predecessores": predecessores,
                 }
 
                 # Infer predecessores based on hierarchy
@@ -276,7 +277,7 @@ def _extract_eap_from_cpus_txt(cpus_path: Path) -> list[dict[str, Any]]:
                     if item_num > 1:
                         prev_id = f"{item_id.split('.')[0]}.{item_num - 1}"
                         if prev_id in seen_ids:
-                            eap_item["predecessores"].append(
+                            predecessores.append(
                                 {
                                     "item_id": prev_id,
                                     "tipo": "FS",

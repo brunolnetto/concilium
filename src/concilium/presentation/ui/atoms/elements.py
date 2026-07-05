@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import streamlit as st
+
+_DeltaColor = Literal[
+    "normal", "inverse", "off", "red", "orange", "yellow", "green", "blue", "violet", "gray", "grey", "primary"
+]
 
 
 def render_primary_button(
@@ -43,9 +47,11 @@ def render_secondary_button(
     )
 
 
-def render_metric(label: str, value: str | int | float, delta: str | None = None, delta_color: str = "normal") -> None:
+def render_metric(
+    label: str, value: str | int | float, delta: str | None = None, delta_color: _DeltaColor = "normal"
+) -> None:
     """Render a metric card."""
-    st.metric(label, value, delta=delta, delta_color=delta_color)  # type: ignore[arg-type]
+    st.metric(label, value, delta=delta, delta_color=delta_color)
 
 
 def render_badge(text: str, color: str = "blue") -> None:

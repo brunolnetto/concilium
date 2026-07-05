@@ -457,15 +457,18 @@ class BenchmarkSpecLoader:
         if mode != "benchmark_config":
             return ref
         out = dict(ref)
-        projeto_block = out.get("projeto") if isinstance(out.get("projeto"), dict) else {}
-        datas_block = out.get("datas") if isinstance(out.get("datas"), dict) else {}
-        regime_block = out.get("regime") if isinstance(out.get("regime"), dict) else {}
-        _norm_ref_projeto_block(out, projeto_block)  # type: ignore[arg-type]
-        _norm_ref_datas_block(out, datas_block)  # type: ignore[arg-type]
+        raw_projeto = out.get("projeto")
+        raw_datas = out.get("datas")
+        raw_regime = out.get("regime")
+        projeto_block: dict[str, Any] = raw_projeto if isinstance(raw_projeto, dict) else {}
+        datas_block: dict[str, Any] = raw_datas if isinstance(raw_datas, dict) else {}
+        regime_block: dict[str, Any] = raw_regime if isinstance(raw_regime, dict) else {}
+        _norm_ref_projeto_block(out, projeto_block)
+        _norm_ref_datas_block(out, datas_block)
         if regime_block and not out.get("regime_trabalho"):
             out["regime_trabalho"] = {
-                "horas_dia": regime_block.get("horas_dia", 8),  # type: ignore[union-attr]
-                "dias_semana": regime_block.get("dias_semana", 6),  # type: ignore[union-attr]
+                "horas_dia": regime_block.get("horas_dia", 8),
+                "dias_semana": regime_block.get("dias_semana", 6),
             }
         _norm_ref_atividades_to_eap(out)
         _norm_ref_metas_confronto(out)

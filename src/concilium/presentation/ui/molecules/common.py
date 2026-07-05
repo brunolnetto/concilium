@@ -22,7 +22,7 @@ def render_project_selector(
     labels = [f"{p['nome']} [{p.get('tipo_projeto', 'hot_project')}]" for p in projects]
     idx = render_selectbox(
         label,
-        options=range(len(labels)),  # type: ignore[arg-type]
+        options=list(range(len(labels))),
         index=0,
         key=f"{key_prefix}-select",
     )

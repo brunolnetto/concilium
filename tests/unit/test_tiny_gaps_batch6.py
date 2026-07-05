@@ -196,16 +196,13 @@ class TestMcpServer:
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "config"))
         (tmp_path / "config").mkdir()
         from concilium.presentation.mcp.middleware import McpAuthMiddleware
-        from concilium.presentation.mcp.server import _patch_mcp_with_auth
+        from concilium.presentation.mcp.server import _AuthenticatedFastMCP
 
-        server = MagicMock()
-        original_http = MagicMock(return_value=MagicMock())
-        original_sse = MagicMock(return_value=MagicMock())
-        server.streamable_http_app = original_http
-        server.sse_app = original_sse
-        _patch_mcp_with_auth(server)
+        server = _AuthenticatedFastMCP("test")
         result = server.streamable_http_app()
         assert isinstance(result, McpAuthMiddleware)
+        result_sse = server.sse_app()
+        assert isinstance(result_sse, McpAuthMiddleware)
 
     def test_main_config_not_found(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "nonexistent"))

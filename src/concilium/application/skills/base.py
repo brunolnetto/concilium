@@ -17,7 +17,19 @@ class SkillResult:
     produzidos pela skill (ex: ArtifactEnvelope[RelatorioCriticidade]).
     O runtime persiste o canônico; os artefatos são responsabilidade do
     consumidor (MCP tool ou teste) que decidirá como armazená-los.
+
+    Os atributos abaixo são anexados dinamicamente por skills específicas
+    após a construção (ex: skill 09 seta ``decision_log``, skill 10 seta
+    ``relatorio``/``excel_bytes``/etc.) — declarados aqui só para tipagem,
+    sem valor padrão, então ``getattr(result, "campo", None)`` continua
+    funcionando normalmente para os consumidores que não os setam.
     """
+
+    relatorio: dict
+    excel_bytes: bytes
+    excel_live_bytes: bytes
+    memorial_bdi_json: bytes
+    decision_log: dict
 
     def __init__(
         self,

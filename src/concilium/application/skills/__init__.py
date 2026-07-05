@@ -57,11 +57,13 @@ def _load_skill_module(skill_id: str) -> types.ModuleType:
 
     _ensure_skill_package(skill_id, skill_path.parent)
     spec = importlib.util.spec_from_file_location(mod_name, skill_path)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para skill.py: {skill_path}")
+    mod = importlib.util.module_from_spec(spec)
     # Register before execution so nested imports during module init can resolve.
     sys.modules[mod_name] = mod
     try:
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        spec.loader.exec_module(mod)
     except Exception:
         # Avoid leaking partially initialized modules into future lazy loads.
         sys.modules.pop(mod_name, None)
@@ -208,8 +210,10 @@ def load_skill_stage(skill_id: str, stage: str, func_name: str) -> Any:
     stage_dir = _MANIFESTS / skill_id / stage
     path = stage_dir / "skill.py" if stage_dir.is_dir() else _MANIFESTS / skill_id / f"{stage}.py"
     spec = importlib.util.spec_from_file_location(f"stage_{skill_id}_{stage}".replace("-", "_"), path)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Não foi possível carregar spec para estágio: {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
     return getattr(mod, func_name)
 
 

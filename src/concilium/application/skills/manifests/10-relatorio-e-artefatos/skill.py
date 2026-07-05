@@ -18,7 +18,7 @@ from concilium.application.skills.base import SkillResult
 from concilium.domain.models.canonical import CanonicalModel, ValidacaoItem
 
 try:
-    from ._skill_helpers_a import (
+    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
         _add_criticidade_validacoes,
         _build_equipe_rows,
         _build_graficos_section,
@@ -37,8 +37,10 @@ except ImportError:
 
     _here = Path(__file__).resolve().parent
     _spec = importlib.util.spec_from_file_location("skill09_helpers_a", _here / "_skill_helpers_a.py")
-    _mod = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
-    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    if _spec is None or _spec.loader is None:
+        raise ImportError("Cannot load _skill_helpers_a.py via importlib") from None
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
 
     _add_criticidade_validacoes = _mod._add_criticidade_validacoes
     _build_equipe_rows = _mod._build_equipe_rows
@@ -54,7 +56,9 @@ except ImportError:
 
 # NEP-041 Fase 1: relatório executivo absorvido de skill-15
 try:
-    from ._skill_helpers_executivo import build_relatorio_executivo
+    from ._skill_helpers_executivo import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
+        build_relatorio_executivo,
+    )
 except ImportError:
     import importlib.util as _ilu
     from pathlib import Path as _Path
@@ -62,8 +66,10 @@ except ImportError:
     _spec_ex = _ilu.spec_from_file_location(
         "skill09_helpers_executivo", _Path(__file__).resolve().parent / "_skill_helpers_executivo.py"
     )
-    _mod_ex = _ilu.module_from_spec(_spec_ex)  # type: ignore[arg-type]
-    _spec_ex.loader.exec_module(_mod_ex)  # type: ignore[union-attr]
+    if _spec_ex is None or _spec_ex.loader is None:
+        raise ImportError("Cannot load _skill_helpers_executivo.py via importlib") from None
+    _mod_ex = _ilu.module_from_spec(_spec_ex)
+    _spec_ex.loader.exec_module(_mod_ex)
     build_relatorio_executivo = _mod_ex.build_relatorio_executivo
 
 _MESES_PT = {
@@ -167,7 +173,6 @@ def run_relatorio_e_artefatos(
     )
 
     novo = canonical_in.model_copy(update={})
-    novo._relatorio_saida = relatorio  # type: ignore[attr-defined]
 
     excel_bytes = _gerar_excel_bytes(canonical_in, validacoes, gerar_excel)
     live_bytes = _gerar_live_model(canonical_in, validacoes, False)
@@ -175,8 +180,8 @@ def run_relatorio_e_artefatos(
 
     # NEP-041 Fase 1: artefatos executivos (criticidade, sensibilidade, intervenção, bridge)
     result = SkillResult(novo, validacoes, artifacts=_exec_artifacts)
-    result.relatorio = relatorio  # type: ignore[attr-defined]
-    result.excel_bytes = excel_bytes  # type: ignore[attr-defined]
-    result.excel_live_bytes = live_bytes  # type: ignore[attr-defined]
-    result.memorial_bdi_json = memorial_json_bytes  # type: ignore[attr-defined]
+    result.relatorio = relatorio
+    result.excel_bytes = excel_bytes
+    result.excel_live_bytes = live_bytes
+    result.memorial_bdi_json = memorial_json_bytes
     return result

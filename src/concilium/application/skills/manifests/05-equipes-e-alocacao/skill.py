@@ -25,7 +25,7 @@ from concilium.infrastructure.repositories.insumo import RepositorioInsumo
 # --- Utils de Dimensionamento (da Skill 03) ---
 
 try:
-    from ._skill_helpers_a import (
+    from ._skill_helpers_a import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
         _aplicar_custo_instancial,
         _build_contratos_recurso,
         _build_dimensionamento,
@@ -37,27 +37,35 @@ try:
         _RepoCtx,
         particionar_contrato,
     )
-    from ._skill_helpers_b import (
+    from ._skill_helpers_b import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
         _build_alocacoes_pool,
         _build_requisitos_e_tipos,
     )
-    from ._skill_helpers_pre import _build_pre_processamento_compartilhamento
+    from ._skill_helpers_pre import (  # ty: ignore[unresolved-import]  # runtime-only: loaded via importlib below
+        _build_pre_processamento_compartilhamento,
+    )
 except ImportError:
     import importlib.util
     from pathlib import Path
 
     _here = Path(__file__).resolve().parent
     _spec_a = importlib.util.spec_from_file_location("skill05_helpers_a", _here / "_skill_helpers_a.py")
-    _mod_a = importlib.util.module_from_spec(_spec_a)  # type: ignore[arg-type]
-    _spec_a.loader.exec_module(_mod_a)  # type: ignore[union-attr]
+    if _spec_a is None or _spec_a.loader is None:
+        raise ImportError("Cannot load _skill_helpers_a.py via importlib") from None
+    _mod_a = importlib.util.module_from_spec(_spec_a)
+    _spec_a.loader.exec_module(_mod_a)
 
     _spec_b = importlib.util.spec_from_file_location("skill05_helpers_b", _here / "_skill_helpers_b.py")
-    _mod_b = importlib.util.module_from_spec(_spec_b)  # type: ignore[arg-type]
-    _spec_b.loader.exec_module(_mod_b)  # type: ignore[union-attr]
+    if _spec_b is None or _spec_b.loader is None:
+        raise ImportError("Cannot load _skill_helpers_b.py via importlib") from None
+    _mod_b = importlib.util.module_from_spec(_spec_b)
+    _spec_b.loader.exec_module(_mod_b)
 
     _spec_pre = importlib.util.spec_from_file_location("skill05_helpers_pre", _here / "_skill_helpers_pre.py")
-    _mod_pre = importlib.util.module_from_spec(_spec_pre)  # type: ignore[arg-type]
-    _spec_pre.loader.exec_module(_mod_pre)  # type: ignore[union-attr]
+    if _spec_pre is None or _spec_pre.loader is None:
+        raise ImportError("Cannot load _skill_helpers_pre.py via importlib") from None
+    _mod_pre = importlib.util.module_from_spec(_spec_pre)
+    _spec_pre.loader.exec_module(_mod_pre)
 
     _RepoCtx = _mod_a._RepoCtx
     _build_dimensionamento = _mod_a._build_dimensionamento
@@ -350,7 +358,9 @@ def run_equipes_e_alocacao(
                 ScheduleOutput,
             )
 
-            from ._skill_helpers_pre import _detectar_oportunidades_paralelo
+            from ._skill_helpers_pre import (  # ty: ignore[unresolved-import]  # runtime-only: sibling loaded via importlib above
+                _detectar_oportunidades_paralelo,
+            )
 
             # Reconstruir ScheduleOutput a partir do cronograma canônico
             _sched_acts_110 = []
@@ -410,7 +420,9 @@ def run_equipes_e_alocacao(
             _dag_110 = ActivityDAG(activities=_act_110, precedence=_prec_110)
 
             # Pool a partir dos contratos
-            _pool_res = {c.tipo_id: int(c.quantidade_total) for c in contratos_recurso}
+            # ADR-071: RecursoContrato.quantidade_contratada é o pool_size do contrato
+            # (quantidade_total pertence a RecursoPool, não a RecursoContrato).
+            _pool_res = {c.tipo_id: int(c.quantidade_contratada) for c in contratos_recurso}
             _pool_110 = ResourcePool(resources=_pool_res)
 
             _resource_costs_110 = rcpsp_spec.get("resource_costs") or {}
@@ -472,5 +484,3 @@ def run_equipes_e_alocacao(
         }
     )
     return SkillResult(novo, validacoes)
-
-

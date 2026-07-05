@@ -23,7 +23,7 @@ from concilium.domain.models.analytics.diagnostico_pe import (
 _CROSS_TERM_THRESHOLD = 0.05
 
 
-def _compute_item_metrics(active: list) -> dict[str, float]:
+def _compute_item_metrics(active: list) -> tuple[dict[str, float], bool]:
     """Calcula η_real, p_medio, cov_np, eps_cross, validade a partir das semanas ativas.
 
     NEP-035 (Seção 5): agregação correta por capacidade máxima q_max_celula.
@@ -91,8 +91,7 @@ def _compute_item_metrics(active: list) -> dict[str, float]:
         "n_medio": n_medio,
         "cov_np": cov_np,
         "eps_cross": eps_cross,
-        "validade": validade,
-    }
+    }, validade
 
 
 def _compute_f1_quantizacao(canonical_in: Any, resultado: Any, gap_total: float) -> float:
@@ -318,7 +317,7 @@ def _process_pe_item(
     if not active:
         return None, False
 
-    metrics = _compute_item_metrics(active)
+    metrics, validade_aprox = _compute_item_metrics(active)
     c_fixo_semanal = (equipe.custo_mao_obra_mensal + equipe.custo_equipamentos_mensal) / SEMANAS_POR_MES
     fatores, _ = _build_gap_fatores(c_fixo_semanal, metrics, ca, canonical_in, gap_total, resultado)
 
@@ -338,7 +337,7 @@ def _process_pe_item(
         p_medio_uniforme=round(metrics["p_medio"], 4),
         cov_n_p=round(metrics["cov_np"], 6),
         eps_cross=round(metrics["eps_cross"], 6),
-        validez_aproximacao=metrics["validade"],
+        validez_aproximacao=validade_aprox,
         n_total=round(metrics["N_total"], 2),
         fatores=fatores,
         l_aplicado=round(L_aplicado, 4),
@@ -349,7 +348,7 @@ def _process_pe_item(
         custo_direto_cubo_rs=float((item_cubo_hint or {}).get("custo_direto_cubo_rs", 0.0) or 0.0),
         custo_indireto_cubo_rs=float((item_cubo_hint or {}).get("custo_indireto_cubo_rs", 0.0) or 0.0),
         explicacao_janela=(item_cubo_hint or {}).get("explicacao_janela"),
-    ), not metrics["validade"]
+    ), not validade_aprox
 
 
 def _dpb_empty_relatorio(projeto_id: str) -> DiagnosticoPERelatorio:

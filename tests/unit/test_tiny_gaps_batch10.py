@@ -71,10 +71,10 @@ class TestProjectionHelpers:
         assert isinstance(totals, dict)
 
     def test_accumulate_equipes_empty(self):
-        from concilium.application.benchmarks.report.projection import _accumulate_equipes
+        from concilium.application.benchmarks.report.projection import TotaisDiretosEquipes, _accumulate_equipes
 
         result = _accumulate_equipes([])
-        assert isinstance(result, dict)
+        assert isinstance(result, TotaisDiretosEquipes)
 
     def test_build_breakdown_indireto(self):
         from concilium.application.benchmarks.report.projection import _build_breakdown_indireto
@@ -89,16 +89,18 @@ class TestProjectionHelpers:
         assert isinstance(result, dict)
 
     def test_build_breakdown_direto_equipes(self):
-        from concilium.application.benchmarks.report.projection import _build_breakdown_direto_equipes
+        from concilium.application.benchmarks.report.projection import (
+            TotaisDiretosEquipes,
+            _build_breakdown_direto_equipes,
+        )
 
-        # Provide a dict with the required keys
-        totals = {
-            "mao_obra": 60000.0,
-            "equipamentos": 30000.0,
-            "diesel": 10000.0,
-            "materiais": 5000.0,
-            "total": 105000.0,
-        }
+        totals = TotaisDiretosEquipes(
+            mao_obra=60000.0,
+            equipamentos=30000.0,
+            diesel=10000.0,
+            materiais=5000.0,
+            total=105000.0,
+        )
         result = _build_breakdown_direto_equipes(totals)
         assert isinstance(result, dict)
 
@@ -223,7 +225,7 @@ class TestCubeInit:
         equipe.custo_combustivel_total_mensal = 500.0
         equipe.cpu_id = "CPU-1"
         result = _accumulate_equipes([equipe])
-        assert result.get("mao_obra", 0) > 0
+        assert result.mao_obra > 0
 
     def test_bai_fill_criticidade(self):
         """Cover lines 204-209: _bai_fill_criticidade."""

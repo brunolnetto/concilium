@@ -542,7 +542,7 @@ def _process_eap_item(
             jurisdicao_id,
             overrides,
             data_base,
-            cpu.get("codigo"),
+            cpu.get("codigo") or "",
             erros_insumo,
             validacoes,
         )

@@ -22,6 +22,7 @@ Não automáticas (reportadas apenas):
   - Produções CAP sem composição (necessitam dados de campo)
   - P0058 "Sala Técnica" — erro semântico que requer redesign
 """
+
 from __future__ import annotations
 
 import argparse
@@ -36,9 +37,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[4]
 
 # ── Constantes ────────────────────────────────────────────────────────────────
-SALARIO_MINIMO_MENSAL = 1_518.0   # R$ Brasil 2025
-HORAS_MES_PADRAO      = 220.0
-SMM = SALARIO_MINIMO_MENSAL       # R$/mês — piso para MAO_OBRA regular
+SALARIO_MINIMO_MENSAL = 1_518.0  # R$ Brasil 2025
+HORAS_MES_PADRAO = 220.0
+SMM = SALARIO_MINIMO_MENSAL  # R$/mês — piso para MAO_OBRA regular
 
 # Estagiários são isentos do SMM CLT (bolsa-auxílio, não salário)
 ESTAGIARIO_KEYWORDS = {"estagi", "intern", "bolsist"}
@@ -46,28 +47,32 @@ ESTAGIARIO_KEYWORDS = {"estagi", "intern", "bolsist"}
 # Preços de referência RFI para correção manual (P#### → salario_mensal_correto)
 # Extraídos da planilha BD_MÃO_DE_OBRA última versão
 RFI_PRECO_REFERENCIA: dict[str, float] = {
-    "MO-P0001":  1830.51,   # Ajudante (P0001 na planilha)
+    "MO-P0001": 1830.51,  # Ajudante (P0001 na planilha)
 }
 
 # Fator CLT horista padrão como referência para α > 1.5 (α armazenado errado)
 ALPHA_CLT = 1.777
-ALPHA_MAX  = 1.5   # se percentual_encargos_local > ALPHA_MAX → provavelmente armazenado α ao invés de α-1
+ALPHA_MAX = 1.5  # se percentual_encargos_local > ALPHA_MAX → provavelmente armazenado α ao invés de α-1
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%d")
+
 
 def _norm(text: str) -> str:
     t = unicodedata.normalize("NFD", str(text).lower())
     t = "".join(c for c in t if unicodedata.category(c) != "Mn")
     return re.sub(r"\s+", " ", t).strip()
 
+
 def _is_estagiario(ins: dict) -> bool:
     desc = _norm(ins.get("descricao", ""))
-    cod  = _norm(ins.get("codigo", ""))
+    cod = _norm(ins.get("codigo", ""))
     return any(k in desc or k in cod for k in ESTAGIARIO_KEYWORDS)
+
 
 def _horas_mes(ins: dict) -> float:
     attrs = ins.get("atributos_especificos") or {}
@@ -80,22 +85,28 @@ def _horas_mes(ins: dict) -> float:
 
 class CureReport:
     def __init__(self) -> None:
-        self.fixed:   list[str] = []
-        self.manual:  list[str] = []
+        self.fixed: list[str] = []
+        self.manual: list[str] = []
         self.skipped: list[str] = []
 
-    def add_fixed(self, msg: str)   -> None: self.fixed.append(msg)
-    def add_manual(self, msg: str)  -> None: self.manual.append(msg)
-    def add_skipped(self, msg: str) -> None: self.skipped.append(msg)
+    def add_fixed(self, msg: str) -> None:
+        self.fixed.append(msg)
+
+    def add_manual(self, msg: str) -> None:
+        self.manual.append(msg)
+
+    def add_skipped(self, msg: str) -> None:
+        self.skipped.append(msg)
 
 
 # ── 1. Erros físicos ─────────────────────────────────────────────────────────
+
 
 def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> list[dict]:
     changed = [dict(i) for i in insumos]
 
     for ins in changed:
-        cod  = ins.get("codigo", "")
+        cod = ins.get("codigo", "")
         tipo = ins.get("tipo", "")
         if tipo != "MAO_OBRA":
             continue
@@ -121,7 +132,7 @@ def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> 
 
         # b) preco_unitario abaixo do mínimo mensal (ignora estagiários)
         preco = float(ins.get("preco_unitario") or 0)
-        hm    = _horas_mes(ins)
+        hm = _horas_mes(ins)
         preco_h = preco / hm if hm > 0 else 0
 
         if not _is_estagiario(ins) and 0 < preco_h < (SALARIO_MINIMO_MENSAL / HORAS_MES_PADRAO) * 0.95:
@@ -138,7 +149,7 @@ def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> 
             else:
                 report.add_manual(
                     f"INSUMO {cod}: preco_unitario {preco} R$/mês → R${preco_h:.2f}/h "
-                    f"abaixo do mínimo legal (R${SALARIO_MINIMO_MENSAL/HORAS_MES_PADRAO:.2f}/h) — "
+                    f"abaixo do mínimo legal (R${SALARIO_MINIMO_MENSAL / HORAS_MES_PADRAO:.2f}/h) — "
                     f"sem referência RFI para correção automática"
                 )
 
@@ -146,6 +157,7 @@ def cure_erros_fisicos(insumos: list[dict], report: CureReport, apply: bool) -> 
 
 
 # ── 2. Duplicatas P#### → MO-NOME ─────────────────────────────────────────────
+
 
 def _build_dup_map(insumos: list[dict]) -> dict[str, str]:
     """Retorna {p_code: canonical_code} para todos os duplicados detectados."""
@@ -161,10 +173,7 @@ def _build_dup_map(insumos: list[dict]) -> dict[str, str]:
         if len(codes) < 2:
             continue
         # Canônico: prefere MO-NOME (não começa com P ou MO-P)
-        canonical = next(
-            (c for c in codes if not re.match(r"^(MO-P|P)\d+$", c)),
-            codes[0]
-        )
+        canonical = next((c for c in codes if not re.match(r"^(MO-P|P)\d+$", c)), codes[0])
         for c in codes:
             if c != canonical:
                 dup_map[c] = canonical
@@ -208,7 +217,7 @@ def cure_duplicatas(
         for p_code, canonical in list(dup_map.items())[:5]:
             report.add_fixed(f"  {p_code} → {canonical} (seria removido)")
         if len(dup_map) > 5:
-            report.add_fixed(f"  ... e mais {len(dup_map)-5} remoções")
+            report.add_fixed(f"  ... e mais {len(dup_map) - 5} remoções")
         new_insumos = insumos
 
     # Atualiza funcao_id nas producoes
@@ -227,7 +236,7 @@ def cure_duplicatas(
                 if apply:
                     f["funcao_id"] = new
                 refs_updated += 1
-                report.add_fixed(f"  PROD {p.get('id','?')}: funcao_id {old} → {new}")
+                report.add_fixed(f"  PROD {p.get('id', '?')}: funcao_id {old} → {new}")
                 changed_equipe = True
             new_funcoes.append(f)
         if changed_equipe and apply:
@@ -245,6 +254,7 @@ def cure_duplicatas(
 
 
 # ── 3. Atualiza data_referencia_preco dos itens atualizados pelo merge ─────────
+
 
 def cure_stale_rfi(insumos: list[dict], report: CureReport, apply: bool) -> list[dict]:
     """Para insumos com _rfi_updated_at ou _rfi_imported_at, propaga a data ao campo oficial."""
@@ -266,6 +276,7 @@ def cure_stale_rfi(insumos: list[dict], report: CureReport, apply: bool) -> list
 
 # ── 4. Equipment: deriva valor_locacao_mensal faltante ──────────────────────────
 
+
 def cure_locacao_mensal(insumos: list[dict], report: CureReport, apply: bool) -> list[dict]:
     changed = [dict(i) for i in insumos]
     n = 0
@@ -281,9 +292,7 @@ def cure_locacao_mensal(insumos: list[dict], report: CureReport, apply: bool) ->
         hm = float(attrs.get("horas_mes") or HORAS_MES_PADRAO)
         vlm = round(preco_h * hm, 2)
         n += 1
-        report.add_fixed(
-            f"INSUMO {ins['codigo']}: valor_locacao_mensal ← {preco_h} × {hm} = {vlm} R$/mês (derivado)"
-        )
+        report.add_fixed(f"INSUMO {ins['codigo']}: valor_locacao_mensal ← {preco_h} × {hm} = {vlm} R$/mês (derivado)")
         if apply:
             attrs["valor_locacao_mensal"] = vlm
             ins["atributos_especificos"] = attrs
@@ -294,6 +303,7 @@ def cure_locacao_mensal(insumos: list[dict], report: CureReport, apply: bool) ->
 
 # ── 5. Manual: não-automatizáveis ────────────────────────────────────────────
 
+
 def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport) -> None:
     # Produções sem composição
     for prod in producoes:
@@ -301,8 +311,7 @@ def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport
         if not (eq.get("funcoes") or eq.get("equipamentos")):
             pid = prod.get("id", "?")
             report.add_manual(
-                f"PROD {pid}: sem composição de equipe "
-                f"(vh={prod.get('valor_horario')}) — dados de campo necessários"
+                f"PROD {pid}: sem composição de equipe (vh={prod.get('valor_horario')}) — dados de campo necessários"
             )
 
     # Insumos semanticamente suspeitos
@@ -318,6 +327,7 @@ def report_manual(insumos: list[dict], producoes: list[dict], report: CureReport
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Curação cirúrgica de plausibilidade do catálogo")
     parser.add_argument("--contexto", required=True, help="ID do contexto (ex: mendeslobo)")
@@ -325,17 +335,17 @@ def main() -> None:
     args = parser.parse_args()
 
     mode = "APPLY" if args.apply else "DRY-RUN"
-    print(f"\n{'='*65}")
+    print(f"\n{'=' * 65}")
     print(f"  Curação de Plausibilidade [{mode}] — contexto: {args.contexto}")
-    print(f"{'='*65}\n")
+    print(f"{'=' * 65}\n")
 
     bundle_path = ROOT / f"config/catalogos/{args.contexto}/.catalog_bundle.json"
     if not bundle_path.exists():
         print(f"Bundle não encontrado: {bundle_path}", file=sys.stderr)
         sys.exit(1)
 
-    bundle    = json.loads(bundle_path.read_text(encoding="utf-8"))
-    insumos   = bundle.get("insumos", [])
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    insumos = bundle.get("insumos", [])
     producoes = bundle.get("producoes", []) or bundle.get("produtividades", [])
 
     report = CureReport()
@@ -357,7 +367,7 @@ def main() -> None:
     report_manual(insumos, producoes, report)
 
     # Relatório
-    print(f"\n{'─'*65}")
+    print(f"\n{'─' * 65}")
     print(f"  Correções automáticas: {len(report.fixed)}")
     print(f"  Intervenção manual:    {len(report.manual)}")
     print()
@@ -386,6 +396,7 @@ def main() -> None:
         # Valida plausibilidade pós-curação
         sys.path.insert(0, str(ROOT / "src"))
         from concilium.application.catalog.plausibility_checker import verificar_plausibilidade
+
         pos = verificar_plausibilidade(insumos, producoes)
         r = pos["resumo"]
         print(f"\n  Pós-curação: {r['erros']} erros | {r['avisos']} avisos | {r['infos']} infos")

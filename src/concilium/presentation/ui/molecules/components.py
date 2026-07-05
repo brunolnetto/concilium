@@ -161,6 +161,8 @@ def render_numeric_override_editor(
         disabled=["campo", "base", "override_atual"],
         key=f"numeric-editor-{project_id}-{skill_id}",
     )
-    if hasattr(edited_numeric, "to_dict"):
-        return edited_numeric.to_dict("records")
-    return list(edited_numeric or [])
+    to_dict = getattr(edited_numeric, "to_dict", None)
+    if callable(to_dict):
+        records = to_dict("records")
+        return [r for r in records if isinstance(r, dict)] if isinstance(records, list) else []
+    return [r for r in edited_numeric if isinstance(r, dict)] if isinstance(edited_numeric, list) else []
