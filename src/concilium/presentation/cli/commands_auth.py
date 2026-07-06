@@ -38,22 +38,52 @@ app = typer.Typer(
 
 _MCP_SERVER_URL = "https://mcp.mendesloboconstrucao.com.br"
 
+_WINDOWS_INSTALL_PATH = r"C:\Concilium\concilium-mcp-proxy.exe"
+_UNIX_INSTALL_PATH = "$HOME/.concilium/bin/concilium-mcp-proxy"
+
+# Publicados pela workflow build-proxy.yml (PyInstaller, um build nativo por SO) —
+# não há PyPI/wheel publicado para instalação via pip em máquinas de usuário final.
+_PROXY_EXE_BLOB_PATHS = {
+    "windows": "distribuicao/concilium-mcp-proxy.exe",
+    "linux": "distribuicao/concilium-mcp-proxy-linux",
+    "macos": "distribuicao/concilium-mcp-proxy-macos",
+}
+
+
+def _get_proxy_exe_download_urls(ttl_segundos: int = 7 * 24 * 3600) -> dict[str, str | None]:
+    """Gera links de download temporário dos executáveis do proxy (um por SO).
+
+    Retorna {"windows": url, "linux": url, "macos": url} — cada valor é None se o
+    backend não suportar URL assinada (ex.: filesystem local em dev), tratado pelo
+    chamador (cai no texto de fallback assumindo instalação via pip).
+    """
+    from concilium.infrastructure.storage.store_factory import build_blob_storage
+
+    storage = build_blob_storage()
+    return {
+        platform: storage.gerar_url_temporaria(blob_path, ttl_segundos=ttl_segundos)
+        for platform, blob_path in _PROXY_EXE_BLOB_PATHS.items()
+    }
+
 
 def _build_mcp_config_block(client_code: str, platform: str) -> dict:
     """Monta o bloco claude_desktop_config.json — "command" varia por plataforma.
 
-    No Windows, apps GUI (como o Claude Desktop) podem herdar um PATH desatualizado
-    ou sem o diretório Scripts do Python (comum com instalações via pip --user ou
-    Microsoft Store), fazendo "concilium-mcp-proxy" sozinho falhar mesmo estando
-    instalado corretamente. "cmd /c" força uma releitura do PATH do registro no
-    lançamento, contornando isso sem exigir path absoluto hardcoded por usuário.
+    Windows e Unix apontam para o executável standalone (PyInstaller) num caminho
+    fixo local — o usuário baixa o binário (link enviado por email) e salva nesse
+    caminho. Isso evita depender do pacote Python/PATH estar instalado na máquina do
+    usuário final, já que não há PyPI/wheel publicado para `concilium`.
+
+    No Unix, "command" não expande "$HOME" sozinho (não passa por um shell) — por
+    isso usamos "sh -c" para forçar a expansão, análogo ao "cmd /c" usado no Windows
+    para outros fins (aqui não é sobre PATH, é sobre variável de ambiente).
     """
     entry: dict = {}
     if platform == "windows":
-        entry["command"] = "cmd"
-        entry["args"] = ["/c", "concilium-mcp-proxy"]
+        entry["command"] = _WINDOWS_INSTALL_PATH
     else:
-        entry["command"] = "concilium-mcp-proxy"
+        entry["command"] = "sh"
+        entry["args"] = ["-c", _UNIX_INSTALL_PATH]
     entry["env"] = {
         "CONCILIUM_CLIENT_CODE": client_code,
         "CONCILIUM_SERVER_URL": _MCP_SERVER_URL,
@@ -142,6 +172,7 @@ def add_user(
             email=email,
             config_json_unix=config_json_unix,
             config_json_windows=config_json_windows,
+            proxy_download_urls=_get_proxy_exe_download_urls(),
         )
         rprint(f"\n[green]✓ Email de boas-vindas enviado para {email}[/green]")
     else:
@@ -268,12 +299,13 @@ def migrate_legacy_codes() -> None:
 
     rprint(f"[green]✓ {len(migrated)} usuário(s) migrado(s):[/green]\n")
 
+    proxy_download_urls = _get_proxy_exe_download_urls()
     manual: list[tuple[str, str]] = []
     for client_id, client_code, email in migrated:
         config_json_unix, config_json_windows = _build_mcp_config_jsons(client_code)
         if email:
             get_notification_service().notify_client_code_migrated(
-                client_id, email, config_json_unix, config_json_windows
+                client_id, email, config_json_unix, config_json_windows, proxy_download_urls
             )
             rprint(f"  [cyan]{client_id}[/cyan] — email enviado para {email}")
         else:

@@ -80,6 +80,73 @@ def _save_cache(data: dict) -> None:
 # ── MCP Tool Call Helpers ─────────────────────────────────────────────────────
 
 
+def _build_mcp_request_headers(access_token: str | None, session_id: str) -> dict:
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    }
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+    if session_id:
+        headers["mcp-session-id"] = session_id
+    return headers
+
+
+def _parse_sse_stream_response(resp) -> dict:
+    # Resposta SSE - extrai linha "data: {...}"
+    result_json = None
+    try:
+        for line in resp.iter_lines():
+            if line.startswith("data:"):
+                data = line[5:].strip()
+                if data and data != "[DONE]":
+                    result_json = data
+                    break
+    except Exception:
+        # Servidor pode fechar conexão prematuramente - isso é OK se já temos dados
+        pass
+
+    if not result_json:
+        raise RuntimeError("Nenhum dado recebido no SSE stream")
+
+    return json.loads(result_json)
+
+
+def _parse_plain_json_response(resp) -> dict:
+    # Resposta JSON pura
+    body_bytes = b""
+    try:
+        for chunk in resp.iter_bytes():
+            body_bytes += chunk
+    except Exception:
+        # Servidor pode fechar conexão - tenta parsear o que foi recebido
+        pass
+
+    if not body_bytes:
+        raise RuntimeError("Resposta vazia do servidor")
+
+    return json.loads(body_bytes.decode("utf-8"))
+
+
+def _read_mcp_stream_result(resp) -> dict:
+    if resp.status_code != 200:
+        error_text = b"".join(resp.iter_bytes()).decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {resp.status_code}: {error_text[:200]}")
+
+    # Lê o body - pode ser JSON puro ou SSE (text/event-stream)
+    content_type = resp.headers.get("content-type", "")
+
+    if "text/event-stream" in content_type:
+        result = _parse_sse_stream_response(resp)
+    else:
+        result = _parse_plain_json_response(resp)
+
+    if "error" in result:
+        raise RuntimeError(f"MCP error: {result['error']}")
+
+    return result.get("result", {})
+
+
 def _mcp_call(http_client, tool_name: str, args: dict, access_token: str | None = None, session_id: str = "") -> dict:
     """Faz uma chamada MCP tool via HTTP.
 
@@ -106,14 +173,7 @@ def _mcp_call(http_client, tool_name: str, args: dict, access_token: str | None 
         },
     }
 
-    headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-    }
-    if access_token:
-        headers["Authorization"] = f"Bearer {access_token}"
-    if session_id:
-        headers["mcp-session-id"] = session_id
+    headers = _build_mcp_request_headers(access_token, session_id)
 
     # Use stream para SSE responses - FastMCP pode retornar SSE mesmo para tools/call
     with http_client.stream(
@@ -123,50 +183,7 @@ def _mcp_call(http_client, tool_name: str, args: dict, access_token: str | None 
         headers=headers,
         timeout=30.0,
     ) as resp:
-        if resp.status_code != 200:
-            error_text = b"".join(resp.iter_bytes()).decode("utf-8", errors="replace")
-            raise RuntimeError(f"HTTP {resp.status_code}: {error_text[:200]}")
-
-        # Lê o body - pode ser JSON puro ou SSE (text/event-stream)
-        content_type = resp.headers.get("content-type", "")
-
-        if "text/event-stream" in content_type:
-            # Resposta SSE - extrai linha "data: {...}"
-            result_json = None
-            try:
-                for line in resp.iter_lines():
-                    if line.startswith("data:"):
-                        data = line[5:].strip()
-                        if data and data != "[DONE]":
-                            result_json = data
-                            break
-            except Exception:
-                # Servidor pode fechar conexão prematuramente - isso é OK se já temos dados
-                pass
-
-            if not result_json:
-                raise RuntimeError("Nenhum dado recebido no SSE stream")
-
-            result = json.loads(result_json)
-        else:
-            # Resposta JSON pura
-            body_bytes = b""
-            try:
-                for chunk in resp.iter_bytes():
-                    body_bytes += chunk
-            except Exception:
-                # Servidor pode fechar conexão - tenta parsear o que foi recebido
-                pass
-
-            if not body_bytes:
-                raise RuntimeError("Resposta vazia do servidor")
-
-            result = json.loads(body_bytes.decode("utf-8"))
-
-        if "error" in result:
-            raise RuntimeError(f"MCP error: {result['error']}")
-
-        return result.get("result", {})
+        return _read_mcp_stream_result(resp)
 
 
 # ── Session initialization (streamable-http protocol) ─────────────────────────
@@ -389,6 +406,61 @@ def _refresh_loop(state: _State, http_client) -> None:
             _log(f"Falha na renovação automática: {e}")
 
 
+def _post_bridge_message(http_client, mcp_url: str, line: str, token: str, session_id: str):
+    return http_client.post(
+        mcp_url,
+        content=line,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "mcp-session-id": session_id,
+        },
+        timeout=300.0,
+    )
+
+
+def _write_bridge_response(resp) -> None:
+    content_type = resp.headers.get("content-type", "")
+    if "text/event-stream" in content_type:
+        # SSE: emit each data event as a separate line
+        for event_line in resp.text.splitlines():
+            if event_line.startswith("data:"):
+                data = event_line[5:].strip()
+                if data and data != "[DONE]":
+                    sys.stdout.write(data + "\n")
+                    sys.stdout.flush()
+    else:
+        sys.stdout.write(resp.text.strip() + "\n")
+        sys.stdout.flush()
+
+
+async def _bridge_handle_message(state: _State, http_client, mcp_url: str, line: str, msg: dict) -> None:
+    with state.lock:
+        token = state.access_token
+        session_id = state.session_id
+
+    try:
+        resp = _post_bridge_message(http_client, mcp_url, line, token, session_id)
+
+        # Handle 401: token might have just expired, retry once with fresh token
+        if resp.status_code == 401:
+            new_token, expire_at = _get_access_token(http_client, session_id)
+            with state.lock:
+                state.access_token = new_token
+                state.expire_at = expire_at
+            resp = _post_bridge_message(http_client, mcp_url, line, new_token, session_id)
+
+        if resp.status_code != 200:
+            _write_error(msg, f"HTTP {resp.status_code}: {resp.text[:200]}")
+            return
+
+        _write_bridge_response(resp)
+
+    except Exception as e:
+        _write_error(msg, str(e))
+
+
 async def _bridge(state: _State, http_client) -> None:
     """Read JSON-RPC from stdin, POST to MCP server, write response to stdout."""
     loop = asyncio.get_event_loop()
@@ -409,60 +481,7 @@ async def _bridge(state: _State, http_client) -> None:
         except json.JSONDecodeError:
             continue
 
-        with state.lock:
-            token = state.access_token
-            session_id = state.session_id
-
-        try:
-            resp = http_client.post(
-                mcp_url,
-                content=line,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                    "Accept": "application/json, text/event-stream",
-                    "mcp-session-id": session_id,
-                },
-                timeout=300.0,
-            )
-
-            # Handle 401: token might have just expired, retry once with fresh token
-            if resp.status_code == 401:
-                new_token, expire_at = _get_access_token(http_client, session_id)
-                with state.lock:
-                    state.access_token = new_token
-                    state.expire_at = expire_at
-                resp = http_client.post(
-                    mcp_url,
-                    content=line,
-                    headers={
-                        "Authorization": f"Bearer {new_token}",
-                        "Content-Type": "application/json",
-                        "Accept": "application/json, text/event-stream",
-                        "mcp-session-id": session_id,
-                    },
-                    timeout=300.0,
-                )
-
-            if resp.status_code != 200:
-                _write_error(msg, f"HTTP {resp.status_code}: {resp.text[:200]}")
-                continue
-
-            content_type = resp.headers.get("content-type", "")
-            if "text/event-stream" in content_type:
-                # SSE: emit each data event as a separate line
-                for event_line in resp.text.splitlines():
-                    if event_line.startswith("data:"):
-                        data = event_line[5:].strip()
-                        if data and data != "[DONE]":
-                            sys.stdout.write(data + "\n")
-                            sys.stdout.flush()
-            else:
-                sys.stdout.write(resp.text.strip() + "\n")
-                sys.stdout.flush()
-
-        except Exception as e:
-            _write_error(msg, str(e))
+        await _bridge_handle_message(state, http_client, mcp_url, line, msg)
 
 
 def _write_error(msg: dict, error: str) -> None:
@@ -513,3 +532,7 @@ def main() -> None:
         asyncio.run(_bridge(state, http))
 
     _log("Proxy encerrado.")
+
+
+if __name__ == "__main__":
+    main()

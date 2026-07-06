@@ -179,6 +179,58 @@ class TestNotifyUserCreated:
                 svc.notify_user_created("c1", "op", "c1@x.com", "{}", "{}")
         assert any("notify_user_created" in r.message for r in caplog.records)
 
+    def test_download_urls_included_in_body_when_present(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send") as mock_send:
+            svc.notify_user_created(
+                "client1",
+                "operator",
+                "client1@test.com",
+                '{"unix":true}',
+                '{"windows":true}',
+                proxy_download_urls={
+                    "windows": "https://example.com/concilium-mcp-proxy.exe",
+                    "linux": "https://example.com/concilium-mcp-proxy-linux",
+                    "macos": "https://example.com/concilium-mcp-proxy-macos",
+                },
+            )
+        body = mock_send.call_args.kwargs["body"]
+        assert "https://example.com/concilium-mcp-proxy.exe" in body
+        assert "https://example.com/concilium-mcp-proxy-linux" in body
+        assert "https://example.com/concilium-mcp-proxy-macos" in body
+        assert r"C:\Concilium\concilium-mcp-proxy.exe" in body
+        assert "~/.concilium/bin/concilium-mcp-proxy" in body
+
+    def test_download_urls_absent_when_none(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send") as mock_send:
+            svc.notify_user_created("client1", "operator", "client1@test.com", '{"unix":true}', '{"windows":true}')
+        body = mock_send.call_args.kwargs["body"]
+        assert "C:\\Concilium" not in body
+
+    def test_download_urls_absent_when_all_none(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send") as mock_send:
+            svc.notify_user_created(
+                "client1",
+                "operator",
+                "client1@test.com",
+                '{"unix":true}',
+                '{"windows":true}',
+                proxy_download_urls={"windows": None, "linux": None, "macos": None},
+            )
+        body = mock_send.call_args.kwargs["body"]
+        assert "C:\\Concilium" not in body
+
 
 class TestNotifyClientCodeMigrated:
     def test_happy_path_fallback(self):
@@ -200,6 +252,22 @@ class TestNotifyClientCodeMigrated:
             with caplog.at_level(logging.ERROR, logger="concilium.infrastructure.services.notification_service"):
                 svc.notify_client_code_migrated("c1", "c1@x.com", "{}", "{}")
         assert any("notify_client_code_migrated" in r.message for r in caplog.records)
+
+    def test_download_url_included_in_body_when_present(self):
+        from concilium.infrastructure.services.notification_service import NotificationService
+
+        cfg = _make_smtp_settings(enabled=False)
+        svc = NotificationService(settings=cfg)
+        with patch.object(svc, "_send") as mock_send:
+            svc.notify_client_code_migrated(
+                "legacy1",
+                "legacy1@test.com",
+                '{"unix":true}',
+                '{"windows":true}',
+                {"windows": "https://example.com/concilium-mcp-proxy.exe", "linux": None, "macos": None},
+            )
+        body = mock_send.call_args.kwargs["body"]
+        assert "https://example.com/concilium-mcp-proxy.exe" in body
 
 
 class TestNotifyUserRemoved:

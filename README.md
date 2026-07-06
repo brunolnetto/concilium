@@ -130,13 +130,29 @@ concilium-api
 
 ### MCP Proxy Remoto
 
-Para conectar ao servidor MCP em produção via proxy, configure (macOS/Linux):
+Não há pacote publicado (PyPI/wheel) para instalar `concilium-mcp-proxy` via pip numa máquina de
+usuário final — só é instalável via `pip install .` a partir de um clone do repositório, um fluxo de
+desenvolvedor. Para eliminar essa dependência de Python/pip na máquina do usuário final, o CI
+([build-proxy.yml](.github/workflows/build-proxy.yml)) empacota o proxy com PyInstaller (build nativo
+por SO — Windows/Linux/macOS) e publica os executáveis no blob storage de produção; `concilium ops
+auth add-user`/`regenerate-code`/`migrate-legacy-codes` geram um link de download temporário (7 dias)
+por SO e os incluem no email, e o `claude_desktop_config.json` de cada plataforma já aponta para um
+caminho fixo local — sem depender de `PATH`.
+
+Baixe o executável correspondente ao seu sistema e salve no caminho indicado (crie a pasta se não
+existir):
+
+- **Windows:** `C:\Concilium\concilium-mcp-proxy.exe`
+- **macOS/Linux:** `~/.concilium/bin/concilium-mcp-proxy` (depois `chmod +x` no arquivo)
+
+**macOS/Linux:**
 
 ```json
 {
   "mcpServers": {
     "concilium": {
-      "command": "concilium-mcp-proxy",
+      "command": "sh",
+      "args": ["-c", "$HOME/.concilium/bin/concilium-mcp-proxy"],
       "env": {
         "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
         "CONCILIUM_CLIENT_CODE": "RCODE-..."
@@ -146,14 +162,16 @@ Para conectar ao servidor MCP em produção via proxy, configure (macOS/Linux):
 }
 ```
 
-**Windows:** use `cmd /c` em vez do comando puro:
+`"command"` sozinho não expande `$HOME` (não passa por um shell) — por isso o bloco usa `sh -c`,
+que resolve a variável em tempo de execução independente do usuário/máquina.
+
+**Windows:**
 
 ```json
 {
   "mcpServers": {
     "concilium": {
-      "command": "cmd",
-      "args": ["/c", "concilium-mcp-proxy"],
+      "command": "C:\\Concilium\\concilium-mcp-proxy.exe",
       "env": {
         "CONCILIUM_SERVER_URL": "https://mcp.mendesloboconstrucao.com.br",
         "CONCILIUM_CLIENT_CODE": "RCODE-..."
@@ -162,13 +180,6 @@ Para conectar ao servidor MCP em produção via proxy, configure (macOS/Linux):
   }
 }
 ```
-
-Por quê: no Windows, apps GUI como o Claude Desktop podem herdar um `PATH` desatualizado ou sem o
-diretório `Scripts` do Python (comum em instalações via `pip install --user` ou Microsoft Store) —
-`"command": "concilium-mcp-proxy"` sozinho falha mesmo com o pacote instalado corretamente. `cmd /c`
-força uma releitura do `PATH` do registro no lançamento, resolvendo isso **sem** precisar de um path
-absoluto hardcoded por usuário/máquina (o que não escala — cada instalação tem um path diferente,
-embutindo usuário e versão do Python).
 
 `concilium auth add-user`, `regenerate-code` e `migrate-legacy-codes` não pedem pra escolher a
 plataforma — o admin não sabe necessariamente o SO do dispositivo final no momento do cadastro.
@@ -195,8 +206,16 @@ acontecer e a ativação continuar falhando mesmo com o código correto, ative u
 terminal para gravar o token em cache diretamente (sem depender do arquivo persistir):
 
 ```bash
-CONCILIUM_CLIENT_CODE="RCODE-..." CONCILIUM_SERVER_URL="https://mcp.mendesloboconstrucao.com.br" concilium-mcp-proxy
+CONCILIUM_CLIENT_CODE="RCODE-..." CONCILIUM_SERVER_URL="https://mcp.mendesloboconstrucao.com.br" ~/.concilium/bin/concilium-mcp-proxy
 # aguarde a linha "Autenticado com sucesso." e encerre com Ctrl+C
+```
+
+No Windows (Prompt de Comando), rode o `.exe` diretamente em vez do comando acima:
+
+```cmd
+set CONCILIUM_CLIENT_CODE=RCODE-...
+set CONCILIUM_SERVER_URL=https://mcp.mendesloboconstrucao.com.br
+C:\Concilium\concilium-mcp-proxy.exe
 ```
 
 Isso é um comportamento do cliente (Claude Desktop), fora do controle deste projeto.

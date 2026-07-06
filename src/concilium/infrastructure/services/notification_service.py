@@ -20,6 +20,36 @@ def get_smtp_settings() -> SmtpSettings:
     return get_smtp()
 
 
+def _build_proxy_download_note(proxy_download_urls: dict[str, str | None] | None) -> str:
+    """Monta o trecho do email com os links de download do executável standalone.
+
+    Um link por SO (Windows/Linux/macOS) — não há PyPI/wheel publicado para o
+    usuário final instalar via pip. Retorna string vazia se nenhum link estiver
+    disponível (ex.: backend de storage sem suporte a URL assinada em dev).
+    """
+    urls = proxy_download_urls or {}
+    windows_url = urls.get("windows")
+    linux_url = urls.get("linux")
+    macos_url = urls.get("macos")
+    if not (windows_url or linux_url or macos_url):
+        return ""
+
+    lines = [
+        "Antes de colar a configuração, baixe o executável do proxy correspondente ao\n"
+        "seu sistema operacional e salve no caminho indicado:\n",
+    ]
+    if windows_url:
+        lines.append(f"  Windows : {windows_url}")
+        lines.append(r"            salvar em C:\Concilium\concilium-mcp-proxy.exe" + "\n")
+    if linux_url:
+        lines.append(f"  Linux   : {linux_url}")
+        lines.append("            salvar em ~/.concilium/bin/concilium-mcp-proxy (chmod +x)\n")
+    if macos_url:
+        lines.append(f"  macOS   : {macos_url}")
+        lines.append("            salvar em ~/.concilium/bin/concilium-mcp-proxy (chmod +x)\n")
+    return "\n".join(lines) + "\n\n"
+
+
 # ── NotificationService ───────────────────────────────────────────────────────
 
 
@@ -45,15 +75,22 @@ class NotificationService:
         email: str,
         config_json_unix: str,
         config_json_windows: str,
+        proxy_download_urls: dict[str, str | None] | None = None,
     ) -> None:
         """Envia email de boas-vindas com os dois configs (macOS/Linux e Windows) em anexo.
 
         O admin não sabe necessariamente o SO do dispositivo do usuário no momento do
         cadastro — manda os dois e deixa o próprio usuário escolher o que corresponde
         ao seu sistema, em vez de arriscar mandar o formato errado.
+
+        Os configs apontam para um executável standalone em caminho fixo local (por
+        SO) — proxy_download_urls (links temporários do blob storage, um por SO)
+        instrui como obtê-lo, já que não há pacote Python instalável via pip para o
+        usuário final.
         """
         try:
             subject = f"[Concilium] Bem-vindo, {client_id}! Sua conta foi criada."
+            download_note = _build_proxy_download_note(proxy_download_urls)
             body = (
                 f"Olá!\n\n"
                 f"Sua conta no Concilium foi criada com sucesso.\n\n"
@@ -63,6 +100,7 @@ class NotificationService:
                 f"ao seu sistema operacional:\n\n"
                 f"  claude_desktop_config-macos-linux.json → macOS/Linux\n"
                 f"  claude_desktop_config-windows.json     → Windows\n\n"
+                f"{download_note}"
                 f"Adicione o conteúdo do arquivo escolhido ao seu arquivo de configuração:\n\n"
                 f"  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n"
                 f"  Win  : %APPDATA%\\Claude\\claude_desktop_config.json\n\n"
@@ -95,10 +133,12 @@ class NotificationService:
         email: str,
         config_json_unix: str,
         config_json_windows: str,
+        proxy_download_urls: dict[str, str | None] | None = None,
     ) -> None:
         """Notifica um client migrado (client_code gerado retroativamente) com os dois configs."""
         try:
             subject = f"[Concilium] Novo código de ativação para '{client_id}'"
+            download_note = _build_proxy_download_note(proxy_download_urls)
             body = (
                 f"Olá!\n\n"
                 f"Sua conta no Concilium recebeu um código de ativação de dispositivo novo\n"
@@ -108,6 +148,7 @@ class NotificationService:
                 f"de um dos anexos — use o que corresponde ao seu sistema operacional:\n\n"
                 f"  claude_desktop_config-macos-linux.json → macOS/Linux\n"
                 f"  claude_desktop_config-windows.json     → Windows\n\n"
+                f"{download_note}"
                 f"  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n"
                 f"  Win  : %APPDATA%\\Claude\\claude_desktop_config.json\n\n"
                 f"Se não conseguir abrir os anexos, o conteúdo é:\n\n"
@@ -230,6 +271,31 @@ class NotificationService:
 
     # ── Internos ───────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _log_fallback(to: str, subject: str, body: str, all_attachments: list[tuple[str, str]]) -> None:
+        # Fallback dev/CI: log sem enviar
+        logger.info(
+            "[NOTIFICATION LOG FALLBACK] To=%s | Subject=%s | Body=%s%s",
+            to,
+            subject,
+            body,
+            f" | Attachments={[name for name, _ in all_attachments]}" if all_attachments else "",
+        )
+
+    @staticmethod
+    def _build_message(body: str, all_attachments: list[tuple[str, str]]) -> MIMEMultipart | MIMEText:
+        if not all_attachments:
+            return MIMEText(body, "plain", "utf-8")
+        msg = MIMEMultipart()
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        for name, content in all_attachments:
+            part = MIMEBase("application", "json")
+            part.set_payload(content.encode("utf-8"))
+            encoders.encode_base64(part)
+            part.add_header("Content-Disposition", f'attachment; filename="{name}"')
+            msg.attach(part)
+        return msg
+
     def _send(
         self,
         to: str,
@@ -251,28 +317,10 @@ class NotificationService:
             all_attachments.append((attachment_name, attachment_content))
 
         if not cfg.enabled or not cfg.host:
-            # Fallback dev/CI: log sem enviar
-            logger.info(
-                "[NOTIFICATION LOG FALLBACK] To=%s | Subject=%s | Body=%s%s",
-                to,
-                subject,
-                body,
-                f" | Attachments={[name for name, _ in all_attachments]}" if all_attachments else "",
-            )
+            self._log_fallback(to, subject, body, all_attachments)
             return
 
-        if all_attachments:
-            msg: MIMEMultipart | MIMEText = MIMEMultipart()
-            assert isinstance(msg, MIMEMultipart)
-            msg.attach(MIMEText(body, "plain", "utf-8"))
-            for name, content in all_attachments:
-                part = MIMEBase("application", "json")
-                part.set_payload(content.encode("utf-8"))
-                encoders.encode_base64(part)
-                part.add_header("Content-Disposition", f'attachment; filename="{name}"')
-                msg.attach(part)
-        else:
-            msg = MIMEText(body, "plain", "utf-8")
+        msg = self._build_message(body, all_attachments)
 
         msg["Subject"] = subject
         msg["From"] = cfg.from_addr

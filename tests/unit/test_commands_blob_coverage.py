@@ -388,6 +388,48 @@ class TestMigrateWithFailures:
 
 
 # ---------------------------------------------------------------------------
+# put
+# ---------------------------------------------------------------------------
+
+
+class TestPut:
+    def test_gravar_blob_called_with_file_contents(self, tmp_path):
+        local_file = tmp_path / "concilium-mcp-proxy.exe"
+        local_file.write_bytes(b"fake-exe-bytes")
+        mock_storage = MagicMock()
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(blob_app, ["put", str(local_file), "distribuicao/concilium-mcp-proxy.exe"])
+
+        assert result.exit_code == 0, result.output
+        mock_storage.gravar_blob.assert_called_once_with("distribuicao/concilium-mcp-proxy.exe", b"fake-exe-bytes")
+
+    def test_success_message_printed(self, tmp_path):
+        local_file = tmp_path / "arquivo.bin"
+        local_file.write_bytes(b"conteudo")
+        mock_storage = MagicMock()
+
+        with patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage):
+            result = runner.invoke(blob_app, ["put", str(local_file), "destino/arquivo.bin"])
+
+        assert "destino/arquivo.bin" in result.output
+
+    def test_explicit_backend_used(self, tmp_path):
+        local_file = tmp_path / "arquivo.bin"
+        local_file.write_bytes(b"conteudo")
+        mock_instance = MagicMock()
+
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.azure.AzureBlobStorage.from_env",
+            return_value=mock_instance,
+        ):
+            result = runner.invoke(blob_app, ["put", str(local_file), "destino/arquivo.bin", "--backend", "azure"])
+
+        assert result.exit_code == 0, result.output
+        mock_instance.gravar_blob.assert_called_once_with("destino/arquivo.bin", b"conteudo")
+
+
+# ---------------------------------------------------------------------------
 # status
 # ---------------------------------------------------------------------------
 

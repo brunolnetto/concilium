@@ -3,6 +3,7 @@
 Comandos:
     concilium ops blob migrate   — copia blobs de source para target
     concilium ops blob status    — lista blobs e estatísticas do backend atual
+    concilium ops blob put       — envia um arquivo local para o blob storage
 """
 
 from __future__ import annotations
@@ -138,6 +139,19 @@ def migrate(
 
     if result.failed > 0:
         raise typer.Exit(1)
+
+
+@blob_app.command("put")
+def put(
+    local_path: Annotated[Path, typer.Argument(help="Arquivo local a enviar.")],
+    blob_path: Annotated[str, typer.Argument(help="Caminho/chave de destino no blob storage.")],
+    backend: Annotated[str, typer.Option("--backend", "-b", help=_BACKEND_HELP)] = "",
+    root: Annotated[str, typer.Option("--root", help="Diretório raiz (apenas backend filesystem).")] = "",
+) -> None:
+    """Envia um arquivo local para o blob storage (ex.: publicar o proxy .exe)."""
+    storage = _make_storage(backend, root)
+    storage.gravar_blob(blob_path, local_path.read_bytes())
+    rprint(f"[bold green]✓[/bold green] {local_path} → {blob_path}")
 
 
 @blob_app.command("status")
