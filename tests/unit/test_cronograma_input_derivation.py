@@ -438,6 +438,42 @@ def test_catalog_based_sizing_productivity_lookup_by_prod_id():
     assert "X1" in num_equipes
 
 
+def test_catalog_based_sizing_cpu_without_codigo_key_skipped():
+    """Branch 49->50: cpu dict sem chave 'codigo' não entra no cpu_lookup."""
+    from concilium.application.benchmarks.input_derivation.cronograma import _catalog_based_sizing
+
+    snapshot = MagicMock()
+    snapshot.cpus = [{"nome": "sem codigo"}, {"codigo": "CPU-1", "producao_id_ref": "PROD-1"}]
+    snapshot.produtividades = [{"id": "PROD-1", "valor_horario": 10.0}]
+    items = [{"item_id": "A1", "cpu_id": "CPU-1", "quantitativo": 480}]
+    num_equipes: dict = {}
+    _catalog_based_sizing(items, ["2026-W01"], 48.0, snapshot, num_equipes)
+    assert "A1" in num_equipes
+
+
+def test_catalog_based_sizing_produtividade_without_id_or_codigo_skipped():
+    """Branch 55->53: produtividade sem 'id' nem 'codigo' não entra no prod_lookup."""
+    from concilium.application.benchmarks.input_derivation.cronograma import _catalog_based_sizing
+
+    snapshot = MagicMock()
+    snapshot.cpus = [{"codigo": "CPU-1", "producao_id_ref": "PROD-1"}]
+    snapshot.produtividades = [{"valor_horario": 99.0}, {"id": "PROD-1", "valor_horario": 10.0}]
+    items = [{"item_id": "A1", "cpu_id": "CPU-1", "quantitativo": 480}]
+    num_equipes: dict = {}
+    _catalog_based_sizing(items, ["2026-W01"], 48.0, snapshot, num_equipes)
+    assert "A1" in num_equipes
+
+
+def test_drfs_get_week_equipes_iso_to_num_present_but_num_key_falsy():
+    """Branch 91->93: iso_to_num tem a chave mas o valor é falsy (0/None) → não tenta fallback."""
+    from concilium.application.benchmarks.input_derivation.cronograma import _drfs_get_week_equipes
+
+    semanas = {}
+    iso_to_num = {"2026-W01": None}
+    result = _drfs_get_week_equipes(semanas, "2026-W01", iso_to_num)
+    assert result == 0
+
+
 # ── BenchmarkInputDeriver._load_and_size ─────────────────────────────────────
 
 

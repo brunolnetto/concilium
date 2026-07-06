@@ -34,6 +34,17 @@ class TestCatalogLoaderHelpers:
         result = _llj_load_cpus(tmp_path)
         assert result == []
 
+    def test_llj_load_cpus_skips_non_dict_files(self, tmp_path):
+        """Um arquivo cujo JSON é uma lista (não dict) na pasta cpus/ é ignorado."""
+        from concilium.infrastructure.catalog.catalog_loader import _llj_load_cpus
+
+        cpus_dir = tmp_path / "cpus"
+        cpus_dir.mkdir()
+        (cpus_dir / "CPU-1.json").write_text('{"codigo": "CPU-1"}', encoding="utf-8")
+        (cpus_dir / "CPU-list.json").write_text("[1, 2, 3]", encoding="utf-8")
+        result = _llj_load_cpus(tmp_path)
+        assert len(result) == 1
+
     def test_llj_load_insumos_from_dir(self, tmp_path):
         from concilium.infrastructure.catalog.catalog_loader import _llj_load_insumos
 
@@ -77,6 +88,17 @@ class TestCatalogLoaderHelpers:
         from concilium.infrastructure.catalog.catalog_loader import _llj_load_produtividades
 
         assert _llj_load_produtividades(tmp_path) == []
+
+    def test_llj_load_produtividades_skips_non_dict_files(self, tmp_path):
+        """Um arquivo cujo JSON é uma lista (não dict) na pasta produtividades/ é ignorado."""
+        from concilium.infrastructure.catalog.catalog_loader import _llj_load_produtividades
+
+        prod_dir = tmp_path / "produtividades"
+        prod_dir.mkdir()
+        (prod_dir / "PROD-001.json").write_text('{"id": "PROD-001"}', encoding="utf-8")
+        (prod_dir / "PROD-list.json").write_text("[1, 2]", encoding="utf-8")
+        result = _llj_load_produtividades(tmp_path)
+        assert len(result) == 1
 
     def test_llj_load_funcoes_from_json(self, tmp_path):
         from concilium.infrastructure.catalog.catalog_loader import _llj_load_funcoes
@@ -194,6 +216,16 @@ class TestCatalogLoaderLsp:
         result = _lsp_load_cpus(storage, "base")
         assert len(result) == 1
 
+    def test_lsp_load_cpus_skips_non_json_blob_and_non_dict_raw(self):
+        """Blobs sem sufixo .json são ignorados; blobs cujo JSON não é dict também são ignorados."""
+        from concilium.infrastructure.catalog.catalog_loader import _lsp_load_cpus
+
+        storage = MagicMock()
+        storage.listar_blobs.return_value = ["base/cpus/README.txt", "base/cpus/CPU-list.json"]
+        storage.ler_blob.return_value = json.dumps([1, 2]).encode()
+        result = _lsp_load_cpus(storage, "base")
+        assert result == []
+
     def test_lsp_load_insumos(self):
         from concilium.infrastructure.catalog.catalog_loader import _lsp_load_insumos
 
@@ -203,6 +235,14 @@ class TestCatalogLoaderLsp:
         result = _lsp_load_insumos(storage, "base")
         assert "COMB" in result
 
+    def test_lsp_load_insumos_skips_non_json_blob(self):
+        from concilium.infrastructure.catalog.catalog_loader import _lsp_load_insumos
+
+        storage = MagicMock()
+        storage.listar_blobs.return_value = ["base/insumos/README.txt"]
+        result = _lsp_load_insumos(storage, "base")
+        assert result == {}
+
     def test_lsp_load_produtividades(self):
         from concilium.infrastructure.catalog.catalog_loader import _lsp_load_produtividades
 
@@ -211,6 +251,15 @@ class TestCatalogLoaderLsp:
         storage.ler_blob.return_value = json.dumps({"id": "PROD-1"}).encode()
         result = _lsp_load_produtividades(storage, "base")
         assert len(result) == 1
+
+    def test_lsp_load_produtividades_skips_non_json_blob_and_non_dict_raw(self):
+        from concilium.infrastructure.catalog.catalog_loader import _lsp_load_produtividades
+
+        storage = MagicMock()
+        storage.listar_blobs.return_value = ["base/produtividades/README.txt", "base/produtividades/PROD-list.json"]
+        storage.ler_blob.return_value = json.dumps([1, 2]).encode()
+        result = _lsp_load_produtividades(storage, "base")
+        assert result == []
 
     def test_lsp_load_produtividades_falls_back_to_single_file(self):
         """Sem blobs individuais em produtividades/, lê produtividades.json agregado."""

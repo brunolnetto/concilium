@@ -108,6 +108,18 @@ class TestCpSatSchedulerFeasibility:
         assert result.feasible
         assert _get(result, "Y").start_week >= _get(result, "X").start_week + 4
 
+    def test_impossible_demand_returns_empty_infeasible_output(self):
+        """A single activity demanding more than the pool's total capacity
+        makes the cumulative constraint unsatisfiable → CP-SAT proves
+        INFEASIBLE and schedule() must fall back to `_empty_output`."""
+        acts = [_act("A", 4, demand=50)]
+        dag = ActivityDAG(activities=acts, precedence=[])
+        scheduler = CpSatScheduler(timeout_seconds=5.0)
+        result = scheduler.schedule(dag, _pool(10), ramp_profiles=_ramps(acts))
+        assert isinstance(result, ScheduleOutput)
+        assert result.feasible is False
+        assert result.scheduled_activities == []
+
 
 # ── Extended precedences ───────────────────────────────────────────────────────
 

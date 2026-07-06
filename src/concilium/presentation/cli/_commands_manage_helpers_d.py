@@ -205,11 +205,9 @@ def _impl_catalog_tendencia(
     if output:
         import dataclasses
 
-        def _ser(obj):
-            if dataclasses.is_dataclass(obj):
-                return dataclasses.asdict(obj)
-            raise TypeError(f"{type(obj)}")
-
+        # dataclasses.asdict() já converte recursivamente todo o dataclass (e nested
+        # dataclasses) em dicts/listas antes do json.dumps ver o objeto, então um
+        # `default=` customizado nunca seria invocado — removido por ser código morto.
         Path(output).write_text(
             json.dumps(dataclasses.asdict(relatorio), indent=2, ensure_ascii=False), encoding="utf-8"
         )

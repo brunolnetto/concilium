@@ -61,6 +61,18 @@ class TestDmfFindTemplateId:
         result = mod._dmf_find_template_id(regra, 100.0)
         assert result is None
 
+    def test_first_step_no_match_continues_to_next(self):
+        """Branch 122->119: primeiro step não casa nenhuma condição -> continua para o próximo."""
+        mod = _load_ind_helpers_a()
+        regra = {
+            "steps": [
+                {"acima_de": 999_999.0, "equipe_base": "TPL-NUNCA"},
+                {"ate_valor": 100.0, "equipe_base": "TPL-PEQUENO"},
+            ]
+        }
+        result = mod._dmf_find_template_id(regra, 50.0)
+        assert result == "TPL-PEQUENO"
+
 
 class TestDaMagnitudeFinanceira:
     def _mk_canonical(self, total_venda):
@@ -231,6 +243,15 @@ class TestResolveCatalogBase:
         cat, source = mixin._resolve_project_catalog_base("cat1", project)
         assert source == "master"
 
+    def test_non_dict_benchmark_reference_uses_master(self, tmp_path):
+        """Branch 49->53: benchmark_reference.json não é um dict → pula direto para master."""
+        mixin = _make_catalog_mixin(tmp_path)
+        _make_cat_dir(tmp_path, "cat1")
+        project = MagicMock()
+        project.read_json.return_value = ["not", "a", "dict"]
+        cat, source = mixin._resolve_project_catalog_base("cat1", project)
+        assert source == "master"
+
 
 class TestLoadResolvedCatalogWithProvenance:
     def test_basic_provenance(self, tmp_path):
@@ -286,6 +307,16 @@ class TestLoadProducoesFromCatDirs:
         (prod_dir / "p1.json").write_text(json.dumps({"id": "PROD-1", "valor_horario": 10.0}), encoding="utf-8")
         result = CatalogMixin._load_producoes_from_cat_dirs(tmp_path)
         assert any(p.get("id") == "PROD-1" for p in result)
+
+    def test_non_dict_non_list_json_is_skipped(self, tmp_path):
+        """Branch 167->162: JSON não é lista nem dict (ex: número) → ignorado silenciosamente."""
+        from concilium.application.runtime.mixins.catalog import CatalogMixin
+
+        prod_dir = tmp_path / "producoes"
+        prod_dir.mkdir()
+        (prod_dir / "scalar.json").write_text("42", encoding="utf-8")
+        result = CatalogMixin._load_producoes_from_cat_dirs(tmp_path)
+        assert result == []
 
 
 class TestLoadCatalogoFromDisk:
@@ -344,6 +375,23 @@ class TestLoadProducoesFromCpus:
         cpus = [{"producao_id_ref": "prod-Z"}]
         result = mixin._load_producoes_from_cpus(cpus, cat_dir=None)
         assert any(p.get("id") == "prod-Z" for p in result)
+
+    def test_file_missing_in_earlier_dir_found_in_later_dir(self, tmp_path):
+        """Branch 259->255: arquivo não existe no primeiro search_dir mas existe em um posterior."""
+        mixin = _make_catalog_mixin(tmp_path)
+        # Primeiro search_dir (config_root/producoes) existe mas não contém o arquivo.
+        empty_prod_dir = tmp_path / "producoes"
+        empty_prod_dir.mkdir(parents=True)
+        # Segundo search_dir (cat_dir/producoes) contém o arquivo procurado.
+        cat_dir = tmp_path / "catalogos" / "cat1"
+        cat_prod_dir = cat_dir / "producoes"
+        cat_prod_dir.mkdir(parents=True)
+        prod_data = {"id": "prod-W", "valor_horario": 7.0}
+        (cat_prod_dir / "prod-W.json").write_text(json.dumps(prod_data), encoding="utf-8")
+
+        cpus = [{"producao_id_ref": "prod-W"}]
+        result = mixin._load_producoes_from_cpus(cpus, cat_dir=cat_dir)
+        assert any(p.get("id") == "prod-W" for p in result)
 
     def test_json_parse_error_continues(self, tmp_path):
         """Lines 264-265: JSON parse error on prod file → except: continue."""

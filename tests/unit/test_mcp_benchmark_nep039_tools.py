@@ -127,6 +127,21 @@ class TestConsultarBenchmarkListMode:
         assert result["total"] == 1
         assert result["benchmarks"][0]["benchmark_id"] == "real-slug"
 
+    def test_corrupted_referencia_json_falls_back_to_slug_only(self, tmp_path, tools):
+        """When referencia.json exists but is not valid JSON, list mode falls back
+        to a minimal meta dict keyed only by slug (except branch at lines 54-55)."""
+        config = tmp_path / "config"
+        data_dir = tmp_path / "benchmarks" / "data"
+        slug_dir = data_dir / "bad-slug"
+        slug_dir.mkdir(parents=True)
+        (slug_dir / "referencia.json").write_text("NOT JSON", encoding="utf-8")
+
+        with patch(_CTX_CONFIG_ROOT, return_value=config):
+            result = tools["consultar_benchmark"]()
+
+        assert result["total"] == 1
+        assert result["benchmarks"][0] == {"benchmark_id": "bad-slug"}
+
 
 # ---------------------------------------------------------------------------
 # consultar_benchmark — detail mode (benchmark_id provided)

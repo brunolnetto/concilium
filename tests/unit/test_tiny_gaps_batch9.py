@@ -270,6 +270,65 @@ class TestRepositorioInsumo:
         repo.atualizar_preco("DIESEL", 7.5, data_vigencia=date(2026, 1, 1), fonte="PROJECT_OVERRIDE")
         assert repo.obter_insumo("DIESEL") is not None  # still exists
 
+    def test_lookup_preco_historico_loops_past_non_matching_record(self):
+        """Branch 80->76: primeiro registro (mais recente) não cobre a data → continua para o próximo."""
+        from concilium.infrastructure.repositories.insumo import _lookup_preco_historico
+
+        historico = [
+            {"data_inicio_vigencia": "2025-01-01", "data_fim_vigencia": "2025-06-30", "preco_unitario": 5.0},
+            {"data_inicio_vigencia": "2025-07-01", "data_fim_vigencia": None, "preco_unitario": 6.0},
+        ]
+        # Data pede o período coberto pelo PRIMEIRO registro (mais antigo); o loop
+        # (reversed) começa pelo mais recente, que não cobre a data → continua.
+        preco = _lookup_preco_historico(historico, "2025-03-15")
+        assert preco == 5.0
+
+    def test_preco_na_data_scd2_no_matching_record_falls_back_to_flat(self):
+        """Branch 132->136: historico_precos presente mas sem registro cobrindo a data → fallback plano."""
+        repo = self._make_repo(
+            insumos=[
+                {
+                    "codigo": "DIESEL",
+                    "preco_unitario": 6.5,
+                    "historico_precos": [
+                        {"data_inicio_vigencia": "2030-01-01", "data_fim_vigencia": None, "preco_unitario": 99.0},
+                    ],
+                }
+            ]
+        )
+        preco = repo.preco_na_data("DIESEL", data_referencia="2020-01-01")
+        assert preco == 6.5
+
+    def test_atualizar_preco_loops_past_already_closed_and_newer_record(self):
+        """Branches 200->199 (registro já fechado) e 202->199 (vigência não é anterior à nova data)."""
+        from datetime import date
+
+        repo = self._make_repo(
+            insumos=[
+                {
+                    "codigo": "DIESEL",
+                    "preco_unitario": 6.5,
+                    "historico_precos": [
+                        # já fechado → não deve ser tocado (branch 200->199)
+                        {
+                            "data_inicio_vigencia": "2025-01-01",
+                            "data_fim_vigencia": "2025-06-30",
+                            "preco_unitario": 5.0,
+                        },
+                        # aberto mas com vigência POSTERIOR à nova data_vigencia → não fecha (branch 202->199)
+                        {"data_inicio_vigencia": "2030-01-01", "data_fim_vigencia": None, "preco_unitario": 7.0},
+                    ],
+                }
+            ]
+        )
+        repo.atualizar_preco("DIESEL", 8.0, data_vigencia=date(2026, 1, 1), fonte="PROJECT_OVERRIDE")
+        insumo = repo.obter_insumo("DIESEL")
+        historico = insumo["historico_precos"]
+        # O registro já fechado permanece inalterado.
+        assert historico[0]["data_fim_vigencia"] == "2025-06-30"
+        # O registro com vigência futura (2030) não é fechado pela nova vigência de 2026.
+        assert historico[1]["data_fim_vigencia"] is None
+
 
 # ─── rp helper functions ───────────────────────────────────────────────────────
 

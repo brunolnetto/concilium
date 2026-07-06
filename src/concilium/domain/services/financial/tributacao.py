@@ -100,11 +100,10 @@ def calculate_irrf(base_calculo: float) -> float:
     if base_calculo <= IRRF_ISENCAO_EFETIVA_2026:
         return 0.0
 
-    irrf_bruto = 0.0
-    for limit, aliq, deducao in IRRF_BRACKETS_2026:
-        if limit is None or base_calculo <= limit:
-            irrf_bruto = max(0.0, base_calculo * aliq - deducao)
-            break
+    # A última faixa de IRRF_BRACKETS_2026 tem limit=None, logo o generator
+    # abaixo sempre encontra uma correspondência (nunca esgota sem achar).
+    _limit, aliq, deducao = next(row for row in IRRF_BRACKETS_2026 if row[0] is None or base_calculo <= row[0])
+    irrf_bruto = max(0.0, base_calculo * aliq - deducao)
 
     if base_calculo <= 7_350.0:
         desconto = IRRF_DESCONTO_PROGRESSIVO_A - IRRF_DESCONTO_PROGRESSIVO_B * base_calculo

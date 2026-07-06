@@ -46,6 +46,7 @@ _promote_materiais_from_cpu = _MOD._promote_materiais_from_cpu
 _build_comb_validacao = _MOD._build_comb_validacao
 _mat_fonte1 = _MOD._mat_fonte1
 _mat_fonte2_item = _MOD._mat_fonte2_item
+_calc_custo_material_item = _MOD._calc_custo_material_item
 _count_transitions = _MOD._count_transitions
 _accum_mob_costs_list = _MOD._accum_mob_costs_list
 _calc_custo_mob_desmob = _MOD._calc_custo_mob_desmob
@@ -58,7 +59,9 @@ _accum_week_demand = _MOD._accum_week_demand
 _get_active_weeks = _MOD._get_active_weeks
 _resolve_custo_hora_ref_sem = _MOD._resolve_custo_hora_ref_sem
 _resolve_prod_lookup = _MOD._resolve_prod_lookup
+_process_item_tipo_map = _MOD._process_item_tipo_map
 _calibrar_custos_por_cref = _MOD._calibrar_custos_por_cref
+_build_resumo_e_validacoes = _MOD._build_resumo_e_validacoes
 _build_perpetuation_chains = _MOD._build_perpetuation_chains
 _build_predecessor_map = _MOD._build_predecessor_map
 _init_item_float_maps = _MOD._init_item_float_maps
@@ -67,11 +70,15 @@ _compute_particao_por_tipo = _MOD._compute_particao_por_tipo
 _compress_to_segments = _MOD._compress_to_segments
 _compute_desmob_antecipada = _MOD._compute_desmob_antecipada
 _build_demand_per_week = _MOD._build_demand_per_week
+_item_demand_for_tipo = _MOD._item_demand_for_tipo
+_collect_items_data_for_tipo = _MOD._collect_items_data_for_tipo
 _build_item_resource_maps = _MOD._build_item_resource_maps
 _sum_inst_categories = _MOD._sum_inst_categories
 _last_week_idx_for_act = _MOD._last_week_idx_for_act
 _first_week_idx_for_act = _MOD._first_week_idx_for_act
 _compute_gap_for_inst = _MOD._compute_gap_for_inst
+_processar_equipamentos_item = _MOD._processar_equipamentos_item
+_derive_rcpsp_from_canonical = _MOD._derive_rcpsp_from_canonical
 
 
 # ---------------------------------------------------------------------------
@@ -676,6 +683,13 @@ class TestPromoveMateriaisDoCpu:
         result = _promote_materiais_from_cpu(comp, cpu)
         assert result == {}
 
+    def test_non_dict_item_skipped(self):
+        """Line 386: non-dict entries in composicao_itens are skipped."""
+        comp = {}
+        cpu = {"composicao_itens": ["not-a-dict", {"categoria_custo": "MATERIAL", "insumo_id": "MAT-002"}]}
+        result = _promote_materiais_from_cpu(comp, cpu)
+        assert result["materiais"][0]["insumo_id"] == "MAT-002"
+
 
 # ===========================================================================
 # 17. _build_comb_validacao
@@ -756,6 +770,45 @@ class TestMatFonte2Item:
 
 
 # ===========================================================================
+# 19b. _calc_custo_material_item (NEP-029 D4) — note: not referenced anywhere
+# else in src/ or tests/ as of this writing; appears to be dead code kept for
+# a future integration. Tested here directly since it's a pure function.
+# ===========================================================================
+
+
+class TestCalcCustoMaterialItem:
+    def test_uses_fonte1_when_comp_has_materiais(self):
+        """Lines 627-630: materiais_equipe present → delegates to _mat_fonte1."""
+        ctx = SimpleNamespace(repo=MagicMock())
+        ctx.repo.obter_insumo.return_value = {"preco_unitario": 5.0}
+        comp = {"materiais": [{"insumo_id": "MAT-1", "consumo_por_hora": 2.0}]}
+        result = _calc_custo_material_item(comp, {}, {}, ctx, 8.0, 21.0)
+        assert result == pytest.approx(2.0 * 5.0 * (8.0 * 21.0))
+
+    def test_no_materiais_and_no_producao_returns_zero(self):
+        """Lines 631-635: no materiais_equipe, producao_horaria <= 0 → 0.0."""
+        ctx = SimpleNamespace(repo=MagicMock())
+        comp = {}
+        cpu = {"producao_id_ref": "P1"}
+        prod_lookup = {"P1": {"valor_horario": 0.0}}
+        result = _calc_custo_material_item(comp, cpu, prod_lookup, ctx, 8.0, 21.0)
+        assert result == 0.0
+
+    def test_no_materiais_falls_back_to_composicao_itens(self):
+        """Line 636-638: fallback to summing _mat_fonte2_item over composicao_itens."""
+        ctx = SimpleNamespace(repo=MagicMock())
+        ctx.repo.obter_insumo.return_value = {"preco_unitario": 2.0}
+        comp = {}
+        cpu = {
+            "producao_id_ref": "P1",
+            "composicao_itens": [{"categoria_custo": "MATERIAL", "insumo_id": "MAT-1", "coeficiente": 3.0}],
+        }
+        prod_lookup = {"P1": {"valor_horario": 5.0}}
+        result = _calc_custo_material_item(comp, cpu, prod_lookup, ctx, 8.0, 21.0)
+        assert result == pytest.approx(round(2.0 * 3.0 * 5.0 * (8.0 * 21.0), 2))
+
+
+# ===========================================================================
 # 20. _count_transitions
 # ===========================================================================
 
@@ -829,8 +882,22 @@ class TestCalcCustoMobDesmob:
         assert _calc_custo_mob_desmob({}, cron) == 0.0
 
     def test_empty_periodos_returns_zero(self):
-        """Line 661: seq empty → 0."""
+        """Line 661: distribuicao_semanal falsy ({}) → 0 (short-circuits before seq)."""
         cron = SimpleNamespace(distribuicao_semanal={})
+        assert _calc_custo_mob_desmob({}, cron) == 0.0
+
+    def test_periodos_truthy_but_seq_empty_returns_zero(self):
+        """Line 673: `periodos` is truthy (non-empty mapping-like object) but
+        `.values()` yields nothing → seq ends up empty → returns 0.0."""
+
+        class _TruthyEmptyMapping:
+            def __bool__(self):
+                return True
+
+            def values(self):
+                return []
+
+        cron = SimpleNamespace(distribuicao_semanal=_TruthyEmptyMapping())
         assert _calc_custo_mob_desmob({}, cron) == 0.0
 
     def test_basic_mob_desmob_cost(self):
@@ -916,6 +983,14 @@ class TestCustoOciosoEq:
         result = _custo_ocioso_eq([d1, d2, d3], 100.0, 2)
         # 1 idle week between first and last active
         assert result == pytest.approx(100.0)
+
+    def test_all_weeks_inactive_returns_zero(self):
+        """Line 749: custo_eq_semanal and ativos truthy, but every period has
+        num_equipes == 0 → indices_ativos empty → returns 0.0."""
+        d1 = SimpleNamespace(num_equipes=0)
+        d2 = SimpleNamespace(num_equipes=0)
+        result = _custo_ocioso_eq([d1, d2], 100.0, 2)
+        assert result == 0.0
 
 
 # ===========================================================================
@@ -1041,16 +1116,18 @@ class TestResolveCustoHoraRefSem:
         assert result == 0.0
 
     def test_cpu_not_found_returns_zero(self):
-        """Line 1082: cpu not in lookup → 0."""
+        """Linha 1091-1092: cpu_lookup e prod_lookup não-vazios (não disparam o guard
+        inicial), mas eq.cpu_id não está em cpu_lookup → cpu=None → 0."""
         eq = SimpleNamespace(cpu_id="MISSING")
-        result = _resolve_custo_hora_ref_sem(eq, {}, {"PROD-1": {}}, 48.0)
+        result = _resolve_custo_hora_ref_sem(eq, {"OUTRO-CPU": {}}, {"PROD-1": {}}, 48.0)
         assert result == 0.0
 
     def test_no_prod_returns_zero(self):
-        """Line 1082: prod not found → 0."""
+        """Linha 1094-1095: cpu encontrado, mas producao_id_ref não está em
+        prod_lookup (que é não-vazio, para não disparar o guard inicial) → 0."""
         eq = SimpleNamespace(cpu_id="CPU-01")
         cpu_lookup = {"CPU-01": {"producao_id_ref": "MISSING-PROD"}}
-        prod_lookup = {}
+        prod_lookup = {"OUTRO-PROD": {}}
         result = _resolve_custo_hora_ref_sem(eq, cpu_lookup, prod_lookup, 48.0)
         assert result == 0.0
 
@@ -1069,6 +1146,78 @@ class TestResolveCustoHoraRefSem:
         prod_lookup = {"PROD-1": {"custo_hora_total_referencia": 10.0}}
         result = _resolve_custo_hora_ref_sem(eq, cpu_lookup, prod_lookup, 48.0)
         assert result == pytest.approx(480.0)
+
+
+# ===========================================================================
+# 30b. _process_item_tipo_map
+# ===========================================================================
+
+
+class TestProcessItemTipoMap:
+    def test_missing_equipe_appends_val_pool_contrato_01(self):
+        """Lines 1117-1124: eq or sa missing → VAL-POOL-CONTRATO-01 + early return."""
+        validacoes: list = []
+        tipo_items: dict = {}
+        tipo_week_demand: dict = {}
+        _process_item_tipo_map(
+            "ITEM-1",
+            {"OPERADOR": 2},
+            equipe_map={},
+            pool={"OPERADOR": {}},
+            sched_lookup={},
+            tipo_items=tipo_items,
+            tipo_week_demand=tipo_week_demand,
+            validacoes=validacoes,
+        )
+        assert len(validacoes) == 1
+        assert validacoes[0].codigo == "VAL-POOL-CONTRATO-01"
+        assert tipo_items == {}
+        assert tipo_week_demand == {}
+
+    def test_tipo_not_in_pool_skipped(self):
+        """Line 1133: tipo not present in pool → continue without appending."""
+        d1 = SimpleNamespace(num_equipes=1)
+        sa = SimpleNamespace(distribuicao_semanal={"S1": d1})
+        eq = SimpleNamespace(custo_total=100.0, custo_mo=0.0, custo_eq=0.0, custo_comb=0.0, custo_mat=0.0)
+        validacoes: list = []
+        tipo_items: dict = {}
+        tipo_week_demand: dict = {}
+        _process_item_tipo_map(
+            "ITEM-1",
+            {"OPERADOR": 1},
+            equipe_map={"ITEM-1": eq},
+            pool={},  # OPERADOR not in pool
+            sched_lookup={"ITEM-1": sa},
+            tipo_items=tipo_items,
+            tipo_week_demand=tipo_week_demand,
+            validacoes=validacoes,
+        )
+        assert tipo_items == {}
+        assert tipo_week_demand == {}
+        assert validacoes == []
+
+    def test_actual_mw_zero_falls_back_to_required_times_weeks(self):
+        """Linha 1050: quando a proporção required/total_required_peak arredonda
+        para 0 em todas as semanas ativas (item minoritário no pool), actual_mw
+        cai no fallback `required * len(active_weeks)` em vez de ficar em 0."""
+        d1 = SimpleNamespace(num_equipes=1)
+        sa = SimpleNamespace(distribuicao_semanal={"S1": d1})
+        eq = SimpleNamespace(custo_total=100.0, custo_mo=25.0, custo_eq=25.0, custo_comb=25.0, custo_mat=25.0)
+        validacoes: list = []
+        tipo_items: dict = {}
+        tipo_week_demand: dict = {}
+        # tipo_map soma 3 (1 + 2); OPERADOR pede só 1/3 da capacidade → round(1*1/3)=0
+        _process_item_tipo_map(
+            "ITEM-1",
+            {"OPERADOR": 1, "OUTRO": 2},
+            equipe_map={"ITEM-1": eq},
+            pool={"OPERADOR": {}},  # só OPERADOR é processado; OUTRO seria pulado (não testado aqui)
+            sched_lookup={"ITEM-1": sa},
+            tipo_items=tipo_items,
+            tipo_week_demand=tipo_week_demand,
+            validacoes=validacoes,
+        )
+        assert tipo_items["OPERADOR"][0]["machine_weeks"] == 1  # required(1) * len(active_weeks)(1)
 
 
 # ===========================================================================
@@ -1434,6 +1583,55 @@ class TestBuildDemandPerWeek:
 
 
 # ===========================================================================
+# 40b. _item_demand_for_tipo / _collect_items_data_for_tipo
+# ===========================================================================
+
+
+class TestItemDemandForTipo:
+    def test_tipo_not_in_map_returns_none(self):
+        """Line 2270-2271: tipo_id absent from tipo_map → None."""
+        result = _item_demand_for_tipo("ITEM-1", "T-X", {"T-Y": 1}, {}, {})
+        assert result is None
+
+    def test_no_schedule_returns_none(self):
+        """Line 2275-2276: iid not found in sched_lookup → None."""
+        result = _item_demand_for_tipo("ITEM-1", "T-X", {"T-X": 1}, {"ITEM-1": 4}, {})
+        assert result is None
+
+    def test_empty_demand_returns_none(self):
+        """demand_per_week empty (no active weeks) → None."""
+        sa = SimpleNamespace(distribuicao_semanal={})
+        result = _item_demand_for_tipo("ITEM-1", "T-X", {"T-X": 1}, {"ITEM-1": 4}, {"ITEM-1": sa})
+        assert result is None
+
+    def test_valid_demand_returned(self):
+        d = SimpleNamespace(num_equipes=4)
+        sa = SimpleNamespace(distribuicao_semanal={"S1": d})
+        result = _item_demand_for_tipo("ITEM-1", "T-X", {"T-X": 2}, {"ITEM-1": 4}, {"ITEM-1": sa})
+        assert result == {"S1": 2}
+
+
+class TestCollectItemsDataForTipo:
+    def test_tipo_missing_from_item_map_skipped(self):
+        """Line 2289-2290: tipo_id not in item's tipo_map → item skipped."""
+        result = _collect_items_data_for_tipo("T-X", {"ITEM-1": {"T-OTHER": 1}}, {}, {})
+        assert result == []
+
+    def test_empty_demand_skips_item(self):
+        """Line 2292-2293: _item_demand_for_tipo returns None/empty → skip."""
+        sa = SimpleNamespace(distribuicao_semanal={})
+        result = _collect_items_data_for_tipo("T-X", {"ITEM-1": {"T-X": 1}}, {"ITEM-1": 4}, {"ITEM-1": sa})
+        assert result == []
+
+    def test_valid_item_included(self):
+        d = SimpleNamespace(num_equipes=4)
+        sa = SimpleNamespace(distribuicao_semanal={"S1": d})
+        result = _collect_items_data_for_tipo("T-X", {"ITEM-1": {"T-X": 2}}, {"ITEM-1": 4}, {"ITEM-1": sa})
+        assert len(result) == 1
+        assert result[0]["item_id"] == "ITEM-1"
+
+
+# ===========================================================================
 # 41. _build_item_resource_maps
 # ===========================================================================
 
@@ -1577,3 +1775,774 @@ class TestSumInstCategories:
         assert tot_eq == 0.0
         assert tot_comb == 0.0
         assert tot_mat == 0.0
+
+
+# ===========================================================================
+# _build_resumo_e_validacoes — status_utilizacao thresholds (ADR-077)
+# ===========================================================================
+
+
+class TestBuildResumoEValidacoes:
+    def _contrato(self, semanas_contrato=10):
+        return SimpleNamespace(contrato_id="CTR-1", semanas_contrato=semanas_contrato)
+
+    def test_taxa_alta_status_ok(self):
+        """taxa_geral >= 65.0 -> status OK."""
+        contrato = self._contrato(semanas_contrato=10)
+        instance_active = {1: 8}
+        instance_standby = {1: 0}
+        validacoes: list = []
+        resumo = _build_resumo_e_validacoes("T1", contrato, 1, instance_active, instance_standby, 100.0, validacoes)
+        assert resumo.status_utilizacao == "OK"
+
+    def test_taxa_media_status_aviso(self):
+        """35.0 <= taxa_geral < 65.0 -> status AVISO."""
+        contrato = self._contrato(semanas_contrato=10)
+        instance_active = {1: 4}
+        instance_standby = {1: 0}
+        validacoes: list = []
+        resumo = _build_resumo_e_validacoes("T1", contrato, 1, instance_active, instance_standby, 100.0, validacoes)
+        assert resumo.status_utilizacao == "AVISO"
+
+    def test_taxa_baixa_status_critico(self):
+        """Line 2451: taxa_geral < 35.0 -> status CRITICO."""
+        contrato = self._contrato(semanas_contrato=10)
+        instance_active = {1: 1}
+        instance_standby = {1: 0}
+        validacoes: list = []
+        resumo = _build_resumo_e_validacoes("T1", contrato, 1, instance_active, instance_standby, 100.0, validacoes)
+        assert resumo.status_utilizacao == "CRITICO"
+
+    def test_taxa_baixa_com_standby_alto_gera_validacao_erro(self):
+        """CRITICO + instância com standby alto -> VAL-SLOT-STANDBY-ALTO com status ERRO."""
+        contrato = self._contrato(semanas_contrato=10)
+        instance_active = {1: 1}
+        instance_standby = {1: 9}  # standby ratio 90% > _STANDBY_THRESHOLD_PCT
+        validacoes: list = []
+        resumo = _build_resumo_e_validacoes("T1", contrato, 1, instance_active, instance_standby, 100.0, validacoes)
+        assert resumo.status_utilizacao == "CRITICO"
+        assert any(v.status == "ERRO" for v in validacoes)
+
+
+# ===========================================================================
+# 40. _processar_equipamentos_item — alias enrichment path (line 553)
+# ===========================================================================
+
+
+class TestProcessarEquipamentosItemAliasEnrichment:
+    def test_alias_attrs_merged_when_primary_insumo_lacks_consumo(self):
+        """O insumo principal do equipamento não traz consumo_litros_hora nos
+        seus atributos_especificos; _best_alias_equip_attrs() encontra um alias
+        no catálogo (via codigo_planilha) com o consumo, e ele é mesclado em
+        _attrs (branch true de `if alias_attrs:`, linha 553)."""
+        repo = MagicMock()
+        repo.obter_insumo.return_value = {
+            "codigo": "E0027",
+            "descricao": "Rolo compactador liso",
+            "preco_unitario": 500.0,
+            "atributos_especificos": {},  # sem consumo_litros_hora
+        }
+        repo._insumos = {
+            "EQ-ROLO-LISO": {
+                "codigo": "EQ-ROLO-LISO",
+                "tipo": "EQUIPAMENTO",
+                "descricao": "Rolo compactador liso",
+                "atributos_especificos": {
+                    "codigo_planilha": "E0027",
+                    "consumo_litros_hora": 7.0,
+                    "tipo_combustivel": "Diesel S10",
+                },
+            }
+        }
+        repo.resolver_preco.return_value = (500.0, "catalogo")
+        ctx = SimpleNamespace(repo=repo, jurisdicao_id="mendeslobo", overrides={}, data_base=None)
+
+        comp = {"equipamentos": [{"equip_id": "E0027", "num_unidades": 1}]}
+        validacoes: list = []
+        equips_mod, custo_eq, custo_comb, modo_est = _processar_equipamentos_item(
+            comp, "1.1", {}, {}, 8.0, 21.0, 6.20, ctx, validacoes
+        )
+
+        assert len(equips_mod) == 1
+        assert equips_mod[0].consumo_litros_hora == 7.0
+        assert equips_mod[0].tipo_combustivel == "Diesel S10"
+        assert custo_comb > 0.0
+
+
+# ===========================================================================
+# 41. _derive_rcpsp_from_canonical
+# ===========================================================================
+
+
+class TestDeriveRcpspFromCanonical:
+    def test_empty_eap_returns_none(self):
+        """Linha 1429: cronograma tem atividades mas eap está vazio → None."""
+        sched_act = SimpleNamespace(activity_id="A1", distribuicao_semanal={})
+        canonical_in = SimpleNamespace(
+            cronograma=SimpleNamespace(scheduled_activities=[sched_act]),
+            eap=[],
+        )
+        result = _derive_rcpsp_from_canonical(canonical_in, {})
+        assert result is None
+
+    def test_item_not_scheduled_is_skipped(self):
+        """Linha 1469: item da EAP sem entrada correspondente no cronograma é
+        pulado; um segundo item, agendado e com composição válida, ainda
+        produz um spec derivado normalmente."""
+        dist = {"2026-W01": SimpleNamespace(num_equipes=2)}
+        sched_act = SimpleNamespace(activity_id="SCHEDULED-1", distribuicao_semanal=dist)
+        canonical_in = SimpleNamespace(
+            cronograma=SimpleNamespace(scheduled_activities=[sched_act]),
+            eap=[
+                SimpleNamespace(item_id="NOT-SCHEDULED", cpu_id="CPU-X"),
+                SimpleNamespace(item_id="SCHEDULED-1", cpu_id="CPU-1"),
+            ],
+        )
+        catalogo = {
+            "cpus": [{"codigo": "CPU-1", "producao_id_ref": "PROD-1"}],
+            "producoes": [
+                {
+                    "id": "PROD-1",
+                    "composicao_padrao_equipe": {"equipamentos": [{"equip_id": "EQ-1", "num_unidades": 1}]},
+                }
+            ],
+        }
+        result = _derive_rcpsp_from_canonical(canonical_in, catalogo)
+        assert result is not None
+        item_ids = {a["item_id"] for a in result["activities"]}
+        assert item_ids == {"SCHEDULED-1"}
+
+
+# ===========================================================================
+# 42. _build_contratos_recurso — total_mw==0 e tipo_costs não-dict
+# ===========================================================================
+
+
+class TestBuildContratosRecursoEdgeCases:
+    def _mk_sched(self, item_id, weeks):
+        from concilium.domain.models.canonical import DistribuicaoSemanal, ScheduledActivityCanonical
+
+        dist = {
+            w: DistribuicaoSemanal(
+                num_equipes=1,
+                qtd_executada=10.0,
+                qtd_acumulada=10.0,
+                pct=1.0,
+                eficiencia=1.0,
+                fator_clima=1.0,
+                fator_calendario=1.0,
+            )
+            for w in weeks
+        }
+        return ScheduledActivityCanonical(
+            activity_id=item_id, start_week=0, end_week=len(weeks), duration_weeks=len(weeks), distribuicao_semanal=dist
+        )
+
+    def _mk_equipe(self, item_id, custo_total=1000.0):
+        from concilium.domain.models.canonical import EquipeDireta
+
+        return EquipeDireta(
+            equipe_id=f"eq-{item_id}",
+            item_id=item_id,
+            cpu_id="CPU-X",
+            custo_mao_obra_mensal=100.0,
+            custo_total=custo_total,
+        )
+
+    def test_total_mw_zero_skips_tipo(self):
+        """Linha 1587: required_resources=0 para o único tipo → machine_weeks=0
+        em todos os itens do tipo → total_mw==0 → tipo não vira contrato."""
+        equipes = [self._mk_equipe("eap-Z")]
+        sched = {"eap-Z": self._mk_sched("eap-Z", ["S001"])}
+        rcpsp = {
+            "resource_pool": {"ZERO": 1},
+            "activities": [{"item_id": "eap-Z", "required_resources": {"ZERO": 0}}],
+        }
+        contratos, atrib, cadeias = _MOD._build_contratos_recurso(equipes, rcpsp, sched, [])
+        assert contratos == []
+        assert atrib == {}
+
+    def test_tipo_costs_non_dict_normalized_to_empty(self):
+        """Linha 1590: resource_costs[tipo] não é dict (payload malformado) —
+        normalizado para {} em vez de propagar erro para _build_tipo_contrato."""
+        equipes = [self._mk_equipe("eap-Y")]
+        sched = {"eap-Y": self._mk_sched("eap-Y", ["S001", "S002"])}
+        rcpsp = {
+            "resource_pool": {"OPERADOR": 1},
+            "activities": [{"item_id": "eap-Y", "required_resources": {"OPERADOR": 1}}],
+            "resource_costs": {"OPERADOR": "nao-e-um-dict"},
+        }
+        contratos, atrib, cadeias = _MOD._build_contratos_recurso(equipes, rcpsp, sched, [])
+        assert len(contratos) == 1
+        assert contratos[0].tipo_id == "OPERADOR"
+
+
+# ===========================================================================
+# 43. _sucessor_critico_id / _impute_euler_regions (ADR-084)
+# ===========================================================================
+
+
+class TestSucessorCriticoId:
+    def test_finds_first_activity_starting_at_or_after_gap_end(self):
+        """Linha 1757: encontra a primeira atividade cujo T_start >= gap_end."""
+        atividades_sorted = [
+            {"item_id": "A", "T_start": 1.0},
+            {"item_id": "B", "T_start": 5.0},
+            {"item_id": "C", "T_start": 8.0},
+        ]
+        result = _MOD._sucessor_critico_id(4.0, atividades_sorted)
+        assert result == "B"
+
+    def test_returns_none_when_no_activity_starts_after_gap(self):
+        atividades_sorted = [{"item_id": "A", "T_start": 1.0}]
+        result = _MOD._sucessor_critico_id(10.0, atividades_sorted)
+        assert result is None
+
+
+class TestImputeEulerRegions:
+    def test_skips_active_id_not_in_items_com_janela(self):
+        """Linha 1774: região do diagrama de Euler referencia um item_id que não
+        está em items_com_janela (fora da janela de análise) — é ignorado."""
+        items_com_janela = [{"item_id": "A"}]
+        region = SimpleNamespace(measure=lambda: 2.0)
+        diagram = {frozenset({"A", "OUTSIDE"}): region}
+        phi, custo_excl, custo_comp, overlap_sem = _MOD._impute_euler_regions(diagram, items_com_janela, 10.0, 1)
+        assert set(phi.keys()) == {"A"}
+        # custo = duracao(2.0) * c_unit_semana(10.0) * qt(1) = 20.0; dividido pelas
+        # 2 ids ativas (A e OUTSIDE) -> parcela=10.0; OUTSIDE é ignorado (não em phi).
+        assert phi["A"] == pytest.approx(10.0)
+
+
+# ===========================================================================
+# 44. ImportError fallback do eule/interval_sets (linhas 48-49)
+# ===========================================================================
+
+
+class TestEuleImportErrorFallback:
+    def test_eule_unavailable_sets_flag_false(self):
+        """Linhas 48-49: quando eule/interval_sets não estão instaláveis, o módulo
+        define _EULE_AVAILABLE=False em vez de propagar o ImportError."""
+        import importlib
+        import sys as _sys
+
+        real_import = __import__
+
+        def _fake_import(name, *args, **kwargs):
+            if name in ("eule", "interval_sets"):
+                raise ImportError(f"simulado: {name} indisponível")
+            return real_import(name, *args, **kwargs)
+
+        mod_name = _MOD.__name__
+        saved = _sys.modules.pop(mod_name, None)
+        try:
+            import builtins
+
+            builtins.__import__ = _fake_import
+            try:
+                reloaded = importlib.import_module(mod_name)
+            finally:
+                builtins.__import__ = real_import
+            assert reloaded._EULE_AVAILABLE is False
+        finally:
+            if saved is not None:
+                _sys.modules[mod_name] = saved
+            else:
+                _sys.modules.pop(mod_name, None)
+            importlib.import_module(mod_name)
+
+
+# ===========================================================================
+# 45. _build_dimensionamento — num_equipes_paralelas via assigned_resources /
+#     fallback pela distribuicao_semanal (ADR-091)
+# ===========================================================================
+
+
+class TestBuildDimensionamentoNumEquipesParalelas:
+    def _make_canonical(self, item_id="EAP-01", cpu_id="CPU-T"):
+        from datetime import UTC, datetime
+
+        from concilium.domain.models.canonical import (
+            CanonicalModel,
+            Coordenadas,
+            EapItem,
+            Meta,
+            Praticabilidade,
+            Projeto,
+            RegimeTrabalho,
+        )
+
+        meta = Meta(gerado_em=datetime.now(UTC), contexto_id="test")
+        proj = Projeto(
+            id="p1",
+            nome="proj",
+            tipo_obra="terraplenagem",
+            localizacao="x",
+            coordenadas=Coordenadas(lat=0.0, lng=0.0),
+            regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
+            data_inicio="2026-06-01",
+            data_termino="2026-07-31",
+            snapshot_catalogo_id="s",
+            snapshot_perfil_id="s",
+        )
+        prat = Praticabilidade(
+            fonte="test",
+            limiar_inviabilidade_mm=0,
+            calculada_em=datetime.now(UTC),
+            percentual_produtivo_mensal={"06": 1.0, "07": 1.0},
+        )
+        eap = [EapItem(item_id=item_id, ordem=1, cpu_id=cpu_id, descricao="Test", unidade="m3", quantitativo=100.0)]
+        return CanonicalModel(meta=meta, projeto=proj, eap=eap, praticabilidade=prat)
+
+    def _catalogo(self, cpu_id="CPU-T"):
+        return {
+            "cpus": [
+                {
+                    "codigo": cpu_id,
+                    "descricao": "Test CPU",
+                    "unidade": "m3",
+                    "origem": "PROPRIA",
+                    "categoria": "TERRAPLENAGEM",
+                    "producao_horaria": 10,
+                    "composicao_itens": [],
+                    "composicao_padrao_equipe": {
+                        "funcoes": [{"funcao_id": "OP-01", "num_pessoas": 1}],
+                        "equipamentos": [{"equip_id": "EQ-01", "num_unidades": 1}],
+                        "materiais": [],
+                    },
+                }
+            ],
+            "insumos": [
+                {
+                    "codigo": "OP-01",
+                    "tipo": "MAO_OBRA",
+                    "descricao": "Operador",
+                    "unidade": "mes",
+                    "preco_unitario": 2000.0,
+                    "fonte_preco": "catalogo",
+                    "atributos_especificos": {},
+                },
+                {
+                    "codigo": "EQ-01",
+                    "tipo": "EQUIPAMENTO",
+                    "descricao": "Escavadeira",
+                    "unidade": "h",
+                    "preco_unitario": 100.0,
+                    "fonte_preco": "catalogo",
+                    "atributos_especificos": {},
+                },
+            ],
+        }
+
+    def test_assigned_resources_sum_gt1_skips_dist_fallback(self):
+        """ADR-091: assigned_resources com soma > 1 já define num_equipes_paralelas
+        > 1 — o bloco de dedução via distribuicao_semanal é pulado (branch False
+        de `if not num_equipes_paralelas or num_equipes_paralelas == 1`)."""
+        from concilium.application.skills import run_cronograma, run_equipes_e_alocacao
+
+        item_id = "EAP-01"
+        can = self._make_canonical(item_id=item_id)
+        cat = self._catalogo()
+        cron_inputs = {"num_equipes_por_item": {item_id: {"2026-W23": 1}}}
+        can_cron = run_cronograma(can, cron_inputs, cat).canonical
+        sa = can_cron.cronograma.scheduled_activities[0]
+        sa.assigned_resources = {"EQ-01": 3}
+        result = run_equipes_e_alocacao(can_cron, {"preco_diesel": 6.20}, cat)
+        eq = result.canonical.equipes_diretas[0]
+        assert eq.num_equipes_base == 3
+
+    def test_dist_semanal_vazia_mantem_num_equipes_paralelas_1(self):
+        """assigned_resources vazio (sum=1 default) e distribuicao_semanal vazia
+        (falsy) — ramo False de `if dist_semanal and isinstance(dist_semanal, dict)`
+        — num_equipes_paralelas permanece 1."""
+        from concilium.application.skills import run_cronograma, run_equipes_e_alocacao
+
+        item_id = "EAP-01"
+        can = self._make_canonical(item_id=item_id)
+        cat = self._catalogo()
+        cron_inputs = {"num_equipes_por_item": {item_id: {"2026-W23": 1}}}
+        can_cron = run_cronograma(can, cron_inputs, cat).canonical
+        sa = can_cron.cronograma.scheduled_activities[0]
+        sa.distribuicao_semanal = {}
+        result = run_equipes_e_alocacao(can_cron, {"preco_diesel": 6.20}, cat)
+        eq = result.canonical.equipes_diretas[0]
+        assert eq.num_equipes_base == 1
+
+
+# ===========================================================================
+# 46. _tipo_recurso_fungivel (closure interna de _derive_rcpsp_from_canonical)
+# ===========================================================================
+
+
+class TestTipoRecursoFungivel:
+    def _canonical_com_composicao(self, equipamentos, funcoes):
+        dist = {"2026-W01": SimpleNamespace(num_equipes=1)}
+        sched_act = SimpleNamespace(activity_id="ITEM-1", distribuicao_semanal=dist)
+        canonical_in = SimpleNamespace(
+            cronograma=SimpleNamespace(scheduled_activities=[sched_act]),
+            eap=[SimpleNamespace(item_id="ITEM-1", cpu_id="CPU-1")],
+        )
+        catalogo = {
+            "cpus": [{"codigo": "CPU-1", "producao_id_ref": "PROD-1"}],
+            "producoes": [
+                {
+                    "id": "PROD-1",
+                    "composicao_padrao_equipe": {"equipamentos": equipamentos, "funcoes": funcoes},
+                }
+            ],
+        }
+        return canonical_in, catalogo
+
+    def test_tokens_com_ids_vazios_intercalados_continua_loop(self):
+        """Funções/equipamentos com id vazio são ignorados mas o loop continua
+        para os próximos — cobre os ramos `if fid:`/`if eid:` False seguidos de
+        continuação (loops de tokens)."""
+        funcoes = [{"funcao_id": None, "num_pessoas": 1}, {"funcao_id": "OP1", "num_pessoas": 2}]
+        equipamentos = [{"equip_id": "", "num_unidades": 1}, {"equip_id": "EQ1", "num_unidades": 1}]
+        canonical_in, catalogo = self._canonical_com_composicao(equipamentos, funcoes)
+        result = _derive_rcpsp_from_canonical(canonical_in, catalogo)
+        assert result is not None
+        tipo = next(iter(result["resource_pool"].keys()))
+        assert tipo.startswith("EQUIPE-COMP-")
+
+    def test_todos_ids_vazios_cai_no_fallback_por_cpu_id(self):
+        """Linhas 1464-1465: equipamentos/funcoes presentes mas todos com id vazio
+        → tokens fica vazio → fallback usa cpu_id (`EQUIPE-CPU-<...>`)."""
+        funcoes = [{"funcao_id": "", "num_pessoas": 1}]
+        equipamentos = [{"equip_id": "", "num_unidades": 1}]
+        canonical_in, catalogo = self._canonical_com_composicao(equipamentos, funcoes)
+        result = _derive_rcpsp_from_canonical(canonical_in, catalogo)
+        assert result is not None
+        tipo = next(iter(result["resource_pool"].keys()))
+        assert tipo == "EQUIPE-CPU-CPU-1"
+
+
+# ===========================================================================
+# 47. _build_item_tipo_map — ids/required_resources falsy intercalados
+# ===========================================================================
+
+
+class TestBuildItemTipoMap:
+    def test_skips_falsy_and_continues_loop(self):
+        """Atividades sem item_id ou sem required_resources são ignoradas, mas o
+        loop continua e processa as atividades subsequentes normalmente."""
+        activities = [
+            {"item_id": None, "required_resources": {"A": 1}},
+            {"item_id": "X", "required_resources": {}},
+            {"item_id": "Y", "required_resources": {"B": 2}},
+        ]
+        result = _MOD._build_item_tipo_map(activities)
+        assert result == {"Y": {"B": 2}}
+
+
+# ===========================================================================
+# 48. _build_contrato_entry — fallback de custo_idle quando cus_mo+cus_locacao<=0
+# ===========================================================================
+
+
+class TestBuildContratoEntryCIdleFallback:
+    def _mk_sched(self, item_id, weeks):
+        from concilium.domain.models.canonical import DistribuicaoSemanal, ScheduledActivityCanonical
+
+        dist = {
+            w: DistribuicaoSemanal(
+                num_equipes=1,
+                qtd_executada=10.0,
+                qtd_acumulada=10.0,
+                pct=1.0,
+                eficiencia=1.0,
+                fator_clima=1.0,
+                fator_calendario=1.0,
+            )
+            for w in weeks
+        }
+        return ScheduledActivityCanonical(
+            activity_id=item_id, start_week=0, end_week=len(weeks), duration_weeks=len(weeks), distribuicao_semanal=dist
+        )
+
+    def _mk_equipe(self, item_id, custo_total=0.0):
+        from concilium.domain.models.canonical import EquipeDireta
+
+        return EquipeDireta(
+            equipe_id=f"eq-{item_id}",
+            item_id=item_id,
+            cpu_id="CPU-X",
+            custo_mao_obra_mensal=100.0,
+            custo_total=custo_total,
+        )
+
+    def test_c_idle_fallback_not_positive_stays_zero(self):
+        """Quando custo_total do item é 0, cus_mo e cus_locacao ficam 0 — o
+        fallback `_c_idle_fallback = cus_mo + cus_locacao` não é > 0, então
+        c_idle permanece 0 (branch False de `if _c_idle_fallback > 0.0`)."""
+        equipes = [self._mk_equipe("eap-W", custo_total=0.0)]
+        sched = {"eap-W": self._mk_sched("eap-W", ["S001"])}
+        rcpsp = {
+            "resource_pool": {"OPERADOR": 1},
+            "activities": [{"item_id": "eap-W", "required_resources": {"OPERADOR": 1}}],
+        }
+        contratos, atrib, cadeias = _MOD._build_contratos_recurso(equipes, rcpsp, sched, [])
+        assert len(contratos) == 1
+        assert contratos[0].custo_idle_semanal_unit == 0.0
+
+
+# ===========================================================================
+# 49. _impute_gaps — gap sem sucessor crítico (fim de contrato)
+# ===========================================================================
+
+
+@pytest.mark.skipif(not _MOD._EULE_AVAILABLE, reason="eule[interval] não instalado")
+class TestImputeGapsSemSucessor:
+    def test_gap_final_sem_sucessor_nao_e_imputado(self):
+        """Gap após a última atividade não tem sucessor crítico (nenhuma atividade
+        com T_start >= gap_end) — ramo False de `if critico_id and critico_id in phi`
+        (a atribuição do custo do gap é pulada, mas o processamento continua)."""
+        items = [{"item_id": "a1", "T_start": 0.0, "T_end": 3.0, "machine_weeks": 3}]
+        atrib = {"a1": (0.0, "produtivo", 3.0)}
+        result = _MOD.particionar_contrato(
+            items_com_janela=items,
+            c_mob=0.0,
+            c_demob=0.0,
+            c_unit_semana=1.0,
+            quantidade_contratada=1,
+            T_contrato_start=0.0,
+            T_contrato_end=7.0,
+            atribuicao=atrib,
+            cadeias=[],
+        )
+        by_id = {it.item_id: it for it in result}
+        # gap [3,7] não tem sucessor -> custo do gap não é imputado a ninguém
+        assert by_id["a1"].custo_ocioso_imputado == 0.0
+
+
+# ===========================================================================
+# 50. _build_demand_per_week — demand arredondado para 0 é excluído
+# ===========================================================================
+
+
+class TestBuildDemandPerWeekDemandZero:
+    def test_demand_rounds_to_zero_excluded(self):
+        """ne > 0 mas demand arredondado para 0 (required pequeno vs total_peak) —
+        ramo False de `if demand > 0`; a semana não entra no resultado."""
+        d_tiny = SimpleNamespace(num_equipes=1)
+        d_pos = SimpleNamespace(num_equipes=100)
+        dist = {"S1": d_tiny, "S2": d_pos}
+        result = _build_demand_per_week(dist, 1, 100)
+        assert "S1" not in result
+        assert result["S2"] == 1
+
+
+# ===========================================================================
+# 51. _build_instancias_for_tipo — early returns (n<=0 / items_data vazio)
+# ===========================================================================
+
+
+class TestBuildInstanciasForTipoEarlyReturns:
+    def test_n_zero_or_negative_returns_empty(self):
+        contrato = SimpleNamespace(quantidade_contratada=0)
+        result = _MOD._build_instancias_for_tipo("T1", contrato, {}, {}, {}, [])
+        assert result == ([], [], [])
+
+    def test_items_data_empty_returns_empty(self):
+        contrato = SimpleNamespace(quantidade_contratada=2)
+        result = _MOD._build_instancias_for_tipo("T1", contrato, {}, {}, {}, [])
+        assert result == ([], [], [])
+
+
+# ===========================================================================
+# 51b. _build_instancias_recurso — early return sem contratos/activities
+# ===========================================================================
+
+
+class TestBuildInstanciasRecursoEarlyReturn:
+    def test_sem_contratos_retorna_listas_vazias(self):
+        result = _MOD._build_instancias_recurso([], {"activities": [{"item_id": "x"}]}, {}, [])
+        assert result == ([], [], [])
+
+    def test_sem_activities_retorna_listas_vazias(self):
+        contrato = SimpleNamespace(tipo_id="T1")
+        result = _MOD._build_instancias_recurso([contrato], {"activities": []}, {}, [])
+        assert result == ([], [], [])
+
+
+# ===========================================================================
+# 52. _reescalar_particao / _apply_instancial_to_contrato — casos vazios
+# ===========================================================================
+
+
+class TestReescalarParticaoEApplyInstancial:
+    def test_reescalar_particao_sem_particoes_apenas_atualiza_total(self):
+        """particao_por_item vazio → nada a reescalar, mas custo_total_contrato
+        do contrato ainda é atualizado para o novo valor."""
+        contrato = SimpleNamespace(custo_total_contrato=100.0, particao_por_item=[], tipo_id="T1")
+        validacoes: list = []
+        _MOD._reescalar_particao(contrato, 50.0, [], {}, validacoes)
+        assert contrato.custo_total_contrato == 50.0
+        assert validacoes == []
+
+    def test_apply_instancial_novo_total_zero_e_no_op(self):
+        """Sem instâncias associadas ao contrato, novo_total=0 → early return sem
+        alterar custo_total_contrato nem emitir validações."""
+        contrato = SimpleNamespace(contrato_id="C1", custo_total_contrato=100.0)
+        validacoes: list = []
+        _MOD._apply_instancial_to_contrato(contrato, [], {}, validacoes)
+        assert contrato.custo_total_contrato == 100.0
+        assert validacoes == []
+
+    def test_apply_instancial_antigo_total_zero_e_no_op(self):
+        """novo_total > 0 (há instâncias com custo), mas custo_total_contrato
+        original é 0/None → segundo early return (`if antigo_total <= 0`)."""
+        contrato = SimpleNamespace(contrato_id="C1", custo_total_contrato=0.0)
+        inst = SimpleNamespace(contrato_id="C1", custo_instancia_total=500.0)
+        validacoes: list = []
+        _MOD._apply_instancial_to_contrato(contrato, [inst], {}, validacoes)
+        assert contrato.custo_total_contrato == 0.0
+        assert validacoes == []
+
+
+# ===========================================================================
+# 53. _enrich_equipes_com_decomposicao_instancial — casos de desvio/reescala
+# ===========================================================================
+
+
+class TestEnrichEquipesDecomposicaoInstancial:
+    def test_contrato_sem_particoes_nao_gera_erro(self):
+        """Loop `for part in contrato.particao_por_item` não é executado quando a
+        lista está vazia — nenhuma equipe é tocada, nenhuma validação emitida."""
+        contrato = SimpleNamespace(particao_por_item=[])
+        validacoes: list = []
+        _MOD._enrich_equipes_com_decomposicao_instancial([], [contrato], validacoes)
+        assert validacoes == []
+
+    def test_desvio_grande_soma_positiva_reescala_proporcionalmente(self):
+        """desvio > 1.0 e soma > 0 → reescala custo_inst_* proporcionalmente e
+        emite VAL-DECOMP-REESCALA. Usa dois contratos, o primeiro com uma
+        partição de item sem equipe correspondente (cobre o `continue` do
+        `if eq is None`) para exercitar a continuação dos loops aninhados
+        (múltiplos contratos e múltiplas partições)."""
+        from concilium.domain.models.canonical import CustoParticionadoItem, EquipeDireta
+
+        eq = EquipeDireta(equipe_id="eq-A", item_id="A", cpu_id="CPU-X", custo_total=1000.0)
+        part_sem_equipe = CustoParticionadoItem(item_id="ZZZ")
+        contrato_sem_equipe = SimpleNamespace(particao_por_item=[part_sem_equipe])
+        part = CustoParticionadoItem(item_id="A", custo_inst_mo=10.0)
+        contrato = SimpleNamespace(particao_por_item=[part])
+        validacoes: list = []
+        _MOD._enrich_equipes_com_decomposicao_instancial([eq], [contrato_sem_equipe, contrato], validacoes)
+        assert eq.custo_inst_mo == pytest.approx(1000.0)
+        assert any(v.codigo == "VAL-DECOMP-REESCALA" for v in validacoes)
+
+    def test_desvio_grande_soma_zero_emite_invariante_sem_reescalar(self):
+        """desvio > 1.0 e soma <= 0 (todos custo_inst_* zerados) → não há como
+        reescalar; emite VAL-DECOMP-INVARIANTE."""
+        from concilium.domain.models.canonical import CustoParticionadoItem, EquipeDireta
+
+        eq = EquipeDireta(equipe_id="eq-B", item_id="B", cpu_id="CPU-X", custo_total=50.0)
+        part = CustoParticionadoItem(item_id="B")
+        contrato = SimpleNamespace(particao_por_item=[part])
+        validacoes: list = []
+        _MOD._enrich_equipes_com_decomposicao_instancial([eq], [contrato], validacoes)
+        assert eq.custo_inst_mo == 0.0
+        assert any(v.codigo == "VAL-DECOMP-INVARIANTE" for v in validacoes)
+
+
+# ===========================================================================
+# 54. _enrich_particao_overhead (ADR-083) — gap real entre segmentos de slot
+# ===========================================================================
+
+
+class TestEnrichParticaoOverhead:
+    def test_gap_entre_predecessor_e_sucessor_gera_overhead(self):
+        """Item sem predecessor na cadeia não recebe overhead (continue); item
+        com predecessor tem overhead_ocioso calculado a partir do gap real entre
+        os segmentos de atividade do slot instancial."""
+        from concilium.domain.models.canonical import CadeiaPerpetuacao, CustoParticionadoItem
+
+        cadeia = CadeiaPerpetuacao(
+            cadeia_id="c1", item_ids=["A", "B"], tipo_id="T1", semana_inicio="S001", semana_fim="S010"
+        )
+        part_a = CustoParticionadoItem(item_id="A")
+        part_b = CustoParticionadoItem(item_id="B")
+        contrato = SimpleNamespace(tipo_id="T1", custo_unit_semanal=10.0, particao_por_item=[part_a, part_b])
+        inst = SimpleNamespace(
+            tipo_id="T1",
+            segmentos_atividade=[
+                SimpleNamespace(activity_id="A", semana_inicio="S001", semana_fim="S003"),
+                SimpleNamespace(activity_id="B", semana_inicio="S005", semana_fim="S007"),
+            ],
+        )
+        _MOD._enrich_particao_overhead([contrato], [cadeia], [inst])
+        assert part_a.custo_ocioso_imputado == 0.0
+        # gap entre S003 (fim de A) e S005 (início de B) = 1 semana ociosa
+        assert part_b.custo_ocioso_imputado == pytest.approx(10.0)
+
+
+# ===========================================================================
+# 55. _best_alias_equip_attrs — pontuação por descrição pulada quando vazia
+# ===========================================================================
+
+
+class TestBestAliasEquipAttrsDescVazia:
+    def test_desc_key_ou_desc_i_vazio_pula_pontuacao_por_descricao(self):
+        """Quando desc_key ou desc_i está vazio, o bloco de pontuação por
+        descrição (linhas 270-278) é pulado — mas o score por codigo_planilha
+        já é suficiente para ultrapassar o limiar de 35.0 (branch False de
+        `if desc_key and desc_i`)."""
+        ctx_repo = MagicMock()
+        ctx_repo._insumos = {
+            "EQ-01": {
+                "tipo": "EQUIPAMENTO",
+                "descricao": "",  # desc_i fica vazio após normalização
+                "atributos_especificos": {
+                    "codigo_planilha": "COD-01",
+                    "consumo_litros_hora": 5.0,
+                },
+            }
+        }
+        ctx = SimpleNamespace(repo=ctx_repo)
+        result = _MOD._best_alias_equip_attrs(ctx, "COD-01", "Alguma descricao")
+        assert result["consumo_litros_hora"] == 5.0
+
+
+# ===========================================================================
+# 56. _scale_part_entry / _aplicar_custo_instancial — branches residuais
+# ===========================================================================
+
+
+class TestScalePartEntryNoMatchingEquipe:
+    def test_item_id_sem_equipe_correspondente_nao_atualiza_custo_total(self):
+        """eq_by_item.get(part.item_id) retorna None -> pula a atualização de
+        eq.custo_total (branch False de `if eq is not None`)."""
+        part = SimpleNamespace(
+            item_id="ITEM-SEM-EQUIPE",
+            custo_produtivo=100.0,
+            custo_mob_imputado=0.0,
+            custo_ocioso_imputado=0.0,
+            overhead_ocioso=0.0,
+            custo_produtivo_exclusivo=100.0,
+            custo_produtivo_compartilhado=0.0,
+            custo_demob_imputado=0.0,
+            custo_total_particionado=100.0,
+            custo_total_autonomo=100.0,
+            custo_inst_mo=0.0,
+            custo_inst_eq=0.0,
+            custo_inst_comb=0.0,
+            custo_inst_mat=0.0,
+        )
+        _MOD._scale_part_entry(part, 1.0, 100.0, 0.0, 0.0, 0.0, 0.0, eq_by_item={})
+        assert part.custo_total_particionado == pytest.approx(100.0)
+
+
+class TestAplicarCustoInstancialPoolTotalPorItem:
+    def test_item_sem_equipe_ou_total_zero_nao_interrompe_loop(self):
+        """Um item_id sem equipe correspondente (ou com total<=0) não deve
+        impedir que o próximo item_id do loop seja processado normalmente
+        (branch False de `if eq is not None and total > 0`, volta ao loop)."""
+        part_sem_equipe = SimpleNamespace(item_id="ITEM-ORFAO", custo_total_particionado=50.0)
+        part_com_equipe = SimpleNamespace(item_id="ITEM-OK", custo_total_particionado=200.0)
+        contrato = SimpleNamespace(particao_por_item=[part_sem_equipe, part_com_equipe])
+        eq_ok = SimpleNamespace(item_id="ITEM-OK", custo_total=0.0)
+
+        with patch.object(_MOD, "_apply_instancial_to_contrato", lambda *a, **k: None):
+            _MOD._aplicar_custo_instancial([contrato], instancias=[], equipes=[eq_ok], validacoes=[])
+
+        assert eq_ok.custo_total == pytest.approx(200.0)

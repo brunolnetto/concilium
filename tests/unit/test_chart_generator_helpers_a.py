@@ -57,6 +57,8 @@ SAMPLE_EAP_DATA = [
     {"nome": "Desmatamento", "crit": "B", "custo": 2529041, "pe_op": 14192824},
     {"nome": "Esc 3aCat 2-3km", "crit": "A", "custo": 13912325, "pe_op": 16188650},
     {"nome": "Compactação PI", "crit": "C", "custo": 393487, "pe_op": 503052},
+    # pe_op <= custo → covers the `if pe > c` false branch (no annotate arrow drawn)
+    {"nome": "Corpo aterro 3aCat", "crit": "B", "custo": 6435974, "pe_op": 4290608},
 ]
 
 SAMPLE_CRIT_COR = {
@@ -725,6 +727,7 @@ class TestChartEapCrit:
         # Desmatamento: pe_op=14192824 > custo=2529041 → annotate
         # Esc 3aCat: pe_op=16188650 > custo=13912325 → annotate
         # PI: pe_op=503052 > custo=393487 → annotate
+        # Corpo aterro 3aCat: pe_op=4290608 <= custo=6435974 → no annotate (false branch)
         assert ax.annotate.call_count == 3
 
 

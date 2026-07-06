@@ -188,6 +188,33 @@ class TestSerialScheduler:
         act_b = next(a for a in schedule.scheduled_activities if a.activity_id == "B")
         assert act_a.end_week <= act_b.start_week
 
+    def test_scheduler_diamond_dag_waits_for_all_predecessors(self):
+        """C depende de A e B (diamante): quando A termina, in_degree[C] fica 1
+        (não 0), exercitando o ramo em que a atividade NÃO entra na ready list
+        imediatamente após decrementar in_degree de um único predecessor."""
+        acts = [
+            Activity("A", "Escavação", 1, {"ESCAVADEIRA": 1}),
+            Activity("B", "Carga", 2, {"CAMINHAO": 1}),
+            Activity("C", "Nivelamento", 1, {"MOTONIVELADORA": 1}),
+        ]
+        dag = ActivityDAG(activities=acts, precedence=[("A", "C"), ("B", "C")])
+        pool = ResourcePool(resources={"ESCAVADEIRA": 1, "CAMINHAO": 1, "MOTONIVELADORA": 1})
+        scheduler = SerialScheduler(priority_rule="MINSLK")
+
+        schedule = scheduler.schedule(
+            activities=acts,
+            dag=dag,
+            pool=pool,
+            deadline_weeks=10,
+        )
+
+        assert len(schedule.scheduled_activities) == 3
+        act_a = next(a for a in schedule.scheduled_activities if a.activity_id == "A")
+        act_b = next(a for a in schedule.scheduled_activities if a.activity_id == "B")
+        act_c = next(a for a in schedule.scheduled_activities if a.activity_id == "C")
+        assert act_c.start_week >= act_a.end_week
+        assert act_c.start_week >= act_b.end_week
+
     def test_scheduler_lpt_heuristic(self, simple_dag, resource_pool):
         """Test LPT (Longest Processing Time) heuristic."""
         scheduler = SerialScheduler(priority_rule="LPT")

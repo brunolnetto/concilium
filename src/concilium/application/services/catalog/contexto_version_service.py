@@ -194,11 +194,14 @@ class ConfigVersionService:
         if make_current:
             (entity_dir / "current").write_text(new_v, encoding="utf-8")
             meta_file = self._find_meta_file(entity_dir)
+            # _find_meta_file() only ever returns a path that already exists() (or None),
+            # so "meta_file truthy but not existing" is not a reachable state — the
+            # complement of the `if` is simply "meta_file is None".
             if meta_file and meta_file.exists():
                 meta = json.loads(meta_file.read_text(encoding="utf-8"))
                 meta["current_version"] = new_v
                 meta_file.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-            elif meta_file is None:
+            else:
                 bootstrap_meta = {
                     "id": new_entry.get("id") or entity_id,
                     "nome": new_entry.get("nome") or entity_id,
@@ -339,8 +342,7 @@ def _diff_values(path: str, left: Any, right: Any, out: dict[str, Any]) -> None:
             child = f"{path}.{key}"
             _diff_values(child, left.get(key), right.get(key), out)
         return
-    if isinstance(left, list) and isinstance(right, list):
-        if left != right:
-            out[path] = {"de": left, "para": right}
-        return
+    # Nota: não há tratamento especial para listas — `left == right` já foi
+    # descartado na guarda acima, então (assim como para qualquer outro tipo)
+    # a única possibilidade aqui é reportar a diferença bruta abaixo.
     out[path] = {"de": left, "para": right}

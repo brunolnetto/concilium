@@ -354,11 +354,10 @@ def _pc_check_prod_zscore(producoes: list[dict]) -> list[Anomalia]:
     vhs = _pc_prod_vhs(producoes)
     if len(vhs) < 3:
         return result
+    # vals é derivado de vhs 1:1, e o guard acima já garante len(vhs) >= 3,
+    # logo len(vals) >= 2 é sempre verdadeiro aqui (statistics.stdev exige >= 2).
     vals = [v for _, v in vhs]
-    if len(vals) >= 2:
-        mu, sd = statistics.mean(vals), statistics.stdev(vals)
-    else:
-        mu, sd = statistics.mean(vals), 0.0
+    mu, sd = statistics.mean(vals), statistics.stdev(vals)
     for pid, vh_f in vhs:
         z = (vh_f - mu) / sd if sd > 0 else 0
         if z > ZSCORE_EXTREMO * 2:

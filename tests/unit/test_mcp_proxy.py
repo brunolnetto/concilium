@@ -208,6 +208,72 @@ class TestMcpCall:
         ):
             proxy_mod._mcp_call(http, "foo", {})
 
+    def test_includes_authorization_and_session_headers(self):
+        """access_token and session_id, when provided, populate the request headers."""
+        resp = _FakeStreamResponse(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            chunks=[json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"ok": True}}).encode()],
+        )
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            proxy_mod._mcp_call(http, "foo", {}, access_token="tok-123", session_id="sess-xyz")
+
+        headers = http.stream.call_args.kwargs["headers"]
+        assert headers["Authorization"] == "Bearer tok-123"
+        assert headers["mcp-session-id"] == "sess-xyz"
+
+    def test_sse_skips_non_data_and_done_lines_before_match(self):
+        """Non-'data:' lines and 'data: [DONE]' are skipped until a real data line is found."""
+        resp = _FakeStreamResponse(
+            status_code=200,
+            headers={"content-type": "text/event-stream"},
+            lines=["event: ping", "data: [DONE]", 'data: {"jsonrpc":"2.0","id":1,"result":{"z":9}}'],
+        )
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            result = proxy_mod._mcp_call(http, "foo", {})
+
+        assert result == {"z": 9}
+
+    def test_sse_exception_during_iteration_before_any_data_raises(self):
+        """If the server closes the stream before any usable data line, 'Nenhum dado' is raised."""
+
+        class _RaisingLines:
+            def __iter__(self):
+                yield "event: ping"
+                raise ConnectionError("closed early")
+
+        resp = _FakeStreamResponse(status_code=200, headers={"content-type": "text/event-stream"})
+        resp.iter_lines = lambda: _RaisingLines()
+        http = _stream_client(resp)
+
+        with (
+            patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"),
+            pytest.raises(RuntimeError, match="SSE"),
+        ):
+            proxy_mod._mcp_call(http, "foo", {})
+
+    def test_json_exception_during_iteration_with_bytes_already_captured(self):
+        """If the server closes the connection after sending bytes, the partial body is parsed."""
+        body = json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"y": 2}}).encode()
+
+        class _RaisingBytes:
+            def __iter__(self):
+                yield body
+                raise ConnectionError("closed early")
+
+        resp = _FakeStreamResponse(status_code=200, headers={"content-type": "application/json"})
+        resp.iter_bytes = lambda chunk_size=None: _RaisingBytes()
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            result = proxy_mod._mcp_call(http, "foo", {})
+
+        assert result == {"y": 2}
+
 
 # ---------------------------------------------------------------------------
 # _initialize_session
@@ -243,6 +309,34 @@ class TestInitializeSession:
             pytest.raises(RuntimeError, match="HTTP 401"),
         ):
             proxy_mod._initialize_session(http)
+
+    def test_sends_authorization_header_when_access_token_given(self):
+        resp = _FakeStreamResponse(status_code=200, headers={"mcp-session-id": "sess-auth"}, chunks=[b""])
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            session_id = proxy_mod._initialize_session(http, access_token="tok-auth")
+
+        assert session_id == "sess-auth"
+        headers = http.stream.call_args.kwargs["headers"]
+        assert headers["Authorization"] == "Bearer tok-auth"
+
+    def test_iter_bytes_exception_after_session_id_is_swallowed(self):
+        """Server closing the stream right after the header is OK: session_id already captured."""
+
+        def _raising_gen(chunk_size=None):
+            if True:
+                raise ConnectionError("closed early")
+            yield
+
+        resp = _FakeStreamResponse(status_code=200, headers={"mcp-session-id": "sess-close"})
+        resp.iter_bytes = _raising_gen
+        http = _stream_client(resp)
+
+        with patch.object(proxy_mod, "_SERVER_URL", "https://test.example.com"):
+            session_id = proxy_mod._initialize_session(http)
+
+        assert session_id == "sess-close"
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +415,19 @@ class TestActivate:
         ):
             with pytest.raises(SystemExit):
                 proxy_mod._activate(http, "sess-4")
+
+    def test_empty_content_calls_sys_exit(self, tmp_path):
+        """_activate calls sys.exit when ativar_dispositivo returns no content."""
+        http = MagicMock()
+
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "dev5"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_mcp_call", return_value={"content": []}),
+        ):
+            with pytest.raises(SystemExit):
+                proxy_mod._activate(http, "sess-5")
 
 
 # ---------------------------------------------------------------------------
@@ -417,6 +524,74 @@ class TestGetAccessToken:
             token, _ = proxy_mod._get_access_token(http, "sess-d")
 
         assert token == "at-fresh"
+
+    def test_empty_content_on_cached_renewal_falls_back_to_activate(self, tmp_path):
+        """Cached refresh_token renewal with empty content is treated as a failure → re-activates."""
+        http = MagicMock()
+
+        def fake_mcp_call(http_client, tool_name, args, access_token=None, session_id=""):
+            if tool_name == "renovar_token" and args.get("refresh_token") == "rt-old":
+                return {"content": []}
+            if tool_name == "ativar_dispositivo":
+                return _tool_result(refresh_token="rt-new", device_id="devF", client_id="bruno")
+            if tool_name == "renovar_token" and args.get("refresh_token") == "rt-new":
+                return _tool_result(access_token="at-new2", expires_in=100)
+            raise AssertionError(f"unexpected call: {tool_name} {args}")
+
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devF"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_mcp_call", side_effect=fake_mcp_call),
+        ):
+            proxy_mod._save_cache({"refresh_token": "rt-old"})
+            token, _ = proxy_mod._get_access_token(http, "sess-f")
+
+        assert token == "at-new2"
+
+    def test_status_error_on_cached_renewal_falls_back_to_activate(self, tmp_path):
+        """Cached refresh_token renewal returning status='error' triggers re-activation."""
+        http = MagicMock()
+
+        def fake_mcp_call(http_client, tool_name, args, access_token=None, session_id=""):
+            if tool_name == "renovar_token" and args.get("refresh_token") == "rt-old":
+                return _tool_result(status="error", message="expirado")
+            if tool_name == "ativar_dispositivo":
+                return _tool_result(refresh_token="rt-new", device_id="devG", client_id="bruno")
+            if tool_name == "renovar_token" and args.get("refresh_token") == "rt-new":
+                return _tool_result(access_token="at-new3", expires_in=100)
+            raise AssertionError(f"unexpected call: {tool_name} {args}")
+
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devG"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-test"),
+            patch.object(proxy_mod, "_mcp_call", side_effect=fake_mcp_call),
+        ):
+            proxy_mod._save_cache({"refresh_token": "rt-old"})
+            token, _ = proxy_mod._get_access_token(http, "sess-g")
+
+        assert token == "at-new3"
+
+    def test_post_activate_empty_content_calls_sys_exit(self, tmp_path):
+        """If the post-activation renewal returns empty content, sys.exit is called."""
+        http = MagicMock()
+
+        def fake_mcp_call(http_client, tool_name, args, access_token=None, session_id=""):
+            if tool_name == "ativar_dispositivo":
+                return _tool_result(refresh_token="rt-h", device_id="devH", client_id="bruno")
+            if tool_name == "renovar_token":
+                return {"content": []}
+            raise AssertionError(f"unexpected tool: {tool_name}")
+
+        with (
+            patch.object(proxy_mod, "_TOKEN_DIR", tmp_path),
+            patch.object(proxy_mod, "_DEVICE_ID", "devH"),
+            patch.object(proxy_mod, "_CLIENT_CODE", "RCODE-h"),
+            patch.object(proxy_mod, "_mcp_call", side_effect=fake_mcp_call),
+        ):
+            with pytest.raises(SystemExit):
+                proxy_mod._get_access_token(http, "sess-h")
 
     def test_post_activate_renewal_error_calls_sys_exit(self, tmp_path):
         """If renewal after a fresh activation also fails, sys.exit is called."""
@@ -617,7 +792,7 @@ class TestBridge:
         state = proxy_mod._State(access_token="tok", expire_at=time.time() + 3600)
         http = MagicMock()
 
-        sse_body = 'data: {"event":"a"}\ndata: {"event":"b"}\ndata: [DONE]\n'
+        sse_body = 'data: {"event":"a"}\n: comment-line-not-data\ndata: {"event":"b"}\ndata: [DONE]\n'
         server_resp = _make_response(200, "", headers={"content-type": "text/event-stream"})
         server_resp.text = sse_body
         server_resp.json.side_effect = Exception("not json")
@@ -807,6 +982,59 @@ class TestState:
 # ---------------------------------------------------------------------------
 # _log / _die
 # ---------------------------------------------------------------------------
+
+
+class TestMain:
+    def test_missing_httpx_calls_sys_exit(self):
+        """main() calls _die when httpx cannot be imported."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "httpx":
+                raise ImportError("no httpx")
+            return real_import(name, *args, **kwargs)
+
+        with (
+            patch.object(builtins, "__import__", side_effect=fake_import),
+            pytest.raises(SystemExit),
+        ):
+            proxy_mod.main()
+
+    def test_happy_path_runs_bridge(self, tmp_path):
+        """main() wires init/token/thread/bridge together end-to-end (all mocked)."""
+        fake_httpx_client_instance = MagicMock()
+        fake_httpx_client_instance.__enter__.return_value = fake_httpx_client_instance
+        fake_httpx_client_instance.__exit__.return_value = False
+        fake_httpx_module = MagicMock()
+        fake_httpx_module.Client.return_value = fake_httpx_client_instance
+
+        started_threads = []
+
+        class _FakeThread:
+            def __init__(self, target=None, args=(), daemon=None):
+                self.target = target
+                self.args = args
+                self.daemon = daemon
+
+            def start(self):
+                started_threads.append(self)
+
+        with (
+            patch.dict("sys.modules", {"httpx": fake_httpx_module}),
+            patch.object(proxy_mod, "_initialize_session", return_value="sess-main") as mock_init,
+            patch.object(proxy_mod, "_get_access_token", return_value=("tok-main", time.time() + 3600)) as mock_gat,
+            patch.object(proxy_mod.threading, "Thread", _FakeThread),
+            patch.object(proxy_mod.asyncio, "run") as mock_run,
+        ):
+            proxy_mod.main()
+
+        mock_init.assert_called_once_with(fake_httpx_client_instance)
+        mock_gat.assert_called_once_with(fake_httpx_client_instance, "sess-main")
+        assert len(started_threads) == 1
+        assert started_threads[0].daemon is True
+        mock_run.assert_called_once()
 
 
 class TestLogDie:

@@ -669,6 +669,33 @@ class TestSaveRelatorioFiles:
         fnames = [c[2] for c in calls_args]
         assert "relatorio.pdf" in fnames
 
+    def test_pdf_not_saved_when_render_returns_falsy(self):
+        """render_financial_report_pdf retornando None/vazio → relatorio.pdf
+        não é salvo (branch false de `if pdf_bytes:`)."""
+        result = SimpleNamespace(relatorio={"meta": {"projeto": "Proj"}}, canonical=None)
+        project = MagicMock()
+        project.load_canonical.side_effect = FileNotFoundError
+
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_financial_report_markdown",
+                return_value="# Relatorio",
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects._save_relatorio_graficos_files",
+                return_value=[],
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.side_effects.render_financial_report_pdf",
+                return_value=None,
+            ),
+        ):
+            _save_relatorio_files(result, project, "v1", gerar_md=False, gerar_pdf=True)
+
+        calls_args = [c[0] for c in project.save_output_file.call_args_list]
+        fnames = [c[2] for c in calls_args]
+        assert "relatorio.pdf" not in fnames
+
     def test_uses_canonical_from_result_when_present(self):
         canonical = MagicMock()
         result = SimpleNamespace(relatorio={"meta": {}}, canonical=canonical)

@@ -241,6 +241,14 @@ class TestCatalogLoader:
         assert loader.backend == CatalogBackend.LOCAL_JSON
         assert loader.ttl_minutes == 30
 
+    def test_from_config_without_yaml_uses_defaults(self, tmp_path):
+        """CatalogLoader.from_config() sem concilium.yaml usa defaults (backend local_json)."""
+        config_root = tmp_path / "config_no_yaml"
+        config_root.mkdir()
+
+        loader = CatalogLoader.from_config(config_root=config_root, project_root=tmp_path)
+        assert loader.backend == CatalogBackend.LOCAL_JSON
+
 
 # ─── Missing branch coverage ──────────────────────────────────────────────────
 
@@ -274,6 +282,25 @@ class TestCatalogLoaderMissingBranches:
             snapshot, _ = loader.load("cat1")
 
         assert snapshot is not None
+
+    def test_load_local_json_duckdb_not_ready_falls_back(self, tmp_path):
+        """Line 162: DuckDB engine exists but is_ready() is False → falls back to JSON loader."""
+        from unittest.mock import patch
+
+        from concilium.infrastructure.catalog.catalog_loader import CatalogLoader
+
+        config_root = tmp_path
+        cat_dir = config_root / "catalogos" / "cat2"
+        _write_catalog(cat_dir, _minimal_cpus(1))
+
+        loader = CatalogLoader(config_root=config_root, project_root=tmp_path, ttl_minutes=0)
+
+        with patch("concilium.infrastructure.catalog.query_engine.CatalogQueryEngine") as MockDuck:
+            MockDuck.return_value.is_ready.return_value = False
+            snapshot, _ = loader.load("cat2")
+
+        assert snapshot is not None
+        assert len(snapshot.cpus) >= 1
         assert len(snapshot.cpus) >= 1
 
     def test_llj_load_cpus_single_file_path(self, tmp_path):

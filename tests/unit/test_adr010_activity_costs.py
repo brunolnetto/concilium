@@ -5,6 +5,7 @@ from __future__ import annotations
 from concilium.domain.models.canonical import (
     AtividadeCustoCompleto,
     AtividadeInsumo,
+    CustoIndiretoAtividade,
     IndiretoAlocacao,
     InsumoComponenteAtividade,
     MobilizacaoAtividade,
@@ -99,6 +100,36 @@ class TestMobilizacaoAtividade:
         result = mob.alocacao_por_semana(semana_inicio=0, semana_fim=10)
         assert result[0] == 3000.0
         assert result[10] == 3000.0
+
+    def test_alocacao_semana_fim(self):
+        mob = MobilizacaoAtividade(
+            atividade_id="ACT-01",
+            fase="teardown",
+            material=InsumoComponenteAtividade(nome="MAT", custo_total=4000.0),
+            alocacao="semana_fim",
+        )
+        result = mob.alocacao_por_semana(semana_inicio=2, semana_fim=8)
+        assert result == {8: 4000.0}
+
+
+class TestCustoIndiretoAtividade:
+    def test_custo_total_indireto_sums_all_categories(self):
+        custo = CustoIndiretoAtividade(
+            atividade_id="ACT-01",
+            alocacao=IndiretoAlocacao(estrategia="duracao", semanas_atividade=4, semanas_projeto=24),
+            custo_top_atribuido=100.0,
+            custo_adm_atribuido=200.0,
+            custo_lab_atribuido=50.0,
+            custo_qsms_atribuido=25.0,
+        )
+        assert custo.custo_total_indireto == 375.0
+
+    def test_custo_total_indireto_defaults_to_zero(self):
+        custo = CustoIndiretoAtividade(
+            atividade_id="ACT-01",
+            alocacao=IndiretoAlocacao(estrategia="duracao", semanas_atividade=4, semanas_projeto=24),
+        )
+        assert custo.custo_total_indireto == 0.0
 
 
 class TestAtividadeCustoCompleto:

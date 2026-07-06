@@ -142,9 +142,9 @@ def _count_mob_demob_por_periodo(cubo: Any, granularidade: FaceGranularity) -> d
     counts: dict[str, dict[str, int]] = {}
 
     def _bucket(week_label: str) -> str:
-        txt = str(week_label or "")
-        if not txt:
-            return ""
+        # Só é chamada dentro de `if semana_mob:`/`if semana_demob:` abaixo,
+        # logo txt nunca é vazio aqui.
+        txt = str(week_label)
         if "-W" not in txt:
             return txt
         return bucket_from_week_iso(txt, granularidade)

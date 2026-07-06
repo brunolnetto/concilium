@@ -170,6 +170,68 @@ class TestReconciliadorPlanejamento:
         reconciliador._agregar_canonical(analise)
         assert analise.total_canonical_indireto == 15000.0
 
+    def test_agregar_canonical_resultado_present_but_custo_falsy(self):
+        """Branch 211→exit: canonical.resultado is truthy but .custo is falsy
+        (e.g. None) → total_canonical_indireto stays at its default (0.0)."""
+        from concilium.application.benchmarks.reconciliacao_planejamento import (
+            DisparityAnalysis,
+            ReconciliadorPlanejamento,
+        )
+
+        canonical = MagicMock()
+        canonical.equipes_diretas = []
+        canonical.resultado.custo = None
+        reconciliador = ReconciliadorPlanejamento(canonical, Path("x.txt"))
+        analise = DisparityAnalysis()
+        reconciliador._agregar_canonical(analise)
+        assert analise.total_canonical_indireto == 0.0
+
+    def test_identificar_disparidades_delta_within_tolerance_not_flagged(self):
+        """Branch 233→225: |delta| <= 1.0 → no disparity is appended for that item."""
+        from concilium.application.benchmarks.reconciliacao_planejamento import (
+            CustoPlanejamento,
+            DisparityAnalysis,
+            ReconciliadorPlanejamento,
+        )
+
+        canonical = self._make_canonical()
+        reconciliador = ReconciliadorPlanejamento(canonical, Path("x.txt"))
+
+        analise = DisparityAnalysis()
+        analise.planejamento = {
+            "2.1": CustoPlanejamento(
+                item_id="2.1",
+                descricao="Item",
+                unidade="m³",
+                quantidade=100.0,
+                total_sem_bdi=1000.0,
+                total_com_bdi=1200.0,
+            )
+        }
+        analise.canonical_direto = {"2.1": 1000.5}  # delta = 0.5, within tolerance
+
+        reconciliador._identificar_disparidades(analise)
+        assert not any(d["item_id"] == "2.1" for d in analise.disparidades)
+
+    def test_identificar_disparidades_item_with_neither_planej_nor_canon(self):
+        """Branch 259→225: item present in canonical_direto with a falsy (0.0)
+        value and absent from planejamento → all three elif branches are
+        false, no disparity is appended."""
+        from concilium.application.benchmarks.reconciliacao_planejamento import (
+            DisparityAnalysis,
+            ReconciliadorPlanejamento,
+        )
+
+        canonical = self._make_canonical()
+        reconciliador = ReconciliadorPlanejamento(canonical, Path("x.txt"))
+
+        analise = DisparityAnalysis()
+        analise.planejamento = {}
+        analise.canonical_direto = {"9.9": 0.0}
+
+        reconciliador._identificar_disparidades(analise)
+        assert analise.disparidades == []
+
 
 # ── PlanejamentoParser.parse — CSV edge cases (lines 92, 103, 112-113, 134-141) ──
 
@@ -266,3 +328,20 @@ class TestPlanejamentoParserEdgeCases:
         f.write_text(csv_content, encoding="utf-8")
         result = PlanejamentoParser.parse(f)
         assert "5.1" not in result
+
+    def test_short_row_under_10_cols_skips_totals_extraction(self, tmp_path):
+        """Branch 131→146: len(row) < 10 → skip the totals-extraction try
+        block entirely; row has no cost, so it's excluded from the result.
+
+        Uses a dedicated short (4-column) CSV — all rows (including the 3
+        skipped header rows) must have a consistent column count for
+        csv.Sniffer to reliably detect the comma delimiter.
+        """
+        from concilium.application.benchmarks.reconciliacao_planejamento import PlanejamentoParser
+
+        short_hdr = "ITEM,Descricao,Unidade,Qtd\nA,B,C,D\n1,2,3,4\n"
+        csv_content = short_hdr + "6.1,ShortRow,m3,20.0\n"
+        f = tmp_path / "plan.csv"
+        f.write_text(csv_content, encoding="utf-8")
+        result = PlanejamentoParser.parse(f)
+        assert "6.1" not in result

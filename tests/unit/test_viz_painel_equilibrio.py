@@ -293,6 +293,13 @@ class TestLabelBuilding:
         result = self._run_with_levers([_make_lever("ordinary", descricao="Ordinary lever")])
         assert result == b"PNG"
 
+    def test_label_empty_after_wrap_when_descricao_is_whitespace_only(self):
+        """Line 65->67: lid.replace('_',' ') yields whitespace-only fallback descricao ->
+        words=[] -> current stays '' -> the `if current: lines.append(current)` branch is
+        skipped, producing an empty base label (still renders without error)."""
+        result = self._run_with_levers([_make_lever("___")])
+        assert result == b"PNG"
+
     def test_restricoes_annotation(self):
         """Lever with restricoes → restricoes_by_pos populated and ax.text called."""
         levers = [_make_lever(restricoes=["R1", "R2"])]

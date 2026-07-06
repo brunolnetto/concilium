@@ -435,6 +435,26 @@ class TestImplAtualizarPrecoInsumo:
         assert "SP" in data.get("regionalizacao", {})
         assert data["regionalizacao"]["SP"]["preco"] == 77.0
 
+    def test_master_with_jurisdicao_reuses_existing_regionalizacao(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # line 207 false branch — "regionalizacao" já existe em data, não é recriado
+        rt = _make_rt("ctx1", "cat1")
+        projects_dir = tmp_path / "projetos"
+        projects_dir.mkdir(parents=True)
+        insumo_file = tmp_path / "ins.json"
+        insumo_file.write_text(
+            json.dumps({"preco_unitario": 5.0, "regionalizacao": {"RJ": {"preco": 50.0, "nota": "old"}}}),
+            encoding="utf-8",
+        )
+        self._setup(monkeypatch, rt, tmp_path, projects_dir, insumo_file=insumo_file)
+
+        result = _impl_atualizar_preco_insumo("ctx1", "INS-001", 88.0, jurisdicao_id="SP")
+        assert result["status"] == "SUCESSO"
+        data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert data["regionalizacao"]["RJ"]["preco"] == 50.0  # preservado
+        assert data["regionalizacao"]["SP"]["preco"] == 88.0
+
     def test_master_with_nota_writes_nota_calibracao(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # line 212-213 — nota present
         rt = _make_rt("ctx1", "cat1")

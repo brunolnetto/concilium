@@ -337,3 +337,31 @@ class TestProjectInputBuilder:
             result = builder.prepare(req)
         assert "06-resultado-financeiro" in result.skill_inputs
         assert result.skill_inputs["06-resultado-financeiro"]["bdi_pct"] == 25.0
+
+    def test_build_skill_inputs_from_spec_no_inputs_escopo(self):
+        """Line 75->79: spec.inputs_escopo falsy -> skip the whole block entirely."""
+        from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+
+        spec = MagicMock()
+        spec.inputs_escopo = None
+        spec.inputs_01A = None
+        spec.inputs_cronograma = None
+        spec.inputs_indiretos = None
+        spec.extra_inputs = {}
+        result = ProjectInputBuilder._build_skill_inputs_from_spec(spec)
+        assert "01-escopo-e-eap" not in result
+        assert result == {}
+
+    def test_build_skill_inputs_from_spec_contexto_id_already_present(self):
+        """Line 76->78: contexto_id already in inputs_escopo -> not overwritten."""
+        from concilium.application.services.project.project_input_builder import ProjectInputBuilder
+
+        spec = MagicMock()
+        spec.inputs_escopo = {"contexto_id": "ja-existente", "foo": "bar"}
+        spec.contexto_id = "outro-contexto"
+        spec.inputs_01A = None
+        spec.inputs_cronograma = None
+        spec.inputs_indiretos = None
+        spec.extra_inputs = {}
+        result = ProjectInputBuilder._build_skill_inputs_from_spec(spec)
+        assert result["01-escopo-e-eap"]["contexto_id"] == "ja-existente"

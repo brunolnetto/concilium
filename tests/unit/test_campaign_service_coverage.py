@@ -453,6 +453,22 @@ class TestConstruirCubo:
         cubo = construir_cubo(bundle, output)
         assert cubo.cobertura_pct == pytest.approx(0.5)  # 1 de 2
 
+    def test_two_dims_with_missing_cell_no_match_in_face(self):
+        """Lines 994-998: célula de grid sem cenário correspondente → matching vazio, row=None."""
+        bundle = self._make_bundle_two_dims()
+        cenarios = []
+        for eq in [1, 2]:
+            for pr in [30, 40]:
+                if eq == 2 and pr == 40:
+                    continue  # deixa essa combinação sem cenário avaliado
+                cid = cenario_id({"meta.equipes": eq, "meta.prazo": pr})
+                cenarios.append(_make_cenario(cid, margem=0.10, prazo=pr))
+        output = self._make_output(bundle, cenarios)
+        cubo = construir_cubo(bundle, output)
+        assert len(cubo.faces) > 0
+        # ao menos uma grade de face deve conter None (célula não avaliada)
+        assert any(v is None for face in cubo.faces for row in face.grade for v in row)
+
     def test_empty_sweep_no_crash(self):
         """Bundle sem sweep → cubo vazio sem crash."""
         bundle = GoResearchCampaignBundle(
@@ -828,6 +844,220 @@ class TestExecutarCampanha:
                 executar_campanha(bundle, config_root="/tmp", projects_root="/tmp", num_workers=1)
 
         assert any("cardinality" in str(warning.message).lower() for warning in w)
+
+
+# ---------------------------------------------------------------------------
+# _run_campaign_task — lines 692-792 (module-level task, picklável)
+# ---------------------------------------------------------------------------
+
+
+class TestRunCampaignTask:
+    def _make_task(self, tmp_path, *, spec_v=None):
+        from concilium.application.services.campaign.campaign_service import _CampaignTask
+
+        return _CampaignTask(
+            spec_v=spec_v or {"slug": "myproj", "id": "myproj", "meta": {"projeto": "Meu Projeto"}},
+            variados={"meta.prazo": 40},
+            config_root=str(tmp_path / "config"),
+            projects_root=str(tmp_path / "projetos"),
+            prazo_contratual=40,
+            perfil=PerfilExpectativas(),
+            procurement_intent="rfp",
+            do_reset=True,
+        )
+
+    def test_success_path_exact_slug_canonical(self, tmp_path):
+        """Lines 728-768: happy path, canonical.json encontrado no slug exato (primeira tentativa)."""
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.services.campaign.campaign_service import _run_campaign_task
+
+        task = self._make_task(tmp_path)
+        projects_root = tmp_path / "projetos"
+        proj_dir = projects_root / "myproj-abc123" / "v1"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "canonical.json").write_text(json.dumps({"foo": "bar"}))
+
+        spec_obj = MagicMock()
+        spec_obj.slug = "myproj-abc123"
+
+        runner_instance = MagicMock()
+        runner_instance.run.return_value = {"quality_gates": {"decision": "APROVADO"}}
+
+        with (
+            patch(
+                "concilium.application.benchmarks.spec.spec_loader.load_spec_from_dict",
+                return_value=spec_obj,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.runner.BenchmarkRunner",
+                return_value=runner_instance,
+            ),
+            patch(
+                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+            ),
+        ):
+            result = _run_campaign_task(task)
+
+        assert result.viabilidade == "APROVADO"
+        assert result.erro is None
+        # cleanup deve ter removido o diretório do projeto de cenário
+        assert not proj_dir.parent.exists()
+
+    def test_success_path_invokes_silent_report_printer(self, tmp_path):
+        """Line 701: the local `_Silent.print()` override (`pass`) is only ever
+        invoked through the real BenchmarkRunner.run() -> report_printer.print()
+        call — a MagicMock runner never exercises it. Use a lightweight fake
+        BenchmarkRunner that actually calls report_printer.print(), matching the
+        production contract, so the override body itself gets covered."""
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.services.campaign.campaign_service import _run_campaign_task
+
+        task = self._make_task(tmp_path)
+        projects_root = tmp_path / "projetos"
+        proj_dir = projects_root / "myproj-abc123" / "v1"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "canonical.json").write_text(json.dumps({"foo": "bar"}))
+
+        spec_obj = MagicMock()
+        spec_obj.slug = "myproj-abc123"
+
+        class _FakeRunner:
+            def __init__(self, **kwargs):
+                self._printer = kwargs["report_printer"]
+
+            def run(self, *_a, **_k):
+                report = {"quality_gates": {"decision": "APROVADO"}}
+                self._printer.print(report)  # exercises _Silent.print's `pass` body
+                return report
+
+        with (
+            patch(
+                "concilium.application.benchmarks.spec.spec_loader.load_spec_from_dict",
+                return_value=spec_obj,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.runner.BenchmarkRunner",
+                _FakeRunner,
+            ),
+            patch(
+                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+            ),
+        ):
+            result = _run_campaign_task(task)
+
+        assert result.viabilidade == "APROVADO"
+
+    def test_success_path_canonical_found_via_upper_variant(self, tmp_path):
+        """Lines 744-748: primeira tentativa (slug exato) falha, encontra via .upper()."""
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.services.campaign.campaign_service import _run_campaign_task
+
+        task = self._make_task(tmp_path)
+        projects_root = tmp_path / "projetos"
+        proj_dir = projects_root / "MYPROJ-ABC123" / "v1"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "canonical.json").write_text(json.dumps({"foo": "bar"}))
+
+        spec_obj = MagicMock()
+        spec_obj.slug = "myproj-abc123"
+
+        runner_instance = MagicMock()
+        runner_instance.run.return_value = {"quality_gates": {"decision": "BLOQUEADO_COM_INVESTIGACAO"}}
+
+        with (
+            patch(
+                "concilium.application.benchmarks.spec.spec_loader.load_spec_from_dict",
+                return_value=spec_obj,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.runner.BenchmarkRunner",
+                return_value=runner_instance,
+            ),
+            patch(
+                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+            ),
+        ):
+            result = _run_campaign_task(task)
+
+        assert result.viabilidade == "BLOQUEADO_COM_INVESTIGACAO"
+        # cleanup também deve encontrar via variante upper e remover
+        assert not proj_dir.parent.exists()
+
+    def test_no_canonical_found_defaults_bloqueado_decision(self, tmp_path):
+        """Nenhum canonical.json existe → decision default 'BLOQUEADO' (via_map)."""
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.services.campaign.campaign_service import _run_campaign_task
+
+        task = self._make_task(tmp_path)
+        spec_obj = MagicMock()
+        spec_obj.slug = "myproj-abc123"
+
+        runner_instance = MagicMock()
+        runner_instance.run.return_value = {"quality_gates": {}}
+
+        with (
+            patch(
+                "concilium.application.benchmarks.spec.spec_loader.load_spec_from_dict",
+                return_value=spec_obj,
+            ),
+            patch(
+                "concilium.application.benchmarks.execution.runner.BenchmarkRunner",
+                return_value=runner_instance,
+            ),
+            patch(
+                "concilium.application.services.campaign.campaign_service._apply_post_load_overrides",
+            ),
+        ):
+            result = _run_campaign_task(task)
+
+        assert result.viabilidade == "BLOQUEADO"
+
+    def test_exception_path_produces_erro_cenario(self, tmp_path):
+        """Lines 769-778: exceção durante load_spec_from_dict → CenarioAvaliado com erro."""
+        from unittest.mock import patch
+
+        from concilium.application.services.campaign.campaign_service import _run_campaign_task
+
+        task = self._make_task(tmp_path)
+
+        with patch(
+            "concilium.application.benchmarks.spec.spec_loader.load_spec_from_dict",
+            side_effect=RuntimeError("boom"),
+        ):
+            result = _run_campaign_task(task)
+
+        assert result.viabilidade == "ERRO"
+        assert result.classificacao_O == "CRITICO"
+        assert result.classificacao_EF == "FORA_EXPECTATIVA"
+        assert result.erro == "boom"
+
+    def test_exception_path_no_actual_slug_cleans_scenario_slug_only(self, tmp_path):
+        """Lines 780-790: exceção antes de obter actual_project_slug → cleanup usa só scenario_slug."""
+        from unittest.mock import patch
+
+        from concilium.application.services.campaign.campaign_service import _run_campaign_task
+
+        task = self._make_task(tmp_path)
+        cid = task.variados
+        from concilium.application.services.campaign.campaign_service import cenario_id
+
+        scenario_slug = f"myproj-{cenario_id(cid)[:6]}"
+        projects_root = tmp_path / "projetos"
+        proj_dir = projects_root / scenario_slug
+        proj_dir.mkdir(parents=True)
+
+        with patch(
+            "concilium.application.benchmarks.spec.spec_loader.load_spec_from_dict",
+            side_effect=RuntimeError("boom"),
+        ):
+            result = _run_campaign_task(task)
+
+        assert result.viabilidade == "ERRO"
+        assert not proj_dir.exists()
 
 
 # ---------------------------------------------------------------------------

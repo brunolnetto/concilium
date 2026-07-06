@@ -275,6 +275,19 @@ class TestBackwardCompat:
         assert result["total_demob"] == pytest.approx(0.0)
         assert sum(result["semanal"].values()) == pytest.approx(0.0)
 
+    def test_fase_com_driver_nao_reconhecido_e_ignorado(self):
+        """Item com `fase` presente mas nenhuma combinação fase/driver bate em
+        nenhum dos ramos (ex.: desmobilizacao com driver != 'projeto') —
+        o loop simplesmente segue para o próximo item sem alterar totais."""
+        fn = _import()
+        items = [
+            {"tipo": "MOB", "fase": "desmobilizacao", "driver": "mensal", "custo_fixo_total": 50_000.0},
+            {"tipo": "MOB", "fase": "mobilizacao", "driver": "projeto", "custo_fixo_total": 200_000.0},
+        ]
+        result = fn(items, duracao_semanas=10)
+        assert result["total_demob"] == pytest.approx(0.0)
+        assert result["total_mob"] == pytest.approx(200_000.0, abs=0.05)
+
 
 # ---------------------------------------------------------------------------
 # Múltiplos itens por fase
@@ -311,3 +324,19 @@ class TestMultiplosItensPorFase:
         total_esperado = 2_044_560.87 + custo_mensal * (duracao_semanas / SEMANAS_POR_MES) + 408_912.17
         soma = sum(result["semanal"].values())
         assert abs(soma - total_esperado) / total_esperado < 0.001
+
+    def test_duracao_semanas_zero_skips_semanal_assignment_for_all_fases(self):
+        """Edge case duracao_semanas=0: totals are still accumulated (totais não
+        dependem de duracao_semanas > 0), but the `if duracao_semanas > 0` guards
+        in each fase branch prevent writing into the (empty) `semanal` dict."""
+        fn = _import()
+        items = [
+            {"tipo": "MOB", "fase": "mobilizacao", "driver": "projeto", "custo_fixo_total": 1000.0},
+            {"tipo": "MOB", "fase": "operacao", "driver": "mensal", "custo_fixo_mensal": 500.0},
+            {"tipo": "MOB", "fase": "desmobilizacao", "driver": "projeto", "custo_fixo_total": 300.0},
+        ]
+        result = fn(items, duracao_semanas=0)
+
+        assert result["total_mob"] == 1000.0
+        assert result["total_demob"] == 300.0
+        assert result["semanal"] == {}

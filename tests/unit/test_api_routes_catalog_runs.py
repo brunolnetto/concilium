@@ -157,6 +157,30 @@ class TestCatalogsRoutes:
             upsert_catalog_cpu("cat", "CPU-1", req, x_user="eng", service=svc)
         assert exc.value.status_code == 422
 
+    def test_upsert_catalog_cpu_not_found(self):
+        from concilium.presentation.api.routes.catalogs import upsert_catalog_cpu
+
+        svc = _svc()
+        svc.upsert_catalog_cpu.side_effect = FileNotFoundError("catalog not found")
+        req = MagicMock()
+        req.cpu_data = {}
+        req.motivo = ""
+        with pytest.raises(HTTPException) as exc:
+            upsert_catalog_cpu("cat", "CPU-1", req, x_user="eng", service=svc)
+        assert exc.value.status_code == 404
+
+    def test_upsert_catalog_cpu_unexpected_error(self):
+        from concilium.presentation.api.routes.catalogs import upsert_catalog_cpu
+
+        svc = _svc()
+        svc.upsert_catalog_cpu.side_effect = RuntimeError("boom")
+        req = MagicMock()
+        req.cpu_data = {}
+        req.motivo = ""
+        with pytest.raises(HTTPException) as exc:
+            upsert_catalog_cpu("cat", "CPU-1", req, x_user="eng", service=svc)
+        assert exc.value.status_code == 500
+
     def test_list_catalog_insumos(self):
         from concilium.presentation.api.routes.catalogs import list_catalog_insumos
 

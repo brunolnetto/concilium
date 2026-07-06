@@ -492,90 +492,40 @@ class TestDefaultConfigRoot:
         assert (result / "catalogos").exists()
 
     def test_fallback_git_root(self, tmp_path: Path, monkeypatch):
-        """Lines 197-199: only .git present (no config/catalogos) → fallback config path."""
-        # Create a fake .git directory without config/catalogos
+        """Lines 204-206: no config/catalogos anywhere, but a .git dir exists at an
+        ancestor → returns <that ancestor>/config.
+
+        __file__ is a plain module global read at call time, so pointing it at a
+        fake path inside tmp_path makes Path(__file__).resolve().parents walk the
+        real tmp_path tree instead of the real repo.
+        """
         (tmp_path / ".git").mkdir()
-        # Point __file__ resolution to tmp_path via a fake source file path
         fake_file = tmp_path / "src" / "pkg" / "module.py"
         fake_file.parent.mkdir(parents=True)
         fake_file.write_text("")
 
-        with patch("concilium.presentation.cli.commands_campaign.Path") as mock_path_cls:
-            # We need __file__ resolution to work — use a simpler approach:
-            # patch only the resolve chain
-            mock_here = MagicMock()
-            # Simulate parents: [src/pkg, src, tmp_path]
-            parent0 = MagicMock()
-            parent0.__truediv__ = MagicMock(
-                side_effect=lambda x: MagicMock(
-                    is_dir=MagicMock(return_value=False),
-                    exists=MagicMock(return_value=False),
-                )
-            )
-            parent1 = MagicMock()
-            parent1.__truediv__ = MagicMock(
-                side_effect=lambda x: MagicMock(
-                    is_dir=MagicMock(return_value=False),
-                    exists=MagicMock(return_value=False),
-                )
-            )
-            root_parent = MagicMock()
+        monkeypatch.setattr(
+            "concilium.presentation.cli.commands_campaign.__file__",
+            str(fake_file),
+        )
 
-            def root_truediv(x):
-                if x == "config":
-                    m = MagicMock()
-                    m.is_dir = MagicMock(return_value=False)
-                    return m
-                if x == ".git":
-                    m = MagicMock()
-                    m.exists = MagicMock(return_value=True)
-                    return m
-                return MagicMock()
-
-            root_parent.__truediv__ = root_truediv
-            MagicMock(spec=Path)
-            root_parent.__truediv__ = MagicMock(side_effect=root_truediv)
-
-            mock_here.parents = [parent0, parent1, root_parent]
-            mock_path_cls.return_value.resolve.return_value = mock_here
-
-        # Instead, just verify the function returns something Path-like
         result = _default_config_root()
-        assert result is not None
+        assert result == tmp_path / "config"
 
-    def test_fallback_no_git_no_catalogos(self):
-        """Line 200: ultimate fallback → Path('config')."""
-        # When no parent has config/catalogos or .git, returns Path("config")
-        # We test this by patching __file__ resolution to a path with no matching parents
-        with patch("concilium.presentation.cli.commands_campaign.Path") as MockPath:
-            fake_here = MagicMock()
-            # All parents return candidates that don't exist
-            fake_parent = MagicMock()
-            fake_candidate = MagicMock()
-            fake_candidate.is_dir.return_value = False
-            fake_git = MagicMock()
-            fake_git.exists.return_value = False
-            fake_parent.__truediv__ = MagicMock(return_value=fake_candidate)
-            fake_here.parents = [fake_parent]
-            MockPath.return_value.resolve.return_value = fake_here
+    def test_fallback_no_git_no_catalogos(self, tmp_path: Path, monkeypatch):
+        """Line 207: neither config/catalogos nor .git found in any ancestor →
+        ultimate fallback Path('config')."""
+        fake_file = tmp_path / "src" / "pkg" / "module.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("")
 
-            # We need Path("config") to work
-            MagicMock(spec=Path)
-            MockPath.side_effect = lambda x: (
-                fake_here
-                if False
-                else MagicMock(resolve=MagicMock(return_value=fake_here))
-                if x == "__file__"
-                else MagicMock()
-            )
+        monkeypatch.setattr(
+            "concilium.presentation.cli.commands_campaign.__file__",
+            str(fake_file),
+        )
 
-            # Simpler: just assert the real function returns Path ending in "config"
-            # when no structure is found (hard to fully mock Path.__file__)
-            pass
-
-        # Verify the real function returns a Path
         result = _default_config_root()
-        assert isinstance(result, Path)
+        assert result == Path("config")
 
 
 # ---------------------------------------------------------------------------
@@ -584,32 +534,20 @@ class TestDefaultConfigRoot:
 
 
 class TestDefaultProjectsRoot:
-    def test_benchmarks_projetos_structure(self, tmp_path: Path):
-        """Lines 205-207: benchmarks/projetos structure present → correct path returned."""
-        # Create benchmarks/projetos under tmp_path
+    def test_benchmarks_projetos_structure(self, tmp_path: Path, monkeypatch):
+        """benchmarks/projetos structure present → returns <ancestor>/benchmarks/projetos."""
         (tmp_path / "benchmarks" / "projetos").mkdir(parents=True)
+        fake_file = tmp_path / "src" / "pkg" / "module.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("")
 
-        # We need _default_projects_root to search from tmp_path
-        # Patch Path(__file__).resolve() parents to include tmp_path
-        fake_here = MagicMock()
-        fake_here.parents = [tmp_path]
+        monkeypatch.setattr(
+            "concilium.presentation.cli.commands_campaign.__file__",
+            str(fake_file),
+        )
 
-        with patch("concilium.presentation.cli.commands_campaign.Path") as MockPath:
-            instance = MagicMock()
-            instance.resolve.return_value = fake_here
-            MockPath.return_value = instance
-            MockPath.side_effect = None
-
-            # Patch __truediv__ on tmp_path directly
-            original_truediv = Path.__truediv__
-
-            def fake_truediv(self_p, other):
-                return original_truediv(self_p, other)
-
-            result = _default_projects_root()
-
-        # Real repo has benchmarks/projetos — just verify it returns a valid Path
-        assert isinstance(result, Path)
+        result = _default_projects_root()
+        assert result == tmp_path / "benchmarks" / "projetos"
 
     def test_real_repo_returns_benchmarks_projetos(self):
         """In the real repo, _default_projects_root returns .../benchmarks/projetos."""
@@ -617,26 +555,36 @@ class TestDefaultProjectsRoot:
         assert isinstance(result, Path)
         assert result.name == "projetos"
 
-    def test_projetos_dir_present(self, tmp_path: Path):
-        """Lines 208-209: projetos dir present but no benchmarks/projetos → returns projetos.
-
-        We create a directory tree where only 'projetos' exists and verify the function
-        would use it. Since the real source file is inside the real repo which has
-        benchmarks/projetos, we test this branch by constructing a fake tree and
-        checking the function's logic directly by calling it with a patched __file__.
-        """
-        # Create a tree with only projetos/ (no benchmarks/)
+    def test_projetos_dir_present(self, tmp_path: Path, monkeypatch):
+        """Line 216: projetos dir present but no benchmarks/projetos anywhere → returns
+        <ancestor>/projetos."""
         (tmp_path / "projetos").mkdir()
-        # We verify the function returns a path ending in 'projetos' for the real repo
-        result = _default_projects_root()
-        assert isinstance(result, Path)
-        assert result.name == "projetos"
+        fake_file = tmp_path / "src" / "pkg" / "module.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("")
 
-    def test_fallback_no_structure(self):
-        """Line 210: ultimate fallback → Path('projetos')."""
+        monkeypatch.setattr(
+            "concilium.presentation.cli.commands_campaign.__file__",
+            str(fake_file),
+        )
+
         result = _default_projects_root()
-        # Should return something ending in 'projetos'
-        assert result.name == "projetos"
+        assert result == tmp_path / "projetos"
+
+    def test_fallback_no_structure(self, tmp_path: Path, monkeypatch):
+        """Line 217: ultimate fallback → Path('projetos') when no ancestor has
+        benchmarks/projetos nor projetos."""
+        fake_file = tmp_path / "src" / "pkg" / "module.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("")
+
+        monkeypatch.setattr(
+            "concilium.presentation.cli.commands_campaign.__file__",
+            str(fake_file),
+        )
+
+        result = _default_projects_root()
+        assert result == Path("projetos")
 
 
 # ---------------------------------------------------------------------------

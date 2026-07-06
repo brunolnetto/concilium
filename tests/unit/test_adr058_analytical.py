@@ -418,6 +418,57 @@ class TestSCurveBuilder:
         assert sc.total_projeto == 0.0
         assert sc.semanas_iso == ()
 
+    def test_build_empty_when_activities_have_no_weeks(self):
+        """scheduled_activities is non-empty but every distribuicao_semanal is
+        empty → _scb_collect_semanas returns (None, None) via the build()
+        code path (not just the helper in isolation)."""
+        from concilium.domain.models.canonical import Cronograma, ScheduledActivityCanonical
+
+        canonical = _make_canonical(with_schedule=False)
+        sched_activities = [
+            ScheduledActivityCanonical(
+                activity_id="eap-01",
+                start_week=0,
+                end_week=0,
+                duration_weeks=0,
+                distribuicao_semanal={},
+            ),
+        ]
+        cronograma = Cronograma(
+            algorithm="manual_allocation",
+            quality_score=1.0,
+            makespan_weeks=1,
+            is_feasible=True,
+            scheduled_activities=sched_activities,
+        )
+        canonical = canonical.model_copy(update={"cronograma": cronograma})
+        sc = SCurveBuilder().build(canonical)
+        assert sc.total_projeto == 0.0
+        assert sc.semanas_iso == ()
+
+    def test_build_skips_equipamento_with_blank_equip_id(self):
+        """An EquipamentoEquipeDireta with a falsy equip_id (default "") must
+        not be aggregated into equip_por_semana."""
+        from concilium.domain.models.canonical import EquipamentoEquipeDireta
+
+        canonical = _make_canonical(with_schedule=True)
+        equipes = list(canonical.equipes_diretas)
+        equipes[0] = equipes[0].model_copy(
+            update={
+                "equipamentos": [
+                    EquipamentoEquipeDireta(
+                        equip_id="",
+                        descricao="Sem ID",
+                        num_unidades=1,
+                        custo_mensal=1000.0,
+                    ),
+                ]
+            }
+        )
+        canonical = canonical.model_copy(update={"equipes_diretas": equipes})
+        sc = SCurveBuilder().build(canonical)
+        assert sc.total_projeto >= 0.0
+
 
 # ---------------------------------------------------------------------------
 # SCurveBuilder helper functions

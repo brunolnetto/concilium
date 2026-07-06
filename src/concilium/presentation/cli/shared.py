@@ -23,16 +23,20 @@ def _looks_like_workspace_root(path: Path) -> bool:
 
 def _tools_root() -> Path:
     """Resolve raiz do workspace, mesmo com pacote instalado no venv."""
-    candidate = get_storage().root
-    if _looks_like_workspace_root(candidate):
-        return candidate.resolve()
+    storage_root = get_storage().root
+    if _looks_like_workspace_root(storage_root):
+        return storage_root.resolve()
 
     cwd = Path.cwd().resolve()
     for candidate in (cwd, *cwd.parents):
         if _looks_like_workspace_root(candidate):
             return candidate
 
-    return candidate
+    # Nenhum ancestral do cwd parece um workspace root: cai de volta para o
+    # candidato original (storage root) em vez do topo do filesystem — o loop
+    # acima usava a mesma variável `candidate`, então o fallback retornava
+    # acidentalmente a raiz do filesystem ("/") quando nada era encontrado.
+    return storage_root
 
 
 def _require_existing_dir(path: Path, *, label: str, env_keys: tuple[str, ...]) -> Path:

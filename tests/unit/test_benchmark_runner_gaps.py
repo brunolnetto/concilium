@@ -424,6 +424,39 @@ class TestRunOlapArtifacts:
         captured = capsys.readouterr()
         assert "[SAVE]" in captured.out
 
+    def test_olap_mode_skips_irrelevant_filename(self, tmp_path):
+        """Line 226->225: fname que não termina em .png, não começa com resultado_planejamento
+        e não está em keep_names é ignorado (não copiado, não passa por load_output_file)."""
+        runner = _make_runner(tmp_path)
+        spec = _make_spec(tmp_path)
+
+        store = MagicMock()
+        store.current_version.return_value = "v1"
+        store.load_canonical.return_value = {}
+        store.list_output_files.return_value = ["irrelevante.txt", "chart.png"]
+        store.load_output_file.side_effect = lambda v, fname: b"PNG_DATA" if fname == "chart.png" else b"IGNORED"
+
+        fake_report = {"quality_gates": {}}
+        svc_cls = _make_svc_cls()
+        runner.report_builder.build.return_value = fake_report
+
+        from concilium.application.skills.phase_classifier import PipelineMode
+
+        with (
+            patch.object(runner, "_find_or_create", return_value=store),
+            patch.object(runner, "_load_referencia", return_value=None),
+            patch.object(runner, "_prepare_inputs", return_value={}),
+            patch("concilium.application.benchmarks.execution.runner._load_inference_service", return_value=svc_cls),
+            patch("concilium.application.benchmarks.execution.runner.Runtime") as MockRuntime,
+            patch("concilium.application.skills.phase_classifier.get_skills_for_mode", return_value=[]),
+        ):
+            MockRuntime.return_value.run_pipeline.return_value = []
+            runner.run(spec, mode=PipelineMode.OLAP)
+
+        artifacts_dir = runner._artifact_output_dir(spec)
+        assert not (artifacts_dir / "reports" / "irrelevante.txt").exists()
+        assert (artifacts_dir / "visualizations" / "chart.png").exists()
+
     def test_olap_mode_skips_none_data(self, tmp_path):
         runner = _make_runner(tmp_path)
         spec = _make_spec(tmp_path)
@@ -620,3 +653,86 @@ class TestPrepareInputsPlanejamentoRef:
 
         skill_05 = result.get("05-equipes-e-alocacao", {})
         assert "planejamento_ref" not in skill_05
+
+    def test_contexto_id_not_overwritten_when_already_present(self, tmp_path):
+        """Line 319 False branch: contexto_id já presente em inputs_escopo não é sobrescrito."""
+        runner = _make_runner(tmp_path)
+        spec = _make_spec(tmp_path)
+        spec.inputs_escopo = {"contexto_id": "ja-existente", "foo": "bar"}
+        svc_cls = _make_svc_cls()
+
+        with patch(
+            "concilium.application.benchmarks.execution.runner._load_inference_service",
+            return_value=svc_cls,
+        ):
+            result = runner._prepare_inputs(spec, ref=None)
+
+        assert result["01-escopo-e-eap"]["contexto_id"] == "ja-existente"
+        assert result["00-escopo"] == result["01-escopo-e-eap"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _emit_business_telemetry: margem presente aciona record_project_margin (linha 34)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestEmitBusinessTelemetry:
+    def test_margem_presente_chama_record_project_margin(self):
+        from concilium.application.benchmarks.execution.runner import _emit_business_telemetry
+
+        spec = MagicMock()
+        spec.benchmark_id = "bench-1"
+        spec.project_slug = "slug-1"
+        report = {"resultado": {"ferramenta": {"margem_pct": 12.5, "custo_direto": 100000.0}}}
+        mode = MagicMock()
+        mode.value = "oltp"
+
+        with patch("concilium.infrastructure.telemetry.record_project_margin") as mock_record:
+            _emit_business_telemetry(spec, report, mode)
+
+        mock_record.assert_called_once()
+        _, kwargs = mock_record.call_args
+        assert kwargs["project_id"] == "bench-1"
+        assert kwargs["margem_pct"] == 12.5
+        assert kwargs["custo_direto"] == 100000.0
+        assert kwargs["pipeline_mode"] == "oltp"
+
+    def test_margem_ausente_nao_chama_record(self):
+        from concilium.application.benchmarks.execution.runner import _emit_business_telemetry
+
+        spec = MagicMock()
+        report = {"resultado": {"ferramenta": {}}}
+        mode = "oltp"
+
+        with patch("concilium.infrastructure.telemetry.record_project_margin") as mock_record:
+            _emit_business_telemetry(spec, report, mode)
+
+        mock_record.assert_not_called()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _find_or_create: nenhum projeto existente casa com "nome" -> cria novo (linha 269->297)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestFindOrCreateNoMatchCreatesNew:
+    def test_creates_new_when_existing_projects_dont_match_nome(self, tmp_path, capsys):
+        runner = _make_runner(tmp_path)
+        projects_root = runner.projects_root
+        projects_root.mkdir(parents=True, exist_ok=True)
+
+        other_dir = projects_root / "outro-projeto"
+        other_dir.mkdir()
+        (other_dir / "meta.json").write_text('{"nome": "Outro Projeto"}', encoding="utf-8")
+
+        store_mock = MagicMock()
+        with patch(
+            "concilium.infrastructure.storage.project.ProjectStore.init",
+            return_value=store_mock,
+        ) as mock_init:
+            result = runner._find_or_create("Projeto Novo", "novo-slug", "ctx", reset=False)
+
+        mock_init.assert_called_once()
+        assert result is store_mock
+        captured = capsys.readouterr()
+        assert "[NEW]" in captured.out

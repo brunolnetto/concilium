@@ -135,6 +135,15 @@ class TestBundle:
         # relatorio.md é audiência 'agente' → fora do filtro humano
         assert "relatorio.md" not in names
 
+    def test_bundle_com_transport_explicito_nao_usa_default(self, store):
+        """Line 313 false branch: transport explicitamente passado é usado diretamente,
+        sem instanciar o LocalBase64Transport default."""
+        from concilium.application.services.artifact.artifact_transport import LocalBase64Transport
+
+        custom_transport = LocalBase64Transport(max_mb=10.0)
+        res = ab.build_bundle(store, None, transport=custom_transport)
+        assert "conteudo_base64" in res or "nome_arquivo" in res
+
     def test_bundle_intermediate_apenas_por_nome_explicito(self, store):
         # sem filtro: intermediários (relatorio.json) não entram no bundle de entrega
         res = ab.build_bundle(store, None)

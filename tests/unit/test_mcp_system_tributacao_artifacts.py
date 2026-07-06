@@ -85,6 +85,19 @@ class TestSystemPing:
             result = tools["ping"]()
         assert "status" in result
 
+    def test_ping_blob_storage_health_check_exception_sets_status_erro(self, monkeypatch, tmp_path):
+        """Lines 84-91: build_blob_storage().health_check() raising → storage_health has
+        status='error' → status_geral becomes 'ERRO'."""
+        tools = _register_tools(_SYSTEM_MOD, monkeypatch, tmp_path)
+
+        with patch(
+            "concilium.infrastructure.storage.store_factory.build_blob_storage",
+            side_effect=RuntimeError("blob storage unreachable"),
+        ):
+            result = tools["ping"]()
+
+        assert result["status"] == "ERRO"
+
     def test_ping_catalog_exception_returns_erro_entry(self, monkeypatch, tmp_path):
         config_dir = tmp_path / "config"
         contextos_dir = config_dir / "contextos"
@@ -274,3 +287,30 @@ class TestArtifactsTools:
         ):
             result = tools["obter_artefato"](formato="bundle", project_id="proj-1")
         assert "erro" in result
+
+    def test_ler_artefato_texto_sem_nome_arquivo(self, monkeypatch, tmp_path):
+        tools = self._make_tools(monkeypatch, tmp_path)
+        store_mock = MagicMock()
+
+        with patch(f"{_ART_MOD}._project", return_value=store_mock):
+            result = tools["obter_artefato"](formato="texto", project_id="proj-1")
+        assert "erro" in result
+        assert "nome_arquivo" in result["erro"]
+
+    def test_baixar_artefato_binario_sem_nome_arquivo(self, monkeypatch, tmp_path):
+        tools = self._make_tools(monkeypatch, tmp_path)
+        store_mock = MagicMock()
+
+        with patch(f"{_ART_MOD}._project", return_value=store_mock):
+            result = tools["obter_artefato"](formato="binario", project_id="proj-1")
+        assert "erro" in result
+        assert "nome_arquivo" in result["erro"]
+
+    def test_obter_artefato_formato_invalido(self, monkeypatch, tmp_path):
+        tools = self._make_tools(monkeypatch, tmp_path)
+        store_mock = MagicMock()
+
+        with patch(f"{_ART_MOD}._project", return_value=store_mock):
+            result = tools["obter_artefato"](formato="csv", project_id="proj-1")
+        assert "erro" in result
+        assert "inválido" in result["erro"]

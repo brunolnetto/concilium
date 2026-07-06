@@ -75,6 +75,18 @@ class TestObjetivos:
         assert pool["EQ"] == 4
 
 
+class TestSemRecursos:
+    def test_activity_without_required_resources_skips_scheduling_probe(self):
+        """Line 156 false branch: no resources at all -> the SerialScheduler probe
+        for peak demand is skipped entirely."""
+        acts = [Activity("A", "Atividade A", 3, {})]
+        dag = ActivityDAG(activities=acts, precedence=[])
+        pool, diag = inferir_pool_minimo(acts, dag, {"objetivo": "minimizar_prazo"})
+        assert pool == {}
+        # No resources -> makespan falls back to the horizon (no scheduling probe ran)
+        assert isinstance(diag["makespan_minimo_semanas"], int)
+
+
 class TestRestricoesMercado:
     def test_teto_de_mercado_limita_pool(self):
         acts, dag = _two_parallel_dag()
@@ -94,6 +106,18 @@ class TestRestricoesMercado:
             {"objetivo": "minimizar_custo", "restricoes_mercado": {"EQ": 1}},
         )
         assert any("inviável" in n.lower() for n in diag["notas"])
+
+    def test_teto_folgado_nao_limita_pool_nem_sinaliza(self):
+        """Line 178 false branch: restrição de mercado com teto acima do pool
+        calculado -> não é aplicado nem gera nota de limitação."""
+        acts, dag = _two_parallel_dag()
+        pool, diag = inferir_pool_minimo(
+            acts,
+            dag,
+            {"objetivo": "minimizar_prazo", "restricoes_mercado": {"EQ": 100}},
+        )
+        assert pool["EQ"] == 4
+        assert not any("restrição de mercado" in n for n in diag["notas"])
 
 
 class TestFromSpec:

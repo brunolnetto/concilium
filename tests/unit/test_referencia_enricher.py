@@ -586,6 +586,12 @@ class TestExtractEapFromCpusTxt:
         result = _extract_eap_from_cpus_txt(path)
         assert result[0]["descricao"] == "Item 3.2"
 
+    def test_generic_description_when_single_token_line(self, tmp_path):
+        """Branch 251->259: linha com apenas o item_id (len(parts) <= 1) -> pula direto para descrição genérica."""
+        path = self._write_cpus_txt(tmp_path, ["3.2"])
+        result = _extract_eap_from_cpus_txt(path)
+        assert result[0]["descricao"] == "Item 3.2"
+
     def test_unreadable_file_returns_empty(self, tmp_path):
         path = tmp_path / "cpus.txt"
         path.write_text("2.1\tItem\tM3\t50", encoding="utf-8")

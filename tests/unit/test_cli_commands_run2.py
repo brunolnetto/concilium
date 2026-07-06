@@ -137,6 +137,17 @@ class TestApproveLoadPendingOverrides:
         result = _approve_load_pending_overrides(project)
         assert result == []
 
+    def test_valid_json_not_a_dict_returns_empty(self, tmp_path):
+        """Valid JSON that parses to a list (not a dict) falls through the
+        `isinstance(loaded, dict)` false branch to the trailing `return []`."""
+        overrides_dir = tmp_path / "overrides"
+        overrides_dir.mkdir()
+        (overrides_dir / "insumos_override.json").write_text("[1, 2, 3]")
+        project = MagicMock()
+        project.root = tmp_path
+        result = _approve_load_pending_overrides(project)
+        assert result == []
+
 
 class TestRunCommand:
     def _project(self, has_errors=False):

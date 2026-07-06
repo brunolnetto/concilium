@@ -495,6 +495,26 @@ def test_derive_bdi_uses_preco_venda_total_fallback() -> None:
     assert value == pytest.approx(1.0)
 
 
+def test_derive_confronto_custo_total_not_recomputed_when_indireto_not_numeric() -> None:
+    """When custo_indireto in confronto isn't int/float, custo_total keeps confronto's value."""
+    ref = {
+        "planejamento_detalhado": [
+            {"subtotal": {"sem_bdi": {"total": 60.0}}},
+        ],
+        "resultado": {
+            "benchmark_confronto_referencia": {
+                "custo_direto": 95.0,
+                "custo_indireto": None,
+                "custo_total": 125.0,
+                "preco_venda": 140.0,
+            }
+        },
+    }
+    pack = BenchmarkInferenceService.derive(ref)
+    assert pack.reference_projection["custo_direto"] == 60.0
+    assert pack.reference_projection["custo_total"] == 125.0
+
+
 def test_derive_bdi_uses_custo_indireto_total_fallback() -> None:
     """Falls back to resultado.custo_indireto_total when confronto has no custo_indireto."""
     ref = {

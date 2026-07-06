@@ -108,9 +108,10 @@ def normalize_referencia_weeks(ref: dict[str, Any]) -> dict[str, Any]:
     if not num_to_iso:
         return ref
 
+    # sorted_nums nunca é vazio aqui: já retornamos acima quando num_to_iso é vazio,
+    # e sorted_nums é sorted(num_to_iso.keys()).
     sorted_nums = sorted(num_to_iso.keys(), key=int)
-    if sorted_nums:
-        _nrw_inject_dates(ref, semanas_meta, sorted_nums)
+    _nrw_inject_dates(ref, semanas_meta, sorted_nums)
 
     _nrw_remap_atividades(cronograma, num_to_iso)
     return ref

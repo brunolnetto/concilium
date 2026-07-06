@@ -213,9 +213,9 @@ class SemanticExtractor:
         # Detectar dimensões embutidas (e.g. "espessura 15cm")
         for m in _RE_EMBEDDED_DIM.finditer(normalized):
             dim_name_raw = m.group(1).lower()
-            canonical_dim = _DIM_NAME_MAP.get(dim_name_raw)
-            if canonical_dim is None:  # pragma: no branch
-                continue
+            # Every alternative captured by _RE_EMBEDDED_DIM's group has a matching
+            # entry in _DIM_NAME_MAP, so this lookup can never miss.
+            canonical_dim = _DIM_NAME_MAP[dim_name_raw]
             # Procurar número + unidade após o nome da dimensão
             rest = normalized[m.end() :]
             num_m = _RE_NUM_UNIT.match(rest.strip())

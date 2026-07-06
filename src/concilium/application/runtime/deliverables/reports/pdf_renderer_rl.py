@@ -151,9 +151,8 @@ def _flush_table(
     from reportlab.lib import colors
     from reportlab.platypus import Paragraph, Table, TableStyle
 
-    if not table_rows:
-        return None
-
+    # Único chamador (flush_table() em _parse_md_to_story) só invoca esta
+    # função quando table_rows já foi verificado como não-vazio.
     n_cols = max(len(r) for r in table_rows)
     col_w = usable_width / n_cols
 

@@ -119,6 +119,29 @@ class TestCqValidateCpus:
         erros, avisos, bloqueadas = _cq_validate_cpus([], validador)
         assert erros == [] and avisos == [] and bloqueadas == []
 
+    def test_erro_com_codigo_nao_bloqueante_nao_e_adicionado_a_bloqueadas(self):
+        """ERRO cujo codigo não está em VAL-CPU-STR-02/03 não bloqueia a CPU."""
+        from concilium.presentation.cli._commands_manage_helpers_a import _cq_validate_cpus
+
+        res_err = SimpleNamespace(status="ERRO", codigo="VAL-CPU-OUTRO", mensagem="erro genérico")
+        validador = MagicMock()
+        validador.validar_cpu_completa.return_value = [res_err]
+        cpus = [{"codigo": "CPU-Y"}]
+        erros, avisos, bloqueadas = _cq_validate_cpus(cpus, validador)
+        assert len(erros) == 1
+        assert bloqueadas == []
+
+    def test_resultado_ok_nao_gera_erro_nem_aviso(self):
+        """status diferente de ERRO/AVISO (ex.: OK) não popula nenhuma lista."""
+        from concilium.presentation.cli._commands_manage_helpers_a import _cq_validate_cpus
+
+        res_ok = SimpleNamespace(status="OK", codigo="OK-01", mensagem="ok")
+        validador = MagicMock()
+        validador.validar_cpu_completa.return_value = [res_ok]
+        cpus = [{"codigo": "CPU-Z"}]
+        erros, avisos, bloqueadas = _cq_validate_cpus(cpus, validador)
+        assert erros == [] and avisos == [] and bloqueadas == []
+
 
 class TestCqValidateInsumos:
     def test_collects_vigencia_and_encoding_avisos(self):
@@ -160,6 +183,20 @@ class TestCqPrintBlockedCpus:
         err = SimpleNamespace(mensagem="campo faltante")
         console = MagicMock()
         _cq_print_blocked_cpus(["CPU-A"], [("CPU-A", err)], console)
+        console.print.assert_called_once()
+
+    def test_erro_nao_bloqueado_e_pulado_na_tabela(self):
+        """erros com codigo fora de cpus_bloqueadas são ignorados na tabela."""
+        from concilium.presentation.cli._commands_manage_helpers_a import _cq_print_blocked_cpus
+
+        err_bloqueado = SimpleNamespace(mensagem="campo faltante")
+        err_nao_bloqueado = SimpleNamespace(mensagem="erro genérico")
+        console = MagicMock()
+        _cq_print_blocked_cpus(
+            ["CPU-A"],
+            [("CPU-B", err_nao_bloqueado), ("CPU-A", err_bloqueado)],
+            console,
+        )
         console.print.assert_called_once()
 
 
@@ -217,6 +254,199 @@ class TestCqFmtPct:
 
         result = _cq_fmt_pct(0, 0)
         assert "0.0%" in result
+
+
+class TestImplCatalogQuality:
+    """Tests for _impl_catalog_quality (full diagnostic flow)."""
+
+    def _make_rt(self, cpus, insumos):
+        ctx = SimpleNamespace(catalogo_id="cat-1")
+        catalogo = {"cpus": cpus, "insumos": insumos}
+        rt = MagicMock()
+        rt.load_contexto.return_value = ctx
+        rt.load_catalogo.return_value = catalogo
+        return rt
+
+    def test_reprovado_when_erros_present(self):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = self._make_rt(
+            cpus=[{"codigo": "CPU-1"}],
+            insumos=[{"codigo": "INS-1", "preco_unitario": 10}],
+        )
+        erro = SimpleNamespace(status="ERRO", codigo="VAL-CPU-STR-02", mensagem="ruim")
+        validador = MagicMock()
+        validador.validar_cpu_completa.return_value = [erro]
+        validador.validar_vigencia.return_value = SimpleNamespace(status="OK", codigo="OK", mensagem="")
+        validador.validar_encoding.return_value = SimpleNamespace(status="OK", codigo="OK", mensagem="")
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.domain.validations.cpu_insumo.ValidadorCPUInsumo", return_value=validador),
+            patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo"),
+            patch("concilium.domain.validations.circular_deps.verificar_ciclos_cpu", return_value=[]),
+        ):
+            mod._impl_catalog_quality(contexto_id="ctx-1")
+
+    def test_aprovado_com_ressalvas_when_only_avisos(self):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = self._make_rt(
+            cpus=[{"codigo": "CPU-1"}],
+            insumos=[{"codigo": "INS-1", "preco_unitario": 10}],
+        )
+        validador = MagicMock()
+        validador.validar_cpu_completa.return_value = []
+        validador.validar_vigencia.return_value = SimpleNamespace(
+            status="AVISO", codigo="VAL-CAT-VIG-01", mensagem="obsoleto"
+        )
+        validador.validar_encoding.return_value = SimpleNamespace(status="OK", codigo="OK", mensagem="")
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.domain.validations.cpu_insumo.ValidadorCPUInsumo", return_value=validador),
+            patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo"),
+            patch("concilium.domain.validations.circular_deps.verificar_ciclos_cpu", return_value=[]),
+        ):
+            mod._impl_catalog_quality(contexto_id="ctx-1")
+
+    def test_integro_when_no_erros_avisos_or_ciclos(self):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = self._make_rt(cpus=[], insumos=[])
+        validador = MagicMock()
+        validador.validar_cpu_completa.return_value = []
+        validador.validar_vigencia.return_value = SimpleNamespace(status="OK", codigo="OK", mensagem="")
+        validador.validar_encoding.return_value = SimpleNamespace(status="OK", codigo="OK", mensagem="")
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.domain.validations.cpu_insumo.ValidadorCPUInsumo", return_value=validador),
+            patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo"),
+            patch("concilium.domain.validations.circular_deps.verificar_ciclos_cpu", return_value=[]),
+        ):
+            mod._impl_catalog_quality(contexto_id="ctx-1")
+
+
+class TestImplCatalogSimulate:
+    """Tests for _impl_catalog_simulate (CLT vs PJ comparison)."""
+
+    def _make_resultado(self, total_direto):
+        return SimpleNamespace(
+            dias_trabalhados=30,
+            producao_total=100.0,
+            unidade="m3",
+            custo_material=10.0,
+            custo_mao_obra_base=20.0,
+            custo_mao_obra_encargos=5.0,
+            custo_equipamento_capital=8.0,
+            custo_equipamento_manutencao=2.0,
+            custo_diesel_total=3.0,
+            total_direto=total_direto,
+        )
+
+    def test_success_path_prints_comparison(self):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = MagicMock()
+        rt.load_contexto.return_value = SimpleNamespace(catalogo_id="cat-1")
+        rt.load_catalogo.return_value = {}
+        simulador = MagicMock()
+        simulador.simular_cpu.side_effect = [
+            self._make_resultado(100.0),
+            self._make_resultado(80.0),
+        ]
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.domain.services.simulation.SimuladorEngenharia", return_value=simulador),
+        ):
+            mod._impl_catalog_simulate(
+                cpu_id="CPU-1",
+                contexto_id="mendeslobo",
+                dias=30,
+                regime="6x1",
+                horas_dia=8.0,
+            )
+
+    def test_exception_raises_typer_exit(self):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = MagicMock()
+        rt.load_contexto.return_value = SimpleNamespace(catalogo_id="cat-1")
+        rt.load_catalogo.return_value = {}
+        simulador = MagicMock()
+        simulador.simular_cpu.side_effect = RuntimeError("boom")
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.domain.services.simulation.SimuladorEngenharia", return_value=simulador),
+            pytest.raises(typer.Exit),
+        ):
+            mod._impl_catalog_simulate(
+                cpu_id="CPU-1",
+                contexto_id="mendeslobo",
+                dias=30,
+                regime="6x1",
+                horas_dia=8.0,
+            )
+
+
+class TestImplCatalogExport:
+    """Tests for _impl_catalog_export."""
+
+    def _make_rt(self):
+        ctx = SimpleNamespace(catalogo_id="cat-1", tema_id="tema-1")
+        rt = MagicMock()
+        rt.load_contexto.return_value = ctx
+        rt.load_catalogo.return_value = {}
+        rt.load_tema.return_value.to_catalogo_dict.return_value = {}
+        return rt
+
+    def test_default_output_name(self):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = self._make_rt()
+        exporter = MagicMock()
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.infrastructure.exporters.catalog_excel.CatalogExporterExcel", return_value=exporter),
+        ):
+            mod._impl_catalog_export(contexto_id="mendeslobo", output=None)
+
+        exporter.export.assert_called_once()
+        called_path = exporter.export.call_args[0][0]
+        assert called_path.name == "catalogo_mendeslobo_audit.xlsx"
+
+    def test_explicit_output_path(self, tmp_path):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = self._make_rt()
+        exporter = MagicMock()
+        out = str(tmp_path / "custom.xlsx")
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.infrastructure.exporters.catalog_excel.CatalogExporterExcel", return_value=exporter),
+        ):
+            mod._impl_catalog_export(contexto_id="mendeslobo", output=out)
+
+        exporter.export.assert_called_once()
+
+    def test_export_exception_raises_typer_exit(self):
+        from concilium.presentation.cli import _commands_manage_helpers_a as mod
+
+        rt = self._make_rt()
+        exporter = MagicMock()
+        exporter.export.side_effect = RuntimeError("disk full")
+
+        with (
+            patch("concilium.presentation.mcp._context._runtime", return_value=rt),
+            patch("concilium.infrastructure.exporters.catalog_excel.CatalogExporterExcel", return_value=exporter),
+            pytest.raises(typer.Exit),
+        ):
+            mod._impl_catalog_export(contexto_id="mendeslobo", output=None)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -498,6 +728,262 @@ class TestImplPlanInit:
         mock_escopo.create_plan.assert_called_once()
 
 
+class TestCmrLoadOpenpyxl:
+    def test_xlsm_missing_raises(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_openpyxl
+
+        mod = SimpleNamespace(XLSM=tmp_path / "nope.xlsm")
+        with pytest.raises(typer.Exit):
+            _cmr_load_openpyxl(mod)
+
+    def test_import_error_raises_exit(self, tmp_path, monkeypatch):
+        import builtins
+
+        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_openpyxl
+
+        orig_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name == "openpyxl":
+                raise ImportError("no openpyxl")
+            return orig_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        mod = SimpleNamespace(XLSM=tmp_path / "x.xlsm")
+        with pytest.raises(typer.Exit):
+            _cmr_load_openpyxl(mod)
+
+    def test_ok_returns_openpyxl_and_path(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _cmr_load_openpyxl
+
+        xlsm = tmp_path / "x.xlsm"
+        xlsm.touch()
+        mod = SimpleNamespace(XLSM=xlsm)
+        openpyxl_mod, xlsm_out = _cmr_load_openpyxl(mod)
+        assert xlsm_out == xlsm
+        assert hasattr(openpyxl_mod, "load_workbook")
+
+
+class TestCcpWriteBundle:
+    def test_with_producoes_key_ok(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _ccp_write_bundle
+
+        bundle_path = tmp_path / "b.json"
+        bundle_path.write_text("{}", encoding="utf-8")
+        bundle = {"insumos": [], "producoes": []}
+        console = MagicMock()
+        mock_result = {"resumo": {"erros": 0, "avisos": 0, "infos": 0}}
+        with patch(
+            "concilium.application.catalog.plausibility_checker.verificar_plausibilidade",
+            return_value=mock_result,
+        ):
+            _ccp_write_bundle(bundle, bundle_path, [{"codigo": "I1"}], [{"id": "P1"}], console)
+        data = json.loads(bundle_path.read_text())
+        assert data["producoes"] == [{"id": "P1"}]
+        assert data["insumos"] == [{"codigo": "I1"}]
+
+    def test_with_produtividades_key_and_erros(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _ccp_write_bundle
+
+        bundle_path = tmp_path / "b2.json"
+        bundle_path.write_text("{}", encoding="utf-8")
+        bundle = {"insumos": [], "produtividades": []}
+        console = MagicMock()
+        mock_result = {"resumo": {"erros": 2, "avisos": 1, "infos": 0}}
+        with patch(
+            "concilium.application.catalog.plausibility_checker.verificar_plausibilidade",
+            return_value=mock_result,
+        ):
+            _ccp_write_bundle(bundle, bundle_path, [], [], console)
+        data = json.loads(bundle_path.read_text())
+        assert "produtividades" in data
+        printed = [str(c) for c in console.print.call_args_list]
+        assert any("ATENÇÃO" in p for p in printed)
+
+
+class TestImplCatalogMergeRfi:
+    """Exercises the full _impl_catalog_merge_rfi flow by faking the externally
+    loaded merge_rfi.py script (tools_dir resolves outside the repo in this
+    environment, so we redirect the importlib load to a fake module we control)."""
+
+    def _make_fake_module_file(self, tmp_path: Path) -> Path:
+        content = """
+from pathlib import Path
+
+
+class _Report:
+    def __init__(self):
+        self.inner_high = []
+        self.inner_low = []
+        self.right_only = []
+        self.left_only = []
+
+
+def extract_rfi(wb):
+    return {"insumos": [], "producoes": []}
+
+
+def _merge_entities(cat, rfi, id_key="codigo"):
+    return _Report(), None
+
+
+def _apply_merge(cat, rfi, report, id_key="codigo"):
+    return list(cat)
+"""
+        script = tmp_path / "fake_merge_rfi.py"
+        script.write_text(content, encoding="utf-8")
+        return script
+
+    def _setup(self, monkeypatch, tmp_path, contexto_id):
+        import importlib.util as real_importlib_util
+
+        import openpyxl as real_openpyxl
+
+        xlsm_path = tmp_path / "planilha.xlsm"
+        wb = real_openpyxl.Workbook()
+        wb.save(xlsm_path)
+
+        fake_script = self._make_fake_module_file(tmp_path)
+
+        bundle_dir = tmp_path / "config" / "catalogos" / contexto_id
+        bundle_dir.mkdir(parents=True)
+        (bundle_dir / ".catalog_bundle.json").write_text(json.dumps({"insumos": [], "producoes": []}), encoding="utf-8")
+
+        orig_exists = Path.exists
+
+        def fake_exists(self_path):
+            if self_path.name == "merge_rfi.py":
+                return True
+            return orig_exists(self_path)
+
+        monkeypatch.setattr(Path, "exists", fake_exists)
+
+        orig_spec = real_importlib_util.spec_from_file_location
+
+        def fake_spec_from_file_location(name, location, *args, **kwargs):
+            if str(location).endswith("merge_rfi.py"):
+                return orig_spec(name, fake_script, *args, **kwargs)
+            return orig_spec(name, location, *args, **kwargs)
+
+        monkeypatch.setattr(real_importlib_util, "spec_from_file_location", fake_spec_from_file_location)
+
+        # Patch mod.XLSM/mod.ROOT indirectly: since our fake module doesn't define
+        # them at import time (they must be Path values known only once tmp_path
+        # exists), inject them onto the loaded module after exec via a wrapper.
+        return xlsm_path
+
+    def test_apply_with_verify_pu_and_report_json(self, monkeypatch, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge_rfi
+
+        ctx = "ctx_apply"
+        xlsm_path = self._setup(monkeypatch, tmp_path, ctx)
+
+        import concilium.presentation.cli._commands_manage_helpers_c as helpers_c
+
+        def fake_cast(_type, value):
+            value.ROOT = tmp_path
+            value.XLSM = xlsm_path
+            return value
+
+        monkeypatch.setattr(helpers_c, "cast", fake_cast)
+
+        report_path = str(tmp_path / "report.json")
+        mock_resultado = {"referencias_faltantes": [], "com_composicao": 0}
+        with patch("concilium.application.catalog.pu_calculator.calcular_catalogo", return_value=mock_resultado):
+            _impl_catalog_merge_rfi(ctx, apply=True, verify_pu=True, report_json=report_path)
+
+        assert Path(report_path).exists()
+        bundle_data = json.loads((tmp_path / "config" / "catalogos" / ctx / ".catalog_bundle.json").read_text())
+        assert bundle_data["insumos"] == []
+
+    def test_dry_run_without_report(self, monkeypatch, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge_rfi
+
+        ctx = "ctx_dry"
+        xlsm_path = self._setup(monkeypatch, tmp_path, ctx)
+
+        import concilium.presentation.cli._commands_manage_helpers_c as helpers_c
+
+        def fake_cast(_type, value):
+            value.ROOT = tmp_path
+            value.XLSM = xlsm_path
+            return value
+
+        monkeypatch.setattr(helpers_c, "cast", fake_cast)
+
+        _impl_catalog_merge_rfi(ctx, apply=False, verify_pu=False, report_json=None)
+
+    def test_script_not_found_raises_exit(self, tmp_path):
+        # No monkeypatching here — merge_rfi.py genuinely does not exist at the
+        # computed tools_dir path in this environment, so this exercises the
+        # real "script not found" branch without mocking.
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_merge_rfi
+
+        with pytest.raises(typer.Exit):
+            _impl_catalog_merge_rfi("whatever-ctx", apply=False, verify_pu=False, report_json=None)
+
+
+class TestImplCatalogCurePlausibility:
+    def test_bundle_missing_raises(self, tmp_path, monkeypatch):
+        import concilium.application.catalog.cure_plausibility as cure_mod
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_cure_plausibility
+
+        monkeypatch.setattr(cure_mod, "ROOT", tmp_path)
+        with pytest.raises(typer.Exit):
+            _impl_catalog_cure_plausibility("nope-ctx", False)
+
+    def test_dry_run_with_fixed_and_manual_items(self, tmp_path, monkeypatch):
+        import concilium.application.catalog.cure_plausibility as cure_mod
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_cure_plausibility
+
+        monkeypatch.setattr(cure_mod, "ROOT", tmp_path)
+        ctx = "ctxcure1"
+        bundle_dir = tmp_path / "config" / "catalogos" / ctx
+        bundle_dir.mkdir(parents=True)
+        bundle = {
+            "insumos": [{"codigo": "EQ1", "tipo": "EQUIPAMENTO", "preco_unitario": 10.0, "atributos_especificos": {}}],
+            "producoes": [{"id": "P1", "valor_horario": 5}],
+        }
+        (bundle_dir / ".catalog_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
+
+        _impl_catalog_cure_plausibility(ctx, False)
+
+    def test_apply_with_fixed_and_manual_writes_bundle(self, tmp_path, monkeypatch):
+        import concilium.application.catalog.cure_plausibility as cure_mod
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_cure_plausibility
+
+        monkeypatch.setattr(cure_mod, "ROOT", tmp_path)
+        ctx = "ctxcure2"
+        bundle_dir = tmp_path / "config" / "catalogos" / ctx
+        bundle_dir.mkdir(parents=True)
+        bundle = {
+            "insumos": [{"codigo": "EQ1", "tipo": "EQUIPAMENTO", "preco_unitario": 10.0, "atributos_especificos": {}}],
+            "produtividades": [{"id": "P1", "valor_horario": 5}],
+        }
+        bundle_path = bundle_dir / ".catalog_bundle.json"
+        bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+
+        _impl_catalog_cure_plausibility(ctx, True)
+
+        data = json.loads(bundle_path.read_text())
+        assert "produtividades" in data
+
+    def test_dry_run_with_no_fixed_and_no_manual_items(self, tmp_path, monkeypatch):
+        """Empty bundle → report.fixed and report.manual both empty, covering
+        the false branch of both `if report.fixed:` and `if report.manual:`."""
+        import concilium.application.catalog.cure_plausibility as cure_mod
+        from concilium.presentation.cli._commands_manage_helpers_c import _impl_catalog_cure_plausibility
+
+        monkeypatch.setattr(cure_mod, "ROOT", tmp_path)
+        ctx = "ctxcure3"
+        bundle_dir = tmp_path / "config" / "catalogos" / ctx
+        bundle_dir.mkdir(parents=True)
+        bundle = {"insumos": [], "producoes": []}
+        (bundle_dir / ".catalog_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
+
+        _impl_catalog_cure_plausibility(ctx, False)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # _commands_manage_helpers_d.py
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -588,6 +1074,98 @@ class TestCheckCatalogSemantics:
         erros, avisos = [], []
         _check_catalog_semantics(cpus, prods, erros, avisos)
         assert erros == [] and avisos == []
+
+
+class TestBuildSchemaValidators:
+    def test_builds_validators_from_real_schemas(self):
+        from concilium.presentation.cli._commands_manage_helpers_d import _build_schema_validators
+
+        schema_root = Path("config") / "schemas" / "catalog"
+        cpu_v, prod_v, ins_v = _build_schema_validators(schema_root)
+        assert cpu_v is not None
+        assert prod_v is not None
+        assert ins_v is not None
+
+    def test_missing_schema_file_raises_exit(self, tmp_path):
+        from concilium.presentation.cli._commands_manage_helpers_d import _build_schema_validators
+
+        with pytest.raises(typer.Exit) as exc_info:
+            _build_schema_validators(tmp_path)
+        assert exc_info.value.exit_code == 2
+
+    def test_missing_common_schema_is_optional(self, tmp_path):
+        """common.schema.json ausente não deve impedir a construção dos validadores."""
+        from concilium.presentation.cli._commands_manage_helpers_d import _build_schema_validators
+
+        real_root = Path("config") / "schemas" / "catalog"
+        for name in ["cpu.schema.json", "producao.schema.json", "insumo.schema.json"]:
+            (tmp_path / name).write_text((real_root / name).read_text(encoding="utf-8"), encoding="utf-8")
+
+        cpu_v, prod_v, ins_v = _build_schema_validators(tmp_path)
+        assert cpu_v is not None
+        assert prod_v is not None
+        assert ins_v is not None
+
+
+class TestImplCatalogValidateSchema:
+    def _make_rt(self, catalogo: dict):
+        rt = MagicMock()
+        rt.load_contexto.return_value = SimpleNamespace(catalogo_id="cat1")
+        rt.load_catalogo.return_value = catalogo
+        return rt
+
+    def test_empty_catalog_prints_ok(self):
+        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_validate_schema
+
+        rt = self._make_rt({"cpus": [], "insumos": [], "produtividades": [], "producoes": []})
+        with patch("concilium.presentation.cli._commands_manage_helpers_d._runtime", return_value=rt):
+            # Should not raise — no errors, no warnings.
+            _impl_catalog_validate_schema(contexto_id="ctx1", fail_on_warning=False)
+
+    def test_non_list_produtividades_and_producoes_default_to_empty(self):
+        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_validate_schema
+
+        rt = self._make_rt({"cpus": [], "insumos": [], "produtividades": None, "producoes": None})
+        with patch("concilium.presentation.cli._commands_manage_helpers_d._runtime", return_value=rt):
+            _impl_catalog_validate_schema(contexto_id="ctx1", fail_on_warning=False)
+
+    def test_schema_errors_raise_exit_1(self):
+        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_validate_schema
+
+        # CPU faltando campos obrigatórios (descricao, unidade, etc.) gera erro de schema.
+        rt = self._make_rt({"cpus": [{"codigo": "CPU-1"}], "insumos": [], "produtividades": [], "producoes": []})
+        with patch("concilium.presentation.cli._commands_manage_helpers_d._runtime", return_value=rt):
+            with pytest.raises(typer.Exit) as exc_info:
+                _impl_catalog_validate_schema(contexto_id="ctx1", fail_on_warning=False)
+            assert exc_info.value.exit_code == 1
+
+    def test_warnings_with_fail_on_warning_raises_exit_1(self):
+        from concilium.presentation.cli._commands_manage_helpers_d import _impl_catalog_validate_schema
+
+        # CPU válido mas com campo legado -> aviso semântico, sem erro de schema.
+        cpu = {
+            "codigo": "CPU-1",
+            "descricao": "desc",
+            "unidade": "m3",
+            "origem": "CATALOGO_MENDESLOBO",
+            "producao_id_ref": None,
+            "categoria": "SERVICO",
+            "composicao_itens": [],
+            "producao_horaria": 10,
+        }
+        rt = self._make_rt({"cpus": [cpu], "insumos": [], "produtividades": [], "producoes": []})
+        with patch("concilium.presentation.cli._commands_manage_helpers_d._runtime", return_value=rt):
+            with pytest.raises(typer.Exit) as exc_info:
+                _impl_catalog_validate_schema(contexto_id="ctx1", fail_on_warning=True)
+            assert exc_info.value.exit_code == 1
+
+    def test_import_error_on_jsonschema_missing(self):
+        from concilium.presentation.cli import _commands_manage_helpers_d as mod
+
+        with patch.object(mod, "_build_schema_validators", side_effect=ImportError("no jsonschema")):
+            with pytest.raises(typer.Exit) as exc_info:
+                mod._impl_catalog_validate_schema(contexto_id="ctx1", fail_on_warning=False)
+            assert exc_info.value.exit_code == 2
 
 
 class TestPrintMessagesSection:
@@ -855,6 +1433,26 @@ class TestConfigRoot:
             with pytest.raises((typer.BadParameter, SystemExit)):
                 cv_mod._config_root()
 
+    def test_falls_back_to_second_candidate(self):
+        """Real _config_root: first candidate (parents[4]) missing, second
+        (parents[5]) exists — exercises the loop's second iteration."""
+        import concilium.presentation.cli.commands_config_version as cv_mod
+
+        real_exists = Path.exists
+        first_candidate = Path(cv_mod.__file__).parents[4] / "config"
+        second_candidate = Path(cv_mod.__file__).parents[5] / "config"
+
+        def fake_exists(self):
+            if self == first_candidate:
+                return False
+            if self == second_candidate:
+                return True
+            return real_exists(self)
+
+        with patch.object(cv_mod.Path, "exists", fake_exists):
+            result = cv_mod._config_root()
+        assert result == second_candidate
+
 
 class TestContextList:
     def test_empty_contexts_prints_warning(self):
@@ -1033,6 +1631,25 @@ class TestContextCompare:
         assert "catalogo_id" in result.output
         assert "cat1" in result.output
         assert "cat2" in result.output
+
+    def test_changed_fields_without_unchanged_skips_footer(self):
+        """When `unchanged` is empty, the 'Inalterados' footer line is skipped."""
+        app = _make_context_app()
+        mock_svc = MagicMock()
+        mock_svc.compare.return_value = {
+            "changed": {"catalogo_id": {"de": "cat1", "para": "cat2"}},
+            "unchanged": [],
+        }
+
+        with patch(
+            "concilium.presentation.cli.commands_config_version.ContextoVersionService",
+            return_value=mock_svc,
+        ):
+            with patch("concilium.presentation.cli.commands_config_version._config_root", return_value=Path("/fake")):
+                result = runner.invoke(app, ["compare", "ctx1", "v1", "v2"])
+
+        assert result.exit_code == 0
+        assert "Inalterados" not in result.output
 
 
 class TestPerfilList:

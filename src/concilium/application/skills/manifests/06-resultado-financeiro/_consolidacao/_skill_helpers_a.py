@@ -602,7 +602,10 @@ def _build_pe_for_equipe(
     # Diesel NÃO integra C_eps: ocorre por produção (não por calendário), é constante em Q.
     # Apenas MO e EQ acumulam custo em intervalos não produtivos (extensão do prazo).
     # fator_clima_v é a média ponderada de η por team-weeks; gap = 0 quando η = 1.
-    if fator_clima_v < 0.9999 and plan is not None and _Q > 0:
+    if 0.0 < fator_clima_v < 0.9999 and plan is not None and _Q > 0:
+        # fator_clima_v == 0.0 (perda climática total em todas as semanas) é
+        # excluído acima: 1/η divergiria (ZeroDivisionError). Nesse cenário extremo
+        # o gap de praticabilidade não é quantificável por este modelo linear.
         _pu = plan.preco_unitario if plan and plan.preco_unitario else None
         _pu_mo_eq = (
             float((getattr(_pu, "mao_obra", 0.0) or 0.0) + (getattr(_pu, "equipamentos", 0.0) or 0.0)) if _pu else 0.0

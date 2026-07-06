@@ -100,6 +100,43 @@ class TestRreHelpers:
         assert relatorio.status_margem == "VERMELHO"
         assert len(relatorio.passos_repair) == 1  # VERMELHO → passos
 
+    def test_rre_build_sensibilidade_status_verde_adds_oportunidade(self):
+        """Branch 101->104: status_margem fora de (AMARELO,VERMELHO) → item vai
+        para `oportunidades`, não `passos_repair`."""
+        mod = self._load()
+        rp = MagicMock()
+        sugestao = MagicMock()
+        sugestao.tipo = "BDI"
+        sugestao.checkpoint = "CP2"
+        sugestao.delta_margem = 0.02
+        sugestao.custo_aplicacao = None
+        sugestao.confianca = "MEDIA"
+        sugestao.atividades_afetadas = []
+        rp.sugestoes = [sugestao]
+        rp.margem_alvo_min = 0.10
+        rp.repair_viavel = False
+        rp.margem_projetada = None
+        relatorio, artifact, validacao = mod._rre_build_sensibilidade(rp, _make_proj(), _NOW, "VERDE", 0.15)
+        assert relatorio.passos_repair == []
+        assert len(relatorio.oportunidades) == 1
+
+    def test_rre_build_intervencao_sem_repair_path_com_oportunidades(self):
+        """Branch 160->171 e 171->172: psr sem repair_path mas com
+        oportunidades não vazio → loop de oportunidades é exercitado."""
+        mod = self._load()
+        psr = MagicMock()
+        psr.repair_path = None
+        oport = MagicMock()
+        oport.lever.tipo = "EQUIPES"
+        oport.margem_adicional_estimada = 0.03
+        oport.confianca = "ALTA"
+        oport.risco = "BAIXO"
+        psr.oportunidades = [oport]
+        psr.status_entrada = "AMARELO"
+        relatorio, artifact, validacao = mod._rre_build_intervencao(psr, _make_proj(), _NOW, "AMARELO")
+        assert len(relatorio.eixos_intervencao) == 1
+        assert "EQUIPES" in relatorio.eixos_intervencao[0].nome
+
     def test_rre_build_intervencao_no_psr(self):
         mod = self._load()
         relatorio, artifact, validacao = mod._rre_build_intervencao(None, _make_proj(), _NOW, "VERDE")

@@ -725,6 +725,42 @@ def test_process_decision_variables_applies_dv_dict(config_root):
 # ── execution mixin: _process_side_effects ──────────────────────────────────
 
 
+def test_process_decision_variables_no_change_returns_should_save_unchanged(config_root):
+    """Branch 211->220: dv_obj computado é igual ao decision_variables já presente
+    no canônico → não atualiza, retorna should_save inalterado."""
+    from concilium.application.skills.base import SkillResult
+    from concilium.domain.models.project.decision_variables import DecisionVariables
+
+    r = Runtime(config_root)
+    canonical = _make_minimal_canonical_for_execution()
+    dv = DecisionVariables(dv4_indirect_policy="lean")
+    canonical = canonical.model_copy(update={"decision_variables": dv})
+    result = SkillResult(canonical, [])
+    normalized_inputs = {"decision_variables": dv}
+    new_result, should_save = r._process_decision_variables(normalized_inputs, result, False)
+    assert new_result is result
+    assert should_save is False
+
+
+def test_process_side_effects_skill_09_no_decision_log(config_root, projeto_terraplenagem):
+    """Branch 235->-222: decision_log ausente/vazio → não escreve decision_log.json."""
+    from unittest.mock import patch as _patch
+
+    from concilium.application.skills.base import SkillResult
+
+    r = Runtime(config_root)
+    p = projeto_terraplenagem
+    v = p.new_version()
+    canonical = _make_minimal_canonical_for_execution()
+    result = SkillResult(canonical, [])
+    result.decision_log = None
+
+    with _patch("concilium.application.runtime.mixins.execution._persist_typed_artifacts"):
+        r._process_side_effects("09-registro-decisoes", result, p, v)
+    decision_log_path = p.version_path(v) / "decision_log.json"
+    assert not decision_log_path.exists()
+
+
 def test_process_side_effects_skill_04(config_root, projeto_terraplenagem):
     from unittest.mock import patch as _patch
 

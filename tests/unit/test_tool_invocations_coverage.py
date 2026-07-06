@@ -379,6 +379,29 @@ class TestSingleton:
 
         assert len(set(id(r) for r in results)) == 1
 
+    def test_inner_double_check_skips_reinit_on_race(self, monkeypatch):
+        """Deterministically exercises the inner `if _repository is None:`
+        False branch (line 112->114): simulates another thread having
+        already initialized `_repository` while the current one was waiting
+        to acquire `_repository_lock`."""
+        import concilium.application.tool_invocations.repository as repo_mod
+
+        reset_tool_invocation_repository(None)
+        sentinel = InMemoryToolInvocationRepository(max_size=1)
+
+        class _FakeLock:
+            def __enter__(self):
+                repo_mod._repository = sentinel
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        monkeypatch.setattr(repo_mod, "_repository_lock", _FakeLock())
+
+        result = repo_mod.get_tool_invocation_repository()
+        assert result is sentinel
+
     def test_reset_with_custom_repo_persists(self):
         custom = InMemoryToolInvocationRepository(max_size=1)
         reset_tool_invocation_repository(custom)

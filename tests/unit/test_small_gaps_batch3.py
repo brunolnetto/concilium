@@ -404,6 +404,49 @@ class TestEscopoStore:
         assert "orcamento.xlsx" in files
         assert "grafico.png" in files
 
+    def test_list_output_files_skips_non_dir_and_non_file_entries(self, tmp_path):
+        """Arquivos soltos em outputs/ (fora de subpastas) e não-arquivos dentro de subpastas são ignorados."""
+        es = self._make_escopo(tmp_path)
+        ps = es.create_plan(nome="P")
+        ps.save_output_file(b"y", "grafico.png")
+        # Arquivo solto diretamente em outputs/ (não é diretório) -> ramo is_dir() falso.
+        (ps.root / "outputs" / "stray.txt").write_text("x")
+        # Subdiretório aninhado dentro de uma subpasta válida -> ramo is_file() falso.
+        nested_dir = ps.root / "outputs" / "visualizations" / "nested"
+        nested_dir.mkdir(parents=True, exist_ok=True)
+
+        files = ps.list_output_files()
+        assert "grafico.png" in files
+        assert "stray.txt" not in files
+        assert "nested" not in files
+
+    def test_load_canonical_returns_model_when_exists(self, tmp_path):
+        """load_canonical() com arquivo canonical.json presente deve retornar o modelo carregado."""
+        es = self._make_escopo(tmp_path)
+        ps = es.create_plan(nome="P")
+        ps.save_canonical(_make_minimal_canonical())
+        loaded = ps.load_canonical()
+        assert loaded is not None
+
+    def test_read_invocations_skips_blank_lines(self, tmp_path):
+        es = self._make_escopo(tmp_path)
+        ps = es.create_plan(nome="P")
+        log_path = ps.root / ps.INVOCATIONS_LOG
+        log_path.write_text('\n   \n{"skill": "01", "status": "OK"}\n', encoding="utf-8")
+        entries = ps.read_invocations()
+        assert len(entries) == 1
+        assert entries[0]["skill"] == "01"
+
+    def test_approve_plan_skips_already_archived_plans(self, tmp_path):
+        """approve_plan(): planos que não estão RASCUNHO/EM_ANALISE e não são o alvo são ignorados."""
+        es = self._make_escopo(tmp_path)
+        ps1 = es.create_plan(nome="P1")
+        ps2 = es.create_plan(nome="P2")
+        ps2.archive()  # status ARQUIVADO — nem alvo, nem RASCUNHO/EM_ANALISE.
+
+        arquivados = es.approve_plan(ps1.plano_id)
+        assert ps2.plano_id not in arquivados
+
     def test_plano_set_em_analise(self, tmp_path):
         es = self._make_escopo(tmp_path)
         ps = es.create_plan(nome="P")
@@ -941,6 +984,95 @@ class TestSpecLoaderHelpersAExtra:
         # D1 has no required_resources and no resources — still included (item_id present)
         # but "not-a-dict" skipped
         assert all(r["item_id"] != "not-a-dict" for r in result)
+
+    def test_norm_ref_metas_confronto_key_already_present_is_noop(self):
+        """When resultado already has benchmark_confronto_referencia, the block
+        is not overwritten (line 93->100 false branch)."""
+        from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_metas_confronto
+
+        out = {
+            "metas_confronto": {"custo_direto": 100},
+            "resultado": {"benchmark_confronto_referencia": {"custo_direto": 999}},
+        }
+        _norm_ref_metas_confronto(out)
+        assert out["resultado"]["benchmark_confronto_referencia"]["custo_direto"] == 999
+
+    def test_norm_ref_build_rcpsp_activities_eap_multiple_cron_compacto_entries(self):
+        """Two entries in cronograma_compacto exercise the indexing loop back-edge (line 124-125)."""
+        from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_build_rcpsp_activities
+
+        out = {
+            "eap": [{"item_id": "A1", "descricao": "Serv A"}],
+            "cronograma_compacto": [
+                {"item_id": "A1", "equipes": {"n_max": 2, "n_inicial": 1}},
+                "not-a-dict",  # exercises the False branch of the loop guard
+                {"item_id": None},  # dict without a truthy item_id
+                {"item_id": "A2", "equipes": {"n_max": 3}},
+            ],
+        }
+        result = _norm_ref_build_rcpsp_activities(out, ["W1"])
+        assert result[0]["ramp_params"]["n_max"] == 2
+
+    def test_norm_ref_build_rcpsp_activities_eap_multiple_legacy_cron_entries(self):
+        """Two entries in cronograma.atividades (legacy) exercise the fallback
+        indexing loop back-edge (line 130-131), used only when cronograma_compacto is absent."""
+        from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_build_rcpsp_activities
+
+        out = {
+            "eap": [{"item_id": "A1", "descricao": "Serv A"}],
+            "cronograma": {
+                "atividades": [
+                    {"item_id": "A1", "equipes": {"n_max": 4}},
+                    "not-a-dict",  # exercises the False branch of the loop guard
+                    {"item_id": ""},  # dict without a truthy item_id
+                    {"item_id": "A2", "equipes": {"n_max": 5}},
+                ]
+            },
+        }
+        result = _norm_ref_build_rcpsp_activities(out, ["W1"])
+        assert result[0]["ramp_params"]["n_max"] == 4
+
+    def test_norm_ref_build_rcpsp_activities_eap_skips_non_dict_item(self):
+        """A non-dict entry in `eap` is skipped via `continue` (line 136-137)."""
+        from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_build_rcpsp_activities
+
+        out = {"eap": ["not-a-dict", {"item_id": "A1", "descricao": "Serv A"}]}
+        result = _norm_ref_build_rcpsp_activities(out, ["W1"])
+        assert len(result) == 1
+        assert result[0]["item_id"] == "A1"
+
+    def test_norm_ref_build_rcpsp_activities_explicit_atividade_without_item_id(self):
+        """An explicit atividade dict lacking item_id is skipped via `continue` (line 172-173)."""
+        from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_build_rcpsp_activities
+
+        out = {"atividades": [{"descricao": "sem id"}, {"item_id": "B1", "descricao": "Serv B"}]}
+        result = _norm_ref_build_rcpsp_activities(out, ["W1"])
+        assert len(result) == 1
+        assert result[0]["item_id"] == "B1"
+
+    def test_norm_ref_build_default_rcpsp_spec_resource_pool_already_present(self):
+        """When resource_pool is already populated, restricao_equipes is not
+        consulted (line 195-199 skip branch)."""
+        from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_build_default_rcpsp_spec
+
+        out = {
+            "data_inicio": "2026-01-05",
+            "data_termino": "2026-01-25",
+            "resource_pool": {"mao_obra": 9},
+            "restricao_equipes": {"mao_obra": 1},
+        }
+        result = _norm_ref_build_default_rcpsp_spec(out, {})
+        assert result["resource_pool"] == {"mao_obra": 9}
+
+    def test_ebr_from_por_item_extracts_valid_rate(self):
+        """Covers the `if rate is not None:` true branch (line 259-260) in
+        _ebr_from_por_item, mapping a bdi rate through _EBR_KEY_MAP."""
+        from concilium.application.benchmarks.spec._spec_loader_helpers_a import _ebr_from_por_item
+
+        bdi_ref = {"por_item": [{"bdi": {"mao_obra": 0.15, "diesel": 0.05}}]}
+        result = _ebr_from_por_item(bdi_ref)
+        assert result["mao_obra"] == 0.15
+        assert result["diesel"] == 0.05
 
     def test_norm_ref_build_default_restricao_equipes_path(self):
         from concilium.application.benchmarks.spec._spec_loader_helpers_a import _norm_ref_build_default_rcpsp_spec

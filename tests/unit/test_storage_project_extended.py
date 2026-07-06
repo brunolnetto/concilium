@@ -552,6 +552,17 @@ class TestResolveCpu:
         result = store.resolve_cpu("CPU-MISSING")
         assert result is None
 
+    def test_resolve_cpu_not_found_when_snapshots_dir_missing(self, tmp_path):
+        """When the snapshots/ dir doesn't exist at all (removed after init),
+        resolve_cpu short-circuits straight to `return None` (line 421->430)."""
+        store = _init_store(tmp_path)
+        snaps_dir = store.root / "snapshots"
+        if snaps_dir.exists():
+            snaps_dir.rmdir()
+        assert not snaps_dir.exists()
+        result = store.resolve_cpu("CPU-MISSING")
+        assert result is None
+
     def test_resolve_cpu_snapshot_newest_first(self, tmp_path):
         """Snapshots are checked in reverse order (newest first)."""
         store = _init_store(tmp_path)

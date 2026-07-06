@@ -259,6 +259,75 @@ def test_query_engine_build_produtividades_edge_paths(tmp_path):
     assert any("CREATE TABLE produtividades" in sql for sql in conn.executed)
 
 
+def test_query_engine_build_cpus_neither_dir_nor_file_exists(tmp_path):
+    """Neither cpus/ nor cpus.json present: rows stays empty, both branches of
+    the if/elif are skipped entirely (line 257->267 arc)."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+    engine._build_cpus(conn)
+    assert not any("INSERT INTO cpus" in sql for sql, _ in conn.executed_many)
+    assert any("CREATE TABLE cpus" in sql for sql in conn.executed)
+
+
+def test_query_engine_build_cpus_file_fallback_multiple_entries(tmp_path):
+    """cpus.json fallback list with 2+ entries exercises the for-loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+    (tmp_path / "cpus.json").write_text(
+        json.dumps(
+            {
+                "cpus": [
+                    {"codigo": "CPU-1", "descricao": "d1", "categoria": "c1", "unidade": "u1"},
+                    {"codigo": "CPU-2", "descricao": "d2", "categoria": "c2", "unidade": "u2"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    engine._build_cpus(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO cpus" in pair[0]]
+    assert len(rows) == 2
+
+
+def test_query_engine_build_insumos_multiple_files_in_same_tipo_dir(tmp_path):
+    """Two JSON files in the same insumos/<tipo>/ dir exercise the glob loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+    tipo_dir = tmp_path / "insumos" / "equipamento"
+    tipo_dir.mkdir(parents=True)
+    (tipo_dir / "EQ-1.json").write_text(json.dumps({"id": "EQ-1", "descricao": "A"}), encoding="utf-8")
+    (tipo_dir / "EQ-2.json").write_text(json.dumps({"id": "EQ-2", "descricao": "B"}), encoding="utf-8")
+    engine._build_insumos(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO insumos" in pair[0]]
+    assert len(rows) == 2
+
+
+def test_query_engine_build_produtividades_multiple_files_in_dir(tmp_path):
+    """Two JSON files in produtividades/ exercise the glob loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+    prod_dir = tmp_path / "produtividades"
+    prod_dir.mkdir(parents=True)
+    (prod_dir / "P1.json").write_text(json.dumps({"id": "P1", "cpu_id": "CPU-1"}), encoding="utf-8")
+    (prod_dir / "P2.json").write_text(json.dumps({"id": "P2", "cpu_id": "CPU-2"}), encoding="utf-8")
+    engine._build_produtividades(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO produtividades" in pair[0]]
+    assert len(rows) == 2
+
+
+def test_query_engine_build_funcoes_file_multiple_entries(tmp_path):
+    """funcoes.json list with 2+ entries exercises the for-loop back-edge."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+    (tmp_path / "funcoes.json").write_text(
+        json.dumps({"funcoes": [{"id": "FN-1", "descricao": "A"}, {"id": "FN-2", "descricao": "B"}]}),
+        encoding="utf-8",
+    )
+    engine._build_funcoes(conn)
+    ((_, rows),) = [pair for pair in conn.executed_many if "INSERT INTO funcoes" in pair[0]]
+    assert len(rows) == 2
+
+
 def test_catalog_session_load_material_id_fallback_branch():
     catalogo = {
         "cpus": [
@@ -347,6 +416,23 @@ def test_graficos_edge_branches_and_campanha_paths(monkeypatch):
         SimpleNamespace(activity_id="missing", distribuicao_semanal={}), {}, "equipamentos", totals
     )
     assert totals["2026-W10"] == 0.0
+
+    # _rg_hist_accumulate_act: semana com n_eq<=0 é pulada (branch 66->64)
+    dist_zero = SimpleNamespace(num_equipes=0)
+    dist_pos = SimpleNamespace(num_equipes=2)
+    totals2 = {"2026-W01": 0.0, "2026-W02": 0.0}
+    eq = SimpleNamespace(equipamentos=[SimpleNamespace(num_unidades=1)])
+    gmod._rg_hist_accumulate_act(
+        SimpleNamespace(
+            activity_id="A1",
+            distribuicao_semanal={"2026-W01": dist_zero, "2026-W02": dist_pos},
+        ),
+        {"A1": eq},
+        "equipamentos",
+        totals2,
+    )
+    assert totals2["2026-W01"] == 0.0
+    assert totals2["2026-W02"] > 0.0
 
     # _rg_histogram_totals no weeks branch
     canonical_empty = SimpleNamespace(cronograma=SimpleNamespace(scheduled_activities=[]), equipes_diretas=[])

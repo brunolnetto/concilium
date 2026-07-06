@@ -158,6 +158,12 @@ class TestToFloat:
 
         assert _to_float(None) == 0.0
 
+    def test_from_dict_no_matching_key_exhausts_loop(self):
+        """Nenhuma das keys casa com um valor numérico -> percorre todo o loop e retorna 0.0."""
+        from concilium.application.benchmarks.analysis.etapa_diffs import _to_float
+
+        assert _to_float({"other": "text", "another": None}, ("total", "valor")) == 0.0
+
 
 class TestSummarize:
     def test_basic(self):
@@ -335,6 +341,16 @@ class TestNormalizeRefIndiretos:
         for cat in ("ADM", "TOP", "LAB", "QSMS", "MOB"):
             assert result[cat]["custo_com_bdi"] == 0.0
 
+    def test_raw_indiretos_unknown_categoria_is_skipped(self):
+        """categoria fora do conjunto conhecido não deve ser adicionada a out."""
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_ref_indiretos
+
+        data = {"raw_indiretos": [{"categoria": "DESCONHECIDA", "custo_total": 999.0}]}
+        result = _normalize_ref_indiretos(data)
+        assert "DESCONHECIDA" not in result
+        for cat in ("ADM", "TOP", "LAB", "QSMS", "MOB"):
+            assert result[cat]["custo_com_bdi"] == 0.0
+
 
 class TestCompareIndiretos:
     def test_no_discrepancy_when_equal(self):
@@ -436,6 +452,42 @@ class TestNormalizeReferencePayload:
         # With 0 deadline_weeks, meses_estimados=0, monthly cost contributes nothing
         assert result["indiretos"]["ADM"]["custo_com_bdi"] == 0.0
 
+    def test_missing_cat_keys_skips_indiretos_derivation(self):
+        """Payload sem os 5 campos de categoria não deve derivar indiretos (mantém {})."""
+        from concilium.application.benchmarks.analysis.etapa_diffs import _normalize_reference_payload
+
+        data = {
+            "equipes_detalhadas": [],
+            "planejamento_detalhado": [],
+            "resultado": {},
+            "ADM": {"custo_fixo_mensal_total": 100.0},
+            # TOP, LAB, QSMS, MOB ausentes.
+        }
+        result = _normalize_reference_payload(data)
+        assert result["indiretos"] == {}
+
+
+class TestGenerateDiffsForBenchmark:
+    def test_returns_none_when_reference_payload_missing(self, tmp_path):
+        from concilium.application.benchmarks.analysis.etapa_diffs import generate_diffs_for_benchmark
+
+        result = generate_diffs_for_benchmark("MISSING_SLUG", tmp_path)
+        assert result is None
+
+    def test_returns_none_when_benchmark_report_missing(self, tmp_path):
+        import json
+
+        from concilium.application.benchmarks.analysis.etapa_diffs import generate_diffs_for_benchmark
+
+        slug_u = "AGIS"
+        ref_dir = tmp_path / "benchmarks" / "data" / slug_u
+        ref_dir.mkdir(parents=True)
+        (ref_dir / "referencia.json").write_text(json.dumps({"resultado": {}}))
+        # Nenhum benchmark_report.json criado.
+
+        result = generate_diffs_for_benchmark(slug_u, tmp_path)
+        assert result is None
+
 
 class TestPlanejamentoSeveridade:
     def test_alta_when_pct_over_20(self):
@@ -516,6 +568,76 @@ class TestGdfbLoadCanonical:
         bench = {"projeto": "MyProject"}
         result = _gdfb_load_canonical(bench, tmp_path)
         assert result == {}
+
+    def test_skips_non_directory_entries(self, tmp_path):
+        import json
+
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+
+        projetos_dir = tmp_path / "projetos"
+        projetos_dir.mkdir(parents=True)
+        (projetos_dir / "stray_file.txt").write_text("not a project")
+        proj_dir = projetos_dir / "proj1"
+        v1_dir = proj_dir / "v1"
+        v1_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(json.dumps({"nome": "MyProject", "current_version": "v1"}))
+        (v1_dir / "canonical.json").write_text(json.dumps({"projeto_id": "p1"}))
+
+        bench = {"projeto": "MyProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result.get("projeto_id") == "p1"
+
+    def test_skips_directory_without_meta_json(self, tmp_path):
+        import json
+
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+
+        projetos_dir = tmp_path / "projetos"
+        no_meta_dir = projetos_dir / "no_meta"
+        no_meta_dir.mkdir(parents=True)
+
+        proj_dir = projetos_dir / "proj1"
+        v1_dir = proj_dir / "v1"
+        v1_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(json.dumps({"nome": "MyProject", "current_version": "v1"}))
+        (v1_dir / "canonical.json").write_text(json.dumps({"projeto_id": "p1"}))
+
+        bench = {"projeto": "MyProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result.get("projeto_id") == "p1"
+
+    def test_no_canonical_file_in_any_candidate_continues_outer_loop(self, tmp_path):
+        """Nenhum canonical.json existe para o projeto encontrado -> loop interno se esgota."""
+        import json
+
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+
+        projetos_dir = tmp_path / "projetos"
+        proj_dir = projetos_dir / "proj1"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(json.dumps({"nome": "MyProject", "current_version": "v2"}))
+        # Nem v2/canonical.json nem v1/canonical.json existem.
+
+        bench = {"projeto": "MyProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result == {}
+
+    def test_falls_back_to_v1_when_current_version_canonical_missing(self, tmp_path):
+        """current_version/canonical.json ausente, mas v1/canonical.json presente."""
+        import json
+
+        from concilium.application.benchmarks.analysis.etapa_diffs import _gdfb_load_canonical
+
+        projetos_dir = tmp_path / "projetos"
+        proj_dir = projetos_dir / "proj1"
+        v1_dir = proj_dir / "v1"
+        v1_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(json.dumps({"nome": "MyProject", "current_version": "v2"}))
+        (v1_dir / "canonical.json").write_text(json.dumps({"projeto_id": "fallback"}))
+
+        bench = {"projeto": "MyProject"}
+        result = _gdfb_load_canonical(bench, tmp_path)
+        assert result.get("projeto_id") == "fallback"
 
     def test_returns_canonical_when_found(self, tmp_path):
         import json

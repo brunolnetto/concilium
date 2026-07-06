@@ -215,6 +215,35 @@ class TestResolveCpuInsumo:
         assert item is None
         assert source == "master"
 
+    def test_resolve_cpu_jurisdiction_present_but_id_missing_falls_to_master(self, tmp_path):
+        # jurisdicao_id is given and the overlay loads fine, but the cpu isn't
+        # in it → must fall through to master (covers the false branch of
+        # `if cpu_id in jur_cpus`).
+        from concilium.application.services.catalog.catalog_resolver import CatalogResolver
+
+        jur_dir = tmp_path / "jurisdicoes" / "jur-1"
+        jur_dir.mkdir(parents=True)
+        (jur_dir / "overlay.json").write_text('{"cpus": {"CPU-OTHER": {"tag": "jur"}}}', encoding="utf-8")
+        resolver = CatalogResolver(config_root=tmp_path)
+        proj = _make_project(tmp_path)
+        with patch.object(resolver, "_resolve_from_master", return_value={"codigo": "CPU-M"}):
+            item, source = resolver.resolve_cpu("CPU-M", "cat-test", proj, jurisdicao_id="jur-1")
+        assert item == {"codigo": "CPU-M"}
+        assert source == "master"
+
+    def test_resolve_insumo_jurisdiction_present_but_id_missing_falls_to_master(self, tmp_path):
+        from concilium.application.services.catalog.catalog_resolver import CatalogResolver
+
+        jur_dir = tmp_path / "jurisdicoes" / "jur-2"
+        jur_dir.mkdir(parents=True)
+        (jur_dir / "overlay.json").write_text('{"insumos": {"INS-OTHER": {"tag": "j"}}}', encoding="utf-8")
+        resolver = CatalogResolver(config_root=tmp_path)
+        proj = _make_project(tmp_path)
+        with patch.object(resolver, "_resolve_from_master", return_value={"codigo": "INS-M"}):
+            item, source = resolver.resolve_insumo("INS-M", "cat-test", proj, jurisdicao_id="jur-2")
+        assert item == {"codigo": "INS-M"}
+        assert source == "master"
+
 
 class TestApplyOverlaysAndBuild:
     def test_apply_overlays_no_overlays(self, tmp_path):
@@ -362,6 +391,32 @@ class TestRfmHelpers:
         (tmp_path / "cpus.json").write_text("NOT JSON", encoding="utf-8")
         result = _rfm_try_aggregate(tmp_path, "cpus", "CPU-A")
         assert result is None
+
+    def test_rfm_try_aggregate_non_list_items_returns_none(self, tmp_path):
+        # data is a dict without a `subdir` key → data.get(subdir, data) falls
+        # back to `data` itself, which is a dict, not a list → isinstance
+        # check is False and the function must return None without looping.
+        from concilium.application.services.catalog.catalog_resolver import _rfm_try_aggregate
+
+        data = {"unrelated_key": "value"}
+        (tmp_path / "cpus.json").write_text(json.dumps(data), encoding="utf-8")
+        result = _rfm_try_aggregate(tmp_path, "cpus", "CPU-A")
+        assert result is None
+
+    def test_resolve_from_master_falls_back_to_aggregate_when_individual_missing(self, tmp_path):
+        # Individual file doesn't exist for this cpu, but the aggregate file
+        # has it → _resolve_from_master must fall through to the aggregate lookup.
+        from concilium.application.services.catalog.catalog_resolver import CatalogResolver
+
+        cat_base = tmp_path / "config" / "catalogos" / "cat-test"
+        cpus_dir = cat_base / "cpus"
+        cpus_dir.mkdir(parents=True)
+        agg_data = {"cpus": [{"codigo": "CPU-AGG", "descricao": "From aggregate"}]}
+        (cpus_dir.parent / "cpus.json").write_text(json.dumps(agg_data), encoding="utf-8")
+        resolver = CatalogResolver(config_root=tmp_path)
+        proj = _make_project(tmp_path)
+        result = resolver._resolve_from_master("CPU-AGG", "cat-test", "cpu", proj)
+        assert result == {"codigo": "CPU-AGG", "descricao": "From aggregate"}
 
 
 class TestDeepMerge:

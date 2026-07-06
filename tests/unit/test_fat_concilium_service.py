@@ -574,6 +574,39 @@ class TestEnrichCpuFromProducao:
         result = svc._enrich_cpu_from_producao(project, cpu)
         assert "producao_horaria" not in result
 
+    def test_producao_horaria_already_set_skips_overwrite(self):
+        """Covers the false branch of
+        `if cpu.get("producao_horaria") is None and ...`: when the CPU
+        already carries a producao_horaria, it must not be overwritten, but
+        the equipe-filling branch below must still run."""
+        svc, deps = _make_svc()
+        project = _make_project_mock(meta={"catalogo_base": "cat1"})
+        deps.project_service.list_contexto_versions.return_value = []
+        cpu = {"codigo": "CPU-A", "producao_id_ref": "PROD-1", "producao_horaria": 42.0}
+        prod = {"id": "PROD-1", "valor_horario": 88.0, "equipe": {"op": 2}}
+        svc._get_catalog_producao = MagicMock(return_value=prod)
+        result = svc._enrich_cpu_from_producao(project, cpu)
+        assert result["producao_horaria"] == 42.0  # unchanged
+        assert result["equipe"] == {"op": 2}
+
+    def test_equipe_already_set_skips_fill_but_still_checks_break(self):
+        """Covers the false branch of `if not cpu.get("equipe")`: when the
+        CPU already has an equipe dict, the fill step is skipped but the
+        loop must still evaluate the break condition afterwards."""
+        svc, deps = _make_svc()
+        project = _make_project_mock(meta={"catalogo_base": "cat1"})
+        deps.project_service.list_contexto_versions.return_value = []
+        cpu = {
+            "codigo": "CPU-A",
+            "producao_id_ref": "PROD-1",
+            "equipe": {"existing": True},
+        }
+        prod = {"id": "PROD-1", "valor_horario": 88.0, "equipe": {"op": 2}}
+        svc._get_catalog_producao = MagicMock(return_value=prod)
+        result = svc._enrich_cpu_from_producao(project, cpu)
+        assert result["equipe"] == {"existing": True}  # unchanged
+        assert result["producao_horaria"] == 88.0
+
 
 # ─── _get_catalog_producao ────────────────────────────────────────────────────
 
@@ -608,6 +641,23 @@ class TestGetCatalogProducao:
             MockRT.return_value.load_catalogo.return_value = fake_cat
             result = svc._get_catalog_producao("cat1", "PROD-MISSING")
         assert result is None
+
+    def test_skips_non_list_key_then_scans_multiple_rows(self, tmp_path):
+        """Covers: (1) the `if not isinstance(rows, list): continue` branch
+        when "produtividades" is not a list, and (2) the for-loop iterating
+        past a non-matching row before finding the match in "producoes"."""
+        svc, _ = _make_svc(tmp_path)
+        fake_cat = {
+            "produtividades": "not-a-list",
+            "producoes": [
+                {"id": "OTHER", "valor_horario": 1},
+                {"id": "PROD-3", "valor_horario": 30},
+            ],
+        }
+        with patch("concilium.application.services.concilium_service.Runtime") as MockRT:
+            MockRT.return_value.load_catalogo.return_value = fake_cat
+            result = svc._get_catalog_producao("cat1", "PROD-3")
+        assert result["id"] == "PROD-3"
 
 
 # ─── _resolve_project_catalog_id ─────────────────────────────────────────────
@@ -1125,6 +1175,28 @@ class TestLoadCanonicalForVersion:
         deps.project_service.get_last_canonical.side_effect = Exception("ps error")
         result_canonical, result_version = svc._load_canonical_for_version("p1", None)
         assert result_canonical is None
+
+    def test_repo_fails_with_explicit_version_skips_project_service_fallback(self):
+        """Covers the false branch of `if version is None`: when a specific
+        version is requested and the repository lookup fails, the legacy
+        project_service fallback must not even be attempted."""
+        svc, deps = _make_svc()
+        deps.repository.get_project.side_effect = Exception("repo error")
+        result_canonical, result_version = svc._load_canonical_for_version("p1", "v2")
+        assert result_canonical is None
+        assert result_version == "v2"
+        deps.project_service.get_last_canonical.assert_not_called()
+
+    def test_repo_fails_and_no_project_service_returns_none(self):
+        """Covers the false branch of
+        `if project_service is not None and hasattr(..., "get_last_canonical")`:
+        when there's no usable project_service, the fallback is skipped."""
+        svc, deps = _make_svc()
+        deps.repository.get_project.side_effect = Exception("repo error")
+        deps.project_service = None
+        result_canonical, result_version = svc._load_canonical_for_version("p1", None)
+        assert result_canonical is None
+        assert result_version is None
 
 
 # ─── get_cubo_analitico ───────────────────────────────────────────────────────

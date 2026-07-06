@@ -466,8 +466,11 @@ def register(server: FastMCP) -> None:
         )
 
     # ADR-101: declarar _meta.ui para MCP Apps (Fase 1)
+    # ADR-116 F5: tool foi renomeada de criar_projeto_formulario para criar_projeto;
+    # a busca abaixo precisa usar o nome atual, senão o lookup nunca encontra a tool
+    # e o _UI_META jamais é anexado.
     try:
-        tool = server._tool_manager._tools.get("criar_projeto_formulario")
+        tool = server._tool_manager._tools.get("criar_projeto")
         if tool is not None:
             tool.meta = _UI_META
     except Exception:

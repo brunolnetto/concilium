@@ -651,3 +651,38 @@ class TestExtractReferenceData:
 
         result = extract_reference_data(str(xlsx_path))
         assert "resultado" in result
+
+    def test_curva_abc_sheet_matched_directly_skips_fallback(self, tmp_path):
+        # A sheet literally named "CURVA ABC" matches the primary lookup
+        # (line 97) and must short-circuit the "OR..MENTO/PLAN" fallback scan.
+        wb = Workbook()
+        ws_res = wb.active
+        ws_res.title = "RESULTADO"
+        ws_abc = wb.create_sheet("CURVA ABC")
+        ws_abc["A1"] = "ITEM"
+        ws_abc["B1"] = "DESCRICAO"
+
+        buf = BytesIO()
+        wb.save(buf)
+        xlsx_path = tmp_path / "ref.xlsx"
+        xlsx_path.write_bytes(buf.getvalue())
+
+        result = extract_reference_data(xlsx_path)
+        assert "eap" in result
+
+    def test_no_orcamento_or_abc_sheet_skips_eap_extraction(self, tmp_path):
+        # No sheet matches either the primary ABC pattern or the fallback
+        # OR*MENTO/PLAN pattern → orc_sheet stays None and _extract_eap_col_map
+        # is never invoked.
+        wb = Workbook()
+        ws_res = wb.active
+        ws_res.title = "RESULTADO"
+        wb.create_sheet("OUTRA PLANILHA")
+
+        buf = BytesIO()
+        wb.save(buf)
+        xlsx_path = tmp_path / "ref.xlsx"
+        xlsx_path.write_bytes(buf.getvalue())
+
+        result = extract_reference_data(xlsx_path)
+        assert result["eap"] == []

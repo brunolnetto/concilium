@@ -424,6 +424,20 @@ class TestPermissionGuard:
         result = roles_from_token({})
         assert isinstance(result, list)
 
+    def test_roles_from_token_unknown_scope_skipped(self):
+        """Scope with no LEGACY_SCOPE_TO_ROLE mapping → role is None → skipped."""
+        from concilium.infrastructure.auth.permission_guard import roles_from_token
+
+        result = roles_from_token({"scopes": ["unknown:scope"]})
+        assert result == []
+
+    def test_roles_from_token_duplicate_scopes_deduplicated(self):
+        """Two scopes mapping to the same role → role appended only once."""
+        from concilium.infrastructure.auth.permission_guard import roles_from_token
+
+        result = roles_from_token({"scopes": ["mcp:read", "mcp:read"]})
+        assert result == ["auditor"]
+
     def test_require_permission_with_no_permission(self):
         from concilium.infrastructure.auth.permission_guard import require_permission
 

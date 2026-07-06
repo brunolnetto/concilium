@@ -409,3 +409,51 @@ class TestFatorProducao:
         fator = prod.fator_producao(nova)
         # 2/3 = 0.666667
         assert abs(fator - round(2 / 3, 6)) < 1e-9
+
+    def test_fator_by_equipamento_multiple_entries_same_principal_id(self):
+        """Two EquipamentoEquipe entries in the calib composition share the
+        principal equip_id: exercises the `for e in equips_calib` loop
+        back-edge (both entries are summed into qtd_calib)."""
+        calib = ComposicaoPadraoEquipe(
+            funcoes=[FuncaoEquipe(funcao_id="OPER", num_pessoas=1)],
+            equipamentos=[
+                EquipamentoEquipe(equip_id="ESCAV-HID-38T", num_unidades=1),
+                EquipamentoEquipe(equip_id="ESCAV-HID-38T", num_unidades=2),
+            ],
+        )
+        prod = _make_producao(composicao=calib)
+        nova = ComposicaoPadraoEquipe(
+            funcoes=[FuncaoEquipe(funcao_id="OPER", num_pessoas=1)],
+            equipamentos=[
+                EquipamentoEquipe(equip_id="ESCAV-HID-38T", num_unidades=3),
+                EquipamentoEquipe(equip_id="ESCAV-HID-38T", num_unidades=3),
+            ],
+        )
+        # qtd_calib = 1+2 = 3, qtd_nova = 3+3 = 6 -> fator = 2.0
+        assert prod.fator_producao(nova) == 2.0
+
+    def test_fator_by_equipamento_calib_has_secondary_equipment_ignored(self):
+        """A calib entry with an equip_id different from the principal one is
+        skipped (covers the `if e.equip_id == equip_principal_id` false arc)."""
+        calib = ComposicaoPadraoEquipe(
+            funcoes=[FuncaoEquipe(funcao_id="OPER", num_pessoas=1)],
+            equipamentos=[
+                EquipamentoEquipe(equip_id="ESCAV-HID-38T", num_unidades=2),
+                EquipamentoEquipe(equip_id="CAMINHAO-BASCULANTE", num_unidades=5),
+            ],
+        )
+        prod = _make_producao(composicao=calib)
+        nova = _make_composicao(equip_id="ESCAV-HID-38T", num_equips=4)
+        # Only the principal (ESCAV-HID-38T) equip_id counts: qtd_calib=2, qtd_nova=4 -> fator=2.0
+        assert prod.fator_producao(nova) == 2.0
+
+    def test_fator_by_mao_obra_zero_nova_returns_1(self):
+        """total_nova == 0 (funcoes vazias na nova composição) → fator 1
+        safe-fallback (covers the `total_nova == 0` branch of the `or`)."""
+        calib = ComposicaoPadraoEquipe(
+            funcoes=[FuncaoEquipe(funcao_id="OPER", num_pessoas=3)],
+            equipamentos=[],
+        )
+        prod = _make_producao(limite="mao_obra", composicao=calib)
+        nova = ComposicaoPadraoEquipe(funcoes=[], equipamentos=[])
+        assert prod.fator_producao(nova) == 1.0

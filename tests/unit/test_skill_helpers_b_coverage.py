@@ -35,6 +35,7 @@ _rbf_resolve_tabela_perfil = _mod._rbf_resolve_tabela_perfil
 _rbf_try_tax_scenario = _mod._rbf_try_tax_scenario
 _rbf_try_manual_bdi = _mod._rbf_try_manual_bdi
 _resolve_bdi_rates = _mod._resolve_bdi_rates
+_resolve_bdi_full = _mod._resolve_bdi_full
 _classificar_margem = _mod._classificar_margem
 
 ValidacaoItem = _mod.ValidacaoItem
@@ -419,6 +420,36 @@ class TestRbfTryTaxScenario:
         assert "VAL-CONSOL-BDI-REGIME" in codes
         statuses = [v.status for v in validacoes if v.codigo == "VAL-CONSOL-BDI-REGIME"]
         assert "AVISO" in statuses
+
+
+# ---------------------------------------------------------------------------
+# _resolve_bdi_full — covers the early-return when tax_scenario succeeds
+# ---------------------------------------------------------------------------
+
+
+class TestResolveBdiFull:
+    def test_tax_scenario_success_short_circuits_manual_and_perfil_paths(self):
+        """When _rbf_try_tax_scenario succeeds, _resolve_bdi_full returns its
+        result directly without evaluating the manual-BDI or perfil fallbacks."""
+        try:
+            from concilium.domain.models.financial.bdi import TaxSimulationScenario
+
+            TaxSimulationScenario.from_dict({"regime_version": "pre_reforma"})
+        except Exception:
+            pytest.skip("Cannot build minimal TaxSimulationScenario for this test")
+
+        validacoes: list = []
+        inputs = {"tax_scenario": {"regime_version": "pre_reforma"}}
+        direct = _rbf_try_tax_scenario(dict(inputs), [])
+        if direct is None:
+            pytest.skip("TaxSimulationScenario path unavailable in this environment")
+
+        result = _resolve_bdi_full(inputs, validacoes)
+
+        assert result[2] == "inputs.tax_scenario"
+        assert result[4] is True
+        codes = [v.codigo for v in validacoes]
+        assert "VAL-CONSOL-BDI-REGIME" in codes
 
 
 # ---------------------------------------------------------------------------

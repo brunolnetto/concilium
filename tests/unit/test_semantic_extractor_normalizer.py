@@ -139,6 +139,19 @@ class TestExtractorDimensions:
         intent = ext.extract("Escavação de 1a categoria 300 m3", "d3")
         assert intent.dimensions == []
 
+    def test_embedded_dim_without_trailing_number_unit_is_skipped(self):
+        """A dim keyword matched by _RE_EMBEDDED_DIM (e.g. 'dmt 3' triggers
+        the regex, since it requires a digit right after) but where the
+        digit isn't immediately followed by a recognizable unit — followed
+        later by a valid embedded dim — exercises the `if num_m:` False
+        branch (no Dimension appended for the first match) while still
+        continuing the loop to find the second, valid match."""
+        ext = _extractor()
+        intent = ext.extract("DMT 3xyz espessura 15cm 500 m2", "d4")
+        dim_names = [d.name for d in intent.dimensions]
+        assert "thickness" in dim_names
+        assert "dmt" not in dim_names
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SemanticExtractor — soil class qualifiers
@@ -396,6 +409,19 @@ class TestVocabularyLoader:
         dims = loader.activity_required_dims("nonexistent_activity")
         assert dims == []
 
+    def test_activity_required_dims_in_non_first_domain(self):
+        """activity_type living outside the first domain forces the for-loop
+        to actually iterate past a non-matching domain (earthwork) before
+        finding it in pavement/drainage."""
+        loader = VocabularyLoader(VOCAB_DIR)
+        dims = loader.activity_required_dims("pipe_collector")
+        assert isinstance(dims, list)
+
+    def test_activity_optional_dims_in_non_first_domain(self):
+        loader = VocabularyLoader(VOCAB_DIR)
+        dims = loader.activity_optional_dims("pipe_collector")
+        assert isinstance(dims, list)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  AttributeNormalizer
@@ -528,6 +554,15 @@ class TestCatalogNormalizer:
         norm = CatalogNormalizer(vocab_loader=vocab)
         canon = norm.normalize_cpu(self._cpu_dict())
         assert canon.domain == "earthwork"
+
+    def test_normalize_cpu_with_vocab_loader_unit_not_in_aliases(self):
+        """When vocab_loader is set but the unit has no alias mapping, the
+        `if mapped:` branch (normalizer.py ~196) is skipped and the
+        lower-cased unit is kept as-is."""
+        vocab = VocabularyLoader(VOCAB_DIR)
+        norm = CatalogNormalizer(vocab_loader=vocab)
+        canon = norm.normalize_cpu(self._cpu_dict(unidade="unidade-inexistente-xyz"))
+        assert canon.unit == "unidade-inexistente-xyz"
 
     def test_normalize_catalog_batch(self):
         norm = CatalogNormalizer()

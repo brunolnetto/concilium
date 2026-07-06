@@ -304,6 +304,41 @@ class TestBuild:
             result = build(canonical, cubo)
         assert result is None
 
+    def test_fallback_zero_eficiencia_week_is_skipped(self):
+        # A fallback week with eficiencia=0.0 yields exactly 0 liters, which
+        # must be skipped by the `if liters <= 0: continue` guard rather than
+        # contributing an empty bucket. A second week with real consumption
+        # keeps monthly_wom non-empty so we exercise both branches.
+        cubo = SimpleNamespace(celulas=[_make_celula("2026-W10", 0.0)])
+        canonical = SimpleNamespace(
+            projeto=SimpleNamespace(regime_trabalho=SimpleNamespace(horas_dia=10, dias_semana=6)),
+            cronograma=SimpleNamespace(
+                scheduled_activities=[
+                    SimpleNamespace(
+                        activity_id="act-1",
+                        distribuicao_semanal={
+                            "2026-W10": SimpleNamespace(num_equipes=1, eficiencia=0.0),
+                            "2026-W11": SimpleNamespace(num_equipes=1, eficiencia=1.0),
+                        },
+                    )
+                ]
+            ),
+            equipes_diretas=[
+                SimpleNamespace(
+                    item_id="act-1",
+                    equipamentos=[
+                        SimpleNamespace(consumo_litros_hora=10.0, num_unidades=1),
+                    ],
+                )
+            ],
+        )
+        with patch(
+            "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",
+            side_effect=_fake_init_mpl,
+        ):
+            result = build(canonical, cubo)
+        assert isinstance(result, bytes)
+
     def test_returns_none_on_unexpected_exception(self):
         # Simulate a downstream error after init_mpl succeeds
         cubo = SimpleNamespace(celulas=[_make_celula("bad-week", 100.0)])
@@ -314,4 +349,40 @@ class TestBuild:
         ):
             # "bad-week" is not a valid ISO week string → ValueError inside the try block
             result = build(canonical, cubo)
+        assert result is None
+
+    def test_fallback_week_with_zero_num_unidades_yields_zero_liters_and_is_skipped(self):
+        # num_unidades=0 makes the per-equipment litros computation exactly 0.0,
+        # which still lands an entry in the fallback dict (defaultdict += 0.0),
+        # exercising the `if liters <= 0: continue` guard in build(). A second
+        # week with real equipment keeps monthly_wom non-empty.
+        cubo = SimpleNamespace(celulas=[_make_celula("2026-W10", 0.0), _make_celula("2026-W11", 0.0)])
+        canonical = SimpleNamespace(
+            projeto=SimpleNamespace(regime_trabalho=SimpleNamespace(horas_dia=10, dias_semana=6)),
+            cronograma=SimpleNamespace(
+                scheduled_activities=[
+                    SimpleNamespace(
+                        activity_id="act-1",
+                        distribuicao_semanal={
+                            "2026-W10": SimpleNamespace(num_equipes=1, eficiencia=1.0),
+                            "2026-W11": SimpleNamespace(num_equipes=1, eficiencia=1.0),
+                        },
+                    )
+                ]
+            ),
+            equipes_diretas=[
+                SimpleNamespace(
+                    item_id="act-1",
+                    equipamentos=[
+                        SimpleNamespace(consumo_litros_hora=10.0, num_unidades=0),
+                    ],
+                )
+            ],
+        )
+        with patch(
+            "concilium.application.runtime.deliverables.visualizations.cube.bar_diesel_temporal.init_mpl",
+            side_effect=_fake_init_mpl,
+        ):
+            result = build(canonical, cubo)
+        # Both weeks yield 0 liters → monthly_wom stays empty → None.
         assert result is None

@@ -229,3 +229,143 @@ class TestBacktrackingPeBuilderT0RampHint:
 
         assert bt_item.solucao_recomendada is not None
         assert bt_item.solucao_recomendada.parametro == "T0_RAMP"
+
+
+# ---------------------------------------------------------------------------
+# cubo_analitico_builder.py line 213:
+# _build_from_pool: cell with estado != "prod" or no atividade_id → continue
+# cubo_analitico_builder.py line 316:
+# _enrich_with_financial_data: item.semana is None → continue (direct call)
+# ---------------------------------------------------------------------------
+
+
+class TestCuboAnaliticoBuilderMoreContinues:
+    def test_build_from_pool_skips_non_prod_and_no_atividade_cells(self):
+        """Line 213: cells with estado != 'prod' or empty atividade_id are skipped,
+        while a valid 'prod' cell with atividade_id still produces output."""
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        cell_not_prod = SimpleNamespace(
+            estado="idle",
+            atividade_id="ACT-1",
+            semana_iso="2026-W01",
+            custo_mo=100.0,
+            custo_eq=0.0,
+            custo_comb=0.0,
+            custo_mat=0.0,
+        )
+        cell_no_atividade = SimpleNamespace(
+            estado="prod",
+            atividade_id="",
+            semana_iso="2026-W01",
+            custo_mo=100.0,
+            custo_eq=0.0,
+            custo_comb=0.0,
+            custo_mat=0.0,
+        )
+        cell_valid = SimpleNamespace(
+            estado="prod",
+            atividade_id="ACT-2",
+            semana_iso="2026-W01",
+            custo_mo=500.0,
+            custo_eq=0.0,
+            custo_comb=0.0,
+            custo_mat=0.0,
+        )
+        fake_cubo_pool = SimpleNamespace(celulas=[cell_not_prod, cell_no_atividade, cell_valid])
+
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(nome="TEST", data_inicio="2026-01-05"),
+            equipes_diretas=None,
+            indiretos_semanal=None,
+            cronograma=None,
+            planejamento=None,
+            tabela_bdi_efetiva=None,
+        )
+
+        builder = CuboAnaliticoBuilder()
+
+        with patch("concilium.domain.services.analytics.cubo_pool_builder.CuboPoolInstancialBuilder") as MockBuilder:
+            MockBuilder.return_value.build.return_value = fake_cubo_pool
+            result = builder._build_from_pool(canonical_in)
+
+        # Only cell_valid (estado="prod" + atividade_id set) contributes cells.
+        assert all(c.atividade_id == "ACT-2" for c in result.celulas)
+
+    def test_enrich_with_financial_data_skips_indireto_item_without_semana(self):
+        """Line 316: an indiretos_semanal item with semana=None is skipped via
+        `continue`, while a sibling item with a valid semana still produces a cell."""
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        builder = CuboAnaliticoBuilder()
+        ind_no_semana = SimpleNamespace(semana=None, custo_semanal=999.0, categoria="ADM")
+        ind_valid = SimpleNamespace(semana=1, custo_semanal=500.0, categoria="ADM")
+
+        canonical_in = SimpleNamespace(
+            projeto=SimpleNamespace(data_inicio="2026-01-05"),
+            planejamento=None,
+            indiretos_semanal=[ind_no_semana, ind_valid],
+        )
+
+        result = builder._enrich_with_financial_data(canonical_in, [])
+
+        # Only the valid item (semana=1) should have produced an indireto cell.
+        assert len(result) == 1
+        assert result[0].natureza == "indireto"
+
+    def test_enrich_with_financial_data_skips_planejamento_item_without_id_or_value(self):
+        """Line 276: planejamento items with empty item_id or total<=0 are skipped
+        (the `if item_id and total_rs > 0` false branch just `continue`s), so they
+        never enter plan_total_by_item and therefore never get a scale factor —
+        while a sibling valid item still scales its matching pool cell."""
+        from concilium.domain.models.analytics.cubo_analitico import CelulaAnalitica
+        from concilium.domain.services.analytics.cubo_analitico_builder import CuboAnaliticoBuilder
+
+        def _item(item_id, total):
+            return SimpleNamespace(
+                item_id=item_id,
+                subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=total)),
+            )
+
+        planejamento = [
+            _item("ACT-1", 1000.0),  # válido: item_id truthy e total_rs > 0
+            _item("", 500.0),  # inválido: item_id vazio
+            _item("ACT-2", 0.0),  # inválido: total_rs <= 0
+        ]
+
+        canonical_in = SimpleNamespace(
+            projeto=None,
+            planejamento=planejamento,
+            indiretos_semanal=None,
+        )
+
+        celulas = [
+            CelulaAnalitica(
+                natureza="direto",
+                atividade_id="ACT-1",
+                categoria_insumo="mao_obra",
+                propriedade="salario_encargos",
+                semana_iso="2026-W01",
+                componente_bdi="custo_direto",
+                valor_rs=100.0,
+            ),
+            CelulaAnalitica(
+                natureza="direto",
+                atividade_id="ACT-2",
+                categoria_insumo="mao_obra",
+                propriedade="salario_encargos",
+                semana_iso="2026-W01",
+                componente_bdi="custo_direto",
+                valor_rs=200.0,
+            ),
+        ]
+
+        builder = CuboAnaliticoBuilder()
+        result = builder._enrich_with_financial_data(canonical_in, celulas)
+        by_atividade = {c.atividade_id: c.valor_rs for c in result}
+
+        # ACT-1 was in plan_total_by_item -> scaled to match plan total (1000.0 / 100.0 = 10x).
+        assert by_atividade["ACT-1"] == 1000.0
+        # ACT-2's planejamento entry was skipped (total_rs<=0), so it never got a
+        # scale factor and keeps its original pool value.
+        assert by_atividade["ACT-2"] == 200.0

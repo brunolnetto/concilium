@@ -106,6 +106,24 @@ class TestExcelRendererSave:
         wb = load_workbook(BytesIO(_xlsx_bytes))
         assert len(wb.sheetnames) > 0
 
+    def test_save_method_writes_valid_workbook(self, tmp_path):
+        """Exercita ExcelRenderer.save() diretamente (não apenas to_bytes())."""
+        from openpyxl import load_workbook
+
+        output_path = tmp_path / "direct_save.xlsx"
+        ExcelRenderer(_canonical_com_resultado()).save(output_path)
+        assert output_path.exists()
+        wb = load_workbook(output_path)
+        assert len(wb.sheetnames) > 0
+
+    def test_render_excel_report_function(self):
+        """Exercita a função de conveniência render_excel_report()."""
+        from concilium.infrastructure.adapters.excel import render_excel_report
+
+        data = render_excel_report(_canonical_com_resultado())
+        assert isinstance(data, bytes)
+        assert len(data) > 0
+
 
 # ── to_bytes() ────────────────────────────────────────────────────────────────
 

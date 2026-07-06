@@ -120,14 +120,16 @@ branch = true
 parallel = true
 data_file = ".coverage"
 omit = [
-    "src/concilium/presentation/*",
+    "src/concilium/presentation/ui/*",
+    # Protocol só referenciado sob `if TYPE_CHECKING:` (ver runtime/mixins/execution.py
+    # e inputs.py) — nunca importado em runtime, zero footprint de execução real.
+    "src/concilium/application/runtime/mixins/_host_protocol.py",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# ── ADR-029 Fase 3: import-linter contracts (Dependency Rule enforcement) ──
 [tool.importlinter]
 root_packages = ["concilium"]
 include_external_packages = true

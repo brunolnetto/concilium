@@ -554,9 +554,12 @@ def _detectar_oportunidades_paralelo(
                         if delay <= 0:
                             continue
                         for succ in dag.successors(act_id):
-                            act_succ = act_map.get(succ)
-                            if act_succ is None:
-                                continue
+                            # act_map sempre contém `succ`: dag.topological_order() (chamado
+                            # acima em _cpm_early_start/_cpm_late_finish) já teria levantado
+                            # ValueError/KeyError se dag.precedence referenciasse uma atividade
+                            # fora de dag.activities — logo `succ` é garantidamente uma chave
+                            # válida de act_map neste ponto.
+                            act_succ = act_map[succ]
                             tf_succ = cpm_lf[succ] - cpm_es.get(succ, 0) - act_succ.duration_weeks
                             if tf_succ < delay:
                                 rejeitado = True

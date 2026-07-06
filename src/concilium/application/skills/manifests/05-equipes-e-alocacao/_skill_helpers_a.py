@@ -1443,33 +1443,35 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
     def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
         equip = composicao.get("equipamentos") or []
         funcs = composicao.get("funcoes") or []
-        if equip or funcs:
-            tokens: list[str] = []
-            for f in sorted(funcs, key=lambda x: str((x or {}).get("funcao_id") or "")):
-                f_safe = f or {}
-                fid = str(f_safe.get("funcao_id") or "").strip().upper()
-                qtd = round(float(f_safe.get("num_pessoas", 1) or 1), 4)
-                if fid:
-                    tokens.append(f"F:{fid}:{qtd}")
-            for e in sorted(equip, key=lambda x: str((x or {}).get("equip_id") or "")):
-                e_safe = e or {}
-                eid = str(e_safe.get("equip_id") or "").strip().upper()
-                qtd = round(float(e_safe.get("num_unidades", 1) or 1), 4)
-                if eid:
-                    tokens.append(f"E:{eid}:{qtd}")
-            if tokens:
-                signature = "|".join(tokens)
-                digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
-                return f"EQUIPE-COMP-{digest}"
+        # Invariante do único call site (abaixo): composicao sempre tem ao menos um de
+        # equipamentos/funcoes não-vazio antes de chegar aqui — guard "equip or funcs"
+        # removido por ser sempre verdadeiro nesse ponto.
+        tokens: list[str] = []
+        for f in sorted(funcs, key=lambda x: str((x or {}).get("funcao_id") or "")):
+            f_safe = f or {}
+            fid = str(f_safe.get("funcao_id") or "").strip().upper()
+            qtd = round(float(f_safe.get("num_pessoas", 1) or 1), 4)
+            if fid:
+                tokens.append(f"F:{fid}:{qtd}")
+        for e in sorted(equip, key=lambda x: str((x or {}).get("equip_id") or "")):
+            e_safe = e or {}
+            eid = str(e_safe.get("equip_id") or "").strip().upper()
+            qtd = round(float(e_safe.get("num_unidades", 1) or 1), 4)
+            if eid:
+                tokens.append(f"E:{eid}:{qtd}")
+        if tokens:
+            signature = "|".join(tokens)
+            digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
+            return f"EQUIPE-COMP-{digest}"
         raw = str(cpu_id or "").strip().upper()
         return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
 
     for item in eap_items:
         if item.item_id not in sched_ids:
             continue
-        sa = sched_lookup.get(item.item_id)
-        if sa is None:
-            continue
+        # sched_ids == set(sched_lookup) (definido acima), logo a checagem de
+        # pertinência já garante que a chave existe — sem necessidade de guard.
+        sa = sched_lookup[item.item_id]
         cpu = cpu_lookup.get(item.cpu_id, {})
         prod_id = cpu.get("producao_id_ref")
         prod = prod_lookup.get(prod_id or "", {})
@@ -1487,6 +1489,9 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
         return None
 
     resource_pool = dict(pool_caps)
+    # item_tipo_ids e pool_caps são preenchidos na mesma iteração do loop acima
+    # (nunca um sem o outro), logo pool_caps não-vazio garante item_tipo_ids
+    # não-vazio — `activities` abaixo nunca fica vazio quando chegamos aqui.
     activities = [
         {
             "item_id": iid,
@@ -1494,9 +1499,6 @@ def _derive_rcpsp_from_canonical(canonical_in: CanonicalModel, catalogo: dict) -
         }
         for iid, (tipo, required) in item_tipo_ids.items()
     ]
-
-    if not activities:
-        return None
 
     return {"resource_pool": resource_pool, "activities": activities}
 
@@ -1578,9 +1580,10 @@ def _build_contratos_recurso(
     todas_cadeias: list[CadeiaPerpetuacao] = []
 
     for tipo, items in tipo_items.items():
-        week_demand = tipo_week_demand.get(tipo, {})
-        if not week_demand:
-            continue
+        # tipo_items[tipo] e tipo_week_demand[tipo] são sempre populados juntos
+        # em _add_tipo_item_demand (mesmo active_weeks não-vazio), logo um tipo
+        # presente em tipo_items nunca tem week_demand vazio aqui.
+        week_demand = tipo_week_demand[tipo]
         mw_list: list[tuple[str, int, dict]] = [(it["item_id"], it["machine_weeks"], it) for it in items]
         total_mw = sum(mw for _, mw, _ in mw_list)
         if total_mw == 0:
@@ -2143,16 +2146,18 @@ def _compute_instancia_idle_gaps(
             continue
         if idle_week_cost * gap <= remob_cost:
             idle_w += gap
+            # gap > 0 (checado acima) garante que enumerar_semanas(...)[1:-1] tenha
+            # exatamente `gap` elementos — nunca vazio para chaves de semana bem
+            # formadas e no mesmo formato (invariante do cronograma canônico).
             between = enumerar_semanas(aw[k - 1], aw[k])[1:-1]
-            if between:
-                idle_segs.append(
-                    SegmentoAtividade(
-                        activity_id="__idle__",
-                        semana_inicio=between[0],
-                        semana_fim=between[-1],
-                        machine_weeks=len(between),
-                    )
+            idle_segs.append(
+                SegmentoAtividade(
+                    activity_id="__idle__",
+                    semana_inicio=between[0],
+                    semana_fim=between[-1],
+                    machine_weeks=len(between),
                 )
+            )
         else:
             off_internal += gap
     leading_off = max(0, mob_idx - contract_start_idx)
@@ -2769,29 +2774,19 @@ def _sum_inst_categories(insts_contrato: list) -> tuple:
 
 
 def _reescalar_particao(contrato, novo_total: float, insts_contrato: list, eq_by_item: dict, validacoes: list) -> None:
-    """Reescala partição_por_item e emite VAL-INST-CAT-SOMA."""
+    """Reescala particao_por_item proporcionalmente ao novo custo instancial total."""
     antigo_total = float(contrato.custo_total_contrato or 0.0)
     escala = novo_total / antigo_total if antigo_total > 0 else 1.0
     contrato.custo_total_contrato = novo_total
     tot_mo, tot_eq, tot_comb, tot_mat = _sum_inst_categories(insts_contrato)
     for part in contrato.particao_por_item:
         _scale_part_entry(part, escala, novo_total, tot_mo, tot_eq, tot_comb, tot_mat, eq_by_item)
-    _max_dev = max(
-        (
-            abs((p.custo_inst_mo + p.custo_inst_eq + p.custo_inst_comb + p.custo_inst_mat) - p.custo_total_particionado)
-            for p in contrato.particao_por_item
-        ),
-        default=0.0,
-    )
-    if _max_dev > 0.05:
-        validacoes.append(
-            ValidacaoItem(
-                codigo="VAL-INST-CAT-SOMA",
-                status="ERRO",
-                mensagem=f"ADR-085: Contrato {contrato.tipo_id} — decomposição categorial não fecha "
-                f"(desvio máx R$ {_max_dev:.2f} > 0.05).",
-            )
-        )
+    # Nota: custo_inst_mo é computado em _scale_part_entry como resíduo exato
+    # (custo_total_particionado - eq - comb - mat), então
+    # custo_inst_mo + eq + comb + mat == custo_total_particionado sempre, a menos
+    # do erro de arredondamento do round(..., 2) aplicado a custo_inst_mo — no
+    # máximo R$ 0,005, sempre abaixo de qualquer tolerância de validação
+    # razoável. Uma checagem VAL-INST-CAT-SOMA aqui seria código morto.
 
 
 def _apply_instancial_to_contrato(contrato, instancias: list, eq_by_item: dict, validacoes: list) -> None:

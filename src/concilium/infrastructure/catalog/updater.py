@@ -151,14 +151,11 @@ class CatalogUpdater:
         else:
             insumo_data[proposta.campo] = proposta.valor_proposto
 
-        # Persiste arquivo
-        if arquivo_path is None:
-            return CatalogUpdateResult(
-                sucesso=False,
-                novo_artefato_id=None,
-                versao_anterior=None,
-                nota=f"Insumo '{insumo_id}' não encontrado em {self._insumos_dir}",
-            )
+        # Persiste arquivo. `_find_insumo` sempre retorna (item, arquivo) juntos ou
+        # (None, None) — como insumo_data já foi validado acima, arquivo_path é
+        # garantidamente não-None aqui (um `if is None: return` residual seria
+        # código morto e nunca coberto por testes).
+        assert arquivo_path is not None
         todos = json.loads(arquivo_path.read_text(encoding="utf-8"))
         todos_list = todos if isinstance(todos, list) else todos.get("insumos", [])
         for i, item in enumerate(todos_list):

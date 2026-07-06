@@ -33,6 +33,13 @@ _process_single_wmp_policy = _MOD._process_single_wmp_policy
 _build_scheduled_activities = _MOD._build_scheduled_activities
 _build_intervalos_and_campanhas = _MOD._build_intervalos_and_campanhas
 run_cronograma = _MOD.run_cronograma
+_compute_productive_weeks = _MOD._compute_productive_weeks
+_enrich_spec_resources_from_catalog = _MOD._enrich_spec_resources_from_catalog
+_rasfc_extract_inputs = _MOD._rasfc_extract_inputs
+_rasfc_run_heuristics = _MOD._rasfc_run_heuristics
+_convert_schedule_to_distribuicao = _MOD._convert_schedule_to_distribuicao
+_check_wmp_pool = _MOD._check_wmp_pool
+_cpv_build_usage = _MOD._cpv_build_usage
 
 
 # ---------------------------------------------------------------------------
@@ -71,9 +78,7 @@ def _make_canonical():
         calculada_em=datetime.now(UTC),
         percentual_produtivo_mensal={"01": 1.0, "02": 1.0, "03": 1.0, "04": 1.0, "05": 1.0, "06": 1.0},
     )
-    eap = [
-        EapItem(item_id="IT-01", ordem=1, cpu_id="CPU-01", descricao="Item", unidade="m", quantitativo=100.0)
-    ]
+    eap = [EapItem(item_id="IT-01", ordem=1, cpu_id="CPU-01", descricao="Item", unidade="m", quantitativo=100.0)]
     return CanonicalModel(meta=meta, projeto=proj, eap=eap, praticabilidade=prat)
 
 
@@ -227,6 +232,66 @@ class TestExtractDagSSFFTipo:
         dag = _extract_dag(FakeCanonical(), ["IT-X", "IT-Y"])
         assert any(ep.tipo == "FF" and ep.lag == 2 for ep in dag.extended_precedences)
 
+    def test_ff_tipo_followed_by_another_predecessor_continues_loop(self):
+        """Line 523->514: after handling an FF predecessor, the for loop must
+        continue to the next predecessor in the same item (not just exit)."""
+
+        class FakePredFF:
+            item_id = "IT-X"
+            tipo = "FF"
+            lag = 1
+            completion_threshold_pct = 0.0
+
+        class FakePredFS:
+            item_id = "IT-W"
+            tipo = "FS"
+            lag = 0
+            completion_threshold_pct = 1.0
+
+        class FakeItem:
+            item_id = "IT-Y"
+            descricao = "Item Y"
+            predecessores = [FakePredFF(), FakePredFS()]
+
+            def predecessores_tipados(self):
+                return self.predecessores
+
+        class FakeCanonical:
+            eap = [FakeItem()]
+            activity_dag = None
+            atividades = None
+
+        dag = _extract_dag(FakeCanonical(), ["IT-X", "IT-W", "IT-Y"])
+        assert any(ep.tipo == "FF" for ep in dag.extended_precedences)
+        assert ("IT-W", "IT-Y") in dag.thresholds
+
+    def test_fs_tipo_uses_completion_threshold_pct(self):
+        """Line 519: FS tipo (explicit or default) uses the real threshold,
+        not the SS/FF topological sentinel of 1.0."""
+
+        class FakePred:
+            item_id = "IT-P"
+            tipo = "FS"
+            lag = 0
+            completion_threshold_pct = 0.75
+
+        class FakeItem:
+            item_id = "IT-Q"
+            descricao = "Item Q"
+            predecessores = [FakePred()]
+
+            def predecessores_tipados(self):
+                return self.predecessores
+
+        class FakeCanonical:
+            eap = [FakeItem()]
+            activity_dag = None
+            atividades = None
+
+        dag = _extract_dag(FakeCanonical(), ["IT-P", "IT-Q"])
+        assert dag.thresholds[("IT-P", "IT-Q")] == 0.75
+        assert dag.extended_precedences == []
+
 
 # ---------------------------------------------------------------------------
 # _extract_dag — no eap → linear fallback via activity_dag (lines 507->520, 520->528)
@@ -306,9 +371,7 @@ class TestExtractActivitiesWithLookups:
                 "precos_unitarios_sbdi": {"total": 0.0},
             }
         }
-        producao_lookup = {
-            "P1": {"valor_horario": 10.0, "producao_horaria": 10.0}
-        }
+        producao_lookup = {"P1": {"valor_horario": 10.0, "producao_horaria": 10.0}}
         validacoes = []
         activities = _extract_activities(FakeCanonical(), cpu_lookup, producao_lookup, validacoes)
         assert len(activities) == 1
@@ -743,3 +806,680 @@ class TestRunAutoScheduleFallbackChainNullExtract:
         assert candidates == []
         assert best is None
         assert any(v.codigo == "VAL-SCHED-EXTRACT-FAIL" for v in validacoes)
+
+
+# ---------------------------------------------------------------------------
+# _compute_productive_weeks — P <= 0 branch (line 677-678)
+# ---------------------------------------------------------------------------
+
+
+class TestComputeProductiveWeeksNonPositiveP:
+    def test_zero_productivity_returns_none(self):
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "cpu_meta": {"producao_horaria": 0.0}}}
+        result = _compute_productive_weeks("IT-01", 1, canonical, cpu_lookup, {}, [])
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# _enrich_spec_resources_from_catalog — early-return / continue branches
+# ---------------------------------------------------------------------------
+
+
+class TestEnrichSpecResourcesFromCatalog:
+    def test_no_activities_returns_early(self):
+        spec = {"activities": []}
+        canonical = _make_canonical()
+        _enrich_spec_resources_from_catalog(spec, canonical, {}, {}, 4, [])
+        assert spec["activities"] == []
+
+    def test_explicit_resource_pool_skips_enrichment(self):
+        spec = {"activities": [{"item_id": "IT-01"}], "resource_pool": {"x": 1}}
+        canonical = _make_canonical()
+        _enrich_spec_resources_from_catalog(spec, canonical, {}, {}, 4, [])
+        assert "required_resources" not in spec["activities"][0]
+
+    def test_explicit_required_resources_skips_enrichment(self):
+        spec = {"activities": [{"item_id": "IT-01", "required_resources": {"x": 1}}]}
+        canonical = _make_canonical()
+        _enrich_spec_resources_from_catalog(spec, canonical, {}, {}, 4, [])
+        assert spec["activities"][0]["required_resources"] == {"x": 1}
+
+    def test_deadline_weeks_non_positive_returns_early(self):
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {
+            "PROD-01": {"valor_horario": 10.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}]}}
+        }
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 0, [])
+        assert "required_resources" not in spec["activities"][0]
+
+    def test_item_not_in_eap_is_skipped(self):
+        spec = {"activities": [{"item_id": "MISSING-ITEM"}]}
+        canonical = _make_canonical()
+        validacoes: list = []
+        _enrich_spec_resources_from_catalog(spec, canonical, {}, {}, 4, validacoes)
+        assert "required_resources" not in spec["activities"][0]
+        assert validacoes == []
+
+    def test_cpu_missing_is_skipped(self):
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        _enrich_spec_resources_from_catalog(spec, canonical, {}, {}, 4, [])
+        assert "required_resources" not in spec["activities"][0]
+
+    def test_prod_missing_is_skipped(self):
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-MISSING"}}
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, {}, 4, [])
+        assert "required_resources" not in spec["activities"][0]
+
+    def test_p_non_positive_is_skipped(self):
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {
+            "PROD-01": {"valor_horario": 0.0, "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP"}]}}
+        }
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
+        assert "required_resources" not in spec["activities"][0]
+
+    def test_comp_empty_is_skipped(self):
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {"PROD-01": {"valor_horario": 10.0, "composicao_padrao_equipe": {}}}
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
+        assert "required_resources" not in spec["activities"][0]
+
+    def test_comp_without_equip_or_funcoes_keys_is_skipped(self):
+        """Line 779-780: comp is truthy but has neither equipamentos nor funcoes."""
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {"PROD-01": {"valor_horario": 10.0, "composicao_padrao_equipe": {"outro_campo": True}}}
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
+        assert "required_resources" not in spec["activities"][0]
+
+    def test_successful_enrichment_with_funcoes_and_equipamentos(self):
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {
+            "PROD-01": {
+                "valor_horario": 1.0,
+                "composicao_padrao_equipe": {
+                    "funcoes": [{"funcao_id": "OP", "num_pessoas": 1}],
+                    "equipamentos": [{"equip_id": "TRATOR", "num_unidades": 1}],
+                },
+            }
+        }
+        validacoes: list = []
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, validacoes)
+        act = spec["activities"][0]
+        assert "required_resources" in act
+        assert act["duration_weeks"] >= 1
+        assert act["n_frentes"] >= 1
+        assert act["_catalog_resources"] is True
+        assert any(v.codigo == "VAL-CRON-CATALOGO-RES" for v in validacoes)
+
+    def test_tipo_fungivel_falls_back_to_cpu_id_when_tokens_blank(self):
+        """funcao_id/equip_id present but blank after strip → no tokens → falls
+        back to the raw cpu_id signature (line 743-748)."""
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {
+            "PROD-01": {
+                "valor_horario": 1.0,
+                "composicao_padrao_equipe": {
+                    "funcoes": [{"funcao_id": "  ", "num_pessoas": 1}],
+                    "equipamentos": [{"equip_id": "  ", "num_unidades": 1}],
+                },
+            }
+        }
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
+        act = spec["activities"][0]
+        assert list(act["required_resources"].keys()) == ["EQUIPE-CPU-CPU-01"]
+
+    def test_ramp_params_n_max_triggers_ramp_profile_computed(self):
+        spec = {
+            "activities": [
+                {"item_id": "IT-01", "ramp_params": {"n_max": 2, "n_inicial": 1}},
+            ]
+        }
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {
+            "PROD-01": {
+                "valor_horario": 1.0,
+                "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP", "num_pessoas": 1}]},
+            }
+        }
+        _enrich_spec_resources_from_catalog(spec, canonical, cpu_lookup, producao_lookup, 4, [])
+        act = spec["activities"][0]
+        assert "ramp_profile_computed" in act
+
+
+# ---------------------------------------------------------------------------
+# _extract_activities_from_spec
+# ---------------------------------------------------------------------------
+
+_extract_activities_from_spec = _MOD._extract_activities_from_spec
+_extract_pool_from_spec = _MOD._extract_pool_from_spec
+
+
+class TestExtractActivitiesFromSpecCatalogResources:
+    def test_catalog_resources_uses_window_directly(self):
+        """Line 837-839: `_catalog_resources` True → productive_w = window_w, no recompute."""
+        spec = {
+            "activities": [
+                {"item_id": "IT-01", "duration_weeks": 3, "_catalog_resources": True, "required_resources": {}},
+            ]
+        }
+        result = _extract_activities_from_spec(spec)
+        assert result[0].duration_weeks == 3
+        assert result[0].window_weeks is None
+
+    def test_use_productive_recomputes_shorter_duration(self):
+        """Lines 840-852: use_productive path, computed < window_w."""
+        spec = {
+            "activities": [
+                {"item_id": "IT-01", "duration_weeks": 10, "required_resources": {"EQUIPE": 1}},
+            ]
+        }
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "cpu_meta": {"producao_horaria": 1000.0}}}
+        producao_lookup = {"PROD-01": {"valor_horario": 1000.0}}
+        result = _extract_activities_from_spec(spec, canonical, cpu_lookup, producao_lookup, [])
+        assert result[0].duration_weeks < 10
+        assert result[0].window_weeks == 10
+
+    def test_use_productive_computed_none_keeps_window(self):
+        """computed is None (CPU not found) → keeps window_w as fallback."""
+        spec = {
+            "activities": [
+                {"item_id": "IT-01", "duration_weeks": 5, "required_resources": {}},
+            ]
+        }
+        canonical = _make_canonical()
+        result = _extract_activities_from_spec(spec, canonical, {}, {}, [])
+        assert result[0].duration_weeks == 5
+        assert result[0].window_weeks is None
+
+    def test_ramp_params_fallback_computes_ramp_profile(self):
+        """Lines 858-863: no ramp_profile_computed, ramp_params present with n_max > 0."""
+        spec = {
+            "activities": [
+                {
+                    "item_id": "IT-01",
+                    "duration_weeks": 4,
+                    "required_resources": {},
+                    "ramp_params": {"n_max": 2, "n_inicial": 1},
+                },
+            ]
+        }
+        result = _extract_activities_from_spec(spec)
+        assert result[0].ramp_profile is not None
+        assert len(result[0].ramp_profile) == 4
+
+
+class TestExtractPoolFromSpec:
+    def test_explicit_resource_pool_used_as_is(self):
+        """Line 892-893: explicit resource_pool → used directly, no inference."""
+        spec = {"resource_pool": {"EQUIPE": 2}}
+        result = _extract_pool_from_spec(spec)
+        assert result.resources == {"EQUIPE": 2}
+
+    def test_empty_resource_pool_infers_from_spec(self):
+        """Lines 895-899: no explicit pool → falls to inferir_pool_minimo_from_spec."""
+        spec = {"activities": [{"item_id": "IT-01", "required_resources": {"EQUIPE": 3}}]}
+        with patch(
+            "concilium.application.scheduling.inferir_pool_minimo_from_spec",
+            return_value=({"EQUIPE": 3}, {"diag": "ok"}),
+        ):
+            result = _extract_pool_from_spec(spec)
+        assert result.resources == {"EQUIPE": 3}
+        assert spec["resource_pool"] == {"EQUIPE": 3}
+        assert spec["pool_inferido_diag"] == {"diag": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# _extract_activities — computed productive weeks falsy (line 480->483)
+# ---------------------------------------------------------------------------
+
+
+class TestExtractActivitiesComputedFalsy:
+    def test_zero_productivity_keeps_default_duration(self):
+        """cpu_lookup/producao_lookup present but productivity resolves to 0 →
+        _compute_productive_weeks returns None → duration_weeks stays default 1."""
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "cpu_meta": {"producao_horaria": 0.0}}}
+        producao_lookup = {"P1": {"valor_horario": 0.0}}
+        validacoes: list = []
+        activities = _extract_activities(canonical, cpu_lookup, producao_lookup, validacoes)
+        assert len(activities) == 1
+        assert activities[0].duration_weeks == 1
+
+
+# ---------------------------------------------------------------------------
+# _extract_dag — multiple predecessors per item, FF not last (line 523->514)
+# ---------------------------------------------------------------------------
+
+
+class TestExtractDagMultiplePredecessors:
+    def test_ff_then_fs_predecessor_continues_inner_loop(self):
+        """Item with 2 predecessors (FF first, FS second) → inner loop must
+        continue past the FF branch back to the top for the second pred."""
+
+        class FakePredFF:
+            item_id = "IT-A"
+            tipo = "FF"
+            lag = 1
+            completion_threshold_pct = 0.0
+
+        class FakePredFS:
+            item_id = "IT-B"
+            tipo = "FS"
+            lag = 0
+            completion_threshold_pct = 0.9
+
+        class FakeItem:
+            item_id = "IT-C"
+            descricao = "Item C"
+            predecessores = [FakePredFF(), FakePredFS()]
+
+            def predecessores_tipados(self):
+                return self.predecessores
+
+        class FakeCanonical:
+            eap = [FakeItem()]
+            activity_dag = None
+            atividades = None
+
+        dag = _extract_dag(FakeCanonical(), ["IT-A", "IT-B", "IT-C"])
+        assert any(ep.tipo == "FF" for ep in dag.extended_precedences)
+        assert dag.thresholds[("IT-B", "IT-C")] == 0.9
+
+
+# ---------------------------------------------------------------------------
+# _extract_activities_from_spec — ramp_profile branches (858->865, 862->865)
+# ---------------------------------------------------------------------------
+
+
+class TestExtractActivitiesFromSpecRampBranches:
+    def test_precomputed_ramp_profile_used_directly(self):
+        """Line 858->865: ramp_profile_computed already set → skip recompute
+        entirely and the temp key is popped from the serialized dict."""
+        spec = {
+            "activities": [
+                {
+                    "item_id": "IT-01",
+                    "duration_weeks": 3,
+                    "required_resources": {},
+                    "ramp_profile_computed": [0.5, 1.0, 0.5],
+                },
+            ]
+        }
+        result = _extract_activities_from_spec(spec)
+        assert result[0].ramp_profile == [0.5, 1.0, 0.5]
+        assert "ramp_profile_computed" not in spec["activities"][0]
+
+    def test_ramp_params_n_max_negative_keeps_ramp_profile_none(self):
+        """Line 862->865: n_max negative (falls through the `or 1` default
+        since -1 is truthy) → n_pico <= 0 → skip _compute_ramp_profile,
+        ramp_profile stays None."""
+        spec = {
+            "activities": [
+                {
+                    "item_id": "IT-01",
+                    "duration_weeks": 3,
+                    "required_resources": {},
+                    "ramp_params": {"n_max": -1},
+                },
+            ]
+        }
+        result = _extract_activities_from_spec(spec)
+        assert result[0].ramp_profile is None
+
+
+# ---------------------------------------------------------------------------
+# _cpv_build_usage — cpu found but no equipamentos configured (line 1581->1582)
+# ---------------------------------------------------------------------------
+
+
+class TestCpvBuildUsageNoEquipNeeded:
+    def test_cpu_without_equipamentos_is_skipped(self):
+        class FakeEapItem:
+            item_id = "IT-01"
+            cpu_id = "CPU-01"
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+
+        cpu_lookup = {"CPU-01": {"equipe": {}}}  # no "equipamentos" key → equip_needed={}
+        usage = _cpv_build_usage(FakeCanonical(), cpu_lookup, {"IT-01": {}})
+        assert usage == {}
+
+
+# ---------------------------------------------------------------------------
+# _rasfc_extract_inputs
+# ---------------------------------------------------------------------------
+
+
+class TestRasfcExtractInputs:
+    def test_pool_config_propagated_from_inputs_to_spec(self):
+        """Lines 1287-1288: inputs['pool_config'] copied into rcpsp_spec when
+        the spec doesn't already carry its own pool_config."""
+        spec = {
+            "activities": [{"item_id": "IT-01", "duration_weeks": 2, "required_resources": {"EQUIPE": 1}}],
+            "resource_pool": {"EQUIPE": 1},
+        }
+        canonical = _make_canonical()
+        validacoes: list = []
+        inputs = {"rcpsp_spec": spec, "pool_config": {"max_equipes": 2}}
+        result = _rasfc_extract_inputs(canonical, inputs, validacoes)
+        assert result is not None
+        assert spec["pool_config"] == {"max_equipes": 2}
+
+    def test_cpu_and_producao_lookup_trigger_catalog_enrichment(self):
+        """Lines 1291-1297: cpu_lookup + producao_lookup present → deadline
+        computed and _enrich_spec_resources_from_catalog invoked before extraction."""
+        spec = {"activities": [{"item_id": "IT-01"}]}
+        canonical = _make_canonical()
+        cpu_lookup = {"CPU-01": {"codigo": "CPU-01", "producao_id_ref": "PROD-01"}}
+        producao_lookup = {
+            "PROD-01": {
+                "valor_horario": 1.0,
+                "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "OP", "num_pessoas": 1}]},
+            }
+        }
+        validacoes: list = []
+        result = _rasfc_extract_inputs(canonical, {"rcpsp_spec": spec}, validacoes, cpu_lookup, producao_lookup)
+        assert result is not None
+        assert "required_resources" in spec["activities"][0]
+        assert any(v.codigo == "VAL-CRON-CATALOGO-RES" for v in validacoes)
+
+    def test_rcpsp_spec_no_activities_returns_none(self):
+        """Lines 1302-1306: extracted activities empty → VAL-SCHED-01 + None."""
+        canonical = _make_canonical()
+        validacoes: list = []
+        result = _rasfc_extract_inputs(canonical, {"rcpsp_spec": {"activities": []}}, validacoes)
+        assert result is None
+        assert any(v.codigo == "VAL-SCHED-01" and "rcpsp_spec" in v.mensagem for v in validacoes)
+
+    def test_pool_inferido_diag_emits_val_pool_infer(self):
+        """Lines 1310-1322: pool inferred → VAL-POOL-INFER validation with notas."""
+        spec = {"activities": [{"item_id": "IT-01", "duration_weeks": 1, "required_resources": {"EQUIPE": 2}}]}
+        canonical = _make_canonical()
+        validacoes: list = []
+        diag = {
+            "objetivo": "custo",
+            "pool_inferido": {"EQUIPE": 2},
+            "makespan_estimado_semanas": 5,
+            "makespan_minimo_semanas": 4,
+            "notas": ["restrição de prazo"],
+        }
+        with patch(
+            "concilium.application.scheduling.inferir_pool_minimo_from_spec",
+            return_value=({"EQUIPE": 2}, diag),
+        ):
+            result = _rasfc_extract_inputs(canonical, {"rcpsp_spec": spec}, validacoes)
+        assert result is not None
+        assert any(v.codigo == "VAL-POOL-INFER" for v in validacoes)
+
+    def test_no_rcpsp_spec_no_activities_returns_none(self):
+        """Lines 1327-1329: else branch (no rcpsp_spec) → _extract_activities
+        empty → VAL-SCHED-01 'Sem atividades.' + None."""
+
+        class FakeCanonical:
+            eap: list = []
+            atividades = None
+
+        validacoes: list = []
+        result = _rasfc_extract_inputs(FakeCanonical(), {}, validacoes)
+        assert result is None
+        assert any(v.codigo == "VAL-SCHED-01" and v.mensagem == "Sem atividades." for v in validacoes)
+
+
+# ---------------------------------------------------------------------------
+# _rasfc_run_heuristics — inputs['heuristics'] overrides strategy (1362->1363)
+# ---------------------------------------------------------------------------
+
+
+class TestRasfcRunHeuristicsOverride:
+    def test_heuristics_input_overrides_strategy_default(self):
+        from concilium.application.scheduling import Activity, ActivityDAG, ResourcePool
+
+        activities = [Activity(activity_id="A", description="A", duration_weeks=1, required_resources={})]
+        dag = ActivityDAG(activities=activities, precedence=[], thresholds={}, extended_precedences=[])
+        pool = ResourcePool(resources={})
+        strategy = SimpleNamespace(algorithm="MINSLK", heuristics=["MINSLK"])
+        fake_result = SimpleNamespace(heuristic="LPT", schedule=MagicMock(), quality_score=0.9)
+        fake_candidate = SimpleNamespace(heuristic="LPT")
+
+        with (
+            patch(f"{_MOD_NAME}.select_scheduling_algorithm", return_value=strategy),
+            patch(f"{_MOD_NAME}.explore_schedules", return_value=[fake_result]),
+            patch(f"{_MOD_NAME}._to_canonical_candidate", return_value=fake_candidate),
+        ):
+            candidates, relaxed = _rasfc_run_heuristics(activities, dag, pool, 4, {"heuristics": ["LPT"]}, [])
+        assert strategy.heuristics == ["LPT"]
+        assert relaxed is False
+        assert candidates == [fake_candidate]
+
+
+# ---------------------------------------------------------------------------
+# _convert_schedule_to_distribuicao — unmapped / missing-item branches
+# ---------------------------------------------------------------------------
+
+
+class TestConvertScheduleToDistribuicaoUnmapped:
+    def test_activity_id_not_in_map_emits_val_cron_convert(self):
+        """Lines 1458-1462: activity_to_item.get(sa.activity_id) is None → AVISO + continue."""
+
+        class FakeCanonical:
+            eap: list = []
+            atividades = None
+
+        sa = SimpleNamespace(activity_id="ACT-UNKNOWN")
+        schedule_selected = SimpleNamespace(scheduled_activities=[sa])
+        validacoes: list = []
+        result = _convert_schedule_to_distribuicao(
+            schedule_selected, FakeCanonical(), [], {}, {}, SimpleNamespace(), {}, {}, {}, validacoes
+        )
+        assert result == {}
+        assert any(v.codigo == "VAL-CRON-CONVERT" for v in validacoes)
+
+    def test_zero_quantitativo_skips_completude_check(self):
+        """Line 1536->1554: item.quantitativo <= 0 → completude check skipped,
+        but the item's (empty) distribuicao is still recorded."""
+
+        class FakeEapItem:
+            item_id = "IT-01"
+            cpu_id = "CPU-01"
+            quantitativo = 0.0
+
+        class FakeProjeto:
+            data_inicio = date(2025, 1, 6)
+
+        class FakeCanonical:
+            eap = [FakeEapItem()]
+            atividades = None
+            projeto = FakeProjeto()
+
+        sa = SimpleNamespace(activity_id="IT-01", start_week=0, duration_weeks=1, assigned_resources={})
+        schedule_selected = SimpleNamespace(scheduled_activities=[sa])
+        validacoes: list = []
+        result = _convert_schedule_to_distribuicao(
+            schedule_selected,
+            FakeCanonical(),
+            ["2025-W02"],
+            {},
+            {},
+            SimpleNamespace(horas_dia=8, dias_semana=5),
+            {},
+            {},
+            {},
+            validacoes,
+        )
+        assert "IT-01" in result
+        assert not any(v.codigo == "VAL-CRON-01" for v in validacoes)
+
+    def test_mapped_item_not_found_in_eap_skips(self):
+        """Line 1465-1466: item_id resolved but _find_item_by_id finds nothing → continue."""
+
+        class FakeAtividade:
+            atividade_id = "ACT-1"
+            eap_item_id = "IT-MISSING"
+
+        class FakeCanonical:
+            eap: list = []
+            atividades = [FakeAtividade()]
+
+        sa = SimpleNamespace(activity_id="ACT-1")
+        schedule_selected = SimpleNamespace(scheduled_activities=[sa])
+        validacoes: list = []
+        result = _convert_schedule_to_distribuicao(
+            schedule_selected, FakeCanonical(), [], {}, {}, SimpleNamespace(), {}, {}, {}, validacoes
+        )
+        assert result == {}
+        assert not any(v.codigo == "VAL-CRON-CONVERT" for v in validacoes)
+
+
+# ---------------------------------------------------------------------------
+# _check_wmp_pool — peak demand vs pool branches (1660->1661, 1664->1658)
+# ---------------------------------------------------------------------------
+
+
+class TestCheckWmpPoolBranches:
+    def test_second_equip_within_pool_after_first_exceeds(self):
+        """2 equipamentos: first exceeds pool (appends + loop continues back to
+        the for at 1658), second stays within pool (false branch of 1660->1661)."""
+        cpu = {
+            "equipe": {
+                "equipamentos": [
+                    {"equip_id": "EQ-A", "num_unidades": 2},
+                    {"equip_id": "EQ-B", "num_unidades": 1},
+                ]
+            }
+        }
+        policy = SimpleNamespace(n_maximo=3)
+        pool = {"EQ-A": 4, "EQ-B": 10}  # EQ-A: 3*2=6 > 4 (violation); EQ-B: 3*1=3 <= 10 (ok)
+        validacoes: list = []
+        _check_wmp_pool("IT-01", cpu, policy, pool, validacoes)
+        codes = [v.codigo for v in validacoes]
+        assert codes.count("VAL-WMP-POOL") == 1
+
+    def test_equip_not_in_pool_is_skipped_then_next_equip_is_checked(self):
+        """Branch 1658->1659: primeiro equipamento sem eid correspondente no
+        pool é pulado (continue), mas o segundo equipamento é normalmente
+        processado (não interrompe o loop)."""
+        cpu = {
+            "equipe": {
+                "equipamentos": [
+                    {"equip_id": "EQ-DESCONHECIDO", "num_unidades": 1},
+                    {"equip_id": "EQ-B", "num_unidades": 5},
+                ]
+            }
+        }
+        policy = SimpleNamespace(n_maximo=3)
+        pool = {"EQ-B": 2}  # EQ-B: 3*5=15 > 2 (violation)
+        validacoes: list = []
+        _check_wmp_pool("IT-01", cpu, policy, pool, validacoes)
+        codes = [v.codigo for v in validacoes]
+        assert codes.count("VAL-WMP-POOL") == 1
+
+
+# ---------------------------------------------------------------------------
+# _determine_mode_and_distribuicao — rcpsp_spec success path (1858->1859)
+# ---------------------------------------------------------------------------
+
+
+class TestDetermineModeRcpspSpecSuccess:
+    def test_rcpsp_spec_success_returns_auto_schedule_mode(self):
+        canonical = _make_canonical()
+        sched_sel = SimpleNamespace(scheduled_activities=[])
+        with (
+            patch(f"{_MOD_NAME}._run_auto_schedule_fallback_chain", return_value=([], sched_sel)),
+            patch(f"{_MOD_NAME}._convert_schedule_to_distribuicao", return_value={"IT-01": {}}),
+        ):
+            mode, distr, candidates, selected, failed = _determine_mode_and_distribuicao(
+                canonical_in=canonical,
+                inputs={"rcpsp_spec": {"activities": []}},
+                num_equipes_por_item=None,
+                semanas_obra=["2025-W01"],
+                cpu_lookup={},
+                producao_lookup={},
+                regime=SimpleNamespace(horas_dia=8, dias_semana=5),
+                prat_semanal={},
+                prat_mensal={},
+                fator_calendario_semanal={},
+                catalogo={},
+                validacoes=[],
+            )
+        assert mode == "AUTO_SCHEDULE (rcpsp_spec)"
+        assert failed is False
+        assert distr == {"IT-01": {}}
+        assert selected is sched_sel
+
+    def test_rcpsp_spec_no_schedule_selected_returns_failed(self):
+        """Line 1857: fallback chain exhausted (schedule_selected falsy) -> early
+        return with failed=True and empty distribuicao."""
+        canonical = _make_canonical()
+        with patch(f"{_MOD_NAME}._run_auto_schedule_fallback_chain", return_value=([{"heuristic": "MINSLK"}], None)):
+            mode, distr, candidates, selected, failed = _determine_mode_and_distribuicao(
+                canonical_in=canonical,
+                inputs={"rcpsp_spec": {"activities": []}},
+                num_equipes_por_item=None,
+                semanas_obra=["2025-W01"],
+                cpu_lookup={},
+                producao_lookup={},
+                regime=SimpleNamespace(horas_dia=8, dias_semana=5),
+                prat_semanal={},
+                prat_mensal={},
+                fator_calendario_semanal={},
+                catalogo={},
+                validacoes=[],
+            )
+        assert mode == "AUTO_SCHEDULE (rcpsp_spec)"
+        assert failed is True
+        assert distr == {}
+        assert selected is None
+
+
+# ---------------------------------------------------------------------------
+# _build_cronograma_out — full heuristic → algorithm literal mapping (2012-2023)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildCronogramaOutHeuristicMapping:
+    @pytest.mark.parametrize(
+        "heuristic,expected",
+        [
+            ("LPT", "LPT"),
+            ("MAXRES", "MAXRES"),
+            ("ES", "ES"),
+            ("GR", "GR"),
+            ("CP-SAT", "CP-SAT"),
+            ("LNS", "LNS"),
+        ],
+    )
+    def test_heuristic_maps_to_matching_algorithm_literal(self, heuristic, expected):
+        schedule_selected = SimpleNamespace(
+            heuristic=heuristic,
+            quality_score=0.5,
+            makespan=10,
+            relaxed=False,
+        )
+        result = _build_cronograma_out(
+            mode="AUTO_SCHEDULE",
+            schedule_selected=schedule_selected,
+            scheduled_activities_out=[],
+            semanas_obra=["2025-W01", "2025-W02"],
+            distribuicao_mensal={},
+            validacoes=[],
+        )
+        assert result.algorithm == expected

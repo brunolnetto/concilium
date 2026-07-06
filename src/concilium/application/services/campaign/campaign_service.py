@@ -992,8 +992,14 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
                                 if ce.dimensoes.get(dx.nome) == vx and ce.dimensoes.get(dy.nome) == vy and ce.cenario_id
                             ]
                             if matching:
-                                c_match = cenario_por_id.get(matching[0].cenario_id)
-                                row.append(_get_metrica(c_match, metrica) if c_match else None)
+                                # matching[0].cenario_id só é truthy quando a célula foi
+                                # construída a partir de um `c` presente em cenario_por_id
+                                # (ver loop de --- 2. Células --- acima); logo o lookup
+                                # abaixo sempre resolve — sem fallback necessário.
+                                cid = matching[0].cenario_id
+                                assert cid is not None, "cenario_id deve ser não-None após filtro"
+                                c_match = cenario_por_id[cid]
+                                row.append(_get_metrica(c_match, metrica))
                             else:
                                 row.append(None)
                         grade.append(row)
@@ -1019,11 +1025,14 @@ def construir_cubo(bundle: GoResearchCampaignBundle, output: CampaignOutputBundl
                 celulas_val = [ce for ce in celulas if ce.dimensoes.get(d.nome) == val and ce.cenario_id]
                 vals_m = []
                 for ce in celulas_val:
-                    c_m = cenario_por_id.get(ce.cenario_id)
-                    if c_m:
-                        v = _get_metrica(c_m, metrica)
-                        if v is not None:
-                            vals_m.append(v)
+                    # Mesmo invariante do bloco de faces acima: ce.cenario_id truthy
+                    # garante presença em cenario_por_id.
+                    cid_m = ce.cenario_id
+                    assert cid_m is not None, "cenario_id deve ser não-None após filtro"
+                    c_m = cenario_por_id[cid_m]
+                    v = _get_metrica(c_m, metrica)
+                    if v is not None:
+                        vals_m.append(v)
                 medias.append(round(sum(vals_m) / len(vals_m), 4) if vals_m else None)
 
             if any(m is not None for m in medias):

@@ -1176,6 +1176,27 @@ class TestFindOrCreate:
 
             MockStore.init.assert_called_once()
 
+    def test_continues_loop_past_non_matching_name(self):
+        """A project dir whose meta.json 'nome' doesn't match spec.nome must
+        not short-circuit the search — the loop keeps going to the next dir
+        (covers the false branch of the name-match check)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            projects_root = Path(tmpdir)
+            other_dir = projects_root / "other"
+            other_dir.mkdir()
+            (other_dir / "meta.json").write_text(json.dumps({"nome": "OtherProject"}), encoding="utf-8")
+
+            runner = AlgorithmComparisonRunner(Path("/tmp/cfg"), projects_root)
+            spec = SimpleNamespace(nome="NewProject", contexto_id="CTX-1")
+
+            mock_store = MagicMock()
+            with patch("concilium.infrastructure.storage.project.ProjectStore") as MockStore:
+                MockStore.init.return_value = mock_store
+                result = runner._find_or_create(spec, reset=False)
+
+            MockStore.init.assert_called_once()
+            assert result is mock_store
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # _print_entry (module-level helper)

@@ -182,8 +182,10 @@ class TestValidateToolCoverage:
         tools = {}
         for name, perm in tools_spec.items():
             t = MagicMock()
+
             def fn():
                 return None
+
             fn.__name__ = name
             if perm is not None:
                 fn._required_permission = perm
@@ -217,8 +219,10 @@ class TestPatchMcpAuthPermissions:
     def _make_server_with_tool(self, tool_name: str, tool_fn=None, perm: str | None = None):
         server = MagicMock()
         if tool_fn is None:
+
             def tool_fn():
                 return "ok"
+
             tool_fn.__name__ = tool_name
         if perm is not None:
             tool_fn._required_permission = perm  # ADR-117: tag posta por @permission
@@ -272,6 +276,32 @@ class TestPatchMcpAuthPermissions:
                     server._tool_manager._tools["disparar_pipeline"].fn()
             finally:
                 _current_roles.reset(tok)
+
+    def test_authorized_call_passes_through_with_auth_enabled(self):
+        """Com auth explicitamente ativo, role correta faz o `if` em get_permissions
+        avaliar False e cair no `return fn(...)` (branch 420->426, não exercitado
+        pelos outros testes pois eles não forçam _auth_enabled=True com role válida)."""
+        from concilium.infrastructure.auth.permission_guard import (
+            _current_roles,
+            patch_mcp_auth_permissions,
+            set_roles,
+        )
+
+        result_holder = []
+
+        def fn():
+            result_holder.append("called")
+
+        fn.__name__ = "disparar_pipeline"
+        server = self._make_server_with_tool("disparar_pipeline", fn, perm="project:run")
+        patch_mcp_auth_permissions(server)
+        tok = set_roles(["operator"])
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+            try:
+                server._tool_manager._tools["disparar_pipeline"].fn()
+            finally:
+                _current_roles.reset(tok)
+        assert "called" in result_holder
 
     def test_auditor_can_call_read_tool(self):
         """auditor pode chamar listar_projetos (project:read)."""

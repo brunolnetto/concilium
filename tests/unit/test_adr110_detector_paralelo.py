@@ -140,6 +140,54 @@ class TestCpmEarlyStart:
         assert es["A"] == 0
         assert es["B"] == 0
 
+    def test_convergencia_segundo_predecessor_nao_sobrescreve(self, helpers):
+        """Quando o EF do segundo predecessor processado é menor que o já
+        registrado, ES(C) não é sobrescrito (branch 431->430 false)."""
+        # A (dur=6) é processado primeiro (ordem de dag.activities) → ES(C)=6.
+        # B (dur=4) processado depois: EF(B)=4 <= ES(C) atual (6) → não sobrescreve.
+        a, b, c = _act("A", 6, {}), _act("B", 4, {}), _act("C", 2, {})
+        dag = _dag([a, b, c], [("A", "C"), ("B", "C")])
+        es = helpers._cpm_early_start(dag)
+        assert es["C"] == 6
+
+
+class TestGapCobertoPorRecurso:
+    """_gap_coberto_por_recurso(sched, tipo_id, t_start, t_end) → bool"""
+
+    def test_gap_vazio_retorna_true(self, helpers):
+        sched = _sched([], 0)
+        assert helpers._gap_coberto_por_recurso(sched, "ESC-22T", 4, 4) is True
+
+    def test_atividade_de_outro_tipo_e_ignorada(self, helpers):
+        """Atividade que não usa tipo_id não contribui para cobertura
+        (branch 458->457 false: `if sa.assigned_resources.get(tipo_id, 0) > 0` falso)."""
+        sched = _sched([_sa("X", 0, 4, {"OUTRO-TIPO": 1})], 4)
+        assert helpers._gap_coberto_por_recurso(sched, "ESC-22T", 0, 4) is False
+
+    def test_gap_coberto_por_atividade_do_mesmo_tipo(self, helpers):
+        sched = _sched([_sa("X", 0, 4, {"ESC-22T": 1})], 4)
+        assert helpers._gap_coberto_por_recurso(sched, "ESC-22T", 0, 4) is True
+
+
+class TestCpmLateFinish:
+    """_cpm_late_finish(dag, makespan) → {activity_id: LF}"""
+
+    def test_folha_lf_igual_makespan(self, helpers):
+        a = _act("A", 4, {})
+        dag = _dag([a])
+        lf = helpers._cpm_late_finish(dag, makespan=10)
+        assert lf["A"] == 10
+
+    def test_segundo_sucessor_nao_sobrescreve_quando_maior(self, helpers):
+        """A tem dois sucessores folha C (dur=5) e B (dur=3), ambos com
+        LF=makespan=10. dag.successors(A) retorna [C, B] (ordem de precedence);
+        C é processado primeiro (LS=5) e reduz LF(A); B (LS=7) não sobrescreve
+        pois 7 não é menor que o LF(A)=5 já definido (branch 447->445 false)."""
+        a, b, c = _act("A", 2, {}), _act("B", 3, {}), _act("C", 5, {})
+        dag = _dag([a, b, c], [("A", "C"), ("A", "B")])
+        lf = helpers._cpm_late_finish(dag, makespan=10)
+        assert lf["A"] == 5  # min(LS(C)=10-5=5, LS(B)=10-3=7) = 5
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. _detectar_oportunidades_paralelo — critérios de candidatura
@@ -208,6 +256,24 @@ class TestCriteriosCandidatura:
         result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
         # A tem slack=0 (schedulado em ES=0) → par descartado
         assert result == []
+
+    def test_par_com_sucessor_com_folga_suficiente_aceito(self, helpers):
+        """A tem sucessor C com float suficiente (tf_succ >= delay) → não rejeitado
+        (branch 561->556 false: loop continua sem marcar `rejeitado`)."""
+        a = _act("A", 4, {"ESC-22T": 1})
+        b = _act("B", 4, {"ESC-22T": 1})
+        c = _act("C", 1, {})
+        # C depende de A; makespan bem maior que o necessário dá folga generosa a C.
+        dag = _dag([a, b, c], [("A", "C")])
+        pool = _pool({"ESC-22T": 1})
+        sched = _sched(
+            [_sa("A", 0, 4, {"ESC-22T": 1}), _sa("B", 4, 4, {"ESC-22T": 1})],
+            makespan=30,
+        )
+        result = helpers._detectar_oportunidades_paralelo(sched, dag, pool, _COSTS_ESC, custo_indireto_semana=0.0)
+        # C tem folga ampla (makespan=30 vs EF(A)=4) → delay de A não viola seu float → aceito
+        assert len(result) == 1
+        assert {result[0].atividade_i, result[0].atividade_j} == {"A", "B"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

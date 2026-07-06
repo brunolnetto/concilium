@@ -163,6 +163,16 @@ class TestConfigMixin:
         assert "E1" in event_ids  # global (overridden by project)
         assert "E2" in event_ids  # jurisdicao
 
+    def test_load_calendario_operacional_malformed_json_ignored(self, tmp_path):
+        # global.json with invalid JSON content must be swallowed by the
+        # `_load_optional` except-branch and treated as if it had no events.
+        cal_dir = tmp_path / "calendarios"
+        cal_dir.mkdir()
+        (cal_dir / "global.json").write_text("{not valid json", encoding="utf-8")
+        cm = self._make(tmp_path)
+        cal = cm.load_calendario_operacional()
+        assert cal["eventos"] == []
+
     def test_load_calendario_cached(self, tmp_path):
         cm = self._make(tmp_path)
         c1 = cm.load_calendario_operacional()
@@ -300,6 +310,20 @@ class TestPermissionGuard:
             with pytest.raises(PermissionError):
                 fn()
 
+    def test_permission_decorator_passes_when_authorized(self):
+        """Covers the false branch of `if perm not in get_permissions(...)`:
+        an authorized role must call through without raising."""
+        from concilium.infrastructure.auth.permission_guard import permission, set_roles
+
+        set_roles(["operator"])
+        with patch("concilium.infrastructure.auth.permission_guard._auth_enabled", return_value=True):
+
+            @permission("project:run")
+            def fn():
+                return "ok"
+
+            assert fn() == "ok"
+
     def test_roles_decorator_disabled(self):
         from concilium.infrastructure.auth.permission_guard import roles
 
@@ -345,6 +369,28 @@ class TestPermissionGuard:
         assert "admin" in result
 
 
+# ─── presentation/mcp/rate_limit.py ───────────────────────────────────────────
+
+
+class TestMcpRateLimit:
+    def test_mcp_rate_limit_raises_when_limit_exceeded(self):
+        """Linhas 50-52: chamadas acima do limite levantam RuntimeError com wait_s."""
+        import concilium.presentation.mcp.rate_limit as rl_mod
+
+        rl_mod._counters.clear()
+
+        @rl_mod.mcp_rate_limit(calls=2, period_s=60)
+        def minha_tool(project_id: str) -> dict:
+            return {"ok": True}
+
+        assert minha_tool(project_id="P1") == {"ok": True}
+        assert minha_tool(project_id="P1") == {"ok": True}
+        with pytest.raises(RuntimeError, match="Rate limit atingido"):
+            minha_tool(project_id="P1")
+
+        rl_mod._counters.clear()
+
+
 # ─── presentation/api/rate_limit.py ───────────────────────────────────────────
 
 
@@ -381,6 +427,42 @@ class TestRateLimit:
         ):
             result = _rate_limit_key(req)
         assert result == "ip:5.6.7.8"
+
+    def test_rate_limit_key_bearer_without_sub_falls_back_to_ip(self):
+        """Linha 36->40: token válido decodifica mas payload não tem 'sub' → fallback IP."""
+        from concilium.presentation.api.rate_limit import _rate_limit_key
+
+        req = MagicMock()
+        req.headers = {"Authorization": "Bearer no-sub-token"}
+        with (
+            patch(
+                "concilium.infrastructure.auth.token_service.decode_token",
+                return_value={"other_claim": "x"},
+            ),
+            patch("concilium.presentation.api.rate_limit.get_remote_address", return_value="9.9.9.9"),
+        ):
+            result = _rate_limit_key(req)
+        assert result == "ip:9.9.9.9"
+
+    def test_rate_limit_exceeded_handler_swallows_telemetry_exception(self):
+        """Linhas 59-60: exceção ao emitir métrica OTEL não propaga."""
+        from slowapi.errors import RateLimitExceeded
+
+        from concilium.presentation.api.rate_limit import rate_limit_exceeded_handler
+
+        req = MagicMock()
+        req.url.path = "/runs"
+        exc = MagicMock(spec=RateLimitExceeded)
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.record_rate_limit_exceeded",
+                side_effect=RuntimeError("otel down"),
+            ),
+            patch("concilium.presentation.api.rate_limit._slowapi_429", return_value=MagicMock()) as mocked_429,
+        ):
+            result = rate_limit_exceeded_handler(req, exc)
+        assert result is not None
+        mocked_429.assert_called_once()
 
     def test_rate_limit_exceeded_handler_does_not_raise(self):
         from slowapi.errors import RateLimitExceeded
@@ -525,3 +607,101 @@ class TestReplanMcpTool:
         ):
             result = tools["simular_cenario_replan"](project_id="proj-1", tipo="lever_adjust", parametros={})
         assert "erro" in result
+
+    def test_simular_cenario_resolve_via_escopo_ativo(self, monkeypatch, tmp_path):
+        """Caminho feliz: escopo -> plano ativo -> canonical, sem cair no fallback flat."""
+        tools = self._register_tools(monkeypatch, tmp_path)
+        canonical = MagicMock(ponto_equilibrio=[], resultado=None, projeto=None)
+        active = MagicMock(plano_id="v1")
+        plano = MagicMock()
+        plano.load_canonical.return_value = canonical
+        es = MagicMock()
+        es.active_plan.return_value = active
+        es.plan.return_value = plano
+        store = MagicMock()
+        store.escopo.return_value = es
+        with (
+            patch("concilium.presentation.mcp._context._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="default"),
+        ):
+            result = tools["simular_cenario_replan"](project_id="proj-1", tipo="lever_adjust", parametros={})
+        assert "resumo" in result
+        store.load_canonical.assert_not_called()
+
+    def test_simular_cenario_no_active_plan_falls_back_to_flat(self, monkeypatch, tmp_path):
+        """Branch 142->146: es.active_plan() é None -> cai no fallback store.load_canonical()."""
+        tools = self._register_tools(monkeypatch, tmp_path)
+        canonical = MagicMock(ponto_equilibrio=[], resultado=None, projeto=None)
+        es = MagicMock()
+        es.active_plan.return_value = None
+        store = MagicMock()
+        store.escopo.return_value = es
+        store.load_canonical.return_value = canonical
+        with (
+            patch("concilium.presentation.mcp._context._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="default"),
+        ):
+            result = tools["simular_cenario_replan"](project_id="proj-1", tipo="lever_adjust", parametros={})
+        assert "resumo" in result
+        store.load_canonical.assert_called_once()
+
+    def test_ui_metas_missing_tool_is_skipped_silently(self, monkeypatch, tmp_path):
+        """register(): se 'simular_cenario_replan' não estiver no tool_manager, o loop apenas pula."""
+        import importlib
+
+        from mcp.server.fastmcp import FastMCP
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_dir))
+        mod = importlib.import_module("concilium.presentation.mcp.tools.replan")
+
+        class _NoneForReplan(dict):
+            def get(self, key, default=None):
+                if key == "simular_cenario_replan":
+                    return None
+                return super().get(key, default)
+
+        server = FastMCP("test-replan-ui-metas-missing")
+        server._tool_manager._tools = _NoneForReplan()
+
+        mod.register(server)  # should not raise
+
+    def test_ui_metas_exception_setting_meta_is_swallowed(self, monkeypatch, tmp_path):
+        """register(): exceção ao atribuir tool.meta é silenciada."""
+        import importlib
+
+        from mcp.server.fastmcp import FastMCP
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(config_dir))
+        mod = importlib.import_module("concilium.presentation.mcp.tools.replan")
+
+        class _RaisingMetaTool:
+            @property
+            def meta(self):
+                return None
+
+            @meta.setter
+            def meta(self, value):
+                raise RuntimeError("cannot set meta")
+
+        class _RaisingForReplan(dict):
+            def get(self, key, default=None):
+                if key == "simular_cenario_replan":
+                    return _RaisingMetaTool()
+                return super().get(key, default)
+
+        server = FastMCP("test-replan-ui-metas-raise")
+        server._tool_manager._tools = _RaisingForReplan()
+
+        mod.register(server)  # should not raise
+
+    def test_simular_lever_adjust_sem_resultado_ignora_custo_indireto(self):
+        from concilium.presentation.mcp.tools.replan import _simular_lever_adjust
+
+        canonical = MagicMock(ponto_equilibrio=[], resultado=None, projeto=None)
+        result = _simular_lever_adjust(canonical, {})
+        assert result["resumo"]["custo_direto_atual"] == 0.0
+        assert result["resumo"]["margem_pct_atual"] == 0.0

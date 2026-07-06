@@ -510,3 +510,25 @@ class TestReturnType:
 
         assert hasattr(result, "validacoes")
         assert isinstance(result.validacoes, list)
+
+
+def test_load_local_raises_importerror_when_spec_is_none():
+    """Covers skill.py's `_load_local` ImportError branch: when the top-level
+    relative import fails (as it always does under load_skill_stage, which
+    doesn't register a synthetic parent package) and spec_from_file_location
+    also fails for the fallback file, an explicit ImportError is raised."""
+    import importlib.util
+    from unittest.mock import patch
+
+    orig_spec = importlib.util.spec_from_file_location
+
+    def fake_spec(mod_name, path, *args, **kwargs):
+        if str(path).endswith("_assessor.py"):
+            return None
+        return orig_spec(mod_name, path, *args, **kwargs)
+
+    import pytest
+
+    with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
+        with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+            load_skill_stage("11-replanejamento-e-cenarios", "skill", "run_replanejamento_e_cenarios")

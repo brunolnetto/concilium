@@ -565,6 +565,125 @@ def test_server_main_calls_server_run(monkeypatch, tmp_path):
     mock_srv.run.assert_called_once()
 
 
+def test_server_main_sse_transport_uses_configured_host_port(monkeypatch, tmp_path):
+    """server.main(): transport='sse' takes the sse branch and reads host/port
+    from mcp settings (branch `if transport != 'stdio'`, line 202-203)."""
+    from unittest.mock import MagicMock, patch
+
+    from concilium.presentation.mcp.server import main as srv_main
+
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs_sse"))
+    monkeypatch.setenv("CONCILIUM__MCP_TRANSPORT", "sse")
+    monkeypatch.setenv("CONCILIUM__MCP_HOST", "1.2.3.4")
+    monkeypatch.setenv("CONCILIUM__MCP_PORT", "9999")
+
+    captured = {}
+
+    def fake_build_server(host, port):
+        captured["host"] = host
+        captured["port"] = port
+        return MagicMock()
+
+    with patch("concilium.presentation.mcp.server.build_server", side_effect=fake_build_server):
+        srv_main()
+
+    assert captured["host"] == "1.2.3.4"
+    assert captured["port"] == 9999
+
+
+def test_server_main_streamable_http_transport(monkeypatch, tmp_path):
+    """server.main(): transport='streamable-http' branch (line 196-197)."""
+    from unittest.mock import MagicMock, patch
+
+    from concilium.presentation.mcp.server import main as srv_main
+
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs_http"))
+    monkeypatch.setenv("CONCILIUM__MCP_TRANSPORT", "streamable-http")
+
+    with patch("concilium.presentation.mcp.server.build_server") as mock_build:
+        mock_srv = MagicMock()
+        mock_build.return_value = mock_srv
+        srv_main()
+
+    mock_srv.run.assert_called_once_with(transport="streamable-http")
+
+
+def test_server_main_invalid_transport_raises(monkeypatch, tmp_path):
+    """server.main(): unrecognized transport value raises RuntimeError (lines 198-201)."""
+    from concilium.presentation.mcp.server import main as srv_main
+
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs_bad"))
+    monkeypatch.setenv("CONCILIUM__MCP_TRANSPORT", "carrier-pigeon")
+
+    with pytest.raises(RuntimeError, match="CONCILIUM__MCP_TRANSPORT inválido"):
+        srv_main()
+
+
+def test_server_main_tool_count_exception_falls_back_to_placeholder(monkeypatch, tmp_path):
+    """server.main(): if reading server._tool_manager._tools raises, n_tools
+    falls back to '?' instead of propagating (lines 209-212)."""
+    from unittest.mock import MagicMock, patch
+
+    from concilium.presentation.mcp.server import main as srv_main
+
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(CONFIG_ROOT))
+    monkeypatch.setenv("CONCILIUM__PROJECTS_ROOT", str(tmp_path / "projs_toolcount"))
+    monkeypatch.setenv("CONCILIUM__MCP_TRANSPORT", "stdio")
+
+    class _BoomToolManager:
+        @property
+        def _tools(self):
+            raise RuntimeError("internal FastMCP structure changed")
+
+    mock_srv = MagicMock()
+    mock_srv._tool_manager = _BoomToolManager()
+
+    with patch("concilium.presentation.mcp.server.build_server", return_value=mock_srv):
+        srv_main()  # should not raise despite the broken tool_manager
+
+    mock_srv.run.assert_called_once()
+
+
+def test_register_ui_resources_skips_missing_html_files(monkeypatch, tmp_path):
+    """_register_ui_resources: apps whose HTML file doesn't exist on disk are
+    skipped via `continue` (line 151), while existing ones still register."""
+    from unittest.mock import MagicMock
+
+    from concilium.presentation.mcp import server as server_mod
+
+    # Only create the file for one of the four known apps.
+    (tmp_path / "formulario-qqp").mkdir()
+    (tmp_path / "formulario-qqp" / "index.html").write_text("<html>ok</html>", encoding="utf-8")
+
+    monkeypatch.setattr(server_mod, "_APPS_DIR", tmp_path)
+
+    fake_server = MagicMock()
+    registered_uris = []
+    registered_handlers = {}
+
+    def fake_resource(uri, mime_type=None):
+        registered_uris.append(uri)
+
+        def decorator(fn):
+            registered_handlers[uri] = fn
+            return fn
+
+        return decorator
+
+    fake_server.resource.side_effect = fake_resource
+
+    server_mod._register_ui_resources(fake_server)
+
+    assert "ui://concilium/formulario-qqp" in registered_uris
+    assert "ui://concilium/dashboard-resultado" not in registered_uris
+
+    # Invoking the registered handler exercises the closure body (line 159).
+    assert registered_handlers["ui://concilium/formulario-qqp"]() == "<html>ok</html>"
+
+
 def test_mcp_main_module_entry_point(monkeypatch, tmp_path):
     """Running concilium.presentation.mcp as __main__ calls main() → server.run()."""
     import runpy
@@ -581,6 +700,36 @@ def test_mcp_main_module_entry_point(monkeypatch, tmp_path):
             mock_build.return_value = mock_srv
             runpy.run_module("concilium.presentation.mcp", run_name="__main__", alter_sys=False)
         mock_srv.run.assert_called_once()
+    finally:
+        if _saved is not None:
+            sys.modules[_mod] = _saved
+
+    # NOTE: the `if __name__ == "__main__": main()` guard at the bottom of
+    # server.py itself (as opposed to __main__.py's own guard, exercised
+    # above) cannot be exercised with a mocked build_server the way the
+    # __main__.py test above does: runpy.run_module(..., run_name="__main__")
+    # recompiles the module into a brand-new namespace, so any
+    # `patch("...server.build_server")` applied to the cached module has no
+    # effect on the freshly executed one. Instead we let main() itself raise
+    # early (invalid CONCILIUM__CONFIG_ROOT) before it ever reaches
+    # build_server/server.run — that still credits both the guard line and
+    # the main() call without touching real stdio.
+
+
+def test_server_main_module_guard_invokes_main(monkeypatch, tmp_path):
+    """Executing server.py as __main__ reaches the `if __name__ == '__main__':
+    main()` guard at the bottom of the module. main() raises immediately due
+    to an invalid CONCILIUM__CONFIG_ROOT, so this covers the guard without
+    starting a real stdio server."""
+    import runpy
+
+    monkeypatch.setenv("CONCILIUM__CONFIG_ROOT", str(tmp_path / "no_config"))
+
+    _mod = "concilium.presentation.mcp.server"
+    _saved = sys.modules.pop(_mod, None)
+    try:
+        with pytest.raises(RuntimeError, match="não encontrado"):
+            runpy.run_module(_mod, run_name="__main__", alter_sys=False)
     finally:
         if _saved is not None:
             sys.modules[_mod] = _saved

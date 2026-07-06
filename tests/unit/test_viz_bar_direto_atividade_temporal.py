@@ -75,6 +75,27 @@ class TestBuildEarlyReturns:
         ):
             assert _build(MagicMock(), MagicMock()) is None
 
+    def test_skips_cells_with_empty_atividade_id(self):
+        # A custo_direto cell with no atividade_id is skipped (continue), and
+        # with no other cells periodos stays empty → returns None.
+        mock_cell = MagicMock()
+        mock_cell.componente_bdi = "custo_direto"
+        mock_cell.atividade_id = ""
+        mock_cell.semana_iso = "2026-W01"
+        mock_plt = MagicMock()
+        mock_plt.subplots.return_value = (MagicMock(), MagicMock())
+        with (
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.cube.bar_direto_atividade_temporal.init_mpl",
+                return_value=(mock_plt, MagicMock()),
+            ),
+            patch(
+                "concilium.application.runtime.deliverables.visualizations.cube.bar_direto_atividade_temporal._iter_scaled_cubo_cells",
+                return_value=[(mock_cell, 100.0)],
+            ),
+        ):
+            assert _build(MagicMock(), MagicMock()) is None
+
 
 class TestBuildHappyPath:
     def _make_cell(self, componente, atividade_id, semana_iso, valor):

@@ -57,6 +57,29 @@ class TestJobsRepositoryUnsupportedBackend:
             except ValueError as exc:
                 assert "redis" in str(exc)
 
+    def test_inner_double_check_skips_reinit_on_race(self):
+        """Line 169->172: deterministically exercises the inner
+        `if _repository is None:` False branch by simulating another thread
+        having already initialized `_repository` while this one waited to
+        acquire `_repository_lock`."""
+        import concilium.application.jobs.repository as jobs_repo_mod
+
+        jobs_repo_mod.reset_repository()
+        sentinel = object()
+
+        class _FakeLock:
+            def __enter__(self):
+                jobs_repo_mod._repository = sentinel
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        with patch.object(jobs_repo_mod, "_repository_lock", _FakeLock()):
+            result = jobs_repo_mod.get_job_repository()
+        assert result is sentinel
+        jobs_repo_mod.reset_repository()
+
 
 # ---------------------------------------------------------------------------
 # producao.py line 33:
@@ -221,3 +244,33 @@ class TestExecutiveSummaryGetDict:
 
         result = _get({"other": 1}, "foo", "fallback")
         assert result == "fallback"
+
+
+# ---------------------------------------------------------------------------
+# completeness.py lines 30-38: _as_health_status full branch coverage
+# ---------------------------------------------------------------------------
+
+
+class TestCompletenessAsHealthStatus:
+    def test_adequado(self):
+        from concilium.infrastructure.catalog.completeness import _as_health_status
+
+        assert _as_health_status("ADEQUADO") == "ADEQUADO"
+
+    def test_parcial(self):
+        from concilium.infrastructure.catalog.completeness import _as_health_status
+
+        assert _as_health_status("PARCIAL") == "PARCIAL"
+
+    def test_insuficiente(self):
+        from concilium.infrastructure.catalog.completeness import _as_health_status
+
+        assert _as_health_status("INSUFICIENTE") == "INSUFICIENTE"
+
+    def test_unexpected_value_raises_value_error(self):
+        import pytest
+
+        from concilium.infrastructure.catalog.completeness import _as_health_status
+
+        with pytest.raises(ValueError, match="Status de saúde do catálogo inesperado"):
+            _as_health_status("BOGUS")

@@ -109,6 +109,19 @@ def test_extract_rows_skips_empty_rows():
     assert result[0]["codigo"] == "INS-01"
 
 
+def test_extract_rows_header_row_blank_after_strip():
+    """Line 46: header row has non-empty cells (spaces), but every cell becomes ''
+    after strip() → all-blank headers → returns []."""
+    excel = _make_excel_bytes({"Insumos": [[" ", "  "], ["INS-01", "Cimento"]]})
+    pipeline = _make_pipeline()
+    from openpyxl import load_workbook
+
+    wb = load_workbook(filename=BytesIO(excel), read_only=True, data_only=True)
+    result = pipeline._extract_rows_from_sheet(wb, "Insumos")
+    wb.close()
+    assert result == []
+
+
 # ── parse_planilha ────────────────────────────────────────────────────────────
 
 
@@ -206,3 +219,37 @@ def test_processar_catalogo_validation_error():
                 versao_tag="2026-01-test",
                 excel_bytes=excel,
             )
+
+
+def test_processar_catalogo_non_erro_status_not_counted():
+    """Line 103 false branch: a validation entry with status != 'ERRO' (e.g. 'AVISO')
+    is not added to erros_fatais, and processing succeeds."""
+    excel = _make_excel_bytes(
+        {
+            "Insumos": [["codigo", "descricao"], ["INS-01", "Cimento"]],
+            "CPUs": [["cpu_id", "descricao"], ["CPU-01", "Escavação"]],
+        }
+    )
+    storage = MagicMock()
+    storage.gravar_blob.return_value = None
+    pipeline = ExcelIngestionPipeline(storage)
+
+    aviso_mock = MagicMock()
+    aviso_mock.status = "AVISO"
+
+    with (
+        patch("concilium.infrastructure.catalog.excel_ingestion.ValidadorCPUInsumo") as mock_validator_cls,
+        patch("concilium.infrastructure.catalog.excel_ingestion.validar_sem_ciclos"),
+        patch("concilium.infrastructure.repositories.insumo.RepositorioInsumo"),
+    ):
+        mock_validator_instance = MagicMock()
+        mock_validator_instance.validar_cpu_completa.return_value = [aviso_mock]
+        mock_validator_cls.return_value = mock_validator_instance
+
+        blob_path = pipeline.processar_catalogo(
+            data_base=date(2026, 1, 1),
+            versao_tag="2026-01-test",
+            excel_bytes=excel,
+        )
+
+    assert isinstance(blob_path, str)

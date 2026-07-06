@@ -780,3 +780,190 @@ def test_resolve_cubo_projection_rows_atividade_componente_skips_empty_cat():
     keys = {r["atividade_id"] for r in rows}
     assert not any(k.endswith(".") for k in keys)  # empty cat skipped
     assert any("indireto.TOP" in k for k in keys)
+
+
+# ---------------------------------------------------------------------------
+# Remaining branch gaps (session 2): 303, 374, [204,202], [268,260], [302,303],
+# [305,295], [311,323], [328,326], [373,374], [453,455]
+# ---------------------------------------------------------------------------
+
+
+def test_custo_indireto_por_periodo_offset_out_of_range_skipped():
+    """Line 204->202: ind.semana offset out of range of semanas_sorted -> skip, no KeyError."""
+    from concilium.application.services.analytics.cube_projection_views import _custo_indireto_por_periodo
+
+    act = _ns(distribuicao_semanal={"2026-W01": 1.0, "2026-W02": 1.0})
+    cronograma = _ns(scheduled_activities=[act])
+    ind_valid = _ns(semana=0, custo_semanal=100.0)
+    ind_out_of_range = _ns(semana=99, custo_semanal=500.0)
+    canonical = _ns(cronograma=cronograma, indiretos_semanal=[ind_valid, ind_out_of_range])
+    result = _custo_indireto_por_periodo(canonical, "semana")
+    assert sum(result.values()) == pytest.approx(100.0)
+
+
+def test_resolve_cubo_projection_rows_direto_temporal_categoria_empty_bucket_skipped():
+    """Line 268->260: empty semana_iso with granularidade='semana' -> bucket falsy -> continue."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    cell = _celula(
+        natureza="direto",
+        componente_bdi="custo_direto",
+        categoria="mao_obra",
+        semana_iso="",
+        valor_rs=100.0,
+    )
+    cubo = _cubo([cell])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(cubo, "direto_temporal_categoria", "semana", 100)
+    total = sum(r["valor_rs"] for r in rows)
+    assert total == 0.0
+
+
+def test_resolve_cubo_projection_rows_indireto_unknown_category_skipped():
+    """Line 302-303: aid category not in the known categories list -> continue."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    ind_cell = _ns(
+        natureza="indireto",
+        componente_bdi="custo_direto",
+        atividade_id="IND-DESCONHECIDO",
+        valor_rs=999.0,
+        semana_iso="2026-W01",
+    )
+    cubo_analitico = _cubo([ind_cell])
+    canonical = _ns(
+        cubo_analitico=cubo_analitico,
+        instancias_recurso=[],
+        indiretos=[],
+        cronograma=None,
+        indiretos_semanal=[],
+    )
+    cubo = _cubo([])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(
+        cubo, "indireto_temporal_categoria", "mes", 100, canonical=canonical
+    )
+    total = sum(r["valor_rs"] for r in rows)
+    assert total == 0.0
+
+
+def test_resolve_cubo_projection_rows_indireto_temporal_categoria_empty_bucket_skipped():
+    """Line 305->295: empty semana_iso with granularidade='semana' -> bucket falsy -> continue."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    ind_cell = _ns(
+        natureza="indireto",
+        componente_bdi="custo_direto",
+        atividade_id="IND-ADM",
+        valor_rs=250.0,
+        semana_iso="",
+    )
+    cubo_analitico = _cubo([ind_cell])
+    canonical = _ns(
+        cubo_analitico=cubo_analitico,
+        instancias_recurso=[],
+        indiretos=[],
+        cronograma=None,
+        indiretos_semanal=[],
+    )
+    cubo = _cubo([])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(
+        cubo, "indireto_temporal_categoria", "semana", 100, canonical=canonical
+    )
+    total = sum(r["valor_rs"] for r in rows)
+    assert total == 0.0
+
+
+def test_resolve_cubo_projection_rows_indireto_temporal_categoria_canonical_none():
+    """Line 311->323: canonical falsy -> skip rebalance and fallback blocks entirely."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    cubo = _cubo([])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(
+        cubo, "indireto_temporal_categoria", "mes", 100, canonical=None
+    )
+    assert rows == []
+
+
+def test_resolve_cubo_projection_rows_indireto_fallback_skips_unknown_category():
+    """Line 328->326: fallback path skips indiretos with categoria not in ADM/TOP/LAB/QSMS/MOB."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    ind_unknown = _ns(categoria="XYZ", custo_total=1000.0)
+    ind_known = _ns(categoria="ADM", custo_total=100.0)
+    act = _ns(distribuicao_semanal={"2026-W01": 1.0})
+    cronograma = _ns(scheduled_activities=[act])
+    ind_semanal = _ns(semana=0, custo_semanal=200.0)
+    canonical = _ns(
+        cubo_analitico=None,
+        instancias_recurso=[],
+        indiretos=[ind_unknown, ind_known],
+        cronograma=cronograma,
+        indiretos_semanal=[ind_semanal],
+    )
+    cubo = _cubo([])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(
+        cubo, "indireto_temporal_categoria", "mes", 100, canonical=canonical
+    )
+    # by_cat_total only counts "ADM"=100.0 (XYZ ignored); indireto_bucket total is 200.0
+    # distributed across categories by share (ADM gets 100% of shares since it's the only known total)
+    adm_total = sum(r["valor_rs"] for r in rows if r.get("categoria_indireto") == "ADM")
+    assert adm_total == pytest.approx(200.0)
+
+
+def test_resolve_cubo_projection_rows_tempo_natureza_empty_bucket_skipped():
+    """Line 373->374: empty semana_iso with granularidade='semana' -> bucket falsy -> continue."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    cell_empty_bucket = _ns(natureza="direto", componente_bdi="custo_direto", valor_rs=100.0, semana_iso="")
+    cubo_analitico = _cubo([cell_empty_bucket])
+    canonical = _ns(cubo_analitico=cubo_analitico)
+    cubo = _cubo([])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(
+        cubo, "tempo_natureza", "semana", 100, canonical=canonical
+    )
+    total = sum(r["valor_rs"] for r in rows)
+    assert total == 0.0
+
+
+def test_resolve_cubo_projection_rows_categoria_componente_sub_zero_custo_total_positive():
+    """Line 453->455: sub==0 (mao=eq=verbas=0) but custo_total_ind>0 -> verbas += custo_total_ind."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    ind = _ns(
+        categoria="ADM",
+        custo_total=777.0,
+        funcoes=[],
+        equipamentos=[],
+        verbas_mensais=[],
+        verbas_fixas=[],
+        mobilizacoes=[],
+    )
+    canonical = _ns(indiretos=[ind])
+    cubo = _cubo([])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(
+        cubo, "categoria_componente", "mes", 100, canonical=canonical
+    )
+    verbas_rows = [r for r in rows if r["categoria"] == "indireto.verbas"]
+    total_verbas = sum(r["valor_rs"] for r in verbas_rows)
+    assert total_verbas > 0.0
+
+
+def test_resolve_cubo_projection_rows_categoria_componente_sub_and_custo_total_both_zero():
+    """Line 453->455 branch False: sub==0 and custo_total_ind<=0 -> neither adjustment runs."""
+    from concilium.application.services.analytics.cube_projection_views import resolve_cubo_projection_rows
+
+    ind = _ns(
+        categoria="ADM",
+        custo_total=0.0,
+        funcoes=[],
+        equipamentos=[],
+        verbas_mensais=[],
+        verbas_fixas=[],
+        mobilizacoes=[],
+    )
+    canonical = _ns(indiretos=[ind])
+    cubo = _cubo([])
+    rows, _columns, _chart_hint = resolve_cubo_projection_rows(
+        cubo, "categoria_componente", "mes", 100, canonical=canonical
+    )
+    total = sum(r["valor_rs"] for r in rows)
+    assert total == 0.0

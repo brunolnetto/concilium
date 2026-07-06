@@ -511,6 +511,22 @@ class TestGerenciarPlano:
         assert "erro" in result
         assert "deletar" in result["erro"]
 
+    def test_entidade_invalida_returns_erro(self, tools):
+        """Branch 121->138: entidade fora de {escopo, plano} → erro dict."""
+        es = MagicMock()
+        store = self._make_store_with_escopo(es)
+
+        with patch("concilium.presentation.mcp.tools.escopo._project", return_value=store):
+            result = tools["gerir_escopo"](
+                project_id="proj-001",
+                entidade="insumo",
+                escopo_id="esc-001",
+                acao="criar",
+            )
+
+        assert "erro" in result
+        assert "insumo" in result["erro"]
+
     def test_criar_com_hipotese(self, tools):
         """acao='criar' with hipotese kwarg → hipotese is forwarded to create_plan."""
         ps = MagicMock()

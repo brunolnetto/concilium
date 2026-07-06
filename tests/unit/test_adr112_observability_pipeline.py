@@ -1035,9 +1035,31 @@ class TestSchedulerCrossDomainException:
                     side_effect=RuntimeError("cross domain boom"),
                 ):
                     with caplog.at_level(logging.WARNING):
-                        result = scheduler.run_cycle(
-                            now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC)
-                        )
+                        result = scheduler.run_cycle(now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC))
 
         assert result.get("cross_domain_ran") is False
         assert any("CrossDomain" in r.message for r in caplog.records)
+
+
+class TestSchedulerCrossDomainNoProjectsRoot:
+    """Branch 280→288: projects_root falsy (no projects_root and no root
+    configured) → CrossDomain block is skipped entirely, no exception, no flag."""
+
+    def test_no_projects_root_skips_cross_domain(self, storage):
+        from unittest.mock import MagicMock, patch
+
+        from concilium.infrastructure.observability.pipeline import ObservabilityScheduler
+
+        scheduler = ObservabilityScheduler(storage, silver_interval_min=9999, gold_interval_min=0)
+
+        import datetime
+
+        mock_cfg = MagicMock()
+        mock_cfg.projects_root = None
+        mock_cfg.root = None
+
+        with patch("concilium.infrastructure.observability.gold_aggregator.GoldAggregator.write_gold"):
+            with patch("concilium.infrastructure.settings.get_storage", return_value=mock_cfg):
+                result = scheduler.run_cycle(now=datetime.datetime(2026, 6, 30, 12, 0, tzinfo=datetime.UTC))
+
+        assert "cross_domain_ran" not in result

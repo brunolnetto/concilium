@@ -433,6 +433,53 @@ class TestConsultarStatus:
         assert result["invocations"][0]["skill"] == "01-escopo-e-eap"
         assert result["invocations"][1]["status"] == "ERRO"
 
+    def test_invocations_log_skips_blank_lines(self, tools, tmp_path):
+        """Linhas em branco no invocations.log são ignoradas (loop continua sem parsear)."""
+        version_dir = tmp_path / "v1"
+        version_dir.mkdir()
+        log_path = version_dir / "invocations.log"
+        log_path.write_text(
+            "\n   \n" + json.dumps({"skill": "01-escopo-e-eap", "status": "OK", "ts": "2026-01-01T10:00:00"}) + "\n",
+            encoding="utf-8",
+        )
+
+        store = _make_store(tmp_path)
+        store.meta = {
+            "nome": "Versioned Proj",
+            "contexto_id": "mendeslobo",
+            "current_version": "v1",
+        }
+        store.list_versions.return_value = ["v1"]
+        store.list_escopos.return_value = []
+        store.version_path.return_value = version_dir
+        store.INVOCATIONS_LOG = "invocations.log"
+        store.load_canonical.return_value = None
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
+        ):
+            result = tools["consultar_status"](project_id="proj-blanklines")
+
+        assert len(result["invocations"]) == 1
+
+    def test_multiple_escopos_no_single_active(self, tools, tmp_path):
+        """Mais de um escopo -> escopo_ativo permanece None e as chaves derivadas não aparecem."""
+        store = _make_store(tmp_path)
+        store.list_escopos.return_value = ["esc-1", "esc-2"]
+
+        with (
+            patch("concilium.presentation.mcp.tools.projeto._project", return_value=store),
+            patch("concilium.presentation.mcp.tools.projeto._wrap_response", side_effect=lambda x: x),
+        ):
+            result = tools["consultar_status"](project_id="proj-multi-escopo")
+
+        assert result["escopos"] == ["esc-1", "esc-2"]
+        assert "escopo_ativo" not in result
+        assert "plano_ativo" not in result
+        assert "invocations" not in result
+        assert "resultado_atual" not in result
+
     def test_canonical_blocked_pipeline_aviso(self, tools, tmp_path):
         """Lines 243-257, 262-274: canonical with blocked pipeline → aviso_integridade + resultado AVISO."""
         version_dir = tmp_path / "v1"
@@ -1041,3 +1088,49 @@ class TestConsultarStatusEdgeCases:
         # Should not crash; escopos key should not be in output
         assert "escopos" not in result
         assert result["project_id"] == "proj-outer-err"
+
+
+# ===========================================================================
+# register() — ADR-101 _meta.ui wiring for MCP Apps
+# ===========================================================================
+
+
+class TestRegisterUiMetas:
+    def test_missing_tool_is_skipped_silently(self):
+        """Se 'consultar_status' não estiver no tool_manager, o loop apenas pula (sem erro)."""
+
+        class _NoneForConsultarStatus(dict):
+            def get(self, key, default=None):
+                if key == "consultar_status":
+                    return None
+                return super().get(key, default)
+
+        server = FastMCP("test-ui-metas-missing")
+        server._tool_manager._tools = _NoneForConsultarStatus()
+
+        # Should not raise even though the lookup returns None for consultar_status.
+        register(server)
+
+    def test_exception_setting_meta_is_swallowed(self):
+        """Se atribuir tool.meta levantar exceção, o loop segue sem propagar o erro."""
+
+        class _RaisingMetaTool:
+            @property
+            def meta(self):
+                return None
+
+            @meta.setter
+            def meta(self, value):
+                raise RuntimeError("cannot set meta")
+
+        class _RaisingForConsultarStatus(dict):
+            def get(self, key, default=None):
+                if key == "consultar_status":
+                    return _RaisingMetaTool()
+                return super().get(key, default)
+
+        server = FastMCP("test-ui-metas-raise")
+        server._tool_manager._tools = _RaisingForConsultarStatus()
+
+        # Should not raise even though tool.meta = meta raises internally.
+        register(server)

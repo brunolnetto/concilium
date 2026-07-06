@@ -11,6 +11,7 @@ import pytest
 reportlab = pytest.importorskip("reportlab", reason="reportlab nao instalado")
 
 
+from concilium.application.runtime.deliverables.reports import pdf_renderer_rl as _pdf_mod  # noqa: E402
 from concilium.application.runtime.deliverables.reports.pdf_renderer_rl import (  # noqa: E402
     render_markdown_pdf,
 )
@@ -91,6 +92,14 @@ class TestTabelas:
         # Valor longo nao causa truncamento silencioso (nao ha limite de 35 chars)
         assert len(result) > 1000  # type: ignore[arg-type]
 
+    def test_flush_table_retornando_none_e_tolerado(self, monkeypatch):
+        """Se _flush_table() (helper de nivel de modulo) retornar None mesmo com
+        linhas acumuladas, o closure flush_table() dentro de _parse_md_to_story
+        deve apenas pular o append (branch False de `if tbl is not None`)."""
+        monkeypatch.setattr(_pdf_mod, "_flush_table", lambda *a, **kw: None)
+        result = render_markdown_pdf(self.MD)
+        assert _is_pdf(result)
+
 
 class TestBlocoDeCodigo:
     MD = (
@@ -107,6 +116,20 @@ class TestBlocoDeCodigo:
         result = render_markdown_pdf(self.MD)
         assert _is_pdf(result)
         assert len(result) > 500  # type: ignore[arg-type]
+
+    def test_bloco_codigo_vazio_nao_quebra(self):
+        """Fence aberta e fechada sem nenhuma linha de conteudo entre elas
+        chama flush_code() com code_lines vazio (branch False de `if code_lines`)."""
+        md = "Antes\n\n```\n```\n\nDepois"
+        result = render_markdown_pdf(md)
+        assert _is_pdf(result)
+
+    def test_bloco_codigo_nao_fechado_no_fim_do_documento(self):
+        """Documento termina com um bloco de codigo ainda aberto — dispara o
+        flush final `if in_code_block: flush_code()` (linha 306)."""
+        md = "Texto normal\n\n```\nlinha de codigo sem fechar a fence"
+        result = render_markdown_pdf(md)
+        assert _is_pdf(result)
 
 
 class TestImagens:
@@ -139,6 +162,17 @@ class TestImagens:
     def test_imagem_provider_retorna_none_nao_quebra(self):
         md = "![faltante](nao_existe.png)\n\nTexto normal."
         result = render_markdown_pdf(md, image_provider=lambda n: None)
+        assert _is_pdf(result)
+
+    def test_imagem_bytes_invalidos_sao_silenciados(self):
+        """Bytes que nao formam uma imagem valida disparam a excecao silenciada
+        em Image(...) (lines 255-256), sem quebrar o resto do documento."""
+        md = "![corrompida](corrompida.png)\n\nTexto apos imagem invalida."
+
+        def provider(name: str) -> bytes | None:
+            return b"isto-nao-e-um-png-valido"
+
+        result = render_markdown_pdf(md, image_provider=provider)
         assert _is_pdf(result)
 
 

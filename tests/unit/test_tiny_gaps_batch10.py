@@ -281,6 +281,82 @@ class TestCubeInit:
         assert proj is not None
         assert proj.ferramenta == {}
 
+    def test_accumulate_equipes_fallback_skipped_when_custo_fixo_zero(self):
+        """Covers the false branch of `if equipe.custo_fixo_mensal > 0` in the
+        PATH-2 fallback: with custo_inst_mo=None and custo_fixo_mensal=0, no
+        fallback totals are added (they stay at zero)."""
+        from concilium.application.benchmarks.report.projection import _accumulate_equipes
+
+        equipe = MagicMock()
+        equipe.custo_inst_mo = None
+        equipe.custo_fixo_mensal = 0.0
+        equipe.custo_total = 60000.0
+        equipe.custo_mao_obra_mensal = 3000.0
+        equipe.custo_equipamentos_mensal = 1000.0
+        equipe.custo_combustivel_total_mensal = 500.0
+        equipe.equipamentos = []
+        equipe.cpu_id = "CPU-1"
+        result = _accumulate_equipes([equipe])
+        assert result.mao_obra == 0.0
+        assert result.equipamentos == 0.0
+
+    def test_populate_resultado_custo_none_skips_ferramenta(self):
+        """Covers the false branch of `if custo is not None`: ferramenta must
+        stay unset when resultado.custo is None."""
+        from concilium.application.benchmarks.report.projection import BenchmarkProjection
+
+        resultado = MagicMock()
+        resultado.custo = None
+        resultado.venda = None
+        resultado.balanco_ponto_equilibrio = None
+        projection = BenchmarkProjection()
+        custo_direto, custo_indireto = projection._populate_resultado(resultado)
+        assert custo_direto is None
+        assert custo_indireto is None
+        assert projection.ferramenta == {}
+
+    def test_populate_resultado_fills_ponto_equilibrio_when_balanco_present(self):
+        """Covers the true branch of `if balanco_pe:` (lines 300-308)."""
+        from concilium.application.benchmarks.report.projection import BenchmarkProjection
+
+        resultado = MagicMock()
+        resultado.custo = None
+        resultado.venda = None
+        balanco = MagicMock()
+        balanco.total_hc_operacional = 10
+        balanco.total_hc_indireto = 2
+        balanco.total_hc = 12
+        balanco.custo_fixo_mensal = 1000.0
+        balanco.custo_fixo_total = 5000.0
+        balanco.numero_equipes_diretas = 3
+        resultado.balanco_ponto_equilibrio = balanco
+        projection = BenchmarkProjection()
+        projection._populate_resultado(resultado)
+        assert projection.ponto_equilibrio_ferramenta["total_hc"] == 12
+        assert projection.ponto_equilibrio_ferramenta["equipes"] == 3
+
+    def test_populate_breakdown_direto_uses_equipes_when_no_catalog(self):
+        """Covers the `elif equipes_diretas:` branch (line 319-320): when
+        planejamento has no catalog data but equipes_diretas is non-empty,
+        the equipes-based breakdown builder must be used."""
+        from concilium.application.benchmarks.report.projection import BenchmarkProjection
+
+        equipe = MagicMock()
+        equipe.custo_inst_mo = None
+        equipe.custo_fixo_mensal = 5000.0
+        equipe.custo_total = 60000.0
+        equipe.custo_mao_obra_mensal = 3000.0
+        equipe.custo_equipamentos_mensal = 1000.0
+        equipe.custo_combustivel_total_mensal = 500.0
+        equipe.equipamentos = []
+        equipe.cpu_id = "CPU-1"
+        canonical = MagicMock()
+        canonical.equipes_diretas = [equipe]
+        canonical.planejamento = []  # empty → has_catalog is False
+        projection = BenchmarkProjection()
+        projection._populate_breakdown_direto(canonical, custo_direto=None)
+        assert projection.ferramenta_breakdown_direto is not None
+
     def test_cube_build_all_empty_canonical(self):
         from concilium.application.runtime.deliverables.visualizations.cube import build_all
 

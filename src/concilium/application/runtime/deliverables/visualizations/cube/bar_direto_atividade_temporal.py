@@ -42,9 +42,10 @@ def build(canonical, cubo) -> bytes | None:
         if not periodos:
             return None
 
+        # total_by_activity e by_period_activity são sempre incrementados juntos no
+        # loop acima, logo periodos não-vazio (checado em cima) implica
+        # total_by_activity não-vazio: top_atividades nunca é vazio aqui.
         top_atividades = sorted(total_by_activity, key=lambda a: -total_by_activity[a])[:8]
-        if not top_atividades:  # pragma: no branch
-            return None
 
         x = list(range(len(periodos)))
         baseline = [0.0] * len(periodos)

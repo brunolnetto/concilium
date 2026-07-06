@@ -61,6 +61,18 @@ class TestProdutividadeDetalhada:
         esperado = custo_horario / 239.04
         assert abs(p.custo_unitario - esperado) < 0.001
 
+    def test_custo_unitario_zero_when_producao_horaria_non_positive(self):
+        """producao_horaria <= 0 → custo_unitario retorna 0.0 (evita divisão por zero).
+
+        O campo tem `Field(gt=0)`, mas o model_config não define
+        `validate_assignment=True`, então uma mutação pós-construção (ex: vinda
+        de código legado que reatribui o campo) ainda pode zerar/negativar o
+        valor sem passar pelo validador — daí a guarda defensiva na property.
+        """
+        p = self._make_produtividade(producao_horaria=1.0)
+        p.producao_horaria = 0.0
+        assert p.custo_unitario == 0.0
+
     def test_custo_horario_total_soma_componentes(self):
         p = self._make_produtividade(
             custo_equip=1170.73,

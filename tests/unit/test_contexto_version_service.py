@@ -132,6 +132,39 @@ class TestReadMetaCorruptFile:
         meta = svc._read_meta(entity_dir)
         assert meta == {"id": "ent-corrupt"}
 
+    def test_no_meta_file_at_all_falls_back_to_dir_name(self, tmp_path):
+        """Line 246 false branch: _find_meta_file returns None (no candidate exists) →
+        _read_meta returns the default {"id": entity_dir.name} without attempting a read."""
+        svc = _svc(tmp_path)
+        root = tmp_path / "contextos"
+        entity_dir = root / "ent-no-meta"
+        entity_dir.mkdir(parents=True)  # no contexto.json / perfil.json / meta.json
+
+        meta = svc._read_meta(entity_dir)
+        assert meta == {"id": "ent-no-meta"}
+
+
+# ---------------------------------------------------------------------------
+# Branch [43, 46]: versioned dir exists, requested version file missing, and
+# no v*.json files exist at all → falls through to the flat-file lookup.
+# ---------------------------------------------------------------------------
+
+
+class TestGetEntityVersionedDirEmptyGlob:
+    def test_versioned_dir_with_no_version_files_falls_to_flat_file(self, tmp_path):
+        svc = _svc(tmp_path)
+        root = tmp_path / "contextos"
+        entity_dir = root / "ent-empty-versions"
+        versions_dir = entity_dir / "versions"
+        versions_dir.mkdir(parents=True)  # exists, but no vN.json files inside
+
+        flat = root / "ent-empty-versions.json"
+        flat.write_text(json.dumps({"id": "ent-empty-versions", "nome": "Flat"}), encoding="utf-8")
+
+        result = svc.resolve("ent-empty-versions")
+        assert result is not None
+        assert result["nome"] == "Flat"
+
 
 # ---------------------------------------------------------------------------
 # Line 269: _list_versions when versions dir does not exist → return []

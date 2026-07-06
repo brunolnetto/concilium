@@ -219,6 +219,60 @@ class TestBuildCatalogReasonabilityArtifact:
         result = build_catalog_reasonability_artifact("cat-1", cpus, prods)
         assert result["summary"]["outliers"] > 0
 
+    def _make_producao_custom(self, pid, valor_horario, num_pessoas):
+        return {
+            "id": pid,
+            "valor_horario": valor_horario,
+            "composicao_padrao_equipe": {
+                "funcoes": [{"num_pessoas": num_pessoas}] if num_pessoas > 0 else [],
+                "equipamentos": [{"num_unidades": 1}],
+            },
+        }
+
+    def test_prod_outlier_on_row_already_erro_skips_severity_upgrade(self):
+        """Row already ERRO (team without mão de obra) that is also a
+        producao_horaria IQR outlier must NOT be downgraded/changed to AVISO —
+        covers the `if r["severity"] == "OK"` False branch for the prod check."""
+        from concilium.application.services.catalog.catalog_reasonability import build_catalog_reasonability_artifact
+
+        cpus = []
+        prods = []
+        for i in range(7):
+            cid, pid = f"CPU-{i}", f"P-{i}"
+            cpus.append(self._make_cpu(cid, categoria="GA", unidade="UA", producao_id_ref=pid))
+            prods.append(self._make_producao_custom(pid, 10.0, num_pessoas=2))
+        # 8th row: extreme producao_horaria outlier AND zero team -> ERRO already
+        cpus.append(self._make_cpu("CPU-7", categoria="GA", unidade="UA", producao_id_ref="P-7"))
+        prods.append(self._make_producao_custom("P-7", 1000.0, num_pessoas=0))
+
+        result = build_catalog_reasonability_artifact("cat-1", cpus, prods)
+        outlier_row = next(r for r in result["rows"] if r["cpu_id"] == "CPU-7")
+        assert outlier_row["severity"] == "ERRO"
+        assert any("Equipe sem mão de obra" in msg for msg in outlier_row["issues"])
+        assert any("IQR" in msg for msg in outlier_row["issues"])
+
+    def test_ppp_outlier_upgrades_ok_row_to_aviso(self):
+        """Row with normal producao_horaria (not an outlier) but a wildly
+        divergent producao_por_pessoa must be upgraded from OK to AVISO —
+        covers the `if r["severity"] == "OK"` True branch for the ppp check."""
+        from concilium.application.services.catalog.catalog_reasonability import build_catalog_reasonability_artifact
+
+        cpus = []
+        prods = []
+        for i in range(7):
+            cid, pid = f"CPU-{i}", f"P-{i}"
+            cpus.append(self._make_cpu(cid, categoria="GB", unidade="UB", producao_id_ref=pid))
+            prods.append(self._make_producao_custom(pid, 10.0, num_pessoas=2))
+        # 8th row: same producao_horaria (not a prod outlier) but a huge team
+        # -> producao_por_pessoa collapses to a clear low outlier.
+        cpus.append(self._make_cpu("CPU-7", categoria="GB", unidade="UB", producao_id_ref="P-7"))
+        prods.append(self._make_producao_custom("P-7", 10.0, num_pessoas=200))
+
+        result = build_catalog_reasonability_artifact("cat-1", cpus, prods)
+        outlier_row = next(r for r in result["rows"] if r["cpu_id"] == "CPU-7")
+        assert outlier_row["severity"] == "AVISO"
+        assert any("Produtividade por pessoa fora da faixa" in msg for msg in outlier_row["issues"])
+
     def test_artifact_structure(self):
         from concilium.application.services.catalog.catalog_reasonability import build_catalog_reasonability_artifact
 

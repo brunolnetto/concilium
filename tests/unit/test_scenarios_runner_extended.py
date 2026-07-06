@@ -504,6 +504,22 @@ class TestRunDvScenario:
         assert result.status == "ERRO"
         assert "Solver failed" in result.erro
 
+    def test_dv_result_to_dict(self):
+        """DVResult.to_dict() serializes config id/nome, status and erro."""
+        from concilium.application.scenarios.runner_dv import DVResult
+
+        config = ScenarioConfig(nome="cenario_x", decision_variables=None)
+        result = DVResult(config=config, canonical=None, status="OK", erro=None)
+
+        as_dict = result.to_dict()
+
+        assert as_dict == {
+            "config_id": config.id,
+            "config_nome": "cenario_x",
+            "status": "OK",
+            "erro": None,
+        }
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ScenarioRunner.compare
@@ -561,6 +577,31 @@ class TestCompare:
         runner = ScenarioRunner(runtime=MagicMock(), project=MagicMock())
         matrix = runner.compare([])
         assert matrix["resumo"]["total_cenarios"] == 0
+
+    def test_compare_ok_results_without_custo_or_margem_metricas(self):
+        """Lines 96/100 false branches: OK results whose metricas lack both
+        'custo_total' and 'margem_pct' — neither summary block is populated."""
+        runner = ScenarioRunner(runtime=MagicMock(), project=MagicMock())
+        results = [self._make_result("a", metricas={"outro_campo": 1})]
+        matrix = runner.compare(results)
+        s = matrix["resumo"]
+        assert "custo_min" not in s
+        assert "custo_max" not in s
+        assert "margem_min" not in s
+        assert "melhor_cenario" not in s
+
+    def test_compare_status_neither_ok_nor_erro_not_counted(self):
+        """Branch 88->85: a status value other than OK/ERRO increments neither counter."""
+        runner = ScenarioRunner(runtime=MagicMock(), project=MagicMock())
+        results = [
+            self._make_result("a", status="PENDENTE"),
+            self._make_result("b", status="OK"),
+        ]
+        matrix = runner.compare(results)
+        s = matrix["resumo"]
+        assert s["ok"] == 1
+        assert s["com_erro"] == 0
+        assert s["total_cenarios"] == 2
 
     def test_save_comparison(self, tmp_path):
         """save_comparison() writes JSON file."""

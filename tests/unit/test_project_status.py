@@ -29,6 +29,10 @@ def test_transicao_valida_em_validacao_para_rascunho() -> None:
     assert transition_status_projeto("EM_VALIDACAO", "RASCUNHO") == "RASCUNHO"
 
 
+def test_transicao_status_igual_e_no_op() -> None:
+    assert transition_status_projeto("RASCUNHO", "RASCUNHO") == "RASCUNHO"
+
+
 def test_transicao_valida_fluxo_execucao() -> None:
     assert transition_status_projeto("APROVADO", "EM_EXECUCAO") == "EM_EXECUCAO"
     assert transition_status_projeto("EM_EXECUCAO", "CONCLUIDO") == "CONCLUIDO"

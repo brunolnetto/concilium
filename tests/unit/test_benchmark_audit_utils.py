@@ -630,3 +630,94 @@ class TestResolveCanonicalPath:
         ref = {"meta": {"projeto": "META PROJ"}}
         result = _resolve_canonical_path(extr, ref, tmp_path)
         assert result == canonical
+
+    def test_no_match_in_first_root_continues_to_second(self, tmp_path: Path) -> None:
+        # benchmarks/projetos exists but contains no project matching "TARGET";
+        # _latest_project_by_name returns None so the loop must `continue` to
+        # the next candidate root (root/projetos).
+        bp_dir = tmp_path / "benchmarks" / "projetos"
+        other_dir = bp_dir / "OTHER"
+        other_dir.mkdir(parents=True)
+        (other_dir / "meta.json").write_text(json.dumps({"nome": "OTHER", "criado_em": "2024-01"}), encoding="utf-8")
+
+        proj_dir = tmp_path / "projetos" / "TARGET"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(json.dumps({"nome": "TARGET", "criado_em": "2024-01"}), encoding="utf-8")
+        v1_dir = proj_dir / "v1"
+        v1_dir.mkdir()
+        canonical = v1_dir / "canonical.json"
+        canonical.write_text(json.dumps({}), encoding="utf-8")
+
+        extr = {}
+        ref = {"projeto": "TARGET"}
+        result = _resolve_canonical_path(extr, ref, tmp_path)
+        assert result == canonical
+
+    def test_meta_json_read_error_falls_back_to_v1(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        import concilium.application.benchmarks.analysis._audit_utils as audit_mod
+
+        proj_dir = tmp_path / "projetos" / "ERRPROJ"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(json.dumps({"nome": "ERRPROJ", "criado_em": "2024-01"}), encoding="utf-8")
+        v1_dir = proj_dir / "v1"
+        v1_dir.mkdir()
+        canonical = v1_dir / "canonical.json"
+        canonical.write_text(json.dumps({}), encoding="utf-8")
+
+        orig_load_json = audit_mod._load_json
+        calls = {"n": 0}
+
+        def flaky_load_json(path: Path) -> dict:
+            calls["n"] += 1
+            # 1st call happens inside _latest_project_by_name's matching scan
+            # (must succeed so the project is found); 2nd call is the direct
+            # re-read at the top of the except block, which we fail here to
+            # exercise the `except Exception: meta = {}` fallback.
+            if calls["n"] == 2:
+                raise ValueError("corrupt meta.json")
+            return orig_load_json(path)
+
+        monkeypatch.setattr(audit_mod, "_load_json", flaky_load_json)
+
+        extr = {}
+        ref = {"projeto": "ERRPROJ"}
+        result = audit_mod._resolve_canonical_path(extr, ref, tmp_path)
+        assert result == canonical
+
+    def test_falls_back_to_v1_when_current_version_canonical_missing(self, tmp_path: Path) -> None:
+        """Branch 206->205: current_version aponta para 'v2', mas v2/canonical.json
+        não existe — o loop interno segue para o segundo candidato (v1/canonical.json)."""
+        proj_dir = tmp_path / "benchmarks" / "projetos" / "V2PROJ"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(
+            json.dumps({"nome": "V2PROJ", "criado_em": "2024-06", "current_version": "v2"}),
+            encoding="utf-8",
+        )
+        # v2/ dir does not exist at all — only v1/canonical.json is present.
+        v1_dir = proj_dir / "v1"
+        v1_dir.mkdir()
+        canonical = v1_dir / "canonical.json"
+        canonical.write_text(json.dumps({}), encoding="utf-8")
+
+        extr = {}
+        ref = {"projeto": "V2PROJ"}
+        result = _resolve_canonical_path(extr, ref, tmp_path)
+        assert result == canonical
+
+    def test_project_found_but_no_canonical_continues_outer_loop(self, tmp_path: Path) -> None:
+        """Branch 205->194: o projeto é encontrado (nome bate) mas nenhum dos
+        dois candidatos de canonical.json existe — o loop interno se esgota sem
+        `return`, e a busca segue para a próxima raiz de projetos (ou levanta
+        FileNotFoundError se não houver mais nenhuma)."""
+        proj_dir = tmp_path / "benchmarks" / "projetos" / "NOCANON"
+        proj_dir.mkdir(parents=True)
+        (proj_dir / "meta.json").write_text(
+            json.dumps({"nome": "NOCANON", "criado_em": "2024-07"}),
+            encoding="utf-8",
+        )
+        # Nem v1/canonical.json nem qualquer outro existem.
+
+        extr = {}
+        ref = {"projeto": "NOCANON"}
+        with pytest.raises(FileNotFoundError):
+            _resolve_canonical_path(extr, ref, tmp_path)

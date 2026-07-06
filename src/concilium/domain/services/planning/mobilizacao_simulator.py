@@ -199,11 +199,10 @@ class WorkforcePolicySimulator:
             semanas_plateau = n - r - d     (onde n = duração total em semanas)
             taxa_desmobilizacao = m_max / d
         """
-        # Week at which n_maximo is first reached
-        if policy.taxa_mobilizacao > 0:  # pragma: no branch
-            t_ramp = math.ceil((policy.n_maximo - policy.n_inicial) / policy.taxa_mobilizacao)
-        else:
-            t_ramp = 0
+        # Week at which n_maximo is first reached. taxa_mobilizacao é sempre > 0
+        # (MobilizacaoPolicy.taxa_mobilizacao usa Field(gt=0) em modelo frozen),
+        # logo a divisão abaixo nunca ocorre por zero.
+        t_ramp = math.ceil((policy.n_maximo - policy.n_inicial) / policy.taxa_mobilizacao)
 
         if t < t_ramp:
             # Mobilization phase

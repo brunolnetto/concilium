@@ -159,6 +159,71 @@ class TestBenchmarkMode:
             r = run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
         assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
 
+    def test_planejamento_ref_dict_missing_valid_subtotal_skipped(self):
+        """Line 113 false branch: dict item present but subtotal isn't numeric — skipped."""
+        eq = _eq("E1", custo_total=100.0)
+        can = _canonical()
+        inputs = {
+            "benchmark_mode": True,
+            "planejamento_ref": [{"item_id": "E1", "subtotal": {}}],
+        }
+        with (
+            patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
+            patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
+            patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
+            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+        ):
+            r = run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
+        assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
+
+    def test_plan_subtotal_dict_sem_bdi_missing_total_key(self):
+        """Line 128 false branch: subtotal dict has sem_bdi dict but no numeric 'total'."""
+        eq = _eq("E1", custo_total=100.0)
+        plan = MagicMock()
+        plan.item_id = "E1"
+        plan.custo_sem_bdi = None
+        plan.subtotal = {"sem_bdi": {"total": "not-a-number"}}
+        r = _run_simple([eq], planejamento=[plan])
+        assert isinstance(r, SkillResult)
+        assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
+
+    def test_plan_subtotal_dict_sem_bdi_not_a_dict(self):
+        """Line 126 false branch: subtotal['sem_bdi'] resolves to a non-dict value."""
+        eq = _eq("E1", custo_total=100.0)
+        plan = MagicMock()
+        plan.item_id = "E1"
+        plan.custo_sem_bdi = None
+        plan.subtotal = {"sem_bdi": "not-a-dict"}
+        r = _run_simple([eq], planejamento=[plan])
+        assert isinstance(r, SkillResult)
+        assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
+
+    def test_plan_subtotal_object_sem_bdi_none(self):
+        """Line 132 false branch: non-dict subtotal object whose sem_bdi attr is None."""
+        eq = _eq("E1", custo_total=100.0)
+        plan = MagicMock()
+        plan.item_id = "E1"
+        plan.custo_sem_bdi = None
+        plan.subtotal = MagicMock(spec=object)
+        plan.subtotal.sem_bdi = None
+        r = _run_simple([eq], planejamento=[plan])
+        assert isinstance(r, SkillResult)
+        assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
+
+    def test_plan_subtotal_object_sem_bdi_total_not_numeric(self):
+        """Line 134 false branch: sem_bdi.total present but not int/float."""
+        eq = _eq("E1", custo_total=100.0)
+        plan = MagicMock()
+        plan.item_id = "E1"
+        plan.custo_sem_bdi = None
+        sem_bdi = MagicMock(spec=object)
+        sem_bdi.total = "not-a-number"
+        plan.subtotal = MagicMock(spec=object)
+        plan.subtotal.sem_bdi = sem_bdi
+        r = _run_simple([eq], planejamento=[plan])
+        assert isinstance(r, SkillResult)
+        assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
+
 
 class TestPoolContractPath:
     def test_rcpsp_in_inputs_triggers_contrato_ok(self):
@@ -385,6 +450,50 @@ class TestPoolContractPath:
             run_equipes_e_alocacao(can, inputs, {"cpus": [], "insumos": []})
         assert eq.custo_total == 600.0
 
+    def test_benchmark_instancias_item_not_in_any_map_no_cap(self):
+        """Line 311 false branch (item_id absent from planejamento_ref_map) followed
+        by line 313 false branch (custo_ref stays 0) — no cap applied."""
+        eq = _eq("E1", custo_total=800.0)
+        plan = MagicMock()
+        plan.item_id = "OTHER-ITEM"  # does not match eq.item_id
+        plan.custo_sem_bdi = 500.0
+        can = _canonical(planejamento=[plan])
+        ct = _contrato("R1", ["E1"])
+
+        def fake_aplicar(contratos, instancias, equipes_list, validacoes_list):
+            for e in equipes_list:
+                e.custo_total = 9000.0
+
+        with (
+            patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
+            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([ct], {}, [])),
+            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([MagicMock()], [], [])),
+            patch(f"{_MOD_NAME}._aplicar_custo_instancial", side_effect=fake_aplicar),
+            patch(f"{_MOD_NAME}._enrich_equipes_com_decomposicao_instancial"),
+            patch(f"{_MOD_NAME}._enrich_particao_overhead"),
+            patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
+            patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
+        ):
+            run_equipes_e_alocacao(can, {"benchmark_mode": True}, {"cpus": [], "insumos": []})
+        # No matching planejamento entry for E1 -> custo_ref stays 0 -> no cap applied
+        assert eq.custo_total == 9000.0
+
+    def test_contratos_recurso_empty_skips_pool_validation_block(self):
+        """Line 216 false branch: rcpsp_spec present but _build_contratos_recurso
+        returns an empty list — the whole VAL-POOL-* validation block is skipped."""
+        eq = _eq("E1")
+        can = _canonical()
+        with (
+            patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
+            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value={"activities": [], "resource_pool": {}}),
+            patch(f"{_MOD_NAME}._build_contratos_recurso", return_value=([], {}, [])),
+            patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
+            patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
+        ):
+            r = run_equipes_e_alocacao(can, {}, {"cpus": [], "insumos": []})
+        assert not any(v.codigo == "VAL-POOL-CONTRATO-OK" for v in r.validacoes)
+
 
 class TestAdr078PreProcessamento:
     def test_resource_costs_triggers_pre_processamento(self):
@@ -470,6 +579,47 @@ class TestAdr110Oportunidades:
         ):
             r = run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         # The block should run (covered) even if it fails internally — best-effort try/except
+        assert isinstance(r, SkillResult)
+
+    def test_adr110_second_contrato_does_not_cover_activity(self):
+        """Line 370 false branch: a contrato in the list that does NOT cover the
+        activity — loop must continue to the next contrato (line 369)."""
+        eq = _eq("E1")
+        sa = MagicMock()
+        sa.activity_id = "E1"
+        sa.semana_inicio_idx = 0
+        sa.semana_fim_idx = 2
+        cronograma = MagicMock()
+        cronograma.scheduled_activities = [sa]
+        cronograma.makespan_weeks = 2
+        recurso_pool = [MagicMock()]
+        can = _canonical(cronograma=cronograma, recurso_pool=recurso_pool)
+        ct_no_match = _contrato("R0", ["OTHER-ITEM"])
+        ct_no_match.items_cobertos = {"OTHER-ITEM"}
+        ct_match = _contrato("R1", ["E1"])
+        ct_match.items_cobertos = {"E1"}
+        rcpsp = {
+            "activities": [{"item_id": "E1", "duration_weeks": 2, "required_resources": {"R1": 1}}],
+            "resource_pool": {"R1": 1},
+            "resource_costs": {"R1": 100.0},
+            "precedence": [],
+        }
+        mock_relatorio = MagicMock()
+        mock_relatorio.model_copy.return_value = mock_relatorio
+        mock_build_pre = MagicMock(return_value=mock_relatorio)
+        with (
+            patch(f"{_MOD_NAME}._build_dimensionamento", return_value=[eq]),
+            patch(
+                f"{_MOD_NAME}._build_contratos_recurso",
+                return_value=([ct_no_match, ct_match], {}, []),
+            ),
+            patch(f"{_MOD_NAME}._build_instancias_recurso", return_value=([], [], [])),
+            patch(f"{_MOD_NAME}._build_pre_processamento_compartilhamento", mock_build_pre),
+            patch(f"{_MOD_NAME}._build_requisitos_e_tipos", return_value=([], {})),
+            patch(f"{_MOD_NAME}._build_alocacoes_pool", return_value=([], {})),
+            patch(f"{_MOD_NAME}._derive_rcpsp_from_canonical", return_value=None),
+        ):
+            r = run_equipes_e_alocacao(can, {"rcpsp_spec": rcpsp}, {"cpus": [], "insumos": []})
         assert isinstance(r, SkillResult)
 
 
@@ -609,3 +759,61 @@ class TestPlanCustoSemBdiHelperPaths:
         r = _run_simple([eq], planejamento=[plan])
         assert isinstance(r, SkillResult)
         assert not any(v.codigo == "VAL-PLANEJAMENTO-OVERRIDE" for v in r.validacoes)
+
+
+# ---------------------------------------------------------------------------
+# importlib fallback in the module header (lines 47-82): triggered only when
+# `from ._skill_helpers_x import ...` fails (e.g. skill.py loaded standalone,
+# with no parent package registered).  Lines 54/60/66 guard against
+# spec_from_file_location returning a broken spec for each helper module.
+# ---------------------------------------------------------------------------
+
+
+class TestSkillHeaderImportlibFallback:
+    """Force skill.py's `except ImportError:` header block to run standalone."""
+
+    def _skill_path(self):
+        import concilium.application.skills as skills_pkg
+
+        return skills_pkg._MANIFESTS / "05-equipes-e-alocacao" / "skill.py"
+
+    def _exec_standalone(self, monkeypatch, blocked_name, module_alias):
+        """Load skill.py with no dotted package context, so the relative
+        imports in its `try:` block fail with ImportError and execution
+        falls into the `except ImportError:` importlib-based fallback.
+        Then intercept spec_from_file_location for `blocked_name` to
+        return None, exercising the `raise ImportError(...) from None` guard.
+        """
+        import importlib.util
+
+        real_spec_from_file_location = importlib.util.spec_from_file_location
+
+        def fake_spec_from_file_location(name, path, *a, **kw):
+            if name == blocked_name:
+                return None
+            return real_spec_from_file_location(name, path, *a, **kw)
+
+        monkeypatch.setattr(importlib.util, "spec_from_file_location", fake_spec_from_file_location)
+
+        # No dot in the name => __package__ becomes "" => relative imports fail.
+        spec = real_spec_from_file_location(module_alias, self._skill_path())
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+    def test_raises_when_spec_a_is_none(self, monkeypatch):
+        import pytest
+
+        with pytest.raises(ImportError, match="_skill_helpers_a.py"):
+            self._exec_standalone(monkeypatch, "skill05_helpers_a", "standalone_skill05_test_a")
+
+    def test_raises_when_spec_b_is_none(self, monkeypatch):
+        import pytest
+
+        with pytest.raises(ImportError, match="_skill_helpers_b.py"):
+            self._exec_standalone(monkeypatch, "skill05_helpers_b", "standalone_skill05_test_b")
+
+    def test_raises_when_spec_pre_is_none(self, monkeypatch):
+        import pytest
+
+        with pytest.raises(ImportError, match="_skill_helpers_pre.py"):
+            self._exec_standalone(monkeypatch, "skill05_helpers_pre", "standalone_skill05_test_pre")

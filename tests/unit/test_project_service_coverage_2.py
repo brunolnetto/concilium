@@ -112,6 +112,29 @@ class TestGetProject:
         # should deduplicate → only 1 item
         assert result["count"] == 1
 
+    def test_get_eap_canonical_conversion_empty_falls_through(self):
+        """Lines 263-270: canonical existe mas converte para lista vazia → segue para fallback histórico."""
+        svc = _make_svc()
+        proj = MagicMock()
+        proj.meta = {"id": "p1"}
+
+        def _read_json(path, default):
+            if "eap_items" in str(path):
+                return []
+            if "benchmark_reference" in str(path):
+                return {}
+            return default
+
+        proj.read_json.side_effect = _read_json
+        canonical = MagicMock()
+        canonical.eap = []  # _canonical_eap_to_rows retorna []
+        proj.load_canonical.return_value = canonical
+        proj.list_versions.return_value = []
+        svc._repository.get_project.return_value = proj
+
+        result = svc.get_eap("p1")
+        assert result["items"] == []
+
 
 # ---------------------------------------------------------------------------
 # 2. compare_versions – lines 356-357, 364-388
@@ -635,6 +658,157 @@ class TestGetBenchmarkReference:
 
         with pytest.raises(ValueError, match="invalida"):
             svc.get_benchmark_reference("proj-1")
+
+    def test_eap_items_skips_invalid_and_duplicate_rows(self):
+        """Lines 858, 861: eap_items com row inválida (normalized None) e item_id duplicado são pulados."""
+        svc = _make_svc()
+        payload = {"skill_inputs": {"k": "v"}}
+        eap_items = [
+            {"item_id": "E1", "cpu_id": "CPU-E1", "descricao": "EAP item", "unidade": "un", "quantitativo": 2.0},
+            {"cpu_id": "CPU-NOITEM"},  # sem item_id → _normalize_eap_item retorna None
+            {"item_id": "E1", "cpu_id": "CPU-E1-DUP", "descricao": "dup", "unidade": "un", "quantitativo": 3.0},
+        ]
+        self._setup_proj(svc, payload=payload, eap_items=eap_items)
+
+        p1, p2, p3 = self._patch_enrichers()
+        with p1, p2, p3:
+            result = svc.get_benchmark_reference("proj-1")
+
+        itens = result["cpus"]["itens_eap"]
+        assert len(itens) == 1
+        assert itens[0]["item_id"] == "E1"
+
+    def test_eap_items_all_invalid_leaves_cpus_block_untouched(self):
+        """Branch 864->870: eap_items presente mas todas as rows normalizam para
+        None (sem item_id) → canonical_items fica vazio, cpus.itens_eap não é
+        hidratado a partir de eap_items."""
+        svc = _make_svc()
+        payload = {"skill_inputs": {"k": "v"}}
+        eap_items = [{"cpu_id": "SEM-ITEM-1"}, {"cpu_id": "SEM-ITEM-2"}]
+        self._setup_proj(svc, payload=payload, eap_items=eap_items)
+
+        p1, p2, p3 = self._patch_enrichers()
+        with p1, p2, p3:
+            result = svc.get_benchmark_reference("proj-1")
+
+        assert result["_debug"]["benchmark_reference_source"] != "eap_items->cpus.itens_eap"
+
+    def test_canonical_eap_rows_empty_does_not_hydrate_cpus_block(self):
+        """Branch 894->900: canonical presente mas _canonical_eap_to_rows retorna
+        [] → cpus.itens_eap não é hidratado a partir do canonical, cai no
+        fallback de historical version."""
+        svc = _make_svc()
+        payload = {"skill_inputs": {"k": "v"}}
+        proj = self._setup_proj(svc, payload=payload)
+        proj.load_canonical.return_value = MagicMock()  # não-None, mas sem eap
+
+        with (
+            patch(
+                "concilium.application.services.project.project_service._canonical_eap_to_rows",
+                return_value=[],
+            ),
+            patch(
+                "concilium.application.services.project.project_service._latest_version_with_eap",
+                return_value=([], None),
+            ),
+        ):
+            p1, p2, p3 = self._patch_enrichers()
+            with p1, p2, p3:
+                result = svc.get_benchmark_reference("proj-1")
+
+        assert result["_debug"]["benchmark_reference_source"] != "canonical.eap->cpus.itens_eap"
+
+    def test_historical_eap_skips_invalid_and_duplicate_rows(self):
+        """Lines 877-881: historical rows com item inválido e item_id duplicado são pulados."""
+        svc = _make_svc()
+        payload = {
+            "eap": [
+                {"item_id": "A1", "cpu_id": "CPU-1", "descricao": "Atividade A"},
+                {"cpu_id": "CPU-SEM-ITEM"},  # normalized None
+                {"item_id": "A1", "cpu_id": "CPU-1-DUP", "descricao": "Atividade A dup"},
+            ],
+            "skill_inputs": {"key": "val"},
+        }
+        self._setup_proj(svc, payload=payload)
+
+        p1, p2, p3 = self._patch_enrichers()
+        with p1, p2, p3:
+            result = svc.get_benchmark_reference("proj-1")
+
+        itens = result["cpus"]["itens_eap"]
+        assert len(itens) == 1
+        assert itens[0]["item_id"] == "A1"
+
+    def test_catalog_deficit_triggers_enrichment(self):
+        """Linha 908-909: catalog deficitário aciona _enrich_payload_catalog."""
+        svc = _make_svc()
+        payload = {"cpus": {"itens_eap": [{"item_id": "A1", "cpu_id": "CPU-1"}]}, "skill_inputs": {}, "catalog": {}}
+        self._setup_proj(svc, payload=payload)
+
+        with (
+            patch(
+                "concilium.application.services.project.project_service._enrich_payload_encargos",
+            ),
+            patch(
+                "concilium.application.services.project.project_service._enrich_payload_bdi",
+            ),
+            patch(
+                "concilium.application.services.project.project_service._enrich_payload_catalog",
+            ) as mock_enrich_catalog,
+        ):
+            svc.get_benchmark_reference("proj-1")
+
+        mock_enrich_catalog.assert_called_once()
+
+    def test_resolve_config_root_returns_none_when_no_candidate_exists(self):
+        """Linhas 657-663: nenhum candidato existe → retorna None."""
+        svc = _make_svc()
+        with patch("pathlib.Path.exists", return_value=False):
+            assert svc._resolve_config_root() is None
+
+    def test_resolve_config_root_finds_candidate(self):
+        """Linhas 657-661: primeiro candidato existente é retornado."""
+        svc = _make_svc()
+        with patch("pathlib.Path.exists", return_value=True):
+            result = svc._resolve_config_root()
+        assert result is not None
+
+    def test_create_contexto_version_raises_when_svc_unavailable(self):
+        """Linhas 488-489: sem ContextoVersionService disponível → RuntimeError."""
+        svc = _make_svc()
+        with patch.object(svc, "_get_contexto_svc", return_value=None):
+            with pytest.raises(RuntimeError, match="Serviço de contextos"):
+                svc.create_contexto_version("ctx-1", {}, "motivo")
+
+    def test_create_contexto_version_delegates_to_svc(self):
+        """Linhas 490-491: delega para svc.create_version com make_current default True."""
+        svc = _make_svc()
+        mock_svc = MagicMock()
+        mock_svc.create_version.return_value = {"ok": True}
+        with (
+            patch.object(svc, "_get_contexto_svc", return_value=mock_svc),
+            patch.object(svc, "_validate_contexto_fields"),
+        ):
+            result = svc.create_contexto_version("ctx-1", {"a": 1}, "motivo", author="joe")
+        mock_svc.create_version.assert_called_once_with("ctx-1", {"a": 1}, "motivo", "joe", make_current=True)
+        assert result == {"ok": True}
+
+    def test_skill_inputs_not_dict_from_project_is_ignored(self):
+        """Linhas 844-847: skill_inputs lido do projeto não é dict → payload não é alterado."""
+        svc = _make_svc()
+        payload = {"cpus": {"itens_eap": [{"item_id": "A1", "cpu_id": "CPU-1"}]}}
+        proj = self._setup_proj(svc, payload=payload, skill_inputs=None)
+        proj.read_json.side_effect = lambda path, default: (
+            "not-a-dict"
+            if "skill_inputs" in str(path)
+            else (payload if "benchmark_reference" in str(path) else default)
+        )
+
+        p1, p2, p3 = self._patch_enrichers()
+        with p1, p2, p3:
+            result = svc.get_benchmark_reference("proj-1")
+
+        assert "skill_inputs" not in result
 
     def test_debug_block_present(self):
         """Line 900: _debug block is returned."""

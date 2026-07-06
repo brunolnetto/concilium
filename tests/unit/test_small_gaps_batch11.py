@@ -183,6 +183,26 @@ class TestBuildActivityWeekMap:
 
         assert _build_activity_week_map(None) == {}
 
+    def test_celula_com_atividade_ou_semana_vazia_e_ignorada(self):
+        """Branch 211->212: célula sem atividade_id ou sem semana_iso é pulada
+        (não contribui para o mapa), enquanto uma célula válida é agregada."""
+        from types import SimpleNamespace
+
+        from concilium.domain.services.analytics.diagnostico_pe_builder import _build_activity_week_map
+
+        cubo = SimpleNamespace(
+            celulas=[
+                SimpleNamespace(componente_bdi="custo_direto", atividade_id="", semana_iso="S001", valor_rs=100.0),
+                SimpleNamespace(componente_bdi="custo_direto", atividade_id="eap-01", semana_iso="", valor_rs=50.0),
+                SimpleNamespace(
+                    componente_bdi="custo_direto", atividade_id="eap-01", semana_iso="S001", valor_rs=200.0
+                ),
+            ]
+        )
+        result = _build_activity_week_map(cubo)
+        assert list(result.keys()) == ["eap-01"]
+        assert result["eap-01"]["S001"]["direto"] == 200.0
+
 
 class TestBuildExplicacaoNaturezaPeriodo:
     def test_returns_empty_dict_when_cubo_is_none(self):
@@ -190,6 +210,47 @@ class TestBuildExplicacaoNaturezaPeriodo:
         from concilium.domain.services.analytics.diagnostico_pe_builder import _build_explicacao_natureza_periodo
 
         assert _build_explicacao_natureza_periodo(None, {}, []) == {}
+
+    def test_item_sem_hint_no_activity_week_map_e_ignorado(self):
+        """Branch 258->256: item cujo atividade_id não está em activity_week_map
+        gera hint vazio e não entra em `itens` (mas o loop continua para os demais)."""
+        from types import SimpleNamespace
+
+        from concilium.domain.models.analytics.diagnostico_pe import DiagnosticoPEItem, FatorPE
+        from concilium.domain.services.analytics.diagnostico_pe_builder import _build_explicacao_natureza_periodo
+
+        fator = FatorPE(codigo="F_RESIDUAL", gap_rs=100.0, pct_gap=1.0)
+
+        def _item(aid: str) -> DiagnosticoPEItem:
+            return DiagnosticoPEItem(
+                atividade_id=aid,
+                cpu_id="CPU-01",
+                descricao="Escavação",
+                preco_venda=10_000.0,
+                custo_realizado=10_100.0,
+                gap_rs=-100.0,
+                pct_gap_sobre_venda=-0.01,
+                eta_real=0.85,
+                p_medio_uniforme=0.90,
+                cov_n_p=0.0,
+                eps_cross=0.0,
+                validez_aproximacao=True,
+                n_total=10.0,
+                fatores=(fator,),
+                l_aplicado=0.09,
+                l_requerido=0.12,
+                delta_l=0.03,
+            )
+
+        cubo = SimpleNamespace(
+            resumo_por_natureza=lambda: {},
+            resumo_por_natureza_temporal=lambda _periodo: {},
+        )
+        activity_week_map = {"eap-com-dados": {"S001": {"direto": 100.0, "indireto": 0.0, "total": 100.0}}}
+        itens_diag = [_item("eap-sem-dados"), _item("eap-com-dados")]
+        result = _build_explicacao_natureza_periodo(cubo, activity_week_map, itens_diag)
+        assert "eap-sem-dados" not in result["itens"]
+        assert "eap-com-dados" in result["itens"]
 
 
 class TestProcessPeItemEmptyActive:

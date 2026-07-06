@@ -288,6 +288,15 @@ class TestProgressTrackerComputeSpi:
         spi = self.tracker.compute_spi(canonical, "2026-W01")
         assert spi <= 2.0
 
+    def test_atividade_sem_cron_item_ignora_planejado(self):
+        """Quando a atividade não tem entrada correspondente no cronograma,
+        cron_item é None e planned_to_week permanece 0 (branch `if cron_item`
+        falso)."""
+        canonical = _make_canonical(activities=[{"id": "EAP-01", "qtd": 10.0}])
+        canonical.cronograma.scheduled_activities = []
+        # sem planejado algum -> compute_spi cai no early-return de total_planned<=0
+        assert self.tracker.compute_spi(canonical, "2026-W01") == 1.0
+
 
 class TestProgressTrackerForecastCompletion:
     def setup_method(self):
@@ -307,6 +316,14 @@ class TestProgressTrackerForecastCompletion:
     def test_current_week_zero_retorna_zero(self):
         canonical = _make_canonical(activities=[])
         assert self.tracker.forecast_completion(canonical, 0) == 0
+
+    def test_avg_rate_underflows_to_zero_retorna_nao_previsivel(self):
+        """total_realized positivo porém subnormal faz avg_rate = total_realized /
+        current_week_int arredondar para 0.0 por underflow de ponto flutuante,
+        exercitando o ramo `avg_rate <= 0` (linha 238-239 de tracker.py)."""
+        canonical = _make_canonical(activities=[{"id": "EAP-01", "qtd": 1e10}])
+        canonical.progresso = {"EAP-01": [_update("EAP-01", quantidade=5e-324)]}
+        assert self.tracker.forecast_completion(canonical, 2) == 2 + 999
 
 
 class TestProgressTrackerDetectDrift:
@@ -352,3 +369,13 @@ class TestProgressTrackerBuildReport:
         )
         report = self.tracker.build_progress_report(canonical, "2026-W01", "p")
         assert abs(report.activities[0].pct_completude - 0.5) < 1e-4
+
+    def test_quantitativo_zero_pula_calculo_expected_pct(self):
+        """Com quantitativo<=0 mas cron_item presente, a condição
+        `cron_item and eap_item.quantitativo > 0` deve ser falsa por causa do
+        segundo operando, pulando o cálculo de expected_pct (linha 293->300)."""
+        dist = {"2026-W01": {"qtd_executada": 20.0}}
+        canonical = _make_canonical(activities=[{"id": "EAP-01", "qtd": 0.0, "dist": dist}])
+        report = self.tracker.build_progress_report(canonical, "2026-W01", "p")
+        assert report.activities[0].pct_completude == 0.0
+        assert report.activities[0].delay_weeks == 0.0

@@ -142,6 +142,86 @@ class TestBlobMigratorCore:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Parallel migration (workers > 1) — _migrate_parallel / _copy_one with lock
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestBlobMigratorParallel:
+    def test_parallel_workers_copies_all_blobs(self, source, target):
+        from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
+
+        migrator = BlobMigrator(workers=4)
+        result = migrator.migrate(source, target)
+
+        assert result.copied == 4
+        assert result.failed == 0
+        assert target.blob_existe("projetos/proj-a/v1/canonical.json")
+        assert target.blob_existe("misc/audit.jsonl")
+
+    def test_parallel_workers_progress_callback_invoked_for_each_blob(self, source, target):
+        from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
+
+        calls = []
+        BlobMigrator(workers=4).migrate(source, target, on_progress=lambda path, n, total: calls.append(path))
+        assert len(calls) == 4
+
+    def test_parallel_workers_skip_existing_without_overwrite(self, source, target):
+        """Exercises _copy_one's lock-protected skip branch under real threads."""
+        from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
+
+        # Pre-populate target with one of the blobs so it gets skipped.
+        target.gravar_blob("misc/audit.jsonl", b'{"run": 1}')
+
+        result = BlobMigrator(workers=4).migrate(source, target, overwrite=False)
+
+        assert result.skipped == 1
+        assert result.copied == 3
+        assert result.failed == 0
+
+    def test_parallel_worker_exception_is_logged_not_raised(self, source, target, caplog):
+        """A blob that fails to copy is counted as failed and logged, but the
+        worker exception path (`if exc:` in _migrate_parallel) doesn't crash
+        the overall migration."""
+        import logging
+
+        from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
+
+        original_ler_blob = source.ler_blob
+
+        def flaky_ler_blob(path):
+            if path == "misc/audit.jsonl":
+                raise OSError("simulated read failure")
+            return original_ler_blob(path)
+
+        source.ler_blob = flaky_ler_blob
+
+        with caplog.at_level(logging.ERROR):
+            result = BlobMigrator(workers=4).migrate(source, target)
+
+        assert result.failed == 1
+        assert result.copied == 3
+
+    def test_parallel_unexpected_worker_exception_is_logged(self, source, target, caplog):
+        """An exception escaping the worker task itself (outside `_copy_one`'s
+        own try/except — e.g. a broken on_progress callback) is caught by
+        `_migrate_parallel`'s `if exc:` branch and logged, not raised."""
+        import logging
+
+        from concilium.infrastructure.adapters.blob_storage.migrator import BlobMigrator
+
+        def broken_on_progress(path, n, total):
+            raise RuntimeError("boom in progress callback")
+
+        with caplog.at_level(logging.ERROR):
+            result = BlobMigrator(workers=4).migrate(source, target, on_progress=broken_on_progress)
+
+        # The copy itself succeeds; the failure is in the progress callback,
+        # so it's reported via the "unexpected worker" error log, not `failed`.
+        assert result.failed == 0
+        assert any("Falha inesperada no worker" in rec.message for rec in caplog.records)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # CLI command
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -175,10 +255,14 @@ class TestBlobMigrateCLI:
             blob_app,
             [
                 "migrate",
-                "--source-backend", "filesystem",
-                "--source-root", str(src_dir),
-                "--target-backend", "filesystem",
-                "--target-root", str(tgt_dir),
+                "--source-backend",
+                "filesystem",
+                "--source-root",
+                str(src_dir),
+                "--target-backend",
+                "filesystem",
+                "--target-root",
+                str(tgt_dir),
                 "--dry-run",
             ],
         )

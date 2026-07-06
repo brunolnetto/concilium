@@ -57,6 +57,19 @@ class TestSuggestCpuKeywordRules:
         assert cpu_id == "CPU-ABC"
         assert score == 1
 
+    def test_keyword_rules_no_match_falls_through_both_loops(self):
+        """Two rule entries, neither all() nor any() matches for either: both
+        for-loops in the keyword-rules section fully exhaust (covers the
+        loop back-edge and the fallthrough to the catalog-overlap section)."""
+        rules = {
+            "CPU-A": ["ZZZZZ", "YYYYY"],
+            "CPU-B": ["WWWWW", "VVVVV"],
+        }
+        with patch(_MAPPER_PATH, return_value=rules):
+            cpu_id, score = suggest_cpu("Escavacao mecanica de solo", config_root=Path("/nonexistent"))
+        assert cpu_id is None
+        assert score == 0
+
 
 class TestSuggestCpuCatalogOverlap:
     def test_catalog_overlap_gte_2_returns_cpu_id(self, tmp_path):
@@ -154,6 +167,29 @@ class TestSuggestCpuCatalogOverlap:
         assert cpu_id == "MY-CODE"
         assert score == 1
 
+    def test_second_glob_match_with_lower_overlap_does_not_replace_best(self, tmp_path):
+        """Two valid CPU files, the second overlapping less than the first:
+        exercises the glob loop back-edge without the `overlap > best_score`
+        branch triggering on the second iteration."""
+        catalogos = tmp_path / "catalogos" / "2024" / "cpus"
+        catalogos.mkdir(parents=True)
+        (catalogos / "CPU-BEST.json").write_text(
+            json.dumps({"codigo": "CPU-BEST", "descricao": "Escavacao mecanica solo argiloso profundo"}),
+            encoding="utf-8",
+        )
+        (catalogos / "CPU-WORSE.json").write_text(
+            json.dumps({"codigo": "CPU-WORSE", "descricao": "Concreto moldado simples"}),
+            encoding="utf-8",
+        )
+
+        with patch(
+            "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+            return_value={},
+        ):
+            cpu_id, score = suggest_cpu("Escavacao mecanica solo argiloso profundo", config_root=tmp_path)
+        assert cpu_id == "CPU-BEST"
+        assert score == 1
+
     def test_catalog_falls_back_to_stem_when_no_codigo(self, tmp_path):
         """Line 77: falls back to f.stem when no codigo or cpu_id."""
         catalogos = tmp_path / "catalogos" / "2024" / "cpus"
@@ -191,6 +227,33 @@ class TestSuggestCpuCatalogOverlap:
             cpu_id, score = suggest_cpu("Escavacao mecanica solo argiloso", config_root=tmp_path)
         assert cpu_id == "CPU-GOOD"
         assert score == 1
+
+    def test_no_catalog_subdir_with_cpus_returns_none(self, tmp_path):
+        """Two catalogos/<x> dirs, neither has a `cpus` subdir: the iterdir loop
+        exhausts (back-edge + fallthrough to `if catalog_cpus:` False -> return)."""
+        catalogos = tmp_path / "catalogos"
+        (catalogos / "cat_a" / "not_cpus").mkdir(parents=True)
+        (catalogos / "cat_b" / "also_not_cpus").mkdir(parents=True)
+
+        with patch(
+            "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+            return_value={},
+        ):
+            cpu_id, score = suggest_cpu("Escavacao mecanica solo argiloso", config_root=tmp_path)
+        assert cpu_id is None
+        assert score == 0
+
+    def test_empty_catalogos_dir_returns_none(self, tmp_path):
+        """catalogos/ exists but is empty: iterdir loop never executes at all."""
+        (tmp_path / "catalogos").mkdir()
+
+        with patch(
+            "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+            return_value={},
+        ):
+            cpu_id, score = suggest_cpu("Escavacao mecanica solo argiloso", config_root=tmp_path)
+        assert cpu_id is None
+        assert score == 0
 
 
 # ── build_eap ─────────────────────────────────────────────────────────────────

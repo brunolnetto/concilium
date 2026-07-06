@@ -547,6 +547,41 @@ class TestRenderPoolEconomiaOrigem:
         assert any("eap-1" in ln for ln in lines)
         assert any("eap-2" in ln for ln in lines)
 
+    def test_causa_row_without_atividade_id_is_skipped(self):
+        """Linha de causa_proj sem atividade_id (vazio/None) é ignorada (continue)."""
+        from concilium.application.runtime.deliverables.reports.report_markdown_sections import (
+            render_pool_economia_origem,
+        )
+
+        eco_proj = {
+            "rows": [
+                {"atividade_id": "eap-1", "custo_autonomo": 50_000, "economia": 10_000, "economia_pct": 20.0},
+            ],
+            "operator_meta": {
+                "custo_autonomo_total": 50_000,
+                "custo_instancial_total": 40_000,
+                "economia_total": 10_000,
+            },
+        }
+        causa_proj = {
+            "rows": [
+                {"atividade_id": "", "produtivo_compartilhado": 999, "ocioso_imputado": 0, "mob_demob_imputado": 0},
+                {
+                    "atividade_id": "eap-1",
+                    "produtivo_compartilhado": 8_000,
+                    "ocioso_imputado": 500,
+                    "mob_demob_imputado": 1_500,
+                },
+            ]
+        }
+        with patch(
+            "concilium.application.services.analytics.cubo_pool_projection.resolve_cubo_pool_projection",
+            side_effect=[eco_proj, causa_proj],
+        ):
+            lines = render_pool_economia_origem(MagicMock())
+
+        assert any("eap-1" in ln for ln in lines)
+
     def test_top_neg_mob_dominates(self):
         """mob_demob > ocioso_imputado → motivo 'mobilização/desmobilização'."""
         from concilium.application.runtime.deliverables.reports.report_markdown_sections import (

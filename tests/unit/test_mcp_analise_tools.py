@@ -252,6 +252,25 @@ class TestAuditarPlano:
 
         assert result["plano_id"] == "PL-explicit"
 
+    def test_no_active_plan_and_no_plano_id_returns_erro(self, monkeypatch, tmp_path):
+        """Line 36: plano_id=None and active_plan() returns None -> erro guard."""
+        store = MagicMock()
+        store.list_escopos.return_value = ["ESC-01"]
+        escopo = MagicMock()
+        escopo.active_plan.return_value = None
+        store.escopo.return_value = escopo
+
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["auditar_plano"]("proj-test")
+
+        assert "erro" in result
+        assert "plano ativo" in result["erro"]
+
     def test_resultado_none_uses_defaults(self, monkeypatch, tmp_path):
         """When canonical.resultado is None/falsy, financeiro uses default values."""
         canonical = _make_canonical()
@@ -485,6 +504,41 @@ class TestExplorarPoolRecursos:
 
         assert "erro" in result
 
+    def test_no_plano_id_and_no_active_plan_returns_erro(self, monkeypatch, tmp_path):
+        """plano_id=None and escopo.active_plan() returns None — 'sem plano ativo' guard."""
+        store = MagicMock()
+        store.list_escopos.return_value = ["ESC-01"]
+        store.meta = {"id": "proj-test"}
+        escopo = MagicMock()
+        escopo.active_plan.return_value = None
+        store.escopo.return_value = escopo
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_pool_recursos"]("proj-test")
+
+        assert "erro" in result
+        assert "sem plano ativo" in result["erro"].lower()
+
+    def test_plano_id_explicito_ignora_active_plan(self, monkeypatch, tmp_path):
+        """plano_id explícito é usado diretamente, sem consultar active_plan()."""
+        canonical = _make_canonical(contratos_recurso=[{"id": "C1"}])
+        store = self._make_pool_store(canonical, plano_id="PL-EXPLICITO")
+        cubo_result = self._make_cubo_result()
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+            patch(f"{_CUBO_MODULE}.resolve_cubo_pool_projection", return_value=cubo_result),
+        ):
+            result = tools["explorar_pool_recursos"]("proj-test", plano_id="PL-EXPLICITO")
+
+        assert result["plano_id"] == "PL-EXPLICITO"
+
     def test_instancias_recurso_present_passes_pool_guard(self, monkeypatch, tmp_path):
         """instancias_recurso present (contratos_recurso absent) passes pool guard."""
         canonical = _make_canonical(contratos_recurso=None, instancias_recurso=[{"id": "I1"}])
@@ -550,3 +604,22 @@ class TestExplorarPoolRecursos:
 
         assert "erro" in result
         assert "nenhum plano ativo" in result["erro"]
+
+    def test_no_active_plan_and_no_plano_id_returns_erro(self, monkeypatch, tmp_path):
+        """Lines 122/126: plano_id=None and active_plan() returns None -> erro guard."""
+        store = MagicMock()
+        store.list_escopos.return_value = ["ESC-01"]
+        escopo = MagicMock()
+        escopo.active_plan.return_value = None
+        store.escopo.return_value = escopo
+
+        tools = _make_tools(monkeypatch, tmp_path)
+
+        with (
+            patch(_PROJECT_PATCH, return_value=store),
+            patch(f"{_ESCOPO_MODULE}._resolve_escopo_id", return_value="ESC-01"),
+        ):
+            result = tools["explorar_pool_recursos"]("proj-test")
+
+        assert "erro" in result
+        assert "plano ativo" in result["erro"]

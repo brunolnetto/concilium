@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -558,3 +559,67 @@ class TestValidateCoverage:
             MOD._validate_coverage(canonical, plan_out, validacoes)
             # No matching equipe+planej pair for I-99
             mock_val.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _process_eap_item  (missing branches: synthetic-cpu failure, early-override
+# short-circuit, preco_cat None after both bottom-up and fallback sources)
+# ---------------------------------------------------------------------------
+
+
+class TestProcessEapItem:
+    def _call(self, item, cpu_lookup, prod_lookup, plan_out, erros_eap, validacoes):
+        return MOD._process_eap_item(
+            item,
+            cpu_lookup,
+            {},
+            prod_lookup,
+            {},
+            {},
+            {},
+            MagicMock(),
+            None,
+            None,
+            None,
+            plan_out,
+            erros_eap,
+            set(),
+            set(),
+            validacoes,
+        )
+
+    def test_synthetic_cpu_creation_fails_records_erro(self):
+        item = SimpleNamespace(cpu_id="CPU-999", item_id="I1")
+        erros_eap: list = []
+        with patch.object(MOD, "_create_synthetic_cpu", return_value=None):
+            self._call(item, {}, {}, [], erros_eap, [])
+        assert erros_eap == ["CPU-999"]
+
+    def test_early_override_short_circuits(self):
+        item = SimpleNamespace(cpu_id="CPU-1", item_id="I2")
+        cpu = {"codigo": "CPU-1", "producao_id_ref": "PR1"}
+        cpu_lookup = {"CPU-1": cpu}
+        prod_lookup = {"PR1": {"id": "PR1"}}
+        plan_out: list = []
+        early_entry = {"item_id": "I2"}
+        with patch.object(MOD, "_try_early_override", return_value=early_entry):
+            self._call(item, cpu_lookup, prod_lookup, plan_out, [], [])
+        assert plan_out == [early_entry]
+
+    def test_preco_cat_none_after_both_sources_returns(self):
+        item = SimpleNamespace(cpu_id="CPU-2", item_id="I3")
+        cpu = {"codigo": "CPU-2", "producao_id_ref": "PR2"}
+        cpu_lookup = {"CPU-2": cpu}
+        prod_lookup = {"PR2": {"id": "PR2"}}
+        plan_out: list = []
+        with (
+            patch.object(MOD, "_try_early_override", return_value=None),
+            patch.object(MOD, "_compute_preco_cat_from_production", return_value=None),
+            patch.object(MOD, "_compute_preco_cat_from_cpu", return_value=(None, set())),
+            patch(
+                "concilium.domain.models.catalog.catalogo.CPU.model_validate",
+                return_value=MagicMock(),
+            ),
+        ):
+            self._call(item, cpu_lookup, prod_lookup, plan_out, [], [])
+        assert plan_out == []

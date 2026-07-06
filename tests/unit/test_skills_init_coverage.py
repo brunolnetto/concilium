@@ -131,6 +131,30 @@ class TestLoadSkillModule:
             skills_pkg._MANIFESTS = original_manifests
             sys.modules.pop(mod_name, None)
 
+    def test_raises_import_error_when_spec_is_none(self, tmp_path, monkeypatch):
+        """Covers the `spec is None` guard when spec_from_file_location fails."""
+        import importlib.util
+
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _load_skill_module, _skill_mod_name
+
+        fake_manifests = tmp_path / "manifests"
+        skill_dir = fake_manifests / "nospec-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "skill.py").write_text("X = 1", encoding="utf-8")
+
+        original_manifests = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = fake_manifests
+        mod_name = _skill_mod_name("nospec-skill")
+        sys.modules.pop(mod_name, None)
+        monkeypatch.setattr(importlib.util, "spec_from_file_location", lambda *a, **kw: None)
+        try:
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                _load_skill_module("nospec-skill")
+        finally:
+            skills_pkg._MANIFESTS = original_manifests
+            sys.modules.pop(mod_name, None)
+
     def test_cached_module_returned_without_re_exec(self, tmp_path):
         import concilium.application.skills as skills_pkg
         from concilium.application.skills import _load_skill_module, _skill_mod_name
@@ -210,6 +234,34 @@ class TestSkillProxy:
             sys.modules.pop(mod_name, None)
             sys.modules.pop(skills_pkg._skill_pkg_name("proxy2-skill"), None)
 
+    def test_proxy_getattr_race_module_loaded_inside_lock(self, tmp_path, monkeypatch):
+        """Covers the inner double-checked-locking false branch: another thread
+        loads the module between the outer check and lock acquisition."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _skill_mod_name, _SkillProxy
+
+        skill_id = "proxy-race-skill"
+        mod_name = _skill_mod_name(skill_id)
+        sys.modules.pop(mod_name, None)
+        dummy = types.ModuleType(mod_name)
+        dummy.RUN_RACE = "raced"
+
+        class _FakeLock:
+            def __enter__(self):
+                sys.modules[mod_name] = dummy
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        monkeypatch.setattr(skills_pkg, "_IMPORT_LOCK", _FakeLock())
+        try:
+            proxy = _SkillProxy(skill_id)
+            val = proxy.RUN_RACE
+            assert val == "raced"
+        finally:
+            sys.modules.pop(mod_name, None)
+
 
 # ---------------------------------------------------------------------------
 # _load — stale/partial module recovery path
@@ -241,6 +293,34 @@ class TestLoadFunction:
             skills_pkg._MANIFESTS = original_manifests
             sys.modules.pop(mod_name, None)
             sys.modules.pop(skills_pkg._skill_pkg_name("stale-skill"), None)
+
+    def test_load_race_module_loaded_inside_lock(self, monkeypatch):
+        """Covers the inner double-checked-locking false branch in _load:
+        another thread already loaded (and it has the attr) before lock acquisition."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _load, _skill_mod_name
+
+        skill_id = "load-race-skill"
+        mod_name = _skill_mod_name(skill_id)
+        sys.modules.pop(mod_name, None)
+        dummy = types.ModuleType(mod_name)
+        dummy.run_load_race = lambda: "raced"
+
+        class _FakeLock:
+            def __enter__(self):
+                sys.modules[mod_name] = dummy
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        monkeypatch.setattr(skills_pkg, "_IMPORT_LOCK", _FakeLock())
+        try:
+            fn = _load(skill_id, "run_load_race")
+            assert fn() == "raced"
+        finally:
+            sys.modules.pop(mod_name, None)
+            sys.modules.pop(skills_pkg._get_compat_alias(skill_id), None)
 
 
 # ---------------------------------------------------------------------------
@@ -441,6 +521,26 @@ class TestLoadSkillStage:
         finally:
             skills_pkg._MANIFESTS = original
 
+    def test_raises_import_error_when_spec_is_none(self, tmp_path, monkeypatch):
+        import importlib.util
+
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import load_skill_stage
+
+        fake_manifests = tmp_path / "manifests"
+        skill_dir = fake_manifests / "sk-nospec"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "_helper.py").write_text("def run_helper(): return 'x'", encoding="utf-8")
+
+        original = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = fake_manifests
+        monkeypatch.setattr(importlib.util, "spec_from_file_location", lambda *a, **kw: None)
+        try:
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                load_skill_stage("sk-nospec", "_helper", "run_helper")
+        finally:
+            skills_pkg._MANIFESTS = original
+
 
 # ---------------------------------------------------------------------------
 # list_compat_aliases
@@ -554,6 +654,32 @@ class TestLazySkillsDict:
                 sys.modules.pop(_skill_mod_name(sid), None)
                 sys.modules.pop(_skill_pkg_name(sid), None)
 
+    def test_values_skips_already_loaded_entry(self, tmp_path):
+        """Covers the false branch of `if skill_id not in self._loaded` in values()."""
+        import concilium.application.skills as skills_pkg
+        from concilium.application.skills import _LazySkillsDict
+
+        fake_manifests = tmp_path / "manifests"
+        sd = fake_manifests / "lz-partial-skill"
+        sd.mkdir(parents=True)
+        (sd / "skill.py").write_text("def run_lz_partial_skill(): pass", encoding="utf-8")
+
+        original = skills_pkg._MANIFESTS
+        skills_pkg._MANIFESTS = fake_manifests
+        try:
+            d = _LazySkillsDict({"lz-preloaded": "run_lz_preloaded", "lz-partial-skill": "run_lz_partial_skill"})
+            # Pre-populate one entry manually so values() must skip re-loading it.
+            d._loaded["lz-preloaded"] = "already-here"
+            vals = list(d.values())
+            assert "already-here" in vals
+            assert len(vals) == 2
+        finally:
+            skills_pkg._MANIFESTS = original
+            from concilium.application.skills import _skill_mod_name, _skill_pkg_name
+
+            sys.modules.pop(_skill_mod_name("lz-partial-skill"), None)
+            sys.modules.pop(_skill_pkg_name("lz-partial-skill"), None)
+
     def test_items_yields_id_fn_pairs(self, tmp_path):
         import concilium.application.skills as skills_pkg
         from concilium.application.skills import _LazySkillsDict
@@ -616,3 +742,25 @@ class TestModuleGetattr:
 
         with pytest.raises(AttributeError):
             skills_pkg.__getattr__("run_nonexistent_skill_xyz")
+
+
+# ---------------------------------------------------------------------------
+# Module-level proxy auto-registration loop
+# ---------------------------------------------------------------------------
+
+
+class TestModuleLevelAliasRegistration:
+    def test_reload_skips_already_registered_aliases(self):
+        """On re-exec of the module body, every alias is already in sys.modules —
+        exercises the `if _alias not in sys.modules` False branch for the whole loop."""
+        import importlib
+
+        import concilium.application.skills as skills_pkg
+
+        aliases_before = {
+            skills_pkg._get_compat_alias(sid): sys.modules.get(skills_pkg._get_compat_alias(sid))
+            for sid in skills_pkg._MANIFEST_INDEX
+        }
+        importlib.reload(skills_pkg)
+        for alias, prior_module in aliases_before.items():
+            assert sys.modules.get(alias) is prior_module

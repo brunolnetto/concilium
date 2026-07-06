@@ -1,4 +1,5 @@
 """Coverage batch 38 — _consolidacao/_skill_helpers_a, _indiretos/_skill_helpers_b, _precificacao/_skill_helpers_a."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -68,6 +69,7 @@ class TestValidatePeDuploRisco:
 
     def _make_pe(self, confianca: str, status: str = "ERRO") -> object:
         from concilium.domain.models.canonical import PontoEquilibrio
+
         return PontoEquilibrio(
             item_id="ITEM-01",
             custo_fixo_equipe=100_000.0,
@@ -114,6 +116,7 @@ class TestApmProcessFamilia:
 
     def _make_pe(self, delta: float, status: str = "ERRO") -> object:
         from concilium.domain.models.canonical import PontoEquilibrio
+
         return PontoEquilibrio(
             item_id="X",
             custo_fixo_equipe=100.0,
@@ -164,6 +167,42 @@ class TestBpeProcessEquipe:
         equipe = SimpleNamespace(item_id=None, custo_total=0.0, funcoes=[])
         result = CONSOL._bpe_process_equipe(equipe, venda_por_item={}, validacoes=[])
         assert result is None
+
+
+class TestApmBuildFamiliaRows:
+    """Line 862: `if fam:` — item sem cpu_id resolvível não entra em nenhuma família."""
+
+    def _make_pe(self) -> object:
+        from concilium.domain.models.canonical import PontoEquilibrio
+
+        return PontoEquilibrio(
+            item_id="X",
+            custo_fixo_equipe=100.0,
+            custo_venda_cpu=120.0,
+            delta=10.0,
+            delta_pct=0.1,
+            status_validacao="OK",
+        )
+
+    def test_equipe_ausente_gera_familia_vazia(self):
+        """eq is None → fam = _cpu_familia("") = "" → branch `if fam` é False."""
+        pe = self._make_pe()
+        rows = CONSOL._apm_build_familia_rows({"X": pe}, equipe_by_item={})
+        assert rows == {}
+
+    def test_equipe_sem_cpu_id_gera_familia_vazia(self):
+        """eq.cpu_id vazio → fam == "" → item não é agrupado."""
+        pe = self._make_pe()
+        equipe = SimpleNamespace(item_id="X", cpu_id="")
+        rows = CONSOL._apm_build_familia_rows({"X": pe}, equipe_by_item={"X": equipe})
+        assert rows == {}
+
+    def test_equipe_com_cpu_id_agrupa_por_familia(self):
+        pe = self._make_pe()
+        equipe = SimpleNamespace(item_id="X", cpu_id="CPU-DREN-01")
+        rows = CONSOL._apm_build_familia_rows({"X": pe}, equipe_by_item={"X": equipe})
+        assert "CPU" in rows
+        assert rows["CPU"] == [("X", pe)]
 
 
 # ===========================================================================
@@ -233,6 +272,7 @@ class TestApplyDv4ScaleToCategoria:
     def test_permanencia_with_prazo_meses(self):
         """Line 349-351: driver='permanencia' and prazo_meses not None → custo from monthly × months."""
         from concilium.domain.models.canonical import IndirectoCategoria
+
         cat_obj = IndirectoCategoria(categoria="TOP", driver="permanencia", custo_fixo_mensal=1000.0)
         custo, updated = INDIR._apply_dv4_scale_to_categoria(
             cat_obj, dv4_policy=None, policy_scale={}, n_semanas=12, prazo_meses=3.0
@@ -242,6 +282,7 @@ class TestApplyDv4ScaleToCategoria:
     def test_one_time_driver_uses_custo_total_para_semanas(self):
         """Else branch: driver='one_time' → custo_total_para_semanas(n_semanas)."""
         from concilium.domain.models.canonical import IndirectoCategoria
+
         cat_obj = IndirectoCategoria(categoria="MOB", driver="one_time", custo_fixo_total=5000.0)
         custo, _ = INDIR._apply_dv4_scale_to_categoria(
             cat_obj, dv4_policy=None, policy_scale={}, n_semanas=8, prazo_meses=None
@@ -250,6 +291,7 @@ class TestApplyDv4ScaleToCategoria:
 
     def test_dv4_policy_scale_applied(self):
         from concilium.domain.models.canonical import IndirectoCategoria
+
         cat_obj = IndirectoCategoria(categoria="ADM", driver="permanencia", custo_fixo_mensal=2000.0)
         custo, _ = INDIR._apply_dv4_scale_to_categoria(
             cat_obj, dv4_policy="REDUZIDO", policy_scale={"REDUZIDO": 0.8}, n_semanas=4, prazo_meses=2.0
@@ -329,6 +371,48 @@ class TestProcessMobCategoriaCatCfgRaw:
         assert indir.custo_total == 7500.0
         assert indir.categoria == "MOB"
 
+    def test_mob_schedule_present_but_total_not_positive_keeps_legacy_custo(self):
+        """Lines 294-322: mob_schedule truthy but lacking the 'mobilizacao' phase
+        key means calcular_custo_indireto_mob's custo_mob_total stays 0.0, so the
+        `if mob_total > 0` branch is skipped and the legacy custo is preserved."""
+        categorias_config_raw = [
+            {"categoria": "MOB", "driver": "one_time", "custo_fixo_total": 7500.0},
+        ]
+        indir, semanal = INDIR._process_mob_categoria(
+            cat={"descricao": "Mobilização"},
+            categorias_config_raw=categorias_config_raw,
+            dados_mob={},
+            num_pessoas_direta=0,
+            prazo_meses=3,
+            n_semanas=12,
+            dv4_policy=None,
+            policy_scale={},
+            mob_schedule={"outra_fase": {}},
+        )
+        assert indir.custo_total == 7500.0
+
+    def test_mob_schedule_present_with_positive_total_updates_custo(self):
+        """Lines 294-314: mob_schedule with a 'mobilizacao' phase window makes
+        calcular_custo_indireto_mob return a positive custo_mob_total, which
+        overrides the legacy custo (the `if mob_total > 0` true branch)."""
+        from datetime import date
+
+        categorias_config_raw = [
+            {"categoria": "MOB", "driver": "one_time", "custo_fixo_total": 7500.0},
+        ]
+        indir, semanal = INDIR._process_mob_categoria(
+            cat={"descricao": "Mobilização"},
+            categorias_config_raw=categorias_config_raw,
+            dados_mob={},
+            num_pessoas_direta=0,
+            prazo_meses=3,
+            n_semanas=12,
+            dv4_policy=None,
+            policy_scale={},
+            mob_schedule={"mobilizacao": {"inicio": date(2026, 1, 1), "fim": date(2026, 1, 7)}},
+        )
+        assert indir.custo_total == 7500.0
+
 
 class TestResolveCategoriaCatCfgRaw:
     """Lines 319, 321: _resolve_categoria_comp early returns."""
@@ -352,6 +436,7 @@ class TestResolveCategoriaCatCfgRaw:
             catalogo=None,
         )
         from concilium.domain.models.canonical import IndirectoCategoria
+
         assert isinstance(result, IndirectoCategoria)
         assert result.categoria == "TOP"
         assert result.custo_fixo_mensal == 3000.0
@@ -372,6 +457,7 @@ class TestResolveCategoriaCatCfgRaw:
             catalogo=None,
         )
         from concilium.domain.models.canonical import IndirectoCategoria
+
         assert isinstance(result, IndirectoCategoria)
         assert result.custo_fixo_mensal == 0.0
 
@@ -463,3 +549,76 @@ class TestComputePrecoFromProduction:
         assert result is not None
         codes = [v.codigo for v in validacoes]
         assert "VAL-PLAN-SBDI-LEGADO" in codes
+
+
+# ===========================================================================
+# _indiretos/_skill_helpers_b.py — _as_categoria_indireto
+# ===========================================================================
+
+
+class TestAsCategoriaIndireto:
+    """Lines 92-96: full branch coverage of the codigo -> Literal narrowing."""
+
+    def test_adm(self):
+        assert INDIR._as_categoria_indireto("ADM") == "ADM"
+
+    def test_top(self):
+        assert INDIR._as_categoria_indireto("TOP") == "TOP"
+
+    def test_lab(self):
+        assert INDIR._as_categoria_indireto("LAB") == "LAB"
+
+    def test_qsms(self):
+        assert INDIR._as_categoria_indireto("QSMS") == "QSMS"
+
+    def test_mob(self):
+        assert INDIR._as_categoria_indireto("MOB") == "MOB"
+
+    def test_unknown_raises_value_error(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="Categoria de indireto desconhecida"):
+            INDIR._as_categoria_indireto("BOGUS")
+
+
+class TestIndirBLoadLocalSpecNone:
+    """Line 59: explicit ImportError when spec_from_file_location fails for
+    _skill_helpers_a.py in the ImportError fallback path (module loaded
+    without a registered synthetic parent package, as done by `_load` above,
+    so the top-level relative import always fails and hits the fallback)."""
+
+    def test_raises_importerror_when_spec_a_is_none(self):
+        from unittest.mock import patch
+
+        import pytest
+
+        p = (_BASE / "_indiretos/_skill_helpers_b.py").resolve()
+        # Build the real spec/module *before* patching, so only the inner
+        # spec_from_file_location call (for _skill_helpers_a.py, made during
+        # exec_module) is affected by the patch below.
+        real_spec = importlib.util.spec_from_file_location("indir_b38_spec_none", p)
+        mod = importlib.util.module_from_spec(real_spec)
+
+        with patch("importlib.util.spec_from_file_location", return_value=None):
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                real_spec.loader.exec_module(mod)
+
+
+class TestConsolidacaoSkillLoadLocalSpecNone:
+    """_consolidacao/skill.py: when the relative import of `._skill_helpers_a`
+    fails (module loaded standalone, no synthetic parent package registered),
+    it falls back to spec_from_file_location — this covers the explicit
+    ImportError raised when that call returns None."""
+
+    def test_raises_importerror_when_spec_a_is_none(self):
+        from unittest.mock import patch
+
+        import pytest
+
+        p = (_BASE / "_consolidacao/skill.py").resolve()
+        real_spec = importlib.util.spec_from_file_location("consol_skill_b38_spec_none", p)
+        mod = importlib.util.module_from_spec(real_spec)
+
+        with patch("importlib.util.spec_from_file_location", return_value=None):
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                real_spec.loader.exec_module(mod)

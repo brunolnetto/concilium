@@ -632,6 +632,16 @@ class TestStorageProjectHandle:
             assert entry["item_id"] == "CPU-01"
             assert entry["actor"] == "tester"
 
+    def test_set_overlay_non_dict_overlay_is_replaced(self):
+        """If the overlay file on disk isn't a dict (corrupt/legacy data),
+        set_overlay must discard it and start a fresh dict instead of raising."""
+        with tempfile.TemporaryDirectory() as tmp:
+            h = self._make_handle(tmp)
+            h.write_json("overrides/cpus_overlay.json", ["not", "a", "dict"])
+            h.set_overlay("cpu", "CPU-01", {"custo": 100}, actor="tester", motivo="ajuste")
+            overlay = h.read_json("overrides/cpus_overlay.json", {})
+            assert overlay == {"CPU-01": {"custo": 100}}
+
     def test_load_resolved_catalog_returns_persisted_data(self):
         with tempfile.TemporaryDirectory() as tmp:
             h = self._make_handle(tmp)
@@ -897,6 +907,56 @@ class TestSharePointLerBlobEdgeCases:
             with patch.dict("sys.modules", {"httpx": mock_httpx}):
                 result = storage.ler_blob("file.json")
             assert result == b"stale_data"
+
+    def test_ler_blob_cached_offline_exception_no_stale_reraises(self):
+        """Branch 171→174: exception during ETag check while offline, but
+        get_stale() returns falsy (no cached blob) → exception is re-raised
+        instead of returning stale content."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._offline = True
+            storage._cache.put("file.json", b"cached_data", "etag-1", "Mon")
+            storage._cache.get_stale = MagicMock(return_value=None)
+
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = OSError("connection refused")
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                with pytest.raises(OSError):
+                    storage.ler_blob("file.json")
+
+    def test_ler_blob_cached_etag_check_non_200_non_304_falls_through(self):
+        """Branch 157→175: check response is neither 304 nor 200 (e.g. 500) →
+        falls through to `return None`, then ler_blob falls back to direct read."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._cache.put("file.json", b"old_content", "etag-old", "Mon")
+
+            check_resp = self._mock_resp(500)
+            direct_resp = self._mock_resp(200, content=b"direct_fallback")
+
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = [check_resp, direct_resp]
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                result = storage.ler_blob("file.json")
+            assert result == b"direct_fallback"
+
+    def test_ler_blob_cached_content_refetch_non_200_falls_through(self):
+        """Branch 165→175: ETag check returns 200 but the content re-fetch does
+        not (e.g. 404) → falls through to `return None` without caching,
+        then ler_blob falls back to direct read."""
+        with tempfile.TemporaryDirectory() as tmp:
+            storage = _make_storage(Path(tmp))
+            storage._cache.put("file.json", b"old_content", "etag-old", "Mon")
+
+            check_resp = self._mock_resp(200, headers={"ETag": "etag-new", "Last-Modified": "Tue"})
+            content_resp_fail = self._mock_resp(404)
+            direct_resp = self._mock_resp(200, content=b"direct_fallback")
+
+            mock_httpx = MagicMock()
+            mock_httpx.get.side_effect = [check_resp, content_resp_fail, direct_resp]
+            with patch.dict("sys.modules", {"httpx": mock_httpx}):
+                result = storage.ler_blob("file.json")
+            assert result == b"direct_fallback"
 
     def test_ler_blob_direct_offline_stale_returns_content(self):
         """Lines 140-143: offline mode + expired cache → _ler_blob_direct returns stale."""

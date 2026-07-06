@@ -97,8 +97,10 @@ def critical_path(
     def _resolve(node: str) -> tuple[int, list[str]]:
         if node in memo:
             return memo[node]
-        if node not in dur:
-            return (0, [])
+        # `node` is always a key of `dur` here: the outer loop only calls _resolve()
+        # for nodes in `dur`, and recursive calls only use `deps`, which is
+        # pre-filtered to `d in dur` below — so a "node not in dur" guard would be
+        # unreachable dead code.
         deps = [d for d in manifest_meta.get(node, {}).get("depends_on", {}).get("skills", []) if d in dur]
         best_dep_ms, best_dep_path = max(
             (_resolve(d) for d in deps),

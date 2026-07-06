@@ -207,6 +207,122 @@ class TestLnsSchedulerMissingLineCoverage:
         # With tol=1.0 (100%) any |ΔC|/C_0 < 1.0 exits → at most ~2 iterations
         assert len(scheduler.iteration_log) <= 3
 
+    def test_second_iteration_does_not_reset_baseline_or_regress_best(self):
+        """Covers the false branches at lines 149 (C_total_0 already set) and
+        174 (a later, worse C_total must not overwrite best_C_total/best_output).
+        Uses controlled fake `_ssgs`/`oracle.solve` outputs with distinct
+        schedule hashes per iteration so cycle detection doesn't short-circuit
+        the loop before k=1, and convergence_tol=0.0 so it never converges."""
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.scheduling.models import (
+            ScheduledActivity,
+            ScheduleMetrics,
+            ScheduleOutput,
+        )
+
+        dag, acts = _dag_chain(2, dur=3)
+        scheduler = LnsScheduler(oracle=_oracle(), k_max=2, convergence_tol=0.0)
+
+        def _fake_output(start_week: int, makespan: int) -> ScheduleOutput:
+            return ScheduleOutput(
+                scheduled_activities=[
+                    ScheduledActivity(
+                        activity_id="A0",
+                        start_week=start_week,
+                        end_week=start_week + 3,
+                        duration_weeks=3,
+                        assigned_resources={"E": 2},
+                    )
+                ],
+                makespan=makespan,
+                feasible=True,
+                metrics=ScheduleMetrics(
+                    makespan=makespan,
+                    resource_leveling_score=1.0,
+                    idle_time=0,
+                    activity_fragmentation=0,
+                    critical_path_slack_min=0.0,
+                    resource_utilization_avg=0.5,
+                ),
+            )
+
+        # Distinct start_week per call → distinct schedule hash → no cycle break.
+        ssgs_outputs = [_fake_output(0, 10), _fake_output(1, 20)]
+
+        fake_sol_k0 = MagicMock(mob_cost_actual=0.0, concurrent_pairs_lost=[])
+        fake_sol_k1 = MagicMock(mob_cost_actual=0.0, concurrent_pairs_lost=[])
+
+        with (
+            patch.object(scheduler, "_ssgs", side_effect=ssgs_outputs),
+            patch.object(scheduler.oracle, "solve", side_effect=[fake_sol_k0, fake_sol_k1]),
+        ):
+            scheduler.schedule(dag, _pool(10), ramp_profiles=_ramps(acts))
+
+        assert len(scheduler.iteration_log) == 2
+        # k=0: C_total=10 sets baseline and best.
+        assert scheduler.iteration_log[0]["C_total"] == 10.0
+        # k=1: C_total=20 is worse → best must remain the k=0 result (makespan=10).
+        assert scheduler.iteration_log[1]["C_total"] == 20.0
+
+    def test_convergence_break_triggers_with_small_delta(self):
+        """Lines 184-185: when |ΔC_total|/C_total_0 < convergence_tol, the
+        loop must log and break immediately, skipping remaining k_max
+        iterations. Uses the same controlled fakes as above but with a tiny
+        C_total delta between k=0 and k=1 and a generous convergence_tol."""
+        from unittest.mock import MagicMock, patch
+
+        from concilium.application.scheduling.models import (
+            ScheduledActivity,
+            ScheduleMetrics,
+            ScheduleOutput,
+        )
+
+        dag, acts = _dag_chain(2, dur=3)
+        scheduler = LnsScheduler(oracle=_oracle(), k_max=5, convergence_tol=0.5)
+
+        def _fake_output(start_week: int, makespan: int) -> ScheduleOutput:
+            return ScheduleOutput(
+                scheduled_activities=[
+                    ScheduledActivity(
+                        activity_id="A0",
+                        start_week=start_week,
+                        end_week=start_week + 3,
+                        duration_weeks=3,
+                        assigned_resources={"E": 2},
+                    )
+                ],
+                makespan=makespan,
+                feasible=True,
+                metrics=ScheduleMetrics(
+                    makespan=makespan,
+                    resource_leveling_score=1.0,
+                    idle_time=0,
+                    activity_fragmentation=0,
+                    critical_path_slack_min=0.0,
+                    resource_utilization_avg=0.5,
+                ),
+            )
+
+        # k=0 → C_total=10 (baseline). k=1 → C_total=10.1, delta_ratio=0.01 << 0.5
+        # tol → converges and breaks before k=2/3/4 ever run.
+        ssgs_outputs = [_fake_output(0, 10), _fake_output(1, 10), _fake_output(2, 10)]
+
+        fake_sols = [
+            MagicMock(mob_cost_actual=0.0, concurrent_pairs_lost=[]),
+            MagicMock(mob_cost_actual=0.1, concurrent_pairs_lost=[]),
+            MagicMock(mob_cost_actual=0.0, concurrent_pairs_lost=[]),
+        ]
+
+        with (
+            patch.object(scheduler, "_ssgs", side_effect=ssgs_outputs),
+            patch.object(scheduler.oracle, "solve", side_effect=fake_sols),
+        ):
+            scheduler.schedule(dag, _pool(10), ramp_profiles=_ramps(acts))
+
+        # Converged at k=1 → only 2 iterations logged, not k_max=5.
+        assert len(scheduler.iteration_log) == 2
+
     def test_lambda_subgradient_update_with_concurrent_pairs(self):
         """Lines 188-190: subgradient λ update runs when oracle returns concurrent pairs."""
         from unittest.mock import MagicMock, patch

@@ -377,3 +377,88 @@ class TestRenderFinancialReportPdfFallback:
     def test_none_image_provider_does_not_crash(self):
         result = render_financial_report_pdf(self._minimal_relatorio(), title="Sem Imagens", image_provider=None)
         assert result is None or isinstance(result, bytes)
+
+    _TINY_PNG = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
+        b"\x00\x00\x00\x0bIDATx\x9cc\xfc\xcf\xc0\x00\x00\x00\t\x00\x01\x93\xd8\xfb\x89\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    def test_recommendations_section_extracts_str_list_and_dict_entries(self):
+        """Lines 465-477: actionable_insights com str simples, lista de str e lista de dict."""
+        relatorio = self._minimal_relatorio()
+        relatorio["ACTIONABLE_INSIGHTS"] = {
+            "criticidade": {"notas_engenheiro": "Nota direta"},
+            "sensibilidade": {
+                "recomendacao_primaria": ["Passo 1", {"descricao": "Passo via dict"}],
+            },
+            "intervencao": "not-a-dict",  # linha 471: sec não é dict → continue
+        }
+        result = render_financial_report_pdf(relatorio, title="Recs")
+        assert result is None or isinstance(result, bytes)
+
+    def test_recommendations_dict_entry_without_text_keys_is_skipped(self):
+        """Linha 474->471: dict de recomendação sem descricao/texto/titulo não vira recs."""
+        relatorio = self._minimal_relatorio()
+        relatorio["ACTIONABLE_INSIGHTS"] = {
+            "criticidade": {"recomendacao_primaria": [{"outro_campo": "sem texto util"}]},
+        }
+        result = render_financial_report_pdf(relatorio, title="RecsVazio")
+        assert result is None or isinstance(result, bytes)
+
+    def test_recommendations_list_entry_neither_str_nor_dict_is_ignored(self):
+        """Linha 474 (ramo falso): item da lista que não é str nem dict (ex.: int/None)
+        não vira recomendação e o loop apenas segue para o próximo item."""
+        relatorio = self._minimal_relatorio()
+        relatorio["ACTIONABLE_INSIGHTS"] = {
+            "criticidade": {"recomendacao_primaria": [123, None, "Passo válido"]},
+        }
+        result = render_financial_report_pdf(relatorio, title="RecsMisto")
+        assert result is None or isinstance(result, bytes)
+
+    def test_planejamento_item_without_descricao_uses_cpu_id_fallback(self):
+        """Linhas 515-517: descricao ausente → formata a partir de cpu_id."""
+        relatorio = self._minimal_relatorio()
+        relatorio["PLANEJAMENTO"] = [
+            {"item_id": "1.1", "cpu_id": "CPU-TERRA-ESCAVACAO", "subtotal_com_bdi": 1000.0},
+        ]
+        result = render_financial_report_pdf(relatorio, title="Planejamento")
+        assert result is None or isinstance(result, bytes)
+
+    def test_images_loop_breaks_after_four_and_skips_missing(self):
+        """Linhas 668-669: break após 4 imagens adicionadas com sucesso."""
+        relatorio = self._minimal_relatorio()
+
+        def provider(name: str) -> bytes | None:
+            return self._TINY_PNG
+
+        result = render_financial_report_pdf(relatorio, title="Imagens", image_provider=provider)
+        assert result is None or isinstance(result, bytes)
+
+    def test_image_with_invalid_natural_dimensions_is_skipped(self, monkeypatch):
+        """Linha 676-677: imagem com dimensões naturais <= 0 é descartada (continue)."""
+        import reportlab.platypus as platypus
+
+        class _ZeroDimImage:
+            def __init__(self, *args, **kwargs):
+                self.imageWidth = 0
+                self.imageHeight = 0
+
+        monkeypatch.setattr(platypus, "Image", _ZeroDimImage)
+
+        def provider(name: str) -> bytes | None:
+            return self._TINY_PNG
+
+        result = render_financial_report_pdf(self._minimal_relatorio(), title="ZeroDim", image_provider=provider)
+        assert result is None or isinstance(result, bytes)
+
+    def test_images_loop_caption_missing_still_adds_image(self, monkeypatch):
+        """Linha 689->691: gráfico sem legenda (caption vazio) ainda é adicionado à história."""
+        import concilium.application.runtime.deliverables.reports.financial_report_pdf as mod
+
+        monkeypatch.setitem(mod._CHART_CAPTIONS, "scurve_custo", "")
+
+        def provider(name: str) -> bytes | None:
+            return self._TINY_PNG if name == "scurve_custo.png" else None
+
+        result = render_financial_report_pdf(self._minimal_relatorio(), title="SemLegenda", image_provider=provider)
+        assert result is None or isinstance(result, bytes)

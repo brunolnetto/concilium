@@ -239,3 +239,73 @@ class TestPipelineHelpers:
         assert result["skill_executada"] == "04-cronograma"
         assert result["status"] == "OK"
         assert result["proxima_sugerida"] == "05-financeiro"
+
+    def test_run_pipeline_on_plano_skill_id_none_picks_first_pending(self):
+        """Cover line 218: skill_id is None and there ARE pending skills -> picks pendentes[0]."""
+        from concilium.application.skills.phase_classifier import CANONICAL_SKILL_ORDER
+        from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
+
+        ps = MagicMock()
+        # Nothing executed yet -> all skills pending
+        ps.read_invocations.return_value = []
+        ps.plano_id = "plano-1"
+
+        r = MagicMock()
+        r.has_errors = False
+        r.validacoes = []
+        r.artifacts = []
+        coord = MagicMock()
+        coord.avancar_plano.return_value = r
+
+        with (
+            patch("concilium.presentation.mcp.tools.pipeline._lifecycle_coordinator", return_value=coord),
+            patch("concilium.presentation.mcp.tools.pipeline._get_or_create_trace_id"),
+        ):
+            result = _run_pipeline_on_plano(MagicMock(), MagicMock(), ps, None, {})
+
+        coord.avancar_plano.assert_called_once()
+        called_skill_id = coord.avancar_plano.call_args[0][0]
+        assert called_skill_id == CANONICAL_SKILL_ORDER[0]
+        assert result["skill_executada"] == CANONICAL_SKILL_ORDER[0]
+
+    def test_run_pipeline_on_plano_success_returns_built_result(self):
+        """Cover lines 230-231: success path builds result via _rpl_build_result."""
+        from concilium.presentation.mcp.tools.pipeline import _run_pipeline_on_plano
+
+        ps = MagicMock()
+        ps.read_invocations.return_value = []
+        ps.plano_id = "plano-1"
+
+        r = MagicMock()
+        r.has_errors = False
+        r.validacoes = []
+        r.artifacts = []
+        coord = MagicMock()
+        coord.avancar_plano.return_value = r
+
+        with (
+            patch("concilium.presentation.mcp.tools.pipeline._lifecycle_coordinator", return_value=coord),
+            patch("concilium.presentation.mcp.tools.pipeline._get_or_create_trace_id"),
+        ):
+            result = _run_pipeline_on_plano(MagicMock(), MagicMock(), ps, "01-escopo-e-eap", {})
+
+        assert result["status"] == "OK"
+        assert result["skill_executada"] == "01-escopo-e-eap"
+        assert result["plano_id"] == "plano-1"
+
+
+class TestDispararPipelineProcurementIntent:
+    def test_disparar_with_procurement_intent_checks_allowed(self, monkeypatch, tmp_path):
+        """Cover lines 62-68: procurement_intent set -> check_intent_allowed is invoked."""
+        tools = _register_tools(monkeypatch, tmp_path)
+        svc_mock = MagicMock()
+        svc_mock.disparar_pipeline.return_value = _make_job_dto()
+
+        with (
+            patch("concilium.application.jobs.get_job_service", return_value=svc_mock),
+            patch("concilium.infrastructure.auth.permission_guard.check_intent_allowed") as mock_check,
+        ):
+            result = tools["disparar_pipeline"](project_id="proj-1", procurement_intent="rfi")
+
+        mock_check.assert_called_once()
+        assert "job_id" in result or "status" in result

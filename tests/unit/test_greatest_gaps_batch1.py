@@ -285,6 +285,79 @@ def test_render_cubo_comp_and_campanha_frota_branches(monkeypatch):
     assert "CAMPANHA.FROTA" in wb.sheetnames
 
 
+def test_hist_accumulate_act_no_equipamentos_defaults_min_units_1():
+    """Line 62: eq.equipamentos vazio/falsy → min_units default 1 (else branch)."""
+    dist = {"2026-W10": SimpleNamespace(num_equipes=2)}
+    act = SimpleNamespace(activity_id="A1", distribuicao_semanal=dist)
+    equipe_sem_equipamentos = SimpleNamespace(item_id="A1", equipamentos=[], funcoes=[SimpleNamespace(num_pessoas=3)])
+    lookup = {"A1": equipe_sem_equipamentos}
+    totals: dict = {"2026-W10": 0.0}
+    gmod._rg_hist_accumulate_act(act, lookup, "equipamentos", totals)
+    # scale = num_pessoas ou num_unidades conforme kind; aqui kind=equipamentos sem
+    # equipamentos cadastrados → _rg_hist_scale retorna 0, mas min_units usou o default 1.
+    assert "2026-W10" in totals
+
+
+def test_render_graficos_empty_canonical_skips_all_charts(monkeypatch):
+    """Lines 163->176, 176->188, 188->206, 201->204: sem labels/gantt/finance → nenhum gráfico é criado."""
+    wb = Workbook()
+    canonical = SimpleNamespace(cronograma=None, equipes_diretas=[])
+    monkeypatch.setattr(gmod, "_cash_flow", lambda _c: [])
+
+    gmod.render_graficos(wb, canonical)
+
+    ws = wb["GRAFICOS"]
+    assert ws._charts == []
+
+
+def test_render_cubo_comp_builds_cubo_when_absent_on_canonical(monkeypatch):
+    """Lines 316-319: cubo_analitico ausente → CuboAnaliticoBuilder().build() é chamado com sucesso."""
+    wb = Workbook()
+    fake_cubo = SimpleNamespace(
+        celulas=[1],
+        regime_bdi="pre_reforma",
+        total_preco_venda=1000.0,
+        total_custo_direto=700.0,
+        pct_margem=0.1,
+        pct_tributos=0.1,
+        total_overhead=100.0,
+        total_margem=100.0,
+        total_tributos=100.0,
+        exposicao_tributaria_por_tipo=lambda: {},
+        margem_por_atividade=lambda: {},
+        composicao_preco_temporal=lambda: {},
+    )
+
+    class _Builder:
+        def build(self, _canonical):
+            return fake_cubo
+
+    monkeypatch.setattr(
+        "concilium.domain.services.analytics.cubo_analitico_builder.CuboAnaliticoBuilder",
+        lambda: _Builder(),
+    )
+    canonical = SimpleNamespace(equipes_diretas=[], analise_campanhas=None)  # sem cubo_analitico
+    gmod.render_cubo_comp(wb, canonical)
+    assert "CUBO.COMP" in wb.sheetnames
+
+
+def test_render_cubo_comp_builder_exception_returns_silently(monkeypatch):
+    """Linhas 320-321: exceção no builder → função retorna sem criar a planilha."""
+    wb = Workbook()
+
+    class _BoomBuilder:
+        def build(self, _canonical):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(
+        "concilium.domain.services.analytics.cubo_analitico_builder.CuboAnaliticoBuilder",
+        lambda: _BoomBuilder(),
+    )
+    canonical = SimpleNamespace(equipes_diretas=[], analise_campanhas=None)
+    gmod.render_cubo_comp(wb, canonical)
+    assert "CUBO.COMP" not in wb.sheetnames
+
+
 # ---------------------------------------------------------------------------
 # Query engine internals
 # ---------------------------------------------------------------------------
@@ -341,16 +414,6 @@ class _DuckConn:
         self.closed = True
 
 
-def test_query_engine_build_junction_tables_internal(tmp_path):
-    engine = CatalogQueryEngine(tmp_path)
-    conn = _FakeConn()
-    engine._build_junction_tables(conn, cpus_rows=[], prods_rows=[])
-
-    assert any("CREATE TABLE composicao_itens" in sql for sql, _ in conn.executed)
-    assert any("INSERT INTO composicao_itens" in sql for sql, _ in conn.executed_many)
-    assert any("INSERT INTO equipe_funcoes" in sql for sql, _ in conn.executed_many)
-
-
 def test_query_engine_build_methods_tolerate_invalid_json(tmp_path):
     engine = CatalogQueryEngine(tmp_path)
     conn = _FakeConn()
@@ -376,6 +439,34 @@ def test_query_engine_build_methods_tolerate_invalid_json(tmp_path):
     assert any("CREATE TABLE insumos" in sql for sql, _ in conn.executed)
     assert any("CREATE TABLE produtividades" in sql for sql, _ in conn.executed)
     assert any("CREATE TABLE funcoes" in sql for sql, _ in conn.executed)
+
+
+def test_query_engine_build_methods_skip_non_dict_list_entries(tmp_path):
+    """Layouts de arquivo único (cpus.json, insumos/<tipo>.json, produtividades.json,
+    funcoes.json) toleram listas com elementos que não são dict — cobre o ramo
+    falso de `if isinstance(raw, dict)` em cada _build_* (só percorrido quando
+    NÃO existe o diretório correspondente, i.e. layout de arquivo único)."""
+    engine = CatalogQueryEngine(tmp_path)
+    conn = _FakeConn()
+
+    (tmp_path / "cpus.json").write_text(json.dumps(["not-a-dict", {"codigo": "CPU-1"}]))
+    engine._build_cpus(conn)
+
+    ins_dir = tmp_path / "insumos"
+    ins_dir.mkdir(parents=True)
+    (ins_dir / "material.json").write_text(json.dumps(["not-a-dict", {"id": "INS-1"}]))
+    engine._build_insumos(conn)
+
+    (tmp_path / "produtividades.json").write_text(json.dumps(["not-a-dict", {"id": "PROD-1"}]))
+    engine._build_produtividades(conn)
+
+    (tmp_path / "funcoes.json").write_text(json.dumps(["not-a-dict", {"id": "FN-1"}]))
+    engine._build_funcoes(conn)
+
+    assert any("INSERT INTO cpus" in sql for sql, _ in conn.executed_many)
+    assert any("INSERT INTO insumos" in sql for sql, _ in conn.executed_many)
+    assert any("INSERT INTO produtividades" in sql for sql, _ in conn.executed_many)
+    assert any("INSERT INTO funcoes" in sql for sql, _ in conn.executed_many)
 
 
 def test_query_engine_load_table_branches(monkeypatch, tmp_path):

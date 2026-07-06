@@ -125,6 +125,17 @@ class TestMobilizationRoutes:
             simulate_mobilizacao_policy("proj-1", req, service=svc)
         assert exc.value.status_code == 422
 
+    def test_simulate_not_found(self):
+        from concilium.presentation.api.routes.mobilization import simulate_mobilizacao_policy
+
+        svc = self._svc()
+        svc.simulate_mobilizacao_policy.side_effect = FileNotFoundError("no project")
+        req = MagicMock()
+        req.model_dump.return_value = {}
+        with pytest.raises(HTTPException) as exc:
+            simulate_mobilizacao_policy("proj-1", req, service=svc)
+        assert exc.value.status_code == 404
+
     def test_get_deliverables_config(self):
         from concilium.presentation.api.routes.mobilization import get_deliverables_config
 
@@ -229,6 +240,57 @@ class TestBenchmarkRoutes:
             with pytest.raises(HTTPException) as exc:
                 download_project_benchmark_zip("proj-1", "AGIS", charts=True, cenarios=False, service=svc)
         assert exc.value.status_code == 404
+
+    def test_download_project_benchmark_success(self):
+        from pathlib import Path
+
+        from concilium.presentation.api.routes.benchmarks import download_project_benchmark_zip
+
+        svc = self._svc()
+        svc.config_root = MagicMock()
+        fake_zip = Path("/tmp/benchmark_AGIS_20260101.zip")
+        with patch(
+            "concilium.application.benchmarks.charts.output_packager.empacotar_outputs",
+            return_value=fake_zip,
+        ):
+            with patch(
+                "concilium.presentation.api.routes.benchmarks.FileResponse",
+                side_effect=lambda **kwargs: kwargs,
+            ):
+                result = download_project_benchmark_zip("proj-1", "agis", charts=True, cenarios=False, service=svc)
+        assert result["filename"] == "benchmark_AGIS_20260101.zip"
+
+    def test_trigger_project_pack_benchmark_background_success(self):
+        from fastapi import BackgroundTasks
+
+        from concilium.presentation.api.routes.benchmarks import trigger_project_pack_benchmark
+
+        svc = self._svc()
+        svc.config_root = MagicMock()
+        bg = BackgroundTasks()
+        with patch(
+            "concilium.application.benchmarks.charts.output_packager.empacotar_outputs",
+        ) as mock_pack:
+            trigger_project_pack_benchmark("proj-1", "AGIS", bg, charts=True, service=svc)
+            assert len(bg.tasks) == 1
+            bg.tasks[0].func()
+            mock_pack.assert_called_once()
+
+    def test_trigger_project_pack_benchmark_background_swallows_exception(self):
+        from fastapi import BackgroundTasks
+
+        from concilium.presentation.api.routes.benchmarks import trigger_project_pack_benchmark
+
+        svc = self._svc()
+        svc.config_root = MagicMock()
+        bg = BackgroundTasks()
+        with patch(
+            "concilium.application.benchmarks.charts.output_packager.empacotar_outputs",
+            side_effect=RuntimeError("boom"),
+        ):
+            trigger_project_pack_benchmark("proj-1", "AGIS", bg, charts=True, service=svc)
+            # Should not raise even though empacotar_outputs fails.
+            bg.tasks[0].func()
 
     def test_download_project_benchmark_server_error(self):
         from concilium.presentation.api.routes.benchmarks import download_project_benchmark_zip

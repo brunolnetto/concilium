@@ -31,7 +31,10 @@ class ProjectInputBuilder:
             slug = req.benchmark_slug.upper() if req.benchmark_slug else None
             if req.referencia_path:
                 ref_path = Path(req.referencia_path).resolve()
-            elif slug:
+            else:
+                # req.referencia_path é falsy aqui, logo req.benchmark_slug (e portanto
+                # slug) é sempre truthy pelo guard `if req.benchmark_slug or req.referencia_path`.
+                assert slug is not None
                 ref_path = find_benchmark_reference(self._benchmarks_root, slug)
             if ref_path is None or not ref_path.exists():
                 raise FileNotFoundError("Referencia de benchmark nao encontrada.")

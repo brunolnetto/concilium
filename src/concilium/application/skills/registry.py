@@ -133,11 +133,13 @@ class SkillRegistry:
                 return
             visited.add(skill_id)
 
-            skill = self.get_skill(skill_id)
-            if skill:
-                for dep_id in skill.depends_on_skills:
-                    if dep_id in self.skills:
-                        visit(dep_id)
+            # skill_id vem sempre de self.skills.keys() (loop inicial abaixo, ou
+            # dep_id já filtrado por `if dep_id in self.skills`) — indexação
+            # direta evita o `SkillMetadata | None` de get_skill(), sempre truthy aqui.
+            skill = self.skills[skill_id]
+            for dep_id in skill.depends_on_skills:
+                if dep_id in self.skills:
+                    visit(dep_id)
 
             order.append(skill_id)
 

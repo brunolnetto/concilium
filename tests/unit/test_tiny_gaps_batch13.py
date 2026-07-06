@@ -348,3 +348,39 @@ class TestRuntimeRunPipeline:
                 mock_executor_cls.return_value = executor
                 result = rt.run_pipeline(store, skill_sequence=["01-escopo-e-eap"])
         assert isinstance(result, list)
+
+    def test_run_pipeline_with_existing_canonical_skips_bootstrap(self, tmp_path):
+        """load_canonical() já não-None -> skip_bootstrap=True -> 01-escopo-e-eap removido."""
+        from concilium.application.runtime import Runtime
+
+        rt = Runtime(config_root=tmp_path)
+        store = MagicMock()
+        store.current_version.return_value = "v1"
+        store.load_canonical.return_value = MagicMock()  # canônico já existe
+        store.meta = {"contexto_id": "ctx-1", "id": "proj-1"}
+        store.root = MagicMock()
+        store.root.name = "proj-dir"
+
+        with patch.object(
+            rt,
+            "_providers_factory",
+            return_value={
+                "canonical_in": None,
+                "inputs": {},
+                "catalogo": {},
+                "catalog_session": None,
+                "perfil": {},
+                "contexto": MagicMock(),
+                "project": store,
+                "version": "v1",
+                "runtime": rt,
+            },
+        ):
+            with patch("concilium.application.runtime.SkillExecutor") as mock_executor_cls:
+                executor = MagicMock()
+                executor.run_pipeline.return_value = (None, [])
+                mock_executor_cls.return_value = executor
+                rt.run_pipeline(store, skill_sequence=["01-escopo-e-eap", "02-cronograma"])
+
+        active_skills_arg = mock_executor_cls.call_args[0][0]
+        assert "01-escopo-e-eap" not in active_skills_arg

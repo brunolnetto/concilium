@@ -141,6 +141,54 @@ class TestOpenMeteoClient:
         assert result.ano_referencia == 2023
         mock_http.get.assert_called_once()
 
+    def test_fetch_dados_anuais_stale_disk_cache_refetches(self, tmp_path):
+        """Cache em disco expirado (age >= TTL) -> ignora e busca da API."""
+        import time
+
+        from concilium.infrastructure.clients.openmeteo import _CLIMATE_CACHE_TTL
+
+        cached = DadosClimaticosMensais(latitude=-3.75, longitude=-38.58, ano_referencia=2023)
+        cache_path = tmp_path / "stale_cache.json"
+        cache_path.write_text(cached.model_dump_json(), encoding="utf-8")
+        # Torna o arquivo mais velho que o TTL.
+        stale_mtime = time.time() - _CLIMATE_CACHE_TTL - 3600
+        import os
+
+        os.utime(cache_path, (stale_mtime, stale_mtime))
+
+        payload = _make_payload(n_days=31, prec_val=3.0)
+        mock_http = MagicMock()
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = payload
+        mock_http.get.return_value = mock_response
+
+        with patch.object(OpenMeteoClient, "_disk_cache_path", return_value=cache_path):
+            client = OpenMeteoClient(http_client=mock_http)
+            result = client.fetch_dados_anuais(-3.75, -38.58, 2023)
+
+        assert isinstance(result, DadosClimaticosMensais)
+        mock_http.get.assert_called_once()
+
+    def test_fetch_dados_anuais_corrupt_disk_cache_refetches(self, tmp_path):
+        """Cache em disco corrompido -> exceção capturada, busca da API normalmente."""
+        cache_path = tmp_path / "corrupt_cache.json"
+        cache_path.write_text("NOT VALID JSON {{{", encoding="utf-8")
+
+        payload = _make_payload(n_days=31, prec_val=3.0)
+        mock_http = MagicMock()
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = payload
+        mock_http.get.return_value = mock_response
+
+        with patch.object(OpenMeteoClient, "_disk_cache_path", return_value=cache_path):
+            client = OpenMeteoClient(http_client=mock_http)
+            result = client.fetch_dados_anuais(-3.75, -38.58, 2023)
+
+        assert isinstance(result, DadosClimaticosMensais)
+        mock_http.get.assert_called_once()
+
     def test_fetch_dados_anuais_http_error_propagates(self):
         """fetch_dados_anuais() propagates HTTP errors."""
         from pathlib import Path
@@ -334,6 +382,28 @@ class TestFuelPriceClient:
         client.get_price(State.BR, FuelType.DIESEL)  # Should use cache
         # Only one HTTP call should have been made
         assert mock_get.call_count == 1
+
+    @patch("concilium.infrastructure.clients.fuel.requests.get")
+    def test_cache_ttl_expired_refetches(self, mock_get):
+        """_load() re-fetches from the API when the cached data is older than TTL
+        (line 115 false branch: now - loaded_at >= TTL)."""
+        from datetime import datetime, timedelta
+
+        from concilium.infrastructure.clients.fuel import FuelPriceClient, FuelType, State
+
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = self._make_api_response()
+        mock_get.return_value = mock_response
+
+        client = FuelPriceClient()
+        client.get_price(State.BR, FuelType.DIESEL)
+        assert mock_get.call_count == 1
+
+        # Force the cache to look stale
+        client._loaded_at = datetime.now() - client.TTL - timedelta(minutes=1)
+        client.get_price(State.BR, FuelType.DIESEL)
+        assert mock_get.call_count == 2
 
     @patch("concilium.infrastructure.clients.fuel.requests.get")
     def test_get_price_str_string_interface(self, mock_get):

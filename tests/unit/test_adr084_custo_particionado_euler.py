@@ -227,3 +227,49 @@ class TestIterIntervalsPolimorfismo:
         """Objeto arbitrário sem .is_empty() → lista vazia."""
         ivs = _iter_intervals(42)
         assert ivs == []
+
+    def test_eule_unavailable_returns_empty(self, monkeypatch):
+        """Quando _EULE_AVAILABLE é False (dependência opcional ausente em
+        produção), _iter_intervals deve retornar [] sem tentar usar Interval."""
+        monkeypatch.setattr(_mod, "_EULE_AVAILABLE", False)
+        from interval_sets import Interval
+
+        ivs = _iter_intervals(Interval(0.0, 3.0))
+        assert ivs == []
+
+
+class TestParticionarContratoEdgeCases:
+    """Ramos de fallback de particionar_contrato: lista vazia, eule indisponível
+    e nenhum item com janela válida (T_end > T_start)."""
+
+    def test_empty_items_returns_empty_list(self):
+        """Linha 1871: items_com_janela vazio → [] imediatamente."""
+        result = particionar_contrato(
+            items_com_janela=[],
+            c_mob=0.0,
+            c_demob=0.0,
+            c_unit_semana=1.0,
+            quantidade_contratada=1,
+            T_contrato_start=0.0,
+            T_contrato_end=1.0,
+            atribuicao={},
+            cadeias=[],
+        )
+        assert result == []
+
+    def test_eule_unavailable_delegates_to_fase2(self, monkeypatch):
+        """Linha 1878: sem eule[interval], delega para _compute_particao_por_tipo
+        (caminho Fase 2) em vez de construir IntervalSet."""
+        monkeypatch.setattr(_mod, "_EULE_AVAILABLE", False)
+        items = [{"item_id": "a1", "T_start": 0.0, "T_end": 5.0, "machine_weeks": 5, "required": 1}]
+        result = _run(items)
+        assert len(result) == 1
+        assert result[0].item_id == "a1"
+
+    def test_all_items_zero_width_falls_back_to_fase2(self):
+        """Linha 1895: todos os itens têm T_end == T_start (janela degenerada) —
+        `sets` fica vazio mesmo com eule disponível, delega para Fase 2."""
+        items = [{"item_id": "a1", "T_start": 3.0, "T_end": 3.0, "machine_weeks": 0, "required": 1}]
+        result = _run(items, T0=3.0, T1=3.0)
+        assert len(result) == 1
+        assert result[0].item_id == "a1"

@@ -174,6 +174,14 @@ class TestOptimizerLoop:
         can_out, feasible, violations = adjust_schedule(can, dv, catalogo={}, perfil=self._PERFIL)
         assert isinstance(feasible, bool)
 
+    def test_perfil_none_defaults_to_empty(self):
+        """perfil=None → perfil = {} (line 90)."""
+        from concilium.application.optimizer.loop import adjust_schedule
+
+        can = _minimal_canonical()
+        can_out, feasible, violations = adjust_schedule(can, None, catalogo=None, perfil=None)
+        assert isinstance(feasible, bool)
+
 
 # ══ skills/__init__.py ═══════════════════════════════════════════════════════
 

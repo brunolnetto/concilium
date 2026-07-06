@@ -340,6 +340,22 @@ class TestDiagnosticoPEBuilder:
             assert "resumo_global_natureza" in diag.explicacao_natureza_periodo
             assert "itens" in diag.explicacao_natureza_periodo
 
+    def test_cross_term_presente_propagated_from_process_pe_item(self, monkeypatch):
+        """build() agrega cross_term_presente=True quando _process_pe_item sinaliza
+        aproximação inválida para algum item (branch 510->511)."""
+        import concilium.domain.services.analytics.diagnostico_pe_builder as mod
+
+        canonical = self._make_canonical()
+        real_process = mod._process_pe_item
+
+        def fake_process_pe_item(*args, **kwargs):
+            item, _cross = real_process(*args, **kwargs)
+            return item, True
+
+        monkeypatch.setattr(mod, "_process_pe_item", fake_process_pe_item)
+        diag = mod.DiagnosticoPEBuilder().build(canonical)
+        assert diag.aviso_cross_term is True
+
     def test_calendar_structural_factor_is_reported_when_calendar_reduces_capacity(self):
         canonical = self._make_canonical(eficiencia=0.9, fator_calendario=0.6)
         diag = DiagnosticoPEBuilder().build(canonical)

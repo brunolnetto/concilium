@@ -135,6 +135,33 @@ class TestRunProjectRoute:
         assert resp.status_code == 400
 
 
+class TestStartRunProjectRoute:
+    def test_start_run_project_happy(self, _fake_client):
+        resp = _fake_client.post("/api/projects/proj-1/runs/start", json={})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["project_id"] == "proj-1"
+        assert data["status"] == "queued"
+
+    def test_start_run_project_not_found(self):
+        class StartErrorSvc(_FakeService):
+            def start_run_project(self, *a, **kw):
+                raise FileNotFoundError("project not found")
+
+        c = _client(StartErrorSvc())
+        resp = c.post("/api/projects/proj-1/runs/start", json={})
+        assert resp.status_code == 404
+
+    def test_start_run_project_generic_error(self):
+        class StartErrorSvc(_FakeService):
+            def start_run_project(self, *a, **kw):
+                raise ValueError("bad input")
+
+        c = _client(StartErrorSvc())
+        resp = c.post("/api/projects/proj-1/runs/start", json={})
+        assert resp.status_code == 400
+
+
 class TestRerunProjectRoute:
     def test_rerun_happy(self, _fake_client):
         resp = _fake_client.post("/api/projects/proj-1/rerun", json={"base_version": "v1"})
@@ -152,6 +179,15 @@ class TestRerunProjectRoute:
         c = _client(RerunErrorSvc())
         resp = c.post("/api/projects/proj-1/rerun", json={})
         assert resp.status_code == 404
+
+    def test_rerun_generic_error(self):
+        class RerunErrorSvc(_FakeService):
+            def run_project(self, *a, **kw):
+                raise ValueError("bad rerun input")
+
+        c = _client(RerunErrorSvc())
+        resp = c.post("/api/projects/proj-1/rerun", json={})
+        assert resp.status_code == 400
 
 
 class TestListRunsRoute:

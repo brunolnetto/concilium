@@ -62,6 +62,67 @@ class TestValidarEquipamentosExistem:
         assert result.status == "ERRO"
 
 
+class TestObterEquipe:
+    def test_pid_set_but_ficha_falsy(self):
+        """pid is truthy but obter_producao returns None → equipe defaults to {} (line 211->213)."""
+        v = _make_validator()
+        v.repo.obter_producao.return_value = None
+        equipe = v._obter_equipe({"producao_id_ref": "P1"})
+        assert equipe == {}
+
+    def test_pid_set_ficha_present_but_no_equipe_key(self):
+        v = _make_validator()
+        v.repo.obter_producao.return_value = {}
+        equipe = v._obter_equipe({"producao_id_ref": "P1"})
+        assert equipe == {}
+
+
+class TestValidarUnidadeCompativelConversao:
+    def test_unidades_compativeis_convertidas_com_sucesso(self):
+        """m3 -> litro is a compatible-but-different unit; conversion happens (lines 172-173)."""
+        v = _make_validator()
+        comp_item = {"insumo_id": "X", "coeficiente": 0.5, "unidade": "m3"}
+        insumo = {"unidade": "litro"}
+        result = v.validar_unidade_compativel(comp_item, insumo)
+        assert result.status == "OK"
+        assert result.codigo == "VAL-CPU-INS-05"
+
+    def test_conversao_levanta_excecao_usa_coeficiente_bruto(self, monkeypatch):
+        """When ConversorUnidades.converter raises, fall back to raw coeficiente (lines 174-175)."""
+        from concilium.domain.services.conversor_unidades import ConversorUnidades
+
+        v = _make_validator()
+        monkeypatch.setattr(
+            ConversorUnidades,
+            "converter",
+            classmethod(lambda cls, *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))),
+        )
+        comp_item = {"insumo_id": "X", "coeficiente": 0.5, "unidade": "m3"}
+        insumo = {"unidade": "litro"}
+        result = v.validar_unidade_compativel(comp_item, insumo)
+        # falls back to raw coeficiente=0.5, within litro range [0.001, 1000] -> OK
+        assert result.status == "OK"
+
+    def test_unidades_incompativeis_dimensionalmente(self):
+        """Units that cannot be converted at all → ERRO VAL-CPU-INS-05."""
+        v = _make_validator()
+        comp_item = {"insumo_id": "X", "coeficiente": 1.0, "unidade": "kg"}
+        insumo = {"unidade": "h"}
+        result = v.validar_unidade_compativel(comp_item, insumo)
+        assert result.status == "ERRO"
+        assert "Incompatibilidade dimensional" in result.mensagem
+
+    def test_unidades_compativeis_sem_coeficiente_numerico(self):
+        """Compatible-but-different units with no numeric coeficiente skips conversion (line 170)
+        and then errors downstream for missing coeficiente."""
+        v = _make_validator()
+        comp_item = {"insumo_id": "X", "unidade": "m3"}
+        insumo = {"unidade": "litro"}
+        result = v.validar_unidade_compativel(comp_item, insumo)
+        assert result.status == "ERRO"
+        assert "Coeficiente ausente" in result.mensagem
+
+
 class TestValidarProducaoExiste:
     def test_producao_exists(self):
         v = _make_validator()

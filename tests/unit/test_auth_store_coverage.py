@@ -73,6 +73,15 @@ class TestAuthStore:
         store = self._make_store(tmp_path)
         assert store.regenerate_client_code("ghost") is None
 
+    def test_regenerate_client_code_unknown_client_with_other_clients_present(self, tmp_path):
+        """Line 292->291: loop iterates over existing (non-matching) clients without a match."""
+        store = self._make_store(tmp_path)
+        store.add_client("real-client", "s", ["operator"])
+        assert store.regenerate_client_code("ghost-does-not-exist") is None
+        # existing client untouched
+        clients = store.list_clients()
+        assert any(c.client_id == "real-client" for c in clients)
+
     def test_migrate_legacy_client_codes_generates_for_missing(self, tmp_path):
         store = self._make_store(tmp_path)
         # Cliente "legado" — criado sem client_code (como antes do bootstrap por código existir).
@@ -274,6 +283,18 @@ class TestAuthStoreMissingLines:
         store.confirm_revoke(pending.revoke_token)
         result = store.confirm_revoke(pending.revoke_token)
         assert result is False
+
+    def test_confirm_revoke_with_falsy_device_id_skips_revoke_device(self, tmp_path):
+        """Line 451->453: device_id_to_revoke falsy -> revoke_device() not invoked, still returns True."""
+        from unittest.mock import patch
+
+        store = self._make_store(tmp_path)
+        store.add_client("cfr-empty-dev", "s", ["operator"])
+        pending = store.create_revoke_pending("cfr-empty-dev", "")
+        with patch.object(store, "revoke_device") as mock_revoke:
+            result = store.confirm_revoke(pending.revoke_token)
+        assert result is True
+        mock_revoke.assert_not_called()
 
     def test_confirm_revoke_expired_returns_false(self, tmp_path):
         from datetime import UTC, datetime, timedelta

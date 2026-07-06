@@ -527,6 +527,76 @@ class TestMatchingEconomico:
         assert len(cadeias) == 2
 
 
+class TestBuildContratosRecursoEarlyReturns:
+    """Covers early-return / skip branches in _build_contratos_recurso and
+    _setup_contratos_context that TestMatchingEconomico doesn't exercise."""
+
+    def _make_equipe(self, item_id, custo_total=100_000.0):
+        class _Eq:
+            def __init__(self, iid, c):
+                self.item_id = iid
+                self.custo_total = c
+
+        return _Eq(item_id, custo_total)
+
+    def test_empty_pool_and_activities_returns_empty(self):
+        """`if not pool or not activities:` → ([], {}, [])."""
+        mod = _load_helpers_a()
+        contratos, atribuicao, cadeias = mod._build_contratos_recurso([], {}, {}, [])
+        assert contratos == []
+        assert atribuicao == {}
+        assert cadeias == []
+
+    def test_pool_empty_but_activities_present_infers_pool(self):
+        """_setup_contratos_context: pool vazio + activities não vazio → chama
+        inferir_pool_minimo_from_spec para derivar o pool automaticamente."""
+        mod = _load_helpers_a()
+
+        equipes = [self._make_equipe("act-infer", 10_000.0)]
+        rcpsp_spec = {
+            "activities": [{"item_id": "act-infer", "required_resources": {"T9": 1}}],
+        }
+        sched_lookup = {"act-infer": _make_sched_activity("act-infer", _weeks(1, 4), num_equipes=1)}
+
+        contratos, _, _ = mod._build_contratos_recurso(equipes, rcpsp_spec, sched_lookup, [])
+
+        # Pool foi inferido e escrito de volta no próprio rcpsp_spec.
+        assert rcpsp_spec.get("resource_pool")
+        assert isinstance(contratos, list)
+
+    def test_resource_costs_non_dict_falls_back_to_empty(self):
+        """resource_costs presente mas não é dict → tratado como {} (retrocompat)."""
+        mod = _load_helpers_a()
+
+        equipes = [self._make_equipe("act-badcosts", 50_000.0)]
+        rcpsp_spec = {
+            "resource_pool": {"T10": 1},
+            "activities": [{"item_id": "act-badcosts", "required_resources": {"T10": 1}}],
+            "resource_costs": "not-a-dict",
+        }
+        sched_lookup = {"act-badcosts": _make_sched_activity("act-badcosts", _weeks(1, 4), num_equipes=1)}
+
+        contratos, _, _ = mod._build_contratos_recurso(equipes, rcpsp_spec, sched_lookup, [])
+        assert len(contratos) == 1
+        assert contratos[0].custo_mob_desmob_contrato == pytest.approx(0.0)
+
+    def test_tipo_with_no_active_schedule_produces_no_contract(self):
+        """Quando o item referenciado no pool não tem equipe/schedule casados,
+        tipo_items fica vazio para aquele tipo → nenhum contrato é gerado."""
+        mod = _load_helpers_a()
+
+        rcpsp_spec = {
+            "resource_pool": {"T11": 1},
+            "activities": [{"item_id": "act-missing", "required_resources": {"T11": 1}}],
+        }
+        # Nem equipe nem schedule contêm "act-missing" → _process_item_tipo_map
+        # emite VAL-POOL-CONTRATO-01 e retorna cedo, sem popular tipo_items.
+        contratos, atribuicao, cadeias = mod._build_contratos_recurso([], rcpsp_spec, {}, [])
+        assert contratos == []
+        assert atribuicao == {}
+        assert cadeias == []
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # E. Inicialização λ₀
 # ──────────────────────────────────────────────────────────────────────────────

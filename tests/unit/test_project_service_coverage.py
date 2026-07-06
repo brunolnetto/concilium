@@ -113,6 +113,14 @@ def test_canonical_eap_to_rows_no_eap_attr():
     assert _canonical_eap_to_rows(canonical) == []
 
 
+def test_canonical_eap_to_rows_item_without_any_conversion_method():
+    """Line 88->78: item sem dict/model_dump/dict/to_dict é ignorado silenciosamente."""
+    item = MagicMock(spec=[])  # sem nenhum dos atributos esperados
+    canonical = MagicMock()
+    canonical.eap = [item]
+    assert _canonical_eap_to_rows(canonical) == []
+
+
 # ---------------------------------------------------------------------------
 # _is_valid_canonical_eap
 # ---------------------------------------------------------------------------
@@ -155,6 +163,59 @@ def test_extract_historical_eap_rows_nested_inputs_escopo():
     payload = {"skill_inputs": {"01-escopo-e-eap": {"inputs_escopo": {"eap": [{"d": 4}]}}}}
     rows = _extract_historical_eap_rows(payload)
     assert rows == [{"d": 4}]
+
+
+def test_extract_historical_eap_rows_escopo_not_dict():
+    """Lines 112->121: escopo não é dict → cai no fallback []."""
+    payload = {"skill_inputs": {"01-escopo-e-eap": "not-a-dict"}}
+    assert _extract_historical_eap_rows(payload) == []
+
+
+def test_extract_historical_eap_rows_nested_not_dict():
+    """Lines 117->121: inputs_escopo não é dict → fallback []."""
+    payload = {"skill_inputs": {"01-escopo-e-eap": {"inputs_escopo": "not-a-dict"}}}
+    assert _extract_historical_eap_rows(payload) == []
+
+
+# ---------------------------------------------------------------------------
+# _resolve_eap_source
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_eap_source_canonical():
+    payload = {"cpus": {"itens_eap": [{"item_id": "1"}]}}
+    assert ProjectService._resolve_eap_source(payload) == "canonical.cpus.itens_eap"
+
+
+def test_resolve_eap_source_historical_root():
+    payload = {"eap": [{"a": 1}]}
+    assert ProjectService._resolve_eap_source(payload) == "historical.eap_root"
+
+
+def test_resolve_eap_source_skill_inputs_eap():
+    payload = {"skill_inputs": {"01-escopo-e-eap": {"eap": [{"a": 1}]}}}
+    assert ProjectService._resolve_eap_source(payload) == "historical.skill_inputs.01-escopo-e-eap.eap"
+
+
+def test_resolve_eap_source_nested_inputs_escopo():
+    payload = {"skill_inputs": {"01-escopo-e-eap": {"inputs_escopo": {"eap": [{"a": 1}]}}}}
+    assert ProjectService._resolve_eap_source(payload) == "historical.skill_inputs.01-escopo-e-eap.inputs_escopo.eap"
+
+
+def test_resolve_eap_source_nested_eap_not_list_returns_none():
+    """Linha 792->794: nested existe mas eap não é lista → None."""
+    payload = {"skill_inputs": {"01-escopo-e-eap": {"inputs_escopo": {"eap": "not-a-list"}}}}
+    assert ProjectService._resolve_eap_source(payload) is None
+
+
+def test_resolve_eap_source_nothing_matches_returns_none():
+    assert ProjectService._resolve_eap_source({}) is None
+
+
+def test_extract_historical_eap_rows_nested_eap_not_list():
+    """Lines 119->121: nested eap presente mas não é lista → fallback []."""
+    payload = {"skill_inputs": {"01-escopo-e-eap": {"inputs_escopo": {"eap": "not-a-list"}}}}
+    assert _extract_historical_eap_rows(payload) == []
 
 
 def test_extract_historical_eap_rows_none():
@@ -688,6 +749,30 @@ class TestServiceDiscoveryHelpers:
             result = svc._get_contexto_svc()
         assert result is not None or result is None
 
+    def test_get_perfil_svc_no_candidate_exists_returns_none(self):
+        """Lines 537-545: nenhum candidato de config existe → loop termina sem retorno, None."""
+        svc = self._make_svc()
+        with patch("pathlib.Path.exists", return_value=False):
+            assert svc._get_perfil_svc() is None
+
+    def test_get_jurisdiction_svc_no_candidate_exists_returns_none(self):
+        """Lines 613-621: idem para jurisdiction."""
+        svc = self._make_svc()
+        with patch("pathlib.Path.exists", return_value=False):
+            assert svc._get_jurisdiction_svc() is None
+
+    def test_get_tema_svc_no_candidate_exists_returns_none(self):
+        """Lines 629-637: idem para tema."""
+        svc = self._make_svc()
+        with patch("pathlib.Path.exists", return_value=False):
+            assert svc._get_tema_svc() is None
+
+    def test_get_contexto_svc_no_candidate_exists_returns_none(self):
+        """Lines 646-654: idem para contexto."""
+        svc = self._make_svc()
+        with patch("pathlib.Path.exists", return_value=False):
+            assert svc._get_contexto_svc() is None
+
     def test_get_perfil_svc_exception_caught(self):
         """Lines 536-538: exception in PerfilVersionService constructor → returns None."""
         svc = self._make_svc()
@@ -759,6 +844,20 @@ class TestValidateFieldMethods:
         ):
             with pytest.raises(ValueError, match="catalogo_id"):
                 svc._validate_contexto_fields({"catalogo_id": "unknown"})
+
+    def test_validate_contexto_fields_no_catalogo_id_returns_none(self):
+        """Line 707 false branch: fields without 'catalogo_id' skip the whole
+        catalogo validation block and the method returns normally (no exception,
+        no call into _resolve_config_root)."""
+        svc = self._make_svc()
+        with (
+            patch.object(svc, "list_perfis", return_value=[]),
+            patch.object(svc, "list_jurisdicoes", return_value=[]),
+            patch.object(svc, "list_temas", return_value=[]),
+            patch.object(svc, "_resolve_config_root") as mock_resolve,
+        ):
+            assert svc._validate_contexto_fields({}) is None
+        mock_resolve.assert_not_called()
 
     def test_validate_tema_fields_valid_passes(self):
         """Lines 706-715: TemaVisual validates successfully."""

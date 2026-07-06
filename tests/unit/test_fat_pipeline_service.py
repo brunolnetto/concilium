@@ -155,7 +155,6 @@ class TestRunProject:
         execute_called = []
         get_run_called = []
 
-
         # We'll patch at instance level
         def fake_execute(proj, run_id):
             execute_called.append(run_id)
@@ -1299,3 +1298,31 @@ class TestUpdateRun:
 
         # Should not raise, just noop since run_id won't be found
         svc._update_run(project, "r1", {"status": "RUNNING"})
+
+    def test_skips_non_matching_run_before_match(self):
+        """Covers the `continue` when an earlier run's run_id doesn't match (line 388)."""
+        svc, project, audit, runtime = _make_svc()
+        run_data = [
+            {"run_id": "r2", "status": "OK"},
+            {"run_id": "r1", "status": "PENDING"},
+        ]
+        write_store = {"data": list(run_data)}
+
+        def read_json(path, default=None):
+            if path == DEFAULT_PROJECT_FILES.runs:
+                return list(write_store["data"])
+            return default if default is not None else {}
+
+        def write_json(path, data):
+            if path == DEFAULT_PROJECT_FILES.runs:
+                write_store["data"] = list(data)
+
+        project.read_json.side_effect = read_json
+        project.write_json.side_effect = write_json
+
+        svc._update_run(project, "r1", {"status": "RUNNING"})
+
+        updated = next(r for r in write_store["data"] if r["run_id"] == "r1")
+        assert updated["status"] == "RUNNING"
+        r2 = next(r for r in write_store["data"] if r["run_id"] == "r2")
+        assert r2["status"] == "OK"

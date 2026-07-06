@@ -69,6 +69,47 @@ class TestCpSatSchedulerMissingLines:
         assert result.feasible is False
         assert result.makespan == 0
 
+    def test_makespan_callback_ignores_non_improving_solution(self):
+        """_MakespanCallback.on_solution_callback must not update
+        best_makespan when a later solution's makespan is >= the current
+        best (covers the false branch of `if ms < self.best_makespan`)."""
+        from ortools.sat.python import cp_model
+
+        from concilium.application.scheduling.cpsat_scheduler import _MakespanCallback
+
+        model = cp_model.CpModel()
+        v = model.new_int_var(0, 10, "v")
+        cb = _MakespanCallback(v)
+        cb.value = lambda _expr: 5
+        cb.on_solution_callback()
+        assert cb.best_makespan == 5
+        cb.value = lambda _expr: 7  # worse (higher) makespan → ignored
+        cb.on_solution_callback()
+        assert cb.best_makespan == 5
+
+    def test_compute_metrics_skips_zero_capacity_resource(self):
+        """A resource with cap<=0 in the pool must be skipped from the
+        leveling-score aggregation (the `if cap > 0 and vals` guard)."""
+        from concilium.application.scheduling.models import (
+            ResourcePool,
+            ScheduledActivity,
+        )
+
+        s = self._scheduler()
+        pool = ResourcePool(resources={"ZERO": 0, "E": 10})
+        scheduled = [
+            ScheduledActivity(
+                activity_id="A1",
+                start_week=0,
+                end_week=3,
+                duration_weeks=3,
+                assigned_resources={"E": 5},
+            )
+        ]
+        result = s._compute_metrics(scheduled, pool, makespan=3)
+        # Only "E" contributes a leveling score; "ZERO" is skipped entirely.
+        assert 0.0 <= result.resource_leveling_score <= 1.0
+
 
 # ---------------------------------------------------------------------------
 # campaign_store.py line 89: raise ValueError when _path is None

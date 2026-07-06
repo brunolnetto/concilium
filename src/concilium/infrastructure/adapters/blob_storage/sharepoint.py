@@ -140,9 +140,10 @@ class SharePointBlobStorage(BlobStoragePort):
         return self._ler_blob_direct(path, httpx)
 
     def _ler_blob_cached(self, path: str, httpx) -> bytes | None:
+        # O único caller (ler_blob) já garante `self._cache` truthy antes de
+        # chamar este método, então `cache` nunca é None aqui.
         cache = self._cache
-        if cache is None:
-            return None
+        assert cache is not None, "cache deve ser não-None quando _ler_blob_cached é chamado"
         cached = cache.get(path)
         if cached:
             content, meta = cached

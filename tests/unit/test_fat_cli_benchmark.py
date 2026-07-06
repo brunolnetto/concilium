@@ -334,6 +334,31 @@ class TestRunBenchmarks:
         assert result.exit_code == 0
         assert "OK" in result.output
 
+    def test_run_slug_with_intent_prints_intent_line(self, tmp_path):
+        """--intent set -> prints '(intent RFX: ...)' line (line 239-240)."""
+        mock_batch = MagicMock()
+        mock_batch.benchmarks_root = tmp_path / "benchmarks" / "data"
+        mock_spec = MagicMock()
+        mock_bench_runner = MagicMock()
+        mock_bench_runner.run.return_value = {"status": "OK"}
+        with (
+            patch(f"{_BENCH_MOD}.BenchmarkBatchRunner", return_value=mock_batch),
+            patch(f"{_BENCH_MOD}.find_benchmark_reference", return_value=Path("/fake/ref.json")),
+            patch(f"{_BENCH_MOD}.BenchmarkSpecLoader") as mock_loader_cls,
+            patch(f"{_BENCH_MOD}.BenchmarkRunner", return_value=mock_bench_runner),
+            patch(f"{_BENCH_MOD}.BenchmarkReportBuilder"),
+            patch(f"{_BENCH_MOD}.BenchmarkReportPrinter"),
+            patch(f"{_BENCH_MOD}._tools_root", return_value=tmp_path),
+            patch(f"{_BENCH_MOD}.config_root", return_value=tmp_path / "config"),
+            patch(f"{_BENCH_MOD}.benchmark_projects_root", return_value=tmp_path / "proj"),
+        ):
+            mock_loader_cls.return_value.load.return_value = mock_spec
+            result = runner.invoke(bench_app, ["run", "--slug", "CTC", "--intent", "rfi"])
+        assert result.exit_code == 0
+        assert "intent RFX" in result.output
+        mock_bench_runner.run.assert_called_once()
+        assert mock_bench_runner.run.call_args.kwargs["procurement_intent"] == "rfi"
+
     def test_run_slug_runner_error(self, tmp_path):
         """runner.run() raises → exit 1."""
         mock_batch = MagicMock()
@@ -857,10 +882,12 @@ from concilium.presentation.cli._commands_benchmark_helpers import (  # noqa: E4
     _discover_slugs,
     _empacotar_benchmark_cli,
     _execute_plan_space_tasks,
+    _make_silent_printer,
     _mc_merge_alternativas,
     _mc_merge_equipes,
     _mc_remove_historical,
     _prepare_plan_space_tasks,
+    _run_one_plan_space,
     _save_plan_space_markdown,
     _save_plan_space_results,
     _validate_and_apply_modo,
@@ -1049,6 +1076,16 @@ class TestHelperPreparePlanSpaceTasks:
             tasks = _prepare_plan_space_tasks(base_ref, ref_path, alternativas)
         assert tasks[0][1] == "AUTO"
 
+    def test_prepare_tasks_overrides_not_dict_raises_exit(self, tmp_path):
+        """overrides deve ser um dict — outro tipo dispara typer.Exit(1)."""
+        import typer
+
+        base_ref = {"spec": {"rcpsp_spec": {"algo": "CPSAT"}}}
+        ref_path = tmp_path / "referencia.json"
+        alternativas = [{"id": "C1", "modo": "AUTO", "overrides": "not-a-dict"}]
+        with pytest.raises(typer.Exit):
+            _prepare_plan_space_tasks(base_ref, ref_path, alternativas)
+
 
 class TestHelperExecutePlanSpaceTasks:
     def test_execute_all_success(self, tmp_path):
@@ -1075,6 +1112,58 @@ class TestHelperExecutePlanSpaceTasks:
             rows, failed = _execute_plan_space_tasks(tasks, 1, True, tmp_path, tmp_path, tmp_path)
         assert len(rows) == 0
         assert "FAIL_ALT" in failed
+
+
+class TestHelperMakeSilentPrinter:
+    def test_print_is_silent(self, capsys):
+        """_make_silent_printer returns a printer whose print() is a no-op."""
+        printer = _make_silent_printer()
+        printer.print({"anything": "goes"})
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
+
+class TestHelperRunOnePlanSpace:
+    def test_run_one_plan_space_builds_row(self, tmp_path):
+        mock_spec = MagicMock()
+        report = {
+            "confronto": {"deltas": {"preco_venda": {"percentual": 3.5}}},
+            "rcpsp_schedule": {"makespan_weeks": 8, "folga_semanas": 2},
+            "status_final": "VIAVEL",
+        }
+        mock_runner = MagicMock()
+        mock_runner.run.return_value = report
+        with patch(
+            "concilium.application.benchmarks.BenchmarkRunner",
+            return_value=mock_runner,
+        ):
+            row = _run_one_plan_space("A1", "AUTO", mock_spec, True, tmp_path, tmp_path, tmp_path)
+
+        assert row["alternativa"] == "A1"
+        assert row["modo"] == "AUTO"
+        assert row["status"] == "VIAVEL"
+        assert row["delta_preco_venda_pct"] == 3.5
+        assert row["makespan_semanas"] == 8
+        assert row["folga_semanas"] == 2
+        report_file = tmp_path / "A1.benchmark_report.json"
+        assert report_file.exists()
+        assert json.loads(report_file.read_text(encoding="utf-8"))["status_final"] == "VIAVEL"
+
+    def test_run_one_plan_space_falls_back_to_quality_gates_decision(self, tmp_path):
+        mock_spec = MagicMock()
+        report = {"quality_gates": {"decision": "REPROVADO"}}
+        mock_runner = MagicMock()
+        mock_runner.run.return_value = report
+        with patch(
+            "concilium.application.benchmarks.BenchmarkRunner",
+            return_value=mock_runner,
+        ):
+            row = _run_one_plan_space("B1", "MANUAL", mock_spec, False, tmp_path, tmp_path, tmp_path)
+
+        assert row["status"] == "REPROVADO"
+        assert row["delta_preco_venda_pct"] is None
+        assert row["makespan_semanas"] is None
+        assert row["folga_semanas"] is None
 
 
 class TestHelperSavePlanSpace:
@@ -1185,6 +1274,24 @@ class TestBdiShow:
             result = runner.invoke(bdi_app, ["show", "mypro"])
         assert result.exit_code == 0
         assert "Revisão anual" in result.output
+
+    def test_bdi_show_empty_tributario_skips_section(self, tmp_path):
+        """Line 68 false branch: empty 'tributario' dict skips the tributário table."""
+        mock_proj = self._make_project(tmp_path)
+        bdi_dir = mock_proj.root / "bdi"
+        bdi_dir.mkdir()
+        perfil = {
+            "versao": 1,
+            "content_hash": "xyz",
+            "confirmado_por": "Eng. C",
+            "tributario": {},
+            "lucro": {"lucro_bruto": 8.0},
+        }
+        (bdi_dir / "perfil_bdi.json").write_text(json.dumps(perfil), encoding="utf-8")
+        with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
+            result = runner.invoke(bdi_app, ["show", "mypro"])
+        assert result.exit_code == 0
+        assert "Regime Tributário" not in result.output
 
 
 # ============================================================================
@@ -1313,6 +1420,39 @@ class TestBdiUpdate:
             )
         assert result.exit_code == 0
         assert "cancelada" in result.output.lower()
+
+    def test_update_confirmed_by_user_without_yes_flag(self, tmp_path):
+        """Line 268 false branch: user answers 'y' to confirm (no --yes) -> proceeds to persist."""
+        bdi_file = self._make_bdi_file(tmp_path)
+        mock_proj = self._make_project(tmp_path)
+
+        with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
+            result = runner.invoke(
+                bdi_app,
+                ["update", "mypro", "--from-file", str(bdi_file), "--confirmado-por", "Eng"],
+                input="y\n",
+            )
+        assert result.exit_code == 0
+        assert "v1" in result.output
+        assert (mock_proj.root / "bdi" / "perfil_bdi.json").exists()
+
+    def test_update_corrupted_previous_perfil_falls_back_to_v1(self, tmp_path):
+        """Lines 230-232: existing perfil_bdi.json fails model_validate -> caught,
+        rprint corrompido warning, versao resets to 1."""
+        bdi_file = self._make_bdi_file(tmp_path)
+        mock_proj = self._make_project(tmp_path)
+        bdi_dir = mock_proj.root / "bdi"
+        bdi_dir.mkdir()
+        # Valid JSON but missing required fields for PerfilBdiProjeto -> model_validate raises.
+        (bdi_dir / "perfil_bdi.json").write_text(json.dumps({"versao": 5, "nonsense": True}), encoding="utf-8")
+        with patch(f"{_BDI_MOD}.resolve_project", return_value=mock_proj):
+            result = runner.invoke(
+                bdi_app,
+                ["update", "mypro", "--from-file", str(bdi_file), "--confirmado-por", "Eng", "--yes"],
+            )
+        assert result.exit_code == 0
+        assert "corrompid" in result.output.lower()
+        assert "v1" in result.output
 
     def test_update_new_perfil_success(self, tmp_path):
         """New project (no existing perfil) + --yes → v1 perfil saved."""

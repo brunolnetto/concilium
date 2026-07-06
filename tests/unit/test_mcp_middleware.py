@@ -14,6 +14,8 @@ import pytest
 from concilium.presentation.mcp.middleware import (
     McpAuthMiddleware,
     _auth_enabled,
+    _is_public_tool_call,
+    _make_cached_receive,
     _send_json_response,
 )
 
@@ -545,3 +547,234 @@ async def test_send_json_response_status_404():
     assert send.messages[0]["status"] == 404
     body = json.loads(send.messages[1]["body"])
     assert body == {"detail": "not found"}
+
+
+# ---------------------------------------------------------------------------
+# OTel best-effort exception handling (propagate.extract / set_baggage)
+# ---------------------------------------------------------------------------
+
+
+class TestBodyNotCachedWhenClientDisconnects:
+    @pytest.mark.asyncio
+    async def test_no_body_key_in_scope_skips_cached_receive_rewrap(self):
+        """Quando o cliente desconecta durante a leitura de _is_public_tool_call,
+        scope['_body'] nunca é setado — __call__ deve pular _make_cached_receive
+        (branch false de `if "_body" in scope` na linha 160) e repassar o
+        `receive` original para o app interno."""
+        inner = AsyncMock()
+        mw = McpAuthMiddleware(inner)
+        scope = _make_scope("http", headers=[])
+        receive = AsyncMock(return_value={"type": "http.disconnect"})
+        send = AsyncMock()
+        mock_auth = MagicMock()
+        mock_auth.enabled = False
+        with patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth):
+            await mw(scope, receive, send)
+        assert "_body" not in scope
+        inner.assert_awaited_once()
+        # o receive repassado ao app interno é o original (não o cached-receive)
+        assert inner.call_args[0][1] is receive
+
+
+class TestOtelBestEffort:
+    @pytest.mark.asyncio
+    async def test_propagate_extract_exception_is_swallowed(self):
+        """propagate.extract() raising must not break the request (best-effort)."""
+        inner = AsyncMock()
+        mw = McpAuthMiddleware(inner)
+        scope = _make_scope("http", headers=[])
+        receive = _make_receive()
+        send = AsyncMock()
+        mock_auth = MagicMock()
+        mock_auth.enabled = False
+        with (
+            patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth),
+            patch(
+                "concilium.presentation.mcp.middleware.propagate.extract",
+                side_effect=RuntimeError("bad carrier"),
+            ),
+        ):
+            await mw(scope, receive, send)
+        inner.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_set_baggage_exception_is_swallowed(self):
+        """set_baggage() raising during token processing must not break the request."""
+        inner = AsyncMock()
+        mw = McpAuthMiddleware(inner)
+        scope = _make_scope("http", headers=_auth_header("good.token"))
+        receive = _make_receive()
+        send = AsyncMock()
+        mock_auth = MagicMock()
+        mock_auth.enabled = False
+        fake_claims = {"roles": ["operator"], "sub": "u1", "tid": "tenant-1"}
+        with (
+            patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth),
+            patch(
+                "concilium.infrastructure.auth.token_service.decode_token",
+                return_value=fake_claims,
+            ),
+            patch(
+                "concilium.infrastructure.auth.permission_guard.roles_from_token",
+                return_value=["operator"],
+            ),
+            patch(
+                "concilium.presentation.mcp.middleware.set_baggage",
+                side_effect=RuntimeError("baggage overflow"),
+            ),
+        ):
+            await mw(scope, receive, send)
+        inner.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_otel_unavailable_skips_traceparent_and_baggage_blocks(self):
+        """Quando _OTEL_AVAILABLE é False, tanto o bloco de extração de
+        traceparent quanto o de injeção de baggage são pulados inteiramente
+        (branches false de `if _OTEL_AVAILABLE and ...` nas linhas 96 e 124)."""
+        inner = AsyncMock()
+        mw = McpAuthMiddleware(inner)
+        scope = _make_scope("http", headers=_auth_header("good.token"))
+        receive = _make_receive()
+        send = AsyncMock()
+        mock_auth = MagicMock()
+        mock_auth.enabled = False
+        fake_claims = {"roles": ["operator"], "sub": "u1", "tid": "tenant-1"}
+        with (
+            patch("concilium.presentation.mcp.middleware.get_auth", return_value=mock_auth),
+            patch("concilium.presentation.mcp.middleware._OTEL_AVAILABLE", False),
+            patch(
+                "concilium.infrastructure.auth.token_service.decode_token",
+                return_value=fake_claims,
+            ),
+            patch(
+                "concilium.infrastructure.auth.permission_guard.roles_from_token",
+                return_value=["operator"],
+            ),
+            patch(
+                "concilium.presentation.mcp.middleware.propagate.extract",
+                side_effect=AssertionError("não deveria ser chamado com OTel indisponível"),
+            ),
+            patch(
+                "concilium.presentation.mcp.middleware.set_baggage",
+                side_effect=AssertionError("não deveria ser chamado com OTel indisponível"),
+            ),
+        ):
+            await mw(scope, receive, send)
+        inner.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# _make_cached_receive
+# ---------------------------------------------------------------------------
+
+
+class TestMakeCachedReceive:
+    @pytest.mark.asyncio
+    async def test_first_call_returns_cached_body(self):
+        original = AsyncMock()
+        receive = _make_cached_receive(b'{"a": 1}', original)
+        message = await receive()
+        assert message == {"type": "http.request", "body": b'{"a": 1}', "more_body": False}
+        original.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_second_call_delegates_to_original_receive(self):
+        original = AsyncMock(return_value={"type": "http.disconnect"})
+        receive = _make_cached_receive(b"{}", original)
+        await receive()
+        second = await receive()
+        assert second == {"type": "http.disconnect"}
+        original.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# _is_public_tool_call
+# ---------------------------------------------------------------------------
+
+
+class TestIsPublicToolCall:
+    @pytest.mark.asyncio
+    async def test_uses_cached_body_when_present(self):
+        scope = {"_body": json.dumps({"method": "ping"}).encode("utf-8")}
+        receive = AsyncMock()
+        result = await _is_public_tool_call(scope, receive)
+        assert result is True
+        receive.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_disconnect_while_reading_body_returns_false(self):
+        scope = {}
+        receive = AsyncMock(return_value={"type": "http.disconnect"})
+        result = await _is_public_tool_call(scope, receive)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_empty_body_returns_false(self):
+        scope = {}
+        receive = AsyncMock(return_value={"type": "http.request", "body": b"", "more_body": False})
+        result = await _is_public_tool_call(scope, receive)
+        assert result is False
+        assert scope["_body"] == b""
+
+    @pytest.mark.asyncio
+    async def test_public_method_returns_true(self):
+        scope = {}
+        body = json.dumps({"method": "notifications/initialized"}).encode("utf-8")
+        receive = AsyncMock(return_value={"type": "http.request", "body": body, "more_body": False})
+        result = await _is_public_tool_call(scope, receive)
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_tools_call_with_public_tool_name_returns_true(self):
+        scope = {}
+        body = json.dumps({"method": "tools/call", "params": {"name": "ativar_dispositivo"}}).encode("utf-8")
+        receive = AsyncMock(return_value={"type": "http.request", "body": body, "more_body": False})
+        result = await _is_public_tool_call(scope, receive)
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_unknown_message_type_is_ignored_and_loop_continues(self):
+        """Uma mensagem ASGI que não é nem http.request nem http.disconnect é
+        ignorada silenciosamente e o loop de leitura continua (branch false
+        do elif, linha 222 -> volta para o topo do while)."""
+        scope = {}
+        body = json.dumps({"method": "ping"}).encode("utf-8")
+        messages = [
+            {"type": "http.lifespan.startup"},
+            {"type": "http.request", "body": body, "more_body": False},
+        ]
+        receive = AsyncMock(side_effect=messages)
+        result = await _is_public_tool_call(scope, receive)
+        assert result is True
+        assert scope["_body"] == body
+
+    @pytest.mark.asyncio
+    async def test_tools_call_with_private_tool_name_returns_false(self):
+        scope = {}
+        body = json.dumps({"method": "tools/call", "params": {"name": "some_private_tool"}}).encode("utf-8")
+        receive = AsyncMock(return_value={"type": "http.request", "body": body, "more_body": False})
+        result = await _is_public_tool_call(scope, receive)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_multi_chunk_body_is_reassembled(self):
+        """Body split across multiple http.request messages (more_body=True) must
+        be concatenated before the loop exits — covers the while-loop back-edge."""
+        scope = {}
+        body = json.dumps({"method": "ping"}).encode("utf-8")
+        half = len(body) // 2
+        messages = [
+            {"type": "http.request", "body": body[:half], "more_body": True},
+            {"type": "http.request", "body": body[half:], "more_body": False},
+        ]
+        receive = AsyncMock(side_effect=messages)
+        result = await _is_public_tool_call(scope, receive)
+        assert result is True
+        assert scope["_body"] == body
+
+    @pytest.mark.asyncio
+    async def test_malformed_json_body_returns_false(self):
+        scope = {}
+        receive = AsyncMock(return_value={"type": "http.request", "body": b"not json", "more_body": False})
+        result = await _is_public_tool_call(scope, receive)
+        assert result is False

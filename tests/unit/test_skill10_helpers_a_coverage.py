@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,6 +15,7 @@ from concilium.application.skills import run_relatorio_e_artefatos
 
 _ = run_relatorio_e_artefatos
 _MOD = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_a"]
+_MOD_SKILL = sys.modules["_concilium_skillpkg_10_relatorio_e_artefatos.skill"]
 
 # Extract names used in patch() calls (need the dotted module path)
 _PATCH_PREFIX = "_concilium_skillpkg_10_relatorio_e_artefatos._skill_helpers_a"
@@ -39,6 +42,8 @@ _bgs_add_financeiro = _MOD._bgs_add_financeiro
 _rra_build_compressao_cronograma = _MOD._rra_build_compressao_cronograma
 _rra_build_decomposicao_pool = _MOD._rra_build_decomposicao_pool
 _gerar_live_model = _MOD._gerar_live_model
+_build_equipe_rows = _MOD._build_equipe_rows
+_build_graficos_section = _MOD._build_graficos_section
 
 
 # ---------------------------------------------------------------------------
@@ -1497,3 +1502,230 @@ class TestRraBuildDecomposicaoPoolExtra:
                 assert "faces" in result
         except ImportError:
             pass  # module not available, skip
+
+
+def _make_equipe_direta(
+    item_id="eap-01",
+    equipe_id="eq-1",
+    cpu_id="CPU-X",
+    custo_fixo_mensal=1000.0,
+    permanencia_meses=1.0,
+    custo_total=10_000.0,
+    custo_mao_obra_mensal=1000.0,
+    custo_encargos_mensal=0.0,
+    custo_equipamentos_mensal=1000.0,
+    custo_material_mensal=1000.0,
+    custo_combustivel_total_mensal=1000.0,
+):
+    eq = MagicMock()
+    eq.item_id = item_id
+    eq.equipe_id = equipe_id
+    eq.cpu_id = cpu_id
+    eq.custo_fixo_mensal = custo_fixo_mensal
+    eq.permanencia_meses = permanencia_meses
+    eq.custo_total = custo_total
+    eq.custo_mao_obra_mensal = custo_mao_obra_mensal
+    eq.custo_encargos_mensal = custo_encargos_mensal
+    eq.custo_equipamentos_mensal = custo_equipamentos_mensal
+    eq.custo_material_mensal = custo_material_mensal
+    eq.custo_combustivel_total_mensal = custo_combustivel_total_mensal
+    return eq
+
+
+class TestSkillModuleImportErrorFallback:
+    """Cobre o try/except ImportError de skill.py (linhas 20-56 e 58-73):
+    quando carregado sem contexto de pacote (import relativo falha), o
+    fallback via importlib.util.spec_from_file_location assume — e se esse
+    spec falhar especificamente para um dos dois helpers, o ImportError
+    explícito (linha 41 / linha 70) é levantado."""
+
+    _SKILL_PATH = (
+        Path(__file__).resolve().parent.parent.parent
+        / "src"
+        / "concilium"
+        / "application"
+        / "skills"
+        / "manifests"
+        / "10-relatorio-e-artefatos"
+        / "skill.py"
+    )
+
+    def _load_standalone(self):
+        """Carrega skill.py como módulo solto (sem pacote pai) — força
+        `from ._skill_helpers_a import ...` a levantar ImportError, entrando
+        no bloco except (fallback via importlib)."""
+        spec = importlib.util.spec_from_file_location("skill10_standalone_test", self._SKILL_PATH)
+        assert spec and spec.loader
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_fallback_happy_path_loads_helpers(self):
+        """Sem mocks: o fallback via importlib carrega _skill_helpers_a e
+        _skill_helpers_executivo com sucesso (branches 40->41 e 69->70 falsos)."""
+        mod = self._load_standalone()
+        assert callable(mod.run_relatorio_e_artefatos)
+        assert callable(mod.build_relatorio_executivo)
+
+    def test_spec_none_for_skill_helpers_a_raises_import_error(self):
+        """Linha 41: spec_from_file_location retorna None para _skill_helpers_a.py."""
+        orig_spec = importlib.util.spec_from_file_location
+
+        def fake_spec(name, path, *args, **kwargs):
+            if str(path).endswith("_skill_helpers_a.py"):
+                return None
+            return orig_spec(name, path, *args, **kwargs)
+
+        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
+            with pytest.raises(ImportError, match="Cannot load _skill_helpers_a.py"):
+                self._load_standalone()
+
+    def test_spec_none_for_skill_helpers_executivo_raises_import_error(self):
+        """Linha 70: spec_from_file_location retorna None para _skill_helpers_executivo.py."""
+        orig_spec = importlib.util.spec_from_file_location
+
+        def fake_spec(name, path, *args, **kwargs):
+            if str(path).endswith("_skill_helpers_executivo.py"):
+                return None
+            return orig_spec(name, path, *args, **kwargs)
+
+        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
+            with pytest.raises(ImportError, match="Cannot load _skill_helpers_executivo.py"):
+                self._load_standalone()
+
+
+class TestAsBoolStringUnrecognized:
+    """Cobre skill.py::_as_bool — string não reconhecida cai no `return False` final
+    (branch 100->102)."""
+
+    def test_unrecognized_string_returns_false(self):
+        assert _MOD_SKILL._as_bool("maybe") is False
+
+    def test_dict_input_returns_false_via_default(self):
+        assert _MOD_SKILL._as_bool({"a": 1}) is False
+
+
+class TestRunRelatorioBenchmarkReferenceProjectionDict:
+    """Cobre skill.py::run_relatorio_e_artefatos — quando
+    inputs['benchmark_reference_projection'] já é um dict, a reatribuição a
+    None não ocorre (branch 115->118 falso)."""
+
+    def test_dict_benchmark_reference_projection_is_preserved_through_call(self, monkeypatch):
+        canonical = _make_canonical(
+            resultado=MagicMock(),
+            eap=[],
+            planejamento=[],
+            plan_space_result=None,
+            cost_criticality_report=None,
+            relatorio_sensibilidade=None,
+        )
+        captured = {}
+
+        def fake_rra_build_relatorio(*args, **kwargs):
+            captured.update(kwargs)
+            return MagicMock()
+
+        monkeypatch.setattr(_MOD_SKILL, "_rra_build_relatorio", fake_rra_build_relatorio)
+        monkeypatch.setattr(_MOD_SKILL, "_gerar_excel_bytes", lambda *a, **k: b"")
+        monkeypatch.setattr(_MOD_SKILL, "_gerar_live_model", lambda *a, **k: b"")
+        monkeypatch.setattr(_MOD_SKILL, "_gerar_memorial_json_bytes", lambda *a, **k: b"{}")
+        ref = {"venda_total": 1000.0}
+        _MOD_SKILL.run_relatorio_e_artefatos(canonical, {"benchmark_reference_projection": ref})
+        assert captured["benchmark_reference_projection"] == ref
+
+
+class TestBuildEquipeRows:
+    """Cobre _acao_sugerida (Diesel/Materiais), _componentes_referencia (None) e
+    _componente_dominante (sem referência / sem economias) em _build_equipe_rows."""
+
+    def test_sem_planejamento_dominante_diesel_gera_acao_logistica(self):
+        """Sem referência (planejamento vazio) → fallback por maior componente absoluto.
+        Diesel dominante + gap<0 → 'Rever logística e consumo de combustível' (linha 156)."""
+        eq = _make_equipe_direta(
+            custo_mao_obra_mensal=100.0,
+            custo_equipamentos_mensal=100.0,
+            custo_material_mensal=100.0,
+            custo_combustivel_total_mensal=10_000.0,
+            custo_total=10_300.0,
+        )
+        canonical = _make_canonical(equipes_diretas=[eq], ponto_equilibrio=None, planejamento=[])
+        equipe_rows, analise = _build_equipe_rows(canonical)
+        assert len(equipe_rows) == 1
+        assert analise[0]["dominante"] == "Diesel"
+        assert analise[0]["acao_sugerida"] == "Rever logística e consumo de combustível"
+
+    def test_sem_planejamento_dominante_materiais_gera_acao_traco(self):
+        """Materiais dominante + gap<0 → 'Rever traço e perdas de material' (linha 162)."""
+        eq = _make_equipe_direta(
+            custo_mao_obra_mensal=100.0,
+            custo_equipamentos_mensal=100.0,
+            custo_material_mensal=10_000.0,
+            custo_combustivel_total_mensal=100.0,
+            custo_total=10_300.0,
+        )
+        canonical = _make_canonical(equipes_diretas=[eq], ponto_equilibrio=None, planejamento=[])
+        equipe_rows, analise = _build_equipe_rows(canonical)
+        assert analise[0]["dominante"] == "Materiais"
+        assert analise[0]["acao_sugerida"] == "Rever traço e perdas de material"
+
+    def test_sem_referencia_planejamento_vazio_usa_fallback(self):
+        """planejamento=[] → _componentes_referencia retorna None (linha 182) →
+        _componente_dominante usa o ramo fallback (branch 194->207)."""
+        eq = _make_equipe_direta()
+        canonical = _make_canonical(equipes_diretas=[eq], ponto_equilibrio=None, planejamento=[])
+        _, analise = _build_equipe_rows(canonical)
+        assert analise[0]["dominante"] in {"Mão de Obra", "Equipamentos", "Materiais", "Diesel", "Encargos Sociais"}
+
+    def test_superavit_sem_economias_usa_fallback(self):
+        """gap_operacional >= 0 (superávit) mas nenhum componente economizou vs
+        referência → economias vazio → fallback (branch 204->207)."""
+        from concilium.domain.models.canonical import (
+            PontoEquilibrio,
+        )
+
+        eq = _make_equipe_direta(
+            custo_mao_obra_mensal=100.0,
+            custo_equipamentos_mensal=100.0,
+            custo_material_mensal=100.0,
+            custo_combustivel_total_mensal=100.0,
+            custo_total=400.0,
+        )
+        pe = PontoEquilibrio(
+            item_id="eap-01",
+            custo_fixo_equipe=100.0,
+            custo_venda_cpu=1000.0,  # superávit: venda >> custo operacional
+            delta=600.0,
+            delta_pct=1.5,
+            status_validacao="OK",
+        )
+        plan = MagicMock()
+        plan.item_id = "eap-01"
+        plan.subtotal.sem_bdi.mao_obra = 0.0
+        plan.subtotal.sem_bdi.equipamentos = 0.0
+        plan.subtotal.sem_bdi.material = 0.0
+        plan.subtotal.sem_bdi.diesel = 0.0
+        canonical = _make_canonical(equipes_diretas=[eq], ponto_equilibrio=[pe], planejamento=[plan])
+        _, analise = _build_equipe_rows(canonical)
+        # referência toda-zero e componentes operacionais positivos → delta_comp todo >= 0
+        # → economias vazio → cai no fallback (maior componente absoluto)
+        assert analise[0]["gap_operacional"] >= 0
+        assert analise[0]["dominante"] in {"Mão de Obra", "Equipamentos", "Materiais", "Diesel"}
+
+
+class TestBuildGraficosSectionEmptyWeeks:
+    """Cobre `if weeks:` falso em _build_graficos_section (branch 412->414) quando
+    uma atividade agendada não tem nenhuma semana em distribuicao_semanal."""
+
+    def test_atividade_sem_distribuicao_semanal_pula_gantt(self, monkeypatch):
+        eq = _make_equipe_direta(item_id="eap-01")
+        act = MagicMock()
+        act.activity_id = "eap-01"
+        act.distribuicao_semanal = {}
+        cronograma = MagicMock()
+        cronograma.scheduled_activities = [act]
+        canonical = _make_canonical(equipes_diretas=[eq], cronograma=cronograma)
+        # Evita depender de estruturas financeiras/painel completas — não é o foco deste teste.
+        monkeypatch.setattr(_MOD, "_bgs_add_financeiro", lambda *a, **k: None)
+        monkeypatch.setattr(_MOD, "_bgs_add_painel_equilibrio", lambda *a, **k: None)
+        result = _build_graficos_section(canonical, {}, [])
+        assert result["cronograma"]["tasks"] == []

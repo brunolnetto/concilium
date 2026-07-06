@@ -17,6 +17,8 @@ from mcp.server.fastmcp import FastMCP
 import concilium.presentation.mcp.rate_limit as _rate_limit_mod
 from concilium.presentation.mcp.tools.formulario import (
     _build_eap_items,
+    _normalize_procurement_intent,
+    _procurement_context,
     _suggest_cpu,
     register,
 )
@@ -136,6 +138,60 @@ class TestSuggestCpu:
             assert cpu_id is None
             assert score == 0
 
+    def test_keywords_map_present_but_no_match_falls_to_catalog(self, tmp_path):
+        """When keywords_map has rules but none match (neither all nor any), falls through
+        to the catalog-overlap search without raising (covers the for-loop-completes-normally
+        branch at line 55)."""
+        keywords_map = {
+            "CPU-ESCAVADEIRA": ["ESCAVACAO", "HIDRAULICA"],
+            "CPU-TRATOR": ["TRATOR", "ESTEIRA"],
+        }
+        with (
+            patch(
+                "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+                return_value=keywords_map,
+            ),
+            patch(
+                "concilium.presentation.mcp._context._storage_live",
+            ) as mock_storage,
+        ):
+            settings = MagicMock()
+            settings.config_root = Path("/nonexistent/path/xyz")
+            mock_storage.return_value = settings
+
+            cpu_id, score = _suggest_cpu("completamente sem relacao nenhuma")
+            assert cpu_id is None
+            assert score == 0
+
+    def test_malformed_catalog_file_is_skipped(self, tmp_path):
+        """A CPU json file that raises during parsing is skipped (except/continue at 89-90),
+        and a later valid file can still be matched."""
+        cat_dir = tmp_path / "catalogos" / "meu-catalogo" / "cpus"
+        cat_dir.mkdir(parents=True)
+        # Malformed JSON — json.loads raises, exercising the except/continue branch
+        (cat_dir / "CPU-BROKEN.json").write_text("{not valid json", encoding="utf-8")
+        (cat_dir / "CPU-ATERRO-002.json").write_text(
+            json.dumps({"codigo": "CPU-ATERRO-002", "descricao": "Aterro compactado mecanicamente solo argiloso"}),
+            encoding="utf-8",
+        )
+
+        with (
+            patch(
+                "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+                return_value={},
+            ),
+            patch(
+                "concilium.presentation.mcp._context._storage_live",
+            ) as mock_storage,
+        ):
+            settings = MagicMock()
+            settings.config_root = tmp_path
+            mock_storage.return_value = settings
+
+            cpu_id, score = _suggest_cpu("Aterro compactado mecanicamente")
+            assert cpu_id == "CPU-ATERRO-002"
+            assert score == 1
+
     def test_catalog_overlap_below_threshold_returns_none(self, tmp_path):
         """When best word overlap < 2, returns (None, 0)."""
         # Only 1 overlapping word — below the >=2 threshold
@@ -160,6 +216,63 @@ class TestSuggestCpu:
             cpu_id, score = _suggest_cpu("aterro pequeno")  # only 1 match word
             assert cpu_id is None
             assert score == 0
+
+    def test_catalogos_dir_without_cpus_subdir_returns_none(self, tmp_path):
+        """When catalogos/<cat> directories exist but none has a 'cpus' subdir,
+        catalog_cpus stays None and the function returns (None, 0) directly."""
+        empty_cat = tmp_path / "catalogos" / "sem-cpus"
+        empty_cat.mkdir(parents=True)
+        (empty_cat / "outra_coisa").mkdir()
+
+        with (
+            patch(
+                "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+                return_value={},
+            ),
+            patch(
+                "concilium.presentation.mcp._context._storage_live",
+            ) as mock_storage,
+        ):
+            settings = MagicMock()
+            settings.config_root = tmp_path
+            mock_storage.return_value = settings
+
+            cpu_id, score = _suggest_cpu("qualquer descricao de servico")
+            assert cpu_id is None
+            assert score == 0
+
+    def test_catalog_multiple_files_picks_best_overlap(self, tmp_path):
+        """With several CPU json files, the loop iterates more than once and picks
+        the one with the highest word overlap (exercises the loop-continuation branch)."""
+        cat_dir = tmp_path / "catalogos" / "meu-catalogo" / "cpus"
+        cat_dir.mkdir(parents=True)
+        (cat_dir / "CPU-A.json").write_text(
+            json.dumps({"codigo": "CPU-A", "descricao": "Aterro simples"}), encoding="utf-8"
+        )
+        (cat_dir / "CPU-B.json").write_text(
+            json.dumps({"codigo": "CPU-B", "descricao": "Aterro compactado mecanicamente solo argiloso"}),
+            encoding="utf-8",
+        )
+        (cat_dir / "CPU-C.json").write_text(
+            json.dumps({"codigo": "CPU-C", "descricao": "Pavimentacao asfaltica final"}), encoding="utf-8"
+        )
+
+        with (
+            patch(
+                "concilium.infrastructure.catalog.mapping.cpu_mapper._load_mapping_keywords",
+                return_value={},
+            ),
+            patch(
+                "concilium.presentation.mcp._context._storage_live",
+            ) as mock_storage,
+        ):
+            settings = MagicMock()
+            settings.config_root = tmp_path
+            mock_storage.return_value = settings
+
+            cpu_id, score = _suggest_cpu("Aterro compactado mecanicamente solo")
+            assert cpu_id == "CPU-B"
+            assert score == 1
 
 
 # ===========================================================================
@@ -329,6 +442,39 @@ _COMMON_KWARGS = dict(
     localizacao="Fortaleza, CE",
     data_inicio="2026-01-01",
 )
+
+
+class TestNormalizeProcurementIntent:
+    """Tests for _normalize_procurement_intent."""
+
+    def test_rfi_passthrough(self):
+        assert _normalize_procurement_intent("rfi") == "rfi"
+
+    def test_rfp_passthrough(self):
+        assert _normalize_procurement_intent("rfp") == "rfp"
+
+    def test_none_defaults_to_rfi(self):
+        assert _normalize_procurement_intent(None) == "rfi"
+
+    def test_invalid_value_falls_back_to_rfi(self):
+        assert _normalize_procurement_intent("bogus") == "rfi"
+
+    def test_case_and_whitespace_normalized(self):
+        assert _normalize_procurement_intent("  RFP  ") == "rfp"
+
+
+class TestProcurementContext:
+    """Tests for _procurement_context."""
+
+    def test_rfp_context(self):
+        ctx = _procurement_context("rfp")
+        assert ctx["intent"] == "rfp"
+        assert ctx["fase"] == "comparacao_tecnico_economica"
+
+    def test_rfi_context(self):
+        ctx = _procurement_context("rfi")
+        assert ctx["intent"] == "rfi"
+        assert ctx["fase"] == "exploracao_inicial"
 
 
 class TestCriarProjetoFormulario:
@@ -700,3 +846,84 @@ class TestCriarProjetoFormulario:
         media_items = [it for it in preview if it["confianca"] == "media"]
         assert len(alta_items) == 1
         assert len(media_items) == 1
+
+    def test_missing_required_params_returns_erro(self, tool_criar):
+        """When any of nome/contexto_id/tipo_obra/localizacao/data_inicio is missing,
+        returns erro without touching storage (formulario-mode required-params branch)."""
+        result = tool_criar(
+            nome="",
+            contexto_id="mendeslobo",
+            tipo_obra="terraplenagem",
+            localizacao="Fortaleza, CE",
+            data_inicio="2026-01-01",
+        )
+        assert "erro" in result
+        assert "obrigatorios" in result["erro"].lower() or "obrigatórios" in result["erro"]
+
+    def test_servicos_none_defaults_to_empty_list(self, tool_criar):
+        """When servicos is not passed (None), it defaults to [] and total_servicos is 0,
+        which resolves as nao_mapeados=[] → status criado is never reached but pendente
+        path isn't triggered either since there are no servicos to map."""
+        result = tool_criar(**_COMMON_KWARGS)
+        # With no servicos, nothing is unmapped and nothing needs mapping — should proceed
+        # to the "criado" path (or raise on further steps, but must not error on servicos).
+        assert result.get("status") in {"criado", "erro_escopo"} or "erro" in result
+
+
+class TestRegisterUiMeta:
+    """Tests for the ADR-101 _meta.ui attachment at the end of register()."""
+
+    def test_ui_meta_attached_to_criar_projeto_tool(self):
+        """After register(), the criar_projeto tool has _UI_META attached (bug fix:
+        previously looked up the stale name 'criar_projeto_formulario', which never
+        matched since ADR-116 renamed the tool to 'criar_projeto')."""
+        from concilium.presentation.mcp.tools.formulario import _UI_META
+
+        server = _make_server()
+        register(server)
+        tool = server._tool_manager._tools["criar_projeto"]
+        assert tool.meta == _UI_META
+
+    def test_ui_meta_attachment_exception_is_swallowed(self):
+        """If server._tool_manager._tools.get() raises, register() must swallow it
+        (the try/except around the ADR-101 block at the end of register())."""
+
+        class _FakeToolManager:
+            class _Tools:
+                def get(self, *_a, **_k):
+                    raise RuntimeError("boom")
+
+            _tools = _Tools()
+
+        class _FakeServer:
+            _tool_manager = _FakeToolManager()
+
+            def tool(self):
+                def _decorator(fn):
+                    return fn
+
+                return _decorator
+
+        register(_FakeServer())  # must not raise
+
+    def test_ui_meta_skipped_when_tool_lookup_returns_none(self):
+        """If the tool lookup finds nothing (e.g. name mismatch), register()
+        must simply skip attaching _meta.ui instead of raising."""
+
+        class _FakeToolManager:
+            class _Tools:
+                def get(self, *_a, **_k):
+                    return None
+
+            _tools = _Tools()
+
+        class _FakeServer:
+            _tool_manager = _FakeToolManager()
+
+            def tool(self):
+                def _decorator(fn):
+                    return fn
+
+                return _decorator
+
+        register(_FakeServer())  # must not raise, and must not try to set .meta on None

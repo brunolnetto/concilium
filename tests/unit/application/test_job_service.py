@@ -82,6 +82,24 @@ class TestJobServiceBasics:
         assert job.iniciado_em is None
         assert job.finalizado_em is None
 
+    def test_disparar_pipeline_skips_submit_when_executor_falsy(self, job_service):
+        """When _executor is falsy (e.g. still None after init for some reason),
+        disparar_pipeline must not attempt to submit and simply return the
+        response (false branch of `if self._executor:`)."""
+        from unittest.mock import patch
+
+        original_ensure = job_service._ensure_initialized
+
+        def _ensure_but_clear_executor():
+            original_ensure()
+            job_service._executor = None
+
+        with patch.object(job_service, "_ensure_initialized", side_effect=_ensure_but_clear_executor):
+            job = job_service.disparar_pipeline(project_id="proj-noexec")
+
+        assert job.status == "AGUARDANDO_FILA"
+        assert job.project_id == "proj-noexec"
+
     def test_consultar_job_retorna_dto(self, job_service):
         """Consultar job deve retornar JobDTO atualizado."""
         job = job_service.disparar_pipeline(project_id="proj-123")
@@ -493,6 +511,36 @@ class TestExecutarPipelineAsync:
         sm = result_job["state_machine"]
         assert sm.status_str == "ERRO"
 
+    def test_executar_pipeline_resolves_active_plan_when_plano_id_none(self, job_service):
+        """When plano_id is None but the escopo has an active plan, that plan's
+        plano_id is used to continue execution (line 168)."""
+        from unittest.mock import MagicMock, patch
+
+        job_id = self._fresh_waiting_job(
+            job_service, "job-async-activeplan", "proj-activeplan", escopo_id="esc-ap", plano_id=None
+        )
+
+        mock_store = MagicMock()
+        mock_plan = MagicMock()
+        mock_active_plan = MagicMock()
+        mock_active_plan.plano_id = "plano-resolvido"
+        mock_escopo = MagicMock()
+        mock_escopo.active_plan.return_value = mock_active_plan
+        mock_escopo.plan.return_value = mock_plan
+        mock_store.escopo.return_value = mock_escopo
+        job_service._project_factory = lambda pid: mock_store
+
+        with (
+            patch("concilium.presentation.mcp.tools.escopo._resolve_escopo_id", return_value="esc-ap"),
+            patch("concilium.presentation.mcp.tools.pipeline._run_pipeline_on_plano", return_value={"done": True}),
+        ):
+            job_service._executar_pipeline_async(job_id)
+
+        mock_escopo.plan.assert_called_once_with("plano-resolvido")
+        result_job = job_service._repo.get(job_id)
+        sm = result_job["state_machine"]
+        assert sm.status_str == "CONCLUIDO"
+
 
 class TestCancelarJob:
     """Covers cancelar_job (lines 361-384)."""
@@ -621,6 +669,42 @@ class TestListarJobsStatusCounts:
         listing = svc.listar_jobs()
         assert listing.estatisticas.cancelado == 1
 
+    def test_listar_jobs_ignores_unrecognized_status(self, job_service):
+        """A job whose status matches none of the known buckets falls through
+        all elif branches without incrementing any counter (line 333 false)."""
+        from datetime import UTC, datetime
+
+        now = datetime.now(UTC).isoformat()
+        job_data = {
+            "job_id": "job-weird-status",
+            "status": "ALGO_DESCONHECIDO",
+            "project_id": "p",
+            "skill_id": None,
+            "inputs": {},
+            "escopo_id": None,
+            "plano_id": None,
+            "disparado_em": now,
+            "iniciado_em": None,
+            "finalizado_em": None,
+            "resultado": None,
+            "erro": None,
+            "progresso": None,
+            "progresso_percentual": None,
+            # No state_machine key -> status comes straight from j["status"]
+        }
+        job_service._repo.save("job-weird-status", job_data)
+
+        listing = job_service.listar_jobs()
+
+        stats = listing.estatisticas
+        assert (
+            stats.aguardando_fila,
+            stats.em_execucao,
+            stats.concluido,
+            stats.erro,
+            stats.cancelado,
+        ) == (0, 0, 0, 0, 0)
+
 
 class TestResetJobServiceWithExecutor:
     """Covers reset_job_service when _executor is active (lines 444-447)."""
@@ -641,6 +725,46 @@ class TestResetJobServiceWithExecutor:
         from concilium.application.jobs import service as _svc_module
 
         assert _svc_module._service is None
+
+
+class TestEnsureInitializedIdempotent:
+    """Covers the double-checked-locking branches inside _ensure_initialized:
+    - executor already set by the time the lock is acquired (skip create)
+    - gc_thread already set (skip create)
+    """
+
+    def test_skips_executor_creation_when_set_inside_lock(self, job_service):
+        class _FakeLock:
+            def __enter__(self_inner):
+                # Simulate a concurrent thread having already created the executor
+                # in between the outer None-check and lock acquisition.
+                job_service._executor = Mock()
+                return None
+
+            def __exit__(self_inner, *exc_info):
+                return False
+
+        job_service._executor = None
+        job_service._gc_thread = None
+        job_service._init_lock = _FakeLock()
+
+        job_service._ensure_initialized()
+
+        assert job_service._executor is not None
+        assert job_service._gc_thread is not None
+
+    def test_skips_gc_thread_creation_when_already_set(self, job_service):
+        job_service._executor = None
+        preexisting_gc_thread = Mock()
+        job_service._gc_thread = preexisting_gc_thread
+
+        job_service._ensure_initialized()
+
+        assert job_service._executor is not None
+        # gc_thread must remain the pre-existing mock (not replaced)
+        assert job_service._gc_thread is preexisting_gc_thread
+
+        job_service._executor.shutdown(wait=False)
 
 
 class TestGarbageCollectorLoop:

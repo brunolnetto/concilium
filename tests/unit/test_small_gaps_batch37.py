@@ -1,4 +1,5 @@
 """Coverage batch 37 — 08-avaliacao-intervencoes, producao repo, compression_analysis, matching_oracle."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -19,13 +20,12 @@ def _load_skill(rel_path: str, name: str):
     return mod
 
 
-MOD_08 = _load_skill(
-    "src/concilium/application/skills/manifests/08-avaliacao-intervencoes/skill.py", "skill08_b37"
-)
+MOD_08 = _load_skill("src/concilium/application/skills/manifests/08-avaliacao-intervencoes/skill.py", "skill08_b37")
 
 
 def _make_schedule_metrics(makespan: int = 4):
     from concilium.application.scheduling.models import ScheduleMetrics
+
     return ScheduleMetrics(
         makespan=makespan,
         resource_leveling_score=1.0,
@@ -84,19 +84,30 @@ class TestEstimateRoiHeuristic:
 
         meta = Meta(gerado_em=datetime.now(UTC), contexto_id="ctx-b37")
         proj = Projeto(
-            id="p1", nome="T", tipo_obra="pavimentacao", localizacao="CE",
+            id="p1",
+            nome="T",
+            tipo_obra="pavimentacao",
+            localizacao="CE",
             coordenadas=Coordenadas(lat=-3.7, lng=-38.5),
-            data_inicio=date(2026, 1, 1), data_termino=date(2026, 12, 31),
+            data_inicio=date(2026, 1, 1),
+            data_termino=date(2026, 12, 31),
             regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
-            snapshot_catalogo_id="s", snapshot_perfil_id="s",
+            snapshot_catalogo_id="s",
+            snapshot_perfil_id="s",
         )
         canonical = CanonicalModel(meta=meta, projeto=proj)
         result = run_avaliacao_intervencoes(
             canonical,
-            inputs={"intervencoes_propostas": [
-                {"intervencao_id": "INT-01", "variavel": "EAP-001",
-                 "tipo_perturbacao": "novo_equipamento", "descricao": "Novo equip"},
-            ]},
+            inputs={
+                "intervencoes_propostas": [
+                    {
+                        "intervencao_id": "INT-01",
+                        "variavel": "EAP-001",
+                        "tipo_perturbacao": "novo_equipamento",
+                        "descricao": "Novo equip",
+                    },
+                ]
+            },
         )
         assert result is not None
         assessments = result.canonical.intervention_assessments
@@ -118,11 +129,16 @@ class TestEstimateRoiHeuristic:
 
         meta = Meta(gerado_em=datetime.now(UTC), contexto_id="ctx-b37-empty")
         proj = Projeto(
-            id="p2", nome="T2", tipo_obra="pavimentacao", localizacao="CE",
+            id="p2",
+            nome="T2",
+            tipo_obra="pavimentacao",
+            localizacao="CE",
             coordenadas=Coordenadas(lat=-3.7, lng=-38.5),
-            data_inicio=date(2026, 1, 1), data_termino=date(2026, 12, 31),
+            data_inicio=date(2026, 1, 1),
+            data_termino=date(2026, 12, 31),
             regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
-            snapshot_catalogo_id="s", snapshot_perfil_id="s",
+            snapshot_catalogo_id="s",
+            snapshot_perfil_id="s",
         )
         canonical = CanonicalModel(meta=meta, projeto=proj)
         result = run_avaliacao_intervencoes(canonical, inputs={"intervencoes_propostas": []})
@@ -146,20 +162,31 @@ class TestEstimateRoiHeuristic:
 
         meta = Meta(gerado_em=datetime.now(UTC), contexto_id="ctx-b37-perfil")
         proj = Projeto(
-            id="p3", nome="T3", tipo_obra="pavimentacao", localizacao="CE",
+            id="p3",
+            nome="T3",
+            tipo_obra="pavimentacao",
+            localizacao="CE",
             coordenadas=Coordenadas(lat=-3.7, lng=-38.5),
-            data_inicio=date(2026, 1, 1), data_termino=date(2026, 12, 31),
+            data_inicio=date(2026, 1, 1),
+            data_termino=date(2026, 12, 31),
             regime_trabalho=RegimeTrabalho(dias_semana=5, horas_dia=8),
-            snapshot_catalogo_id="s", snapshot_perfil_id="s",
+            snapshot_catalogo_id="s",
+            snapshot_perfil_id="s",
         )
         canonical = CanonicalModel(meta=meta, projeto=proj)
         perfil = {"effort_catalog": {"+10%": {"nivel": "LOW", "tipo": "aditivo"}}}
         result = run_avaliacao_intervencoes(
             canonical,
-            inputs={"intervencoes_propostas": [
-                {"intervencao_id": "INT-02", "variavel": "EAP-002",
-                 "tipo_perturbacao": "+10%", "descricao": "Aumento produção"},
-            ]},
+            inputs={
+                "intervencoes_propostas": [
+                    {
+                        "intervencao_id": "INT-02",
+                        "variavel": "EAP-002",
+                        "tipo_perturbacao": "+10%",
+                        "descricao": "Aumento produção",
+                    },
+                ]
+            },
             perfil=perfil,
         )
         assert result is not None
@@ -192,6 +219,14 @@ class TestEstimateRoiHeuristic:
         cc_dict = {"atividades": [{"atividade_id": "OTHER-001", "class": "A+"}]}
         roi_pp, _ = MOD_08._estimate_roi_heuristic("+20%", "+20%", cc_dict)
         # "+20%" not in "OTHER-001" → condition False → no amplification
+        assert roi_pp == 2.8
+
+    def test_atividades_non_list_is_normalized_to_empty(self):
+        """Line 81-82: quando 'atividades' não é uma lista (payload malformado), o
+        helper normaliza para [] em vez de iterar/quebrar sobre um valor inesperado."""
+        cc_dict = {"atividades": "nao-e-uma-lista"}
+        roi_pp, _ = MOD_08._estimate_roi_heuristic("+20%", "+20%", cc_dict)
+        # loop nunca executa (atividades virou []) → sem amplificação
         assert roi_pp == 2.8
 
 
@@ -259,22 +294,27 @@ class TestRcpspBackward:
 class TestClassify:
     def test_pc_class(self):
         from concilium.application.scheduling.compression_analysis import _classify
+
         assert _classify(0.0, 5.0, 0.5) == "PC"
 
     def test_bloqueada_class(self):
         from concilium.application.scheduling.compression_analysis import _classify
+
         assert _classify(1.0, 1.0, -0.05) == "Bloqueada"
 
     def test_rc_class(self):
         from concilium.application.scheduling.compression_analysis import _classify
+
         assert _classify(1.0, 0.0, 0.5) == "RC"
 
     def test_gw_class(self):
         from concilium.application.scheduling.compression_analysis import _classify
+
         assert _classify(1.0, 1.0, 0.5) == "GW"
 
     def test_livre_class(self):
         from concilium.application.scheduling.compression_analysis import _classify
+
         assert _classify(1.0, 1.0, 0.0) == "Livre"
 
 
@@ -287,10 +327,17 @@ class TestFormatCompressionTable:
         )
 
         r = CompressionResult(
-            activity_id="ACT-001", tipo_recurso_bottleneck="ESCAV", n_base=1,
-            duration_base=4, start_base=0, makespan_base=10,
-            float_rcpsp=2.0, float_cpm=3.0, resource_delay=0.0,
-            criticality_class="Livre", by_k={},
+            activity_id="ACT-001",
+            tipo_recurso_bottleneck="ESCAV",
+            n_base=1,
+            duration_base=4,
+            start_base=0,
+            makespan_base=10,
+            float_rcpsp=2.0,
+            float_cpm=3.0,
+            resource_delay=0.0,
+            criticality_class="Livre",
+            by_k={},
         )
         table = format_compression_table([r])
         assert "ACT-001" in table
@@ -304,13 +351,29 @@ class TestFormatCompressionTable:
             format_compression_table,
         )
 
-        kr = KScaleResult(k=2, duration_new=2, makespan_new=8, delta_makespan=2,
-                          delta_duration=2, gamma=0.8, cost_extra=1000.0, poupanca=5000.0, roi=5.0)
+        kr = KScaleResult(
+            k=2,
+            duration_new=2,
+            makespan_new=8,
+            delta_makespan=2,
+            delta_duration=2,
+            gamma=0.8,
+            cost_extra=1000.0,
+            poupanca=5000.0,
+            roi=5.0,
+        )
         r = CompressionResult(
-            activity_id="ACT-002", tipo_recurso_bottleneck="COMP", n_base=1,
-            duration_base=4, start_base=0, makespan_base=10,
-            float_rcpsp=0.5, float_cpm=1.0, resource_delay=0.0,
-            criticality_class="RC", by_k={2: kr},
+            activity_id="ACT-002",
+            tipo_recurso_bottleneck="COMP",
+            n_base=1,
+            duration_base=4,
+            start_base=0,
+            makespan_base=10,
+            float_rcpsp=0.5,
+            float_cpm=1.0,
+            resource_delay=0.0,
+            criticality_class="RC",
+            by_k={2: kr},
         )
         table = format_compression_table([r])
         assert "ACT-002" in table
@@ -322,12 +385,29 @@ class TestCompressionAnalysisHelpers:
         """Line 78: max_gamma reads max gamma from by_k values."""
         from concilium.application.scheduling.compression_analysis import CompressionResult, KScaleResult
 
-        kr = KScaleResult(k=2, duration_new=2, makespan_new=8, delta_makespan=2,
-                          delta_duration=2, gamma=1.5, cost_extra=500.0, poupanca=3000.0, roi=6.0)
+        kr = KScaleResult(
+            k=2,
+            duration_new=2,
+            makespan_new=8,
+            delta_makespan=2,
+            delta_duration=2,
+            gamma=1.5,
+            cost_extra=500.0,
+            poupanca=3000.0,
+            roi=6.0,
+        )
         r = CompressionResult(
-            activity_id="X", tipo_recurso_bottleneck="R", n_base=1, duration_base=4,
-            start_base=0, makespan_base=10, float_rcpsp=0.0, float_cpm=0.0,
-            resource_delay=0.0, criticality_class="RC", by_k={2: kr},
+            activity_id="X",
+            tipo_recurso_bottleneck="R",
+            n_base=1,
+            duration_base=4,
+            start_base=0,
+            makespan_base=10,
+            float_rcpsp=0.0,
+            float_cpm=0.0,
+            resource_delay=0.0,
+            criticality_class="RC",
+            by_k={2: kr},
         )
         assert r.max_gamma == 1.5
 
@@ -363,7 +443,9 @@ class TestCompressionAnalysisHelpers:
                 ScheduledActivity("A", 0, 2, 2),
                 ScheduledActivity("B", 2, 4, 2),
             ],
-            makespan=4, feasible=True, metrics=_make_schedule_metrics(4),
+            makespan=4,
+            feasible=True,
+            metrics=_make_schedule_metrics(4),
         )
         result = _rcpsp_backward(sched, dag)
         # A has successor B → line 144 hit for A's ls computation
@@ -385,13 +467,21 @@ class TestCompressionAnalysisHelpers:
         dag = ActivityDAG(activities=acts, precedence=[])
         sched = ScheduleOutput(
             scheduled_activities=[ScheduledActivity("A", 0, 4, 4, {"ESCAV": 1})],
-            makespan=4, feasible=True, metrics=_make_schedule_metrics(4),
+            makespan=4,
+            feasible=True,
+            metrics=_make_schedule_metrics(4),
         )
         pool = ResourcePool(resources={"ESCAV": 2})
         # Non-zero contract costs → cost_extra > 0 → line 293
         contratos = {"ESCAV": {"custo_mob_unit": 5000.0, "custo_demob_unit": 2000.0, "custo_idle_semanal_unit": 500.0}}
         results = compute_compression_sensitivities(
-            sched, dag, pool, contratos=contratos, custo_semana=50_000.0, k_values=(2,), scheduler_timeout=30.0,
+            sched,
+            dag,
+            pool,
+            contratos=contratos,
+            custo_semana=50_000.0,
+            k_values=(2,),
+            scheduler_timeout=30.0,
         )
         a_results = [r for r in results if r.activity_id == "A"]
         if a_results and a_results[0].by_k:
@@ -422,12 +512,19 @@ class TestComputeCompressionSensitivitiesGuards:
                 ScheduledActivity("A", 0, 2, 2, {"ESCAV": 1}),
                 ScheduledActivity("B", 2, 4, 2),
             ],
-            makespan=4, feasible=True, metrics=_make_schedule_metrics(4),
+            makespan=4,
+            feasible=True,
+            metrics=_make_schedule_metrics(4),
         )
         pool = ResourcePool(resources={"ESCAV": 1})
         results = compute_compression_sensitivities(
-            sched_output=sched, dag=dag, pool=pool, contratos={},
-            custo_semana=10_000.0, k_values=(2,), scheduler_timeout=10.0,
+            sched_output=sched,
+            dag=dag,
+            pool=pool,
+            contratos={},
+            custo_semana=10_000.0,
+            k_values=(2,),
+            scheduler_timeout=10.0,
         )
         assert all(r.activity_id != "B" for r in results)
         assert any(r.activity_id == "A" for r in results)
@@ -447,11 +544,19 @@ class TestComputeCompressionSensitivitiesGuards:
         dag = ActivityDAG(activities=acts, precedence=[])
         sched = ScheduleOutput(
             scheduled_activities=[ScheduledActivity("X", 0, 1, 1, {"T": 1})],
-            makespan=1, feasible=True, metrics=_make_schedule_metrics(1),
+            makespan=1,
+            feasible=True,
+            metrics=_make_schedule_metrics(1),
         )
         pool = ResourcePool(resources={"T": 1})
         results = compute_compression_sensitivities(
-            sched, dag, pool, contratos={}, custo_semana=5000.0, k_values=(2,), scheduler_timeout=5.0,
+            sched,
+            dag,
+            pool,
+            contratos={},
+            custo_semana=5000.0,
+            k_values=(2,),
+            scheduler_timeout=5.0,
         )
         x_results = [r for r in results if r.activity_id == "X"]
         assert len(x_results) == 1
@@ -475,12 +580,20 @@ class TestComputeCompressionSensitivitiesGuards:
         dag = ActivityDAG(activities=acts, precedence=[])
         sched = ScheduleOutput(
             scheduled_activities=[ScheduledActivity("A", 0, 2, 2, {"ESCAV": 1})],
-            makespan=2, feasible=True, metrics=_make_schedule_metrics(2),
+            makespan=2,
+            feasible=True,
+            metrics=_make_schedule_metrics(2),
         )
         pool = ResourcePool(resources={"ESCAV": 2})  # enough capacity for k=2
         # contratos={} → cost_extra=0 (no hire cost) → line 295: roi = inf
         results = compute_compression_sensitivities(
-            sched, dag, pool, contratos={}, custo_semana=50_000.0, k_values=(2,), scheduler_timeout=30.0,
+            sched,
+            dag,
+            pool,
+            contratos={},
+            custo_semana=50_000.0,
+            k_values=(2,),
+            scheduler_timeout=30.0,
         )
         a_results = [r for r in results if r.activity_id == "A"]
         if a_results and a_results[0].by_k:
@@ -494,12 +607,21 @@ class TestComputeCompressionSensitivitiesGuards:
 # ===========================================================================
 
 
-def _make_ramp_profile(activity_id: str, resources: dict[str, int],
-                       supply: dict[str, int] | None = None, demand: dict[str, int] | None = None):
+def _make_ramp_profile(
+    activity_id: str,
+    resources: dict[str, int],
+    supply: dict[str, int] | None = None,
+    demand: dict[str, int] | None = None,
+):
     from concilium.domain.models.analytics.optimization import RampProfile
+
     return RampProfile(
         activity_id=activity_id,
-        K_max=1, r=0, d=0, n_i=2, n_0=1,
+        K_max=1,
+        r=0,
+        d=0,
+        n_i=2,
+        n_0=1,
         resources_per_team=resources,
         m=(1, 1),
         boundary_supply=supply or {},

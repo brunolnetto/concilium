@@ -154,6 +154,34 @@ class TestSetupLoggingConsole:
         # se chegou aqui sem exceção, o caminho foi percorrido
 
 
+class TestSetupLoggingHandlerFallbackImport:
+    def test_fallback_to_sdk_internal_when_instrumentation_package_missing(self):
+        """Linhas 82-84: se opentelemetry.instrumentation.logging.handler não
+        está instalado, cai no fallback opentelemetry.sdk._logs._internal."""
+        import builtins
+
+        import concilium.infrastructure.telemetry as tel
+
+        real_import = builtins.__import__
+
+        def _fake_import(name, *args, **kwargs):
+            if name == "opentelemetry.instrumentation.logging.handler":
+                raise ImportError("no instrumentation package")
+            return real_import(name, *args, **kwargs)
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk._logs.LoggerProvider"),
+            patch("opentelemetry._logs.set_logger_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+            patch.object(builtins, "__import__", side_effect=_fake_import),
+        ):
+            tel._setup_logging()
+
+
 class TestSetupLoggingOtlpEndpoint:
     def test_otlp_exporter_added_when_endpoint_set(self):
         import concilium.infrastructure.telemetry as tel
@@ -175,6 +203,26 @@ class TestSetupLoggingOtlpEndpoint:
                 tel._setup_logging()
             except Exception:
                 pass  # pode falhar por deps não totalmente mockadas; o objetivo é exercitar o branch
+
+
+class TestSetupLoggingNeitherOtlpNorConsole:
+    def test_no_exporter_added_when_disabled(self):
+        """Branch 98->103: sem otlp_endpoint e sem console → nenhum processor
+        é adicionado, mas o handler ainda é registrado."""
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider = MagicMock()
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk._logs.LoggerProvider", return_value=mock_provider),
+            patch("opentelemetry._logs.set_logger_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_logging()
+        mock_provider.add_log_record_processor.assert_not_called()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -202,6 +250,26 @@ class TestSetupTracingConsole:
             tel._setup_tracing()
 
         mock_provider.add_span_processor.assert_called_once()
+
+
+class TestSetupTracingNeitherOtlpNorConsole:
+    def test_no_processor_added_when_disabled(self):
+        """Branch 127->132: sem otlp_endpoint e sem console → nenhum span
+        processor é adicionado."""
+        import concilium.infrastructure.telemetry as tel
+
+        mock_provider = MagicMock()
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk.trace.TracerProvider", return_value=mock_provider),
+            patch("opentelemetry.trace.set_tracer_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_tracing()
+        mock_provider.add_span_processor.assert_not_called()
 
 
 class TestSetupTracingOtlpEndpoint:
@@ -269,6 +337,26 @@ class TestSetupMetricsOtlpEndpoint:
             patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
         ):
             tel._setup_metrics()
+
+
+class TestSetupMetricsNeitherOtlpNorConsole:
+    def test_no_reader_added_when_disabled(self):
+        """Branch 158->163: sem otlp_endpoint e sem console → readers fica
+        vazio, mas o MeterProvider ainda é criado e registrado."""
+        import concilium.infrastructure.telemetry as tel
+
+        with (
+            patch(
+                "concilium.infrastructure.telemetry.get_telemetry",
+                return_value=_telemetry_settings(console=False, endpoint=None),
+            ),
+            patch("opentelemetry.sdk.metrics.MeterProvider") as mock_provider_cls,
+            patch("opentelemetry.metrics.set_meter_provider"),
+            patch("concilium.infrastructure.telemetry._otel_console", return_value=False),
+        ):
+            tel._setup_metrics()
+        _, kwargs = mock_provider_cls.call_args
+        assert kwargs["metric_readers"] == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────

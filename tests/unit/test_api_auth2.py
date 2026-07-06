@@ -121,3 +121,116 @@ class TestRefreshToken:
             resp = c.post("/auth/token/refresh", json={"refresh_token": "RT-valid"})
         assert resp.status_code == 200
         assert resp.json()["access_token"] == "new-jwt"
+
+
+class TestIssueUserToken:
+    def test_invalid_credentials_returns_401(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        store_mock.get_client_roles.return_value = None
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/token/issue", json={"client_id": "bad", "client_secret": "bad"})
+        assert resp.status_code == 401
+
+    def test_valid_credentials_returns_long_lived_token(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        store_mock.get_client_roles.return_value = ["operator"]
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
+            patch("concilium.infrastructure.auth.token_service.issue_token", return_value="jwt-user-30d"),
+        ):
+            resp = c.post(
+                "/auth/token/issue",
+                json={"client_id": "bruno", "client_secret": "secret", "ttl_days": 30, "label": "claude-desktop"},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["access_token"] == "jwt-user-30d"
+
+
+class TestRevokePending:
+    def test_token_not_found_returns_404(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        store_mock.get_revoke_pending.return_value = None
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/revoke-pending/bad-token")
+        assert resp.status_code == 404
+
+    def test_client_with_email_sends_confirmation(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        record = MagicMock(client_id="svc", device_id="dev-1")
+        store_mock.get_revoke_pending.return_value = record
+        store_mock.list_clients.return_value = [MagicMock(client_id="svc", email="user@example.com")]
+        notif_mock = MagicMock()
+        with (
+            patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock),
+            patch(
+                "concilium.infrastructure.services.notification_service.get_notification_service",
+                return_value=notif_mock,
+            ),
+        ):
+            resp = c.post("/auth/revoke-pending/good-token")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "confirmation_sent"
+        notif_mock.notify_revoke_pending.assert_called_once()
+
+    def test_client_without_email_skips_notification(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        record = MagicMock(client_id="svc", device_id="dev-1")
+        store_mock.get_revoke_pending.return_value = record
+        store_mock.list_clients.return_value = []
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/revoke-pending/good-token")
+        assert resp.status_code == 200
+        assert "Nenhum email de confirmação" in resp.json()["message"]
+
+
+class TestRevokeConfirm:
+    def test_token_not_found_returns_404(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        store_mock.get_revoke_pending.return_value = None
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/revoke-confirm/bad-token")
+        assert resp.status_code == 404
+
+    def test_confirm_fails_returns_404(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        record = MagicMock(device_id="dev-1")
+        store_mock.get_revoke_pending.return_value = record
+        store_mock.confirm_revoke.return_value = False
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/revoke-confirm/expired-token")
+        assert resp.status_code == 404
+
+    def test_confirm_succeeds_returns_revoked(self):
+        from unittest.mock import MagicMock, patch
+
+        c = _client()
+        store_mock = MagicMock()
+        record = MagicMock(device_id="dev-1")
+        store_mock.get_revoke_pending.return_value = record
+        store_mock.confirm_revoke.return_value = True
+        with patch("concilium.infrastructure.auth.auth_store.get_auth_store", return_value=store_mock):
+            resp = c.post("/auth/revoke-confirm/good-token")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "revoked"
+        assert resp.json()["device_id"] == "dev-1"

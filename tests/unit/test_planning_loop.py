@@ -85,3 +85,12 @@ def test_planning_loop_detects_pool_violation():
 
     assert not feasible
     assert any(v.code == "VAL-POOL-01" or v.code == "VAL-POOL-01" for v in violations)
+
+    # Line 85 false branch: explicit (non-None) extra_inputs must be honored as-is,
+    # skipping the `extra_inputs = {}` default-init.
+    can2, feasible2, violations2 = adjust_schedule(
+        canonical, dv, catalogo, perfil={"categorias_indireto": []}, extra_inputs={}
+    )
+    assert can2 is not None
+    assert feasible2 == feasible
+    assert len(violations2) == len(violations)

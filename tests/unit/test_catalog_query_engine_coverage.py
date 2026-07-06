@@ -193,6 +193,46 @@ class TestCatalogQueryEngineNoDuckDB:
                 result = engine.is_ready()
             assert result is False
 
+    def test_build_insumos_skips_non_dict_entry_and_continues_loop(self, tmp_path):
+        """Layout A (insumos/<tipo>/*.json): um arquivo cujo JSON não é dict é
+        pulado, mas o loop continua e processa o próximo arquivo normalmente."""
+        duckdb = pytest.importorskip("duckdb")
+        from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine
+
+        tipo_dir = tmp_path / "insumos" / "mao_obra"
+        tipo_dir.mkdir(parents=True)
+        (tipo_dir / "a_lista.json").write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+        (tipo_dir / "b_dict.json").write_text(json.dumps({"id": "INS-1", "descricao": "Servente"}), encoding="utf-8")
+        engine = CatalogQueryEngine(tmp_path)
+        conn = duckdb.connect(":memory:")
+        try:
+            engine._build_insumos(conn)
+            rows = conn.execute("SELECT id FROM insumos").fetchall()
+        finally:
+            conn.close()
+        assert rows == [("INS-1",)]
+
+    def test_build_produtividades_skips_non_dict_entry_and_continues_loop(self, tmp_path):
+        """produtividades/*.json: um arquivo cujo JSON não é dict é pulado, mas
+        o loop continua e processa o próximo arquivo normalmente."""
+        duckdb = pytest.importorskip("duckdb")
+        from concilium.infrastructure.catalog.query_engine import CatalogQueryEngine
+
+        prod_dir = tmp_path / "produtividades"
+        prod_dir.mkdir()
+        (prod_dir / "a_lista.json").write_text(json.dumps(["nao", "e", "dict"]), encoding="utf-8")
+        (prod_dir / "b_dict.json").write_text(
+            json.dumps({"cpu_id": "CPU-1", "producao_horaria": 5.0}), encoding="utf-8"
+        )
+        engine = CatalogQueryEngine(tmp_path)
+        conn = duckdb.connect(":memory:")
+        try:
+            engine._build_produtividades(conn)
+            rows = conn.execute("SELECT * FROM produtividades").fetchall()
+        finally:
+            conn.close()
+        assert len(rows) == 1
+
 
 # ---------------------------------------------------------------------------
 # CatalogSession — sem DuckDB
@@ -324,6 +364,124 @@ class TestCatalogSessionWithDuckDB:
         assert equipe["funcoes"] == []
         assert equipe["equipamentos"] == []
 
+    def test_load_with_empty_composicao_and_empty_equipe(self):
+        """Covers the false branches of `if comp_rows:` / `if rows:` in _load:
+        a CPU with no composicao_itens and a produtividade with no
+        funcoes/equipamentos/materiais leave those staging lists empty."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [{"codigo": "CPU-EMPTY", "descricao": "d", "categoria": "c", "unidade": "u"}],
+            "insumos": [],
+            "produtividades": [{"id": "PROD-EMPTY", "cpu_id": "CPU-EMPTY", "composicao_padrao_equipe": {}}],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            composicao = session.get_composicao_com_precos("CPU-EMPTY")
+            equipe = session.get_equipe_com_precos("PROD-EMPTY")
+        assert composicao == []
+        assert equipe["funcoes"] == []
+        assert equipe["equipamentos"] == []
+        assert equipe["materiais"] == []
+
+    def test_get_composicao_com_precos_multi_row_with_missing_insumo(self):
+        """Covers the loop back-edge and the `if rec["raw_json"]` false branch:
+        one item resolves via LEFT JOIN, the other references a nonexistent
+        insumo_id so raw_json comes back NULL."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [
+                {
+                    "codigo": "CPU-MULTI",
+                    "descricao": "d",
+                    "categoria": "c",
+                    "unidade": "u",
+                    "composicao_itens": [
+                        {"insumo_id": "EQ-1", "coeficiente": 1.0, "categoria_custo": "equipamento", "unidade": "h"},
+                        {
+                            "insumo_id": "INSUMO-INEXISTENTE",
+                            "coeficiente": 2.0,
+                            "categoria_custo": "material",
+                            "unidade": "kg",
+                        },
+                    ],
+                }
+            ],
+            "insumos": {"equipamento": [{"id": "EQ-1", "descricao": "Escavadeira", "preco_unitario": 100.0}]},
+            "produtividades": [],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            items = session.get_composicao_com_precos("CPU-MULTI")
+        assert len(items) == 2
+        by_id = {i["insumo_id"]: i for i in items}
+        assert by_id["EQ-1"]["preco_unitario"] == 100.0
+        assert by_id["INSUMO-INEXISTENTE"]["preco_unitario"] is None
+
+    def test_get_equipe_com_precos_multi_row_with_missing_insumo(self):
+        """Covers the loop back-edge and falsy-raw_json branch in _parse()
+        for get_equipe_com_precos (funcoes with 2 entries, one unresolved)."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [],
+            "insumos": {"mao_obra": [{"id": "MO-1", "descricao": "Operador", "preco_unitario": 50.0}]},
+            "produtividades": [
+                {
+                    "id": "PROD-MULTI",
+                    "cpu_id": "CPU-X",
+                    "composicao_padrao_equipe": {
+                        "funcoes": [
+                            {"funcao_id": "MO-1", "num_pessoas": 1, "papel": "direto"},
+                            {"funcao_id": "MO-INEXISTENTE", "num_pessoas": 2, "papel": "indireto"},
+                        ],
+                    },
+                }
+            ],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            equipe = session.get_equipe_com_precos("PROD-MULTI")
+        assert len(equipe["funcoes"]) == 2
+        by_id = {f["funcao_id"]: f for f in equipe["funcoes"]}
+        assert by_id["MO-1"]["preco_unitario"] == 50.0
+        assert by_id["MO-INEXISTENTE"]["preco_unitario"] is None
+
+    def test_load_insumos_flat_list_multiple_entries(self):
+        """Covers the loop back-edge on the `elif isinstance(raw_insumos, list)` path."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [],
+            "insumos": [
+                {"id": "INS-1", "tipo": "mao_obra", "preco_unitario": 50.0},
+                {"id": "INS-2", "tipo": "equipamento", "preco_unitario": 200.0},
+            ],
+            "produtividades": [],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            stats = session.get_price_stats()
+        assert len(stats) == 2
+
+    def test_load_insumos_dict_multiple_entries_per_tipo(self):
+        """Covers the inner-loop back-edge for dict-shaped insumos when a single
+        tipo has 2+ items (`for i in items or []` at line 526)."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [],
+            "insumos": {
+                "mao_obra": [
+                    {"id": "MO-1", "descricao": "Op1", "preco_unitario": 50.0},
+                    {"id": "MO-2", "descricao": "Op2", "preco_unitario": 60.0},
+                ]
+            },
+            "produtividades": [],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            stats = session.get_price_stats(tipo="mao_obra")
+        assert len(stats) == 1
+        assert stats[0]["maximo"] == 60.0
+        assert stats[0]["minimo"] == 50.0
+
     def test_get_price_stats_all(self, minimal_catalogo):
         from concilium.infrastructure.catalog.query_engine import CatalogSession
 
@@ -357,6 +515,64 @@ class TestCatalogSessionWithDuckDB:
         # Após __exit__, close() foi chamado — nova query levanta exceção
         with pytest.raises(Exception):  # noqa: B017
             session.query("SELECT 1")
+
+    def test_get_equipe_com_precos_with_materiais(self):
+        """Covers materiais loop body (linha 605) — nunca exercido pelas fixtures existentes."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [],
+            "insumos": {"material": [{"id": "MAT-1", "descricao": "Cimento", "preco_unitario": 30.0}]},
+            "produtividades": [
+                {
+                    "id": "PROD-MAT",
+                    "cpu_id": "CPU-X",
+                    "composicao_padrao_equipe": {
+                        "materiais": [{"insumo_id": "MAT-1", "consumo_por_hora": 2.0, "unidade": "kg"}],
+                    },
+                }
+            ],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            equipe = session.get_equipe_com_precos("PROD-MAT")
+        assert len(equipe["materiais"]) == 1
+        assert equipe["materiais"][0]["insumo_id"] == "MAT-1"
+        assert equipe["materiais"][0]["preco_unitario"] == 30.0
+
+    def test_insumos_dict_with_non_dict_item_skipped(self):
+        """Covers `if isinstance(i, dict)` false branch inside dict-shaped insumos loop (527->526)."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [],
+            "insumos": {"mao_obra": ["not-a-dict", {"id": "MO-1", "preco_unitario": 50.0}]},
+            "produtividades": [],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            stats = session.get_price_stats(tipo="mao_obra")
+        assert len(stats) == 1
+
+    def test_insumos_neither_dict_nor_list_skipped(self):
+        """Covers `raw_insumos` sendo nem dict nem list — pula ambos os ramos (529->534)."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {"cpus": [], "insumos": None, "produtividades": []}
+        with CatalogSession.from_resolved(catalogo) as session:
+            stats = session.get_price_stats()
+        assert stats == []
+
+    def test_insumos_list_with_non_dict_item_skipped(self):
+        """Covers `if isinstance(i, dict)` false branch inside list-shaped insumos loop (531->530)."""
+        from concilium.infrastructure.catalog.query_engine import CatalogSession
+
+        catalogo = {
+            "cpus": [],
+            "insumos": ["not-a-dict", {"id": "INS-1", "tipo": "mao_obra", "preco_unitario": 50.0}],
+            "produtividades": [],
+        }
+        with CatalogSession.from_resolved(catalogo) as session:
+            stats = session.get_price_stats(tipo="mao_obra")
+        assert len(stats) == 1
 
     def test_insumos_as_flat_list(self):
         """Catálogo com insumos como lista plana (não dict por tipo)."""

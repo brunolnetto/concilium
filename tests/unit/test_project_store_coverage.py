@@ -265,6 +265,53 @@ class TestResolveCpu:
         result = store.resolve_cpu("CPU-OK")
         assert result is not None
 
+    def test_catalogo_base_set_but_no_individual_no_aggregate_falls_to_snapshot(self, tmp_path, monkeypatch):
+        """aggregate.exists() is False (no cpus.json at all) → falls straight through
+        to the snapshot lookup instead of raising."""
+        store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="empty-cat")
+        fake_root = tmp_path / "fake_concilium_root"
+        catalogo_dir = fake_root / "config" / "catalogos" / "empty-cat"
+        catalogo_dir.mkdir(parents=True)  # no cpus/ subdir, no cpus.json
+        monkeypatch.setattr(store, "_concilium_root", lambda: fake_root)
+
+        snaps_dir = store.root / "snapshots"
+        snaps_dir.mkdir(exist_ok=True)
+        (snaps_dir / "catalogo-v1.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-SNAPFALLBACK", "descricao": "Snap"}]}), encoding="utf-8"
+        )
+        result = store.resolve_cpu("CPU-SNAPFALLBACK")
+        assert result is not None
+        assert result["descricao"] == "Snap"
+
+    def test_aggregate_list_no_match_falls_to_snapshot(self, tmp_path, monkeypatch):
+        """Aggregate cpus.json exists as a list but no entry matches cpu_id → the loop
+        completes without returning, falling through to the snapshot lookup."""
+        store = ProjectStore.init(tmp_path, "Test", "ctx", catalogo_base="test-cat")
+        fake_root = tmp_path / "fake_concilium_root"
+        catalogo_dir = fake_root / "config" / "catalogos" / "test-cat"
+        catalogo_dir.mkdir(parents=True)
+        (catalogo_dir / "cpus.json").write_text(
+            json.dumps(
+                {
+                    "cpus": [
+                        {"codigo": "CPU-OTHER-1", "descricao": "Other 1"},
+                        {"codigo": "CPU-OTHER-2", "descricao": "Other 2"},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(store, "_concilium_root", lambda: fake_root)
+
+        snaps_dir = store.root / "snapshots"
+        snaps_dir.mkdir(exist_ok=True)
+        (snaps_dir / "catalogo-v1.json").write_text(
+            json.dumps({"cpus": [{"codigo": "CPU-NOTFOUND", "descricao": "Found in snap"}]}), encoding="utf-8"
+        )
+        result = store.resolve_cpu("CPU-NOTFOUND")
+        assert result is not None
+        assert result["descricao"] == "Found in snap"
+
 
 # ── list_versions ─────────────────────────────────────────────────────────────
 
@@ -362,6 +409,33 @@ class TestListOutputFiles:
         (reports / "a.xlsx").write_bytes(b"")
         result = store.list_output_files()
         assert result == ["a.xlsx", "b.xlsx"]
+
+    def test_ignores_loose_files_directly_in_outputs_dir(self, tmp_path):
+        """A file placed directly under outputs/ (not inside a subdir) is skipped —
+        only files inside subdirectories are collected."""
+        store = _make_store(tmp_path)
+        store.new_version()
+        v = store.current_version()
+        outputs = store.root / v / "outputs"
+        outputs.mkdir(parents=True, exist_ok=True)
+        (outputs / "loose.txt").write_bytes(b"")  # not inside a subdir → ignored
+        reports = outputs / "reports"
+        reports.mkdir()
+        (reports / "a.xlsx").write_bytes(b"")
+        result = store.list_output_files()
+        assert result == ["a.xlsx"]
+
+    def test_ignores_nested_subdirectories(self, tmp_path):
+        """A nested directory inside a subdir (not a file) is skipped."""
+        store = _make_store(tmp_path)
+        store.new_version()
+        v = store.current_version()
+        reports = store.root / v / "outputs" / "reports"
+        reports.mkdir(parents=True)
+        (reports / "nested_dir").mkdir()  # not a file → ignored
+        (reports / "a.xlsx").write_bytes(b"")
+        result = store.list_output_files()
+        assert result == ["a.xlsx"]
 
 
 # ── load_output_file ─────────────────────────────────────────────────────────

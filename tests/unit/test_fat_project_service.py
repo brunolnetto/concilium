@@ -1060,6 +1060,18 @@ class TestCpSavePerfilContext:
         assert "perfil_id" in written
         assert "contexto_version" not in written
 
+    def test_perfil_id_falsy_skips_that_field_only(self):
+        """contexto_version and perfil_version set, but perfil_id is None —
+        covers the false branch of `if perfil_id:` while still writing."""
+        project = MagicMock()
+        project.meta = {"id": "p1"}
+        _cp_save_perfil_context(project, "ctx-v2", None, "perf-v2")
+        project.write_json.assert_called_once()
+        written = project.write_json.call_args[0][1]
+        assert written["contexto_version"] == "ctx-v2"
+        assert "perfil_id" not in written
+        assert written["perfil_version"] == "perf-v2"
+
 
 class TestResolveCatalogoBase:
     def test_returns_catalogo_id_from_last_version(self):
@@ -1183,6 +1195,23 @@ class TestEnrichPayloadBdi:
     def test_exception_does_not_propagate(self):
         _enrich_payload_bdi(None)  # should not raise
 
+    def test_tabela_bdi_present_but_flat_empty_leaves_payload_unchanged(self):
+        """tabela_bdi is a non-empty dict, but every categoria is missing the
+        'ac' key so _compute_bdi_for_categoria returns None for all of them —
+        _compute_flat_bdi() ends up {} (falsy), so `if flat:` is skipped and
+        bdi_aplicado is never set."""
+        payload = {
+            "skill_inputs": {
+                "06-resultado-financeiro": {
+                    "tabela_bdi": {
+                        "mao_obra": {"df": 0.02},  # no "ac" key
+                    }
+                }
+            }
+        }
+        _enrich_payload_bdi(payload)
+        assert "bdi_aplicado" not in payload["skill_inputs"]["06-resultado-financeiro"]
+
 
 class TestBuildCatalogFromSnapshot:
     def test_builds_catalog_with_cpus_and_prods(self):
@@ -1230,6 +1259,15 @@ class TestTryEnrichCpuWithProd:
         cpu = {"id": "C1", "producao_id_ref": "P1"}
         equipe = {"funcoes": ["operador"], "equipamentos": []}
         prod_lkp = {"P1": {"composicao_padrao_equipe": equipe}}
+        result = _try_enrich_cpu_with_prod(cpu, prod_lkp)
+        assert result.get("equipe") == equipe
+
+    def test_enriches_equipe_directly_from_prod_equipe_dict(self):
+        """When prod['equipe'] is already a dict, it's used as-is without
+        falling back to composicao_padrao_equipe (isinstance-dict true branch)."""
+        cpu = {"id": "C1", "producao_id_ref": "P1"}
+        equipe = {"funcoes": ["motorista"]}
+        prod_lkp = {"P1": {"equipe": equipe}}
         result = _try_enrich_cpu_with_prod(cpu, prod_lkp)
         assert result.get("equipe") == equipe
 
@@ -1356,6 +1394,27 @@ class TestEnrichPayloadCatalog:
         project.root = "/nonexistent_xyz_12345_abc"
         _enrich_payload_catalog({}, project)  # should not raise
 
+    def test_catalog_file_present_but_empty_catalog_leaves_payload_unchanged(self, tmp_path):
+        """cat_files is truthy but the snapshot has no cpus/insumos/produtividades,
+        so _build_catalog_from_snapshot returns {} (falsy) — the `if catalog:`
+        branch is skipped and neither payload nor project.write_json is touched."""
+        from concilium.application.services.project._project_service_helpers import _enrich_payload_catalog
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        import json
+
+        (snaps_dir / "catalogo-20260101.json").write_text(json.dumps({}))
+
+        project = MagicMock()
+        project.root = tmp_path
+        payload: dict = {}
+
+        _enrich_payload_catalog(payload, project)
+
+        assert "catalog" not in payload
+        project.write_json.assert_not_called()
+
 
 class TestEnrichPayloadEncargos:
     """Covers _enrich_payload_encargos (lines 69-84)."""
@@ -1470,6 +1529,30 @@ class TestCpEmbedCatalogIfNeeded:
         # Should not raise, even with bad path
         _cp_embed_catalog_if_needed(project, {"no_catalog": True}, files)
         project.write_json.assert_called_once()
+
+    def test_snapshot_file_present_but_empty_catalog_still_saves_ref_unchanged(self, tmp_path):
+        """cat_files is truthy but the snapshot yields an empty catalog dict
+        (falsy), so `if catalog:` is skipped and ref_to_save keeps no catalog
+        key — the final write_json still fires with the untouched ref."""
+        import json
+
+        from concilium.application.services.project._project_service_helpers import _cp_embed_catalog_if_needed
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        (snaps_dir / "catalogo-20260101.json").write_text(json.dumps({}))
+
+        project = MagicMock()
+        project.root = tmp_path
+        files = MagicMock()
+        files.benchmark_reference = "benchmark_reference.json"
+        ref = {"other": "no-catalog-key"}
+
+        _cp_embed_catalog_if_needed(project, ref, files)
+
+        project.write_json.assert_called_once()
+        saved = project.write_json.call_args[0][1]
+        assert "catalog" not in saved
 
 
 class TestPsUpsertEap:

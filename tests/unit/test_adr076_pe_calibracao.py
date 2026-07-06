@@ -168,6 +168,42 @@ class TestBuildPeForEquipeNewFields:
         assert pe.pu_calibrado_unitario == pytest.approx(500.0, abs=0.01)
         assert pe.ajuste_minimo_pct == pytest.approx(0.0, abs=0.01)
 
+    def test_frentes_necessarias_fallback_quando_venda_sem_bdi_zero(self):
+        """Sem catálogo (pu_sem_bdi=0) e custo_total==custo_total_autonomo==0 → usa
+        fallback custo_operacional_real / custo_venda_total (branch elif linha 550).
+
+        custo_total=0 evita o auto-preenchimento de _custo_1fr_autonomo (linha 517-518),
+        garantindo custo_total_autonomo local == 0 no ponto do elif.
+        """
+        eq = _make_equipe(custo_total=0.0, custo_total_autonomo=0.0)
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=0.0)
+        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan})
+        assert pe is not None
+        assert pe.frentes_equivalentes_necessarias == pytest.approx(0.0, abs=0.001)
+
+    def test_pu_catalogo_zero_nao_calcula_ajuste_minimo_pct(self):
+        """pu_catalogo_unitario == 0 (venda_sem_bdi=0) → ajuste_minimo_pct permanece 0
+        (branch 559->565 false)."""
+        eq = _make_equipe(custo_total_autonomo=0.0)
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=0.0)
+        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan})
+        assert pe is not None
+        assert pe.pu_catalogo_unitario == pytest.approx(0.0, abs=0.001)
+        assert pe.ajuste_minimo_pct == pytest.approx(0.0, abs=0.001)
+
+    def test_gap_praticabilidade_abs_zero_quando_pu_mo_eq_zero(self):
+        """fator_clima_v em (0, 1) mas PU_mo=PU_eq=0 → gap_praticabilidade_abs
+        permanece 0 (branch 613 false, _pu_mo_eq <= 0)."""
+        eq = _make_equipe(custo_total=750_000, custo_total_autonomo=650_000)
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0, pu_mo=0.0, pu_eq=0.0, pu_diesel=50.0)
+        sched = _FakeSched(
+            "eap-01",
+            [_FakeDistSem(1, 1.0) for _ in range(9)] + [_FakeDistSem(1, 0.0)],
+        )
+        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan}, sched_por_item={"eap-01": sched})
+        assert pe is not None
+        assert pe.gap_praticabilidade_abs == pytest.approx(0.0, abs=0.01)
+
     def test_gap_praticabilidade_abs_zero_quando_custo_proporcional_a_N(self):
         """gap_praticabilidade_abs ≈ 0 quando custo_autonomo == fixo × perm_efetiva (puramente proporcional a N).
 
@@ -231,6 +267,62 @@ class TestBuildPeForEquipeNewFields:
         # gap = (PU_mo + PU_eq) × Q × (1/fv - 1) = (300+150) × 1000 × (1/0.9 - 1)
         expected_gap = (300.0 + 150.0) * 1000.0 * (1.0 / 0.9 - 1.0)
         assert pe.gap_praticabilidade_abs == pytest.approx(expected_gap, rel=0.01)
+
+    def test_eta_real_fallback_quando_effective_machine_weeks_zero(self):
+        """Lines 586-589 de _skill_helpers_a.py: fallback de eta_real quando emw exato é 0.
+
+        Quando fator_total é 0 para todas as semanas (fator_calendario=0, lesão de
+        calendário total) mas team_weeks > 0, o cálculo exato de
+        effective_machine_weeks resulta em 0, acionando o fallback via produto
+        das médias de fator_clima/fator_cal. fator_clima é mantido > 0 para não
+        disparar divisão por zero em gap_praticabilidade_abs (fator_clima_v).
+        """
+        eq = _make_equipe(
+            custo_fixo_mensal=100_000,
+            permanencia_meses=5.0,
+            permanencia_efetiva_meses=6.0,
+            custo_total=750_000,
+            custo_total_autonomo=650_000,
+        )
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0)
+        sched = _FakeSched(
+            "eap-01",
+            [
+                _FakeDistSem(1, 0.5, 0.0),
+                _FakeDistSem(1, 0.5, 0.0),
+            ],
+        )
+        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan}, sched_por_item={"eap-01": sched})
+        assert pe is not None
+        # gap_praticabilidade_abs deve ter sido calculado (fator_clima_v=0 < 0.9999)
+        assert pe.gap_praticabilidade_abs > 0
+
+    def test_fator_clima_v_zero_nao_gera_zero_division(self):
+        """Bug fix: perda climática TOTAL (fator_clima_v == 0.0) não deve crashar.
+
+        Antes da correção, `1.0 / fator_clima_v` com fator_clima_v == 0.0
+        levantava ZeroDivisionError. Nesse cenário extremo o gap de
+        praticabilidade não é quantificável pelo modelo linear — o valor
+        default (0.0) é mantido em vez de propagar a exceção.
+        """
+        eq = _make_equipe(
+            custo_fixo_mensal=100_000,
+            permanencia_meses=5.0,
+            permanencia_efetiva_meses=6.0,
+            custo_total=750_000,
+            custo_total_autonomo=650_000,
+        )
+        plan = _make_plan(qty=1000.0, pu_sem_bdi=500.0)
+        sched = _FakeSched(
+            "eap-01",
+            [
+                _FakeDistSem(1, 0.0, 1.0),
+                _FakeDistSem(1, 0.0, 1.0),
+            ],
+        )
+        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, {"eap-01": plan}, sched_por_item={"eap-01": sched})
+        assert pe is not None
+        assert pe.gap_praticabilidade_abs == 0.0
 
     def test_decomposicao_custo_total_identidade(self):
         """gap_praticabilidade usa apenas PU_mo+PU_eq (sem diesel) × Q × (1/η - 1).
@@ -571,6 +663,18 @@ class TestFase4LeverGapPool:
         pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, None, None, {"eap-01": particao})
         lv = self._lever_pool(pe)
         assert lv is not None
+
+    def test_lever_pool_sem_overhead_ocioso_nem_economia_mob(self):
+        """overhead_ocioso<=0 e economia_mob<=0 → nenhuma das duas restrições é adicionada
+        (branches 675->677 e 677->679 false)."""
+        particao = self._make_particao(overhead_ocioso=0.0, economia_mob=0.0)
+        eq = _make_equipe(custo_total=700_000, custo_total_autonomo=600_000)
+        pe = _build_pe_for_equipe(eq, {"eap-01": 575_000}, None, None, {"eap-01": particao})
+        lv = self._lever_pool(pe)
+        assert lv is not None
+        assert not any("Ociosidade" in r for r in lv.restricoes)
+        assert not any("Economia mob" in r for r in lv.restricoes)
+        assert any("Saldo pool" in r for r in lv.restricoes)
         assert not any("predecessor" in r.lower() for r in lv.restricoes), (
             f"Lever should not contain predecessor when None: {lv.restricoes}"
         )
@@ -606,3 +710,52 @@ class TestFase4LeverGapPool:
         assert lv is not None
         restricoes_text = " ".join(lv.restricoes)
         assert "a1" in restricoes_text, f"Critical predecessor 'a1' not in restricoes: {lv.restricoes}"
+
+
+class TestBuildPontoEquilibrioIdlePorItem:
+    """Cobre o loop de agregação idle_por_item em _build_ponto_equilibrio (NEP-042)."""
+
+    def _make_canonical(self, instancias_recurso):
+        return SimpleNamespace(
+            planejamento=[],
+            equipes_diretas=[],
+            cronograma=None,
+            contratos_recurso=[],
+            instancias_recurso=instancias_recurso,
+        )
+
+    def test_instancia_sem_idle_nao_contribui(self):
+        """idle == 0 → branch idle>0 não é tomada, idle_por_item permanece vazio."""
+        inst = SimpleNamespace(custo_idle_mo=0.0, custo_idle_eq=0.0, atividades_cobertas=["eap-01"])
+        canonical_in = self._make_canonical([inst])
+        validacoes: list = []
+        result = _mod._build_ponto_equilibrio(canonical_in, validacoes)
+        assert result == []
+
+    def test_instancia_com_idle_mas_sem_atividades_cobertas(self):
+        """idle > 0 mas atividades_cobertas vazia → loop interno não itera (963->960)."""
+        inst = SimpleNamespace(custo_idle_mo=500.0, custo_idle_eq=0.0, atividades_cobertas=[])
+        canonical_in = self._make_canonical([inst])
+        validacoes: list = []
+        result = _mod._build_ponto_equilibrio(canonical_in, validacoes)
+        assert result == []
+
+    def test_instancia_com_idle_e_atividades_cobertas_acumula(self):
+        """idle > 0 com atividades_cobertas → idle_por_item acumula por atividade (963->964)."""
+        inst1 = SimpleNamespace(custo_idle_mo=300.0, custo_idle_eq=200.0, atividades_cobertas=["eap-01", "eap-02"])
+        inst2 = SimpleNamespace(custo_idle_mo=100.0, custo_idle_eq=0.0, atividades_cobertas=["eap-01"])
+        equipe = _make_equipe(item_id="eap-01")
+        equipe.cpu_id = "CPU-01"
+        canonical_in = SimpleNamespace(
+            planejamento=[_make_plan(item_id="eap-01")],
+            equipes_diretas=[equipe],
+            cronograma=None,
+            contratos_recurso=[],
+            instancias_recurso=[inst1, inst2],
+        )
+        validacoes: list = []
+        result = _mod._build_ponto_equilibrio(canonical_in, validacoes)
+        # eap-01 recebe idle de ambas instâncias (500 + 100 = 600); apenas confirma
+        # que o cálculo roda sem erro e produz um PE para a equipe.
+        assert len(result) == 1
+        assert result[0].item_id == "eap-01"

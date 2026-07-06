@@ -647,6 +647,11 @@ class TestFindBenchmarkDir:
         result = _find_benchmark_dir("MYBENCH", config_root=config_root)
         assert result == bench_dir
 
+    def test_no_config_root_skips_config_candidate(self):
+        """Line 32 false branch: config_root=None -> only the fallback candidate is checked."""
+        result = _find_benchmark_dir("DEFINITELY-NOT-A-REAL-BENCHMARK-SLUG-XYZ", config_root=None)
+        assert result is None
+
 
 class TestCfCollectGraficos:
     def test_empty_bench_dir_collected_unchanged(self, tmp_path):
@@ -857,6 +862,36 @@ class TestEmpacotar:
             manifest = json.loads(zf.read("manifest.json"))
             assert manifest["slug"] == "MYBENCH"
 
+    def test_skips_collected_file_that_no_longer_exists(self, tmp_path):
+        """Line 200 false branch: a collected (path, arc) entry whose real_path
+        does not exist on disk is silently skipped when writing the zip."""
+        from unittest.mock import patch
+
+        config_root = tmp_path / "config"
+        config_root.mkdir()
+        bench_dir = tmp_path / "benchmarks" / "data" / "GHOSTFILE"
+        bench_dir.mkdir(parents=True)
+        existing = bench_dir / "referencia.json"
+        existing.write_text("{}")
+        missing = bench_dir / "vanished.json"  # never created on disk
+        output_zip = tmp_path / "out.zip"
+
+        with patch(
+            "concilium.application.benchmarks.charts.output_packager._collect_files",
+            return_value=[(existing, "relatorio/referencia.json"), (missing, "relatorio/vanished.json")],
+        ):
+            result = empacotar_outputs(
+                "GHOSTFILE",
+                config_root=config_root,
+                output_path=output_zip,
+                gerar_graficos=False,
+            )
+
+        with zipfile.ZipFile(result) as zf:
+            names = zf.namelist()
+        assert "relatorio/referencia.json" in names
+        assert "relatorio/vanished.json" not in names
+
     def test_incluir_cenarios_includes_cenario_files(self, tmp_path):
         config_root = tmp_path / "config"
         config_root.mkdir()
@@ -898,6 +933,18 @@ class TestTentarGerarGraficos:
 
         monkeypatch.setattr("builtins.__import__", _import_with_forced_error)
         _tentar_gerar_graficos(tmp_path, "SLUG")
+
+    def test_generic_exception_logs_warning_and_swallows(self, tmp_path):
+        """Lines 223-224: gerar_graficos_benchmark raising a non-ImportError Exception
+        is caught and logged as a warning — packaging proceeds without PNGs."""
+        from unittest.mock import patch
+
+        with patch(
+            "concilium.application.benchmarks.charts.chart_generator.gerar_graficos_benchmark",
+            side_effect=RuntimeError("matplotlib backend crashed"),
+        ):
+            # Must not raise — best-effort chart generation.
+            _tentar_gerar_graficos(tmp_path, "SLUG")
 
 
 # ===========================================================================

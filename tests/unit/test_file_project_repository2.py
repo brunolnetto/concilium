@@ -167,6 +167,18 @@ class TestFileProjectHandle:
         handle.delete_tree("to_delete")
         assert not subdir.exists()
 
+    def test_delete_tree_missing_path_is_noop(self, tmp_path):
+        """Covers the false branch of `if path.exists() and path.is_dir()`:
+        deleting a nonexistent path must not raise."""
+        handle = _make_handle(tmp_path)
+        handle.delete_tree("does_not_exist")  # no exception expected
+
+    def test_get_version_meta(self, tmp_path):
+        handle = _make_handle(tmp_path)
+        handle.new_version()
+        meta = handle.get_version_meta("v1")
+        assert isinstance(meta, dict)
+
     def test_set_overlay_and_audit(self, tmp_path):
         handle = _make_handle(tmp_path)
         handle.set_overlay("cpu", "CPU-1", {"descricao": "Test"}, actor="user", motivo="update")
@@ -368,6 +380,44 @@ class TestFileProjectHandleExtended:
         result = handle.resolve_cpu("CPU-S")
         assert result == {"codigo": "CPU-S"}
 
+    def test_resolve_cpu_finds_individual_catalog_file(self, tmp_path):
+        """Covers the true branch at line 223-224: the individual per-cpu
+        JSON file under config/catalogos/{base}/cpus/{id}.json is found and
+        returned directly, without falling through to aggregate/snapshot."""
+        import shutil
+
+        handle = self._make_handle(tmp_path)
+        catalogo_base = "cat-individual-test"
+        handle.update_meta(catalogo_base=catalogo_base)
+        concilium_root = handle._store.root.parents[1]
+        cat_dir = concilium_root / "config" / "catalogos" / catalogo_base
+        individual_dir = cat_dir / "cpus"
+        individual_dir.mkdir(parents=True, exist_ok=True)
+        (individual_dir / "CPU-IND.json").write_text(json.dumps({"codigo": "CPU-IND"}), encoding="utf-8")
+        try:
+            result = handle.resolve_cpu("CPU-IND")
+            assert result == {"codigo": "CPU-IND"}
+        finally:
+            shutil.rmtree(cat_dir, ignore_errors=True)
+
+    def test_resolve_cpu_finds_aggregate_catalog_file(self, tmp_path):
+        """Covers the true branch at line 229-230: no individual file exists,
+        but the aggregate config/catalogos/{base}/cpus.json contains the cpu."""
+        import shutil
+
+        handle = self._make_handle(tmp_path)
+        catalogo_base = "cat-aggregate-test"
+        handle.update_meta(catalogo_base=catalogo_base)
+        concilium_root = handle._store.root.parents[1]
+        cat_dir = concilium_root / "config" / "catalogos" / catalogo_base
+        cat_dir.mkdir(parents=True, exist_ok=True)
+        (cat_dir / "cpus.json").write_text(json.dumps({"cpus": [{"codigo": "CPU-AGG"}]}), encoding="utf-8")
+        try:
+            result = handle.resolve_cpu("CPU-AGG")
+            assert result == {"codigo": "CPU-AGG"}
+        finally:
+            shutil.rmtree(cat_dir, ignore_errors=True)
+
     def test_append_jsonl_and_read_lines(self, tmp_path):
         handle = self._make_handle(tmp_path)
         log_path = handle.root / "events.jsonl"
@@ -467,6 +517,30 @@ class TestRcHelpersEdgeCases:
         (snaps_dir / "catalogo-v2.json").write_text('{"cpus": [{"codigo": "CPU-G"}]}')
         result = _rc_try_snapshots(snaps_dir, "CPU-G", json)
         assert result == {"codigo": "CPU-G"}
+
+    def test_rc_try_snapshots_bad_json_actually_triggers_except_continue(self, tmp_path):
+        """Snapshots are scanned newest-first (glob sorted reverse). Name the
+        malformed file so it's tried *before* the valid one, forcing the
+        `except Exception: continue` branch to actually execute."""
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        (snaps_dir / "catalogo-v2.json").write_text("not json")  # tried first (reverse sort)
+        (snaps_dir / "catalogo-v1.json").write_text('{"cpus": [{"codigo": "CPU-G"}]}')
+        result = _rc_try_snapshots(snaps_dir, "CPU-G", json)
+        assert result == {"codigo": "CPU-G"}
+
+    def test_rc_try_snapshots_non_list_cpus_skipped(self, tmp_path):
+        """Covers the false branch of `isinstance(cpus, list)`: a snapshot
+        file whose "cpus" value is not a list must be skipped without error."""
+        from concilium.infrastructure.storage.file_project_repository import _rc_try_snapshots
+
+        snaps_dir = tmp_path / "snapshots"
+        snaps_dir.mkdir()
+        (snaps_dir / "catalogo-v1.json").write_text(json.dumps({"cpus": {"not": "a list"}}))
+        result = _rc_try_snapshots(snaps_dir, "CPU-ANY", json)
+        assert result is None
 
     def test_rc_try_aggregate_data_is_list_not_dict(self, tmp_path):
         """When cpus.json contains a list instead of dict (no 'cpus' key), handled gracefully."""

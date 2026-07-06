@@ -297,3 +297,20 @@ class TestExploreLnsPaths:
             results = compare_all_algorithms([], dag, pool, deadline_weeks=10, algorithms=["LNS"])
         assert len(results) == 1
         assert "lns crashed" in results[0].error
+
+
+class TestSpanEventOtelUnavailable:
+    def test_returns_early_when_otel_unavailable(self):
+        """_span_event() is a no-op when _OTEL_AVAILABLE is False (SDK not installed)."""
+        from concilium.application.scheduling import selector
+
+        with patch.object(selector, "_OTEL_AVAILABLE", False):
+            # Should not raise even though trace usage below would otherwise be exercised.
+            selector._span_event("some.event", {"k": "v"})
+
+    def test_returns_early_when_trace_is_none(self):
+        """_span_event() is a no-op when trace module reference is None."""
+        from concilium.application.scheduling import selector
+
+        with patch.object(selector, "trace", None):
+            selector._span_event("some.event", {"k": "v"})

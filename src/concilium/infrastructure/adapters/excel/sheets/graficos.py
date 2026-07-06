@@ -198,9 +198,10 @@ def render_graficos(wb: Workbook, canonical: CanonicalModel) -> None:
         cats = Reference(ws, min_col=gantt_col, min_row=3, max_row=2 + len(gantt_map))
         chart.add_data(data, titles_from_data=True)
         chart.set_categories(cats)
-        if chart.series:
-            chart.series[0].graphicalProperties.noFill = True
-            chart.series[0].graphicalProperties.line.noFill = True
+        # add_data() with these fixed 2-column data/cats References always yields
+        # exactly 2 series (start-offset + duration) — chart.series is never empty here.
+        chart.series[0].graphicalProperties.noFill = True
+        chart.series[0].graphicalProperties.line.noFill = True
         ws.add_chart(chart, "J34")
 
     if finance_rows:

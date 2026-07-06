@@ -148,6 +148,42 @@ class TestUnpackV2Schema:
         assert out["cronograma"]["atividades"][0]["producao_diaria"] == 10.0
         assert len(out["cronograma_compacto"]) == 1
 
+    def test_v2_with_cronograma_item_without_producao_diaria(self):
+        """Linha 143->146: item de cronograma sem 'producao_diaria' → chave omitida no compacto."""
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+
+        ref = {
+            "spec": {
+                "eap": [{"item_id": "1.1", "quantitativo": 100.0}],
+                "cronograma": [
+                    {"item_id": "1.1", "equipes": {"n_inicial": 2}},
+                ],
+            },
+            "meta": {"data_inicio": "2026-01-01", "data_termino": "2026-06-30"},
+        }
+        out = _unpack_v2_schema(ref)
+        assert "producao_diaria" not in out["cronograma_compacto"][0]
+        # fallback default 0.0 aplicado nas atividades v1
+        assert out["cronograma"]["atividades"][0]["producao_diaria"] == 0.0
+
+    def test_v2_with_cronograma_item_without_equipes(self):
+        """Branch 141->143 (false): item de cronograma sem 'equipes' → chave omitida
+        no compacto, mas 'producao_diaria' ainda é propagada."""
+        from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
+
+        ref = {
+            "spec": {
+                "eap": [{"item_id": "1.1", "quantitativo": 100.0}],
+                "cronograma": [
+                    {"item_id": "1.1", "producao_diaria": 5.0},
+                ],
+            },
+            "meta": {"data_inicio": "2026-01-01", "data_termino": "2026-06-30"},
+        }
+        out = _unpack_v2_schema(ref)
+        assert "equipes" not in out["cronograma_compacto"][0]
+        assert out["cronograma_compacto"][0]["producao_diaria"] == 5.0
+
     def test_v2_indiretos_driver_projeto(self):
         """driver='projeto' → custo_fixo_total in detalhamento."""
         from concilium.application.benchmarks.spec.spec_loader import _unpack_v2_schema
@@ -229,6 +265,17 @@ class TestInferSlugFromPath:
         loader = BenchmarkSpecLoader(tmp_path)
         path = Path("/data/SLUG-BENCH/artifacts/inputs/referencia.json")
         assert loader._infer_slug_from_path(path) == "SLUG-BENCH"
+
+    def test_artifacts_inputs_path_at_filesystem_root_falls_back_to_inputs(self, tmp_path):
+        """Linha 441->443: parent.parent.parent.name vazio (raiz do FS) → candidate falsy → usa parent.name."""
+        from pathlib import Path
+
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(tmp_path)
+        # Apenas 2 níveis acima da raiz "/" → parent.parent.parent == Path("/") cujo .name é "".
+        path = Path("/artifacts/inputs/referencia.json")
+        assert loader._infer_slug_from_path(path) == "inputs"
 
 
 class TestNormalizeReferenceSchema:
@@ -541,6 +588,79 @@ class TestLfdResolveContext:
         assert perfil_id is None
         assert perfil_version is None
 
+    def test_merges_versioned_ctx_fields_skipping_existing_and_missing_keys(self, tmp_path):
+        """Branch 261->260: 'catalogo_id' já presente em ref não é sobrescrito;
+        'referencia_id' ausente do versioned_ctx também é pulado; apenas
+        'jurisdicao_id' (ausente em ref, presente no versioned_ctx) é copiado."""
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        ref = {"catalogo_id": "CAT-EXISTENTE"}
+        versioned_ctx = {
+            "version": "v3",
+            "catalogo_id": "CAT-NOVO",  # ref já tem catalogo_id → não sobrescreve
+            "jurisdicao_id": "BR-SP",  # ausente em ref → copiado
+            "perfil_id": None,  # falsy → não copiado, e perfil_id fica None
+            # "referencia_id" ausente do dict → `k in versioned_ctx` é False
+        }
+        with patch(
+            "concilium.application.services.catalog.contexto_version_service.ContextoVersionService"
+        ) as MockCtxSvc:
+            MockCtxSvc.return_value.resolve.return_value = versioned_ctx
+            ctx_version, perfil_id, perfil_version = loader._lfd_resolve_context(ref, "ctx-1")
+        assert ctx_version == "v3"
+        assert ref["catalogo_id"] == "CAT-EXISTENTE"
+        assert ref["jurisdicao_id"] == "BR-SP"
+        assert "referencia_id" not in ref
+        assert perfil_id is None
+        assert perfil_version is None
+
+    def test_perfil_id_ausente_pula_resolucao_de_perfil(self, tmp_path):
+        """Branch 264->271 (false): versioned_ctx sem perfil_id → não instancia
+        PerfilVersionService, retorna direto."""
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        versioned_ctx = {"version": "v1"}
+        with patch(
+            "concilium.application.services.catalog.contexto_version_service.ContextoVersionService"
+        ) as MockCtxSvc:
+            MockCtxSvc.return_value.resolve.return_value = versioned_ctx
+            ctx_version, perfil_id, perfil_version = loader._lfd_resolve_context({}, "ctx-1")
+        assert ctx_version == "v1"
+        assert perfil_id is None
+        assert perfil_version is None
+
+    def test_perfil_version_service_resolve_returns_none(self, tmp_path):
+        """Branch 267->271 (false): PerfilVersionService.resolve retorna None →
+        perfil_version permanece None."""
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        versioned_ctx = {"version": "v1", "perfil_id": "PERF-1"}
+        with (
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.ContextoVersionService"
+            ) as MockCtxSvc,
+            patch(
+                "concilium.application.services.catalog.contexto_version_service.PerfilVersionService"
+            ) as MockPerfSvc,
+        ):
+            MockCtxSvc.return_value.resolve.return_value = versioned_ctx
+            MockPerfSvc.return_value.resolve.return_value = None
+            ctx_version, perfil_id, perfil_version = loader._lfd_resolve_context({}, "ctx-1")
+        assert perfil_id == "PERF-1"
+        assert perfil_version is None
+
 
 class TestUnpackV2SchemaBdi:
     def test_bdi_propagated(self):
@@ -748,6 +868,36 @@ class TestResolveContextoLogError:
         # Calling with explicit version on non-existent config exercises the error log path
         result = loader.resolve_contexto("nonexistent-ctx", version="v99")
         assert result is None
+
+    def test_resolve_contexto_forced_exception_logs_and_returns_none(self, tmp_path, monkeypatch):
+        """Lines 235-237: força exceção real dentro do try → logger.error + return None."""
+        from pathlib import Path
+
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        monkeypatch.setattr(
+            "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+            lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+        result = loader.resolve_contexto("ctx-x")
+        assert result is None
+
+    def test_lfd_resolve_context_forced_exception_swallowed(self, tmp_path, monkeypatch):
+        """Lines 269-270: força exceção real dentro do try de _lfd_resolve_context → swallowed."""
+        from pathlib import Path
+
+        from concilium.application.benchmarks.spec.spec_loader import BenchmarkSpecLoader
+
+        loader = BenchmarkSpecLoader(Path(tmp_path))
+        monkeypatch.setattr(
+            "concilium.application.services.catalog.contexto_version_service.ContextoVersionService",
+            lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("boom")),
+        )
+        ctx_version, perfil_id, perfil_version = loader._lfd_resolve_context({}, "ctx-x")
+        assert ctx_version is None
+        assert perfil_id is None
+        assert perfil_version is None
 
 
 class TestLfdBuildIndRefParsedNone:

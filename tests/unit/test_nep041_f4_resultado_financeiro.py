@@ -162,6 +162,29 @@ class TestParidadeComPipelineSeparado:
         assert ru.has_errors
         assert ru.canonical.resultado is None  # estágio 3 não rodou
 
+    def test_bdi_indireto_efetivo_numerico_e_usado_diretamente(self):
+        """inputs['bdi_indireto_efetivo'] como float é aceito sem cair no fallback None."""
+        from concilium.application.skills import run_resultado_financeiro
+
+        ru = run_resultado_financeiro(_base_canonical(), {"bdi_indireto_efetivo": 0.2}, _catalogo_minimo(), _PERFIL)
+        assert ru.canonical.resultado is not None
+
+    def test_custo_direto_zero_nao_emite_gap_catalogo_operacional(self):
+        """equipes_diretas com custo_total=0 e sem planejamento → custo_direto=0 →
+        bloco VAL-GAP-CATALOGO-OPERACIONAL não é emitido (branch 357->372)."""
+        from concilium.application.skills import run_resultado_financeiro
+
+        canonical = _base_canonical().model_copy(
+            update={
+                "equipes_diretas": [
+                    e.model_copy(update={"custo_total": 0.0}) for e in _base_canonical().equipes_diretas
+                ]
+            }
+        )
+        ru = run_resultado_financeiro(canonical, {}, _catalogo_minimo(), _PERFIL)
+        codigos = {v.codigo for v in ru.validacoes}
+        assert "VAL-GAP-CATALOGO-OPERACIONAL" not in codigos
+
 
 class TestSemResiduosLegados:
     """Pós-limpeza: shims e aliasing de inputs legados foram removidos."""
@@ -195,3 +218,115 @@ class TestSemResiduosLegados:
         assert '"06-resultado-financeiro"' in src
         assert 'skill_inputs["07-custos-indiretos"]' not in src
         assert 'skill_inputs.setdefault("08-consolidacao-financeira"' not in src
+
+    def test_load_estagio_raises_when_spec_is_none(self):
+        """_load_estagio propaga ImportError quando spec_from_file_location falha."""
+        import sys
+        from unittest.mock import patch
+
+        mod = sys.modules["_concilium_skillpkg_06_resultado_financeiro.skill"]
+        with patch("importlib.util.spec_from_file_location", return_value=None):
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                mod._load_estagio("_precificacao", "run_precificacao_unitaria")
+
+    def test_consolidacao_skill_module_loads_via_real_package_dotted_path(self):
+        """A pasta hifenizada '06-resultado-financeiro' possui __init__.py em cada
+        nível, então importlib.import_module com o caminho pontuado (string,
+        sem exigir identificador válido) resolve normalmente — cobrindo o
+        caminho feliz do bloco try/except (ambos os imports relativos
+        internos, _skill_helpers_a e _skill_helpers_b, sucedem)."""
+        import importlib
+
+        mod = importlib.import_module(
+            "concilium.application.skills.manifests.06-resultado-financeiro._consolidacao.skill"
+        )
+        assert hasattr(mod, "run_consolidacao_financeira")
+        assert hasattr(mod, "_build_abc_analytics")
+        assert hasattr(mod, "_build_bridge_from_pe")
+
+    def test_consolidacao_load_estagio_raises_when_spec_a_is_none(self):
+        """load_skill_stage carrega _consolidacao/skill.py sem pacote sintético,
+        então o import relativo inicial falha (ImportError) e cai no fallback
+        via importlib; se spec_from_file_location falhar para _skill_helpers_a.py
+        especificamente, o ImportError explícito da linha 47 é levantado."""
+        import importlib.util
+        from unittest.mock import patch
+
+        from concilium.application.skills import load_skill_stage
+
+        orig_spec = importlib.util.spec_from_file_location
+
+        def fake_spec(name, path, *args, **kwargs):
+            if str(path).endswith("_skill_helpers_a.py"):
+                return None
+            return orig_spec(name, path, *args, **kwargs)
+
+        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                load_skill_stage("06-resultado-financeiro", "_consolidacao", "run_consolidacao_financeira")
+
+    def test_consolidacao_load_estagio_raises_when_spec_b_is_none(self):
+        """Mesmo cenário, mas para _skill_helpers_b.py (linha 54)."""
+        import importlib.util
+        from unittest.mock import patch
+
+        from concilium.application.skills import load_skill_stage
+
+        orig_spec = importlib.util.spec_from_file_location
+
+        def fake_spec(name, path, *args, **kwargs):
+            if str(path).endswith("_skill_helpers_b.py"):
+                return None
+            return orig_spec(name, path, *args, **kwargs)
+
+        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                load_skill_stage("06-resultado-financeiro", "_consolidacao", "run_consolidacao_financeira")
+
+    def test_indiretos_skill_module_loads_via_real_package_dotted_path(self):
+        """A pasta '_indiretos' possui __init__.py, então importlib.import_module
+        com o caminho pontuado resolve o import relativo inicial de skill.py com
+        sucesso (ambos os `from ._skill_helpers_x import` completam) — cobrindo
+        o caminho feliz do bloco try (linha 42, segundo import nunca alcançado
+        pelas demais rotas de carregamento que sempre caem no fallback)."""
+        import importlib
+
+        mod = importlib.import_module("concilium.application.skills.manifests.06-resultado-financeiro._indiretos.skill")
+        assert hasattr(mod, "run_custos_indiretos")
+
+    def test_indiretos_load_estagio_raises_when_spec_a_is_none(self):
+        """Linha 64: spec_from_file_location retorna None para _skill_helpers_a.py
+        no fallback interno de _indiretos/skill.py."""
+        import importlib.util
+        from unittest.mock import patch
+
+        from concilium.application.skills import load_skill_stage
+
+        orig_spec = importlib.util.spec_from_file_location
+
+        def fake_spec(name, path, *args, **kwargs):
+            if "_indiretos" in str(path) and str(path).endswith("_skill_helpers_a.py"):
+                return None
+            return orig_spec(name, path, *args, **kwargs)
+
+        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")
+
+    def test_indiretos_load_estagio_raises_when_spec_b_is_none(self):
+        """Linha 71: mesmo cenário, para _skill_helpers_b.py."""
+        import importlib.util
+        from unittest.mock import patch
+
+        from concilium.application.skills import load_skill_stage
+
+        orig_spec = importlib.util.spec_from_file_location
+
+        def fake_spec(name, path, *args, **kwargs):
+            if "_indiretos" in str(path) and str(path).endswith("_skill_helpers_b.py"):
+                return None
+            return orig_spec(name, path, *args, **kwargs)
+
+        with patch("importlib.util.spec_from_file_location", side_effect=fake_spec):
+            with pytest.raises(ImportError, match="Não foi possível carregar spec"):
+                load_skill_stage("06-resultado-financeiro", "_indiretos", "run_custos_indiretos")

@@ -217,6 +217,19 @@ class TestListEntitiesWithFlatFiles:
         result = svc.list_entities()
         assert not any(e.get("id") == "bad" for e in result)
 
+    def test_list_entities_skips_flat_file_with_duplicate_declared_id(self, tmp_path):
+        """A flat file whose stem is unique but whose payload declares an `id`
+        that matches an already-listed versioned entity must be skipped."""
+        svc = _make_svc(tmp_path, include_flat_files=True)
+        jur_dir = tmp_path / "contextos"
+        jur_dir.mkdir()
+        # Versioned entity directory named "ctx-a" registers "ctx-a" in seen_ids.
+        _setup_entity(tmp_path, "contextos", "ctx-a", versions={"v1": {"nome": "Ctx A"}})
+        # Flat file with a different stem, but payload declares id="ctx-a" (dup).
+        (jur_dir / "other.json").write_text(json.dumps({"id": "ctx-a", "nome": "Dup"}), encoding="utf-8")
+        result = svc.list_entities()
+        assert len([e for e in result if e["id"] == "ctx-a"]) == 1
+
 
 class TestConcreteServices:
     def test_contexto_version_service(self, tmp_path):
@@ -271,3 +284,11 @@ class TestDiffValues:
         _diff_values("parent", {"a": 1, "b": 2}, {"a": 1, "b": 99}, out)
         assert "parent.b" in out
         assert "parent.a" not in out
+
+    def test_equal_lists_no_diff(self):
+        """Line 343: left == right for lists → no entry added to out."""
+        from concilium.application.services.catalog.contexto_version_service import _diff_values
+
+        out: dict = {}
+        _diff_values("items", [1, 2, 3], [1, 2, 3], out)
+        assert out == {}

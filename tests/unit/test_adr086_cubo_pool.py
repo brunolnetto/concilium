@@ -373,3 +373,87 @@ def test_economia_pool_sem_baseline_triggers_warning():
         mock_cubo, contratos, [], baseline_por_item={}, baseline_source_by_item={}
     )
     assert any("sem baseline" in n for n in narrativa)
+
+
+def test_baseline_skips_planejamento_with_nonpositive_total():
+    """Line 124 false branch: planejamento total <= 0.0 is not added to baseline."""
+    from concilium.application.services.analytics.cubo_pool_projection import _baseline_homogenea_por_item
+
+    zero_plan = SimpleNamespace(item_id="eap-Z", subtotal=SimpleNamespace(sem_bdi=SimpleNamespace(total=0.0)))
+    canonical = SimpleNamespace(planejamento=[zero_plan], equipes_diretas=[])
+    baseline, source = _baseline_homogenea_por_item(canonical)
+    assert "eap-Z" not in baseline
+    assert "eap-Z" not in source
+
+
+def test_baseline_skips_equipe_fallback_with_zero_custo():
+    """Line 133 false branch: operational fallback total <= 0.0 is not added."""
+    from concilium.application.services.analytics.cubo_pool_projection import _baseline_homogenea_por_item
+
+    eq = SimpleNamespace(item_id="eap-Y", custo_total_autonomo=0.0, num_equipes_base=1)
+    canonical = SimpleNamespace(planejamento=[], equipes_diretas=[eq])
+    baseline, source = _baseline_homogenea_por_item(canonical)
+    assert "eap-Y" not in baseline
+    assert "eap-Y" not in source
+
+
+def test_count_mob_demob_bucket_empty_week_label():
+    """Line 146-147: empty week label bucket resolves to ''."""
+    from unittest.mock import MagicMock
+
+    from concilium.application.services.analytics.cubo_pool_projection import _count_mob_demob_por_periodo
+
+    mock_cubo = MagicMock()
+    mock_cubo.ciclo_vida_instancias.return_value = {"inst-1": {"semana_mob": "", "semana_demob": ""}}
+    counts = _count_mob_demob_por_periodo(mock_cubo, "semana")
+    # Neither mob nor demob bucket recorded since both labels are empty.
+    assert counts == {}
+
+
+def test_count_mob_demob_bucket_without_dash_w_returns_raw():
+    """Line 148-150: week label without '-W' returns the raw text as bucket."""
+    from unittest.mock import MagicMock
+
+    from concilium.application.services.analytics.cubo_pool_projection import _count_mob_demob_por_periodo
+
+    mock_cubo = MagicMock()
+    mock_cubo.ciclo_vida_instancias.return_value = {"inst-1": {"semana_mob": "FASE-1", "semana_demob": ""}}
+    counts = _count_mob_demob_por_periodo(mock_cubo, "semana")
+    assert "FASE-1" in counts
+    assert counts["FASE-1"]["mob"] == 1
+
+
+def test_count_mob_demob_bucket_with_dash_w_calls_bucket_from_week_iso():
+    """Line 150: a week label containing '-W' (ISO week format) is bucketed via
+    bucket_from_week_iso instead of being returned raw."""
+    from unittest.mock import MagicMock
+
+    from concilium.application.services.analytics.cubo_pool_projection import _count_mob_demob_por_periodo
+
+    mock_cubo = MagicMock()
+    mock_cubo.ciclo_vida_instancias.return_value = {"inst-1": {"semana_mob": "2026-W23", "semana_demob": ""}}
+    counts = _count_mob_demob_por_periodo(mock_cubo, "mes")
+    # bucket_from_week_iso("2026-W23", "mes") collapses the ISO week into a month bucket,
+    # which differs from the raw "2026-W23" string.
+    assert "2026-W23" not in counts
+    assert sum(v["mob"] for v in counts.values()) == 1
+
+
+def test_count_mob_demob_only_demob_present():
+    """Line 155->158 false (no semana_mob) then line 158 true (semana_demob present)."""
+    from unittest.mock import MagicMock
+
+    from concilium.application.services.analytics.cubo_pool_projection import _count_mob_demob_por_periodo
+
+    mock_cubo = MagicMock()
+    mock_cubo.ciclo_vida_instancias.return_value = {"inst-1": {"semana_mob": "", "semana_demob": "FASE-2"}}
+    counts = _count_mob_demob_por_periodo(mock_cubo, "semana")
+    assert counts["FASE-2"]["demob"] == 1
+    assert counts["FASE-2"]["mob"] == 0
+
+
+def test_utilizacao_temporal_off_weeks_add_honesty_narrative():
+    """Line 321-322: sem['off'] truthy adds the 'não representa desmobilização' narrative."""
+    canonical, contratos, _ = _build_pool([f"S{n:03d}" for n in range(20, 26)], mo=8000.0, remob=(5000.0, 2500.0))
+    proj = resolve_cubo_pool_projection(canonical, face="utilizacao_temporal", granularidade="semana")
+    assert any("Desmobilizado (off)" in n for n in proj["narrativa"])

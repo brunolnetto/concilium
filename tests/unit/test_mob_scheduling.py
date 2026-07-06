@@ -3,6 +3,7 @@
 from datetime import date
 
 from concilium.application.scheduling.mob_scheduling import (
+    _topological_sort_eap,
     calcular_custo_indireto_mob,
     get_mob_summary,
     infer_mob_windows,
@@ -81,6 +82,32 @@ class TestInferMobWindows:
         assert windows["mobilizacao"]["inicio"] == date(2025, 6, 1)
         # Project end should be in desmobilizacao
         assert windows["desmobilizacao"]["fim"] == date(2026, 6, 1)
+
+    def test_infer_windows_zero_margin_skips_adjustment(self):
+        """With safety_margin_days=0, mob_end==mob_start and op_end==project_end,
+        so neither the `mob_end < mob_start` nor `op_end > project_end` adjustment
+        branches fire (both conditions are exactly equal, not strictly True)."""
+        meta = {
+            "data_inicio": "2025-01-01",
+            "data_termino": "2025-12-31",
+        }
+        spec_eap = [{"item_id": "1.1", "predecessores": []}]
+
+        windows = infer_mob_windows(meta, spec_eap, safety_margin_days=0)
+
+        assert windows["mobilizacao"]["fim"] == date(2025, 1, 1)
+        assert windows["operacao"]["fim"] == date(2025, 12, 31)
+
+
+class TestTopologicalSortEap:
+    def test_predecessor_not_in_graph_is_skipped(self):
+        """A predecessor referencing an item_id absent from the EAP list must
+        simply be skipped (dangling reference), not raise."""
+        spec_eap = [
+            {"item_id": "1.1", "predecessores": [{"item_id": "does-not-exist"}]},
+        ]
+        order = _topological_sort_eap(spec_eap)
+        assert [i["item_id"] for i in order] == ["1.1"]
 
 
 class TestCalcularCustoIndiretoMob:
@@ -241,6 +268,29 @@ class TestCalcularCustoIndiretoMob:
         # Should only include MOB cost, not ADM
         assert result["custo_mob_total"] == 50000.0
 
+    def test_calcular_mob_unrecognized_driver_contributes_nothing(self):
+        """A MOB indireto with a driver that is neither 'projeto' nor 'mensal'
+        should be silently skipped (no phase entry, no cost added)."""
+        indiretos = [
+            {
+                "tipo": "MOB",
+                "categoria": "MOB",
+                "fase": "mobilizacao",
+                "driver": "desconhecido",
+                "custo_fixo_total": 50000.0,
+            },
+        ]
+        mob_windows = {
+            "mobilizacao": {"inicio": date(2025, 1, 1), "fim": date(2025, 1, 31)},
+            "operacao": {"inicio": date(2025, 2, 1), "fim": date(2026, 1, 31)},
+            "desmobilizacao": {"inicio": date(2026, 2, 1), "fim": date(2026, 2, 28)},
+        }
+
+        result = calcular_custo_indireto_mob(indiretos, mob_windows)
+
+        assert result["custo_mob_total"] == 0.0
+        assert "mobilizacao" not in result["mob"]
+
 
 class TestGetMobSummary:
     """Tests for get_mob_summary() function."""
@@ -293,6 +343,20 @@ class TestGetMobSummary:
         """Extract summary from empty mob_costs."""
         mob_costs = {
             "mob": {},
+            "custo_mob_total": 0.0,
+        }
+
+        summary = get_mob_summary(mob_costs)
+
+        assert summary == {}
+
+    def test_get_mob_summary_phase_without_recognized_keys(self):
+        """A phase dict lacking both 'custo_total' and 'total' keys must be
+        skipped entirely (neither branch of the if/elif matches)."""
+        mob_costs = {
+            "mob": {
+                "mobilizacao": {"semana_inicio": "2025-W01"},
+            },
             "custo_mob_total": 0.0,
         }
 

@@ -726,24 +726,26 @@ def _enrich_spec_resources_from_catalog(
 
     def _tipo_recurso_fungivel(cpu_id: str, composicao: dict[str, Any]) -> str:
         """Deriva tipo fungível por assinatura de composição (não por regex de CPU id)."""
+        # O único call site (abaixo) já garante `comp.get("equipamentos") or
+        # comp.get("funcoes")` truthy antes de chamar esta função (linha 779),
+        # então `equip`/`funcs` nunca são ambos vazios aqui.
         equip = composicao.get("equipamentos") or []
         funcs = composicao.get("funcoes") or []
-        if equip or funcs:
-            tokens: list[str] = []
-            for f in sorted(funcs, key=lambda x: str(x.get("funcao_id") or "")):
-                fid = str(f.get("funcao_id") or "").strip().upper()
-                qtd = round(float(f.get("num_pessoas", 1) or 1), 4)
-                if fid:
-                    tokens.append(f"F:{fid}:{qtd}")
-            for e in sorted(equip, key=lambda x: str(x.get("equip_id") or "")):
-                eid = str(e.get("equip_id") or "").strip().upper()
-                qtd = round(float(e.get("num_unidades", 1) or 1), 4)
-                if eid:
-                    tokens.append(f"E:{eid}:{qtd}")
-            if tokens:
-                signature = "|".join(tokens)
-                digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
-                return f"EQUIPE-COMP-{digest}"
+        tokens: list[str] = []
+        for f in sorted(funcs, key=lambda x: str(x.get("funcao_id") or "")):
+            fid = str(f.get("funcao_id") or "").strip().upper()
+            qtd = round(float(f.get("num_pessoas", 1) or 1), 4)
+            if fid:
+                tokens.append(f"F:{fid}:{qtd}")
+        for e in sorted(equip, key=lambda x: str(x.get("equip_id") or "")):
+            eid = str(e.get("equip_id") or "").strip().upper()
+            qtd = round(float(e.get("num_unidades", 1) or 1), 4)
+            if eid:
+                tokens.append(f"E:{eid}:{qtd}")
+        if tokens:
+            signature = "|".join(tokens)
+            digest = sha1(signature.encode("utf-8")).hexdigest()[:12]
+            return f"EQUIPE-COMP-{digest}"
         raw = str(cpu_id or "").strip().upper()
         return f"EQUIPE-CPU-{raw}" if raw else "EQUIPE"
 
@@ -1596,7 +1598,6 @@ def _cpv_process_violations(
     from concilium.domain.models.project.constraint_violation import ConstraintViolation
 
     violations = []
-    reported: set[str] = set()
     for semana, week_usage in sorted(usage.items()):
         for tipo_id, total_used in week_usage.items():
             available = pool.get(tipo_id)
@@ -1612,16 +1613,15 @@ def _cpv_process_violations(
                     remediation_hint=f"Reduzir equipes de {tipo_id} em {semana} em {int(magnitude)}",
                 )
             )
-            key = f"{tipo_id}@{semana}"
-            if key not in reported:
-                reported.add(key)
-                validacoes.append(
-                    ValidacaoItem(
-                        codigo="VAL-POOL-01",
-                        status="ERRO",
-                        mensagem=f"Pool excedido: {tipo_id} requer {total_used}, disponível {available} em {semana}",
-                    )
+            # key=f"{tipo_id}@{semana}" é único por iteração (semana/tipo_id não repetem
+            # dentro deste loop), então o dedup por `reported` nunca disparava — removido.
+            validacoes.append(
+                ValidacaoItem(
+                    codigo="VAL-POOL-01",
+                    status="ERRO",
+                    mensagem=f"Pool excedido: {tipo_id} requer {total_used}, disponível {available} em {semana}",
                 )
+            )
     return violations
 
 

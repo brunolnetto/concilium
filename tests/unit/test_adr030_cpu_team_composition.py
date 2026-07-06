@@ -380,6 +380,13 @@ class TestCalcularCustoEquipamentoOverride:
         assert res.consumo_litros_hora is None
         assert res.custo_combustivel_mensal == 0.0
 
+    def test_custo_mensal_override_sobrepoe_custo_base_convertido(self):
+        """custo_mensal_override substitui o custo_base calculado a partir do
+        preço unitário do insumo (linha 319 do _skill_helpers_a.py)."""
+        insumo = self._insumo_com_consumo(20.0)
+        res, val_code = _calcular_custo_equipamento(insumo, 1, 8, 21.4, 6.20, custo_mensal_override=9999.0)
+        assert res.custo_mensal == 9999.0
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fase B — Integração com skill 03

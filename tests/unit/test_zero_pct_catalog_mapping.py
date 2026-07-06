@@ -232,6 +232,26 @@ class TestApplyCpuMappings:
         result = apply_cpu_mappings(tmp_path)
         assert result == []
 
+    def test_referencia_with_missing_cpu_id_and_no_keyword_match_not_updated(self, tmp_path: Path) -> None:
+        """When map_desc() can't find a matching keyword (code is None/falsy),
+        the item is left untouched and no update/log is produced — exercises
+        the false branch of `if code:` in apply_cpu_mappings."""
+        proj = tmp_path / "PROJ-003"
+        proj.mkdir()
+        referencia = {
+            "eap": [
+                {"descricao": "Descricao sem correspondencia nenhuma", "cpu_id": None},
+            ]
+        }
+        (proj / "referencia.json").write_text(json.dumps(referencia), encoding="utf-8")
+        mappings = {"CPU-ATERRO": ["ATERRO"]}
+        with patch(f"{_MAPPER_MODULE}._load_mapping_keywords", return_value=mappings):
+            result = apply_cpu_mappings(tmp_path)
+
+        assert result == []
+        updated = json.loads((proj / "referencia.json").read_text(encoding="utf-8"))
+        assert updated["eap"][0]["cpu_id"] is None
+
 
 # ---------------------------------------------------------------------------
 # 3. equipes_normalizer
@@ -586,6 +606,31 @@ class TestHealCatalog:
         # equipe is preserved because no producao_id
         assert "equipe" in healed
 
+    def test_producao_without_equipe_is_left_unchanged(self, tmp_path: Path) -> None:
+        """Line 18 false branch: producao with neither composicao_padrao_equipe
+        nor equipe keys skips the remap block entirely."""
+        cat = _setup_catalog(tmp_path)
+        prod_data = {"id": "PROD-002", "descricao": "Sem equipe"}
+        (cat / "producoes" / "PROD-002.json").write_text(json.dumps(prod_data), encoding="utf-8")
+
+        heal_catalog(cat)
+
+        healed = json.loads((cat / "producoes" / "PROD-002.json").read_text(encoding="utf-8"))
+        assert "equipe" not in healed
+        assert healed["id"] == "PROD-002"
+
+    def test_missing_insumo_subfolder_is_skipped(self, tmp_path: Path) -> None:
+        """Line 57 false branch: an insumos/{folder} directory that doesn't exist
+        is skipped without populating id_map for that prefix."""
+        cat = tmp_path / "catalog"
+        # Only create mao_obra — equipamento and material dirs are absent.
+        (cat / "insumos" / "mao_obra").mkdir(parents=True)
+        (cat / "producoes").mkdir(parents=True)
+        (cat / "cpus").mkdir(parents=True)
+
+        result = heal_catalog(cat)
+        assert "Cura concluída" in result
+
 
 # ---------------------------------------------------------------------------
 # 5. updater.CatalogUpdater
@@ -810,6 +855,83 @@ class TestCatalogUpdaterUpdateInsumo:
         updated_data = json.loads(insumo_file.read_text(encoding="utf-8"))
         updated_insumo = next(i for i in updated_data["insumos"] if i["codigo"] == "MO-002")
         assert updated_insumo["preco_unitario"] == 220.0
+
+    def test_target_is_second_item_in_list_exercises_loop_back_edge(self, tmp_path: Path) -> None:
+        """Two insumos in the same file, target is the second one: the
+        persist-loop `for i, item in enumerate(todos_list)` iterates once
+        without matching before finding it on the second item (back-edge)."""
+        insumos_dir = tmp_path / "insumos"
+        insumos_dir.mkdir()
+        prods_dir = tmp_path / "producoes"
+        prods_dir.mkdir()
+
+        primeiro = {"codigo": "MO-010", "descricao": "Servente", "preco_unitario": 90.0}
+        segundo = {"codigo": "MO-011", "descricao": "Pedreiro", "preco_unitario": 150.0}
+        insumo_file = insumos_dir / "mao_obra.json"
+        insumo_file.write_text(json.dumps([primeiro, segundo]), encoding="utf-8")
+
+        proposta = _make_proposta(
+            artefato_id="MO-011",
+            campo="preco_unitario",
+            valor_atual=150.0,
+            valor_proposto=160.0,
+        )
+
+        with patch(f"{_UPDATER_MODULE}.RepositorioProducao"):
+            updater = CatalogUpdater(prods_dir, insumos_dir)
+            result = updater.apply_update(proposta, "aprovador@co.com")
+
+        assert result.sucesso is True
+        updated_data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        assert updated_data[0]["codigo"] == "MO-010"
+        assert updated_data[0]["preco_unitario"] == 90.0  # untouched
+        updated_second = next(i for i in updated_data if i["codigo"] == "MO-011")
+        assert updated_second["preco_unitario"] == 160.0
+
+    def test_persist_loop_exhausts_without_match_leaves_list_unchanged(self, tmp_path: Path) -> None:
+        """Regression-guard for a race condition: if the on-disk file changes
+        between `_find_insumo`'s read and the persist re-read (so the target
+        codigo is no longer present), the persist-loop must exhaust without a
+        match and simply write the list back unchanged instead of raising."""
+        insumos_dir = tmp_path / "insumos"
+        insumos_dir.mkdir()
+        prods_dir = tmp_path / "producoes"
+        prods_dir.mkdir()
+
+        insumo = {"codigo": "MO-020", "descricao": "Servente", "preco_unitario": 90.0}
+        insumo_file = insumos_dir / "mao_obra.json"
+        insumo_file.write_text(json.dumps([insumo]), encoding="utf-8")
+
+        proposta = _make_proposta(
+            artefato_id="MO-020",
+            campo="preco_unitario",
+            valor_atual=90.0,
+            valor_proposto=95.0,
+        )
+
+        original_read_text = Path.read_text
+        call_count = {"n": 0}
+
+        def _flaky_read_text(self, *args, **kwargs):
+            call_count["n"] += 1
+            if self == insumo_file and call_count["n"] > 1:
+                # Simulate concurrent modification: codigo changed on disk
+                # between _find_insumo's read and the persist re-read.
+                return json.dumps([{"codigo": "MO-OUTRO", "descricao": "Outro", "preco_unitario": 1.0}])
+            return original_read_text(self, *args, **kwargs)
+
+        with (
+            patch(f"{_UPDATER_MODULE}.RepositorioProducao"),
+            patch.object(Path, "read_text", _flaky_read_text),
+        ):
+            updater = CatalogUpdater(prods_dir, insumos_dir)
+            result = updater.apply_update(proposta, "aprovador@co.com")
+
+        assert result.sucesso is True
+        updated_data = json.loads(insumo_file.read_text(encoding="utf-8"))
+        # Loop found no match for MO-020 in the (stale-simulated) re-read list,
+        # so it was written back untouched.
+        assert updated_data == [{"codigo": "MO-OUTRO", "descricao": "Outro", "preco_unitario": 1.0}]
 
 
 class TestCatalogUpdaterFindInsumo:

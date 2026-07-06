@@ -404,6 +404,20 @@ class TestBuildPreProcessamento:
         if relatorio:
             assert all(o.gap_semanas >= 0 for o in relatorio.oportunidades)
 
+    def test_atividade_sem_item_id_ou_sem_requisitos_ignorada(self, helpers):
+        """Atividades com item_id vazio ou required_resources vazio não entram no
+        lookup activity_resources (branch 279->276 false)."""
+        spec = _make_rcpsp_spec_com_resource_costs()
+        spec["activities"].append({"item_id": "", "required_resources": {"ESC-3CAT": 1}})
+        spec["activities"].append({"item_id": "D", "required_resources": {}})
+        contratos = _make_contratos(["ESC-3CAT"])
+        cron = _make_cron_lookup({"A": (1, 10), "B": (15, 25), "C": (1, 25), "D": (1, 25)})
+        validacoes: list = []
+        relatorio = helpers._build_pre_processamento_compartilhamento(contratos, spec, cron, validacoes)
+        assert relatorio is not None
+        # "D" nunca aparece em nenhuma oportunidade (não tinha requisitos válidos)
+        assert all("D" not in (o.atividade_i, o.atividade_j) for o in relatorio.oportunidades)
+
     def test_oportunidades_ordenadas_por_delta_desc(self, helpers):
         """Oportunidades devem estar ordenadas por delta_c_pot decrescente."""
         spec = {
@@ -730,18 +744,9 @@ class TestBuildPreProcessamentoMissingBranches:
         relatorio = helpers._build_pre_processamento_compartilhamento([], spec, {}, validacoes)
         assert relatorio is not None
 
-    def test_b_ends_before_a_starts_reversed_pair(self, helpers):
-        """Lines 329-330: elif end_b <= start_a branch.
-
-        Activities sorted by start_idx: id_a starts earlier (idx=1), id_b starts later (idx=20).
-        But id_b (short, starts at 20, ends at 22) ends BEFORE id_a (starts at 1, ends at 30).
-        That means end_a=30 > start_b=20 (not first branch), and end_b=22 <= start_a=1 is FALSE.
-        This path actually requires: end_a > start_b AND end_b <= start_a.
-        Since activities are sorted by start, id_a.start <= id_b.start always.
-        For end_b <= start_a: id_b ends at start_b+dur_b, but start_b >= start_a, so
-        end_b = start_b + dur_b >= start_a + dur_b >= start_a — only if dur_b=0 which is invalid.
-        The elif is effectively unreachable when sorted; we test the else (overlap) branch instead.
-        """
+    def test_overlapping_activities_hit_else_continue(self, helpers):
+        """Line 333: overlapping activities (neither end_a<=start_b nor end_b<=start_a)
+        hit the `else: continue` branch and produce no oportunidades."""
         spec = {
             "activities": [
                 {"item_id": "A", "duration_weeks": 5, "required_resources": {"ESC": 3}},
@@ -763,6 +768,38 @@ class TestBuildPreProcessamentoMissingBranches:
         assert relatorio is not None
         # Overlapping → no oportunidades
         assert relatorio.total_oportunidades == 0
+
+    def test_tied_start_zero_duration_hits_reversed_elif_branch(self, helpers):
+        """Lines 329-330: elif end_b <= start_a branch.
+
+        atividades_tipo is sorted by _start_idx only (stable sort), so activities
+        with the SAME start keep their original relative order. If A (dur 5, start=5,
+        end=10) comes first in the activities list and B is a zero-length activity
+        (start=5, end=5) tied on start_idx, the pair (id_a=A, id_b=B) is formed with
+        end_a=10 > start_b=5 (first branch false), but end_b=5 <= start_a=5 is TRUE —
+        reaching the `elif` that swaps i/j (B is treated as the earlier/anterior one).
+        """
+        spec = {
+            "activities": [
+                {"item_id": "A", "duration_weeks": 5, "required_resources": {"ESC": 3}},
+                {"item_id": "B", "duration_weeks": 0, "required_resources": {"ESC": 2}},
+            ],
+            "resource_costs": {
+                "ESC": {
+                    "custo_mob_unit": 80_000.0,
+                    "custo_demob_unit": 40_000.0,
+                    "custo_idle_semanal_unit": 1_000.0,
+                    "unidade_faturamento": "hora_prod",
+                },
+            },
+        }
+        cron = _make_cron_lookup({"A": (5, 10), "B": (5, 5)})
+        validacoes: list = []
+        relatorio = helpers._build_pre_processamento_compartilhamento([], spec, cron, validacoes)
+        assert relatorio is not None
+        # gap = start_a - end_b = 5 - 5 = 0 → an oportunidade with gap 0 is produced
+        # (or rejected downstream, but the elif branch itself must have executed).
+        assert relatorio.gap_max_por_tipo.get("ESC") is not None
 
 
 class TestDetectarOportunidadesParaleloMissingBranches:

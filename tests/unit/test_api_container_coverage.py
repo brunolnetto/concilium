@@ -144,6 +144,27 @@ def test_instance_sets_class_attribute():
     assert ServiceContainer._instance is not None
 
 
+def test_instance_race_skips_second_construction():
+    """Simula a corrida do double-checked locking: outra thread já setou
+    `_instance` enquanto esta aguardava o lock, exercitando o ramo em que
+    o `if cls._instance is None` interno é falso e a instância existente
+    é reaproveitada em vez de reconstruída."""
+    sentinel = MagicMock()
+
+    class _RaceLock:
+        def __enter__(self):
+            ServiceContainer._instance = sentinel
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    with patch.object(ServiceContainer, "_lock", _RaceLock()):
+        result = ServiceContainer.instance()
+
+    assert result is sentinel
+
+
 def test_get_concilium_service_returns_attribute():
     mocks, cfg_root, prj_root, benchmarks_root = _make_mocks()
 

@@ -214,6 +214,56 @@ class TestReadPem:
                 result = _read_from_key_vault("jwt-private-key")
         assert result is None
 
+    def test_read_from_key_vault_success_returns_encoded_secret(self, monkeypatch):
+        from concilium.infrastructure.auth.jwt_config import _read_from_key_vault
+
+        auth_mock = MagicMock()
+        auth_mock.key_vault_url = "https://myvault.vault.azure.net"
+        azure_identity_mock = MagicMock()
+        azure_secrets_mock = MagicMock()
+        secret_client_mock = MagicMock()
+        secret_value = MagicMock()
+        secret_value.value = "-----BEGIN RSA PRIVATE KEY-----\nfake\n"
+        secret_client_mock.get_secret.return_value = secret_value
+        azure_secrets_mock.SecretClient.return_value = secret_client_mock
+        with (
+            patch("concilium.infrastructure.auth.jwt_config.get_auth", return_value=auth_mock),
+            patch.dict(
+                "sys.modules",
+                {
+                    "azure.identity": azure_identity_mock,
+                    "azure.keyvault.secrets": azure_secrets_mock,
+                },
+            ),
+        ):
+            result = _read_from_key_vault("jwt-private-key")
+        assert result == secret_value.value.encode()
+
+    def test_read_from_key_vault_empty_secret_returns_none(self, monkeypatch):
+        from concilium.infrastructure.auth.jwt_config import _read_from_key_vault
+
+        auth_mock = MagicMock()
+        auth_mock.key_vault_url = "https://myvault.vault.azure.net"
+        azure_identity_mock = MagicMock()
+        azure_secrets_mock = MagicMock()
+        secret_client_mock = MagicMock()
+        secret_value = MagicMock()
+        secret_value.value = "   "
+        secret_client_mock.get_secret.return_value = secret_value
+        azure_secrets_mock.SecretClient.return_value = secret_client_mock
+        with (
+            patch("concilium.infrastructure.auth.jwt_config.get_auth", return_value=auth_mock),
+            patch.dict(
+                "sys.modules",
+                {
+                    "azure.identity": azure_identity_mock,
+                    "azure.keyvault.secrets": azure_secrets_mock,
+                },
+            ),
+        ):
+            result = _read_from_key_vault("jwt-private-key")
+        assert result is None
+
 
 # ─── application/benchmarks/validation/cpu_mapper.py ─────────────────────────
 
@@ -267,6 +317,32 @@ class TestCpuMapper:
         mapper = self._make_mapper()
         result = mapper.map_item_to_cpu("3.1", "Aterro tipo compactado")
         assert result == "CPU-ATE"
+
+    def test_map_item_to_cpu_fallback_skips_short_words(self):
+        """Palavras com <=3 caracteres são puladas na busca por termos-chave
+        (branch false de `if len(word) > 3`) antes de achar uma palavra longa
+        que resulte em match."""
+        mapper = self._make_mapper()
+        result = mapper.map_item_to_cpu("3.2", "de aterro")
+        assert result == "CPU-ATE"
+
+    def test_map_item_to_cpu_fallback_loop_skips_short_word_then_matches_long_one(self):
+        """Line 112 (false branch of `if len(word) > 3`): the full-descricao search
+        (line 104) and the two other existing fallback tests above all incidentally
+        match on the *first* try via search_cpus' own per-word scoring against the
+        description — they never actually reach this loop. Here the catalog entry's
+        descricao shares no substring with any word of the query, so the direct
+        search returns empty and we truly fall into the per-word loop: "de" (<=3
+        chars) is skipped, then "XPTO" (>3 chars) matches via the CPU's codigo."""
+        catalogo = {
+            "cpus": [
+                {"codigo": "XPTO", "descricao": "Unico Especial Distinto", "unidade": "un", "categoria": "X"},
+            ]
+        }
+        mapper = self._make_mapper(catalogo)
+        assert mapper.search_cpus("de XPTO extra", limit=1) == []
+        result = mapper.map_item_to_cpu("1.1", "de XPTO extra")
+        assert result == "XPTO"
 
     def test_map_item_to_cpu_no_match(self):
         mapper = self._make_mapper()

@@ -197,9 +197,10 @@ def cure_duplicatas(
     # Adiciona codigo_referencia_externa ao canônico
     ins_by_code = {i["codigo"]: dict(i) for i in insumos}
     for p_code, canonical in dup_map.items():
-        canon_ins = ins_by_code.get(canonical)
-        if canon_ins is None:
-            continue
+        # `canonical` sempre vem de _build_dup_map, que o extrai de `insumos`
+        # (o mesmo iterável usado para montar ins_by_code acima), logo é
+        # sempre uma chave presente — sem necessidade de guard defensivo.
+        canon_ins = ins_by_code[canonical]
         ext = canon_ins.get("codigo_referencia_externa") or ""
         existing = [x.strip() for x in ext.split(",") if x.strip()] if ext else []
         if p_code not in existing:

@@ -326,6 +326,20 @@ class TestWmpHelpers:
         codes = [r["codigo"] for r in results]
         assert "VAL-WMP-02" in codes
 
+    def test_process_wmp_p_positive_skips_wmp_02(self):
+        """Produtividade resolvida (P>0) não gera o aviso VAL-WMP-02."""
+        from concilium.application.services._concilium_service_helpers import _process_wmp_policy
+
+        sim = MagicMock()
+        curva = MagicMock(is_complete=True, duration_weeks=5, peak_teams=2, delivered=100.0)
+        sim.simulate.return_value = curva
+        results: list = []
+        eap_items = {"item-1": {"quantitativo": 100.0, "cpu_id": "CPU-1"}}
+        cpu_lookup = {"CPU-1": {"producao_horaria": 10.0}}
+        _process_wmp_policy(sim, "item-1", self._valid_policy_dict(), eap_items, cpu_lookup, {}, results)
+        codes = [r["codigo"] for r in results]
+        assert "VAL-WMP-02" not in codes
+
     def test_cs_validate_mobilizacao_no_policies(self):
         from concilium.application.services._concilium_service_helpers import _cs_validate_mobilizacao_policies
 

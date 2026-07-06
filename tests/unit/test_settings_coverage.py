@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 import concilium.infrastructure.settings as _mod
@@ -490,3 +492,109 @@ def test_mcp_proxy_settings_prefers_new_name_over_legacy(monkeypatch):
     monkeypatch.setenv("CONCILIUM_DEVICE_CODE", "RCODE-LEGACY")
     settings = McpProxySettings.from_env()
     assert settings.client_code == "RCODE-NEW"
+
+
+def test_mcp_proxy_settings_device_id_detection_failure_falls_back(monkeypatch):
+    """Covers lines 367-368: socket.gethostname() raising must not blow up
+    from_env(); device_id falls back to 'unknown-device'."""
+    import socket
+
+    def _raise():
+        raise OSError("no network")
+
+    monkeypatch.setattr(socket, "gethostname", _raise)
+    settings = McpProxySettings.from_env()
+    assert settings.device_id == "unknown-device"
+
+
+def test_get_mcp_returns_cached_instance_on_second_call(monkeypatch):
+    """Covers the false branch of `if _mcp is None` in get_mcp()."""
+    _mod._reset_all()
+    from concilium.infrastructure.settings import get_mcp
+
+    first = get_mcp()
+    second = get_mcp()
+    assert first is second
+
+
+def test_get_mcp_proxy_returns_cached_instance_on_second_call(monkeypatch):
+    """Covers the false branch of `if _mcp_proxy is None` in get_mcp_proxy()."""
+    _mod._reset_all()
+    from concilium.infrastructure.settings import get_mcp_proxy
+
+    first = get_mcp_proxy()
+    second = get_mcp_proxy()
+    assert first is second
+
+
+def test_get_smtp_returns_cached_instance_on_second_call(monkeypatch):
+    """Covers the false branch of `if _smtp is None` in get_smtp()."""
+    _mod._reset_all()
+    from concilium.infrastructure.settings import get_smtp
+
+    first = get_smtp()
+    second = get_smtp()
+    assert first is second
+
+
+def test_smtp_password_skips_kv_lookup_when_env_password_set(monkeypatch):
+    """Covers the false branch of `if not password` in SmtpSettings.from_env():
+    when CONCILIUM__SMTP_PASSWORD is set, the Key Vault lookup must be skipped."""
+    from concilium.infrastructure.settings import SmtpSettings
+
+    monkeypatch.setenv("CONCILIUM__SMTP_PASSWORD", "from-env-password")
+    settings = SmtpSettings.from_env()
+    assert settings.password == "from-env-password"
+
+
+def test_read_smtp_password_from_kv_no_url_returns_none(monkeypatch):
+    """Covers the true branch of `if not kv_url` in _read_smtp_password_from_kv()."""
+    from concilium.infrastructure.settings import _read_smtp_password_from_kv
+
+    monkeypatch.delenv("CONCILIUM__JWT_KEY_VAULT_URL", raising=False)
+    assert _read_smtp_password_from_kv() is None
+
+
+def test_read_smtp_password_from_kv_fetches_secret(monkeypatch):
+    """Covers lines 920-926: kv_url present → fetch secret via Azure SDK."""
+    from unittest.mock import MagicMock
+
+    from concilium.infrastructure.settings import _read_smtp_password_from_kv
+
+    monkeypatch.setenv("CONCILIUM__JWT_KEY_VAULT_URL", "https://fake-vault.vault.azure.net")
+
+    fake_secret = MagicMock()
+    fake_secret.value = "  secret-from-kv  "
+    fake_client = MagicMock()
+    fake_client.get_secret.return_value = fake_secret
+
+    fake_azure_identity = MagicMock()
+    fake_azure_identity.DefaultAzureCredential.return_value = MagicMock()
+    fake_azure_keyvault_secrets = MagicMock()
+    fake_azure_keyvault_secrets.SecretClient.return_value = fake_client
+
+    monkeypatch.setitem(sys.modules, "azure.identity", fake_azure_identity)
+    monkeypatch.setitem(sys.modules, "azure.keyvault.secrets", fake_azure_keyvault_secrets)
+
+    result = _read_smtp_password_from_kv()
+    assert result == "secret-from-kv"
+
+
+def test_read_smtp_password_from_kv_exception_returns_none(monkeypatch):
+    """Covers the except-branch (line 927-928): any failure during the Azure
+    SDK import/call must be swallowed and return None."""
+    from unittest.mock import MagicMock
+
+    from concilium.infrastructure.settings import _read_smtp_password_from_kv
+
+    monkeypatch.setenv("CONCILIUM__JWT_KEY_VAULT_URL", "https://fake-vault.vault.azure.net")
+
+    def _raise_import(*_a, **_k):
+        raise ImportError("azure sdk not installed")
+
+    fake_azure_identity = MagicMock()
+    fake_azure_identity.DefaultAzureCredential.side_effect = _raise_import
+    monkeypatch.setitem(sys.modules, "azure.identity", fake_azure_identity)
+
+    result = _read_smtp_password_from_kv()
+    assert result is None

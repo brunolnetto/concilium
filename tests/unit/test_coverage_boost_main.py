@@ -285,6 +285,45 @@ def test_approve_invalid_status_transition(env_cfg):
 # ── line 384: approve with --motivo ──────────────────────────────────────────
 
 
+def test_approve_with_motivo_prints_motivo_line(env_cfg):
+    """approve --motivo prints the 'Motivo: ...' line (commands_run.py:180-181)."""
+    from concilium.application.runtime import Runtime
+
+    projects_path = env_cfg["projects_path"]
+    store = ProjectStore.init(projects_path, "ApprovedWithMotivo", "test")
+    store.new_version()
+    rt = Runtime(CONFIG_ROOT)
+    rt.run_skill(
+        "01-escopo-e-eap",
+        store,
+        inputs={
+            "nome": "ApprovedWithMotivo",
+            "tipo_obra": "terraplenagem",
+            "localizacao": "Aracoiaba, CE",
+            "coordenadas": {"lat": -4.36, "lng": -38.74},
+            "regime_trabalho": {"dias_semana": 6, "horas_dia": 8},
+            "data_inicio": "2026-06-01",
+            "data_termino": "2026-12-31",
+            "eap": [
+                {
+                    "item_id": "eap-01",
+                    "ordem": 1,
+                    "cpu_id": "ESCO-CARGA-1CAT-DMT2000",
+                    "descricao": "Escavação",
+                    "unidade": "m3",
+                    "quantitativo": 1000,
+                }
+            ],
+        },
+    )
+    result = runner.invoke(
+        app,
+        ["project", "approve", "ApprovedWithMotivo", "--as", "eng_senior", "--motivo", "revisado em campo"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Motivo: revisado em campo" in result.output
+
+
 # ── lines 662, 666: main() function and __main__ ─────────────────────────────
 
 
@@ -298,6 +337,154 @@ def test_main_function_entry_point(monkeypatch, tmp_path):
     with patch.object(main_mod, "app") as mock_app:
         main_mod.main()
     mock_app.assert_called_once()
+
+
+# ── _startup_validation branches (lines 24, 26) ──────────────────────────────
+
+
+def test_startup_validation_resilient_parsing_returns_early(monkeypatch):
+    """ctx.resilient_parsing=True short-circuits before touching config_root (line 24)."""
+    import concilium.presentation.main as main_mod
+
+    ctx = MagicMock()
+    ctx.resilient_parsing = True
+    monkeypatch.setattr(sys, "argv", ["concilium", "project", "init"])
+    # Should not raise even though config_root is unset/invalid — early return.
+    main_mod._startup_validation(ctx)
+
+
+def test_startup_validation_help_flag_returns_early(monkeypatch):
+    """-h/--help anywhere in argv short-circuits before touching config_root (line 24)."""
+    import concilium.presentation.main as main_mod
+
+    ctx = MagicMock()
+    ctx.resilient_parsing = False
+    monkeypatch.setattr(sys, "argv", ["concilium", "project", "init", "--help"])
+    main_mod._startup_validation(ctx)
+
+
+def test_startup_validation_health_subcommand_returns_early(monkeypatch):
+    """invoked_subcommand == 'health' short-circuits before touching config_root (line 26)."""
+    import concilium.presentation.main as main_mod
+
+    ctx = MagicMock()
+    ctx.resilient_parsing = False
+    ctx.invoked_subcommand = "health"
+    monkeypatch.setattr(sys, "argv", ["concilium", "health"])
+    main_mod._startup_validation(ctx)
+
+
+# ── _load_validate / _load_health (lines 193, 195, 200-202, 236, 238) ────────
+
+
+def test_load_validate_registers_project_and_benchmark_subcommands():
+    import typer
+
+    import concilium.presentation.main as main_mod
+
+    # _load_validate() builds a fresh validate_app and adds it to `app`; calling
+    # it directly (bypassing the test-context auto-load) exercises the function body.
+    before = len(main_mod.app.registered_groups)
+    main_mod._load_validate()
+    after = len(main_mod.app.registered_groups)
+    assert after == before + 1
+    assert isinstance(main_mod.app, typer.Typer)
+
+
+def test_load_health_registers_health_command():
+    import concilium.presentation.main as main_mod
+
+    before = len(main_mod.app.registered_commands)
+    main_mod._load_health()
+    after = len(main_mod.app.registered_commands)
+    assert after == before + 1
+
+
+def test_populate_catalog_into_skips_optional_commands_when_absent():
+    """_populate_catalog_into only registers audit/validate/cure when the cmd
+    module exposes them (lines 110-115) — exercise the false branches with a
+    stub module lacking the optional attributes."""
+    import typer
+
+    import concilium.presentation.main as main_mod
+
+    class _StubCmd:
+        def catalog_list(self): ...
+        def catalog_browse(self): ...
+        def catalog_quality(self): ...
+        def catalog_simulate(self): ...
+        def catalog_export(self): ...
+        def catalog_survey(self): ...
+        def catalog_promote(self): ...
+        def catalog_search(self): ...
+
+    target = typer.Typer()
+    main_mod._populate_catalog_into(target, _StubCmd())
+    names = {c.name for c in target.registered_commands}
+    assert names == {
+        "list",
+        "browse",
+        "quality",
+        "simulate",
+        "export",
+        "survey",
+        "promote",
+        "search",
+    }
+    assert "audit" not in names
+    assert "validate" not in names
+    assert "cure" not in names
+
+
+# ── _get_non_flags / _is_in_test_context / _dispatch (lines 314, 332, 351-356) ──
+
+
+def test_get_non_flags_filters_out_flags(monkeypatch):
+    import concilium.presentation.main as main_mod
+
+    monkeypatch.setattr(sys, "argv", ["concilium", "--verbose", "project", "-x", "init"])
+    assert main_mod._get_non_flags() == ["project", "init"]
+
+
+def test_is_in_test_context_detects_collect_flag(monkeypatch):
+    import concilium.presentation.main as main_mod
+
+    monkeypatch.setattr(sys, "argv", ["concilium", "--collect-only"])
+    assert main_mod._is_in_test_context() is True
+
+
+def test_dispatch_devops_alias_group_uses_load_devops(monkeypatch):
+    """group in {'auth','observability','blob'} maps to _load_devops (line 351)."""
+    import concilium.presentation.main as main_mod
+
+    monkeypatch.setattr(main_mod, "_is_in_test_context", lambda: False)
+    monkeypatch.setattr(sys, "argv", ["concilium", "auth", "list-users"])
+    with patch.object(main_mod, "_load_devops") as mock_loader:
+        main_mod._dispatch()
+    mock_loader.assert_called_once()
+
+
+def test_dispatch_unknown_group_loads_all(monkeypatch):
+    """Unknown top-level group falls back to _load_all() (line 356)."""
+    import concilium.presentation.main as main_mod
+
+    monkeypatch.setattr(main_mod, "_is_in_test_context", lambda: False)
+    monkeypatch.setattr(sys, "argv", ["concilium", "totally-unknown-group"])
+    with patch.object(main_mod, "_load_all") as mock_load_all:
+        main_mod._dispatch()
+    mock_load_all.assert_called_once()
+
+
+def test_dispatch_known_group_uses_specific_loader(monkeypatch):
+    """A recognized group calls its dedicated loader (line 353)."""
+    import concilium.presentation.main as main_mod
+
+    monkeypatch.setattr(main_mod, "_is_in_test_context", lambda: False)
+    monkeypatch.setattr(sys, "argv", ["concilium", "catalog", "list"])
+    mock_loader = MagicMock()
+    monkeypatch.setitem(main_mod._GROUP_LOADERS, "catalog", mock_loader)
+    main_mod._dispatch()
+    mock_loader.assert_called_once()
 
 
 def test_main_module_dunder_main(monkeypatch, tmp_path):

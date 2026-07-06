@@ -99,59 +99,44 @@ class PlanejamentoParser:
                     current_section = "INDIRETO"
                     continue
 
-                # Parse linha de dados
-                try:
-                    item_id = row[0].strip()
-                    if not item_id or item_id in ("ITEM", ""):
-                        continue
-
-                    descricao = row[1].strip() if len(row) > 1 else ""
-                    unidade = row[2].strip() if len(row) > 2 else ""
-
-                    # Quantidade é complexa — pode estar em várias colunas
-                    # Por enquanto, usar coluna 3
-                    try:
-                        quantidade = float(row[3].replace(",", ".")) if len(row) > 3 else 0.0
-                    except (ValueError, IndexError):
-                        quantidade = 0.0
-
-                    # Custos estão em colunas variáveis dependendo do layout
-                    # Para DIRETO: procurar padrão de valores numéricos após quantidade
-                    # Para INDIRETO: o total está normalmente em uma coluna específica
-
-                    custo = CustoPlanejamento(
-                        item_id=item_id,
-                        descricao=descricao,
-                        quantidade=quantidade,
-                        unidade=unidade,
-                        tipo=current_section,
-                    )
-
-                    # Extrair valores do final da linha (último valor é geralmente total)
-                    if len(row) >= 10:
-                        try:
-                            # Últimas colunas geralmente têm valores numéricos
-                            # Esta é uma heurística que pode precisar ajuste
-                            custo.total_com_bdi = _parse_valor(row[-2])
-                            custo.total_sem_bdi = _parse_valor(row[-3]) if len(row) > 3 else custo.total_com_bdi
-                        except (ValueError, IndexError):
-                            # Inalcançável hoje (_parse_valor nunca levanta; len(row)>=10
-                            # garante os índices), mas fica como rede de segurança caso
-                            # a heurística acima mude — loga em vez de dropar silencioso.
-                            _log.warning(
-                                "Falha ao extrair totais da linha '%s' — mantendo sem custo", item_id, exc_info=True
-                            )
-                            continue
-
-                    if custo.total_com_bdi > 0 or custo.total_sem_bdi > 0:
-                        dados[item_id] = custo
-
-                except (IndexError, ValueError):
-                    # Também inalcançável hoje — todos os acessos acima já são guardados
-                    # por len(row) e o parse de quantidade tem seu próprio try/except.
-                    # Rede de segurança contra mudanças futuras no layout/heurística.
-                    _log.warning("Falha ao processar linha de planejamento — pulando", exc_info=True)
+                # Parse linha de dados. Sem try/except aqui: todos os acessos a `row`
+                # são guardados por `len(row)`, o parse de quantidade tem seu próprio
+                # try/except e `_parse_valor` nunca levanta — não há exceção a capturar.
+                item_id = row[0].strip()
+                if not item_id or item_id in ("ITEM", ""):
                     continue
+
+                descricao = row[1].strip() if len(row) > 1 else ""
+                unidade = row[2].strip() if len(row) > 2 else ""
+
+                # Quantidade é complexa — pode estar em várias colunas
+                # Por enquanto, usar coluna 3
+                try:
+                    quantidade = float(row[3].replace(",", ".")) if len(row) > 3 else 0.0
+                except (ValueError, IndexError):
+                    quantidade = 0.0
+
+                # Custos estão em colunas variáveis dependendo do layout
+                # Para DIRETO: procurar padrão de valores numéricos após quantidade
+                # Para INDIRETO: o total está normalmente em uma coluna específica
+
+                custo = CustoPlanejamento(
+                    item_id=item_id,
+                    descricao=descricao,
+                    quantidade=quantidade,
+                    unidade=unidade,
+                    tipo=current_section,
+                )
+
+                # Extrair valores do final da linha (último valor é geralmente total)
+                if len(row) >= 10:
+                    # Últimas colunas geralmente têm valores numéricos
+                    # Esta é uma heurística que pode precisar ajuste
+                    custo.total_com_bdi = _parse_valor(row[-2])
+                    custo.total_sem_bdi = _parse_valor(row[-3]) if len(row) > 3 else custo.total_com_bdi
+
+                if custo.total_com_bdi > 0 or custo.total_sem_bdi > 0:
+                    dados[item_id] = custo
 
         return dados
 

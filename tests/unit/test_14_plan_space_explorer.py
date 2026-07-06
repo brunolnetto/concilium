@@ -129,6 +129,40 @@ def test_verde_sem_pe_levers_sem_oportunidades():
     assert psr.repair_path is None
 
 
+def test_pe_com_custo_venda_cpu_zero_ainda_agrega_item():
+    """Lines 95-97: item_venda<=0 → skips delta_pct increment but still appends the
+    item id and restricoes (the `if` only guards the ratio math, not the aggregation)."""
+    lever = LeverEquilibrio(
+        id="fechar_gap_escala",
+        tipo="custo",
+        descricao="Serializar cronograma",
+        delta_margin=50_000.0,
+        delta_margin_pct=0.05,
+        viavel=True,
+    )
+    # custo_venda_cpu=0.0 → item_venda=0.0 → `item_venda > 0` is False
+    pe = _pe_com_levers("eap-zero", 0.0, [lever])
+    c = _canonical(resultado=_resultado(0.09, "VERDE"), ponto_equilibrio=[pe])
+    result = run_explorador_cenarios(c, {}, _PERFIL)
+    assert not result.has_errors
+    psr = result.canonical.plan_space_result
+    assert psr is not None
+    # The lever is still aggregated (itens list gets the id) even without delta_pct
+    tipos = {o.lever.tipo for o in psr.oportunidades}
+    assert "SERIALIZAR_CRONOGRAMA" in tipos
+
+
+def test_perfil_vazio_usa_faixas_padrao():
+    """Line 245 false branch: perfil={} (falsy) → uses hardcoded default faixas
+    instead of perfil.get(...)."""
+    c = _canonical(resultado=_resultado(0.09, "VERDE"))
+    result = run_explorador_cenarios(c, {}, {})
+    assert not result.has_errors
+    psr = result.canonical.plan_space_result
+    assert psr is not None
+    assert psr.status_entrada == "VERDE"
+
+
 def test_amarelo_com_pe_levers_gera_repair_path():
     """AMARELO + PE levers reais → repair_path com levers ADR-082."""
     lever_escala = LeverEquilibrio(

@@ -56,6 +56,14 @@ class TestLoadProdutividadeMapEdgeCases:
         result = _load_produtividade_map(tsv)
         assert result == {}
 
+    def test_blank_line_within_data_is_skipped(self, tmp_path):
+        from concilium.application.benchmarks.cronograma_parser import _load_produtividade_map
+
+        tsv = tmp_path / "produtividade.txt"
+        tsv.write_text("H\nH\nH\nH\n\n2.1\tServico\tunid\t10,0\n", encoding="utf-8")
+        result = _load_produtividade_map(tsv)
+        assert "2.1" in result
+
 
 # ---------------------------------------------------------------------------
 # _infer_predecessores — additional branches
@@ -112,6 +120,47 @@ class TestInferPredecessoresAdditional:
         # section 1 has no items, so no predecessor
         assert result == []
 
+    def test_first_item_of_section_skips_malformed_ids_in_prev_section(self):
+        """1º item da seção 2 (item_num==1); seção 1 tem item malformado (1.X) e um
+        item válido (1.2) — deve ignorar o malformado e usar 1.2 como predecessor."""
+        from concilium.application.benchmarks.cronograma_parser import CronogramaItem, _infer_predecessores
+
+        bad = CronogramaItem(item_id="1.X", descricao="Bad", unidade="m", quantitativo=1.0)
+        good = CronogramaItem(item_id="1.2", descricao="Good", unidade="m", quantitativo=1.0)
+        items = [bad, good]
+        result = _infer_predecessores(items, "2.1", {})
+        assert len(result) == 1
+        assert result[0]["item_id"] == "1.2"
+
+    def test_first_item_of_section_prev_section_out_of_order_keeps_max(self):
+        """1º item da seção 2; seção 1 tem itens fora de ordem (1.5 antes de 1.2)
+        — o item de menor número não deve sobrescrever o max já encontrado
+        (cobre o ramo False de `prev_num > max_prev_num`)."""
+        from concilium.application.benchmarks.cronograma_parser import CronogramaItem, _infer_predecessores
+
+        items = [
+            CronogramaItem(item_id="1.5", descricao="Fifth", unidade="m", quantitativo=1.0),
+            CronogramaItem(item_id="1.2", descricao="Second", unidade="m", quantitativo=1.0),
+        ]
+        result = _infer_predecessores(items, "2.1", {})
+        assert len(result) == 1
+        assert result[0]["item_id"] == "1.5"
+
+    def test_no_prev_in_section_fallback_prev_section_out_of_order_keeps_max(self):
+        """item_num > 1, sem item anterior na própria seção → cai no fallback
+        para a última item da seção anterior; itens fora de ordem na seção
+        anterior cobrem o ramo False de `prev_num > max_prev_num` no 2º bloco."""
+        from concilium.application.benchmarks.cronograma_parser import CronogramaItem, _infer_predecessores
+
+        items = [
+            CronogramaItem(item_id="1.5", descricao="Fifth", unidade="m", quantitativo=1.0),
+            CronogramaItem(item_id="1.2", descricao="Second", unidade="m", quantitativo=1.0),
+            CronogramaItem(item_id="2.3", descricao="Third of section 2", unidade="m", quantitativo=1.0),
+        ]
+        result = _infer_predecessores(items, "2.3", {})
+        assert len(result) == 1
+        assert result[0]["item_id"] == "1.5"
+
     def test_invalid_item_parts_in_section_do_not_crash(self):
         """Items with non-integer sub-ids in same section are silently skipped."""
         from concilium.application.benchmarks.cronograma_parser import CronogramaItem, _infer_predecessores
@@ -123,6 +172,20 @@ class TestInferPredecessoresAdditional:
         # Should not raise even with "2.X" in items
         result = _infer_predecessores(items, "2.2", {})
         assert isinstance(result, list)
+
+    def test_item_num_gt1_fallback_to_prev_section_skips_malformed_ids(self):
+        """item_num > 1, no direct predecessor in its own section (2.1/2.2 absent),
+        falls back to the previous section — which itself contains a malformed
+        id ("1.X") that must be skipped via the ValueError branch while a valid
+        one ("1.2") is still picked as the predecessor."""
+        from concilium.application.benchmarks.cronograma_parser import CronogramaItem, _infer_predecessores
+
+        bad = CronogramaItem(item_id="1.X", descricao="Bad", unidade="m", quantitativo=1.0)
+        good = CronogramaItem(item_id="1.2", descricao="Good", unidade="m", quantitativo=1.0)
+        items = [bad, good, self._item("2.3")]
+        result = _infer_predecessores(items, "2.3", {})
+        assert len(result) == 1
+        assert result[0]["item_id"] == "1.2"
 
 
 # ---------------------------------------------------------------------------
@@ -289,3 +352,18 @@ class TestParseLinesBranches:
         ]
         result = parser.parse_lines(lines)
         assert len(result) == 1
+
+    def test_three_part_item_id_neither_section_nor_subitem_ignored(self):
+        """item_id like '2.1.1' is neither a section header (1 part) nor a
+        sub-item (2 parts) — falls through with no action taken."""
+        from concilium.application.benchmarks.cronograma_parser import CronogramaParser
+
+        parser = CronogramaParser()
+        lines = ["H\n"] * 4 + [
+            "2.1.1\tSub-sub item\tm³\t100\n",  # 3 parts → falls through, ignored
+            "2.2\tServico B\tm³\t50\n",
+        ]
+        result = parser.parse_lines(lines)
+        ids = [r["item_id"] for r in result]
+        assert "2.1.1" not in ids
+        assert "2.2" in ids

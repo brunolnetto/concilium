@@ -91,6 +91,38 @@ class TestSkillGraphExporter:
         result = exporter.to_dot()
         assert "->" in result
 
+    def test_to_json_edges_loop_dep_not_in_registry_and_duplicate(self):
+        """Branches 133->132 (dep ausente do registry) e 135->132 (edge duplicado)
+        pulam o corpo do if e voltam direto ao topo do loop interno."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+
+        registry = _make_registry(3)
+        registry.skills["03-skill-3"].depends_on_skills = [
+            "01-skill-1",
+            "missing-skill-not-in-registry",
+            "01-skill-1",  # duplicado → edge já processado
+        ]
+        exporter = SkillGraphExporter(registry=registry)
+        result = exporter.to_json()
+        # Apenas 1 edge único de 03 (para 01) + 1 default de 02->01... na verdade
+        # skill-2 depende de skill-1 (default de _make_registry); total = 2.
+        assert result["total_dependencies"] == 2
+
+    def test_to_dot_edges_loop_dep_not_in_registry_and_duplicate(self):
+        """Branches 177->176, 179->176: mesmo caso para to_dot()."""
+        from concilium.application.skills.graph_exporter import SkillGraphExporter
+
+        registry = _make_registry(3)
+        registry.skills["03-skill-3"].depends_on_skills = [
+            "01-skill-1",
+            "missing-skill-not-in-registry",
+            "01-skill-1",
+        ]
+        exporter = SkillGraphExporter(registry=registry)
+        result = exporter.to_dot()
+        assert '"01-skill-1" -> "03-skill-3"' in result
+        assert "missing-skill-not-in-registry" not in result
+
     def test_default_registry_loads(self):
         from concilium.application.skills.graph_exporter import SkillGraphExporter
 
@@ -124,6 +156,22 @@ class TestSkillGraphExporter:
         lines: list = []
         _append_dep_edges(lines, registry, lambda x: x)
         assert len(lines) == 0  # dep not in registry → no edge
+
+    def test_append_dep_edges_skips_duplicate_edge(self):
+        """Branch 39->36: edge já processado (dep duplicado) pula o append e volta ao topo do loop."""
+        from concilium.application.skills.graph_exporter import _append_dep_edges
+
+        registry = MagicMock()
+        skill_a = MagicMock()
+        skill_a.depends_on_skills = []
+        skill_b = MagicMock()
+        # dep_id repetido duas vezes → segunda ocorrência é duplicata do edge já adicionado
+        skill_b.depends_on_skills = ["01-a", "01-a"]
+        registry.skills = {"01-a": skill_a, "02-b": skill_b}
+        registry.get_skill.side_effect = lambda sid: registry.skills.get(sid)
+        lines: list = []
+        _append_dep_edges(lines, registry, lambda x: x)
+        assert len(lines) == 1  # apenas 1 edge único, apesar do dep duplicado
 
     def test_group_skills_by_phase(self):
         from concilium.application.skills.graph_exporter import _group_skills_by_phase

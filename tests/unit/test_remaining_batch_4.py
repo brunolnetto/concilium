@@ -386,6 +386,78 @@ class TestPuCalculator:
         result = calcular_catalogo(producoes, insumos, tolerancia_pct=5.0)
         assert len(result["pu_divergentes"]) == 1
 
+    def test_calcular_catalogo_with_explicit_params(self):
+        """Line 339 false branch: explicit `params` skips the ParametrosCalculo() default."""
+        from concilium.application.catalog.pu_calculator import ParametrosCalculo, calcular_catalogo
+
+        producoes = [
+            {
+                "id": "P1",
+                "valor_horario": 10.0,
+                "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-1", "num_pessoas": 1}]},
+            }
+        ]
+        insumos = [{"codigo": "FN-1", "preco_unitario": 100.0, "tipo": "MO"}]
+        params = ParametrosCalculo()
+        result = calcular_catalogo(producoes, insumos, params=params)
+        assert result["total_producoes"] == 1
+
+    def test_calcular_catalogo_referencias_faltantes_collected(self):
+        """Line 356-357: a production whose bd.referencias_faltantes is non-empty
+        gets recorded in refs_faltantes at the calcular_catalogo level."""
+        from concilium.application.catalog.pu_calculator import calcular_catalogo
+
+        producoes = [
+            {
+                "id": "P-MISSING",
+                "valor_horario": 10.0,
+                "composicao_padrao_equipe": {"funcoes": [{"funcao_id": "FN-UNKNOWN", "num_pessoas": 1}]},
+            }
+        ]
+        result = calcular_catalogo(producoes, [])
+        assert len(result["referencias_faltantes"]) == 1
+        assert result["referencias_faltantes"][0]["producao_id"] == "P-MISSING"
+        assert result["ok"] is False
+
+    def test_check_pu_divergencia_ref_not_positive(self):
+        """Line 306 false branch: cpu_hint parses to a non-positive ref -> no divergence check."""
+        from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
+
+        bd = BreakdownPU(producao_id="P", valor_horario=100.0, custo_mo_h=1001.0)
+        divergentes: list = []
+        _check_pu_divergencia(bd, {"_cu_planilha_referencia": 0.0}, 20.0, divergentes)
+        assert divergentes == []
+
+    def test_calcular_pu_equipamento_consumo_direct_skips_atributos_fallback(self):
+        """Line 260 false branch: consumo_litros_hora present directly on the equipamento
+        entry -> the atributos_especificos fallback lookup is skipped."""
+        from concilium.application.catalog.pu_calculator import calcular_pu
+
+        producao = {
+            "id": "P1",
+            "composicao_padrao_equipe": {
+                "equipamentos": [
+                    {
+                        "equip_id": "EQ-1",
+                        "num_unidades": 1,
+                        "consumo_litros_hora": 5.0,
+                        "producao_horaria": 10.0,
+                    }
+                ]
+            },
+        }
+        insumo_index = {
+            "EQ-1": {
+                "codigo": "EQ-1",
+                "preco_unitario": 100.0,
+                "atributos_especificos": {"consumo_litros_hora": 999.0},  # must NOT be used
+            }
+        }
+        bd = calcular_pu(producao, insumo_index)
+        # If the fallback had been (incorrectly) used, custo_diesel_h would be much larger.
+        assert bd.custo_diesel_h < 100.0
+        assert not any("atributos_especificos" in a for a in bd.alertas)
+
     def test_check_pu_divergencia_no_hint(self):
         from concilium.application.catalog.pu_calculator import BreakdownPU, _check_pu_divergencia
 

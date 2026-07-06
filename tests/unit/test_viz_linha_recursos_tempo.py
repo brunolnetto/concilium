@@ -495,3 +495,47 @@ class TestFuncoesUnicasAllZero:
             # If plot was called at all it should not include "Funcoes Unicas" label
             kwargs = call_args[1] if len(call_args) > 1 else {}
             assert kwargs.get("label") != "Funcoes Unicas"
+
+
+# ---------------------------------------------------------------------------
+# Test: scheduled_activities with an entry missing activity_id/dist (line 90)
+# ---------------------------------------------------------------------------
+
+
+class TestEquipesByAtividadeSkipsInvalidEntries:
+    def test_activity_missing_id_or_dist_is_skipped(self):
+        """Line 90 false branch: a scheduled activity with empty activity_id (or a
+        non-dict distribuicao_semanal) is skipped, while a valid one is still
+        aggregated into equipes_by_atv."""
+        from types import SimpleNamespace
+
+        from concilium.application.runtime.deliverables.visualizations.cube.linha_recursos_tempo import build
+
+        rows = _rows_factory(3)
+        periods = [r["periodo"] for r in rows]
+
+        num_equipes_ns = SimpleNamespace(num_equipes=2)
+        valid_dist = {p: num_equipes_ns for p in periods}
+
+        sa_no_id = SimpleNamespace(activity_id="", distribuicao_semanal=valid_dist)
+        sa_bad_dist = SimpleNamespace(activity_id="eap-1_2", distribuicao_semanal="not-a-dict")
+        sa_valid = SimpleNamespace(activity_id="eap-1_1", distribuicao_semanal=valid_dist)
+
+        canonical = MagicMock()
+        canonical.cronograma.scheduled_activities = [sa_no_id, sa_bad_dist, sa_valid]
+
+        mock_plt, mock_fig, axes = _make_mock_plt(n_panels=3)
+
+        with (
+            patch(f"{COMMON}.build_payload", return_value={"rows": rows}),
+            patch(f"{COMMON}.init_mpl", return_value=(mock_plt, _fig_to_bytes_stub)),
+            patch(f"{COMMON}.apply_monthly_ticks"),
+            patch(f"{COMMON}.is_weekly_labels", return_value=False),
+        ):
+            result = build(canonical, MagicMock(), graficos_dict={})
+
+        assert result == b"PNG"
+        # graficos_dict={} -> has_mo=False -> ax_team is axes[1] (no MO panel).
+        # Only the valid entry should have produced a stacked-area fill_between call.
+        ax_team = axes[1]
+        assert ax_team.fill_between.call_count == 1

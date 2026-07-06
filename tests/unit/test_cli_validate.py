@@ -35,6 +35,14 @@ class TestHelpers:
         assert resumo["amarelo"] == 1
         assert resumo["vermelho"] == 2
 
+    def test_tally_resumo_unknown_status_not_counted(self):
+        """Status fora de OK/AVISO/ERRO/EXCEPTION não incrementa nenhum contador
+        (cobre o ramo falso do último elif, que apenas segue para a próxima
+        validação sem tocar em resumo)."""
+        resumo = _empty_resumo()
+        _tally_resumo([{"status": "DESCONHECIDO"}], resumo)
+        assert resumo == {"verde": 0, "amarelo": 0, "vermelho": 0}
+
     def test_val_status_color_ok(self):
         assert _val_status_color("OK") == "green"
 

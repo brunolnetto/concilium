@@ -134,3 +134,27 @@ class TestBuildHappyPath:
         with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
             result = _build(canonical)
         assert result == b"PNG_BYTES"
+
+    def test_zero_only_material_annotation(self):
+        """Covers the opposite partial zero-annotation: comb is non-zero, only
+        mat is zero -- exercises the `if total_comb <= 0.0` False branch that
+        falls through directly to the `if total_mat <= 0.0` check."""
+        canonical = MagicMock()
+        rows = [
+            {"estado": "Produtivo", "componente": "mo", "valor_rs": 50_000},
+            {"estado": "Produtivo", "componente": "comb", "valor_rs": 10_000},
+            # mat absent -> total_mat=0, total_comb > 0
+        ]
+        mock_plt = MagicMock()
+        mock_fig = MagicMock()
+        mock_ax = MagicMock()
+        mock_plt.subplots.return_value = (mock_fig, mock_ax)
+
+        def fake_fig_to_bytes(fig):
+            return b"PNG_BYTES"
+
+        with patch(_RESOLVE, return_value={"rows": rows}), patch(_INIT_MPL, return_value=(mock_plt, fake_fig_to_bytes)):
+            result = _build(canonical)
+        assert result == b"PNG_BYTES"
+        annotation_calls = [c for c in mock_fig.text.call_args_list if "Material" in str(c)]
+        assert annotation_calls

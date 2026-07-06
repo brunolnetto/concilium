@@ -8,15 +8,92 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
-from concilium.presentation.cli.commands_blob import blob_app
+from concilium.presentation.cli.commands_blob import _make_storage, blob_app
 
 runner = CliRunner()
 
 MODULE = "concilium.presentation.cli.commands_blob"
 STORE_FACTORY = "concilium.infrastructure.storage.store_factory"
 MIGRATOR_MODULE = "concilium.infrastructure.adapters.blob_storage.migrator"
+
+
+# ---------------------------------------------------------------------------
+# _make_storage — explicit backend branches
+# ---------------------------------------------------------------------------
+
+
+class TestMakeStorageExplicitBackends:
+    def test_filesystem_backend_with_root(self, tmp_path):
+        storage = _make_storage("filesystem", str(tmp_path))
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+        assert isinstance(storage, LocalBlobStorage)
+
+    def test_filesystem_backend_without_root(self):
+        storage = _make_storage("filesystem", "")
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+        assert isinstance(storage, LocalBlobStorage)
+
+    def test_sharepoint_backend(self):
+        mock_instance = MagicMock()
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.sharepoint.SharePointBlobStorage.from_env",
+            return_value=mock_instance,
+        ):
+            storage = _make_storage("sharepoint")
+        assert storage is mock_instance
+
+    def test_azure_backend_alias(self):
+        mock_instance = MagicMock()
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.azure.AzureBlobStorage.from_env",
+            return_value=mock_instance,
+        ):
+            storage = _make_storage("azure")
+        assert storage is mock_instance
+
+    def test_azure_blob_backend_canonical(self):
+        mock_instance = MagicMock()
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.azure.AzureBlobStorage.from_env",
+            return_value=mock_instance,
+        ):
+            storage = _make_storage("azure_blob")
+        assert storage is mock_instance
+
+    def test_s3_backend(self):
+        mock_instance = MagicMock()
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.s3.S3BlobStorage.from_env",
+            return_value=mock_instance,
+        ):
+            storage = _make_storage("s3")
+        assert storage is mock_instance
+
+    def test_gdrive_backend(self):
+        mock_instance = MagicMock()
+        with patch(
+            "concilium.infrastructure.adapters.blob_storage.gdrive.GoogleDriveBlobStorage.from_env",
+            return_value=mock_instance,
+        ):
+            storage = _make_storage("gdrive")
+        assert storage is mock_instance
+
+    def test_unknown_backend_raises_bad_parameter(self):
+        import typer
+
+        with pytest.raises(typer.BadParameter):
+            _make_storage("unknown-backend-xyz")
+
+    def test_backend_case_insensitive_and_stripped(self, tmp_path):
+        storage = _make_storage("  FILESYSTEM  ", str(tmp_path))
+        from concilium.infrastructure.adapters.blob_storage.local import LocalBlobStorage
+
+        assert isinstance(storage, LocalBlobStorage)
 
 
 def _make_result(*, total_blobs=2, copied=2, skipped=0, failed=0, success=True):
@@ -32,6 +109,44 @@ def _make_result(*, total_blobs=2, copied=2, skipped=0, failed=0, success=True):
 # ---------------------------------------------------------------------------
 # migrate
 # ---------------------------------------------------------------------------
+
+
+class TestMigrateOnProgressCallback:
+    """Covers the on_progress closure branches: multiple-of-10, ==total, and neither."""
+
+    def test_on_progress_branches(self, capsys):
+        mock_storage = MagicMock()
+        mock_migrator_instance = MagicMock()
+        captured = {}
+
+        def _fake_migrate(**kwargs):
+            captured["on_progress"] = kwargs["on_progress"]
+            return _make_result()
+
+        mock_migrator_instance.migrate.side_effect = _fake_migrate
+        mock_migrator_cls = MagicMock(return_value=mock_migrator_instance)
+
+        with (
+            patch(f"{STORE_FACTORY}.build_blob_storage", return_value=mock_storage),
+            patch(f"{MIGRATOR_MODULE}.BlobMigrator", mock_migrator_cls),
+        ):
+            result = runner.invoke(blob_app, ["migrate"])
+
+        assert result.exit_code == 0
+        on_progress = captured["on_progress"]
+        capsys.readouterr()  # discard output emitted by the migrate command itself
+
+        # n % 10 == 0 -> prints.
+        on_progress("blob-10.json", 10, 37)
+        assert "10/37" in capsys.readouterr().out
+
+        # n == total (not a multiple of 10) -> prints even though not a multiple of 10.
+        on_progress("blob-last.json", 37, 37)
+        assert "37/37" in capsys.readouterr().out
+
+        # neither n%10==0 nor n==total -> silently skipped, no output.
+        on_progress("blob-mid.json", 13, 37)
+        assert capsys.readouterr().out == ""
 
 
 class TestMigrateNormalRun:

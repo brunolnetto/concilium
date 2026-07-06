@@ -171,6 +171,33 @@ class TestInputsMixin:
         assert result["percentual_encargos"] == 1.777
         assert result["percentual_encargos_mensalista"] == 1.06
 
+    def test_apply_runtime_defaults_skill05_encargos_all_none_skips_fields(self):
+        """Branches 59->61, 61->63: horista e mensalista None → nenhum campo setado."""
+        mixin = self._make_mixin()
+        mixin.load_jurisdicao = MagicMock(return_value={"motor_encargos_sociais": {}})
+        proj = self._make_project()
+        ctx = self._make_contexto()
+        result = mixin._apply_runtime_defaults("05-equipes-e-alocacao", proj, ctx, {})
+        assert "percentual_encargos" not in result
+        assert "percentual_encargos_mensalista" not in result
+        assert "percentual_encargos_pj" not in result
+
+    def test_apply_runtime_defaults_skill05_encargos_pj_present(self):
+        """Linha 64: percentual_pj presente → percentual_encargos_pj setado."""
+        mixin = self._make_mixin()
+        mixin.load_jurisdicao = MagicMock(
+            return_value={
+                "motor_encargos_sociais": {
+                    "percentual_horista": 1.5,
+                    "percentual_pj": 1.11,
+                }
+            }
+        )
+        proj = self._make_project()
+        ctx = self._make_contexto()
+        result = mixin._apply_runtime_defaults("05-equipes-e-alocacao", proj, ctx, {})
+        assert result["percentual_encargos_pj"] == 1.11
+
     def test_apply_runtime_defaults_skill04_calendario(self):
         mixin = self._make_mixin()
         mixin.load_calendario_operacional = MagicMock(return_value={"eventos": []})

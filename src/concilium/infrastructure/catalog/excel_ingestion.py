@@ -54,8 +54,9 @@ class ExcelIngestionPipeline:
                 if not header:
                     continue
                 item[header] = row[i] if i < len(row) else None
-            if item:
-                parsed.append(item)
+            # `headers` is guaranteed to have at least one truthy entry (checked above),
+            # so `item` always gains at least one key here — no need to guard the append.
+            parsed.append(item)
         return parsed
 
     def parse_planilha(self, excel_bytes: bytes) -> dict[str, list[dict]]:

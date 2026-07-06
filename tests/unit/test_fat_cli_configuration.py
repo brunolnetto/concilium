@@ -303,3 +303,13 @@ class TestJurisdicaoList:
         assert "Bahia" in result.output
         # total is None → shown as "-"
         assert "-" in result.output
+
+
+class TestConfigRoot:
+    """Covers the real _config_root() body (other tests monkeypatch it away)."""
+
+    def test_config_root_delegates_to_shared_config_root(self):
+        from concilium.presentation.cli.commands_configuration import _config_root
+        from concilium.presentation.cli.shared import config_root
+
+        assert _config_root() == config_root()

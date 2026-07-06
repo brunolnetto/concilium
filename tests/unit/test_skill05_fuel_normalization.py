@@ -71,3 +71,14 @@ def test_alias_enriquece_consumo_por_codigo_planilha_e_descricao():
 
     assert attrs.get("consumo_litros_hora") == 7.0
     assert attrs.get("tipo_combustivel") == "Diesel S10"
+
+
+def test_alias_returns_empty_dict_when_repo_access_raises():
+    """ctx sem atributo `repo` faz `ctx.repo` levantar AttributeError — o
+    try/except no topo de _best_alias_equip_attrs deve engolir e retornar {}."""
+    mod = _load_skill05_helpers_a()
+    ctx = SimpleNamespace()  # sem `.repo`
+
+    attrs = mod._best_alias_equip_attrs(ctx, "E0027", "Rolo compactador liso")
+
+    assert attrs == {}

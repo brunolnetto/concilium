@@ -84,9 +84,9 @@ def build(canonical, cubo=None) -> bytes | None:
         if not liters_by_week_and_fuel:
             return None
 
+        # `fuels` é derivado do mesmo `liters_by_week_and_fuel` já garantido
+        # não-vazio pela guarda acima, então nunca é uma lista vazia aqui.
         fuels = sorted({f for m in liters_by_week_and_fuel.values() for f in m.keys()})
-        if not fuels:  # pragma: no branch
-            return None
 
         by_fuel_monthly_wom: dict[str, dict[str, dict[int, float]]] = defaultdict(
             lambda: defaultdict(lambda: defaultdict(float))
@@ -101,11 +101,12 @@ def build(canonical, cubo=None) -> bytes | None:
         periodos = sorted({bucket for fuels_map in by_fuel_monthly_wom.values() for bucket in fuels_map.keys()})
         if not periodos:
             return None
+        # Toda entrada de `periodos` (não-vazio pela guarda acima) veio de um
+        # bucket com pelo menos um `wom` associado em `by_fuel_monthly_wom`,
+        # então `all_woms` nunca é uma lista vazia aqui.
         all_woms = sorted(
             {w for fuels_map in by_fuel_monthly_wom.values() for wom_map in fuels_map.values() for w in wom_map}
         )
-        if not all_woms:  # pragma: no branch
-            return None
 
         num_fuels = len(fuels)
         x = list(range(len(periodos)))

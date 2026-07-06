@@ -283,10 +283,10 @@ def cure_producao(prod: dict, report: CurationReport, apply: bool) -> dict:
                 changed["composicao_padrao_equipe"] = normalized
             report.add_fixed(f"PRODUCAO {pid}: deduplicada composicao_padrao_equipe")
 
-    # Remove cpu_ids (redundante)
+    # Nota: cpu_ids já está em prod_cpu_fields acima e é removido de lá quando
+    # apply=True; este bloco só dispara em dry-run (apply=False) para reportar
+    # o campo pendente de remoção.
     if "cpu_ids" in changed:
-        if apply:
-            del changed["cpu_ids"]
         report.add_fixed(f"PRODUCAO {pid}: removido cpu_ids (derivável via CPU.producao_id_ref)")
 
     # Estrutura historico_observacoes
@@ -412,14 +412,14 @@ def cure_insumo(ins: dict, report: CurationReport, apply: bool) -> dict:
             if apply:
                 attrs["tipo_contrato"] = inferred
             report.add_fixed(f"INSUMO {codigo}: preenchido tipo_contrato='{inferred}'")
-        if isinstance(attrs, dict):
-            derivados = [k for k in ("custo_com_encargos",) if k in attrs]
-            if derivados and apply:
-                for k in derivados:
-                    del attrs[k]
-                changed["atributos_especificos"] = attrs
+        # attrs já é garantidamente dict pela coerção acima (linha 406-407).
+        derivados = [k for k in ("custo_com_encargos",) if k in attrs]
+        if derivados and apply:
             for k in derivados:
-                report.add_fixed(f"INSUMO {codigo}: removido campo derivado atributos_especificos.{k}")
+                del attrs[k]
+            changed["atributos_especificos"] = attrs
+        for k in derivados:
+            report.add_fixed(f"INSUMO {codigo}: removido campo derivado atributos_especificos.{k}")
         if apply:
             changed["atributos_especificos"] = attrs
 
@@ -708,27 +708,34 @@ def cure_contextual(
             current = float(item["valor_horario"])
             if low <= current <= high:
                 continue
-            if abs(current - med) <= 1e-12:
-                continue
+            # Não há checagem residual `current == med` aqui: `_robust_bounds` garante
+            # low <= q10 <= med <= q90 <= high, logo `med` está sempre dentro de
+            # [low, high] — se chegamos até aqui é porque `current` já está fora dos
+            # limites, então `current == med` é matematicamente impossível.
 
             # Evita sobrecorreção: atua apenas em desvios realmente extremos.
             # - baixo extremo: abaixo de 50% do limite inferior
             # - alto extremo: acima de 200% do limite superior
-            if low > 0 and current < low:
+            # Nota: `current` é sempre > 0 (filtrado na montagem de `rows` acima) e a
+            # checagem em `low <= current <= high` já garante que current está fora dos
+            # limites aqui — logo é sempre current < low (o que implica low > 0, já que
+            # current > 0) ou current > high, nunca nenhum dos dois. Por isso usamos
+            # if/else exaustivo (em vez de if/elif com um terceiro caminho residual
+            # inatingível, que seria código morto e nunca coberto por testes).
+            if current < low:
                 if current >= low * 0.5:
                     continue
-            elif current > high:
+            else:
                 if current <= high * 2.0:
                     continue
-            else:
-                continue
 
             prod_ref = item["producao_id_ref"]
             cpu_codigo = item["cpu_codigo"]
             if apply:
-                prod = prod_by_id.get(prod_ref)
-                if isinstance(prod, dict):
-                    prod["valor_horario"] = med
+                # `item` só entra em `rows`/`items` quando `prod_by_id.get(prod_ref)`
+                # já foi validado como dict (linhas acima) — prod_by_id não é mutado
+                # entre as duas passagens, então o lookup aqui é sempre um dict.
+                prod_by_id[prod_ref]["valor_horario"] = med
             report.add_fixed(
                 "PRODUCAO "
                 f"{prod_ref}: valor_horario {current:.6f} -> {med:.6f} "
