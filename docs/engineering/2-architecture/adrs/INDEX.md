@@ -239,6 +239,7 @@ D1, D2, D3 — decisões numeradas com exemplos de código
 | [127](adr-127-regime-contrato-vs-precificacao-horaria.md) | Regime de Contrato (Contínuo/Mensal) vs. Precificação Horária: consolida `rental_unit`/`unidade_faturamento`/custo idle já implementados (só documentação, sem código novo); multa de rescisão avaliada e descartada de escopo | ✅ Implementado 2026-07-02 | ADR-080, ADR-108, ADR-125 |
 | [128](adr-128-disponibilidade-recursos-consumiveis.md) | Disponibilidade de Recursos Consumíveis: `DisponibilidadeConsumivel` (estoque/capacidade/reabastecimento) e `ReplenishableResource` no motor RCPSP para diesel/material; reaproveita `prazo_entrega` hoje não utilizado | 💡 Proposta 2026-07-02 | ADR-107, ADR-090, ADR-046 |
 | [129](adr-129-cotacao-por-proximidade-geografica.md) | Cotação por Proximidade Geográfica: `MunicipioReferenceClient` (IBGE), reconexão do `FuelPriceClient` hoje desconectado, resolução por município mais próximo às coordenadas do `Escopo`, desempate por população | 💡 Proposta 2026-07-02 | ADR-032, ADR-066, ADR-107 |
+| [130](adr-130-composicao-equipe-grafo-sinergia-produtividade-derivada.md) | Composição de Equipe como Grafo de Sinergia: `GrafoSinergiaEquipe` (acoplamento/dimensionamento/precondição) com produtividade derivada do gargalo; estrutura estável × capacidades calibráveis (ADR-076); fallback integral para `valor_horario` declarado | 💡 Proposta 2026-07-06 | ADR-011, ADR-030, ADR-053, ADR-076, ADR-128 |
 
 **Legenda:** ✅ Implementado/Decidido · ⚠️ Parcialmente Implementado · 💡 Proposta · ⬜ Supersedido
 
