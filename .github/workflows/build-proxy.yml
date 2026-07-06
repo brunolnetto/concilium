@@ -56,6 +56,10 @@ jobs:
 
       - name: Publish to blob storage
         env:
+          # Console legado do Windows (codepage cp1252) não decodifica os símbolos
+          # Unicode (✓, →) que o rich/rprint usa no output — força UTF-8 no stdout
+          # independente do codepage do runner.
+          PYTHONUTF8: "1"
           # A CLI valida config_root no startup (mesmo para comandos que não usam
           # catálogo, como "blob put") — sem isso, "pip install ." (não-editável)
           # resolve a raiz a partir do local de instalação do pacote, não do checkout.
