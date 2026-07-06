@@ -56,6 +56,10 @@ jobs:
 
       - name: Publish to blob storage
         env:
+          # A CLI valida config_root no startup (mesmo para comandos que não usam
+          # catálogo, como "blob put") — sem isso, "pip install ." (não-editável)
+          # resolve a raiz a partir do local de instalação do pacote, não do checkout.
+          CONCILIUM__CONFIG_ROOT: ${{ github.workspace }}/config
           # Mesmo backend usado em produção pelo concilium-mcp/concilium-api
           # (provision.sh) — reaproveita o SharePoint já contratado, sem gerar
           # custo novo de Azure Blob/S3.
